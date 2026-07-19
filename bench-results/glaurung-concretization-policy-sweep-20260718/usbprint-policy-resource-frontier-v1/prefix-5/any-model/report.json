@@ -1,0 +1,742 @@
+{
+  "acceptance_population": "high-confidence",
+  "accepted": true,
+  "all_drivers_exact_finding_parity": true,
+  "all_drivers_exact_high_confidence_finding_parity": true,
+  "all_drivers_exact_raw_finding_parity": true,
+  "axeyum": {
+    "path": "/tmp/axeyum-usbprint-frontier-v1.OhGVBV",
+    "revision": "f951152517a6bdcf0410d88c48c2cc3a167cac6a",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "binaries": {
+    "axeyum": {
+      "path": "/tmp/glaurung-policy-sweep-v3-axeyum-ioctlance",
+      "sha256": "ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd"
+    },
+    "z3": {
+      "path": "/tmp/glaurung-policy-sweep-v3-z3-ioctlance",
+      "sha256": "027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e"
+    }
+  },
+  "canonical_model_choice_policy": null,
+  "canonical_model_choice_required": false,
+  "check_timeout_ms_required": 250,
+  "concretization_policy_id": null,
+  "concretization_policy_label": null,
+  "concretization_policy_source": "default",
+  "drivers": [
+    {
+      "driver": {
+        "path": "/nas4/data/workspace-infosec/cold-hunt-durable/nucbox-25h2/System32/drivers/usbprint.sys",
+        "sha256": "3eb6b8172849290bac6ff548b53fbf78c37c6f68a22bdc604b12418d1b22a968"
+      },
+      "runs": [
+        {
+          "analysis_roots": 21,
+          "analyzed": 5,
+          "average_us_per_solve": 967.4,
+          "backend": "z3",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "fixed-work-limit",
+          "diagnostic_finding_count": 31,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "elapsed_seconds": 2.85,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 31,
+          "findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 58880,
+          "position": 1,
+          "repetition": 1,
+          "reported_high_confidence": 0,
+          "reported_lines": 31,
+          "reported_raw": 31,
+          "reported_suppressed": 31,
+          "solver_time_ms": 2790.0,
+          "solves": 2884,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 21,
+          "analyzed": 5,
+          "average_us_per_solve": 153.8,
+          "backend": "axeyum",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "fixed-work-limit",
+          "diagnostic_finding_count": 31,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "elapsed_seconds": 0.49,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 31,
+          "findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 19668,
+          "position": 2,
+          "repetition": 1,
+          "reported_high_confidence": 0,
+          "reported_lines": 31,
+          "reported_raw": 31,
+          "reported_suppressed": 31,
+          "solver_time_ms": 443.4,
+          "solves": 2884,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 21,
+          "analyzed": 5,
+          "average_us_per_solve": 154.4,
+          "backend": "axeyum",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "fixed-work-limit",
+          "diagnostic_finding_count": 31,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "elapsed_seconds": 0.48,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 31,
+          "findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 20088,
+          "position": 1,
+          "repetition": 2,
+          "reported_high_confidence": 0,
+          "reported_lines": 31,
+          "reported_raw": 31,
+          "reported_suppressed": 31,
+          "solver_time_ms": 445.4,
+          "solves": 2884,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 21,
+          "analyzed": 5,
+          "average_us_per_solve": 970.5,
+          "backend": "z3",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "fixed-work-limit",
+          "diagnostic_finding_count": 31,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "elapsed_seconds": 2.85,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 31,
+          "findings": [
+            "   arbitrary-write  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "   arbitrary-write  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "  integer-overflow  va=0x14000262f  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "  integer-overflow  va=0x140002657  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg1\"]",
+            "      double-fetch  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]",
+            "   arbitrary-write  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "        null-deref  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "        null-deref  va=0x140001d6f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg1\", \"Arg1\"]",
+            "        null-deref  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "        null-deref  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "        null-deref  va=0x140002648  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x14000267e  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "        null-deref  va=0x140002684  [handler] fn=sub_140002620 @ 0x140002620  sev=Arbitrary  taint=[\"Arg0\", \"Arg1\"]",
+            "    arbitrary-read  va=0x140001cb8  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001cc5  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cde  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"**Arg0\"]",
+            "    arbitrary-read  va=0x140001d5b  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Arbitrary  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001df4  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x140001e23  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Arbitrary  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140002073  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg0\"]",
+            "    arbitrary-read  va=0x1400020fa  [handler] fn=sub_140001f80 @ 0x140001f80  sev=Arbitrary  taint=[\"Arg2\"]",
+            "    arbitrary-read  va=0x140001cce  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001cd7  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"*Arg0\"]",
+            "    arbitrary-read  va=0x140001d5f  [handler] fn=sub_140001ca0 @ 0x140001ca0  sev=Constrained  taint=[\"Arg1\"]",
+            "    arbitrary-read  va=0x140001e83  [handler] fn=sub_140001de0 @ 0x140001de0  sev=Constrained  taint=[\"*Arg0\"]"
+          ],
+          "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 57468,
+          "position": 2,
+          "repetition": 2,
+          "reported_high_confidence": 0,
+          "reported_lines": 31,
+          "reported_raw": 31,
+          "reported_suppressed": 31,
+          "solver_time_ms": 2798.9,
+          "solves": 2884,
+          "time_exit": 0
+        }
+      ],
+      "summary": {
+        "axeyum_only": [],
+        "axeyum_warm_execution": null,
+        "axeyum_warm_telemetry_available": false,
+        "axeyum_warm_telemetry_note": "the Glaurung example prints warm lifecycle rows only when both solver features are compiled; the Axeyum-only authority binary does not expose them",
+        "backends": {
+          "axeyum": {
+            "analysis_roots": 21,
+            "analyzed": 5,
+            "diagnostic_finding_count": 31,
+            "diagnostic_finding_counts": [
+              31,
+              31
+            ],
+            "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+            "elapsed_seconds": [
+              0.49,
+              0.48
+            ],
+            "finding_count": 31,
+            "finding_counts": [
+              31,
+              31
+            ],
+            "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+            "findings_sha256_per_run": [
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+            ],
+            "high_confidence_finding_count": 0,
+            "high_confidence_finding_counts": [
+              0,
+              0
+            ],
+            "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+            "max_rss_kib": [
+              19668,
+              20088
+            ],
+            "solver_time_median_ms": 444.4,
+            "solver_time_ms": [
+              443.4,
+              445.4
+            ],
+            "solves": [
+              2884,
+              2884
+            ]
+          },
+          "z3": {
+            "analysis_roots": 21,
+            "analyzed": 5,
+            "diagnostic_finding_count": 31,
+            "diagnostic_finding_counts": [
+              31,
+              31
+            ],
+            "diagnostic_findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+            "elapsed_seconds": [
+              2.85,
+              2.85
+            ],
+            "finding_count": 31,
+            "finding_counts": [
+              31,
+              31
+            ],
+            "findings_sha256": "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+            "findings_sha256_per_run": [
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7",
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+            ],
+            "high_confidence_finding_count": 0,
+            "high_confidence_finding_counts": [
+              0,
+              0
+            ],
+            "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+            "max_rss_kib": [
+              58880,
+              57468
+            ],
+            "solver_time_median_ms": 2794.45,
+            "solver_time_ms": [
+              2790.0,
+              2798.9
+            ],
+            "solves": [
+              2884,
+              2884
+            ]
+          }
+        },
+        "canonical_model_choice": {
+          "backends": {
+            "axeyum": {
+              "attempts": 0,
+              "completed": 0,
+              "error": 0,
+              "final_unsat": 0,
+              "inconclusive": 0,
+              "infeasible": 0,
+              "no_solver": 0,
+              "policy": "glaurung-any-model-v1",
+              "probes": 0,
+              "unknown": 0,
+              "unsupported_width": 0
+            },
+            "z3": {
+              "attempts": 0,
+              "completed": 0,
+              "error": 0,
+              "final_unsat": 0,
+              "inconclusive": 0,
+              "infeasible": 0,
+              "no_solver": 0,
+              "policy": "glaurung-any-model-v1",
+              "probes": 0,
+              "unknown": 0,
+              "unsupported_width": 0
+            }
+          },
+          "policy": "glaurung-any-model-v1"
+        },
+        "check_timeout_ms": 250,
+        "confidence_partition_available": true,
+        "coverage": {
+          "analyzed": 5,
+          "boundary": "fixed-work-limit",
+          "reachable": 21
+        },
+        "diagnostic": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 31,
+              "union_finding_count": 31,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 31,
+              "union_finding_count": 31,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 31,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "exact_finding_parity": true,
+        "exact_high_confidence_finding_parity": true,
+        "exact_raw_finding_parity": true,
+        "high_confidence": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 0,
+              "union_finding_count": 0,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 0,
+              "union_finding_count": 0,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 0,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "raw": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 31,
+              "union_finding_count": 31,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 31,
+              "union_finding_count": 31,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 31,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "stability": {
+          "axeyum": {
+            "distinct_hashes": [
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+            ],
+            "output_stable": true,
+            "stable_finding_count": 31,
+            "union_finding_count": 31,
+            "unstable_findings": []
+          },
+          "z3": {
+            "distinct_hashes": [
+              "3be462486f16ded8c3cd63e4400cd6aca8e99747bcd06dac0b915897b9d772d7"
+            ],
+            "output_stable": true,
+            "stable_finding_count": 31,
+            "union_finding_count": 31,
+            "unstable_findings": []
+          }
+        },
+        "stable_intersection_count": 31,
+        "within_backend_stable": true,
+        "z3_only": []
+      },
+      "summary_error": null
+    }
+  ],
+  "environment": {
+    "GLAURUNG_CHECK_TIMEOUT_MS": "250",
+    "IOCTLANCE_ALL": "1",
+    "IOCTLANCE_ANNOTATE_CONFIDENCE": "1",
+    "IOCTLANCE_DEADLINE_SECS": "1800",
+    "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "5",
+    "IOCTLANCE_SOLVE_BUDGET": "300000",
+    "IOCTLANCE_SOLVE_SECS": "300"
+  },
+  "failures": [],
+  "glaurung": {
+    "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+    "revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
+  "post_run_source_identity": {
+    "axeyum": {
+      "path": "/tmp/axeyum-usbprint-frontier-v1.OhGVBV",
+      "revision": "f951152517a6bdcf0410d88c48c2cc3a167cac6a",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "glaurung": {
+      "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+      "revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stable": true
+  },
+  "process_timeout_seconds": 1920,
+  "repetitions": 2,
+  "schema": "axeyum.glaurung-authoritative-finding-parity.v5"
+}

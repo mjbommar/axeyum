@@ -111,7 +111,12 @@ def accepted_report(policy_id: str, limit: int, solves: int = 10) -> dict:
         "process_timeout_seconds": 1920,
         "repetitions": 2,
         "acceptance_population": "high-confidence",
-        "concretization_policy_id": policy_id,
+        "concretization_policy_id": (
+            None if policy_id == "glaurung-any-model-v1" else policy_id
+        ),
+        "concretization_policy_source": (
+            "default" if policy_id == "glaurung-any-model-v1" else "preferred"
+        ),
         "all_drivers_exact_high_confidence_finding_parity": True,
         "drivers": [
             {

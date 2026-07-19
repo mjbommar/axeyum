@@ -194,3 +194,19 @@ are duplicate presentations of already validated sinks. There are zero
 independent primitives and zero indeterminate rows. Consequently the five
 scalar policies have no validated finding difference on this exhaustive
 source-backed population, and no residual gap admits symbolic-memory work.
+
+## Usbprint policy-resource frontier v1: rejected
+
+ADR-0249's separate point-major usbprint run is preserved under
+[`usbprint-policy-resource-frontier-v1/`](usbprint-policy-resource-frontier-v1/).
+Fourteen of 15 cells complete and all five policies establish a common prefix
+of 10. Prefix-15/site-hash-one retains identical 91/0 raw/high output but fails
+exact Axeyum work reproduction, so the aggregate reports no resource bracket.
+
+Post-result-only Glaurung instrumentation at isolated candidate `ff3c0a7`
+attributes the drift to one wall-deadline-terminated inner symbolic worklist;
+the outer analyzed-function count had concealed partial work. The preserved
+result remains rejected. Future fixed-work evidence must record explicit
+worklist-stop classes and reject deadline/timeout stops. This does not change
+the accepted five-policy control, select a default, establish recall, compare
+solver speed, or reopen symbolic memory.

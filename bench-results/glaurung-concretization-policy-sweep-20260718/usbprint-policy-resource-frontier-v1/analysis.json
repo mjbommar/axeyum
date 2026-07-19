@@ -1,0 +1,765 @@
+{
+  "accepted": false,
+  "cells": [
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 5,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-5",
+      "policy": "any-model",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 31,
+          "elapsed_seconds": 2.85,
+          "finding_count": 31,
+          "max_rss_kib": 58880,
+          "position": 1,
+          "repetition": 1,
+          "solves": 2884
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 31,
+          "elapsed_seconds": 0.49,
+          "finding_count": 31,
+          "max_rss_kib": 19668,
+          "position": 2,
+          "repetition": 1,
+          "solves": 2884
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 31,
+          "elapsed_seconds": 0.48,
+          "finding_count": 31,
+          "max_rss_kib": 20088,
+          "position": 1,
+          "repetition": 2,
+          "solves": 2884
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 31,
+          "elapsed_seconds": 2.85,
+          "finding_count": 31,
+          "max_rss_kib": 57468,
+          "position": 2,
+          "repetition": 2,
+          "solves": 2884
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 5,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-5",
+      "policy": "min-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 39,
+          "elapsed_seconds": 229.68,
+          "finding_count": 39,
+          "max_rss_kib": 58480,
+          "position": 1,
+          "repetition": 1,
+          "solves": 208110
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 39,
+          "elapsed_seconds": 398.27,
+          "finding_count": 39,
+          "max_rss_kib": 99696,
+          "position": 2,
+          "repetition": 1,
+          "solves": 208110
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 39,
+          "elapsed_seconds": 397.32,
+          "finding_count": 39,
+          "max_rss_kib": 99544,
+          "position": 1,
+          "repetition": 2,
+          "solves": 208110
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 39,
+          "elapsed_seconds": 229.58,
+          "finding_count": 39,
+          "max_rss_kib": 61108,
+          "position": 2,
+          "repetition": 2,
+          "solves": 208110
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 5,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-5",
+      "policy": "max-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 22,
+          "elapsed_seconds": 29.38,
+          "finding_count": 22,
+          "max_rss_kib": 59064,
+          "position": 1,
+          "repetition": 1,
+          "solves": 49704
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 22,
+          "elapsed_seconds": 5.91,
+          "finding_count": 22,
+          "max_rss_kib": 26076,
+          "position": 2,
+          "repetition": 1,
+          "solves": 49704
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 22,
+          "elapsed_seconds": 5.91,
+          "finding_count": 22,
+          "max_rss_kib": 25572,
+          "position": 1,
+          "repetition": 2,
+          "solves": 49704
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 22,
+          "elapsed_seconds": 29.08,
+          "finding_count": 22,
+          "max_rss_kib": 59624,
+          "position": 2,
+          "repetition": 2,
+          "solves": 49704
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 5,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-5",
+      "policy": "site-hash-0",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 26,
+          "elapsed_seconds": 73.86,
+          "finding_count": 26,
+          "max_rss_kib": 61804,
+          "position": 1,
+          "repetition": 1,
+          "solves": 111326
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 26,
+          "elapsed_seconds": 52.53,
+          "finding_count": 26,
+          "max_rss_kib": 43112,
+          "position": 2,
+          "repetition": 1,
+          "solves": 111326
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 26,
+          "elapsed_seconds": 52.51,
+          "finding_count": 26,
+          "max_rss_kib": 41856,
+          "position": 1,
+          "repetition": 2,
+          "solves": 111326
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 26,
+          "elapsed_seconds": 74.63,
+          "finding_count": 26,
+          "max_rss_kib": 64972,
+          "position": 2,
+          "repetition": 2,
+          "solves": 111326
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 5,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-5",
+      "policy": "site-hash-1",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 35,
+          "elapsed_seconds": 227.4,
+          "finding_count": 35,
+          "max_rss_kib": 67360,
+          "position": 1,
+          "repetition": 1,
+          "solves": 211152
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 35,
+          "elapsed_seconds": 389.8,
+          "finding_count": 35,
+          "max_rss_kib": 123912,
+          "position": 2,
+          "repetition": 1,
+          "solves": 211152
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 35,
+          "elapsed_seconds": 389.21,
+          "finding_count": 35,
+          "max_rss_kib": 123984,
+          "position": 1,
+          "repetition": 2,
+          "solves": 211152
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 35,
+          "elapsed_seconds": 226.46,
+          "finding_count": 35,
+          "max_rss_kib": 68600,
+          "position": 2,
+          "repetition": 2,
+          "solves": 211152
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 10,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-10",
+      "policy": "any-model",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 89,
+          "elapsed_seconds": 7.97,
+          "finding_count": 89,
+          "max_rss_kib": 67616,
+          "position": 1,
+          "repetition": 1,
+          "solves": 7531
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 89,
+          "elapsed_seconds": 1.34,
+          "finding_count": 89,
+          "max_rss_kib": 22276,
+          "position": 2,
+          "repetition": 1,
+          "solves": 7531
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 89,
+          "elapsed_seconds": 1.34,
+          "finding_count": 89,
+          "max_rss_kib": 22856,
+          "position": 1,
+          "repetition": 2,
+          "solves": 7531
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 89,
+          "elapsed_seconds": 7.75,
+          "finding_count": 89,
+          "max_rss_kib": 74144,
+          "position": 2,
+          "repetition": 2,
+          "solves": 7531
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 10,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-10",
+      "policy": "min-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 94,
+          "elapsed_seconds": 335.08,
+          "finding_count": 94,
+          "max_rss_kib": 65996,
+          "position": 1,
+          "repetition": 1,
+          "solves": 379298
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 94,
+          "elapsed_seconds": 559.39,
+          "finding_count": 94,
+          "max_rss_kib": 100172,
+          "position": 2,
+          "repetition": 1,
+          "solves": 379298
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 94,
+          "elapsed_seconds": 559.82,
+          "finding_count": 94,
+          "max_rss_kib": 99452,
+          "position": 1,
+          "repetition": 2,
+          "solves": 379298
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 94,
+          "elapsed_seconds": 336.46,
+          "finding_count": 94,
+          "max_rss_kib": 66072,
+          "position": 2,
+          "repetition": 2,
+          "solves": 379298
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 10,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-10",
+      "policy": "max-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 42,
+          "elapsed_seconds": 46.67,
+          "finding_count": 42,
+          "max_rss_kib": 59492,
+          "position": 1,
+          "repetition": 1,
+          "solves": 88224
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 42,
+          "elapsed_seconds": 11.51,
+          "finding_count": 42,
+          "max_rss_kib": 25856,
+          "position": 2,
+          "repetition": 1,
+          "solves": 88224
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 42,
+          "elapsed_seconds": 11.58,
+          "finding_count": 42,
+          "max_rss_kib": 26016,
+          "position": 1,
+          "repetition": 2,
+          "solves": 88224
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 42,
+          "elapsed_seconds": 46.71,
+          "finding_count": 42,
+          "max_rss_kib": 58860,
+          "position": 2,
+          "repetition": 2,
+          "solves": 88224
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 10,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-10",
+      "policy": "site-hash-0",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 81,
+          "elapsed_seconds": 163.33,
+          "finding_count": 81,
+          "max_rss_kib": 70476,
+          "position": 1,
+          "repetition": 1,
+          "solves": 250153
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 81,
+          "elapsed_seconds": 241.98,
+          "finding_count": 81,
+          "max_rss_kib": 97492,
+          "position": 2,
+          "repetition": 1,
+          "solves": 250153
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 81,
+          "elapsed_seconds": 242.05,
+          "finding_count": 81,
+          "max_rss_kib": 96520,
+          "position": 1,
+          "repetition": 2,
+          "solves": 250153
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 81,
+          "elapsed_seconds": 161.79,
+          "finding_count": 81,
+          "max_rss_kib": 67956,
+          "position": 2,
+          "repetition": 2,
+          "solves": 250153
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 10,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-10",
+      "policy": "site-hash-1",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 56,
+          "elapsed_seconds": 258.23,
+          "finding_count": 56,
+          "max_rss_kib": 61116,
+          "position": 1,
+          "repetition": 1,
+          "solves": 281372
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 56,
+          "elapsed_seconds": 413.21,
+          "finding_count": 56,
+          "max_rss_kib": 123948,
+          "position": 2,
+          "repetition": 1,
+          "solves": 281372
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 56,
+          "elapsed_seconds": 413.81,
+          "finding_count": 56,
+          "max_rss_kib": 123696,
+          "position": 1,
+          "repetition": 2,
+          "solves": 281372
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 56,
+          "elapsed_seconds": 258.92,
+          "finding_count": 56,
+          "max_rss_kib": 67304,
+          "position": 2,
+          "repetition": 2,
+          "solves": 281372
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 15,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-15",
+      "policy": "any-model",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 146,
+          "elapsed_seconds": 13.57,
+          "finding_count": 146,
+          "max_rss_kib": 66796,
+          "position": 1,
+          "repetition": 1,
+          "solves": 14626
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 146,
+          "elapsed_seconds": 2.45,
+          "finding_count": 146,
+          "max_rss_kib": 27860,
+          "position": 2,
+          "repetition": 1,
+          "solves": 14626
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 146,
+          "elapsed_seconds": 2.43,
+          "finding_count": 146,
+          "max_rss_kib": 28092,
+          "position": 1,
+          "repetition": 2,
+          "solves": 14626
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 146,
+          "elapsed_seconds": 13.74,
+          "finding_count": 146,
+          "max_rss_kib": 67300,
+          "position": 2,
+          "repetition": 2,
+          "solves": 14626
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 15,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-15",
+      "policy": "min-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 140,
+          "elapsed_seconds": 508.9,
+          "finding_count": 140,
+          "max_rss_kib": 67064,
+          "position": 1,
+          "repetition": 1,
+          "solves": 638349
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 140,
+          "elapsed_seconds": 931.38,
+          "finding_count": 140,
+          "max_rss_kib": 125276,
+          "position": 2,
+          "repetition": 1,
+          "solves": 638349
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 140,
+          "elapsed_seconds": 932.95,
+          "finding_count": 140,
+          "max_rss_kib": 123060,
+          "position": 1,
+          "repetition": 2,
+          "solves": 638349
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 140,
+          "elapsed_seconds": 508.59,
+          "finding_count": 140,
+          "max_rss_kib": 66416,
+          "position": 2,
+          "repetition": 2,
+          "solves": 638349
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 15,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-15",
+      "policy": "max-unsigned",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 65,
+          "elapsed_seconds": 98.9,
+          "finding_count": 65,
+          "max_rss_kib": 60404,
+          "position": 1,
+          "repetition": 1,
+          "solves": 156228
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 65,
+          "elapsed_seconds": 21.51,
+          "finding_count": 65,
+          "max_rss_kib": 34212,
+          "position": 2,
+          "repetition": 1,
+          "solves": 156228
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 65,
+          "elapsed_seconds": 21.62,
+          "finding_count": 65,
+          "max_rss_kib": 33060,
+          "position": 1,
+          "repetition": 2,
+          "solves": 156228
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 65,
+          "elapsed_seconds": 98.77,
+          "finding_count": 65,
+          "max_rss_kib": 61592,
+          "position": 2,
+          "repetition": 2,
+          "solves": 156228
+        }
+      ]
+    },
+    {
+      "classification": "complete",
+      "coverage": {
+        "analyzed": 15,
+        "boundary": "fixed-work-limit",
+        "reachable": 21
+      },
+      "high": 0,
+      "point": "prefix-15",
+      "policy": "site-hash-0",
+      "runs": [
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 114,
+          "elapsed_seconds": 219.22,
+          "finding_count": 114,
+          "max_rss_kib": 67976,
+          "position": 1,
+          "repetition": 1,
+          "solves": 320485
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 114,
+          "elapsed_seconds": 266.92,
+          "finding_count": 114,
+          "max_rss_kib": 95764,
+          "position": 2,
+          "repetition": 1,
+          "solves": 320485
+        },
+        {
+          "backend": "axeyum",
+          "diagnostic_finding_count": 114,
+          "elapsed_seconds": 266.58,
+          "finding_count": 114,
+          "max_rss_kib": 95880,
+          "position": 1,
+          "repetition": 2,
+          "solves": 320485
+        },
+        {
+          "backend": "z3",
+          "diagnostic_finding_count": 114,
+          "elapsed_seconds": 219.15,
+          "finding_count": 114,
+          "max_rss_kib": 68460,
+          "position": 2,
+          "repetition": 2,
+          "solves": 320485
+        }
+      ]
+    }
+  ],
+  "common_completed_prefix": 10,
+  "executed_cell_count": 15,
+  "expected_cell_count": 15,
+  "failures": [
+    "prefix-15/site-hash-1 is a protocol failure"
+  ],
+  "first_resource_bound": null,
+  "high_confidence_finding_count": 0,
+  "matrix_complete": false,
+  "per_policy_completed_prefix": {
+    "any-model": 15,
+    "max-unsigned": 15,
+    "min-unsigned": 15,
+    "site-hash-0": 15,
+    "site-hash-1": 10
+  },
+  "registration_sha256": "dc7be000b2f38216011dc31b465c6abccf57d2d9a35ed185289e7f72c7a280c8",
+  "schema": "axeyum.glaurung-usbprint-frontier-analysis.v1"
+}

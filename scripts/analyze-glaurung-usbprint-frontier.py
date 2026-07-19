@@ -71,8 +71,17 @@ def _validate_complete_report(
         failures.append(f"{label}: wrong acceptance population")
     if report.get("all_drivers_exact_high_confidence_finding_parity") is not True:
         failures.append(f"{label}: lacks high-confidence authority parity")
-    if report.get("concretization_policy_id") != policy["policy_id"]:
-        failures.append(f"{label}: policy identity differs")
+    expected_top_level_policy = (
+        None if policy["harness_choice"] is None else policy["policy_id"]
+    )
+    expected_policy_source = (
+        "default" if policy["harness_choice"] is None else "preferred"
+    )
+    if (
+        report.get("concretization_policy_id") != expected_top_level_policy
+        or report.get("concretization_policy_source") != expected_policy_source
+    ):
+        failures.append(f"{label}: policy identity or selection source differs")
     if not _clean_identity(report.get("glaurung"), registration["glaurung_revision"]):
         failures.append(f"{label}: Glaurung source identity differs")
     if not _clean_identity(report.get("axeyum")):

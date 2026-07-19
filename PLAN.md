@@ -309,14 +309,22 @@ session state.
 > symbolic-address memory gated off; only genuinely broader labeled evidence
 > can reopen that one architectural project. BoundarySet/DiverseEnum remain
 > settings of the same A0 surface, not follow-on research programs.
-> ADR-0249 now preregisters usbprint's separately tracked resource frontier
-> without changing the failed complete-driver cell. The exact point-major
-> sequence runs all five policies at 5, then 10, then 15 analyzed functions
-> under deterministic work limits and final corrected Glaurung `7f682e5`.
-> Acceptance requires a complete common policy prefix; a four-run exact
-> in-process deadline may bound the next point but is never counted as zero
-> output or a solver disagreement. Commit and run this protocol from clean
-> detached Axeyum source before observing any new cell.
+> ADR-0249's exact clean-detached `f9511525` run now rejects at its protocol
+> gate after executing all 15 cells. Fourteen cells complete, all five policies
+> establish a common prefix of 10, and four complete prefix 15; the final
+> prefix-15/site-hash-one cell has identical 91/0 raw/high output across both
+> authorities and repetitions but Axeyum canonical work drifts from
+> 522,032 solves / 7,951 attempts to 522,296 / 7,955. This is not the
+> preregistered exact four-run resource bracket, so the aggregate records no
+> resource bound and remains rejected. Post-result-only Glaurung instrumentation
+> at isolated candidate `ff3c0a7` attributes the drift to a concealed inner
+> symbolic-worklist wall deadline: 40 worklists partition as 36 complete, three
+> state-budget stops, and one deadline stop, while the same 91 diagnostics and
+> zero high-confidence rows remain. Outer analyzed-function count is therefore
+> not a sufficient fixed-work boundary. Preserve the rejected artifact; future
+> evidence must require explicit exploration-stop telemetry and zero deadline/
+> timeout stops rather than adapting ADR-0249's observed bounds. This result
+> makes no solver-speed or recall claim and does not reopen symbolic memory.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end

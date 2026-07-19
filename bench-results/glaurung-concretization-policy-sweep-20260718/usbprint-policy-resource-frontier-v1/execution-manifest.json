@@ -1,0 +1,253 @@
+{
+  "authority_binaries": {
+    "axeyum": {
+      "path": "/tmp/glaurung-policy-sweep-v3-axeyum-ioctlance",
+      "sha256": "ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd"
+    },
+    "z3": {
+      "path": "/tmp/glaurung-policy-sweep-v3-z3-ioctlance",
+      "sha256": "027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e"
+    }
+  },
+  "axeyum": {
+    "revision": "f951152517a6bdcf0410d88c48c2cc3a167cac6a",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cell_order": [
+    [
+      "prefix-5",
+      "any-model"
+    ],
+    [
+      "prefix-5",
+      "min-unsigned"
+    ],
+    [
+      "prefix-5",
+      "max-unsigned"
+    ],
+    [
+      "prefix-5",
+      "site-hash-0"
+    ],
+    [
+      "prefix-5",
+      "site-hash-1"
+    ],
+    [
+      "prefix-10",
+      "any-model"
+    ],
+    [
+      "prefix-10",
+      "min-unsigned"
+    ],
+    [
+      "prefix-10",
+      "max-unsigned"
+    ],
+    [
+      "prefix-10",
+      "site-hash-0"
+    ],
+    [
+      "prefix-10",
+      "site-hash-1"
+    ],
+    [
+      "prefix-15",
+      "any-model"
+    ],
+    [
+      "prefix-15",
+      "min-unsigned"
+    ],
+    [
+      "prefix-15",
+      "max-unsigned"
+    ],
+    [
+      "prefix-15",
+      "site-hash-0"
+    ],
+    [
+      "prefix-15",
+      "site-hash-1"
+    ]
+  ],
+  "cells": [
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 5,
+      "point": "prefix-5",
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "report": "prefix-5/any-model/report.json",
+      "report_sha256": "8d2e70cce1ded58d6e72237adc83e9118a827fc6e916e77f24a0aa456edb2179",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 5,
+      "point": "prefix-5",
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "report": "prefix-5/min-unsigned/report.json",
+      "report_sha256": "85ad193edfa3a5a4ba8ea4f0982543618db4a59f151321cd5145096c0373058e",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 5,
+      "point": "prefix-5",
+      "policy": "max-unsigned",
+      "policy_id": "glaurung-max-unsigned-v1",
+      "report": "prefix-5/max-unsigned/report.json",
+      "report_sha256": "31be93fa2ec51ff796f81ad6c5d09eb3bbad2e0cfcf13bc456ad097673e90211",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 5,
+      "point": "prefix-5",
+      "policy": "site-hash-0",
+      "policy_id": "glaurung-site-hash-0-v1",
+      "report": "prefix-5/site-hash-0/report.json",
+      "report_sha256": "dc65d60129a9b7f6cd66fd694fc88572d1d36a248c95cce0a7fcb42852d9dac9",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 5,
+      "point": "prefix-5",
+      "policy": "site-hash-1",
+      "policy_id": "glaurung-site-hash-1-v1",
+      "report": "prefix-5/site-hash-1/report.json",
+      "report_sha256": "0a34e9a84bcda2a502c050a1c6a823a8978e39caa5fc8259d2c47dbd4685147c",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 10,
+      "point": "prefix-10",
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "report": "prefix-10/any-model/report.json",
+      "report_sha256": "2feba1cf410e5243cad5dde0e5a81ab6548cb1dbdc9fcd7bd5ae6f8e58ebb2ab",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 10,
+      "point": "prefix-10",
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "report": "prefix-10/min-unsigned/report.json",
+      "report_sha256": "7d0036f59ad84cedaf8a3466d68bf88b80e881b452d09029d28fdbc6949b50f6",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 10,
+      "point": "prefix-10",
+      "policy": "max-unsigned",
+      "policy_id": "glaurung-max-unsigned-v1",
+      "report": "prefix-10/max-unsigned/report.json",
+      "report_sha256": "ac8860b09e1384f29fa6fa6e46f419c34730418d5f6204b3b49edc238bd59012",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 10,
+      "point": "prefix-10",
+      "policy": "site-hash-0",
+      "policy_id": "glaurung-site-hash-0-v1",
+      "report": "prefix-10/site-hash-0/report.json",
+      "report_sha256": "8592b3f20f0e4102815b3b9033116198966f750f49410b01bef2bde6134bec28",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 10,
+      "point": "prefix-10",
+      "policy": "site-hash-1",
+      "policy_id": "glaurung-site-hash-1-v1",
+      "report": "prefix-10/site-hash-1/report.json",
+      "report_sha256": "03c32c447230c45cbb17a360c1dc7cdd1cd1fd1b58a02b84bb3c84fcbcaca7c5",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 15,
+      "point": "prefix-15",
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "report": "prefix-15/any-model/report.json",
+      "report_sha256": "8371682bdc7ac24918dbe76db310e76064157f118f519514b4c3985c1c6883d3",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 15,
+      "point": "prefix-15",
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "report": "prefix-15/min-unsigned/report.json",
+      "report_sha256": "6a6063a919969359e951aa7662a02052dcbee6e9f9da5c9ec76f779d91f4811c",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 15,
+      "point": "prefix-15",
+      "policy": "max-unsigned",
+      "policy_id": "glaurung-max-unsigned-v1",
+      "report": "prefix-15/max-unsigned/report.json",
+      "report_sha256": "287ecc9aec3945b454010cb5a8a3b129e44e30001c806742c1f96b14eb944149",
+      "returncode": 0
+    },
+    {
+      "classification": "complete",
+      "max_analyzed_functions": 15,
+      "point": "prefix-15",
+      "policy": "site-hash-0",
+      "policy_id": "glaurung-site-hash-0-v1",
+      "report": "prefix-15/site-hash-0/report.json",
+      "report_sha256": "a37c867c5662ede4e3ea484a7b741761235c685f2d99b9798b4c0ac599045b29",
+      "returncode": 0
+    },
+    {
+      "classification": "protocol-failure",
+      "max_analyzed_functions": 15,
+      "point": "prefix-15",
+      "policy": "site-hash-1",
+      "policy_id": "glaurung-site-hash-1-v1",
+      "report": "prefix-15/site-hash-1/report.json",
+      "report_sha256": "97acdffc778a58cd5bf8d51a55164848f4b746d92b749bcdfb3d5d88239a876a",
+      "returncode": 1
+    }
+  ],
+  "driver": {
+    "path": "/nas4/data/workspace-infosec/cold-hunt-durable/nucbox-25h2/System32/drivers/usbprint.sys",
+    "sha256": "3eb6b8172849290bac6ff548b53fbf78c37c6f68a22bdc604b12418d1b22a968"
+  },
+  "glaurung": {
+    "revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "post_run_axeyum": {
+    "revision": "f951152517a6bdcf0410d88c48c2cc3a167cac6a",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "post_run_glaurung": {
+    "revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "registration_sha256": "dc7be000b2f38216011dc31b465c6abccf57d2d9a35ed185289e7f72c7a280c8",
+  "schema": "axeyum.glaurung-usbprint-frontier-execution.v1",
+  "source_identity_stable": true
+}
