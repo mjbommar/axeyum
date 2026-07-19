@@ -1,0 +1,627 @@
+{
+  "acceptance_population": "high-confidence",
+  "accepted": true,
+  "all_drivers_exact_finding_parity": true,
+  "all_drivers_exact_high_confidence_finding_parity": true,
+  "all_drivers_exact_raw_finding_parity": true,
+  "axeyum": {
+    "path": "/tmp/axeyum-confidence-measure.DTLYOz",
+    "revision": "593cc582a8d533989e7a2aa678674669f392e26e",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "binaries": {
+    "axeyum": {
+      "path": "/tmp/glaurung-confidence-axeyum-ioctlance",
+      "sha256": "4d43aa1c61e59b8e6e84c05c4435c4c5ffffd4c2c56334a4999a97b2b9f85fa6"
+    },
+    "z3": {
+      "path": "/tmp/glaurung-confidence-z3-ioctlance",
+      "sha256": "4b59501a1cb0e2322d1812445cc305782e89bf2053d7a023352400bc769ca485"
+    }
+  },
+  "canonical_model_choice_policy": null,
+  "canonical_model_choice_required": false,
+  "check_timeout_ms_required": 250,
+  "drivers": [
+    {
+      "driver": {
+        "path": "/nas4/data/workspace-infosec/glaurung/samples/binaries/platforms/windows/vendor/realworld/sqfs-intel-DptfDevGen.sys",
+        "sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b"
+      },
+      "runs": [
+        {
+          "analysis_roots": 8,
+          "analyzed": 6,
+          "average_us_per_solve": 902.2,
+          "backend": "z3",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "complete",
+          "diagnostic_finding_count": 17,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "elapsed_seconds": 0.58,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 17,
+          "findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 58252,
+          "position": 1,
+          "repetition": 1,
+          "reported_high_confidence": 0,
+          "reported_lines": 17,
+          "reported_raw": 17,
+          "reported_suppressed": 17,
+          "solver_time_ms": 506.1,
+          "solves": 561,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 8,
+          "analyzed": 6,
+          "average_us_per_solve": 241.5,
+          "backend": "axeyum",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "complete",
+          "diagnostic_finding_count": 17,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "elapsed_seconds": 0.18,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 17,
+          "findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 28980,
+          "position": 2,
+          "repetition": 1,
+          "reported_high_confidence": 0,
+          "reported_lines": 17,
+          "reported_raw": 17,
+          "reported_suppressed": 17,
+          "solver_time_ms": 135.5,
+          "solves": 561,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 8,
+          "analyzed": 6,
+          "average_us_per_solve": 243.7,
+          "backend": "axeyum",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "complete",
+          "diagnostic_finding_count": 17,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "elapsed_seconds": 0.17,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 17,
+          "findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 29072,
+          "position": 1,
+          "repetition": 2,
+          "reported_high_confidence": 0,
+          "reported_lines": 17,
+          "reported_raw": 17,
+          "reported_suppressed": 17,
+          "solver_time_ms": 136.7,
+          "solves": 561,
+          "time_exit": 0
+        },
+        {
+          "analysis_roots": 8,
+          "analyzed": 6,
+          "average_us_per_solve": 872.5,
+          "backend": "z3",
+          "canonical_model_choice": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "check_timeout_ms": 250,
+          "confidence_partition_available": true,
+          "coverage_boundary": "complete",
+          "diagnostic_finding_count": 17,
+          "diagnostic_findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "elapsed_seconds": 0.53,
+          "finding_confidence_schema": "glaurung-ioctlance-confidence-v1",
+          "finding_count": 17,
+          "findings": [
+            "   arbitrary-write  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "  integer-overflow  va=0x1400010ce  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001123  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001127  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000112f  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001133  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113a  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x14000113e  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "   arbitrary-write  va=0x140001142  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Constrained  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010cb  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x1400010f0  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001101  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "        null-deref  va=0x140001120  [handler] fn=sub_1400010a0 @ 0x1400010a0  sev=Arbitrary  taint=[\"Arg0\"]",
+            "   arbitrary-rdmsr  va=0x14000d41f  [handler] fn=sub_14000d3a0 @ 0x14000d3a0  sev=Constrained  taint=[\"Arg0\"]"
+          ],
+          "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+          "high_confidence_finding_count": 0,
+          "high_confidence_findings": [],
+          "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+          "max_rss_kib": 58140,
+          "position": 2,
+          "repetition": 2,
+          "reported_high_confidence": 0,
+          "reported_lines": 17,
+          "reported_raw": 17,
+          "reported_suppressed": 17,
+          "solver_time_ms": 489.5,
+          "solves": 561,
+          "time_exit": 0
+        }
+      ],
+      "summary": {
+        "axeyum_only": [],
+        "axeyum_warm_execution": null,
+        "axeyum_warm_telemetry_available": false,
+        "axeyum_warm_telemetry_note": "the Glaurung example prints warm lifecycle rows only when both solver features are compiled; the Axeyum-only authority binary does not expose them",
+        "backends": {
+          "axeyum": {
+            "analysis_roots": 8,
+            "analyzed": 6,
+            "diagnostic_finding_count": 17,
+            "diagnostic_finding_counts": [
+              17,
+              17
+            ],
+            "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+            "elapsed_seconds": [
+              0.18,
+              0.17
+            ],
+            "finding_count": 17,
+            "finding_counts": [
+              17,
+              17
+            ],
+            "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+            "findings_sha256_per_run": [
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+            ],
+            "high_confidence_finding_count": 0,
+            "high_confidence_finding_counts": [
+              0,
+              0
+            ],
+            "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+            "max_rss_kib": [
+              28980,
+              29072
+            ],
+            "solver_time_median_ms": 136.1,
+            "solver_time_ms": [
+              135.5,
+              136.7
+            ],
+            "solves": [
+              561,
+              561
+            ]
+          },
+          "z3": {
+            "analysis_roots": 8,
+            "analyzed": 6,
+            "diagnostic_finding_count": 17,
+            "diagnostic_finding_counts": [
+              17,
+              17
+            ],
+            "diagnostic_findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+            "elapsed_seconds": [
+              0.58,
+              0.53
+            ],
+            "finding_count": 17,
+            "finding_counts": [
+              17,
+              17
+            ],
+            "findings_sha256": "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+            "findings_sha256_per_run": [
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c",
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+            ],
+            "high_confidence_finding_count": 0,
+            "high_confidence_finding_counts": [
+              0,
+              0
+            ],
+            "high_confidence_findings_sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+            "max_rss_kib": [
+              58252,
+              58140
+            ],
+            "solver_time_median_ms": 497.8,
+            "solver_time_ms": [
+              506.1,
+              489.5
+            ],
+            "solves": [
+              561,
+              561
+            ]
+          }
+        },
+        "canonical_model_choice": {
+          "backends": {
+            "axeyum": {
+              "attempts": 0,
+              "completed": 0,
+              "error": 0,
+              "final_unsat": 0,
+              "inconclusive": 0,
+              "infeasible": 0,
+              "no_solver": 0,
+              "policy": "glaurung-any-model-v1",
+              "probes": 0,
+              "unknown": 0,
+              "unsupported_width": 0
+            },
+            "z3": {
+              "attempts": 0,
+              "completed": 0,
+              "error": 0,
+              "final_unsat": 0,
+              "inconclusive": 0,
+              "infeasible": 0,
+              "no_solver": 0,
+              "policy": "glaurung-any-model-v1",
+              "probes": 0,
+              "unknown": 0,
+              "unsupported_width": 0
+            }
+          },
+          "policy": "glaurung-any-model-v1"
+        },
+        "check_timeout_ms": 250,
+        "confidence_partition_available": true,
+        "coverage": {
+          "analyzed": 6,
+          "boundary": "complete",
+          "reachable": 8
+        },
+        "diagnostic": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 17,
+              "union_finding_count": 17,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 17,
+              "union_finding_count": 17,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 17,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "exact_finding_parity": true,
+        "exact_high_confidence_finding_parity": true,
+        "exact_raw_finding_parity": true,
+        "high_confidence": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 0,
+              "union_finding_count": 0,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 0,
+              "union_finding_count": 0,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 0,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "raw": {
+          "axeyum_only": [],
+          "exact_finding_parity": true,
+          "stability": {
+            "axeyum": {
+              "distinct_hashes": [
+                "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 17,
+              "union_finding_count": 17,
+              "unstable_findings": []
+            },
+            "z3": {
+              "distinct_hashes": [
+                "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+              ],
+              "output_stable": true,
+              "stable_finding_count": 17,
+              "union_finding_count": 17,
+              "unstable_findings": []
+            }
+          },
+          "stable_intersection_count": 17,
+          "within_backend_stable": true,
+          "z3_only": []
+        },
+        "stability": {
+          "axeyum": {
+            "distinct_hashes": [
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+            ],
+            "output_stable": true,
+            "stable_finding_count": 17,
+            "union_finding_count": 17,
+            "unstable_findings": []
+          },
+          "z3": {
+            "distinct_hashes": [
+              "4f23929cadbb7ec47c6cc64706cc6e20ff6025a721ac13375a4649f9112e6f5c"
+            ],
+            "output_stable": true,
+            "stable_finding_count": 17,
+            "union_finding_count": 17,
+            "unstable_findings": []
+          }
+        },
+        "stable_intersection_count": 17,
+        "within_backend_stable": true,
+        "z3_only": []
+      },
+      "summary_error": null
+    }
+  ],
+  "environment": {
+    "GLAURUNG_CHECK_TIMEOUT_MS": "250",
+    "IOCTLANCE_ALL": "1",
+    "IOCTLANCE_ANNOTATE_CONFIDENCE": "1",
+    "IOCTLANCE_DEADLINE_SECS": "300",
+    "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
+    "IOCTLANCE_SOLVE_BUDGET": "20000",
+    "IOCTLANCE_SOLVE_SECS": "60"
+  },
+  "failures": [],
+  "glaurung": {
+    "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+    "revision": "931d8a844c7ffeb4e96d9b7ab4834b7be1ef9701",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
+  "post_run_source_identity": {
+    "axeyum": {
+      "path": "/tmp/axeyum-confidence-measure.DTLYOz",
+      "revision": "593cc582a8d533989e7a2aa678674669f392e26e",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "glaurung": {
+      "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+      "revision": "931d8a844c7ffeb4e96d9b7ab4834b7be1ef9701",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stable": true
+  },
+  "process_timeout_seconds": 360,
+  "repetitions": 2,
+  "schema": "axeyum.glaurung-authoritative-finding-parity.v5"
+}
