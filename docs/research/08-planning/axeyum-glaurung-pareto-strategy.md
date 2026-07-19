@@ -355,12 +355,14 @@ support anyway.
 
 **Phase 0 -- Make concretization configurable (complete). The enabling refactor.**
 - A0: extract `ConcretizationPolicy` at the two seams; implement `AnyModel`
-  (behavior-preserving default), `LeastUnsigned`, `BoundarySet`; select by env;
+  (behavior-preserving default) plus selectable scalar policies; select by env;
   write the policy name into the trace. **Gate:** existing runs reproduce
   byte-for-byte under `AnyModel`; a second policy is selectable and observably
   changes the trace tag. Glaurung's isolated A0 branch satisfies this gate for
-  AnyModel plus the existing least/greatest/site settings. BoundarySet remains
-  unimplemented execution configuration, not a separate research project.
+  AnyModel plus least/greatest/site-hash-zero/site-hash-one. BoundarySet and
+  DiverseEnum remain settings of this same policy surface, not separate research
+  projects, but their set-valued choices require bounded successor forking and
+  are not executable cells at `b79f269`.
 
 **Phase 1 -- Make the comparison honest and reproducible (weeks).**
 - A1 work-bounded timeout (config); B1 fair four-cell on small-formula drivers +
@@ -376,17 +378,20 @@ support anyway.
   positive fixtures under both authorities. Use that population as a mandatory
   no-regression stratum, not as evidence that value selection changes recall.
 
-**Phase 2 -- Recover coverage reproducibly (a sweep, then symcrete if needed).**
-- Run the A0 policy sweep across the driver corpus: {AnyModel, LeastUnsigned,
-  GreatestUnsigned, BoundarySet, DiverseEnum} x backends, measuring coverage /
+**Phase 2 -- Recover coverage reproducibly (a sweep, then conditional memory-model work).**
+- Run the initial A0 policy sweep across the driver corpus using the five
+  executable cells at `b79f269`: {AnyModel, LeastUnsigned, GreatestUnsigned,
+  SiteHashZero, SiteHashOne} x backends, measuring coverage /
   reproducibility / solve-cost with ADR-0243's 14/14 source-backed population as
   a hard regression stratum. Report policy-dependent real-driver rows as a
   separate unlabeled discovery population until independently validated.
   Report raw, confidence-gated, and validated populations independently; never
   use raw `>= AnyModel` as an acceptance gate. C1 WASM number. **Gate:** an exact,
   reproducible configuration sweep with explicit validated recall, work, time,
-  and memory tradeoffs. Advance to A2' only if this cheap sweep leaves a
-  measured aliasing-related coverage gap.
+  and memory tradeoffs. Extend it with BoundarySet/DiverseEnum only after bounded
+  multi-successor execution exists; do not approximate either policy by choosing
+  one value. Advance to memory-model work only if the cheap policy sweep leaves
+  a measured, validated coverage gap.
 
 **Phase 3 -- The structural lever, only if A2' leaves headroom (month+).**
 - A2 fully symbolic memory (memsight-style); B2 abstraction-refinement for

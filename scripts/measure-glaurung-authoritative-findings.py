@@ -21,6 +21,8 @@ CANONICAL_MODEL_POLICIES = {
     "site-hash-0": "glaurung-site-hash-0-v1",
     "site-hash-1": "glaurung-site-hash-1-v1",
 }
+CONCRETIZATION_POLICY_ENV = "GLAURUNG_CONCRETIZATION_POLICY"
+LEGACY_CANONICAL_MODEL_CHOICE_ENV = "GLAURUNG_CANONICAL_MODEL_CHOICE"
 SYMBOLIC_RE = re.compile(
     r"\[symbolic\] \S+\s+raw=(\d+) high-confidence=(\d+) suppressed=(\d+).*"
     r"analyzed=(\d+)/(\d+)(.*)"
@@ -43,6 +45,42 @@ FINDING_CONFIDENCE_RE = re.compile(
 )
 FINDING_CONFIDENCE_SUFFIX_RE = re.compile(r"\tconfidence=([^\t]+)$")
 FINDING_CONFIDENCE_SCHEMA = "glaurung-ioctlance-confidence-v1"
+
+
+def resolve_policy_configuration(
+    preferred: str | None, legacy: str | None
+) -> dict[str, Any]:
+    """Resolve one explicit deterministic policy surface without ambiguity."""
+
+    if preferred is not None and legacy is not None:
+        raise RuntimeError(
+            f"both {CONCRETIZATION_POLICY_ENV} and "
+            f"{LEGACY_CANONICAL_MODEL_CHOICE_ENV} were requested; configure exactly one"
+        )
+    if preferred is not None:
+        if preferred not in CANONICAL_MODEL_POLICIES:
+            raise RuntimeError(f"unsupported concretization policy: {preferred}")
+        return {
+            "environment": {CONCRETIZATION_POLICY_ENV: preferred},
+            "label": preferred,
+            "policy_id": CANONICAL_MODEL_POLICIES[preferred],
+            "source": "preferred",
+        }
+    if legacy is not None:
+        if legacy not in CANONICAL_MODEL_POLICIES:
+            raise RuntimeError(f"unsupported legacy canonical policy: {legacy}")
+        return {
+            "environment": {LEGACY_CANONICAL_MODEL_CHOICE_ENV: legacy},
+            "label": legacy,
+            "policy_id": CANONICAL_MODEL_POLICIES[legacy],
+            "source": "legacy",
+        }
+    return {
+        "environment": {},
+        "label": None,
+        "policy_id": None,
+        "source": "default",
+    }
 
 
 def file_sha256(path: Path) -> str:
@@ -271,7 +309,8 @@ def run_one(
         "GLAURUNG_FAIR_SHADOW",
         "GLAURUNG_AXEYUM_PROFILE_DIR",
         "GLAURUNG_ORDERED_TRACE_DIR",
-        "GLAURUNG_CANONICAL_MODEL_CHOICE",
+        CONCRETIZATION_POLICY_ENV,
+        LEGACY_CANONICAL_MODEL_CHOICE_ENV,
         "GLAURUNG_CHECK_TIMEOUT_MS",
     ):
         environment.pop(inherited, None)
@@ -752,7 +791,16 @@ def main() -> None:
     parser.add_argument("--solve-budget", type=int, default=20000)
     parser.add_argument("--solve-secs", type=int, default=60)
     parser.add_argument("--process-timeout-secs", type=int, default=600)
-    parser.add_argument(
+    policy_group = parser.add_mutually_exclusive_group()
+    policy_group.add_argument(
+        "--concretization-policy",
+        choices=tuple(CANONICAL_MODEL_POLICIES),
+        help=(
+            "select and require one first-class deterministic concretization "
+            "policy through GLAURUNG_CONCRETIZATION_POLICY"
+        ),
+    )
+    policy_group.add_argument(
         "--canonical-model-choice",
         nargs="?",
         const="min-unsigned",
@@ -819,15 +867,11 @@ def main() -> None:
         "IOCTLANCE_SOLVE_BUDGET": str(args.solve_budget),
         "IOCTLANCE_SOLVE_SECS": str(args.solve_secs),
     }
-    required_canonical_model_policy = (
-        CANONICAL_MODEL_POLICIES[args.canonical_model_choice]
-        if args.canonical_model_choice is not None
-        else None
+    policy_configuration = resolve_policy_configuration(
+        args.concretization_policy, args.canonical_model_choice
     )
-    if args.canonical_model_choice is not None:
-        common_environment["GLAURUNG_CANONICAL_MODEL_CHOICE"] = (
-            args.canonical_model_choice
-        )
+    required_canonical_model_policy = policy_configuration["policy_id"]
+    common_environment.update(policy_configuration["environment"])
     if args.check_timeout_ms is not None:
         common_environment["GLAURUNG_CHECK_TIMEOUT_MS"] = str(args.check_timeout_ms)
     if args.max_analyzed_functions is not None:
@@ -913,6 +957,9 @@ def main() -> None:
         "process_timeout_seconds": args.process_timeout_secs,
         "canonical_model_choice_required": required_canonical_model_policy is not None,
         "canonical_model_choice_policy": required_canonical_model_policy,
+        "concretization_policy_source": policy_configuration["source"],
+        "concretization_policy_label": policy_configuration["label"],
+        "concretization_policy_id": policy_configuration["policy_id"],
         "check_timeout_ms_required": args.check_timeout_ms,
         "acceptance_population": args.acceptance_population,
         "repetitions": args.repetitions,

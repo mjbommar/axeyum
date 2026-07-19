@@ -126,6 +126,37 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             "glaurung-site-hash-1-v1",
         )
 
+    def test_prefers_first_class_concretization_policy_configuration(self) -> None:
+        preferred = MODULE.resolve_policy_configuration("site-hash-0", None)
+        self.assertEqual(
+            preferred,
+            {
+                "environment": {
+                    "GLAURUNG_CONCRETIZATION_POLICY": "site-hash-0"
+                },
+                "label": "site-hash-0",
+                "policy_id": "glaurung-site-hash-0-v1",
+                "source": "preferred",
+            },
+        )
+        legacy = MODULE.resolve_policy_configuration(None, "max-unsigned")
+        self.assertEqual(
+            legacy["environment"],
+            {"GLAURUNG_CANONICAL_MODEL_CHOICE": "max-unsigned"},
+        )
+        self.assertEqual(legacy["source"], "legacy")
+        self.assertEqual(
+            MODULE.resolve_policy_configuration(None, None),
+            {
+                "environment": {},
+                "label": None,
+                "policy_id": None,
+                "source": "default",
+            },
+        )
+        with self.assertRaisesRegex(RuntimeError, "configure exactly one"):
+            MODULE.resolve_policy_configuration("min-unsigned", "max-unsigned")
+
     def test_rejects_missing_or_unexercised_canonical_model_choice(self) -> None:
         with self.assertRaisesRegex(RuntimeError, "missing canonical-model-choice"):
             MODULE.parse_canonical_model_choice(
