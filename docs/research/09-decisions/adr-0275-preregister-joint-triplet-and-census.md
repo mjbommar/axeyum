@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; zero ADR-0275 processes
+Result state: Phase A accepted; zero Phase B census processes
 
 ## Context
 
@@ -46,6 +46,17 @@ authority outcome hash
 byte-identical findings/outer work, all six cells decided and agreeing, direct
 warm execution, and zero resource/wall/other/operational/fallback/deadline
 rows. A failure rejects ADR-0275 and Phase B must not start.
+
+### Observed Phase A gate
+
+All 3/3 joint-triplet processes complete and validate. Every cell decides and
+agrees on 4,846/4,846 checks with direct warm execution and zero resource,
+wall, other, operational, fallback, or deadline row. Authority identity/outcome
+and finding hashes reproduce ADR-0274 exactly. The Phase A campaign and report
+hash to `ec1e15f3664f85887c67e758d93770a263536ce3057f1e6fb4e60e26364ed05b`
+and `f1d0d74ca95f669e6403137f4ca2c6cf14b492516efc9e27cb8f8b604794af4a`.
+Phase B is therefore authorized without changing any preregistered value; zero
+Phase B process existed at this checkpoint.
 
 ### Phase B: full bounded census
 

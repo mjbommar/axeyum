@@ -363,9 +363,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   its two-phase fail-closed tooling now freezes the exact three-process triplet
   per phase, prevents Phase B unless the accepted Phase A campaign hash remains
   unchanged, and distinguishes the 20/338 work boundary from complete 338/338
-  coverage. Freeze this zero-row tooling commit, then preflight and run Phase A.
-  A1 remains configuration/measurement, A0 remains complete, and symbolic
-  memory remains closed.
+  coverage. Phase A now passes 3/3: all six cells decide 4,846/4,846, direct
+  warm execution holds, and authority/finding identities reproduce exactly;
+  campaign/report hashes are `ec1e15f3...ed05b` / `f1d0d74c...4af4a`.
+  No Phase B row exists at this checkpoint. The unchanged 338/338 N=3 census is
+  now authorized. A1 remains configuration/measurement, A0 remains complete,
+  and symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves
