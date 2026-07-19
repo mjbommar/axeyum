@@ -1,0 +1,103 @@
+{
+  "acceptance_population": "high-confidence",
+  "accepted": false,
+  "all_drivers_exact_finding_parity": false,
+  "all_drivers_exact_high_confidence_finding_parity": false,
+  "all_drivers_exact_raw_finding_parity": false,
+  "axeyum": {
+    "path": "/tmp/axeyum-concretization-sweep.qulpGp",
+    "revision": "234c6678c0521e30a8a92c76a0abf7758fc01395",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "binaries": {
+    "axeyum": {
+      "path": "/tmp/glaurung-system-buffer-axeyum-ioctlance",
+      "sha256": "1436e483d67d80e523cae920e16d7958486fb30ca7523c40a340de157b6bf240"
+    },
+    "z3": {
+      "path": "/tmp/glaurung-system-buffer-z3-ioctlance",
+      "sha256": "7221037f57bd9a650ad9e8fc9da0b7a2fbfb07024d97c17ce16c11c72b2017aa"
+    }
+  },
+  "canonical_model_choice_policy": "glaurung-min-unsigned-v1",
+  "canonical_model_choice_required": true,
+  "check_timeout_ms_required": 250,
+  "concretization_policy_id": "glaurung-min-unsigned-v1",
+  "concretization_policy_label": "min-unsigned",
+  "concretization_policy_source": "preferred",
+  "drivers": [
+    {
+      "driver": {
+        "path": "/nas4/data/workspace-infosec/cold-hunt-durable/nucbox-25h2/System32/drivers/usbprint.sys",
+        "sha256": "3eb6b8172849290bac6ff548b53fbf78c37c6f68a22bdc604b12418d1b22a968"
+      },
+      "runs": [
+        {
+          "backend": "z3",
+          "position": 1,
+          "repetition": 1,
+          "run_error": "analysis hit the wall-clock safety deadline"
+        },
+        {
+          "backend": "axeyum",
+          "position": 2,
+          "repetition": 1,
+          "run_error": "analysis hit the wall-clock safety deadline"
+        },
+        {
+          "backend": "axeyum",
+          "position": 1,
+          "repetition": 2,
+          "run_error": "analysis hit the wall-clock safety deadline"
+        },
+        {
+          "backend": "z3",
+          "position": 2,
+          "repetition": 2,
+          "run_error": "analysis hit the wall-clock safety deadline"
+        }
+      ],
+      "summary": null,
+      "summary_error": "process failures: z3 repetition 1 position 1, axeyum repetition 1 position 2, axeyum repetition 2 position 1, z3 repetition 2 position 2"
+    }
+  ],
+  "environment": {
+    "GLAURUNG_CHECK_TIMEOUT_MS": "250",
+    "GLAURUNG_CONCRETIZATION_POLICY": "min-unsigned",
+    "IOCTLANCE_ALL": "1",
+    "IOCTLANCE_ANNOTATE_CONFIDENCE": "1",
+    "IOCTLANCE_DEADLINE_SECS": "300",
+    "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100",
+    "IOCTLANCE_SOLVE_BUDGET": "50000",
+    "IOCTLANCE_SOLVE_SECS": "120"
+  },
+  "failures": [
+    "/nas4/data/workspace-infosec/cold-hunt-durable/nucbox-25h2/System32/drivers/usbprint.sys: process failures: z3 repetition 1 position 1, axeyum repetition 1 position 2, axeyum repetition 2 position 1, z3 repetition 2 position 2"
+  ],
+  "glaurung": {
+    "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+    "revision": "b79f26959378f9b8ea51eee6f1b3809a4a234c84",
+    "tracked_dirty": false,
+    "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",
+  "post_run_source_identity": {
+    "axeyum": {
+      "path": "/tmp/axeyum-concretization-sweep.qulpGp",
+      "revision": "234c6678c0521e30a8a92c76a0abf7758fc01395",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "glaurung": {
+      "path": "/tmp/glaurung-concretization-a0.NEo0bV",
+      "revision": "b79f26959378f9b8ea51eee6f1b3809a4a234c84",
+      "tracked_dirty": false,
+      "tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stable": true
+  },
+  "process_timeout_seconds": 360,
+  "repetitions": 2,
+  "schema": "axeyum.glaurung-authoritative-finding-parity.v5"
+}

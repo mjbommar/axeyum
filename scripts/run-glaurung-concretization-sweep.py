@@ -204,6 +204,16 @@ def validate_registration(registration: dict[str, Any]) -> None:
         registration.get("schema") == REGISTRATION_SCHEMA,
         "unsupported preregistration schema",
     )
+    require(
+        isinstance(registration.get("acceptance"), dict),
+        "preregistration has no acceptance policy",
+    )
+    require(
+        isinstance(registration.get("claim_limits"), list)
+        and registration["claim_limits"]
+        and all(isinstance(row, str) and row for row in registration["claim_limits"]),
+        "preregistration has no claim limits",
+    )
     policies = registration.get("policies")
     require(isinstance(policies, list), "preregistration has no policy list")
     observed_policies = [

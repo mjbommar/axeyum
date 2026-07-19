@@ -40,6 +40,8 @@ def registration() -> dict:
         "source_manifest_sha256": "manifest-sha",
         "source_verified_file_count": 2,
         "authority_binary_sha256": {"z3": "z3-bin", "axeyum": "ax-bin"},
+        "acceptance": {"positive_control": "exact"},
+        "claim_limits": ["bounded synthetic test"],
         "policies": POLICIES,
         "strata": [
             {
@@ -260,6 +262,7 @@ class ConcretizationSweepAnalyzerTests(unittest.TestCase):
         reports, validations, hashes = inputs()
         result = MODULE.analyze_sweep(registration(), reports, validations, hashes)
         self.assertTrue(result["accepted"])
+        self.assertEqual(result["preregistered_claim_limits"], ["bounded synthetic test"])
         self.assertEqual(result["positive_control"]["validated_finding_count"], 2)
         self.assertEqual(
             result["positive_control"]["policies"]["min-unsigned"][

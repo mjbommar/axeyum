@@ -13,6 +13,58 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ConcretizationSweepRunnerTests(unittest.TestCase):
+    def test_validate_registration_requires_claim_contract(self) -> None:
+        registration = {
+            "schema": MODULE.REGISTRATION_SCHEMA,
+            "policies": [
+                {
+                    "label": label,
+                    "policy_id": policy_id,
+                    "harness_choice": harness_choice,
+                }
+                for label, policy_id, harness_choice in MODULE.EXPECTED_POLICIES
+            ],
+            "strata": [
+                {
+                    "name": "positive-control",
+                    "kind": "validated-positive",
+                    "driver_source": "source-manifest",
+                    "driver_sha256": ["positive-sha"],
+                    "work": {
+                        "repetitions": 2,
+                        "deadline_secs": 1,
+                        "max_analyzed_functions": 1,
+                        "solve_budget": 1,
+                        "solve_secs": 1,
+                        "process_timeout_secs": 1,
+                        "check_timeout_ms": 1,
+                    },
+                },
+                {
+                    "name": "tcpip-discovery",
+                    "kind": "unlabeled-discovery",
+                    "driver_source": "tcpip",
+                    "driver_sha256": ["tcpip-sha"],
+                    "work": {
+                        "repetitions": 2,
+                        "deadline_secs": 1,
+                        "max_analyzed_functions": 1,
+                        "solve_budget": 1,
+                        "solve_secs": 1,
+                        "process_timeout_secs": 1,
+                        "check_timeout_ms": 1,
+                    },
+                },
+            ],
+            "acceptance": {"positive_control": "exact"},
+            "claim_limits": ["bounded test campaign"],
+        }
+        MODULE.validate_registration(registration)
+
+        del registration["claim_limits"]
+        with self.assertRaisesRegex(RuntimeError, "claim limits"):
+            MODULE.validate_registration(registration)
+
     def test_measure_command_uses_preferred_policy_and_exact_work(self) -> None:
         policy = {
             "label": "min-unsigned",

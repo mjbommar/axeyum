@@ -430,6 +430,16 @@ def analyze_sweep(
     stratum_rows = registration.get("strata")
     require(isinstance(policy_rows, list) and policy_rows, "no policies preregistered")
     require(isinstance(stratum_rows, list) and stratum_rows, "no strata preregistered")
+    require(
+        isinstance(registration.get("acceptance"), dict),
+        "preregistered acceptance policy is missing",
+    )
+    require(
+        isinstance(registration.get("claim_limits"), list)
+        and registration["claim_limits"]
+        and all(isinstance(row, str) and row for row in registration["claim_limits"]),
+        "preregistered claim limits are missing",
+    )
     policies = {row["label"]: row for row in policy_rows}
     strata = {row["name"]: row for row in stratum_rows}
     require(len(policies) == len(policy_rows), "duplicate policy registration")
@@ -619,6 +629,8 @@ def analyze_sweep(
         "axeyum_revision": axeyum_identity["revision"] if axeyum_identity else None,
         "authority_binaries": binaries,
         "policy_order": list(policies),
+        "preregistered_acceptance": registration["acceptance"],
+        "preregistered_claim_limits": registration["claim_limits"],
         "positive_control": {
             "stratum": positive["name"],
             "validated_finding_count": expected_count,

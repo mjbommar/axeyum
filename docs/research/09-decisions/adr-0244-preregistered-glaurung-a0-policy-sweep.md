@@ -1,9 +1,9 @@
 # ADR-0244: Preregister the corrected Glaurung A0 policy sweep
 
-Status: proposed
+Status: deferred
 Date: 2026-07-18
 
-Result state: protocol preregistered; results pending
+Result state: v1 failed closed at the complete-usbprint policy-resource boundary
 
 ## Context
 
@@ -84,8 +84,14 @@ drift, confidence-partition corruption, population-hash corruption, and missing
 cost telemetry. The pre-run checkpoint has 39 passing tests across the runner,
 analyzer, authority harness, and source-backed validator.
 
-No sweep result has been observed at this decision point. Update this ADR only
-after the exact committed protocol either completes or fails closed.
+At preregistration, no sweep result had been observed. The exact committed run
+subsequently failed closed at minimum/complete-usbprint: all four order-balanced
+processes reported the 300-second wall-clock safety deadline. AnyModel had
+already cleared all three strata; minimum had cleared 14/14 positive validation
+and exact tcpip parity. The runner preserved the full partial attempt and did
+not execute maximum or either site-hash policy. ADR-0245 preregisters the full
+five-policy v2 matrix over the positive and tcpip strata while moving complete
+usbprint to a separately bounded resource frontier.
 
 ## Consequences
 
