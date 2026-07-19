@@ -353,9 +353,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   reuse every ADR-0273 source/binary/linkage/log gate and additionally reject
   any cross-tier authority identity, Z3 outcome, finding, or outer-work drift;
   3 focused shadow tests, 7 base calibration tests, and 20 paired-trace tests
-  pass. Freeze this zero-row tooling commit, then execute all 30 rows without
-  adaptation. A1 remains configuration/measurement, A0 remains complete, and
-  symbolic memory remains closed.
+  pass. All 30/30 rows now validate and reproduce one invariant 4,846-check
+  stream. ADR-0274 accepts Z3 100,000, Axeyum 32,768, and Bitwuzla 512;
+  campaign/analysis hashes are `0526f925...3ceb7` / `7b20e363...8cf6`. No
+  census row exists. Preregister and jointly reproduce the triplet before
+  freezing the 338-function census. A1 remains configuration/measurement, A0
+  remains complete, and symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves

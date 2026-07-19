@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; zero ADR-0274 processes
+Result state: executed and accepted; zero census rows
 
 ## Context
 
@@ -136,6 +136,23 @@ recall, precision, equal work, or cross-authority finding parity.
 
 ## Evidence
 
+### Observed result
+
+All 30/30 processes complete with validator-clean v4 traces and reproduce one
+4,846-check authority stream across every tier. The invariant identity/outcome
+hashes are `89d28a2978e4d9fc1bbba78bb1413a80fffc408c0bbc4dcef51b1eb6b5e1e928`
+and `f0b5580fcc6bba0accd6a91fc76a1373a60835af84c5982394ca9d6b3312fafa`.
+Campaign/analysis hashes are
+`0526f925aba7816e61df3598553f7bb0ed323a8b492f5d3e700add6ec193ceb7`
+and `7b20e363ee5558de02e5534e047c2645ffe8a65541be239754fc9fd03ad18cf6`;
+the compact result is [retained here](../../../bench-results/glaurung-fixed-authority-shadow-calibration-20260719/README.md).
+
+The selector accepts Axeyum 32,768 progress checks (tier 2) and Bitwuzla 512
+termination polls (tier 9), beside fixed Z3 rlimit 100,000. All selected
+cold/warm cells decide 4,846/4,846 with agreement. Every lower nondecision is
+resource-limit; wall/other/operational/fallback/deadline failures are zero. No
+census row exists.
+
 ADR-0273's retained result supplies the fixed-authority choice and the need for
 this separation:
 
@@ -162,9 +179,8 @@ this separation:
 
 ## Consequences
 
-The publication trajectory remains unchanged: correctness and deployability
-lead, the easy-driver neutral performance map is already closed, and this
-harder-driver experiment proceeds only under deterministic, common-population
-measurement. A1 stays configuration/measurement rather than a research
-program. A0 remains reproducibility infrastructure, and symbolic memory stays
-closed.
+The harder-driver experiment now has one common-population triplet, but a later
+zero-census ADR must jointly reproduce it and freeze the census before any
+338-function row. Correctness and deployability still lead; A1 remains
+configuration/measurement, A0 remains reproducibility infrastructure, and
+symbolic memory stays closed.
