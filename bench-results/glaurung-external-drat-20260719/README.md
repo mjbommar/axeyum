@@ -27,3 +27,8 @@ records the accepted result: the unchanged real pair verifies, while the same
 proof against the exact satisfiable control exits 1 with `s NOT VERIFIED`.
 ADR-0256 accepts this bounded interoperability/checker-sanity cell while keeping
 the trivial-proof limitation explicit.
+
+[`nontrivial-scan-no-selection/`](nontrivial-scan-no-selection/) records
+ADR-0257's fixed-cap follow-on. All 32 hash-ordered exports succeed, but every
+DRAT is again the same two-byte empty-clause proof; ADR-0258 retains the
+preregistered `no-selection` and closes further mining of this holdout.
