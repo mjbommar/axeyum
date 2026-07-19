@@ -1,0 +1,76 @@
+{
+  "artifacts": [
+    {
+      "path": "artifact-v34-run1.json",
+      "sha256": "b6d74d754ba6aa16a4d8b75581bf89fc0f180a4235d0e5f752b74e7b92e589ed"
+    },
+    {
+      "path": "artifact-v34-run2.json",
+      "sha256": "8bc8822becb5a88c29534a62cfa4d5896c8c7f22463a9b75d1311325e9ce32e6"
+    }
+  ],
+  "assurance_elapsed_distributions": [
+    {
+      "max_ms": 1500.4561270000002,
+      "mean_ms": 73.03276967583497,
+      "min_ms": 1.202243,
+      "p50_ms": 6.530298,
+      "p95_ms": 339.365463
+    },
+    {
+      "max_ms": 1500.497175,
+      "mean_ms": 73.15297525540275,
+      "min_ms": 1.210543,
+      "p50_ms": 6.544473,
+      "p95_ms": 335.29047899999995
+    }
+  ],
+  "contract": {
+    "fatal": "manifest/oracle disagreement, CNF proof missing, satisfiable contradiction, certificate recheck failure, operational error, or identity drift",
+    "population": "every member of one exact content-hashed manifest",
+    "repetitions": 2,
+    "timing": "descriptive assurance work only; hard subprocess timeout covers parse, construction, proof searches, and completed-proof checking",
+    "unsat_denominator": "every primary UNSAT; not-certified rows are retained"
+  },
+  "coverage": {
+    "attempted_per_run": 509,
+    "certified_per_run": [
+      508,
+      508
+    ],
+    "coverage_percent": 99.80353634577604,
+    "hard_timeouts_per_run": [
+      1,
+      1
+    ],
+    "not_certified_per_run": [
+      1,
+      1
+    ],
+    "stable_per_query": true
+  },
+  "identity": {
+    "config_hash": "05b8660e0b754135",
+    "deadline_ms": 1000,
+    "environment_hash": "sha256:c9c631dec727c0ba76d099459769e2c10c8b12310f657788855eca65e8c0882b",
+    "isolation": "subprocess-hard-timeout",
+    "manifest_hash": "sha256:67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+    "manifest_name": "glaurung-qfbv-2026-07-16-corrected-wide-v3-proof-holdout-v1",
+    "process_timeout_ms": 1500,
+    "selected_entries": 1024,
+    "selected_tier": "proof-holdout-v1",
+    "source_revision": "d8da4a4534c2b9dc8073bbfb110773e8f39ead3b"
+  },
+  "population": {
+    "files": 1024,
+    "sat": 515,
+    "unsat": 509,
+    "unsat_family_counts": {
+      "arithmetic": 170,
+      "register-slice": 170,
+      "slice-partial": 169
+    }
+  },
+  "schema": "axeyum-qfbv-real-faithfulness-analysis-v1",
+  "source_artifact_version": 34
+}

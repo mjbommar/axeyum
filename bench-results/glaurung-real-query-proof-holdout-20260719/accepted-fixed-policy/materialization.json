@@ -1,0 +1,16 @@
+{
+  "all_destination_bytes_verified": true,
+  "all_source_hashes_verified": true,
+  "copied_bytes": 17416339,
+  "destination": "/tmp/corrected-wide-v3-proof-holdout-v1-corpus-d8da4a45",
+  "destination_manifest": "/tmp/corrected-wide-v3-proof-holdout-v1-corpus-d8da4a45/manifest-v1.json",
+  "exact_membership": true,
+  "full_manifest": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full/manifest-v1.json",
+  "full_manifest_sha256": "c3cad70caff90d7f1528196e306cbb45808c14f839f07e742aac6ad2f0ade75c",
+  "query_set_sha256": "51942a9de70485d77cba32ef75701d721a990662c07451c0a72b500e92897ad2",
+  "schema": "axeyum.qfbv-proof-holdout-materialization.v1",
+  "selected_entries": 1024,
+  "selected_manifest": "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+  "selected_manifest_sha256": "67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+  "source_root": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full"
+}
