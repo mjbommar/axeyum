@@ -403,10 +403,15 @@ support anyway.
   another neutral formula sweep under that name.
 - Remaining A1 is configuration/wiring: select and record backend-specific
   deterministic resource budgets while retaining the wall as a safety cap.
-  Remaining finding evidence is a wider timeout-sensitive sole-authority tier
-  under ADR-0250's v6 stop partition. **Gate:** exact source/config identity,
-  stable within-backend work partitions, zero accepted deadline/timeout worklist
-  stops, separately reported per-check nondecisions, and no cherry-picked cells.
+  ADR-0262 completes the wider timeout-sensitive sole-authority tier under
+  ADR-0250's v6 stop partition: all six first-20 cells are valid, timeout is a
+  measured no-op from 100 to 1000 ms, AnyModel remains raw-divergent, and
+  LeastUnsigned gives exact parity at substantial policy cost. Preserve the
+  exact source/config identity, stable within-backend work partitions, zero
+  accepted deadline/timeout worklist stops, separately reported per-check
+  nondecisions, and non-cherry-picked cells as standing gates. Remaining
+  finding evidence is a genuinely broader labeled population, not another
+  unlabeled tcpip prefix or timeout sweep.
 - **Decisive classification (complete):** exact PDB, disassembly, trace, and
   taint-provenance analysis classify both model-sensitive tcpip rows as generic
   `Arg0` diagnostics. The producer now emits an exhaustive confidence
@@ -444,6 +449,12 @@ support anyway.
   BoundarySet/DiverseEnum only after bounded multi-successor execution exists
   and the labeled evidence justifies the extra work; do not approximate either
   policy by choosing one value.
+- ADR-0262 independently confirms the mechanism/cost boundary on the wider
+  first-20 tcpip prefix. LeastUnsigned produces exact 185/185 authority parity
+  at all three timeouts but overlaps only 147 rows with AnyModel's 220-row
+  combined union and requires about 25 times as many solve calls. Treat this as
+  a policy-sweep characterization, not finding preservation or an invitation
+  to build A2.
 
 **Phase 3 -- The structural lever, only if new labeled evidence opens A2 (month+).**
 - A2 symbolic-address memory, starting with bounded symcrete aliasing and

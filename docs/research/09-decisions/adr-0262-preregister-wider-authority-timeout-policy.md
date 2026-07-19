@@ -1,9 +1,9 @@
 # ADR-0262: Preregister wider authority timeout/policy evidence
 
-Status: proposed
+Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; no driver cell observed
+Result state: accepted; all six cells valid
 
 ## Context
 
@@ -119,6 +119,62 @@ stop rejection, and source drift. Together with the 26 existing authority-
 producer tests, all 31 pass. The shell runner passes `bash -n`; the analyzer
 passes Python bytecode compilation.
 
+## Observed result
+
+The exact clean campaign at Axeyum
+`ee5b5c4aac6c6ac4614f8060bfc1ece2fe4c0562` completes all 36 processes and
+passes the independent six-cell analysis. Every cell analyzes 20/338 functions,
+has stable work and ordered findings within each authority, preserves exact
+high-confidence parity at 0/0, and reports the same v6 inner partition under
+both authorities: 21 worklists = 20 complete + one deterministic state-budget
+stop, with zero solve-budget, timeout-budget, or deadline stops.
+
+| Policy | Timeout | Raw Z3 / Axeyum | Z3-only / Axeyum-only | Solves Z3 / Axeyum | Median elapsed Z3 / Axeyum |
+|---|---:|---:|---:|---:|---:|
+| AnyModel | 100 ms | 211 / 209 | 11 / 9 | 3,788 / 3,745 | 6.62 s / 3.93 s |
+| AnyModel | 250 ms | 211 / 209 | 11 / 9 | 3,788 / 3,745 | 6.60 s / 3.90 s |
+| AnyModel | 1000 ms | 211 / 209 | 11 / 9 | 3,788 / 3,745 | 6.62 s / 3.90 s |
+| LeastUnsigned | 100 ms | 185 / 185 | 0 / 0 | 96,075 / 96,075 | 94.54 s / 168.68 s |
+| LeastUnsigned | 250 ms | 185 / 185 | 0 / 0 | 96,075 / 96,075 | 93.89 s / 168.68 s |
+| LeastUnsigned | 1000 ms | 185 / 185 | 0 / 0 | 96,075 / 96,075 | 94.44 s / 168.90 s |
+
+Every ordered finding hash and work counter is identical across the three
+timeouts within a policy/authority. The timeout sweep is therefore a measured
+no-op on this first-20 prefix between 100 and 1000 ms. AnyModel remains
+authority-dependent at all three timeouts: 200 rows intersect, with 11 stable
+Z3-only and nine stable Axeyum-only rows. LeastUnsigned restores exact raw
+authority parity at all three timeouts.
+
+LeastUnsigned also has exact authority- and timeout-invariant policy telemetry:
+1,436 attempts, 1,434 completed minima, two infeasible paths, 94,646 probes,
+and zero inconclusive/error/unknown outcomes. The knob is mechanically
+successful but costly: about 25 times as many solve calls, median process time
+of about 94 seconds under Z3 authority and 169 seconds under Axeyum authority,
+and about 191 MiB median Axeyum RSS rather than about 125 MiB for AnyModel.
+These standalone authority times are policy-cost observations, not solver
+speed comparisons.
+
+Canonicalization changes rather than preserves the raw population. AnyModel's
+combined union contains 220 rows; LeastUnsigned contains 185. Only 147 rows
+overlap, leaving 38 canonical-only and 73 AnyModel-union-only rows. Because all
+258 distinct rows remain diagnostic and independently unlabeled, the
+set changes prove neither recall gain nor recall loss.
+
+Exact artifacts are committed under
+[`bench-results/glaurung-authority-timeout-policy-20260719/`](../../../bench-results/glaurung-authority-timeout-policy-20260719/README.md).
+The joined `analysis.json` SHA-256 is
+`7687f1cd828f91641ef88ebaad71c7f905609c5e2a7c667600df4175330ac6ee`.
+The six raw report SHA-256 values are, in runner order:
+
+```text
+efdd3badeabdbc14d8ef9d47c5993e4f8b6b8fac53f4f7c9a5e1368fda014688  any-model-100ms-report.json
+29b5f39d9e4df994aef51d2dee1f67b075630c4dc589c55532e2b588efeaaf22  any-model-250ms-report.json
+f9c24038e822bc57b49434bdbfdc2020cfb140635eb3edea4737a3ecf867b8a5  any-model-1000ms-report.json
+a26b7aba265feefe36dbec3e29a694d3ad9c7e3ec80fdffb834e5285125760cc  min-unsigned-100ms-report.json
+f9b065d81bad2d603a902fe67f7a96767cd8b89dac1ca261991e83c6af6cfdac  min-unsigned-250ms-report.json
+ed337210fcb985a47b4ae4328465d73df1e9cd676593512ea4d7ee3594878962  min-unsigned-1000ms-report.json
+```
+
 ## Alternatives
 
 - Repeat the 15-function/250 ms canonical result: rejected because it adds no
@@ -139,15 +195,16 @@ passes Python bytecode compilation.
 
 ## Consequences
 
-ADR-0262 is the next publication-evidence action and supersedes stale plan text
-requesting more neutral timeout formula breadth. It does not reopen A0, create a
-new concretization algorithm, admit BoundarySet/DiverseEnum successor mechanics,
-or justify symbolic memory. A2 remains gated on a genuinely broader labeled
-residual gap.
+ADR-0262 closes the preregistered wider tcpip timeout-sensitive sole-authority
+finding tier and supersedes stale plan text requesting more neutral timeout
+formula breadth. The result attributes this prefix's stable raw divergence to
+the value-selection setting rather than the 100--1000 ms wall. It also shows
+that one canonical setting can make authority output identical without making
+the output finding-preserving or cheap.
 
-If the exact matrix is valid, it characterizes whether the first canonical
-policy remains raw-authority-parity-producing over a wider prefix and across
-explicit timeout cells. If it rejects, the preserved failure identifies the
-resource or reproducibility boundary without being tuned away. Either result is
-reported separately from ADR-0233's neutral formula timing and from performance
-headlines.
+This does not reopen A0, create a new concretization algorithm, admit
+BoundarySet/DiverseEnum successor mechanics, or justify symbolic memory. A2
+remains gated on a genuinely broader labeled residual gap. Further tcpip prefix
+or timeout repetition is lower priority than acquiring such labels, wiring A1's
+backend-specific deterministic resource configuration, and coordinating clean
+integration of the isolated Glaurung branch.

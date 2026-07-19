@@ -1,0 +1,659 @@
+{
+  "any_model_raw_parity_all_timeouts": false,
+  "axeyum_revision": "ee5b5c4aac6c6ac4614f8060bfc1ece2fe4c0562",
+  "cells": [
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            3.95,
+            3.89,
+            3.93
+          ],
+          "finding_count": 209,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            125088,
+            125368,
+            125036
+          ],
+          "solves": [
+            3745,
+            3745,
+            3745
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            6.66,
+            6.62,
+            6.54
+          ],
+          "finding_count": 211,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            142748,
+            142788,
+            142632
+          ],
+          "solves": [
+            3788,
+            3788,
+            3788
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-any-model-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "raw_axeyum_only_count": 9,
+      "raw_exact_authority_parity": false,
+      "raw_z3_only_count": 11,
+      "timeout_ms": 100
+    },
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            3.9,
+            3.88,
+            3.99
+          ],
+          "finding_count": 209,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            125096,
+            125520,
+            125268
+          ],
+          "solves": [
+            3745,
+            3745,
+            3745
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            6.6,
+            6.57,
+            6.61
+          ],
+          "finding_count": 211,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            143140,
+            142992,
+            142532
+          ],
+          "solves": [
+            3788,
+            3788,
+            3788
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-any-model-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "raw_axeyum_only_count": 9,
+      "raw_exact_authority_parity": false,
+      "raw_z3_only_count": 11,
+      "timeout_ms": 250
+    },
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            3.98,
+            3.9,
+            3.89
+          ],
+          "finding_count": 209,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            125252,
+            125492,
+            125148
+          ],
+          "solves": [
+            3745,
+            3745,
+            3745
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            6.62,
+            6.54,
+            6.68
+          ],
+          "finding_count": 211,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            142800,
+            142572,
+            142784
+          ],
+          "solves": [
+            3788,
+            3788,
+            3788
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 0,
+            "completed": 0,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 0,
+            "no_solver": 0,
+            "policy": "glaurung-any-model-v1",
+            "probes": 0,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-any-model-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "raw_axeyum_only_count": 9,
+      "raw_exact_authority_parity": false,
+      "raw_z3_only_count": 11,
+      "timeout_ms": 1000
+    },
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            169.34,
+            168.68,
+            168.63
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            191128,
+            191484,
+            190728
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            94.61,
+            94.54,
+            94.48
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            153316,
+            152976,
+            152900
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-min-unsigned-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "raw_axeyum_only_count": 0,
+      "raw_exact_authority_parity": true,
+      "raw_z3_only_count": 0,
+      "timeout_ms": 100
+    },
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            168.47,
+            169.22,
+            168.68
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            190852,
+            190984,
+            190472
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            94.86,
+            93.8,
+            93.89
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            152532,
+            153608,
+            152964
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-min-unsigned-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "raw_axeyum_only_count": 0,
+      "raw_exact_authority_parity": true,
+      "raw_z3_only_count": 0,
+      "timeout_ms": 250
+    },
+    {
+      "backends": {
+        "axeyum": {
+          "elapsed_seconds": [
+            168.48,
+            169.05,
+            168.9
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            190644,
+            190548,
+            191028
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        },
+        "z3": {
+          "elapsed_seconds": [
+            94.44,
+            94.52,
+            94.34
+          ],
+          "finding_count": 185,
+          "high_confidence_finding_count": 0,
+          "max_rss_kib": [
+            152496,
+            152028,
+            153160
+          ],
+          "solves": [
+            96075,
+            96075,
+            96075
+          ]
+        }
+      },
+      "canonical_model_choice": {
+        "backends": {
+          "axeyum": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          },
+          "z3": {
+            "attempts": 1436,
+            "completed": 1434,
+            "error": 0,
+            "final_unsat": 0,
+            "inconclusive": 0,
+            "infeasible": 2,
+            "no_solver": 0,
+            "policy": "glaurung-min-unsigned-v1",
+            "probes": 94646,
+            "unknown": 0,
+            "unsupported_width": 0
+          }
+        },
+        "policy": "glaurung-min-unsigned-v1"
+      },
+      "coverage": {
+        "analyzed": 20,
+        "boundary": "fixed-work-limit",
+        "reachable": 338
+      },
+      "exploration_limits": {
+        "backends": {
+          "axeyum": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          },
+          "z3": {
+            "completed": 20,
+            "deadline": 0,
+            "runs": 21,
+            "solve_budget": 0,
+            "state_budget": 1,
+            "timeout_budget": 0
+          }
+        }
+      },
+      "high_confidence_exact_authority_parity": true,
+      "policy": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "raw_axeyum_only_count": 0,
+      "raw_exact_authority_parity": true,
+      "raw_z3_only_count": 0,
+      "timeout_ms": 1000
+    }
+  ],
+  "claim": "wider fixed-prefix sole-authority finding sensitivity across explicit timeout and concretization-policy cells",
+  "claim_limits": [
+    "tcpip first 20 of 338 reachable functions only",
+    "high-confidence output remains the validity gate; raw divergence is reported",
+    "wall-clock timeout cells are sensitivity evidence, not deterministic work equivalence",
+    "backend resource units are not compared in this campaign"
+  ],
+  "driver_sha256": "ff965206a37f2c258b7199bc87b49ee12c834e5fc50f58dae2f3de66a57022ea",
+  "glaurung_revision": "ff3c0a767a0b085f8552bdb2b363c0b7fa273cbe",
+  "high_confidence_parity_all_cells": true,
+  "least_unsigned_raw_parity_all_timeouts": true,
+  "policies": [
+    "any-model",
+    "min-unsigned"
+  ],
+  "repetitions_per_cell_authority": 3,
+  "schema": "axeyum.glaurung-authority-timeout-policy.v1",
+  "timeouts_ms": [
+    100,
+    250,
+    1000
+  ],
+  "valid": true
+}
