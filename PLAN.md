@@ -496,6 +496,13 @@ session state.
 > text `p cnf 1 0\n`, reuses the exact real proof unchanged, and requires no
 > `s VERIFIED`. Preserve the v1 rejection beside any v2 result; this is a
 > post-result checker sanity correction, not a stronger source-proof claim.
+> ADR-0256 accepts that corrected bounded result. The unchanged real pair again
+> makes pinned `drat-trim` exit zero with `s VERIFIED`; the same two-byte proof
+> against preregistered satisfiable DIMACS `p cnf 1 0\n` exits one with
+> `s NOT VERIFIED`. This closes one independent standard-format consumer cell
+> and its checker-binding sanity control. Keep the limitation prominent: the
+> real CNF is input-unit-refutable and its DRAT is only `0\n`, so this is not a
+> nontrivial learned-clause-trace, coverage, lowering, or performance claim.
 > ADR-0236 closes the first measured canonical-authority cell after tcpip
 > activates ADR-0229's reopen condition. On the same current source, binaries,
 > first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,
@@ -1034,7 +1041,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative and wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, versioned confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, corrected five-policy sweep, exhaustive source-backed difference adjudication, and v6 hidden-work rejection DONE; neutral proof positive DONE and corrected teeth control PREREGISTERED (ADR-0187/0188/0197/0213--0255 plus Glaurung `7f682e5`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. The real-query proof union covers 1,186 decisions, 603 SAT replays, all 583 UNSAT CNF DRAT proofs, and 582/583 stronger certificates. ADR-0254's pinned external `drat-trim` positive verifies, but its final-line deletion gate rejects as semantically inert; ADR-0255 fixes a satisfiable-CNF control before observation. No symbolic-memory work is admitted; execute ADR-0255 and add a genuinely broader labeled finding population. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative and wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, versioned confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, corrected five-policy sweep, exhaustive source-backed difference adjudication, v6 hidden-work rejection, and one neutral standard DRAT consumer plus checker-sanity control DONE (ADR-0187/0188/0197/0213--0256 plus Glaurung `7f682e5`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. The real-query proof union covers 1,186 decisions, 603 SAT replays, all 583 UNSAT CNF DRAT proofs, and 582/583 stronger certificates. ADR-0256 accepts one real pinned `drat-trim` verification plus a preregistered satisfiable-CNF checker control; the real proof is only `0\n` over an input-unit-refutable CNF, so a nontrivial external trace remains a separate possible cell. No symbolic-memory work is admitted; add a genuinely broader labeled finding population. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -1198,7 +1205,7 @@ evidence are now distinct:
    claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
    Pareto, and representative plus wider-holdout real-query proof deployment
-   DONE (ADR-0216/0227/0228/0230/0234/0235/0251--0253):** `qfbv` is the
+   DONE (ADR-0216/0227/0228/0230/0234/0235/0251--0256):** `qfbv` is the
    exact solver default; Glaurung
    and `axeyum-wasm` select it explicitly; full in-tree consumers opt in; and
    host tests plus an executed wasm32 SAT/UNSAT gate protect the browser
@@ -1214,8 +1221,10 @@ evidence are now distinct:
    with one stable retained hard timeout. ADR-0254's independent `drat-trim`
    positive verifies, but its deleted-final-line negative remains verifiable
    because the input CNF is already unit-refutable. ADR-0255 preserves that
-   rejection and preregisters a fixed satisfiable-CNF control; execute it, then
-   consider a
+   rejection, and ADR-0256 accepts the preregistered satisfiable-CNF checker
+   control: the real pair verifies while the same proof against the satisfiable
+   input does not. This closes one standard-consumer cell, not a nontrivial
+   proof-trace claim. Consider a
    narrow QF_BV parser only against the committed bundle baseline, and widen
    matched RSS only if it outranks the remaining publication blockers.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV

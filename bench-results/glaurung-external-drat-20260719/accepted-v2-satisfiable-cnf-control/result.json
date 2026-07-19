@@ -1,0 +1,68 @@
+{
+  "schema": "axeyum.qfbv-external-drat-teeth-result.v2",
+  "accepted": true,
+  "status": "positive-verified-satisfiable-control-rejected",
+  "source_result": {
+    "path": "../attempt-1-final-step-deletion-rejection/result.json",
+    "sha256": "aef73c9443f5fdf157bcdfdc2522fbccfd7d6388d92250845691e71678728627"
+  },
+  "fixed_artifacts": {
+    "real_source_sha256": "0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e",
+    "real_dimacs_sha256": "40154e420dcbd75bccb192c2fea15c275a529063795e63c06c9baeff68ca3567",
+    "real_drat_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "real_drat_bytes": 2,
+    "checker_binary_sha256": "c0b9bd6a2369918f171a42d024aa2993d5eff4f597e019850c073d0aa08bd9db"
+  },
+  "positive_reproduction": {
+    "command": "drat-trim problem.cnf proof.drat",
+    "exit_code": 0,
+    "stdout_bytes": 349,
+    "stdout_lines": 8,
+    "stdout_sha256": "c3d942424eae4c19a4db2e95ab6f2e9a166d2e51e18aa241e42bf72ae3751330",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verified": true,
+    "normalized_stdout": [
+      "c parsing input formula with 558 variables and 2166 clauses",
+      "c finished parsing",
+      "c UNSAT via unit propagation on the input instance",
+      "c 7 of 2166 clauses in core",
+      "c 1 of 2 lemmas in core using 7 resolution steps",
+      "c 0 RAT lemmas in core; 0 redundant literals in core lemmas",
+      "s VERIFIED",
+      "c verification time: 0.038 seconds"
+    ]
+  },
+  "satisfiable_control": {
+    "dimacs_text_escaped": "p cnf 1 0\n",
+    "dimacs_bytes": 10,
+    "dimacs_lines": 1,
+    "dimacs_sha256": "946afef7ecdb9105cb716a27cc0fce5d64ad13885ba0fa0108d4873be031790c",
+    "proof_policy": "exact unmodified real proof",
+    "proof_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "command": "drat-trim satisfiable-control.cnf proof.drat",
+    "exit_code": 1,
+    "stdout_bytes": 150,
+    "stdout_lines": 6,
+    "stdout_sha256": "c1924d7b13193ccb00aa7d1946e3b7cb9966224aa190e37a6096bd41c0c6fed3",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "verified": false,
+    "negative_gate_passed": true,
+    "normalized_stdout": [
+      "c parsing input formula with 1 variables and 0 clauses",
+      "c finished parsing",
+      "c ERROR: no conflict",
+      "",
+      "s NOT VERIFIED",
+      "c verification time: 0.035 seconds"
+    ]
+  },
+  "claim_limits": [
+    "This accepts one real standard DIMACS/DRAT interoperability cell plus a separate checker sanity control.",
+    "The two-byte proof is a trivial empty-clause proof over an input-unit-refutable CNF; it does not exercise a nontrivial learned-clause trace.",
+    "The v1 final-step-deletion rejection remains part of the evidence trail.",
+    "No access-controlled source or derived proof bytes are committed.",
+    "No timing is performance evidence and clausal verification alone does not certify source lowering."
+  ]
+}

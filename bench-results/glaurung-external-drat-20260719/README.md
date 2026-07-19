@@ -1,7 +1,7 @@
 # Glaurung external DRAT consumption — 2026-07-19
 
-Status: first positive interoperability check passed; preregistered teeth cell
-rejected because its proof mutation was semantically inert
+Status: accepted external interoperability plus v2 checker sanity control; v1
+final-step-deletion design retained as rejected
 
 ADR-0254 selected the lowest-hash UNSAT in the fixed 1,024-query holdout before
 standard proof export. Axeyum emitted a self-rechecked DIMACS/DRAT/LRAT bundle,
@@ -18,6 +18,12 @@ but is not promoted alone as an accepted cell.
 records exact identities, hashes, sizes, checker streams, and claim limits. The
 access-controlled query and derived CNF/DRAT/LRAT bytes are not committed.
 
-ADR-0255 preregisters a corrected teeth control before running it: replace only
+ADR-0255 preregistered a corrected teeth control before running it: replace only
 the input with the exact satisfiable DIMACS text `p cnf 1 0\n`, keep the same
 two-byte proof, and require the checker not to report `s VERIFIED`.
+
+[`accepted-v2-satisfiable-cnf-control/`](accepted-v2-satisfiable-cnf-control/)
+records the accepted result: the unchanged real pair verifies, while the same
+proof against the exact satisfiable control exits 1 with `s NOT VERIFIED`.
+ADR-0256 accepts this bounded interoperability/checker-sanity cell while keeping
+the trivial-proof limitation explicit.
