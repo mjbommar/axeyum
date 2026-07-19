@@ -152,7 +152,13 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def parse_stderr(stderr: str) -> dict[str, Any]:
+def parse_stderr(
+    stderr: str,
+    *,
+    expected_analyzed: int = 20,
+    expected_reachable: int = 338,
+    require_work_limit: bool = True,
+) -> dict[str, Any]:
     symbolic = list(SYMBOLIC_RE.finditer(stderr))
     confidence = list(CONFIDENCE_RE.finditer(stderr))
     exploration = list(EXPLORATION_RE.finditer(stderr))
@@ -168,8 +174,14 @@ def parse_stderr(stderr: str) -> dict[str, Any]:
     analyzed = int(symbolic_match.group(4))
     reachable = int(symbolic_match.group(5))
     boundary = symbolic_match.group(6)
-    require(analyzed == 20 and reachable == 338, "calibration coverage is not 20/338")
-    require("WORK-LIMIT-HIT" in boundary, "fixed function boundary was not reached")
+    require(
+        analyzed == expected_analyzed and reachable == expected_reachable,
+        f"coverage is not {expected_analyzed}/{expected_reachable}",
+    )
+    if require_work_limit:
+        require("WORK-LIMIT-HIT" in boundary, "fixed function boundary was not reached")
+    else:
+        require("WORK-LIMIT-HIT" not in boundary, "unexpected function work limit")
     require("DEADLINE-HIT" not in boundary, "outer driver deadline was reached")
     require(
         confidence_match.group(1) == "glaurung-ioctlance-confidence-v1",

@@ -86,6 +86,22 @@ class SixCellCalibrationAnalysisTests(unittest.TestCase):
         with self.assertRaisesRegex(analysis.CalibrationError, "timeout/deadline"):
             analysis.parse_stderr(stderr.replace("timeout_budget=0", "timeout_budget=1"))
 
+    def test_parses_complete_census_without_a_work_limit_marker(self) -> None:
+        stderr = """
+[symbolic] 1.2s raw=3 high-confidence=1 suppressed=2 (ArgN pointer-deref noise) analyzed=338/338
+[finding-confidence] schema=glaurung-ioctlance-confidence-v1 high=1 diagnostic=2
+[exploration-limits] runs=338 completed=338 state_budget=0 solve_budget=0 timeout_budget=0 deadline=0
+"""
+
+        parsed = analysis.parse_stderr(
+            stderr,
+            expected_analyzed=338,
+            expected_reachable=338,
+            require_work_limit=False,
+        )
+
+        self.assertEqual(parsed["coverage"], {"analyzed": 338, "reachable": 338})
+
 
 if __name__ == "__main__":
     unittest.main()

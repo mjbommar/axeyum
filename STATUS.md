@@ -360,8 +360,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   freezing the 338-function census. ADR-0275 now freezes that zero-row boundary:
   N=3 exact first-20 joint reproduction, followed only on success by an N=3
   338/338 census under the unchanged triplet and work/deadline gates. Implement
-  its two-phase fail-closed tooling next. A1 remains configuration/measurement,
-  A0 remains complete, and symbolic memory remains closed.
+  its two-phase fail-closed tooling now freezes the exact three-process triplet
+  per phase, prevents Phase B unless the accepted Phase A campaign hash remains
+  unchanged, and distinguishes the 20/338 work boundary from complete 338/338
+  coverage. Freeze this zero-row tooling commit, then preflight and run Phase A.
+  A1 remains configuration/measurement, A0 remains complete, and symbolic
+  memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves

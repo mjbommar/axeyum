@@ -17,6 +17,14 @@ must nevertheless reproduce jointly under one committed protocol.
 
 No ADR-0275 process was executed while defining this decision.
 
+The zero-row protocol is executable in
+`scripts/run-glaurung-joint-triplet-census.py` and
+`scripts/analyze-glaurung-joint-triplet-census.py`. Phase B cannot create its
+output directory unless the canonical Phase A report is accepted and still
+hashes the unchanged Phase A campaign. The analyzer parameterizes the existing
+strict coverage parser for 20/338 work-limited reproduction versus 338/338
+complete census while retaining typed outcome/stop/fallback gates.
+
 ## Decision
 
 Use the unchanged ADR-0273/0274 Glaurung source, Axeyum measured trees, release
