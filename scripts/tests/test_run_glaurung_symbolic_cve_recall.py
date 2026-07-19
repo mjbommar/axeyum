@@ -41,13 +41,28 @@ def report(*, kind: str, taint: list[str], witness: dict[str, str]) -> dict:
                 "witness": witness,
             }
         ],
-        "exploration": {"runs": 1, "completed": 1},
+        "exploration": {"runs": 1, "completed": 1, "memory_sites": {}},
         "path_stops": {"returned": 1, "unmodeled_calls": {}},
         "concretization": {"policy": "glaurung-any-address-v1"},
     }
 
 
 class SymbolicCveRecallTests(unittest.TestCase):
+    def test_memory_targets_allow_only_registered_uniform_relocation(self) -> None:
+        ordinary = {
+            "4096": {"8192": 1, "12288": 2},
+            "4100": {"30": 1},
+        }
+        embedded = {
+            "4096": {"4096": 1, "8192": 2},
+            "4100": {"30": 1},
+        }
+        self.assertEqual(
+            MODULE.memory_target_relocations(ordinary, embedded, delta=4096), 2
+        )
+        with self.assertRaisesRegex(ValueError, "not relocation-equivalent"):
+            MODULE.memory_target_relocations(ordinary, embedded, delta=8192)
+
     def test_repository_allows_registered_ancestor_with_exact_inputs(self) -> None:
         revision = "1" * 40
         tree = "2" * 40
@@ -132,6 +147,7 @@ class SymbolicCveRecallTests(unittest.TestCase):
                 {
                     "handler": "handler",
                     "environment": "generic",
+                    "ordinary_embedded_memory_target_delta": 0,
                     "expected_sink": {
                         "kind": "NullDeref",
                         "tainted_by": ["IoctlCmd"],
@@ -156,6 +172,7 @@ class SymbolicCveRecallTests(unittest.TestCase):
                 {
                     "handler": "handler",
                     "environment": "generic",
+                    "ordinary_embedded_memory_target_delta": 0,
                     "expected_sink": {
                         "kind": "NullDeref",
                         "tainted_by": ["IoctlCmd"],
