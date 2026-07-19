@@ -558,6 +558,16 @@ session state.
 > timing: equal same-owner parity-origin clauses did not imply identical
 > normalized parity leaves. Close this origin lane unless a new preregistered
 > leaf-shape/clause-overlap diagnostic supplies a different mechanism.
+> ADR-0262 now preregisters the next publication experiment before any driver
+> observation. Widen tcpip authority coverage from 15 to 20 of 338 reachable
+> functions and run `{AnyModel, LeastUnsigned} x {100, 250, 1000 ms}` as six
+> separate N=3 order-balanced cells. Every cell requires exact clean identities,
+> stable findings/work, exact high-confidence parity, zero inconclusive policy
+> choices, and ADR-0250 v6 stop partitions with no hidden deadline/timeout stop.
+> Raw parity is a reported hypothesis because tcpip remains zero-high and
+> unlabeled; it is not an acceptance gate. Preserve and reject any failed cell
+> without retuning. This is the wider sole-authority finding tier, not another
+> neutral formula sweep, performance headline, or symbolic-memory admission.
 > ADR-0236 closes the first measured canonical-authority cell after tcpip
 > activates ADR-0229's reopen condition. On the same current source, binaries,
 > first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,

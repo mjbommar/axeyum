@@ -322,19 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-19 — publication planning is realigned around the accepted evidence
-  and the configurable-policy boundary.** ADR-0233 already closes neutral
-  timeout-sensitive formula breadth; the remaining timeout item is a wider
-  sole-authority **finding** tier, with every timeout cell separate and
-  ADR-0250's v6 inner-work stop partition mandatory. The paper spine remains
-  strict-typing correctness first, then deployability and the measured
-  workload-dependent performance map. A0/A1/A3 stay policy/configuration plus
-  bounded sweep work; only A2 changes the memory model, and it remains gated on
-  a genuinely broader labeled residual gap. A1 now names the existing Axeyum
-  `resource_limit`, Z3 `rlimit`, and outer work bounds without falsely treating
-  their backend-specific units as equivalent or the outer function limit as a
-  per-check budget. Next: preregister the wider v6 sole-authority protocol from
-  clean Glaurung `ff3c0a7`; do not reopen the closed GQ5 duplicate-origin lane.
+- **2026-07-19 — ADR-0262 preregisters the wider v6 sole-authority finding
+  matrix before driver observation.** The fixed population is tcpip first 20 of
+  338 reachable functions. Six separate cells cross AnyModel/LeastUnsigned with
+  100/250/1000 ms, each at N=3 per authority. Exact source/input/binary identity,
+  stable work/findings, high-confidence parity, complete policy telemetry, and
+  zero v6 deadline/timeout inner stops are mandatory. Raw parity is a reported
+  hypothesis, not a validity gate. Five new analyzer tests began red and pass;
+  all 31 focused authority tests, shell syntax, bytecode compilation, and binary
+  builds pass. Run the exact clean matrix next; preserve any failure without
+  retuning. Do not reopen GQ5 or admit symbolic memory.
 
 - **2026-07-19 — ADR-0261 rejects private parity-leaf elision at the fixed
   structural gate; timing is not run.** Clean detached
@@ -4682,6 +4679,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0262 preregisters wider authority timeout/policy
+  sensitivity.** A non-overwriting runner and independent analyzer bind six
+  first-20 tcpip cells, exact clean identities, N=3 order balance, corrected
+  high-confidence output, and the v6 hidden-work gate before observation.
 
 - **2026-07-19 — PLAN/STATUS/Pareto strategy reconcile ADR-0233 and the A0
   reframe.** Neutral timeout-sensitive formula breadth is complete. The active
