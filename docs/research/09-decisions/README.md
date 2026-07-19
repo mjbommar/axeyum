@@ -332,4 +332,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0274](adr-0274-preregister-fixed-authority-shadow-calibration.md) | Preregister an observation-aware fixed-Z3-authority calibration of Axeyum and Bitwuzla shadow limits on one invariant tcpip stream | accepted |
 | [0275](adr-0275-preregister-joint-triplet-and-census.md) | Preregister exact joint-triplet reproduction before a conditional 338-function cold-Z3-authoritative six-cell census | accepted |
 | [0276](adr-0276-preregister-parity-leaf-clause-overlap.md) | Preregister profile-only within-leaf versus cross-leaf parity-clause overlap attribution before another cold CNF generator experiment | accepted |
-| [0277](adr-0277-preregister-direct-root-parity-leaf-emission-memo.md) | Preregister one same-leaf positive-direct-root parity emission memo with an exact 107,000-attempt structural gate before unprofiled timing | accepted |
+| [0277](adr-0277-preregister-direct-root-parity-leaf-emission-memo.md) | Reject the exact-delta direct-root parity memo at its variance/family timing gates and remove it despite a 0.9601 aggregate ratio | accepted |

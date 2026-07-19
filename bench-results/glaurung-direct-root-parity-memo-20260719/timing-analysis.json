@@ -1,0 +1,80 @@
+{
+  "accepted": false,
+  "artifact_sha256": [
+    "386337e73961de36be1f62378d18b0ea7ec292a30533f0e55ec87c4d039186fa",
+    "180d3ad18e2625e7a2d628b9b19d76e0c4973698012ccf923bfb0709f0246368",
+    "795bc16d3fe7df5cf74eeec33f793b52c25e0411a54676bde6e057d0f8231608",
+    "e2f918ff53eaf1518f60764b8815148bf8de152cf3b17f0ebe4f9d29db5ba502",
+    "e2bdde6f9cf4bde09f23eee8141327e2e35f5dc4c80993fa27c0a0f44054837c",
+    "ab5420074b836ce66992f8962381fa975312155ce58ce85bf8fbdc548031563e",
+    "ac13d0c81e61175e2c7aec728de347bd437015762102bd5f82440a7ca9ff15bf",
+    "ce41743c4c780a2aa88a3d63e149810b9f08dcb7d79b2f2110352c966fd0f19d",
+    "667013e83b6ca605c989798f2be66a94deafe1334e0764c6c119c61d64d2d531",
+    "1131fb542aaf4b9767bcdd2841325e343777c2e5db9c71b518458f1e0ecc8f4a",
+    "1abc8ef39191c5411653cf67e0a35706d0f1ad8adff675cf2cd3c3ff9fa06eae",
+    "d1c5e9620550d0ff6ef16b465931a1df0477ac0f8baf2715c40ca1a0ff30d39b"
+  ],
+  "baseline_cv_percent": 3.424994773003335,
+  "baseline_total_ms": [
+    134.025122,
+    127.96988099999999,
+    123.44353199999999,
+    130.45732100000006,
+    129.67760199999998,
+    136.02784400000002
+  ],
+  "binary_sha256": {
+    "baseline": "c33065e4bf353ec1ccbb37c30152cb8b046eec2e4232f4062a4e1925217bffc4",
+    "candidate": "dcc25e2442623dae583a16b92a4824d881d633aaf40e19add192f09414275c6e"
+  },
+  "candidate_cv_percent": 3.01523329934291,
+  "candidate_total_ms": [
+    123.57468900000012,
+    121.31095299999993,
+    125.36863,
+    121.57203699999998,
+    127.31092799999998,
+    131.183734
+  ],
+  "complete_correctness_and_structure": true,
+  "exhaustive_bootstrap_95_upper": 0.9814567610878715,
+  "family_paired_geometric_means": {
+    "arithmetic": 0.9491445810955043,
+    "comparison": 0.8799570792549454,
+    "mixed": 1.0491801186084246,
+    "register-slice": 0.9965505084045637,
+    "slice-partial": 0.9289714904708374,
+    "trivial": 1.3269103387549388
+  },
+  "gates": {
+    "aggregate_geomean_at_most_0_97": true,
+    "baseline_cv_at_most_3_percent": false,
+    "bootstrap_upper_below_1": true,
+    "candidate_cv_at_most_3_percent": false,
+    "no_family_geomean_above_1_02": false
+  },
+  "paired_candidate_over_baseline": [
+    0.9220263123506063,
+    0.9479648808925589,
+    1.0155949685561492,
+    0.9318912581379769,
+    0.981749554560702,
+    0.9643888349799911
+  ],
+  "paired_geometric_mean": 0.9600909398826396,
+  "schedule": [
+    "B",
+    "C",
+    "C",
+    "B",
+    "B",
+    "C",
+    "C",
+    "B",
+    "B",
+    "C",
+    "C",
+    "B"
+  ],
+  "schema": "axeyum.direct-root-parity-memo-timing.v1"
+}

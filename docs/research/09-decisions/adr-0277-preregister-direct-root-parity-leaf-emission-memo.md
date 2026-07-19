@@ -3,7 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: zero-row candidate preregistration; no implementation or timing
+Result state: exact structural gate passed; performance gate rejected; candidate
+removed from production
 
 ## Context
 
@@ -104,6 +105,29 @@ Pre-observation gates pass:
 No corrected-wide-v3 query has been run through the candidate. The next action
 is exactly one clean detached profiled structural run, not timing.
 
+## Observed structural result
+
+The clean detached artifact-v37 run at `900f6997` passes all 162 decision,
+manifest/Z3, 88 SAT replay, family, and per-query structure gates. The
+independent analyzer frozen at `13ca0d2b` compares the accepted ADR-0276
+artifact and reports every registered delta exactly:
+
+- clause attempts and duplicates: -107,000 each;
+- declared and visited literals: -321,000 each;
+- false constants: -107,000;
+- canonical literals: -214,000;
+- canonical binary attempts and primary occupied/exact probes: -107,000 each;
+- emitted clauses, every other construction counter, and every nonselected
+  origin row: unchanged; and
+- parity overlap: exactly zero, leaving 12,260 other duplicates.
+
+The retained structural
+[`artifact.json`](../../../bench-results/glaurung-direct-root-parity-memo-20260719/artifact.json)
+has SHA-256 `14b42944...60ee`; its
+[`analysis.json`](../../../bench-results/glaurung-direct-root-parity-memo-20260719/analysis.json)
+has SHA-256 `71830237...91bd`. This exact pass authorized the conditional timing
+protocol and no broader change.
+
 ## Conditional unprofiled performance protocol
 
 Only after the exact structural gate passes, compare baseline source
@@ -130,10 +154,36 @@ Retain and reject any correctness, structural, identity, variance, aggregate,
 or family failure. Do not tune thresholds, broaden memo scope, combine smaller
 origin cells, or use profiled time as performance evidence.
 
+## Observed performance result
+
+Distinct frozen baseline/candidate executables were run in the exact 12-process
+order. All processes preserve 162/162 decisions, manifest/Z3 agreement, 88 SAT
+replays, and per-query AIG/CNF/emitted-clause structure. The paired candidate /
+baseline ratios are `0.92203, 0.94796, 1.01559, 0.93189, 0.98175, 0.96439`.
+
+The aggregate speed gates pass: geometric mean `0.96009` and exhaustive
+deterministic bootstrap 95% upper bound `0.98146`. Acceptance still fails:
+
+- baseline CV is 3.4250%, above 3%;
+- candidate CV is 3.0152%, above 3%; and
+- mixed and trivial family geomeans are 1.04918 and 1.32691, above 1.02.
+
+The remaining family geomeans are arithmetic 0.94914, comparison 0.87996,
+register-slice 0.99655, and slice-partial 0.92897. The trivial row's tiny
+absolute duration does not permit post-observation relaxation of the
+unconditional family gate.
+
+The retained
+[`timing-analysis.json`](../../../bench-results/glaurung-direct-root-parity-memo-20260719/timing-analysis.json)
+has SHA-256 `7a68f696...4816`; all twelve raw artifacts are retained beside it.
+Candidate code and its candidate-only regressions were removed at `4fc45767`.
+
 ## Consequences
 
-ADR-0277 is the only production experiment selected by ADR-0276. If its exact
-structural gate fails, remove it before timing. If timing fails, remove it while
-retaining the negative evidence. Strict sort errors, original-model replay,
-proof work, warm retention, Glaurung concretization policy, and symbolic memory
-remain unchanged.
+ADR-0277 was the only production experiment selected by ADR-0276. Its exact
+structural mechanism is real, but the full preregistered performance contract
+rejects it. Production encoding returns to pre-candidate behavior. Do not rerun
+to select a lower-variance sample, weaken the family gate, or reuse the same
+107,000-clause population for another post-hoc candidate. The ADR-0259--0277
+duplicate-clause lane is closed. Strict sort errors, replay, proof work, warm
+retention, concretization policy, and symbolic memory remain unchanged.

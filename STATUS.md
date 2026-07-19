@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0277 passes its exact structural gate but is rejected by
+  the full performance contract; candidate removed.** Candidate `9533c508`
+  removes exactly 107,000 attempts/duplicates, 321,000 declared/visited
+  literals, and 214,000 canonical literals while preserving all 162
+  decisions, 88 SAT replays, oracle/manifest agreement, emitted CNF, per-query
+  structure, and every nonselected origin row. The fixed 12-process unprofiled
+  comparison has a favorable 0.96009 paired geomean and exhaustive-bootstrap
+  95% upper bound 0.98146, but fails preregistered acceptance: baseline CV
+  3.4250%, candidate CV 3.0152%, mixed family 1.04918, and trivial family
+  1.32691. Production code is removed at `4fc45767`; do not rerun, relax the
+  family rule, or mine the same 107,000 clauses again. The ADR-0259--0277
+  duplicate-clause lane is closed. Advance GQ5 only from a new independently
+  motivated mechanism/population; otherwise advance PLAN item 5's proof-
+  carrying infeasible-path integration.
+
 - **2026-07-19 — ADR-0276 accepts one within-leaf overlap cell; ADR-0277
   preregisters the only permitted production experiment.** The clean detached
   artifact-v37 observation at `6ff05905` passes all 162 decision, manifest/Z3,
