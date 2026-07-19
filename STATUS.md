@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0266 implements the fail-closed paired-artifact builder
+  and passes a full noncandidate LLVM-18 pilot before selected execution.**
+  Eleven tests cover exact Kbuild command parsing, the sole permitted `-Wa,`
+  removal plus embedded-bitcode/output rewrite, AArch64 executable-section
+  identity, exact ELF/IR handler names, campaign/tool hashes, zero-execution
+  admission, and overwrite refusal. A two-side `pci_endpoint_test` parent/HEAD
+  pilot builds and validates both sides, finds the handler in ordinary ELF,
+  embedded ELF, and IR, and matches all `.text`/`.init.text`/`.exit.text` bytes
+  (framed SHA-256 `1da357917722081d44962449834a6778c185f4198754d2b07c50c8863f607216`).
+  The worktree restores cleanly. This is mechanism evidence on an unchanged,
+  noncandidate pair; zero selected CVE sides have run. Commit the builder, then
+  freeze and validate the exact twelve-side campaign before execution.
+
 - **2026-07-19 — ADR-0265 accepts the exact paired symbolic-CVE artifact and
   frontend-executability preflight before any candidate build.** The six corrected rows
   bind one direct helper, two file IOCTLs, one DRM callback, and two block
@@ -2673,8 +2686,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** implement and preregister ADR-0265's non-overwriting paired
-  artifact builder, then materialize its hash-bound vulnerable/fixed artifacts;
+  **Next actions:** commit ADR-0266's tested builder, freeze and accept its exact
+  tool-hash-pinned twelve-side campaign, then materialize the hash-bound
+  vulnerable/fixed artifacts without adaptation;
   do not score recall until a row executes both sides of its pair. Then (1)
   coordinate with the active Glaurung explorer owner and
   integrate isolated branch `axeyum-concretization-policy-a0` at `7f682e5`
@@ -4719,6 +4733,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0266 proposes the tested symbolic-CVE artifact builder.**
+  Eleven unit gates and a two-side noncandidate LLVM-18 pilot validate
+  non-overwriting Kbuild command replay, complete executable-section byte
+  identity, exact handler presence across ELF/IR, tool hash checks, explicit
+  failures, and clean worktree restoration. The exact selected campaign is not
+  frozen and no selected side has run.
 
 - **2026-07-19 — ADR-0265 accepts the paired symbolic-CVE artifact/frontend
   preflight.** Exact translation units, handlers, entry ABIs,
