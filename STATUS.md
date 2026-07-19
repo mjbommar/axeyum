@@ -349,10 +349,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from different tiers cannot be combined. ADR-0274 now preregisters the
   observation-aware correction with zero extension rows: fix Z3 at 100,000,
   require the exact invariant 4,846-check authority stream, and sweep ten
-  Axeyum/Bitwuzla shadow-limit pairs at N=3. Implement and freeze its dedicated
-  fail-closed runner/analyzer next, then execute all 30 rows without adaptation.
-  A1 remains configuration/measurement, A0 remains complete, and symbolic
-  memory remains closed.
+  Axeyum/Bitwuzla shadow-limit pairs at N=3. Its dedicated runner/analyzer now
+  reuse every ADR-0273 source/binary/linkage/log gate and additionally reject
+  any cross-tier authority identity, Z3 outcome, finding, or outer-work drift;
+  3 focused shadow tests, 7 base calibration tests, and 20 paired-trace tests
+  pass. Freeze this zero-row tooling commit, then execute all 30 rows without
+  adaptation. A1 remains configuration/measurement, A0 remains complete, and
+  symbolic memory remains closed.
 
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves

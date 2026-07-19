@@ -26,6 +26,15 @@ its interpretation.
 
 No ADR-0274 process was executed while defining this protocol.
 
+The zero-row protocol is executable in
+`scripts/run-glaurung-fixed-authority-shadow-calibration.py` and
+`scripts/analyze-glaurung-fixed-authority-shadow-calibration.py`. They reuse
+ADR-0273's frozen source/binary/linkage preflight but emit a distinct ADR-0274
+campaign schema. The analyzer adds exact across-tier authority identity,
+outcome, finding, and outer-work equality before applying either shadow
+selection. Focused tests freeze the 10-by-3 order, constant Z3 limit, ladder
+endpoints, independent smallest-tier selection, and missing-backend rejection.
+
 ## Decision
 
 Run a new 10-tier, N=3 calibration with Z3 fixed at its qualifying authority
