@@ -1,0 +1,103 @@
+{
+  "schema": "axeyum.qfbv-real-proof-widening-registration.v1",
+  "status": "preregistered",
+  "name": "corrected-wide-v3-proof-holdout-v1",
+  "source_population": {
+    "corpus_root": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full",
+    "full_manifest": {
+      "path": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full/manifest-v1.json",
+      "sha256": "c3cad70caff90d7f1528196e306cbb45808c14f839f07e742aac6ad2f0ade75c",
+      "entries": 30628,
+      "sat": 21333,
+      "unsat": 9295
+    },
+    "excluded_representative_manifest": {
+      "path": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/representative/manifest-v1.json",
+      "sha256": "7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064",
+      "entries": 162,
+      "sat": 88,
+      "unsat": 74
+    }
+  },
+  "selection": {
+    "selector": "scripts/select-glaurung-proof-holdout.py",
+    "selector_sha256": "eb13e5e823f26c00e31faf60b259dc1cac05be4d3d2a42eb508f9e0d902d7e48",
+    "algorithm": "exclude every representative content hash, group remaining rows by family and expected verdict, select the lexicographically smallest content hashes up to each fixed quota, then globally sort by content hash",
+    "independent_of": [
+      "Axeyum result",
+      "Z3 result",
+      "proof completion",
+      "certificate status",
+      "certificate timing",
+      "solver timing"
+    ],
+    "tier": "proof-holdout-v1",
+    "manifest": "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+    "manifest_sha256": "67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+    "selected_entries": 1024,
+    "expected_sat": 515,
+    "expected_unsat": 509,
+    "representative_overlap": 0,
+    "quotas": {
+      "arithmetic/sat": 170,
+      "arithmetic/unsat": 170,
+      "comparison/sat": 6,
+      "register-slice/sat": 170,
+      "register-slice/unsat": 170,
+      "slice-partial/sat": 169,
+      "slice-partial/unsat": 169
+    },
+    "rare_strata_note": "The excluded representative already contains every full-corpus mixed row, the only trivial row, and every comparison/unsat row; the holdout adds all six remaining comparison/sat rows. The combined evidence union therefore retains complete rare-stratum coverage."
+  },
+  "execution": {
+    "source_policy": "run from the clean detached Axeyum commit containing this registration",
+    "artifact_version": 34,
+    "repetitions": 2,
+    "cpu": 3,
+    "backend": "sat-bv",
+    "rewrite": "off",
+    "query_plan": "full",
+    "prove_unsat": true,
+    "certify_end_to_end_unsat": true,
+    "end_to_end_deadline_ms": 1000,
+    "end_to_end_process_timeout_ms": 1500,
+    "compare_z3": true,
+    "require_in_process_z3": true,
+    "require_reproducible_run": true,
+    "require_deterministic_resources": true,
+    "timeout_ms": 30000,
+    "resource_limit": 2000000,
+    "node_budget": 300000,
+    "cnf_var_budget": 3000000,
+    "cnf_clause_budget": 8000000,
+    "jobs": 1,
+    "manifest_jobs": 1,
+    "min_decided_percent": 100,
+    "logic": "QF_BV"
+  },
+  "acceptance": {
+    "selected_entries": 1024,
+    "sat": 515,
+    "unsat": 509,
+    "all_decided": true,
+    "manifest_disagreements": 0,
+    "z3_disagreements": 0,
+    "z3_skips": 0,
+    "sat_model_replay_failures": 0,
+    "cnf_drat_missing": 0,
+    "cnf_drat_checked": 509,
+    "end_to_end_attempted": 509,
+    "satisfiable_contradictions": 0,
+    "certificate_recheck_failures": 0,
+    "certificate_errors": 0,
+    "not_certified_policy": "retain and report every row; cooperative expiry and hard timeout are coverage misses, not solver verdicts or omitted denominator rows",
+    "repetition_gate": "exact source/config/environment/manifest identity and exact per-query outcome, proof, and end-to-end status across both runs"
+  },
+  "claim_limits": [
+    "This is a real-query correctness and deployability denominator, not a solver-performance experiment.",
+    "The holdout is hash-stratified and verdict-balanced rather than prevalence-weighted; do not extrapolate its percentages to the full corpus.",
+    "CNF DRAT and end-to-end faithfulness remain separate assurance statements.",
+    "A not-certified row is retained coverage under the fixed resource policy, not a proof failure.",
+    "No result from this holdout changes concretization policy, finding recall, or the symbolic-memory gate."
+  ]
+}
