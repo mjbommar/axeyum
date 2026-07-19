@@ -322,6 +322,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — The neutral in-process mechanism is frozen and ADR-0272 now
+  fixes its six-cell experiment before timing.** Isolated Glaurung commit
+  `2961d7c` adds benchmark-only Bitwuzla 0.9.1 cold/fresh and warm/source-owner
+  cells beside the existing Z3 and Axeyum cells, keeps cold Z3 authoritative,
+  rotates all six cells, and emits the additive ordered-measurement v3 schema.
+  Focused adapter, lineage, all-operator, W128, six-cell integration, and v2/v3
+  validator tests pass. The all-three-backend library suite is 1,030/1,032;
+  only ADR-030's two untouched-baseline WinAPI signature failures remain. The
+  feature fails closed without its explicit library and the default build is
+  unaffected. ADR-0272 binds the exact Glaurung/Axeyum/Bitwuzla sources,
+  resolved native libraries, four historical drivers, five fresh processes,
+  fixed environment, nine paired contrasts, all-six parity/fallback/CV gates,
+  and a zero-row boundary. Next: implement/test the registered v3 consumer,
+  run exactly that campaign, then move to PLAN item 3. No performance result is
+  claimed yet; A0 and symbolic memory remain closed.
+
 - **2026-07-19 — ADR-0269--0271 complete the bounded AArch64 symbolic-CVE
   recall gate and move the integration critical path to the neutral warm
   baseline.** The isolated Glaurung AArch64 ET_REL frontend is frozen at
@@ -336,7 +352,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   false-positive pairs, and all eight cells execution-acceptable. This is only
   the artifact-admitted selected-pair result, not population precision or
   population-wide recall. Next: PLAN item 2, the in-process warm Bitwuzla
-  four-way regime map; then item 3's deterministic harder-driver tier. A0 stays
+  six-cell regime map; then item 3's deterministic harder-driver tier. A0 stays
   reproducibility infrastructure, symbolic memory stays closed, and the
   general LLVM frontend stays later work.
 
@@ -2734,7 +2750,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, complete three-solver timeout frontier, bounded/canonical/four-schedule plus wider timeout-sensitive raw authority cells, process-isolated corrected-representative plus wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, two rejected usbprint resource protocols, v2 maximum-precision rejection, stack-region correction, corrected v3 sweep, exhaustive difference adjudication, v6 hidden-work rejection, one neutral standard DRAT consumer plus checker-sanity control, capped nontrivial-proof no-selection, corrected symbolic-CVE execution preflight, immutable artifact campaign admission, and complete 4/12 artifact attrition DONE (ADR-0187/0188/0213--0267 plus Glaurung `7f682e5`; campaign revision `ff3c0a7`).** cvc5 agrees on all 9,526 checks in both external protocols; ADR-0233 closes the neutral 50/100/250/1000 ms formula frontier; ADR-0253 accepts 515 SAT replays, all 509 CNF DRAT rechecks, and 508/509 stronger certificates on the holdout. ADR-0256 accepts the real `drat-trim` verification and fixed satisfiable-CNF control; ADR-0258 retains 32/32 follow-on two-byte proofs and closes further holdout mining. ADR-0262 closes the first-20 tcpip v6 timeout matrix: timeout changes no result, AnyModel remains raw-divergent, and LeastUnsigned reaches exact parity at substantial cost. ADR-0263's v1 qualification is invalidated before build; ADR-0264 accepts all 22 corrected v2 rows and the secure-erase effective handler; ADR-0265 accepts the exact six-row zero-execution artifact/frontend preflight; ADR-0266 accepts the exact twelve-side builder campaign at a zero-build gate; ADR-0267 retains two admitted pairs and eight explicit artifact failures without adaptation. Tcpip remains zero-high/unlabeled | Measure and preregister the four admitted LLVM sides' frontend surface, then prove paired frontend executability before symbolic scoring; add the in-process warm Bitwuzla control next; defer A1 resource configuration to the deterministic harder-driver tier |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, complete three-solver timeout frontier, bounded/canonical/four-schedule plus wider timeout-sensitive raw authority cells, process-isolated corrected-representative plus wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, two rejected usbprint resource protocols, v2 maximum-precision rejection, stack-region correction, corrected v3 sweep, exhaustive difference adjudication, v6 hidden-work rejection, one neutral standard DRAT consumer plus checker-sanity control, capped nontrivial-proof no-selection, corrected symbolic-CVE execution preflight, immutable artifact campaign admission, complete 4/12 artifact attrition, and 2/2 selected-pair symbolic recall DONE (ADR-0187/0188/0213--0271 plus Glaurung `2961d7c`; campaign revision `ff3c0a7`).** cvc5 agrees on all 9,526 checks in both external protocols; ADR-0233 closes the neutral 50/100/250/1000 ms formula frontier; ADR-0253 accepts 515 SAT replays, all 509 CNF DRAT rechecks, and 508/509 stronger certificates on the holdout. ADR-0256 accepts the real `drat-trim` verification and fixed satisfiable-CNF control; ADR-0258 retains 32/32 follow-on two-byte proofs and closes further holdout mining. ADR-0262 closes the first-20 tcpip v6 timeout matrix: timeout changes no result, AnyModel remains raw-divergent, and LeastUnsigned reaches exact parity at substantial cost. ADR-0263--0271 preserve the qualification/artifact/frontend failure trail and accept only two admitted vulnerable/fixed pairs at 2/2 recall with fixed sides clean; this is not population recall. ADR-0272 preregisters the neutral six-cell map at zero rows. Tcpip remains zero-high/unlabeled | Implement/test ADR-0272's v3 analyzer and execute the fixed four-driver N>=5 six-cell protocol; admit broader labeled artifacts separately; defer A1 resource configuration to the deterministic harder-driver tier |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -2746,9 +2762,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
   **Next actions:** ADR-0271 closes the minimum AArch64 ELF frontend and bounded
-  selected-pair recall gate. Build PLAN item 2 next: a topology-equivalent
-  in-process warm Bitwuzla control for the `{Z3, Axeyum, Bitwuzla} × {cold,
-  warm}` regime map. Then run item 3's timeout-sensitive/harder-driver tier
+  selected-pair recall gate. Glaurung `2961d7c` now implements PLAN item 2's
+  topology-equivalent in-process Bitwuzla cells, and ADR-0272 preregisters the
+  six-cell `{Z3, Axeyum, Bitwuzla} × {cold, warm}` campaign at zero rows. Build
+  and test the registered v3 analyzer, execute its fixed four-driver N>=5
+  protocol, and accept or retain it without tuning. Then run item 3's
+  timeout-sensitive/harder-driver tier
   under a deterministic work bound. Standing integration constraints: (1)
   coordinate with the active Glaurung explorer owner and
   integrate isolated branch `axeyum-concretization-policy-a0` at `7f682e5`
