@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0276 preregisters the new GQ5 diagnostic before code or
+  corpus observation.** ADR-0260's 107,000 same-owner forward-parity duplicates
+  did not imply repeated normalized leaves: ADR-0261's candidate changed every
+  selected construction counter by zero. The missing causal partition is
+  within one leaf versus across distinct leaves. ADR-0276 therefore freezes an
+  opt-in, zero-row parity-leaf overlap profile over the unchanged 162-query
+  corrected-wide-v3 population. It records bounded leaf identity/shape,
+  partitions parity/parity duplicates into `within_leaf`,
+  `cross_leaf_same_owner`, and `cross_owner`, independently re-sums every row,
+  and permits at most one separately preregistered follow-on under the fixed
+  50% / 10-query / 50% rule. It authorizes no timing or production change.
+  Implement the disabled-zero-sized/profile-only boundary and analyzer next;
+  preserve strict IR errors, complete decisions, Z3/manifest agreement, and
+  original-term replay.
+
 - **2026-07-19 — ADR-0273's deterministic six-cell calibration is rejected;
   no census is authorized.** Axeyum
   `72375263` now bounds retained as well as cold BatSat checks with a reset-per-
