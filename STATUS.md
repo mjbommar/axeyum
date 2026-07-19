@@ -334,9 +334,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   unaffected. ADR-0272 binds the exact Glaurung/Axeyum/Bitwuzla sources,
   resolved native libraries, four historical drivers, five fresh processes,
   fixed environment, nine paired contrasts, all-six parity/fallback/CV gates,
-  and a zero-row boundary. Next: implement/test the registered v3 consumer,
-  run exactly that campaign, then move to PLAN item 3. No performance result is
-  claimed yet; A0 and symbolic memory remain closed.
+  and a zero-row boundary. The registered v3 analyzer is now frozen at
+  `5d74283b`: 17 focused tests pass and the historical five-trace Dptf v2 ratio
+  reproduces exactly. The exact guarded release executable is built and its
+  SHA-256 plus complete resolved-library hashes are committed in the zero-row
+  registration artifact. Next: run exactly the four-driver campaign, then move
+  to PLAN item 3. No performance result is claimed yet; A0 and symbolic memory
+  remain closed.
 
 - **2026-07-19 — ADR-0269--0271 complete the bounded AArch64 symbolic-CVE
   recall gate and move the integration critical path to the neutral warm
@@ -2766,7 +2770,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   topology-equivalent in-process Bitwuzla cells, and ADR-0272 preregisters the
   six-cell `{Z3, Axeyum, Bitwuzla} × {cold, warm}` campaign at zero rows. Build
   and test the registered v3 analyzer, execute its fixed four-driver N>=5
-  protocol, and accept or retain it without tuning. Then run item 3's
+  protocol, and accept or retain it without tuning. The analyzer is now frozen
+  at `5d74283b` and the exact release/linkage registration is committed; capture
+  is the next action. Then run item 3's
   timeout-sensitive/harder-driver tier
   under a deterministic work bound. Standing integration constraints: (1)
   coordinate with the active Glaurung explorer owner and

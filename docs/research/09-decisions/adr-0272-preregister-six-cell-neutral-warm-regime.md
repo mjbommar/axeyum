@@ -191,6 +191,20 @@ and v2/v3 structural fixtures. The all-three-backend library suite passes
 1,030/1,032 tests; the two residual WinAPI signature-render failures reproduce
 on the untouched baseline and are documented by Glaurung ADR-030.
 
+After this zero-row decision was committed, the registered v3 analyzer landed
+at Axeyum `5d74283b8cc1779df4d67b654c44d6b7dcc94611`. Its 17 focused tests cover
+all nine contrasts, complete and inconclusive all-six gates, neutral identity,
+third-solver disagreement/error rejection, fallback classification, v1/v2
+compatibility, and six-cell CDF output. It reproduces ADR-0215's real five-trace
+Dptf v2 report at 561 checks and warm Z3/Axeyum ratio
+`0.7874873147798102`. The exact registered release executable then built from
+the frozen producer with SHA-256
+`5d454daf6c12c1d69bc0e28e12c391286b53d1a7735514043b85ea82057ef17b`;
+its full resolved-library hashes are frozen in
+[`bench-results/glaurung-six-cell-neutral-20260719/registration.json`](../../../bench-results/glaurung-six-cell-neutral-20260719/registration.json).
+These are implementation and build observations only: there are still zero
+real-driver v3 timing rows, and the protocol above is unchanged.
+
 ## Evidence
 
 The design directly closes reviewer-checklist item 1's neutral warm-baseline

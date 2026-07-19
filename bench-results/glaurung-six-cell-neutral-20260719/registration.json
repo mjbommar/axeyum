@@ -1,0 +1,142 @@
+{
+  "schema": "axeyum-glaurung-six-cell-registration-v1",
+  "date": "2026-07-19",
+  "zero_result_rows": true,
+  "preregistration": "docs/research/09-decisions/adr-0272-preregister-six-cell-neutral-warm-regime.md",
+  "producer": {
+    "repository": "glaurung",
+    "revision": "2961d7c1bca03f14b77b12fb852d193413207982",
+    "dirty": false,
+    "measurement_schema": "glaurung-ordered-check-measurement-v3",
+    "authoritative_backend": "z3-cold",
+    "neutral_backend": {
+      "backend": "bitwuzla",
+      "runtime_version": "0.9.1",
+      "authoritative_in_shadow_mode": false,
+      "role": "benchmark-only-neutral"
+    }
+  },
+  "axeyum": {
+    "implementation_revision": "a9abc6cdcdda0451e6a9b6aca5f8ff924e49e513",
+    "analyzer_revision": "5d74283b8cc1779df4d67b654c44d6b7dcc94611",
+    "analyzer_path": "scripts/analyze-glaurung-paired-traces.py",
+    "analyzer_sha256": "ff2131bfc67d21045d5c36ca8b214cfe6528e5d085b4584453d4f8dd02c47d93",
+    "solver_tree": "ec3a38f3244d1d2e9d3b57f66f6079fca19ceba6",
+    "ir_tree": "ed3649e3a52fbd602327ea523db49bac3a883b6a",
+    "workspace_manifest_blob": "e1351bec59d6601b6a60c774f1d00a01be1dc3e4",
+    "lockfile_blob": "2738bf0d289afea537f444fe0152b040f68278fa"
+  },
+  "release_executable": {
+    "path": "/home/mjbommar/.cache/codex/glaurung-six-cell-target/release/examples/ioctlance",
+    "sha256": "5d454daf6c12c1d69bc0e28e12c391286b53d1a7735514043b85ea82057ef17b",
+    "features": [
+      "solver-z3",
+      "solver-axeyum",
+      "solver-bitwuzla"
+    ],
+    "runpath": [
+      "/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu"
+    ],
+    "toolchain": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
+    "build_jobs": 2,
+    "memory_limit_gib": 64
+  },
+  "resolved_libraries": [
+    {
+      "path": "/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzla.so.0",
+      "sha256": "4e994b7a527e207dfdde3dcc289133f72e423e54e4ce67ba8ff2211c1b48bb1c"
+    },
+    {
+      "path": "/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlabb.so",
+      "sha256": "3bc0a9fb5f1d4f5799ba2c71aec40b3616ad04a03942e5d23f639bb96b64a75b"
+    },
+    {
+      "path": "/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlabv.so",
+      "sha256": "df3ffc2e41e92ff04c017b77b0e5b14b391ae687482542d47162b90aae0bfab3"
+    },
+    {
+      "path": "/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlals.so",
+      "sha256": "83e70c846dcf33d0c8a3ecdf88e74b9fc7ce48de3aa1fc034c130190ab1365da"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libz3.so.4",
+      "sha256": "eff8f0f91482d0809aae7aa0ed54cb52ff5ee9b5fe1ed1d2bfa9153c4a2fcfaf"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libgmp.so.10",
+      "sha256": "fda9699eef15deda5f1c626e9140377a7f5d88c41516a54278ac02429cb20fa5"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libmpfr.so.6",
+      "sha256": "1aed080b3143049fbe016cd82cdc5fb47db386386556cc1bb37cfccc133c0fae"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libstdc++.so.6",
+      "sha256": "5bb0d21308f123b6ad46c6f35b42cedfcb8d6d439a53aa3dae04d880aaffdde3"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+      "sha256": "9d339ecb409578d6a5d587e6c537a8f9589b8a13fefba30d167433a4b5758bee"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libm.so.6",
+      "sha256": "670fb59bd462ee2f833e2ed7c0a1814e0dcdbec0b8bfa048bec46e2e6fd66334"
+    },
+    {
+      "path": "/usr/lib/x86_64-linux-gnu/libc.so.6",
+      "sha256": "d763925433ff9b757390549e1b20c085f5e6de27ae700fe89194178d96a8a2b0"
+    },
+    {
+      "path": "/lib64/ld-linux-x86-64.so.2",
+      "sha256": "223b94a42758f2434da331cc0aa62db1af5b456481762c5caceefa1a2d1eb8fb"
+    }
+  ],
+  "drivers": [
+    {
+      "label": "DptfDevGen",
+      "path": "samples/binaries/platforms/windows/vendor/realworld/sqfs-intel-DptfDevGen.sys",
+      "sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b"
+    },
+    {
+      "label": "vwififlt",
+      "path": "samples/binaries/platforms/windows/vendor/realworld/win10-vwififlt.sys",
+      "sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820"
+    },
+    {
+      "label": "IntcSST",
+      "path": "samples/binaries/platforms/windows/vendor/realworld/windows-update-intel-audio-IntcSST.sys",
+      "sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750"
+    },
+    {
+      "label": "SurfacePen",
+      "path": "samples/binaries/platforms/windows/vendor/realworld/windows-update-SurfacePenBleLcAddrAdaptationDriver.sys",
+      "sha256": "3c062dc57832caab776bec99656798474af7ffb59ef751c9a004a95c0ae74405"
+    }
+  ],
+  "protocol": {
+    "repetitions_per_driver": 5,
+    "process_order": "driver-major, repetition 1 through 5",
+    "logical_cpu": 2,
+    "worker_count": 1,
+    "bootstrap_samples": 10000,
+    "bootstrap_seed": 0,
+    "environment": {
+      "GLAURUNG_FAIR_SHADOW": "1",
+      "GLAURUNG_CHECK_TIMEOUT_MS": "250",
+      "GLAURUNG_AXEYUM_REPLAY_SAT_CACHE": "1",
+      "GLAURUNG_AXEYUM_WARM_MAX_LIVE_PATHS": "9",
+      "GLAURUNG_AXEYUM_WARM_MAX_ASSERTIONS_PER_PATH": "512",
+      "IOCTLANCE_DEADLINE_SECS": "600",
+      "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
+      "IOCTLANCE_SOLVE_BUDGET": "20000",
+      "IOCTLANCE_SOLVE_SECS": "60"
+    }
+  },
+  "observations": {
+    "trace_paths": [],
+    "timing_rows": 0,
+    "ratios": [],
+    "confidence_intervals": [],
+    "driver_conclusions": []
+  }
+}
