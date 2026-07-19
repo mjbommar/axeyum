@@ -1,0 +1,92 @@
+{
+  "schema": "axeyum.qfbv-real-proof-holdout-preexecution-rejection.v1",
+  "accepted": false,
+  "status": "rejected-before-query-execution",
+  "reason": "corpus-manifest-membership-mismatch",
+  "date": "2026-07-19",
+  "axeyum": {
+    "revision": "8ab56771956395d9859706bebf183d1698794db4",
+    "clean_detached_worktree": "/tmp/axeyum-proof-holdout-v1.ErKtFh"
+  },
+  "binary": {
+    "path": "/home/mjbommar/projects/personal/axeyum/target/release/axeyum-bench",
+    "sha256": "97549fbfe234c54ca5dcb9c3cbe71871d1b37835f648612addbb89b762e6282b"
+  },
+  "corpus": {
+    "root": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full",
+    "full_manifest": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full/manifest-v1.json",
+    "full_manifest_sha256": "c3cad70caff90d7f1528196e306cbb45808c14f839f07e742aac6ad2f0ade75c",
+    "discovered_smt2_files": 30628,
+    "selected_manifest": "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+    "selected_manifest_sha256": "67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+    "selected_entries": 1024,
+    "missing_selected_files": 0,
+    "unlisted_files": 29604
+  },
+  "execution": {
+    "exit_code": 1,
+    "selected_queries_executed": 0,
+    "result_artifact_created": false,
+    "stdout": {
+      "bytes": 0,
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "stderr": {
+      "bytes": 2397983,
+      "lines": 1,
+      "sha256": "a94cc71dd0cbb68840b0a37745e427528363986770127fd54b985e329a493c57",
+      "prefix": "corpus manifest membership mismatch: missing=[], unlisted=["
+    },
+    "exact_reproduction": {
+      "exit_code": 1,
+      "stdout_sha256_identical": true,
+      "stderr_sha256_identical": true,
+      "result_artifact_created": false
+    },
+    "argv": [
+      "taskset",
+      "-c",
+      "3",
+      "axeyum-bench",
+      "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full",
+      "--corpus-manifest",
+      "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+      "--corpus-tier",
+      "proof-holdout-v1",
+      "--backend",
+      "sat-bv",
+      "--rewrite",
+      "off",
+      "--prove-unsat",
+      "--certify-end-to-end-unsat",
+      "--end-to-end-deadline-ms",
+      "1000",
+      "--end-to-end-process-timeout-ms",
+      "1500",
+      "--compare-z3",
+      "--require-in-process-z3",
+      "--require-reproducible-run",
+      "--require-deterministic-resources",
+      "--timeout-ms",
+      "30000",
+      "--resource-limit",
+      "2000000",
+      "--node-budget",
+      "300000",
+      "--cnf-var-budget",
+      "3000000",
+      "--cnf-clause-budget",
+      "8000000",
+      "--jobs",
+      "1",
+      "--manifest-jobs",
+      "1",
+      "--min-decided-percent",
+      "100",
+      "--logic",
+      "QF_BV"
+    ]
+  },
+  "claim_limit": "This rejected pre-execution attempt contains no solver, proof, certificate, timing, or holdout-acceptance evidence."
+}

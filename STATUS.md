@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0252 preserves the proof-holdout packaging rejection and
+  preregisters exact materialization.** The first ADR-0251 command used the
+  1,024-row manifest over the 30,628-file full root; `axeyum-bench` correctly
+  rejected 29,604 unlisted files before executing a selected query. An exact
+  clean-detached reproduction exits 1 with byte-identical 2,397,983-byte
+  stderr, empty stdout, and no result artifact. Four tests now gate a
+  materializer that verifies both manifest hashes, exact full-manifest
+  membership, all source and copied bytes, byte-identical output manifest, and
+  exactly 1,024 output `.smt2` paths while refusing overwrite. Next commit this
+  preregistration, materialize once into a new isolated root, and run the two
+  unchanged ADR-0251 repetitions.
+
 - **2026-07-19 — ADR-0251 preregisters a 1,024-query real-proof holdout before
   execution.** The selector binds the corrected 30,628-query full manifest and
   accepted 162-query representative by SHA-256, excludes every representative
@@ -2520,7 +2532,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, two rejected usbprint resource protocols, v2 maximum-precision rejection, stack-region correction, corrected v3 sweep, exhaustive difference adjudication, and v6 hidden-work rejection DONE (ADR-0187/0188/0213--0250 plus Glaurung `7f682e5`; instrumentation candidate `ff3c0a7`).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. ADR-0247 accepts all five scalar policies at 14/14. ADR-0248 closes all 54 varying source-backed rows as 30 plumbing plus 24 duplicate presentations, with zero independent primitives or indeterminate labels. ADR-0249 establishes only a common usbprint prefix of 10 and rejects because an inner wall deadline invalidates fixed work; ADR-0250 now makes that stop class fail closed in future v6 reports. ADR-0251 preregisters a disjoint 1,024-query real-proof holdout before execution. Tcpip remains zero-high/unlabeled. All accepted proof results remain unchanged | Run and preserve ADR-0251; keep symbolic memory gated; coordinate the Glaurung footer; add a broader labeled population |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT breadth, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, two rejected usbprint resource protocols, v2 maximum-precision rejection, stack-region correction, corrected v3 sweep, exhaustive difference adjudication, and v6 hidden-work rejection DONE (ADR-0187/0188/0213--0250 plus Glaurung `7f682e5`; instrumentation candidate `ff3c0a7`).** cvc5 agrees on all 9,526 checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. ADR-0247 accepts all five scalar policies at 14/14. ADR-0248 closes all 54 varying source-backed rows as 30 plumbing plus 24 duplicate presentations, with zero independent primitives or indeterminate labels. ADR-0249 establishes only a common usbprint prefix of 10 and rejects because an inner wall deadline invalidates fixed work; ADR-0250 now makes that stop class fail closed in future v6 reports. ADR-0251 preregisters a disjoint 1,024-query real-proof holdout; ADR-0252 preserves its zero-query packaging rejection and fixes exact materialization before execution. Tcpip remains zero-high/unlabeled. All accepted proof results remain unchanged | Commit ADR-0252, materialize exactly, then run and preserve ADR-0251 unchanged; keep symbolic memory gated; coordinate the Glaurung footer; add a broader labeled population |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -2559,8 +2571,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   partitions, so use it for any future fixed-work campaign rather than accepting
   outer function count alone; (5) after
   ADR-0235's completed process-isolated representative real-query denominator,
-  run and preserve ADR-0251's exact 1,024-query corrected proof holdout without
-  changing its certificate bounds; (6) widen
+  preserve ADR-0252's zero-query membership rejection, commit its exact
+  materialization boundary, then run and preserve ADR-0251's exact 1,024-query
+  corrected proof holdout without changing its population or certificate
+  bounds; (6) widen
   ADR-0237's accepted four-oracle/edge-frequency gate as a standing bounded
   correctness control; (7) keep each subprocess/FFI boundary named; (8)
   preserve ADR-0236's rejected any-model
@@ -2579,6 +2593,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regeneration is byte-identical at `67c7f14f...`; independent inspection
   confirms 1,024 entries, 515 SAT / 509 UNSAT, exact registered strata, and
   zero representative overlap. No selected query is executed before commit.
+
+  **Validation (2026-07-19, ADR-0252 preregistration):** the original and exact
+  clean-detached reproduction both exit 1 before query execution with empty
+  stdout, no artifact, and stderr SHA-256 `a94cc71d...`; 29,604 full-root files
+  are unlisted by the 1,024-row holdout. Four materializer tests pass after a
+  recorded missing-script red phase. They cover exact membership/bytes,
+  pre-output source-hash rejection, nonmember and manifest-hash rejection, and
+  overwrite refusal. Together with the four selector tests, 8/8 pass. No
+  corrected holdout query is executed before the materialization registration.
+  Full script discovery runs 162 tests: 152 pass and the same 10 recipe tests
+  cannot start solely because `just` is not installed; the documentation link
+  check passes.
 
   **Validation (2026-07-19, ADR-0250):** the focused authoritative-finding
   harness suite passes 26/26 after a recorded red phase for the missing parser
@@ -4505,6 +4531,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0252 preserves a zero-query proof-holdout packaging
+  rejection and preregisters exact materialization.** The full corpus root
+  violated the selected manifest's exact-membership contract, so the benchmark
+  stopped before producing an artifact or observing a holdout result. The new
+  tested materializer retains the same 1,024 hashes and every ADR-0251 bound;
+  it verifies exact source membership and bytes, copies into a new isolated
+  root, and rechecks exact destination membership before corrected execution.
 
 - **2026-07-19 — ADR-0251 preregisters a wider real-query proof holdout.** A
   tested selector excludes all 162 accepted representative hashes before

@@ -456,6 +456,16 @@ session state.
 > `not-certified`/hard-timeout rows under the fixed policy rather than selecting
 > finishers or adapting the bounds. This is a verdict-balanced correctness and
 > deployability denominator, not prevalence or performance evidence.
+> The first execution attempt is preserved as an ADR-0252 pre-execution
+> rejection: the 1,024-row manifest was paired with the 30,628-file full root,
+> and the benchmark correctly refused 29,604 unlisted files before reading a
+> selected query. The exact reproduction exits 1 with byte-identical stderr and
+> no artifact. ADR-0252 preregisters a tested materializer that verifies both
+> fixed manifests, every exact selected full-manifest member, all source and
+> copied query bytes, and an output root containing exactly the selected 1,024
+> `.smt2` paths plus the byte-identical manifest. Commit that boundary before
+> corrected execution; do not weaken membership validation or change any
+> ADR-0251 selection, resource, repetition, or acceptance field.
 > ADR-0236 closes the first measured canonical-authority cell after tcpip
 > activates ADR-0229's reopen condition. On the same current source, binaries,
 > first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,

@@ -1,0 +1,59 @@
+{
+  "schema": "axeyum.qfbv-proof-holdout-materialization-registration.v1",
+  "status": "preregistered-after-preexecution-membership-rejection",
+  "name": "corrected-wide-v3-proof-holdout-v1-materialization",
+  "source": {
+    "root": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full",
+    "full_manifest": "/nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full/manifest-v1.json",
+    "full_manifest_sha256": "c3cad70caff90d7f1528196e306cbb45808c14f839f07e742aac6ad2f0ade75c",
+    "full_entries": 30628
+  },
+  "selection": {
+    "manifest": "corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json",
+    "manifest_sha256": "67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b",
+    "selected_entries": 1024,
+    "sat": 515,
+    "unsat": 509,
+    "changed_by_this_registration": false
+  },
+  "rejected_attempt": {
+    "evidence": "bench-results/glaurung-real-query-proof-holdout-20260719/attempt-1-membership-rejection/failure.json",
+    "evidence_sha256": "f791018d7ddf3d0276299c3741b5dc3ff70bd5975aede78cc69da556067ee802",
+    "failure_class": "corpus-manifest-membership-mismatch",
+    "selected_queries_executed": 0,
+    "solver_or_proof_outcomes_observed": 0
+  },
+  "materialization": {
+    "script": "scripts/materialize-glaurung-proof-holdout.py",
+    "script_sha256": "e6d6505ad2735226e4e80ce25ba5f18dd746322ad30fa04ea1200fb81826275d",
+    "destination_policy": "new nonexisting isolated directory outside the repository",
+    "preflight": [
+      "verify the fixed full-manifest SHA-256",
+      "verify the fixed selected-manifest SHA-256",
+      "verify every selection row is an exact full-manifest member by path, content hash, verdict, and family",
+      "verify every selected source query's SHA-256 before creating the destination"
+    ],
+    "output_contract": [
+      "copy exactly 1024 selected query files",
+      "verify every copied query byte for byte",
+      "write the selected manifest byte for byte as manifest-v1.json",
+      "verify the destination contains exactly the 1024 selected .smt2 paths and no other .smt2 files",
+      "refuse to overwrite an existing destination"
+    ]
+  },
+  "execution": {
+    "inherits": "corrected-wide-v3-proof-holdout-v1-registration.json execution and acceptance fields without modification",
+    "repetitions": 2,
+    "cpu": 3,
+    "end_to_end_deadline_ms": 1000,
+    "end_to_end_process_timeout_ms": 1500,
+    "selected_population_changed": false,
+    "resource_bounds_changed": false,
+    "acceptance_gates_changed": false
+  },
+  "claim_limits": [
+    "The rejected attempt is packaging evidence only and contains no holdout result.",
+    "Materialization does not authorize selecting a replacement row, adapting a timeout, or changing an acceptance gate.",
+    "The corrected executions remain correctness and deployability evidence, not performance or prevalence evidence."
+  ]
+}

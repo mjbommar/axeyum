@@ -27,3 +27,20 @@ The committed manifest SHA-256 is
 `67c7f14f5f2f8db1eaa1bb17649cf3623e268e3f7ea678cbe53326bfa8cd899b`.
 ADR-0251 requires execution from its clean detached preregistration commit and
 retains every resource-bounded `not-certified` row in the denominator.
+
+ADR-0252 preserves the first full-root membership rejection and preregisters an
+exact materialization boundary. Reproduce the execution corpus in a new path:
+
+```sh
+python3 scripts/materialize-glaurung-proof-holdout.py \
+  --source-root /nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full \
+  --full-manifest /nas4/data/workspace-infosec/glaurung-captures/2026-07-16-corrected-wide-v3/full/manifest-v1.json \
+  --selected-manifest corpus/glaurung-proof-populations/corrected-wide-v3-proof-holdout-v1.json \
+  --out /tmp/corrected-wide-v3-proof-holdout-v1-corpus
+```
+
+The materializer verifies both manifest hashes, exact full-manifest membership,
+all source and destination query bytes, byte-identical destination manifest,
+and exact destination `.smt2` membership. It refuses an existing destination.
+Its machine-readable preregistration is
+[`corrected-wide-v3-proof-holdout-v1-materialization-registration.json`](corrected-wide-v3-proof-holdout-v1-materialization-registration.json).
