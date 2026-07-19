@@ -1,0 +1,39 @@
+{
+  "schema": "axeyum.qfbv-external-drat-teeth-registration.v2",
+  "status": "preregistered-after-v1-negative-control-rejection",
+  "name": "corrected-wide-v3-external-drat-teeth-v2",
+  "v1_result": {
+    "path": "bench-results/glaurung-external-drat-20260719/attempt-1-final-step-deletion-rejection/result.json",
+    "sha256": "aef73c9443f5fdf157bcdfdc2522fbccfd7d6388d92250845691e71678728627",
+    "positive_verified": true,
+    "negative_gate_passed": false,
+    "reason": "the real CNF is UNSAT by input unit propagation, so deleting its one-line DRAT leaves a still-verifiable input"
+  },
+  "fixed_artifacts": {
+    "source_sha256": "0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e",
+    "dimacs_sha256": "40154e420dcbd75bccb192c2fea15c275a529063795e63c06c9baeff68ca3567",
+    "drat_sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+    "drat_bytes": 2,
+    "checker_binary_sha256": "c0b9bd6a2369918f171a42d024aa2993d5eff4f597e019850c073d0aa08bd9db"
+  },
+  "positive_reproduction": {
+    "command": "drat-trim problem.cnf proof.drat",
+    "gate": "exit zero and stdout contains s VERIFIED"
+  },
+  "negative_control": {
+    "rationale": "bind the exact proof to an intentionally satisfiable CNF rather than deleting a redundant proof line from an already unit-refutable CNF",
+    "dimacs_text_escaped": "p cnf 1 0\n",
+    "dimacs_bytes": 10,
+    "dimacs_sha256": "946afef7ecdb9105cb716a27cc0fce5d64ad13885ba0fa0108d4873be031790c",
+    "proof_policy": "reuse the exact unmodified two-byte real proof",
+    "command": "drat-trim satisfiable-control.cnf proof.drat",
+    "gate": "stdout must not contain s VERIFIED",
+    "observation_policy": "preserve exact stdout, stderr, exit code, byte counts, and hashes regardless of outcome"
+  },
+  "claim_limits": [
+    "This post-result control repairs only the rejected teeth test; it does not turn the one-query positive result into coverage evidence.",
+    "The substituted satisfiable CNF is a checker sanity control, not a mutation of the source query.",
+    "The v1 rejection remains part of the record and cannot be replaced or hidden.",
+    "No timing is performance evidence and no access-controlled proof bytes are committed."
+  ]
+}

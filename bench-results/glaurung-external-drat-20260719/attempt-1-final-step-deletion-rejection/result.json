@@ -1,0 +1,103 @@
+{
+  "schema": "axeyum.qfbv-external-drat-result.v1",
+  "accepted": false,
+  "status": "positive-verified-negative-control-rejected",
+  "reason": "deleting the only DRAT line is semantically inert because the input CNF is already UNSAT by unit propagation",
+  "source": {
+    "axeyum_revision": "ba9ff7c6c1b7af030b36aea9a4b1dced4ab3d8ba",
+    "clean_detached": true,
+    "path": "queries/0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e.smt2",
+    "bytes": 6543,
+    "sha256": "0015f5bd8a50e7d1859888c308e0621fede3e8fb322ffaf1222c4e6aad28000e",
+    "family": "register-slice",
+    "expected": "unsat"
+  },
+  "exporter": {
+    "binary_sha256": "6a1e4d369f69a374e07dd5251546b4351ad5c7612a3c5c216f0160de5a220188",
+    "exit_code": 0,
+    "stdout_bytes": 1090,
+    "stdout_lines": 31,
+    "stdout_sha256": "c49aee6b179f5e164b9e85ba66ad38dce2c718bbb761d50b7d1acff48d512492",
+    "stderr_bytes": 0,
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "self_rechecked": true
+  },
+  "artifacts": {
+    "manifest": {
+      "bytes": 1090,
+      "sha256": "c49aee6b179f5e164b9e85ba66ad38dce2c718bbb761d50b7d1acff48d512492"
+    },
+    "dimacs": {
+      "bytes": 29135,
+      "lines": 2167,
+      "variables": 558,
+      "clauses": 2166,
+      "sha256": "40154e420dcbd75bccb192c2fea15c275a529063795e63c06c9baeff68ca3567"
+    },
+    "drat": {
+      "bytes": 2,
+      "lines": 1,
+      "semantic_text": "empty clause followed by newline",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "lrat": {
+      "bytes": 50,
+      "lines": 1,
+      "sha256": "f5eefbffed3626e791ea5c62bd5113ccbcda70ef530987fbc9a19f44d3e22156"
+    },
+    "access_controlled_bytes_committed": false
+  },
+  "checker": {
+    "project": "drat-trim",
+    "revision": "2e3b2dc0ecf938addbd779d42877b6ed69d9a985",
+    "source_sha256": "d834b649f437e091597f5347f259b9f681087f89ca0844d0cee250a1a1a0c2ee",
+    "binary_sha256": "c0b9bd6a2369918f171a42d024aa2993d5eff4f597e019850c073d0aa08bd9db",
+    "positive": {
+      "exit_code": 0,
+      "stdout_bytes": 349,
+      "stdout_lines": 8,
+      "stdout_sha256": "25ec40ff995a3e87ddaa6254586b4fc86ace8f533e3b92d2722ae4a84b2b20f1",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "verified": true,
+      "normalized_stdout": [
+        "c parsing input formula with 558 variables and 2166 clauses",
+        "c finished parsing",
+        "c UNSAT via unit propagation on the input instance",
+        "c 7 of 2166 clauses in core",
+        "c 1 of 2 lemmas in core using 7 resolution steps",
+        "c 0 RAT lemmas in core; 0 redundant literals in core lemmas",
+        "s VERIFIED",
+        "c verification time: 0.036 seconds"
+      ]
+    },
+    "final_step_deleted": {
+      "proof_bytes": 0,
+      "proof_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "exit_code": 0,
+      "stdout_bytes": 349,
+      "stdout_lines": 8,
+      "stdout_sha256": "7f7958e2e3197f3219789b518c5b59969164f6e2f589a336adf4dbd4e65ebcc8",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "verified": true,
+      "negative_gate_passed": false,
+      "normalized_stdout": [
+        "c parsing input formula with 558 variables and 2166 clauses",
+        "c finished parsing",
+        "c UNSAT via unit propagation on the input instance",
+        "c 7 of 2166 clauses in core",
+        "c 1 of 1 lemmas in core using 7 resolution steps",
+        "c 0 RAT lemmas in core; 0 redundant literals in core lemmas",
+        "s VERIFIED",
+        "c verification time: 0.033 seconds"
+      ]
+    }
+  },
+  "claim_limits": [
+    "The positive route is one-query standard-format interoperability evidence.",
+    "The complete ADR-0254 cell is rejected because the preregistered negative mutation did not change the semantic verification problem.",
+    "No checker timing is performance evidence.",
+    "DIMACS/DRAT verification does not by itself certify the source-to-CNF reduction."
+  ]
+}

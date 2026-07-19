@@ -486,6 +486,16 @@ session state.
 > deletion teeth control. Keep access-controlled query/proof bytes out of Git;
 > preserve hashes and exact checker evidence. This is interoperability, not a
 > coverage or performance sample.
+> ADR-0255 preserves the first observation without laundering its failed teeth
+> gate. The fixed real query exports a self-rechecked 558-variable/2,166-clause
+> CNF, two-byte DRAT, and LRAT; pinned `drat-trim` prints `s VERIFIED`. But the
+> CNF is already UNSAT by input unit propagation, so deleting the only `0\n`
+> proof line leaves an empty proof that the checker also verifies. Treat
+> ADR-0254 as positive interoperability plus a rejected negative-control design.
+> Before a corrected control is observed, ADR-0255 fixes the satisfiable DIMACS
+> text `p cnf 1 0\n`, reuses the exact real proof unchanged, and requires no
+> `s VERIFIED`. Preserve the v1 rejection beside any v2 result; this is a
+> post-result checker sanity correction, not a stronger source-proof claim.
 > ADR-0236 closes the first measured canonical-authority cell after tcpip
 > activates ADR-0229's reopen condition. On the same current source, binaries,
 > first 15 functions, 250 ms check wall, and N=3 order-balanced repetitions,
@@ -1024,7 +1034,7 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative and wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, versioned confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, corrected five-policy sweep, exhaustive source-backed difference adjudication, and v6 hidden-work rejection DONE; neutral proof consumption PREREGISTERED (ADR-0187/0188/0197/0213--0254 plus Glaurung `7f682e5`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. ADR-0247 accepts every scalar policy at the exact 14/14 planted set with no unexpected high rows. ADR-0248 closes all 54 varying planted-fixture rows with zero independent primitives. The disjoint real-query proof union covers 1,186 decisions, 603 SAT replays, all 583 UNSAT CNF DRAT proofs, and 582/583 stronger certificates with one stable retained fixed-policy miss. ADR-0254 pins the first external `drat-trim` cell before export. No symbolic-memory work is admitted; execute ADR-0254 and add a genuinely broader labeled finding population. |
+| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, independent four-oracle fuzz, bounded/canonical/four-schedule raw authority cells, process-isolated corrected-representative and wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, versioned confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, corrected five-policy sweep, exhaustive source-backed difference adjudication, and v6 hidden-work rejection DONE; neutral proof positive DONE and corrected teeth control PREREGISTERED (ADR-0187/0188/0197/0213--0255 plus Glaurung `7f682e5`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; 302 raw sinks match under unrestricted sole authority on four drivers. The real-query proof union covers 1,186 decisions, 603 SAT replays, all 583 UNSAT CNF DRAT proofs, and 582/583 stronger certificates. ADR-0254's pinned external `drat-trim` positive verifies, but its final-line deletion gate rejects as semantically inert; ADR-0255 fixes a satisfiable-CNF control before observation. No symbolic-memory work is admitted; execute ADR-0255 and add a genuinely broader labeled finding population. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
@@ -1201,9 +1211,11 @@ evidence are now distinct:
    two clean process-isolated runs, with the kill path separately exercised
    without dropping rows. The disjoint 1,024-query holdout adds 515 SAT replays
    and all 509 CNF DRAT rechecks; its stronger fixed-policy coverage is 508/509
-   with one stable retained hard timeout. ADR-0254 preregisters an independent
-   `drat-trim` consumer on the lowest-hash holdout UNSAT; execute and preserve
-   that exact cell, then consider a
+   with one stable retained hard timeout. ADR-0254's independent `drat-trim`
+   positive verifies, but its deleted-final-line negative remains verifiable
+   because the input CNF is already unit-refutable. ADR-0255 preserves that
+   rejection and preregisters a fixed satisfiable-CNF control; execute it, then
+   consider a
    narrow QF_BV parser only against the committed bundle baseline, and widen
    matched RSS only if it outranks the remaining publication blockers.
 6. **Supporting artifact work:** contribution ablations, neutral SMT-COMP QF_BV
