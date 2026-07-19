@@ -3362,6 +3362,7 @@ struct TseitinEncoder<'a, P = DisabledConstructionProfile> {
     not_ite_gates: Vec<Option<NotIteGate>>,
     not_and_gates: Vec<Option<NotAndGate>>,
     and_tree_gates: Vec<Option<AndTreeGate>>,
+    emitted_root_parity_leaves: BTreeSet<(AigNodeId, usize)>,
     clause_index: ClauseIndex,
     variable_bindings: Vec<CnfVarBinding>,
     clause_attempts: u64,
@@ -3396,6 +3397,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             not_ite_gates: vec![None; aig.node_count()],
             not_and_gates: vec![None; aig.node_count()],
             and_tree_gates: vec![None; aig.node_count()],
+            emitted_root_parity_leaves: BTreeSet::new(),
             clause_index: ClauseIndex::default(),
             variable_bindings: Vec::new(),
             clause_attempts: 0,
@@ -3932,6 +3934,9 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                         )?;
                     }
                     AndTreeLeaf::Parity { lits, expected } => {
+                        if !self.should_emit_parity_leaf(context, out, leaf_index) {
+                            continue;
+                        }
                         self.encode_parity_implication(
                             context,
                             out,
@@ -3972,6 +3977,19 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             )?;
         }
         Ok(())
+    }
+
+    fn should_emit_parity_leaf(
+        &mut self,
+        context: EmissionContext,
+        out: EncodedLit,
+        leaf_index: usize,
+    ) -> bool {
+        context.phase != CnfClauseOriginPhase::Root
+            || out != EncodedLit::Const(true)
+            || self
+                .emitted_root_parity_leaves
+                .insert((context.owner, leaf_index))
     }
 
     fn encode_parity_implication(
@@ -5137,6 +5155,35 @@ mod tests {
     }
 
     #[test]
+    fn parity_leaf_emission_memo_is_scoped_to_positive_direct_root_identity() {
+        let mut aig = Aig::new();
+        let owner_p = aig.input("owner-p").node();
+        let owner_q = aig.input("owner-q").node();
+        let mut encoder = super::TseitinEncoder::<super::DisabledConstructionProfile>::new(&aig);
+        let root_p = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_p,
+        };
+        let root_q = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_q,
+        };
+        let gate_p = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Gate,
+            owner: owner_p,
+        };
+
+        assert!(encoder.should_emit_parity_leaf(root_p, EncodedLit::Const(true), 0));
+        assert!(!encoder.should_emit_parity_leaf(root_p, EncodedLit::Const(true), 0));
+        assert!(encoder.should_emit_parity_leaf(root_p, EncodedLit::Const(true), 1));
+        assert!(encoder.should_emit_parity_leaf(root_q, EncodedLit::Const(true), 0));
+        assert!(encoder.should_emit_parity_leaf(gate_p, EncodedLit::Const(true), 2));
+        assert!(encoder.should_emit_parity_leaf(gate_p, EncodedLit::Const(true), 2));
+        assert!(encoder.should_emit_parity_leaf(root_p, EncodedLit::Const(false), 3));
+        assert!(encoder.should_emit_parity_leaf(root_p, EncodedLit::Const(false), 3));
+    }
+
+    #[test]
     fn clause_fingerprint_collision_requires_exact_equality() {
         let p = CnfLit::positive(CnfVar::new(0).unwrap());
         let q = CnfLit::positive(CnfVar::new(1).unwrap());
@@ -5963,6 +6010,39 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn repeated_positive_direct_root_emits_each_parity_leaf_once() {
+        let mut arena = TermArena::new();
+        let x_sym = arena.declare("x", Sort::BitVec(2)).unwrap();
+        let y_sym = arena.declare("y", Sort::BitVec(2)).unwrap();
+        let x = arena.var(x_sym);
+        let y = arena.var(y_sym);
+        let root = arena.eq(x, y).unwrap();
+        let lowering = lower_terms(&arena, &[root]).unwrap();
+        let root_lit = lowering.roots()[0].bits()[0];
+        let (single, _) =
+            tseitin_encode_profiled_with_origins(lowering.aig(), &[root_lit]).unwrap();
+        let (repeated, repeated_origins) =
+            tseitin_encode_profiled_with_origins(lowering.aig(), &[root_lit, root_lit, root_lit])
+                .unwrap();
+
+        assert_eq!(repeated.formula(), single.formula());
+        assert_eq!(repeated.variable_bindings(), single.variable_bindings());
+        assert_eq!(
+            repeated.stats().clause_attempts,
+            single.stats().clause_attempts
+        );
+        assert_eq!(repeated.stats().duplicate_clauses_skipped, 0);
+        assert_eq!(repeated_origins.parity_overlap.duplicate_clauses, 0);
+        assert_eq!(repeated.roots().len(), 3);
+        assert!(
+            repeated
+                .roots()
+                .iter()
+                .all(|root| root.cnf_lit == EncodedLit::Const(true))
+        );
     }
 
     #[test]
