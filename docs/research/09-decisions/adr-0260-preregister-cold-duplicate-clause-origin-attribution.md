@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: artifact-v36 implementation complete; fixed real-query
-observation not yet started
+Result state: fixed artifact-v36 observation accepted; exactly one follow-on
+cell passes the preregistered rule
 
 ## Context
 
@@ -124,8 +124,42 @@ Pre-observation gates pass:
   the independent analyzer.
 
 No corrected-wide-v3 query was run through the origin profiler while this
-implementation was developed. Commit this implementation boundary next, then
-execute the fixed detached measurement from that exact commit.
+implementation was developed. The implementation was committed as `1bce10fd`
+before the fixed detached measurement began.
+
+## Observed result
+
+The fixed run accepts all 162 decisions (88 SAT / 74 UNSAT), all 162 manifest
+and in-process Z3 agreements, all 88 SAT original-model replays, every exact
+family count, and every construction/origin identity. Artifact v36 has config
+hash `3031046d19deeb81`, corpus hash `23932b876da74bd1`, and clean source
+revision `1bce10fd5eb6b96fc6eff692434e7d8e7d79a14b`.
+
+All 119,260 exact duplicates and 229,651 duplicate canonical literals are
+attributed. The length partition is 11,997 unit, 107,117 binary, and 146 larger
+clauses, with zero empty or ternary duplicates.
+
+Exactly one matrix cell passes the fixed selection rule:
+
+| First/duplicate origin | Owner relation | Duplicates | Share | Queries | Largest-query share |
+|---|---|---:|---:|---:|---:|
+| `root/and_tree/forward/parity` | same | 107,000 | 89.7199% | 29 | 9.9738% |
+
+All 107,000 selected-cell duplicates are binary and contain 214,000 canonical
+literals. They partition as 83,172 slice-partial SAT, 14,894 register-slice
+SAT, and 8,934 register-slice UNSAT duplicates. The next cells are same-owner
+root AND-tree literals (11,309; 9.4826%) and cross-owner root AND-tree literals
+(675; 0.5660%).
+
+The retained
+[`artifact.json`](../../../bench-results/glaurung-cnf-duplicate-origin-profile-20260719/artifact.json)
+has SHA-256 `aeba00c5...f15`; the independently re-summed
+[`analysis.json`](../../../bench-results/glaurung-cnf-duplicate-origin-profile-20260719/analysis.json)
+has SHA-256 `17134ac5...066`.
+
+ADR-0260 still selects no production optimization. Its rule authorizes only
+ADR-0261's separately preregistered repeated-private-parity-leaf elision
+experiment. Counts remain diagnostic and do not establish a wall-time win.
 
 ## Follow-on selection rule
 
