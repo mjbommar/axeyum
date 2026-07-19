@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0263 preregisters symbolic-CVE corpus qualification
+  before any detector execution.** The exact 22-row Linux IOCTL census and
+  reachability result are source-hash pinned. Patch review partitions six
+  direct scalar/address-safety candidates from 16 rows requiring speculative,
+  authorization, API/protocol, lifetime/concurrency, resource-lifecycle, or
+  uninitialized-output semantics. One UVC source path is explicitly corrected;
+  the purported integer-underflow row is correctly classified as speculation
+  semantics. The validator binds every fixing commit, vulnerable parent, patch
+  hash, changed file, and parent handler. Seven tests began red and pass. Commit
+  this protocol before retaining the exact qualification result. Candidate is
+  not executable or detected; no recall claim exists yet.
+
 - **2026-07-19 — ADR-0262 accepts all six wider v6 sole-authority finding
   cells.** All 36 tcpip first-20 processes pass exact identities, stable work
   and findings, 0/0 high-confidence parity, complete policy accounting, and the
