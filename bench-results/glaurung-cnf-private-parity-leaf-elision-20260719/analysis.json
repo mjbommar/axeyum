@@ -1,0 +1,985 @@
+{
+  "accepted": true,
+  "aggregate": {
+    "canonical_binary_clauses": 255330,
+    "canonical_empty_clauses": 34,
+    "canonical_larger_clauses": 1013,
+    "canonical_literals": 894543,
+    "canonical_ternary_clauses": 112144,
+    "canonical_unit_clauses": 22730,
+    "clause_attempts": 396270,
+    "clauses_emitted": 271991,
+    "collision_bucket_comparisons": 0,
+    "collision_exact_duplicates": 0,
+    "collision_inserts": 0,
+    "complementary_literal_tautologies": 0,
+    "declared_clause_literals": 1085685,
+    "duplicate_clauses_skipped": 119260,
+    "false_constants_dropped": 186123,
+    "primary_exact_duplicates": 119260,
+    "primary_occupied_probes": 119260,
+    "primary_vacant_probes": 271991,
+    "repeated_literals_dropped": 0,
+    "tautological_clauses_skipped": 5019,
+    "true_constant_tautologies": 5019,
+    "visited_clause_literals": 1085685
+  },
+  "all_profile_invariants_hold": true,
+  "artifact": {
+    "config_hash": "3031046d19deeb81",
+    "corpus_hash": "23932b876da74bd1",
+    "manifest_sha256": "sha256:7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064",
+    "version": 36
+  },
+  "claim_limits": [
+    "Profiled timing is diagnostic and is not a production performance result.",
+    "Work counts attribute construction operations but do not alone prove an optimization will improve wall time.",
+    "The report selects no optimization."
+  ],
+  "duplicate_origins": {
+    "by_duplicate_origin": {
+      "root/and_tree/forward/literal": {
+        "duplicate_canonical_literals": 11984,
+        "duplicate_clauses": 11984,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 11984,
+            "literals": 11984
+          }
+        }
+      },
+      "root/and_tree/forward/parity": {
+        "duplicate_canonical_literals": 214000,
+        "duplicate_clauses": 107000,
+        "lengths": {
+          "binary": {
+            "clauses": 107000,
+            "literals": 214000
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/and_tree/reverse/long": {
+        "duplicate_canonical_literals": 3420,
+        "duplicate_clauses": 146,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 146,
+            "literals": 3420
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/direct_negative_and/direct/leaf": {
+        "duplicate_canonical_literals": 216,
+        "duplicate_clauses": 108,
+        "lengths": {
+          "binary": {
+            "clauses": 108,
+            "literals": 216
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/not_and/forward/literal": {
+        "duplicate_canonical_literals": 3,
+        "duplicate_clauses": 3,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 3,
+            "literals": 3
+          }
+        }
+      },
+      "root/not_and/forward/nested": {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/not_ite/reverse/else": {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/not_ite/reverse/then": {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        }
+      },
+      "root/root/assertion/unit": {
+        "duplicate_canonical_literals": 10,
+        "duplicate_clauses": 10,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 10,
+            "literals": 10
+          }
+        }
+      }
+    },
+    "duplicate_canonical_literals": 229651,
+    "duplicate_clauses": 119260,
+    "eligible_cells": [
+      {
+        "duplicate_origin": "root/and_tree/forward/parity",
+        "first_origin": "root/and_tree/forward/parity",
+        "owner_relation": "same"
+      }
+    ],
+    "lengths": {
+      "binary": {
+        "clauses": 107117,
+        "literals": 214234
+      },
+      "empty": {
+        "clauses": 0,
+        "literals": 0
+      },
+      "larger": {
+        "clauses": 146,
+        "literals": 3420
+      },
+      "ternary": {
+        "clauses": 0,
+        "literals": 0
+      },
+      "unit": {
+        "clauses": 11997,
+        "literals": 11997
+      }
+    },
+    "rows": [
+      {
+        "duplicate_canonical_literals": 675,
+        "duplicate_clauses": 675,
+        "duplicate_origin": "root/and_tree/forward/literal",
+        "families": {
+          "arithmetic": {
+            "sat": 1,
+            "unsat": 48
+          },
+          "comparison": {
+            "sat": 61,
+            "unsat": 117
+          },
+          "register-slice": {
+            "sat": 18,
+            "unsat": 329
+          },
+          "slice-partial": {
+            "sat": 45,
+            "unsat": 56
+          }
+        },
+        "first_origin": "root/and_tree/forward/literal",
+        "largest_instance_share": 0.09037037037037036,
+        "largest_single_instance_clauses": 61,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 675,
+            "literals": 675
+          }
+        },
+        "owner_relation": "cross",
+        "participating_instances": 50,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 0.0056599027335233944
+      },
+      {
+        "duplicate_canonical_literals": 11309,
+        "duplicate_clauses": 11309,
+        "duplicate_origin": "root/and_tree/forward/literal",
+        "families": {
+          "arithmetic": {
+            "sat": 0,
+            "unsat": 63
+          },
+          "comparison": {
+            "sat": 188,
+            "unsat": 124
+          },
+          "register-slice": {
+            "sat": 1625,
+            "unsat": 5007
+          },
+          "slice-partial": {
+            "sat": 4302,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/and_tree/forward/literal",
+        "largest_instance_share": 0.0972676629233354,
+        "largest_single_instance_clauses": 1100,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 11309,
+            "literals": 11309
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 44,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 0.09482642964950529
+      },
+      {
+        "duplicate_canonical_literals": 1,
+        "duplicate_clauses": 1,
+        "duplicate_origin": "root/root/assertion/unit",
+        "families": {
+          "comparison": {
+            "sat": 1,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/and_tree/forward/literal",
+        "largest_instance_share": 1.0,
+        "largest_single_instance_clauses": 1,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 1,
+            "literals": 1
+          }
+        },
+        "owner_relation": "cross",
+        "participating_instances": 1,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 8.385041086701324e-06
+      },
+      {
+        "duplicate_canonical_literals": 214000,
+        "duplicate_clauses": 107000,
+        "duplicate_origin": "root/and_tree/forward/parity",
+        "families": {
+          "register-slice": {
+            "sat": 14894,
+            "unsat": 8934
+          },
+          "slice-partial": {
+            "sat": 83172,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/and_tree/forward/parity",
+        "largest_instance_share": 0.09973831775700935,
+        "largest_single_instance_clauses": 10672,
+        "lengths": {
+          "binary": {
+            "clauses": 107000,
+            "literals": 214000
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 29,
+        "selection_eligible": true,
+        "share_of_all_duplicates": 0.8971993962770417
+      },
+      {
+        "duplicate_canonical_literals": 3420,
+        "duplicate_clauses": 146,
+        "duplicate_origin": "root/and_tree/reverse/long",
+        "families": {
+          "arithmetic": {
+            "sat": 0,
+            "unsat": 9
+          },
+          "register-slice": {
+            "sat": 83,
+            "unsat": 40
+          },
+          "slice-partial": {
+            "sat": 6,
+            "unsat": 8
+          }
+        },
+        "first_origin": "root/and_tree/reverse/long",
+        "largest_instance_share": 0.273972602739726,
+        "largest_single_instance_clauses": 40,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 146,
+            "literals": 3420
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 18,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 0.0012242159986583935
+      },
+      {
+        "duplicate_canonical_literals": 216,
+        "duplicate_clauses": 108,
+        "duplicate_origin": "root/direct_negative_and/direct/leaf",
+        "families": {
+          "register-slice": {
+            "sat": 86,
+            "unsat": 6
+          },
+          "slice-partial": {
+            "sat": 0,
+            "unsat": 16
+          }
+        },
+        "first_origin": "root/direct_negative_and/direct/leaf",
+        "largest_instance_share": 0.46296296296296297,
+        "largest_single_instance_clauses": 50,
+        "lengths": {
+          "binary": {
+            "clauses": 108,
+            "literals": 216
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 8,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 0.0009055844373637431
+      },
+      {
+        "duplicate_canonical_literals": 3,
+        "duplicate_clauses": 3,
+        "duplicate_origin": "root/not_and/forward/literal",
+        "families": {
+          "register-slice": {
+            "sat": 3,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/not_and/forward/literal",
+        "largest_instance_share": 0.6666666666666666,
+        "largest_single_instance_clauses": 2,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 3,
+            "literals": 3
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 2,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 2.5155123260103976e-05
+      },
+      {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "duplicate_origin": "root/not_and/forward/nested",
+        "families": {
+          "register-slice": {
+            "sat": 3,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/not_and/forward/nested",
+        "largest_instance_share": 0.6666666666666666,
+        "largest_single_instance_clauses": 2,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 2,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 2.5155123260103976e-05
+      },
+      {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "duplicate_origin": "root/not_ite/reverse/else",
+        "families": {
+          "register-slice": {
+            "sat": 3,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/not_ite/reverse/else",
+        "largest_instance_share": 0.6666666666666666,
+        "largest_single_instance_clauses": 2,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 2,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 2.5155123260103976e-05
+      },
+      {
+        "duplicate_canonical_literals": 6,
+        "duplicate_clauses": 3,
+        "duplicate_origin": "root/not_ite/reverse/then",
+        "families": {
+          "register-slice": {
+            "sat": 3,
+            "unsat": 0
+          }
+        },
+        "first_origin": "root/not_ite/reverse/then",
+        "largest_instance_share": 0.6666666666666666,
+        "largest_single_instance_clauses": 2,
+        "lengths": {
+          "binary": {
+            "clauses": 3,
+            "literals": 6
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 0,
+            "literals": 0
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 2,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 2.5155123260103976e-05
+      },
+      {
+        "duplicate_canonical_literals": 9,
+        "duplicate_clauses": 9,
+        "duplicate_origin": "root/root/assertion/unit",
+        "families": {
+          "arithmetic": {
+            "sat": 0,
+            "unsat": 7
+          },
+          "comparison": {
+            "sat": 0,
+            "unsat": 1
+          },
+          "register-slice": {
+            "sat": 0,
+            "unsat": 1
+          }
+        },
+        "first_origin": "root/root/assertion/unit",
+        "largest_instance_share": 0.7777777777777778,
+        "largest_single_instance_clauses": 7,
+        "lengths": {
+          "binary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "empty": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "larger": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "ternary": {
+            "clauses": 0,
+            "literals": 0
+          },
+          "unit": {
+            "clauses": 9,
+            "literals": 9
+          }
+        },
+        "owner_relation": "same",
+        "participating_instances": 3,
+        "selection_eligible": false,
+        "share_of_all_duplicates": 7.546536978031192e-05
+      }
+    ],
+    "selection_rule": {
+      "maximum_largest_instance_share": 0.5,
+      "minimum_participating_instances": 10,
+      "minimum_share_of_all_duplicates": 0.5
+    }
+  },
+  "families": {
+    "arithmetic": {
+      "counters": {
+        "canonical_binary_clauses": 17339,
+        "canonical_empty_clauses": 6,
+        "canonical_larger_clauses": 72,
+        "canonical_literals": 77516,
+        "canonical_ternary_clauses": 13050,
+        "canonical_unit_clauses": 1644,
+        "clause_attempts": 32380,
+        "clauses_emitted": 31983,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 87193,
+        "duplicate_clauses_skipped": 128,
+        "false_constants_dropped": 9408,
+        "primary_exact_duplicates": 128,
+        "primary_occupied_probes": 128,
+        "primary_vacant_probes": 31983,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 269,
+        "true_constant_tautologies": 269,
+        "visited_clause_literals": 87193
+      },
+      "instances": 36,
+      "sat": 18,
+      "unsat": 18
+    },
+    "comparison": {
+      "counters": {
+        "canonical_binary_clauses": 205,
+        "canonical_empty_clauses": 0,
+        "canonical_larger_clauses": 23,
+        "canonical_literals": 2743,
+        "canonical_ternary_clauses": 15,
+        "canonical_unit_clauses": 1062,
+        "clause_attempts": 1305,
+        "clauses_emitted": 813,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 3815,
+        "duplicate_clauses_skipped": 492,
+        "false_constants_dropped": 1072,
+        "primary_exact_duplicates": 492,
+        "primary_occupied_probes": 492,
+        "primary_vacant_probes": 813,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 0,
+        "true_constant_tautologies": 0,
+        "visited_clause_literals": 3815
+      },
+      "instances": 12,
+      "sat": 7,
+      "unsat": 5
+    },
+    "mixed": {
+      "counters": {
+        "canonical_binary_clauses": 0,
+        "canonical_empty_clauses": 1,
+        "canonical_larger_clauses": 3,
+        "canonical_literals": 320,
+        "canonical_ternary_clauses": 0,
+        "canonical_unit_clauses": 128,
+        "clause_attempts": 133,
+        "clauses_emitted": 132,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 453,
+        "duplicate_clauses_skipped": 0,
+        "false_constants_dropped": 132,
+        "primary_exact_duplicates": 0,
+        "primary_occupied_probes": 0,
+        "primary_vacant_probes": 132,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 1,
+        "true_constant_tautologies": 1,
+        "visited_clause_literals": 453
+      },
+      "instances": 7,
+      "sat": 6,
+      "unsat": 1
+    },
+    "register-slice": {
+      "counters": {
+        "canonical_binary_clauses": 81697,
+        "canonical_empty_clauses": 17,
+        "canonical_larger_clauses": 539,
+        "canonical_literals": 316952,
+        "canonical_ternary_clauses": 42802,
+        "canonical_unit_clauses": 12023,
+        "clause_attempts": 138657,
+        "clauses_emitted": 106043,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 376635,
+        "duplicate_clauses_skipped": 31035,
+        "false_constants_dropped": 58104,
+        "primary_exact_duplicates": 31035,
+        "primary_occupied_probes": 31035,
+        "primary_vacant_probes": 106043,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 1579,
+        "true_constant_tautologies": 1579,
+        "visited_clause_literals": 376635
+      },
+      "instances": 52,
+      "sat": 26,
+      "unsat": 26
+    },
+    "slice-partial": {
+      "counters": {
+        "canonical_binary_clauses": 156089,
+        "canonical_empty_clauses": 10,
+        "canonical_larger_clauses": 376,
+        "canonical_literals": 497012,
+        "canonical_ternary_clauses": 56277,
+        "canonical_unit_clauses": 7873,
+        "clause_attempts": 223795,
+        "clauses_emitted": 133020,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 617589,
+        "duplicate_clauses_skipped": 87605,
+        "false_constants_dropped": 117407,
+        "primary_exact_duplicates": 87605,
+        "primary_occupied_probes": 87605,
+        "primary_vacant_probes": 133020,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 3170,
+        "true_constant_tautologies": 3170,
+        "visited_clause_literals": 617589
+      },
+      "instances": 54,
+      "sat": 30,
+      "unsat": 24
+    },
+    "trivial": {
+      "counters": {
+        "canonical_binary_clauses": 0,
+        "canonical_empty_clauses": 0,
+        "canonical_larger_clauses": 0,
+        "canonical_literals": 0,
+        "canonical_ternary_clauses": 0,
+        "canonical_unit_clauses": 0,
+        "clause_attempts": 0,
+        "clauses_emitted": 0,
+        "collision_bucket_comparisons": 0,
+        "collision_exact_duplicates": 0,
+        "collision_inserts": 0,
+        "complementary_literal_tautologies": 0,
+        "declared_clause_literals": 0,
+        "duplicate_clauses_skipped": 0,
+        "false_constants_dropped": 0,
+        "primary_exact_duplicates": 0,
+        "primary_occupied_probes": 0,
+        "primary_vacant_probes": 0,
+        "repeated_literals_dropped": 0,
+        "tautological_clauses_skipped": 0,
+        "true_constant_tautologies": 0,
+        "visited_clause_literals": 0
+      },
+      "instances": 1,
+      "sat": 1,
+      "unsat": 0
+    }
+  },
+  "population": {
+    "files": 162,
+    "sat": 88,
+    "unsat": 74
+  },
+  "schema": "axeyum.cnf-construction-profile-analysis.v2"
+}

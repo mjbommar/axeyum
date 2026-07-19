@@ -3,8 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: candidate implementation and local validation complete; fixed
-real-query observation not yet started
+Result state: rejected at the fixed structural gate; timing not run
 
 ## Context
 
@@ -63,7 +62,7 @@ candidate or requires a new ADR; it is not explained after observation.
 
 ## Implementation boundary
 
-Private positive-root AND-tree collection now performs one deterministic
+Candidate commit `8b95d42a` made private positive-root AND-tree collection perform one deterministic
 post-collection pass. For every parity leaf it folds complemented inputs into
 the expected bit, replaces them with positive node literals, sorts those
 literals, and retains only the first identical `(literals, expected)` key in a
@@ -77,8 +76,36 @@ input order, inversion normalization, distinct expected bits, retained
 multiplicity, non-parity leaves, and unchanged helper bookkeeping. All 305 CNF
 library tests, 880 all-feature solver library tests, 43 all-feature benchmark
 binary tests, and strict all-target/all-feature Clippy for all three affected
-crates pass. No corrected-wide-v3 query has been observed on this candidate.
-Commit this boundary before running the fixed structural verification.
+crates passed before observation. The implementation was committed before the
+fixed run and removed from production after rejection.
+
+## Observed result
+
+The clean detached run at
+`8b95d42aa264c94c30df14fb9d114a6973b6a62c` passes all 162
+decision/manifest/Z3/replay gates and preserves every per-query DAG, AIG, CNF
+variable, and emitted-clause count. It changes none of the selected structural
+counters:
+
+| Counter | Baseline | Candidate | Required delta | Observed delta |
+|---|---:|---:|---:|---:|
+| Clause attempts | 396,270 | 396,270 | -107,000 | 0 |
+| Exact duplicates | 119,260 | 119,260 | -107,000 | 0 |
+| Canonical attempted literals | 894,543 | 894,543 | -214,000 | 0 |
+| Emitted clauses | 271,991 | 271,991 | 0 | 0 |
+
+The independent analysis is byte-identical to ADR-0260's accepted analysis.
+The retained
+[`artifact.json`](../../../bench-results/glaurung-cnf-private-parity-leaf-elision-20260719/artifact.json)
+has SHA-256 `33638089...6621`; its
+[`analysis.json`](../../../bench-results/glaurung-cnf-private-parity-leaf-elision-20260719/analysis.json)
+has SHA-256 `17134ac5...066`.
+
+ADR-0260 established equal clauses from the same owner and parity-emission
+template, not identical normalized enclosing leaves. ADR-0261's stronger
+mechanism inference is false on this population. The preselected non-exact-
+delta rule rejects the candidate, so the unprofiled timing protocol below was
+not run.
 
 ## Unprofiled performance protocol
 
@@ -109,7 +136,10 @@ the smaller origin cells.
 
 ## Consequences
 
-This is the one experiment ADR-0260 authorizes. A pass removes redundant cold
-construction work without changing CNF; a fail closes this origin-selected
-candidate on the current population. Either outcome leaves warm retention,
-SAT tuning, Glaurung concretization policy, and symbolic memory unchanged.
+This was the one experiment ADR-0260 authorized. Its structural failure closes
+the origin-selected candidate and the current duplicate-origin lane. The
+no-op production change is removed; its commit and complete negative evidence
+remain retained. Any future cold-clause candidate needs new preregistered leaf-
+shape or clause-overlap evidence rather than reinterpretation of this origin
+cell. Warm retention, SAT tuning, Glaurung concretization policy, and symbolic
+memory remain unchanged.

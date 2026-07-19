@@ -4304,27 +4304,7 @@ fn collect_private_and_tree(
     };
     collect_private_and_leaf(context, lhs, &mut gate, allow_equal_leaves);
     collect_private_and_leaf(context, rhs, &mut gate, allow_equal_leaves);
-    if allow_equal_leaves {
-        elide_repeated_private_parity_leaves(&mut gate);
-    }
     (!gate.helper_nodes.is_empty()).then_some(gate)
-}
-
-fn elide_repeated_private_parity_leaves(gate: &mut AndTreeGate) {
-    let mut seen = BTreeSet::<(Vec<AigLit>, bool)>::new();
-    gate.leaves.retain_mut(|leaf| {
-        let AndTreeLeaf::Parity { lits, expected } = leaf else {
-            return true;
-        };
-        for lit in lits.iter_mut() {
-            if lit.is_inverted() {
-                *expected = !*expected;
-                *lit = AigLit::positive(lit.node());
-            }
-        }
-        lits.sort_unstable();
-        seen.insert((lits.clone(), *expected))
-    });
 }
 
 fn collect_private_and_leaf(
@@ -4656,59 +4636,6 @@ mod tests {
             std::mem::size_of::<super::DisabledDuplicateOriginStore>(),
             0,
             "ordinary encoding must retain no origin metadata"
-        );
-    }
-
-    #[test]
-    fn private_parity_leaf_elision_normalizes_only_equivalent_leaves() {
-        let mut aig = Aig::new();
-        let p = aig.input("p");
-        let q = aig.input("q");
-        let r = aig.input("r");
-        let helpers = vec![p.node(), q.node(), r.node()];
-        let mut gate = super::AndTreeGate {
-            leaves: vec![
-                super::AndTreeLeaf::Parity {
-                    lits: vec![p, q],
-                    expected: true,
-                },
-                super::AndTreeLeaf::Parity {
-                    lits: vec![q.negated(), p],
-                    expected: false,
-                },
-                super::AndTreeLeaf::Parity {
-                    lits: vec![q, p],
-                    expected: false,
-                },
-                super::AndTreeLeaf::Parity {
-                    lits: vec![p, p],
-                    expected: true,
-                },
-                super::AndTreeLeaf::Lit(r),
-            ],
-            helper_nodes: helpers.clone(),
-        };
-
-        super::elide_repeated_private_parity_leaves(&mut gate);
-
-        assert_eq!(gate.helper_nodes, helpers);
-        assert_eq!(
-            gate.leaves,
-            vec![
-                super::AndTreeLeaf::Parity {
-                    lits: vec![p, q],
-                    expected: true,
-                },
-                super::AndTreeLeaf::Parity {
-                    lits: vec![p, q],
-                    expected: false,
-                },
-                super::AndTreeLeaf::Parity {
-                    lits: vec![p, p],
-                    expected: true,
-                },
-                super::AndTreeLeaf::Lit(r),
-            ]
         );
     }
 
