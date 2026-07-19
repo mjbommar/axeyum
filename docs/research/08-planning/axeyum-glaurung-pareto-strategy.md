@@ -16,14 +16,18 @@ fair baseline: with a warm z3 control, DptfDevGen is parity cold (0.97x) and
 **favors z3 warm (0.79x)**. Chasing raw speed against a mature bit-blaster is a
 losing, non-Pareto game. Instead, this plan argues that axeyum's real
 differentiators -- **in-process, warm-incremental, deterministic, pure-Rust,
-proof-carrying** -- are the *enablers* of a symbolic-execution capability that
-**Pareto-dominates the status quo on the axes that actually matter to the
-downstream use cases**: reproducibility and bug-finding coverage, at acceptable
-performance and footprint. The novel contribution is a **concretization policy**,
-made affordable by axeyum's warm path, whose settings can be swept
+proof-carrying** -- are the *enablers* of a symbolic-execution program that asks
+whether it can move the measured Pareto frontier on the axes that actually
+matter to the downstream use cases: reproducibility and validated bug-finding
+coverage, at acceptable performance and footprint. No current result establishes
+overall dominance. The lead methods contribution is strict typed
+translation plus multi-oracle differential validation: it exposed real consumer
+soundness defects that the permissive adapter masked. The integration
+contribution is a **concretization policy** whose settings can be swept
 reproducibly against separately reported raw, confidence-gated, and validated
-finding populations. Whether any setting improves validated coverage is an
-experimental question, not a premise of the plan.
+finding populations. Axeyum's warm path may make richer settings affordable,
+but whether any setting improves validated coverage is an experimental question,
+not a premise of the plan.
 
 ## 1. The objective space (Pareto axes) and where we sit today
 
@@ -257,10 +261,17 @@ genuinely architectural; the rest are knobs or bounded explorer mechanics.
   remains an arbitrary-read/write/null finding. This is a localized detector-
   correctness repair, not a new concretization research program.
 - **A1. Deterministic work-bounded timeout (a config value, not a project).**
-  Replace the 250ms wall with a deterministic resource bound (conflicts/decisions;
-  the fixed-work boundary already exists in ioctlance). Removes the
-  nondeterministic Unknown-split divergence at no coverage/soundness cost. A knob.
-  Prerequisite for every reproducibility claim.
+  Select the existing deterministic resource-budget surfaces instead of relying
+  only on the 250ms wall: Axeyum already exposes `SolverConfig::resource_limit`,
+  Z3 exposes `rlimit`, and ioctlance already has deterministic outer function and
+  exploration-work bounds. The remaining work is to wire and record one explicit
+  Glaurung policy/config value, not invent a new solver algorithm. Backend resource
+  units are not numerically equivalent, so calibrate and report each backend's
+  unit separately; reproducibility is a within-backend gate, while cross-backend
+  finding parity remains the user-visible comparison. Keep the wall timeout as a
+  safety cap and report any hit. This removes wall time from the accepted work
+  boundary without pretending the existing outer function bound already controls
+  each solver check.
 - **A3. Diverse / boundary concretization (a policy under A0 -- but NOT a
   guaranteed fix).** The `BoundarySet`/`DiverseEnum` policies fork a
   *deterministic diverse set* at value-dependent sinks. This is deterministic
@@ -303,12 +314,15 @@ cheap.
 
 ### Pillar B -- Performance where it actually matters (characterize and win the right regime)
 
-- **B1. Fair four-cell across all drivers + neutral baselines.** Run
-  `GLAURUNG_FAIR_SHADOW` on the small-formula drivers (vwififlt/IntcSST/
-  SurfacePen), add Bitwuzla and cvc5 as neutral cold points. Deliver the honest
-  regime map: axeyum wins the *in-process, small-formula, high-reuse* regime
-  (FFI floor dominates for z3 even warm); z3/Bitwuzla win *hard BV*. Publish that
-  characterization, not a single ratio.
+- **B1. Fair four-cell across all drivers + neutral baselines.** The
+  `GLAURUNG_FAIR_SHADOW` four-cell small-driver map and cvc5 cold/reset plus
+  source-owner-retained controls are complete; Bitwuzla remains a correctness
+  oracle rather than a measured end-to-end performance cell. The honest observed
+  map is workload-dependent: Axeyum wins warm on IntcSST/SurfacePen, ties on
+  vwififlt, and loses on Dptf. Formula size and the FFI floor do not by themselves
+  explain the reversal. Publish that measured characterization and the separately
+  scoped ADR-0233 hard-frontier cold result, not a single ratio or an inferred
+  universal regime.
 - **B2. Attack the cold 84% via abstraction-refinement + word-level (not more
   bit-blasting).** The cold gap is bit_blast+cnf. Adopt the SOTA lever:
   incremental abstraction-refinement for `mul`/`div`/`rem` and word-level
@@ -342,12 +356,15 @@ cheap.
 Retire "a faster solver." The defensible, novel thesis:
 
 > **A pure-Rust, proof-carrying, warm-incremental SMT backend co-designed with a
-> binary symbolic-execution engine, whose in-process warm path makes a
-> reproducible sweep of concretization policies practical -- separating raw
+> binary symbolic-execution engine, whose in-process warm path supports
+> reproducible sweeps of concretization policies -- separating raw
 > diagnostics from validated coverage while rigorously characterizing the
 > resulting performance regime.**
 
-- **Lead contribution (novel, but scope it honestly):** the concretization
+- **Lead methods contribution:** strict typed translation as a differential
+  oracle, backed by the standing Axeyum/Z3/cvc5/Bitwuzla fuzz campaign and named
+  regressions for the consumer soundness defects it exposed.
+- **Integration contribution (scope it honestly):** the concretization
   Pareto experiment -- determine whether one reproducible setting improves
   validated coverage, work, or cost without hiding losses. The
   *value-selection* half is a configurable-policy sweep (A0) -- convincing and
@@ -359,9 +376,6 @@ Retire "a faster solver." The defensible, novel thesis:
   evidence.
 - **Systems contribution:** the deployability + determinism story (C1/C3) -- a
   solver that ships where libz3 cannot and makes analysis reproducible.
-- **Methods contribution:** strict typing as a differential oracle that caught
-  real consumer soundness bugs (concat/extension/empty-model/wide-const), with a
-  fuzzer backing it.
 - **Honest performance section:** the fair regime map (B1), not an inflated
   headline.
 
@@ -380,12 +394,19 @@ support anyway.
   AnyModel plus least/greatest/site-hash-zero/site-hash-one. BoundarySet and
   DiverseEnum remain settings of this same policy surface, not separate research
   projects, but their set-valued choices require bounded successor forking and
-  are not executable cells at `b79f269`.
+  are not executable cells at `7f682e5`.
 
-**Phase 1 -- Make the comparison honest and reproducible (weeks).**
-- A1 work-bounded timeout (config); B1 fair four-cell on small-formula drivers +
-  Bitwuzla/cvc5. **Gate:** a regime map; timeout nondeterminism eliminated
-  (CV < 3% without cherry-picking).
+**Phase 1 -- Make the comparison honest and reproducible (WIP).**
+- The fair four-cell small-driver map, cvc5 cold/reset and retained breadth, and
+  ADR-0233's 50/100/250/1000 ms Axeyum/Z3/cvc5 formula frontier are complete.
+  ADR-0233 closes neutral timeout-sensitive formula breadth; do not schedule
+  another neutral formula sweep under that name.
+- Remaining A1 is configuration/wiring: select and record backend-specific
+  deterministic resource budgets while retaining the wall as a safety cap.
+  Remaining finding evidence is a wider timeout-sensitive sole-authority tier
+  under ADR-0250's v6 stop partition. **Gate:** exact source/config identity,
+  stable within-backend work partitions, zero accepted deadline/timeout worklist
+  stops, separately reported per-check nondecisions, and no cherry-picked cells.
 - **Decisive classification (complete):** exact PDB, disassembly, trace, and
   taint-provenance analysis classify both model-sensitive tcpip rows as generic
   `Arg0` diagnostics. The producer now emits an exhaustive confidence
