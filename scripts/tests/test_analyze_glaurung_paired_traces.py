@@ -30,7 +30,14 @@ def write_trace(
     z3_scale: int = 2,
     axeyum_scale: int = 1,
     four_cell: bool = False,
+    six_cell: bool = False,
+    bitwuzla_outcomes: tuple[str, ...] | None = None,
+    bitwuzla_execution: str = "warm-retained",
 ) -> pathlib.Path:
+    if four_cell and six_cell:
+        raise ValueError("fixture cannot be both four-cell and six-cell")
+    if bitwuzla_outcomes is None:
+        bitwuzla_outcomes = z3_outcomes
     trace = root / f"trace-{repetition}"
     trace.mkdir()
     events = []
@@ -60,7 +67,7 @@ def write_trace(
                 "axeyum_outcome": axeyum_outcome,
                 "axeyum_execution": execution,
             }
-        if four_cell:
+        if four_cell or six_cell:
             event.update(
                 {
                     "z3_cold_nanos": z3_scale * (index + 1) * 100,
@@ -73,6 +80,17 @@ def write_trace(
                     "axeyum_warm_outcome": axeyum_outcome,
                     "z3_warm_execution": "warm-retained",
                     "axeyum_warm_execution": execution,
+                }
+            )
+        if six_cell:
+            bitwuzla_outcome = bitwuzla_outcomes[index]
+            event.update(
+                {
+                    "bitwuzla_cold_nanos": 4 * (index + 1) * 100,
+                    "bitwuzla_warm_nanos": 2 * (index + 1) * 100,
+                    "bitwuzla_cold_outcome": bitwuzla_outcome,
+                    "bitwuzla_warm_outcome": bitwuzla_outcome,
+                    "bitwuzla_warm_execution": bitwuzla_execution,
                 }
             )
         events.append(event)
@@ -102,9 +120,13 @@ def write_trace(
         "schema": "glaurung-ordered-trace-v1",
         "version": 1,
         "check_measurement_schema": (
-            "glaurung-ordered-check-measurement-v2"
-            if four_cell
-            else "glaurung-ordered-check-measurement-v1"
+            "glaurung-ordered-check-measurement-v3"
+            if six_cell
+            else (
+                "glaurung-ordered-check-measurement-v2"
+                if four_cell
+                else "glaurung-ordered-check-measurement-v1"
+            )
         ),
         "source": {"revision": "a" * 40, "dirty": False},
         "driver": {"path": "fixture.sys", "sha256": "d" * 64},
@@ -113,8 +135,22 @@ def write_trace(
             "GLAURUNG_ORDERED_TRACE_DIR": str(trace),
             "GLAURUNG_SHADOW_DIFF": "1",
         },
-        "solver_features": ["solver-z3", "solver-axeyum"],
+        "solver_features": (
+            ["symbolic", "solver-z3", "solver-axeyum", "solver-bitwuzla"]
+            if six_cell
+            else ["solver-z3", "solver-axeyum"]
+        ),
         "trusted_oracle": {"backend": "z3"},
+        "neutral_measurement_backend": (
+            {
+                "backend": "bitwuzla",
+                "runtime_version": "0.9.1",
+                "authoritative_in_shadow_mode": False,
+                "role": "benchmark-only-neutral",
+            }
+            if six_cell
+            else None
+        ),
         "toolchain": "rustc fixture",
         "host_identity": {"hostname": "fixture"},
         "worker_count": 1,
@@ -128,6 +164,142 @@ def write_trace(
 
 
 class PairedTraceAnalysisTests(unittest.TestCase):
+    def test_reports_six_cell_neutral_contrasts_and_acceptance_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, six_cell=True)
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=100, seed=7)
+        comparisons = report["six_cell_comparisons"]
+        self.assertEqual(len(comparisons), 9)
+        self.assertAlmostEqual(
+            comparisons["cold_z3_over_bitwuzla"][
+                "per_occurrence_geomean_speedup"
+            ],
+            0.5,
+        )
+        self.assertAlmostEqual(
+            comparisons["warm_axeyum_over_bitwuzla"][
+                "per_occurrence_geomean_speedup"
+            ],
+            0.5,
+        )
+        self.assertAlmostEqual(
+            comparisons["bitwuzla_cold_over_warm"][
+                "per_occurrence_geomean_speedup"
+            ],
+            2.0,
+        )
+        self.assertEqual(report["stable_all_six_decided_occurrences"], 2)
+        self.assertEqual(
+            report["six_cell_outcome_counts_per_repetition"][0],
+            {"all_six_decided": 2, "any_nondecision": 1},
+        )
+        self.assertEqual(
+            report["configuration_identity"]["neutral_measurement_backend"]
+            ["backend"],
+            "bitwuzla",
+        )
+        self.assertEqual(
+            report["neutral_regime_gate"], {"accepted": False, "reasons": [
+                "not_all_occurrences_six_way_decided"
+            ]}
+        )
+
+    def test_rejects_invalid_v3_neutral_backend_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(root, repetition, six_cell=True)
+                for repetition in range(5)
+            ]
+            manifest_path = traces[-1] / "trace-manifest-v1.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["neutral_measurement_backend"]["runtime_version"] = "0.8.0"
+            manifest_path.write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(paired.AnalysisError, "neutral.*identity"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
+    def test_six_cell_fallback_marks_neutral_gate_inconclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(
+                    root,
+                    repetition,
+                    six_cell=True,
+                    z3_outcomes=("sat", "unsat"),
+                    axeyum_outcomes=("sat", "unsat"),
+                    bitwuzla_execution="fallback-missing-delta",
+                )
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=100, seed=7)
+        self.assertFalse(report["neutral_regime_gate"]["accepted"])
+        self.assertIn(
+            "non_pure_warm_execution:bitwuzla",
+            report["neutral_regime_gate"]["reasons"],
+        )
+
+    def test_accepts_complete_stable_six_cell_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(
+                    root,
+                    repetition,
+                    six_cell=True,
+                    z3_outcomes=("sat", "unsat"),
+                    axeyum_outcomes=("sat", "unsat"),
+                )
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=100, seed=7)
+        self.assertEqual(
+            report["neutral_regime_gate"], {"accepted": True, "reasons": []}
+        )
+        self.assertEqual(report["stable_all_six_decided_occurrences"], 2)
+        self.assertEqual(
+            report["warm_execution_counts_per_repetition"][0],
+            {
+                "z3": {"warm-retained": 2},
+                "axeyum": {"warm-retained": 2},
+                "bitwuzla": {"warm-retained": 2},
+            },
+        )
+
+    def test_rejects_six_cell_decided_disagreement(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(
+                    root,
+                    repetition,
+                    six_cell=True,
+                    bitwuzla_outcomes=("unsat", "unsat", "unknown"),
+                )
+                for repetition in range(5)
+            ]
+            with self.assertRaisesRegex(paired.AnalysisError, "fair-cell disagreement"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
+    def test_rejects_six_cell_operational_result(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(
+                    root,
+                    repetition,
+                    six_cell=True,
+                    bitwuzla_outcomes=("sat", "unsat", "error"),
+                )
+                for repetition in range(5)
+            ]
+            with self.assertRaisesRegex(paired.AnalysisError, "operational bitwuzla"):
+                paired.analyze(traces, bootstrap_samples=100, seed=7)
+
     def test_rejects_decided_outcome_drift_across_repetitions(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = pathlib.Path(directory)
@@ -285,6 +457,32 @@ class PairedTraceAnalysisTests(unittest.TestCase):
             png_path = output / "fixture.sys-four-cell-latency-cdf.png"
             self.assertIn(b"z3_cold", csv_path.read_bytes())
             self.assertIn(b"axeyum_warm", csv_path.read_bytes())
+            self.assertGreater(png_path.stat().st_size, 0)
+
+    @unittest.skipUnless(
+        importlib.util.find_spec("matplotlib") is not None,
+        "matplotlib is optional",
+    )
+    def test_writes_six_cell_csv_and_png_cdf(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            traces = [
+                write_trace(
+                    root,
+                    repetition,
+                    six_cell=True,
+                    z3_outcomes=("sat", "unsat"),
+                    axeyum_outcomes=("sat", "unsat"),
+                )
+                for repetition in range(5)
+            ]
+            report = paired.analyze(traces, bootstrap_samples=10, seed=7)
+            output = root / "cdf"
+            paired.write_cdf(report, output)
+            csv_path = output / "fixture.sys-six-cell-latency-cdf.csv"
+            png_path = output / "fixture.sys-six-cell-latency-cdf.png"
+            self.assertIn(b"z3_cold", csv_path.read_bytes())
+            self.assertIn(b"bitwuzla_warm", csv_path.read_bytes())
             self.assertGreater(png_path.stat().st_size, 0)
 
 

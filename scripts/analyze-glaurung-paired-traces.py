@@ -3,7 +3,9 @@
 
 The publication scalar is the geometric mean of per-occurrence Z3/Axeyum
 latency ratios. An occurrence enters that population only when both backends
-decide it in every fixed-work repetition. Ratio-of-sums is never reported.
+decide it in every fixed-work repetition. V3 additionally reports the nine
+registered Z3/Axeyum/Bitwuzla cold/warm contrasts and an all-six acceptance
+gate. Ratio-of-sums is never reported.
 """
 
 from __future__ import annotations
@@ -25,7 +27,14 @@ from typing import Any, Sequence
 TRACE_SCHEMA = "glaurung-ordered-trace-v1"
 MEASUREMENT_SCHEMA_V1 = "glaurung-ordered-check-measurement-v1"
 MEASUREMENT_SCHEMA_V2 = "glaurung-ordered-check-measurement-v2"
-MEASUREMENT_SCHEMAS = {MEASUREMENT_SCHEMA_V1, MEASUREMENT_SCHEMA_V2}
+MEASUREMENT_SCHEMA_V3 = "glaurung-ordered-check-measurement-v3"
+MEASUREMENT_SCHEMAS = {
+    MEASUREMENT_SCHEMA_V1,
+    MEASUREMENT_SCHEMA_V2,
+    MEASUREMENT_SCHEMA_V3,
+}
+FAIR_CELLS_V2 = ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
+FAIR_CELLS_V3 = FAIR_CELLS_V2 + ("bitwuzla_cold", "bitwuzla_warm")
 DECIDED = {"sat", "unsat"}
 OUTCOMES = DECIDED | {"unknown", "error", "no-solver"}
 EXECUTION_CLASSES = {
@@ -41,6 +50,11 @@ EXECUTION_CLASSES = {
     "invalid-direct-delta",
 }
 PURE_WARM_CLASSES = {"warm-snapshot", "warm-created", "warm-retained"}
+DIRECT_WARM_CLASSES = {"warm-created", "warm-retained"}
+NEUTRAL_WARM_CLASSES = DIRECT_WARM_CLASSES | {
+    "fallback-missing-delta",
+    "invalid-direct-delta",
+}
 OUTPUT_CONFIGURATION_KEYS = {
     "GLAURUNG_AXEYUM_PROFILE_DIR",
     "GLAURUNG_DUMP_QUERIES",
@@ -75,6 +89,11 @@ class Check:
     axeyum_warm_nanos: int | None = None
     z3_warm_execution: str | None = None
     axeyum_warm_execution: str | None = None
+    bitwuzla_cold_outcome: str | None = None
+    bitwuzla_warm_outcome: str | None = None
+    bitwuzla_cold_nanos: int | None = None
+    bitwuzla_warm_nanos: int | None = None
+    bitwuzla_warm_execution: str | None = None
 
 
 @dataclass(frozen=True)
@@ -143,7 +162,22 @@ def configuration_identity(manifest: dict[str, Any]) -> str:
         "host_identity": manifest.get("host_identity"),
         "worker_count": manifest.get("worker_count"),
     }
+    if manifest.get("check_measurement_schema") == MEASUREMENT_SCHEMA_V3:
+        identity["neutral_measurement_backend"] = manifest.get(
+            "neutral_measurement_backend"
+        )
     return stable_json(identity)
+
+
+def validate_neutral_backend_identity(manifest: dict[str, Any]) -> None:
+    identity = manifest.get("neutral_measurement_backend")
+    if identity != {
+        "backend": "bitwuzla",
+        "runtime_version": "0.9.1",
+        "authoritative_in_shadow_mode": False,
+        "role": "benchmark-only-neutral",
+    }:
+        fail("invalid v3 neutral measurement backend identity")
 
 
 def verify_query_artifacts(
@@ -204,6 +238,8 @@ def load_trace(root: pathlib.Path) -> Trace:
     measurement_schema = manifest.get("check_measurement_schema")
     if measurement_schema not in MEASUREMENT_SCHEMAS:
         fail(f"{root} lacks a supported ordered-check measurement schema")
+    if measurement_schema == MEASUREMENT_SCHEMA_V3:
+        validate_neutral_backend_identity(manifest)
     driver = manifest.get("driver")
     if not isinstance(driver, dict):
         fail(f"{root} has no driver identity")
@@ -259,8 +295,13 @@ def load_trace(root: pathlib.Path) -> Trace:
         z3_nanos = require_positive_int(event.get("z3_nanos"), "Z3 timing")
         axeyum_nanos = require_positive_int(event.get("axeyum_nanos"), "Axeyum timing")
         fair_values: dict[str, Any] = {}
-        if measurement_schema == MEASUREMENT_SCHEMA_V2:
-            for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm"):
+        if measurement_schema in {MEASUREMENT_SCHEMA_V2, MEASUREMENT_SCHEMA_V3}:
+            fair_cells = (
+                FAIR_CELLS_V3
+                if measurement_schema == MEASUREMENT_SCHEMA_V3
+                else FAIR_CELLS_V2
+            )
+            for cell in fair_cells:
                 cell_outcome = require_string(
                     event.get(f"{cell}_outcome"), f"{cell} outcome"
                 )
@@ -274,11 +315,11 @@ def load_trace(root: pathlib.Path) -> Trace:
                 )
             decided = {
                 fair_values[f"{cell}_outcome"]
-                for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
+                for cell in fair_cells
                 if fair_values[f"{cell}_outcome"] in DECIDED
             }
             if len(decided) > 1:
-                fail(f"decided four-cell disagreement for {check_id} in {root}")
+                fail(f"decided fair-cell disagreement for {check_id} in {root}")
             fair_values["z3_warm_execution"] = require_string(
                 event.get("z3_warm_execution"), "warm Z3 execution"
             )
@@ -294,6 +335,15 @@ def load_trace(root: pathlib.Path) -> Trace:
             )
             if fair_values["axeyum_warm_execution"] not in EXECUTION_CLASSES:
                 fail(f"invalid warm Axeyum execution for {check_id} in {root}")
+            if measurement_schema == MEASUREMENT_SCHEMA_V3:
+                fair_values["bitwuzla_warm_execution"] = require_string(
+                    event.get("bitwuzla_warm_execution"), "warm Bitwuzla execution"
+                )
+                if (
+                    fair_values["bitwuzla_warm_execution"]
+                    not in NEUTRAL_WARM_CLASSES
+                ):
+                    fail(f"invalid warm Bitwuzla execution for {check_id} in {root}")
             aliases = (
                 (z3_nanos, fair_values["z3_cold_nanos"], "Z3 timing"),
                 (axeyum_nanos, fair_values["axeyum_warm_nanos"], "Axeyum timing"),
@@ -327,6 +377,7 @@ def load_trace(root: pathlib.Path) -> Trace:
             execution,
             fair_values.get("z3_warm_execution"),
             fair_values.get("axeyum_warm_execution"),
+            fair_values.get("bitwuzla_warm_execution"),
         )
         checks.append(
             Check(
@@ -474,7 +525,7 @@ def population_summary(
     }
 
 
-def four_cell_population_summary(
+def fair_cell_population_summary(
     traces: Sequence[Trace],
     indices: Sequence[int],
     numerator: str,
@@ -497,7 +548,7 @@ def four_cell_population_summary(
             getattr(trace.checks[index], denominator_field) for trace in traces
         ]
         if any(value is None for value in numerator_values + denominator_values):
-            fail("four-cell timing is absent from a v2 comparison")
+            fail("fair-cell timing is absent from a comparison")
         numerator_ints = [int(value) for value in numerator_values]
         denominator_ints = [int(value) for value in denominator_values]
         per_occurrence_ratios.append(
@@ -540,7 +591,7 @@ def four_cell_population_summary(
     }
 
 
-def stable_four_cell_indices(
+def stable_fair_cell_indices(
     traces: Sequence[Trace], numerator: str, denominator: str
 ) -> list[int]:
     return [
@@ -579,15 +630,13 @@ def analyze(
             fail(f"fixed-work check identity drift in {trace.path}")
 
     outcome_fields = ["z3_outcome", "axeyum_outcome"]
-    if baseline.measurement_schema == MEASUREMENT_SCHEMA_V2:
-        outcome_fields.extend(
-            [
-                "z3_cold_outcome",
-                "z3_warm_outcome",
-                "axeyum_cold_outcome",
-                "axeyum_warm_outcome",
-            ]
+    if baseline.measurement_schema in {MEASUREMENT_SCHEMA_V2, MEASUREMENT_SCHEMA_V3}:
+        fair_cells = (
+            FAIR_CELLS_V3
+            if baseline.measurement_schema == MEASUREMENT_SCHEMA_V3
+            else FAIR_CELLS_V2
         )
+        outcome_fields.extend(f"{cell}_outcome" for cell in fair_cells)
     for index, baseline_check in enumerate(baseline.checks):
         for field in outcome_fields:
             decided_outcomes = {
@@ -651,8 +700,8 @@ def analyze(
         )
         four_cell_comparisons = {}
         for offset, (name, numerator, denominator) in enumerate(comparison_specs):
-            indices = stable_four_cell_indices(traces, numerator, denominator)
-            four_cell_comparisons[name] = four_cell_population_summary(
+            indices = stable_fair_cell_indices(traces, numerator, denominator)
+            four_cell_comparisons[name] = fair_cell_population_summary(
                 traces,
                 indices,
                 numerator,
@@ -666,12 +715,7 @@ def analyze(
             if all(
                 all(
                     getattr(trace.checks[index], f"{cell}_outcome") in DECIDED
-                    for cell in (
-                        "z3_cold",
-                        "z3_warm",
-                        "axeyum_cold",
-                        "axeyum_warm",
-                    )
+                    for cell in FAIR_CELLS_V2
                 )
                 for trace in traces
             )
@@ -683,8 +727,108 @@ def analyze(
                 )
                 for index in all_four_indices
             ]
-            for cell in ("z3_cold", "z3_warm", "axeyum_cold", "axeyum_warm")
+            for cell in FAIR_CELLS_V2
         }
+    six_cell_comparisons: dict[str, Any] | None = None
+    six_cell_cdf: dict[str, list[float]] | None = None
+    stable_all_six: list[int] = []
+    six_cell_outcome_counts: list[dict[str, int]] | None = None
+    warm_execution_counts: list[dict[str, dict[str, int]]] | None = None
+    neutral_gate: dict[str, Any] | None = None
+    if baseline.measurement_schema == MEASUREMENT_SCHEMA_V3:
+        comparison_specs = (
+            ("cold_z3_over_axeyum", "z3_cold", "axeyum_cold"),
+            ("cold_z3_over_bitwuzla", "z3_cold", "bitwuzla_cold"),
+            ("cold_axeyum_over_bitwuzla", "axeyum_cold", "bitwuzla_cold"),
+            ("warm_z3_over_axeyum", "z3_warm", "axeyum_warm"),
+            ("warm_z3_over_bitwuzla", "z3_warm", "bitwuzla_warm"),
+            ("warm_axeyum_over_bitwuzla", "axeyum_warm", "bitwuzla_warm"),
+            ("z3_cold_over_warm", "z3_cold", "z3_warm"),
+            ("axeyum_cold_over_warm", "axeyum_cold", "axeyum_warm"),
+            ("bitwuzla_cold_over_warm", "bitwuzla_cold", "bitwuzla_warm"),
+        )
+        six_cell_comparisons = {}
+        for offset, (name, numerator, denominator) in enumerate(comparison_specs):
+            indices = stable_fair_cell_indices(traces, numerator, denominator)
+            six_cell_comparisons[name] = fair_cell_population_summary(
+                traces,
+                indices,
+                numerator,
+                denominator,
+                bootstrap_samples,
+                seed + 200 + offset,
+            )
+        stable_all_six = [
+            index
+            for index in range(len(baseline.checks))
+            if all(
+                all(
+                    getattr(trace.checks[index], f"{cell}_outcome") in DECIDED
+                    for cell in FAIR_CELLS_V3
+                )
+                for trace in traces
+            )
+        ]
+        six_cell_outcome_counts = []
+        for trace in traces:
+            all_decided = sum(
+                all(getattr(check, f"{cell}_outcome") in DECIDED for cell in FAIR_CELLS_V3)
+                for check in trace.checks
+            )
+            six_cell_outcome_counts.append(
+                {
+                    "all_six_decided": all_decided,
+                    "any_nondecision": len(trace.checks) - all_decided,
+                }
+            )
+        warm_fields = {
+            "z3": "z3_warm_execution",
+            "axeyum": "axeyum_warm_execution",
+            "bitwuzla": "bitwuzla_warm_execution",
+        }
+        warm_execution_counts = []
+        for trace in traces:
+            per_solver: dict[str, dict[str, int]] = {}
+            for solver, field in warm_fields.items():
+                counts: dict[str, int] = {}
+                for check in trace.checks:
+                    execution = getattr(check, field)
+                    if execution is None:
+                        fail(f"missing v3 warm execution class for {solver}")
+                    counts[execution] = counts.get(execution, 0) + 1
+                per_solver[solver] = counts
+            warm_execution_counts.append(per_solver)
+        six_cell_cdf = {
+            cell: [
+                statistics.median(
+                    [int(getattr(trace.checks[index], f"{cell}_nanos")) for trace in traces]
+                )
+                for index in stable_all_six
+            ]
+            for cell in FAIR_CELLS_V3
+        }
+        gate_reasons: list[str] = []
+        if len(stable_all_six) != len(baseline.checks):
+            gate_reasons.append("not_all_occurrences_six_way_decided")
+        for solver, field in warm_fields.items():
+            if any(
+                getattr(check, field) not in DIRECT_WARM_CLASSES
+                for trace in traces
+                for check in trace.checks
+            ):
+                gate_reasons.append(f"non_pure_warm_execution:{solver}")
+        for name in (
+            "warm_z3_over_axeyum",
+            "warm_z3_over_bitwuzla",
+            "warm_axeyum_over_bitwuzla",
+        ):
+            comparison = six_cell_comparisons[name]
+            per_run = comparison.get("per_run_geomean_speedup")
+            if per_run is None:
+                gate_reasons.append(f"no_stable_pair_population:{name}")
+            elif per_run["coefficient_of_variation"] > 0.03:
+                gate_reasons.append(f"warm_process_cv_above_0.03:{name}")
+        neutral_gate = {"accepted": not gate_reasons, "reasons": gate_reasons}
     warm_count = sum(class_counts.get(name, 0) for name in PURE_WARM_CLASSES)
     retained_warm_count = class_counts.get("warm-retained", 0)
     report = {
@@ -723,6 +867,13 @@ def analyze(
     if four_cell_comparisons is not None:
         report["four_cell_comparisons"] = four_cell_comparisons
         report["_four_cell_cdf"] = four_cell_cdf
+    if six_cell_comparisons is not None:
+        report["six_cell_comparisons"] = six_cell_comparisons
+        report["stable_all_six_decided_occurrences"] = len(stable_all_six)
+        report["six_cell_outcome_counts_per_repetition"] = six_cell_outcome_counts
+        report["warm_execution_counts_per_repetition"] = warm_execution_counts
+        report["neutral_regime_gate"] = neutral_gate
+        report["_six_cell_cdf"] = six_cell_cdf
     return report
 
 
@@ -762,28 +913,33 @@ def write_cdf(report: dict[str, Any], output_dir: pathlib.Path) -> None:
     plt.savefig(output_dir / f"{stem}-latency-cdf.png", dpi=180)
     plt.close()
 
-    four_cell_values = report.pop("_four_cell_cdf", None)
-    if four_cell_values is not None:
-        four_csv_path = output_dir / f"{stem}-four-cell-latency-cdf.csv"
-        with four_csv_path.open("w", encoding="utf-8", newline="") as output:
+    for private_key, suffix, title in (
+        ("_four_cell_cdf", "four-cell", "Four-cell"),
+        ("_six_cell_cdf", "six-cell", "Six-cell"),
+    ):
+        cell_values = report.pop(private_key, None)
+        if cell_values is None:
+            continue
+        cell_csv_path = output_dir / f"{stem}-{suffix}-latency-cdf.csv"
+        with cell_csv_path.open("w", encoding="utf-8", newline="") as output:
             writer = csv.writer(output, lineterminator="\n")
             writer.writerow(["cell", "latency_nanos", "cumulative_fraction"])
-            for cell, values in four_cell_values.items():
+            for cell, values in cell_values.items():
                 ordered = sorted(values)
                 for rank, value in enumerate(ordered, 1):
                     writer.writerow([cell, value, rank / len(ordered)])
-        for cell, values in four_cell_values.items():
+        for cell, values in cell_values.items():
             ordered = sorted(value / 1_000.0 for value in values)
             cumulative = [rank / len(ordered) for rank in range(1, len(ordered) + 1)]
             plt.step(ordered, cumulative, where="post", label=cell)
         plt.xscale("log")
         plt.xlabel("latency (microseconds, log scale)")
         plt.ylabel("cumulative fraction")
-        plt.title(f"Four-cell paired latency: {report['driver']['label']}")
+        plt.title(f"{title} paired latency: {report['driver']['label']}")
         plt.grid(True, which="both", alpha=0.25)
         plt.legend()
         plt.tight_layout()
-        plt.savefig(output_dir / f"{stem}-four-cell-latency-cdf.png", dpi=180)
+        plt.savefig(output_dir / f"{stem}-{suffix}-latency-cdf.png", dpi=180)
         plt.close()
 
 
@@ -794,6 +950,7 @@ def strip_private_cdf_values(report: dict[str, Any]) -> None:
         population.pop("_cdf_z3_nanos", None)
         population.pop("_cdf_axeyum_nanos", None)
     report.pop("_four_cell_cdf", None)
+    report.pop("_six_cell_cdf", None)
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
