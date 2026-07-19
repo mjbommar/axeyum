@@ -36,6 +36,10 @@ CANONICAL_MODEL_CHOICE_RE = re.compile(
     r"infeasible=(\d+) probes=(\d+) inconclusive=(\d+) unsupported_width=(\d+) "
     r"unknown=(\d+) no_solver=(\d+) error=(\d+) final_unsat=(\d+)"
 )
+EXPLORATION_LIMITS_RE = re.compile(
+    r"\[exploration-limits\] runs=(\d+) completed=(\d+) state_budget=(\d+) "
+    r"solve_budget=(\d+) timeout_budget=(\d+) deadline=(\d+)"
+)
 CHECK_TIMEOUT_RE = re.compile(r"\[solver\][^\n]* check_timeout_ms=(\d+)")
 TIME_RE = re.compile(
     rf"{TIME_PREFIX} elapsed_seconds=([0-9.]+) max_rss_kib=(\d+) exit=(\d+)"
@@ -45,6 +49,8 @@ FINDING_CONFIDENCE_RE = re.compile(
 )
 FINDING_CONFIDENCE_SUFFIX_RE = re.compile(r"\tconfidence=([^\t]+)$")
 FINDING_CONFIDENCE_SCHEMA = "glaurung-ioctlance-confidence-v1"
+AUTHORITY_SCHEMA_V5 = "axeyum.glaurung-authoritative-finding-parity.v5"
+AUTHORITY_SCHEMA_V6 = "axeyum.glaurung-authoritative-finding-parity.v6"
 
 
 def resolve_policy_configuration(
@@ -263,6 +269,36 @@ def parse_check_timeout_ms(stderr: str, *, expected: int | None) -> int | None:
     return observed
 
 
+def parse_exploration_limits(
+    stderr: str, *, require_deterministic_worklists: bool
+) -> dict[str, int] | None:
+    matches = list(EXPLORATION_LIMITS_RE.finditer(stderr))
+    if not matches:
+        if require_deterministic_worklists:
+            raise RuntimeError("missing exploration-limits row")
+        return None
+    if len(matches) != 1:
+        raise RuntimeError("multiple exploration-limits rows")
+    match = matches[0]
+    keys = (
+        "runs",
+        "completed",
+        "state_budget",
+        "solve_budget",
+        "timeout_budget",
+        "deadline",
+    )
+    telemetry = {key: int(match.group(index)) for index, key in enumerate(keys, 1)}
+    classified = sum(telemetry[key] for key in keys[1:])
+    if classified != telemetry["runs"]:
+        raise RuntimeError("exploration-limit accounting is inconsistent")
+    if require_deterministic_worklists and (
+        telemetry["timeout_budget"] != 0 or telemetry["deadline"] != 0
+    ):
+        raise RuntimeError("exploration has a deadline/timeout stop")
+    return telemetry
+
+
 def validate_coverage_boundary(
     *,
     tail: str,
@@ -302,6 +338,7 @@ def run_one(
     max_analyzed_functions: int | None,
     required_canonical_model_policy: str | None,
     expected_check_timeout_ms: int | None,
+    require_deterministic_worklists: bool,
 ) -> dict[str, Any]:
     environment = os.environ.copy()
     for inherited in (
@@ -362,6 +399,10 @@ def run_one(
     )
     check_timeout_ms = parse_check_timeout_ms(
         result.stderr, expected=expected_check_timeout_ms
+    )
+    exploration_limits = parse_exploration_limits(
+        result.stderr,
+        require_deterministic_worklists=require_deterministic_worklists,
     )
     if solver.group(1) != backend:
         raise RuntimeError(f"expected {backend} binary, observed {solver.group(1)}")
@@ -436,6 +477,8 @@ def run_one(
         run["canonical_model_choice"] = canonical_model_choice
     if check_timeout_ms is not None:
         run["check_timeout_ms"] = check_timeout_ms
+    if exploration_limits is not None:
+        run["exploration_limits"] = exploration_limits
     if backend == "axeyum":
         for prefix, key in (
             ("[axeyum-warm]", "warm"),
@@ -547,6 +590,39 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         if len(check_timeouts) != 1:
             raise RuntimeError("solver check-timeout population drift")
         check_timeout_ms = check_timeouts.pop()
+
+    exploration_presence = {"exploration_limits" in run for run in runs}
+    if len(exploration_presence) != 1:
+        raise RuntimeError("exploration-limit telemetry availability drift")
+    exploration_available = exploration_presence.pop()
+    exploration_summary: dict[str, Any] | None = None
+    deterministic_worklists_verified = False
+    if exploration_available:
+        exploration_keys = (
+            "runs",
+            "completed",
+            "state_budget",
+            "solve_budget",
+            "timeout_budget",
+            "deadline",
+        )
+        exploration_summary = {"backends": {}}
+        for backend, population in populations.items():
+            telemetry_rows = {
+                tuple(run["exploration_limits"][key] for key in exploration_keys)
+                for run in population
+            }
+            if len(telemetry_rows) != 1:
+                raise RuntimeError(f"{backend} exploration-limit telemetry drift")
+            values = telemetry_rows.pop()
+            exploration_summary["backends"][backend] = dict(
+                zip(exploration_keys, values)
+            )
+        deterministic_worklists_verified = all(
+            int(telemetry[stop]) == 0
+            for telemetry in exploration_summary["backends"].values()
+            for stop in ("timeout_budget", "deadline")
+        )
 
     canonical_presence = {"canonical_model_choice" in run for run in runs}
     if len(canonical_presence) != 1:
@@ -664,6 +740,8 @@ def summarize_driver(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "backends": {},
         "canonical_model_choice": canonical_summary,
         "check_timeout_ms": check_timeout_ms,
+        "exploration_limits": exploration_summary,
+        "deterministic_worklists_verified": deterministic_worklists_verified,
     }
     for backend, population in populations.items():
         backend_stability = raw_summary["stability"][backend]
@@ -825,6 +903,14 @@ def main() -> None:
             "acceptance; both populations remain recorded"
         ),
     )
+    parser.add_argument(
+        "--require-deterministic-worklists",
+        action="store_true",
+        help=(
+            "require Glaurung's exploration-limit stop partition, reject any "
+            "deadline/timeout stop, and require stable per-backend partitions"
+        ),
+    )
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
     if args.repetitions < 2:
@@ -898,6 +984,7 @@ def main() -> None:
                         args.max_analyzed_functions,
                         required_canonical_model_policy,
                         args.check_timeout_ms,
+                        args.require_deterministic_worklists,
                     )
                 except (RuntimeError, subprocess.TimeoutExpired) as error:
                     run = {
@@ -936,7 +1023,11 @@ def main() -> None:
         failures.append("source identity changed during measurement")
 
     report = {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v5",
+        "schema": (
+            AUTHORITY_SCHEMA_V6
+            if args.require_deterministic_worklists
+            else AUTHORITY_SCHEMA_V5
+        ),
         "accepted": not failures,
         "failures": failures,
         "glaurung": glaurung_identity,
@@ -961,6 +1052,7 @@ def main() -> None:
         "concretization_policy_label": policy_configuration["label"],
         "concretization_policy_id": policy_configuration["policy_id"],
         "check_timeout_ms_required": args.check_timeout_ms,
+        "deterministic_worklists_required": args.require_deterministic_worklists,
         "acceptance_population": args.acceptance_population,
         "repetitions": args.repetitions,
         "order": "odd repetitions Z3/Axeyum; even repetitions Axeyum/Z3",

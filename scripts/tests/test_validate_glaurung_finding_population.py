@@ -56,29 +56,40 @@ def manifest(expected: list[str] | None = None) -> dict:
 def authority_report(
     z3: list[str] | None = None,
     axeyum: list[str] | None = None,
+    *,
+    schema: str = "v5",
 ) -> dict:
     z3 = ["validated-a", "validated-b"] if z3 is None else z3
     axeyum = z3 if axeyum is None else axeyum
     runs = []
     for repetition in (1, 2):
         for backend, findings in (("z3", z3), ("axeyum", axeyum)):
-            runs.append(
-                {
-                    "backend": backend,
-                    "repetition": repetition,
-                    "confidence_partition_available": True,
-                    "high_confidence_findings": findings,
-                    "high_confidence_finding_count": len(findings),
-                    "diagnostic_findings": ["diagnostic"],
-                    "finding_count": len(findings) + 1,
+            run = {
+                "backend": backend,
+                "repetition": repetition,
+                "confidence_partition_available": True,
+                "high_confidence_findings": findings,
+                "high_confidence_finding_count": len(findings),
+                "diagnostic_findings": ["diagnostic"],
+                "finding_count": len(findings) + 1,
+            }
+            if schema == "v6":
+                run["exploration_limits"] = {
+                    "runs": 2,
+                    "completed": 1,
+                    "state_budget": 1,
+                    "solve_budget": 0,
+                    "timeout_budget": 0,
+                    "deadline": 0,
                 }
-            )
+            runs.append(run)
     exact = z3 == axeyum
     return {
-        "schema": "axeyum.glaurung-authoritative-finding-parity.v5",
+        "schema": f"axeyum.glaurung-authoritative-finding-parity.{schema}",
         "accepted": exact,
         "acceptance_population": "high-confidence",
         "all_drivers_exact_high_confidence_finding_parity": exact,
+        "deterministic_worklists_required": schema == "v6",
         "glaurung": {"revision": "glaurung-rev", "tracked_dirty": False},
         "axeyum": {"revision": "axeyum-rev", "tracked_dirty": False},
         "post_run_source_identity": {
@@ -107,6 +118,24 @@ def authority_report(
                             "axeyum": {"output_stable": True},
                         },
                     },
+                    "deterministic_worklists_verified": schema == "v6",
+                    "exploration_limits": (
+                        {
+                            "backends": {
+                                backend: {
+                                    "runs": 2,
+                                    "completed": 1,
+                                    "state_budget": 1,
+                                    "solve_budget": 0,
+                                    "timeout_budget": 0,
+                                    "deadline": 0,
+                                }
+                                for backend in ("z3", "axeyum")
+                            }
+                        }
+                        if schema == "v6"
+                        else None
+                    ),
                 },
             }
         ],
@@ -124,6 +153,36 @@ class ValidatedFindingPopulationTests(unittest.TestCase):
         self.assertEqual(result["unexpected_high_confidence_count"], 0)
         self.assertEqual(result["recall"], 1.0)
         self.assertEqual(result["precision"], 1.0)
+
+    def test_accepts_v6_only_with_rechecked_deterministic_worklists(self) -> None:
+        result = MODULE.validate_population(
+            manifest(), authority_report(schema="v6")
+        )
+        self.assertTrue(result["accepted"])
+
+        missing = authority_report(schema="v6")
+        missing["drivers"][0]["runs"][0].pop("exploration_limits")
+        rejected_missing = MODULE.validate_population(manifest(), missing)
+        self.assertFalse(rejected_missing["accepted"])
+        self.assertTrue(
+            any(
+                "lacks exploration-limit telemetry" in row
+                for row in rejected_missing["failures"]
+            )
+        )
+
+        deadline = authority_report(schema="v6")
+        limits = deadline["drivers"][0]["runs"][0]["exploration_limits"]
+        limits["completed"] = 0
+        limits["deadline"] = 1
+        rejected_deadline = MODULE.validate_population(manifest(), deadline)
+        self.assertFalse(rejected_deadline["accepted"])
+        self.assertTrue(
+            any(
+                "deadline/timeout stop" in row
+                for row in rejected_deadline["failures"]
+            )
+        )
 
     def test_retains_false_negative_and_rejects_incomplete_recall(self) -> None:
         result = MODULE.validate_population(

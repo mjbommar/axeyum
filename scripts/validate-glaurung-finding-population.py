@@ -18,9 +18,19 @@ from typing import Any
 
 
 MANIFEST_SCHEMA = "axeyum.glaurung-validated-finding-manifest.v1"
-AUTHORITY_SCHEMA = "axeyum.glaurung-authoritative-finding-parity.v5"
+AUTHORITY_SCHEMA_V5 = "axeyum.glaurung-authoritative-finding-parity.v5"
+AUTHORITY_SCHEMA_V6 = "axeyum.glaurung-authoritative-finding-parity.v6"
+AUTHORITY_SCHEMAS = {AUTHORITY_SCHEMA_V5, AUTHORITY_SCHEMA_V6}
 OUTPUT_SCHEMA = "axeyum.glaurung-validated-finding-population.v1"
 VALIDATION_POLICY = "exact-high-confidence-set"
+EXPLORATION_LIMIT_KEYS = (
+    "runs",
+    "completed",
+    "state_budget",
+    "solve_budget",
+    "timeout_budget",
+    "deadline",
+)
 
 
 def file_sha256(path: Path) -> str:
@@ -288,6 +298,74 @@ def _stable_high_findings(
     return stable["z3"] if stable["z3"] == stable["axeyum"] else []
 
 
+def _validate_deterministic_worklists(
+    driver: dict[str, Any], failures: list[str], label: str
+) -> None:
+    """Recheck every required v6 worklist partition without trusting summary flags."""
+
+    summary = driver.get("summary")
+    if not isinstance(summary, dict):
+        failures.append(f"{label}: deterministic-worklist summary is missing")
+        return
+    if summary.get("deterministic_worklists_verified") is not True:
+        failures.append(f"{label}: deterministic worklists are not verified")
+    summary_limits = summary.get("exploration_limits")
+    summary_backends = (
+        summary_limits.get("backends")
+        if isinstance(summary_limits, dict)
+        else None
+    )
+    if not isinstance(summary_backends, dict):
+        failures.append(f"{label}: exploration-limit summary is missing")
+        summary_backends = {}
+
+    runs = driver.get("runs")
+    if not isinstance(runs, list) or not runs:
+        failures.append(f"{label}: authority runs are missing")
+        return
+    per_backend: dict[str, list[tuple[int, ...]]] = {"z3": [], "axeyum": []}
+    for index, run in enumerate(runs):
+        if not isinstance(run, dict):
+            continue
+        backend = run.get("backend")
+        if backend not in per_backend:
+            continue
+        telemetry = run.get("exploration_limits")
+        if not isinstance(telemetry, dict):
+            failures.append(
+                f"{label}: {backend} run {index} lacks exploration-limit telemetry"
+            )
+            continue
+        if any(
+            type(telemetry.get(key)) is not int or telemetry[key] < 0
+            for key in EXPLORATION_LIMIT_KEYS
+        ):
+            failures.append(
+                f"{label}: {backend} run {index} has malformed exploration-limit telemetry"
+            )
+            continue
+        row = tuple(telemetry[key] for key in EXPLORATION_LIMIT_KEYS)
+        if sum(row[1:]) != row[0]:
+            failures.append(
+                f"{label}: {backend} run {index} has inconsistent exploration-limit accounting"
+            )
+        if telemetry["timeout_budget"] or telemetry["deadline"]:
+            failures.append(f"{label}: {backend} run {index} has a deadline/timeout stop")
+        per_backend[backend].append(row)
+
+    for backend, rows in per_backend.items():
+        if not rows:
+            continue
+        if len(set(rows)) != 1:
+            failures.append(f"{label}: {backend} exploration-limit telemetry drifts")
+            continue
+        observed = dict(zip(EXPLORATION_LIMIT_KEYS, rows[0]))
+        if summary_backends.get(backend) != observed:
+            failures.append(
+                f"{label}: {backend} exploration-limit summary differs from runs"
+            )
+
+
 def validate_population(
     manifest: dict[str, Any], authority_report: dict[str, Any]
 ) -> dict[str, Any]:
@@ -393,8 +471,14 @@ def validate_population(
     if validated_count == 0:
         failures.append("validated denominator is empty")
 
-    if authority_report.get("schema") != AUTHORITY_SCHEMA:
+    authority_schema = authority_report.get("schema")
+    if authority_schema not in AUTHORITY_SCHEMAS:
         failures.append("unsupported authority report schema")
+    require_deterministic_worklists = authority_schema == AUTHORITY_SCHEMA_V6
+    if require_deterministic_worklists and (
+        authority_report.get("deterministic_worklists_required") is not True
+    ):
+        failures.append("v6 authority report does not require deterministic worklists")
     if authority_report.get("accepted") is not True:
         failures.append("authority report was not accepted")
     if authority_report.get("acceptance_population") != "high-confidence":
@@ -457,12 +541,13 @@ def validate_population(
     for sha256, validated in validated_by_sha.items():
         expected = validated["expected_findings"]
         authority_driver = authority_by_sha.get(sha256)
-        observed = (
-            _stable_high_findings(
-                authority_driver,
-                failures,
-                f"driver {validated.get('name', sha256)}",
+        driver_label = f"driver {validated.get('name', sha256)}"
+        if authority_driver is not None and require_deterministic_worklists:
+            _validate_deterministic_worklists(
+                authority_driver, failures, driver_label
             )
+        observed = (
+            _stable_high_findings(authority_driver, failures, driver_label)
             if authority_driver is not None
             else []
         )
@@ -514,6 +599,13 @@ def validate_population(
         "drivers": driver_results,
         "failures": failures,
     }
+    if require_deterministic_worklists:
+        result.update(
+            {
+                "authority_report_schema": authority_schema,
+                "deterministic_worklists_required": True,
+            }
+        )
     return result
 
 

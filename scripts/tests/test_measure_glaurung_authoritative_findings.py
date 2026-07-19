@@ -83,6 +83,62 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "missing solver check-timeout"):
             MODULE.parse_check_timeout_ms("", expected=1000)
 
+    def test_parses_and_requires_deadline_free_exploration_limits(self) -> None:
+        stderr = (
+            "[exploration-limits] runs=40 completed=37 state_budget=3 "
+            "solve_budget=0 timeout_budget=0 deadline=0\n"
+        )
+        self.assertEqual(
+            MODULE.parse_exploration_limits(
+                stderr, require_deterministic_worklists=True
+            ),
+            {
+                "runs": 40,
+                "completed": 37,
+                "state_budget": 3,
+                "solve_budget": 0,
+                "timeout_budget": 0,
+                "deadline": 0,
+            },
+        )
+        self.assertIsNone(
+            MODULE.parse_exploration_limits(
+                "", require_deterministic_worklists=False
+            )
+        )
+        with self.assertRaisesRegex(RuntimeError, "missing exploration-limits"):
+            MODULE.parse_exploration_limits(
+                "", require_deterministic_worklists=True
+            )
+
+    def test_rejects_invalid_or_wall_bounded_exploration_limits(self) -> None:
+        with self.assertRaisesRegex(RuntimeError, "accounting is inconsistent"):
+            MODULE.parse_exploration_limits(
+                "[exploration-limits] runs=4 completed=2 state_budget=1 "
+                "solve_budget=0 timeout_budget=0 deadline=0\n",
+                require_deterministic_worklists=True,
+            )
+        for field in ("timeout_budget", "deadline"):
+            values = {
+                "completed": 3,
+                "state_budget": 0,
+                "solve_budget": 0,
+                "timeout_budget": 0,
+                "deadline": 0,
+            }
+            values[field] = 1
+            footer = (
+                "[exploration-limits] runs=4 "
+                + " ".join(f"{key}={value}" for key, value in values.items())
+                + "\n"
+            )
+            with self.subTest(field=field), self.assertRaisesRegex(
+                RuntimeError, "deadline/timeout stop"
+            ):
+                MODULE.parse_exploration_limits(
+                    footer, require_deterministic_worklists=True
+                )
+
     def test_accepts_complete_canonical_model_choice_footer(self) -> None:
         telemetry = MODULE.parse_canonical_model_choice(
             "[canonical-model-choice] policy=glaurung-min-unsigned-v1 "
@@ -295,6 +351,40 @@ class AuthoritativeFindingRunnerTests(unittest.TestCase):
             }
         runs[1]["canonical_model_choice"]["probes"] = 129
         with self.assertRaisesRegex(RuntimeError, "canonical model telemetry drift"):
+            MODULE.summarize_driver(runs)
+
+    def test_summarizes_stable_exploration_limit_partitions(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["exploration_limits"] = {
+                "runs": 4,
+                "completed": 3,
+                "state_budget": 1,
+                "solve_budget": 0,
+                "timeout_budget": 0,
+                "deadline": 0,
+            }
+        summary = MODULE.summarize_driver(runs)
+        self.assertTrue(summary["deterministic_worklists_verified"])
+        self.assertEqual(
+            summary["exploration_limits"]["backends"]["axeyum"]["state_budget"],
+            1,
+        )
+
+    def test_rejects_exploration_limit_partition_drift(self) -> None:
+        runs = [run("z3"), run("z3"), run("axeyum"), run("axeyum")]
+        for candidate in runs:
+            candidate["exploration_limits"] = {
+                "runs": 4,
+                "completed": 3,
+                "state_budget": 1,
+                "solve_budget": 0,
+                "timeout_budget": 0,
+                "deadline": 0,
+            }
+        runs[1]["exploration_limits"]["completed"] = 2
+        runs[1]["exploration_limits"]["state_budget"] = 2
+        with self.assertRaisesRegex(RuntimeError, "exploration-limit telemetry drift"):
             MODULE.summarize_driver(runs)
 
     def test_accepts_stable_exact_authority_population(self) -> None:

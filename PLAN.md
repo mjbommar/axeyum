@@ -325,6 +325,22 @@ session state.
 > evidence must require explicit exploration-stop telemetry and zero deadline/
 > timeout stops rather than adapting ADR-0249's observed bounds. This result
 > makes no solver-speed or recall claim and does not reopen symbolic memory.
+> ADR-0250 implements that next fail-closed boundary in Axeyum's authoritative-
+> finding harness. Opt-in `--require-deterministic-worklists` requires exactly
+> one machine-readable exploration-stop partition per process, checks that all
+> stop classes sum to the worklist count, rejects any deadline/timeout stop,
+> and requires the complete partition to reproduce within each backend. These
+> required reports advance to schema v6; historical/default v5 invocations stay
+> stable and cannot be retroactively relabeled. The parser accepts the real
+> one-function Dptf footer from isolated Glaurung candidate `ff3c0a7`, and all
+> 26 focused producer tests pass. The source-backed finding-population validator
+> independently rechecks every v6 run rather than trusting the summary; its
+> eight tests pass. Coordinate that candidate with the Glaurung owner
+> before any full v6 campaign; do not edit the live dirty checkout. This closes
+> the harness-side dropped-work gap but does not rehabilitate ADR-0249 or reopen
+> symbolic memory. Resume publication work with wider corrected real proof
+> manifests or a genuinely broader labeled population, not another policy-
+> tuning cell.
 > ADR-0226 adds the first explicit proof denominator. Of 2,513 generated UNSAT
 > rows, a predeclared width<=8/seed-divisible-by-4 subset selects 169 (6.725030%):
 > all 169 carry independently rechecked CNF DRAT and end-to-end
