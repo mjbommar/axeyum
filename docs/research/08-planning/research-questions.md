@@ -710,6 +710,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
   bit_blast/cnf gap (currently ~84% of cold cost) without regressing the warm path?
 - [ ] Are proof-carrying "infeasible path" certificates useful enough downstream
   (agent verdicts, CI determinism) to justify their cost?
+  - In progress: [ADR-0278](../09-decisions/adr-0278-preregister-glaurung-infeasible-path-certificate.md)
+    freezes one explicit, off-trait Glaurung path-verdict attachment with exact
+    source rebinding and pinned `drat-trim` consumption. It measures a requested
+    proof second pass only; ordinary pruning cost and whole-CFG proof coverage
+    remain outside this first cell.
 
 ## Source Pointers
 

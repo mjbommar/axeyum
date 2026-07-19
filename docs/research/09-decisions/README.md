@@ -333,3 +333,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0275](adr-0275-preregister-joint-triplet-and-census.md) | Preregister exact joint-triplet reproduction before a conditional 338-function cold-Z3-authoritative six-cell census | accepted |
 | [0276](adr-0276-preregister-parity-leaf-clause-overlap.md) | Preregister profile-only within-leaf versus cross-leaf parity-clause overlap attribution before another cold CNF generator experiment | accepted |
 | [0277](adr-0277-preregister-direct-root-parity-leaf-emission-memo.md) | Reject the exact-delta direct-root parity memo at its variance/family timing gates and remove it despite a 0.9601 aggregate ratio | accepted |
+| [0278](adr-0278-preregister-glaurung-infeasible-path-certificate.md) | Preregister one source-bound Glaurung infeasible-path certificate attachment plus pinned external DRAT consumption | accepted |

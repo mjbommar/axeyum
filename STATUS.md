@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0278 preregisters the first downstream proof-carrying
+  infeasible-path verdict.** Axeyum's source-bound `UnsatProof` and external
+  DRAT interoperability already exist; Glaurung's current prototype discards
+  the certificate and keeps only a line count. The next isolated-worktree
+  increment makes one concrete off-trait verdict own the proof, rechecks it
+  against the exact Glaurung `ExprPool` path, proves source binding with a
+  weakened-path negative, and exports one fixed bundle for pinned `drat-trim`.
+  It does not change ordinary pruning, the generic solver trait, A0,
+  authoritative findings, symbolic memory, or the Lean/Alethe track.
+
 - **2026-07-19 — ADR-0277 passes its exact structural gate but is rejected by
   the full performance contract; candidate removed.** Candidate `9533c508`
   removes exactly 107,000 attempts/duplicates, 321,000 declared/visited
