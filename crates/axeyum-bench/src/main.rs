@@ -64,7 +64,7 @@ mod run {
 
     use crate::certificate_process::{IsolatedStatus, certify_file_isolated};
 
-    const ARTIFACT_VERSION: u32 = 35;
+    const ARTIFACT_VERSION: u32 = 36;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -839,6 +839,79 @@ mod run {
         cnf_collision_inserts: u64,
     }
 
+    #[derive(Debug, Clone, Default, PartialEq, Eq)]
+    struct DuplicateOriginMetrics {
+        clauses: u64,
+        canonical_literals: u64,
+        empty_clauses: u64,
+        empty_literals: u64,
+        unit_clauses: u64,
+        unit_literals: u64,
+        binary_clauses: u64,
+        binary_literals: u64,
+        ternary_clauses: u64,
+        ternary_literals: u64,
+        larger_clauses: u64,
+        larger_literals: u64,
+    }
+
+    impl DuplicateOriginMetrics {
+        fn add_assign(&mut self, other: &Self) {
+            self.clauses = self.clauses.saturating_add(other.clauses);
+            self.canonical_literals = self
+                .canonical_literals
+                .saturating_add(other.canonical_literals);
+            self.empty_clauses = self.empty_clauses.saturating_add(other.empty_clauses);
+            self.empty_literals = self.empty_literals.saturating_add(other.empty_literals);
+            self.unit_clauses = self.unit_clauses.saturating_add(other.unit_clauses);
+            self.unit_literals = self.unit_literals.saturating_add(other.unit_literals);
+            self.binary_clauses = self.binary_clauses.saturating_add(other.binary_clauses);
+            self.binary_literals = self.binary_literals.saturating_add(other.binary_literals);
+            self.ternary_clauses = self.ternary_clauses.saturating_add(other.ternary_clauses);
+            self.ternary_literals = self.ternary_literals.saturating_add(other.ternary_literals);
+            self.larger_clauses = self.larger_clauses.saturating_add(other.larger_clauses);
+            self.larger_literals = self.larger_literals.saturating_add(other.larger_literals);
+        }
+
+        fn length_clauses(&self) -> u64 {
+            self.empty_clauses
+                .saturating_add(self.unit_clauses)
+                .saturating_add(self.binary_clauses)
+                .saturating_add(self.ternary_clauses)
+                .saturating_add(self.larger_clauses)
+        }
+
+        fn length_literals(&self) -> u64 {
+            self.empty_literals
+                .saturating_add(self.unit_literals)
+                .saturating_add(self.binary_literals)
+                .saturating_add(self.ternary_literals)
+                .saturating_add(self.larger_literals)
+        }
+
+        fn record(&self) -> JsonValue {
+            json!({
+                "duplicate_clauses": self.clauses,
+                "duplicate_canonical_literals": self.canonical_literals,
+                "lengths": {
+                    "empty": {"clauses": self.empty_clauses, "literals": self.empty_literals},
+                    "unit": {"clauses": self.unit_clauses, "literals": self.unit_literals},
+                    "binary": {"clauses": self.binary_clauses, "literals": self.binary_literals},
+                    "ternary": {"clauses": self.ternary_clauses, "literals": self.ternary_literals},
+                    "larger": {"clauses": self.larger_clauses, "literals": self.larger_literals},
+                },
+            })
+        }
+    }
+
+    #[derive(Debug, Clone, Default, PartialEq, Eq)]
+    struct DuplicateOriginSample {
+        profile_complete: bool,
+        duplicate_clauses: u64,
+        duplicate_canonical_literals: u64,
+        rows: BTreeMap<(String, String, String), DuplicateOriginMetrics>,
+    }
+
     /// Original-query structural profile used to verify that an external `QF_BV`
     /// tier actually has the binary-lifter shape it claims to represent. Counts
     /// are over unique reachable DAG nodes, so parser-preserved sharing cannot
@@ -1469,6 +1542,9 @@ mod run {
         /// the samples in one allocation for exact deterministic p50/p95 values.
         layer_sample: Option<LayerSample>,
         layer_samples: Vec<LayerSample>,
+        /// ADR-0260 profile-only sparse first-origin/duplicate-origin cells.
+        cnf_duplicate_origin_sample: Option<DuplicateOriginSample>,
+        cnf_duplicate_origin_samples: Vec<DuplicateOriginSample>,
         /// Structural samples from the untouched parsed assertions. Unlike
         /// layer samples these include every successfully parsed flat query,
         /// regardless of verdict, so a fast failure cannot erase evidence that
@@ -2845,7 +2921,10 @@ mod run {
     }
 
     #[allow(clippy::too_many_lines)] // Flat versioned artifact contract; keep partitions adjacent.
-    fn construction_attribution_record(samples: &[LayerSample]) -> JsonValue {
+    fn construction_attribution_record(
+        samples: &[LayerSample],
+        duplicate_origin_samples: &[DuplicateOriginSample],
+    ) -> JsonValue {
         let count = |select: fn(&LayerSample) -> u64| {
             samples.iter().map(select).fold(0_u64, u64::saturating_add)
         };
@@ -2974,6 +3053,11 @@ mod run {
                     ),
                     "collision_exact_duplicates": collision_duplicates,
                     "collision_inserts": collision_inserts,
+                    "duplicate_origins": duplicate_origin_aggregate_record(
+                        duplicate_origin_samples,
+                        count(|sample| sample.cnf_duplicate_clauses_skipped),
+                        samples.len(),
+                    ),
                     "invariants": {
                         "non_tautological_attempts_equal_length_buckets":
                             non_tautological_attempts == canonical_attempts,
@@ -2999,6 +3083,156 @@ mod run {
                 },
             },
         })
+    }
+
+    fn backend_stat_count(stats: &SolveStats, name: &str) -> Option<u64> {
+        const MAX_EXACT_F64_INTEGER: f64 = 9_007_199_254_740_992.0;
+        let value = stats
+            .backend
+            .iter()
+            .find_map(|(key, value)| (key == name).then_some(*value))?;
+        if !value.is_finite()
+            || value < 0.0
+            || value.fract() != 0.0
+            || value > MAX_EXACT_F64_INTEGER
+        {
+            return None;
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        Some(value as u64)
+    }
+
+    fn duplicate_origin_sample(stats: &SolveStats) -> Option<DuplicateOriginSample> {
+        const PREFIX: &str = "cnf_duplicate_origin|";
+        let profile_complete =
+            backend_stat_count(stats, "cnf_duplicate_origin_profile_complete")? == 1;
+        let duplicate_clauses = backend_stat_count(stats, "cnf_duplicate_origin_clauses")?;
+        let duplicate_canonical_literals =
+            backend_stat_count(stats, "cnf_duplicate_origin_canonical_literals")?;
+        let mut rows = BTreeMap::new();
+        for (name, _) in &stats.backend {
+            let Some(encoded) = name.strip_prefix(PREFIX) else {
+                continue;
+            };
+            let parts = encoded.split('|').collect::<Vec<_>>();
+            if parts.len() != 4 || !matches!(parts[2], "same" | "cross") {
+                continue;
+            }
+            let Some(value) = backend_stat_count(stats, name) else {
+                continue;
+            };
+            let metrics = rows
+                .entry((
+                    parts[0].to_owned(),
+                    parts[1].to_owned(),
+                    parts[2].to_owned(),
+                ))
+                .or_insert_with(DuplicateOriginMetrics::default);
+            match parts[3] {
+                "clauses" => metrics.clauses = value,
+                "canonical_literals" => metrics.canonical_literals = value,
+                "empty_clauses" => metrics.empty_clauses = value,
+                "empty_literals" => metrics.empty_literals = value,
+                "unit_clauses" => metrics.unit_clauses = value,
+                "unit_literals" => metrics.unit_literals = value,
+                "binary_clauses" => metrics.binary_clauses = value,
+                "binary_literals" => metrics.binary_literals = value,
+                "ternary_clauses" => metrics.ternary_clauses = value,
+                "ternary_literals" => metrics.ternary_literals = value,
+                "larger_clauses" => metrics.larger_clauses = value,
+                "larger_literals" => metrics.larger_literals = value,
+                _ => {}
+            }
+        }
+        Some(DuplicateOriginSample {
+            profile_complete,
+            duplicate_clauses,
+            duplicate_canonical_literals,
+            rows,
+        })
+    }
+
+    fn duplicate_origin_record(
+        sample: &DuplicateOriginSample,
+        expected_duplicate_clauses: u64,
+        profiled_instances: usize,
+        instances: usize,
+    ) -> JsonValue {
+        let mut totals = DuplicateOriginMetrics::default();
+        let rows = sample
+            .rows
+            .iter()
+            .map(|((first, duplicate, relation), metrics)| {
+                totals.add_assign(metrics);
+                let mut record = metrics.record();
+                let object = record
+                    .as_object_mut()
+                    .expect("duplicate-origin metric record is an object");
+                object.insert("first_origin".to_owned(), json!(first));
+                object.insert("duplicate_origin".to_owned(), json!(duplicate));
+                object.insert("owner_relation".to_owned(), json!(relation));
+                record
+            })
+            .collect::<Vec<_>>();
+        json!({
+            "profile_complete": sample.profile_complete,
+            "profiled_instances": profiled_instances,
+            "instances": instances,
+            "duplicate_clauses": sample.duplicate_clauses,
+            "duplicate_canonical_literals": sample.duplicate_canonical_literals,
+            "lengths": totals.record()["lengths"].clone(),
+            "rows": rows,
+            "invariants": {
+                "duplicate_clauses_equal_rows": sample.duplicate_clauses == totals.clauses,
+                "duplicate_literals_equal_rows":
+                    sample.duplicate_canonical_literals == totals.canonical_literals,
+                "row_clauses_equal_length_buckets": sample.rows.values().all(
+                    |metrics| metrics.clauses == metrics.length_clauses(),
+                ),
+                "row_literals_equal_length_buckets": sample.rows.values().all(
+                    |metrics| metrics.canonical_literals == metrics.length_literals(),
+                ),
+                "construction_duplicates_equal_origin_duplicates":
+                    expected_duplicate_clauses == sample.duplicate_clauses,
+                "owner_relations_closed": sample.rows.keys().all(
+                    |(_, _, relation)| matches!(relation.as_str(), "same" | "cross"),
+                ),
+            },
+        })
+    }
+
+    fn duplicate_origin_aggregate_record(
+        samples: &[DuplicateOriginSample],
+        expected_duplicate_clauses: u64,
+        instances: usize,
+    ) -> JsonValue {
+        let mut aggregate = DuplicateOriginSample {
+            profile_complete: !samples.is_empty()
+                && samples.len() == instances
+                && samples.iter().all(|sample| sample.profile_complete),
+            ..DuplicateOriginSample::default()
+        };
+        for sample in samples {
+            aggregate.duplicate_clauses = aggregate
+                .duplicate_clauses
+                .saturating_add(sample.duplicate_clauses);
+            aggregate.duplicate_canonical_literals = aggregate
+                .duplicate_canonical_literals
+                .saturating_add(sample.duplicate_canonical_literals);
+            for (key, metrics) in &sample.rows {
+                aggregate
+                    .rows
+                    .entry(key.clone())
+                    .or_default()
+                    .add_assign(metrics);
+            }
+        }
+        duplicate_origin_record(
+            &aggregate,
+            expected_duplicate_clauses,
+            samples.len(),
+            instances,
+        )
     }
 
     #[allow(clippy::too_many_lines)] // Flat versioned JSON contract; keep profile modes adjacent.
@@ -3343,7 +3577,10 @@ mod run {
                     |sample| sample.cnf_clauses,
                 ),
             },
-            "construction": construction_attribution_record(&s.layer_samples),
+            "construction": construction_attribution_record(
+                &s.layer_samples,
+                &s.cnf_duplicate_origin_samples,
+            ),
             "bit_demand": bit_demand_attribution_record(&s.layer_samples),
             // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
             // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
@@ -3388,7 +3625,10 @@ mod run {
         })
     }
 
-    fn instance_cnf_construction_profile_record(sample: &LayerSample) -> JsonValue {
+    fn instance_cnf_construction_profile_record(
+        sample: &LayerSample,
+        stats: Option<&SolveStats>,
+    ) -> JsonValue {
         let non_tautological = sample
             .cnf_clause_attempts
             .saturating_sub(sample.cnf_tautological_clauses_skipped);
@@ -3401,6 +3641,10 @@ mod run {
         let duplicate_outcomes = sample
             .cnf_primary_exact_duplicates
             .saturating_add(sample.cnf_collision_exact_duplicates);
+        let duplicate_origins = stats.and_then(duplicate_origin_sample).map_or_else(
+            || duplicate_origin_aggregate_record(&[], sample.cnf_duplicate_clauses_skipped, 1),
+            |origins| duplicate_origin_record(&origins, sample.cnf_duplicate_clauses_skipped, 1, 1),
+        );
         json!({
             "profile_complete": sample.cnf_construction_profile_complete,
             "declared_clause_literals": sample.cnf_declared_clause_literals,
@@ -3425,6 +3669,7 @@ mod run {
             "collision_bucket_comparisons": sample.cnf_collision_bucket_comparisons,
             "collision_exact_duplicates": sample.cnf_collision_exact_duplicates,
             "collision_inserts": sample.cnf_collision_inserts,
+            "duplicate_origins": duplicate_origins,
             "invariants": {
                 "non_tautological_attempts_equal_length_buckets":
                     non_tautological == canonical_attempts,
@@ -3501,7 +3746,10 @@ mod run {
                     "clauses_emitted": layers.cnf_clauses,
                     "clause_outcomes_partition_attempts":
                         sample.cnf_clause_outcomes() == sample.cnf_clause_attempts,
-                    "detailed_profile": instance_cnf_construction_profile_record(&sample),
+                    "detailed_profile": instance_cnf_construction_profile_record(
+                        &sample,
+                        Some(&record.stats),
+                    ),
                 },
             },
             "bit_demand": instance_bit_demand_record(&sample),
@@ -5299,6 +5547,7 @@ mod run {
         summary.layer_model_replay_s += record.model_replay.as_secs_f64();
         summary.layer_model_replay_files += u64::from(record.outcome == "sat");
         summary.layer_sample = Some(sample);
+        summary.cnf_duplicate_origin_sample = duplicate_origin_sample(&record.stats);
     }
 
     fn accumulate_par2(
@@ -5460,6 +5709,9 @@ mod run {
         total.layer_model_replay_files += next.layer_model_replay_files;
         if let Some(sample) = next.layer_sample {
             total.layer_samples.push(sample);
+        }
+        if let Some(sample) = &next.cnf_duplicate_origin_sample {
+            total.cnf_duplicate_origin_samples.push(sample.clone());
         }
         total.query_shape_files += next.query_shape_files;
         if let Some(sample) = next.query_shape_sample {
@@ -7802,7 +8054,7 @@ mod run {
                     ..LayerSample::default()
                 },
             ];
-            let record = construction_attribution_record(&samples);
+            let record = construction_attribution_record(&samples, &[]);
             assert_eq!(record["aig"]["and_requests"], json!(110));
             assert_eq!(
                 record["aig"]["request_outcomes_partition_requests"],
@@ -7849,7 +8101,7 @@ mod run {
                 cnf_collision_inserts: 1,
                 ..LayerSample::default()
             };
-            let aggregate = construction_attribution_record(&[sample]);
+            let aggregate = construction_attribution_record(&[sample], &[]);
             let profile = &aggregate["cnf"]["detailed_profile"];
             assert_eq!(profile["profile_complete"], json!(true));
             assert_eq!(profile["declared_clause_literals"], json!(21));
@@ -7862,10 +8114,53 @@ mod run {
                     .all(|value| value == &json!(true))
             );
 
-            let instance = instance_cnf_construction_profile_record(&sample);
+            let instance = instance_cnf_construction_profile_record(&sample, None);
             assert_eq!(instance["profile_complete"], json!(true));
             assert!(
                 instance["invariants"]
+                    .as_object()
+                    .unwrap()
+                    .values()
+                    .all(|value| value == &json!(true))
+            );
+        }
+
+        #[test]
+        fn duplicate_origin_backend_stats_round_trip_with_exact_partitions() {
+            let first = "gate/binary_and/forward/lhs";
+            let duplicate = "root/root/assertion/unit";
+            let prefix = format!("cnf_duplicate_origin|{first}|{duplicate}|same|");
+            let mut stats = SolveStats::default();
+            for (name, value) in [
+                ("cnf_duplicate_origin_profile_complete".to_owned(), 1.0),
+                ("cnf_duplicate_origin_clauses".to_owned(), 1.0),
+                ("cnf_duplicate_origin_canonical_literals".to_owned(), 2.0),
+                (format!("{prefix}clauses"), 1.0),
+                (format!("{prefix}canonical_literals"), 2.0),
+                (format!("{prefix}empty_clauses"), 0.0),
+                (format!("{prefix}empty_literals"), 0.0),
+                (format!("{prefix}unit_clauses"), 0.0),
+                (format!("{prefix}unit_literals"), 0.0),
+                (format!("{prefix}binary_clauses"), 1.0),
+                (format!("{prefix}binary_literals"), 2.0),
+                (format!("{prefix}ternary_clauses"), 0.0),
+                (format!("{prefix}ternary_literals"), 0.0),
+                (format!("{prefix}larger_clauses"), 0.0),
+                (format!("{prefix}larger_literals"), 0.0),
+            ] {
+                stats.backend.push((name, value));
+            }
+
+            let sample = duplicate_origin_sample(&stats).unwrap();
+            let record = duplicate_origin_record(&sample, 1, 1, 1);
+            assert_eq!(record["profile_complete"], json!(true));
+            assert_eq!(record["duplicate_clauses"], json!(1));
+            assert_eq!(record["duplicate_canonical_literals"], json!(2));
+            assert_eq!(record["rows"][0]["first_origin"], json!(first));
+            assert_eq!(record["rows"][0]["duplicate_origin"], json!(duplicate));
+            assert_eq!(record["rows"][0]["owner_relation"], json!("same"));
+            assert!(
+                record["invariants"]
                     .as_object()
                     .unwrap()
                     .values()

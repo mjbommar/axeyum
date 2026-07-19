@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and summarize an axeyum-bench CNF construction profile."""
+"""Validate and summarize CNF construction and duplicate-origin profiles."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any
 
 
-ARTIFACT_VERSION = 35
-REPORT_SCHEMA = "axeyum.cnf-construction-profile-analysis.v1"
+ARTIFACT_VERSION = 36
+REPORT_SCHEMA = "axeyum.cnf-construction-profile-analysis.v2"
 INVARIANTS = {
     "non_tautological_attempts_equal_length_buckets",
     "non_tautological_attempts_equal_primary_probes",
@@ -20,6 +20,15 @@ INVARIANTS = {
     "emitted_partition",
     "tautologies_partition",
 }
+ORIGIN_INVARIANTS = {
+    "duplicate_clauses_equal_rows",
+    "duplicate_literals_equal_rows",
+    "row_clauses_equal_length_buckets",
+    "row_literals_equal_length_buckets",
+    "construction_duplicates_equal_origin_duplicates",
+    "owner_relations_closed",
+}
+LENGTH_BUCKETS = ("empty", "unit", "binary", "ternary", "larger")
 COUNTER_PATHS = {
     "clause_attempts": ("clause_attempts",),
     "tautological_clauses_skipped": ("tautological_clauses_skipped",),
@@ -108,6 +117,103 @@ def require_invariants(profile: dict[str, Any], *, label: str) -> None:
     require(all(value is True for value in invariants.values()), f"{label} has a failed invariant")
 
 
+def origin_lengths(value: Any, *, label: str) -> dict[str, dict[str, int]]:
+    require(isinstance(value, dict), f"{label} lacks duplicate-origin lengths")
+    require(set(value) == set(LENGTH_BUCKETS), f"{label} duplicate-origin length set mismatch")
+    result = {}
+    for bucket in LENGTH_BUCKETS:
+        row = value[bucket]
+        require(isinstance(row, dict) and set(row) == {"clauses", "literals"}, f"{label}.{bucket} is malformed")
+        result[bucket] = {
+            "clauses": count(row["clauses"], label=f"{label}.{bucket}.clauses"),
+            "literals": count(row["literals"], label=f"{label}.{bucket}.literals"),
+        }
+    return result
+
+
+def add_origin_metrics(destination: dict[str, Any], source: dict[str, Any]) -> None:
+    destination["duplicate_clauses"] += source["duplicate_clauses"]
+    destination["duplicate_canonical_literals"] += source["duplicate_canonical_literals"]
+    for bucket in LENGTH_BUCKETS:
+        destination["lengths"][bucket]["clauses"] += source["lengths"][bucket]["clauses"]
+        destination["lengths"][bucket]["literals"] += source["lengths"][bucket]["literals"]
+
+
+def empty_origin_metrics() -> dict[str, Any]:
+    return {
+        "duplicate_clauses": 0,
+        "duplicate_canonical_literals": 0,
+        "lengths": {
+            bucket: {"clauses": 0, "literals": 0} for bucket in LENGTH_BUCKETS
+        },
+    }
+
+
+def origin_profile(
+    profile: dict[str, Any],
+    *,
+    expected_duplicate_clauses: int,
+    label: str,
+) -> tuple[dict[str, Any], dict[tuple[str, str, str], dict[str, Any]]]:
+    value = profile.get("duplicate_origins")
+    require(isinstance(value, dict), f"{label} lacks duplicate-origin profile")
+    require(value.get("profile_complete") is True, f"{label} duplicate-origin profile is incomplete")
+    invariants = value.get("invariants")
+    require(isinstance(invariants, dict), f"{label} duplicate-origin profile lacks invariants")
+    require(set(invariants) == ORIGIN_INVARIANTS, f"{label} duplicate-origin invariant set mismatch")
+    require(all(entry is True for entry in invariants.values()), f"{label} duplicate-origin failed invariant")
+    totals = {
+        "duplicate_clauses": count(value.get("duplicate_clauses"), label=f"{label}.duplicate_clauses"),
+        "duplicate_canonical_literals": count(
+            value.get("duplicate_canonical_literals"),
+            label=f"{label}.duplicate_canonical_literals",
+        ),
+        "lengths": origin_lengths(value.get("lengths"), label=label),
+    }
+    require(
+        totals["duplicate_clauses"] == expected_duplicate_clauses,
+        f"{label} duplicate-origin clause total drift",
+    )
+    rows = value.get("rows")
+    require(isinstance(rows, list), f"{label} duplicate-origin rows are malformed")
+    rendered: dict[tuple[str, str, str], dict[str, Any]] = {}
+    summed = empty_origin_metrics()
+    for index, row in enumerate(rows):
+        row_label = f"{label}.duplicate_origins.rows[{index}]"
+        require(isinstance(row, dict), f"{row_label} is not an object")
+        first = row.get("first_origin")
+        duplicate = row.get("duplicate_origin")
+        relation = row.get("owner_relation")
+        require(isinstance(first, str) and first.count("/") == 3, f"{row_label} first origin is malformed")
+        require(isinstance(duplicate, str) and duplicate.count("/") == 3, f"{row_label} duplicate origin is malformed")
+        require(relation in {"same", "cross"}, f"{row_label} owner relation is invalid")
+        key = (first, duplicate, relation)
+        require(key not in rendered, f"{row_label} repeats a duplicate-origin cell")
+        metrics = {
+            "duplicate_clauses": count(row.get("duplicate_clauses"), label=f"{row_label}.duplicate_clauses"),
+            "duplicate_canonical_literals": count(
+                row.get("duplicate_canonical_literals"),
+                label=f"{row_label}.duplicate_canonical_literals",
+            ),
+            "lengths": origin_lengths(row.get("lengths"), label=row_label),
+        }
+        require(metrics["duplicate_clauses"] > 0, f"{row_label} is a zero cell")
+        require(
+            metrics["duplicate_clauses"]
+            == sum(metrics["lengths"][bucket]["clauses"] for bucket in LENGTH_BUCKETS),
+            f"{row_label} duplicate-origin clause partition drift",
+        )
+        require(
+            metrics["duplicate_canonical_literals"]
+            == sum(metrics["lengths"][bucket]["literals"] for bucket in LENGTH_BUCKETS),
+            f"{row_label} duplicate-origin literal partition drift",
+        )
+        rendered[key] = metrics
+        add_origin_metrics(summed, metrics)
+    require(summed == totals, f"{label} duplicate-origin rows do not equal totals")
+    return totals, rendered
+
+
 def counters(cnf: dict[str, Any], *, label: str) -> dict[str, int]:
     return {
         name: count(nested(cnf, path, label=label), label=f"{label}.{name}")
@@ -178,6 +284,13 @@ def analyze_artifact(
 
     aggregate = defaultdict(int)
     families: dict[str, dict[str, Any]] = {}
+    aggregate_origin_totals = empty_origin_metrics()
+    aggregate_origin_rows: dict[tuple[str, str, str], dict[str, Any]] = {}
+    origin_participation: dict[tuple[str, str, str], set[int]] = defaultdict(set)
+    origin_largest_instance: dict[tuple[str, str, str], int] = defaultdict(int)
+    origin_families: dict[tuple[str, str, str], dict[str, dict[str, int]]] = defaultdict(
+        lambda: defaultdict(lambda: {"sat": 0, "unsat": 0})
+    )
     for index, instance in enumerate(instances):
         label = f"instance[{index}]"
         require(isinstance(instance, dict), f"{label} is not an object")
@@ -196,6 +309,22 @@ def analyze_artifact(
         require(profile.get("profile_complete") is True, f"{label} profile is incomplete")
         require_invariants(profile, label=label)
         row_counts = counters(cnf, label=label)
+        origin_totals, origin_rows = origin_profile(
+            profile,
+            expected_duplicate_clauses=row_counts["duplicate_clauses_skipped"],
+            label=label,
+        )
+        add_origin_metrics(aggregate_origin_totals, origin_totals)
+        for key, metrics in origin_rows.items():
+            aggregate_row = aggregate_origin_rows.setdefault(key, empty_origin_metrics())
+            add_origin_metrics(aggregate_row, metrics)
+            origin_participation[key].add(index)
+            origin_largest_instance[key] = max(
+                origin_largest_instance[key], metrics["duplicate_clauses"]
+            )
+            origin_families[key][family][instance["outcome"]] += metrics[
+                "duplicate_clauses"
+            ]
         add_counts(aggregate, row_counts)
         row = families.setdefault(
             family,
@@ -207,6 +336,19 @@ def analyze_artifact(
 
     expected_aggregate = counters(summary_cnf, label="summary")
     require(dict(aggregate) == expected_aggregate, "summary counters do not equal per-instance sums")
+    summary_origin_totals, summary_origin_rows = origin_profile(
+        summary_profile,
+        expected_duplicate_clauses=expected_aggregate["duplicate_clauses_skipped"],
+        label="summary",
+    )
+    require(
+        aggregate_origin_totals == summary_origin_totals,
+        "summary duplicate-origin totals do not equal per-instance sums",
+    )
+    require(
+        aggregate_origin_rows == summary_origin_rows,
+        "summary duplicate-origin rows do not equal per-instance sums",
+    )
 
     if expected_files is not None:
         require(files == expected_files, "file-count gate failed")
@@ -236,6 +378,52 @@ def analyze_artifact(
         }
         for name, row in sorted(families.items())
     }
+    rendered_origin_rows = []
+    by_duplicate_origin: dict[str, dict[str, Any]] = {}
+    eligible_cells = []
+    all_duplicate_clauses = aggregate_origin_totals["duplicate_clauses"]
+    for key, metrics in sorted(aggregate_origin_rows.items()):
+        clauses = metrics["duplicate_clauses"]
+        duplicate_origin_metrics = by_duplicate_origin.setdefault(
+            key[1], empty_origin_metrics()
+        )
+        add_origin_metrics(duplicate_origin_metrics, metrics)
+        participating_instances = len(origin_participation[key])
+        largest_instance = origin_largest_instance[key]
+        selection_eligible = (
+            clauses * 2 >= all_duplicate_clauses
+            and participating_instances >= 10
+            and largest_instance * 2 <= clauses
+        )
+        if selection_eligible:
+            eligible_cells.append(
+                {
+                    "first_origin": key[0],
+                    "duplicate_origin": key[1],
+                    "owner_relation": key[2],
+                }
+            )
+        rendered_origin_rows.append(
+            {
+                "first_origin": key[0],
+                "duplicate_origin": key[1],
+                "owner_relation": key[2],
+                **metrics,
+                "participating_instances": participating_instances,
+                "largest_single_instance_clauses": largest_instance,
+                "largest_instance_share": (
+                    largest_instance / clauses if clauses else None
+                ),
+                "share_of_all_duplicates": (
+                    clauses / all_duplicate_clauses if all_duplicate_clauses else None
+                ),
+                "selection_eligible": selection_eligible,
+                "families": {
+                    family: dict(outcomes)
+                    for family, outcomes in sorted(origin_families[key].items())
+                },
+            }
+        )
     return {
         "schema": REPORT_SCHEMA,
         "accepted": True,
@@ -247,6 +435,20 @@ def analyze_artifact(
         },
         "population": {"files": files, "sat": sat, "unsat": unsat},
         "aggregate": dict(aggregate),
+        "duplicate_origins": {
+            **aggregate_origin_totals,
+            "rows": rendered_origin_rows,
+            "by_duplicate_origin": {
+                origin: metrics
+                for origin, metrics in sorted(by_duplicate_origin.items())
+            },
+            "eligible_cells": eligible_cells,
+            "selection_rule": {
+                "minimum_share_of_all_duplicates": 0.5,
+                "minimum_participating_instances": 10,
+                "maximum_largest_instance_share": 0.5,
+            },
+        },
         "families": rendered_families,
         "all_profile_invariants_hold": True,
         "claim_limits": [

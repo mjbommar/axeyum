@@ -24,13 +24,14 @@ use axeyum_bv::{
     lower_terms_with_deadline, lower_terms_with_deadline_profiled,
 };
 use axeyum_cnf::{
-    BveOptions, CnfAssignment, CnfConstructionProfile, CnfEncoding, CnfError, CnfFormula,
-    CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, Reconstruction, SatError,
-    SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult,
-    XorPropagation, check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
-    solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits,
-    solve_with_xor_cdcl, tseitin_encode, tseitin_encode_profiled, vivify_within, write_drat,
-    xor_gauss_drat_refutation, xor_propagate,
+    BveOptions, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding,
+    CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome,
+    Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
+    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
+    extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_with_limits,
+    solve_with_rustsat_batsat_limits, solve_with_xor_cdcl, tseitin_encode,
+    tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
+    xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
@@ -156,17 +157,25 @@ impl SatBvBackend {
             .map(|root| root.bits()[0])
             .collect::<Vec<_>>();
         let cnf_start = Instant::now();
-        let encoding = if config.profile_cnf_construction {
-            tseitin_encode_profiled(lowering.aig(), &roots)
+        let (encoding, duplicate_origins) = if config.profile_cnf_construction {
+            let (encoding, origins) = tseitin_encode_profiled_with_origins(lowering.aig(), &roots)
+                .map_err(|error| map_cnf_error(&error))?;
+            (encoding, Some(origins))
         } else {
-            tseitin_encode(lowering.aig(), &roots)
-        }
-        .map_err(|error| map_cnf_error(&error))?;
+            (
+                tseitin_encode(lowering.aig(), &roots).map_err(|error| map_cnf_error(&error))?,
+                None,
+            )
+        };
         if config.profile_cnf_construction
-            && !encoding.stats().construction_profile_invariants_hold()
+            && (!encoding.stats().construction_profile_invariants_hold()
+                || duplicate_origins.as_ref().is_none_or(|origins| {
+                    !origins.invariants_hold()
+                        || origins.duplicate_clauses != encoding.stats().duplicate_clauses_skipped
+                }))
         {
             return Err(SolverError::Backend(
-                "cold CNF construction profile violated an accounting invariant".to_owned(),
+                "cold CNF construction/origin profile violated an accounting invariant".to_owned(),
             ));
         }
         let cnf_encode = cnf_start.elapsed();
@@ -174,6 +183,9 @@ impl SatBvBackend {
         push_duration_ms(&mut stats, "bit_blast_ms", bit_blast);
         push_duration_ms(&mut stats, "cnf_encode_ms", cnf_encode);
         record_encoding_stats(&mut stats, &lowering, &encoding);
+        if let Some(origins) = &duplicate_origins {
+            record_duplicate_origin_profile(&mut stats, origins);
+        }
 
         // Optional CNF inprocessing (subsumption + bounded variable elimination)
         // on the Tseitin formula. Subsumption is model-preserving and BVE is
@@ -498,6 +510,48 @@ fn record_cnf_construction_profile(stats: &mut SolveStats, profile: CnfConstruct
         profile.collision_exact_duplicates,
     );
     push_count(stats, "cnf_collision_inserts", profile.collision_inserts);
+}
+
+fn record_duplicate_origin_profile(stats: &mut SolveStats, profile: &CnfDuplicateOriginProfile) {
+    push_count(
+        stats,
+        "cnf_duplicate_origin_profile_complete",
+        u64::from(profile.profile_complete),
+    );
+    push_count(
+        stats,
+        "cnf_duplicate_origin_clauses",
+        profile.duplicate_clauses,
+    );
+    push_count(
+        stats,
+        "cnf_duplicate_origin_canonical_literals",
+        profile.duplicate_canonical_literals,
+    );
+    for row in &profile.rows {
+        let relation = if row.same_owner { "same" } else { "cross" };
+        let prefix = format!(
+            "cnf_duplicate_origin|{}|{}|{relation}|",
+            row.first_origin.stable_key(),
+            row.duplicate_origin.stable_key(),
+        );
+        for (metric, value) in [
+            ("clauses", row.duplicate_clauses),
+            ("canonical_literals", row.duplicate_canonical_literals),
+            ("empty_clauses", row.empty_clauses),
+            ("empty_literals", row.empty_literals),
+            ("unit_clauses", row.unit_clauses),
+            ("unit_literals", row.unit_literals),
+            ("binary_clauses", row.binary_clauses),
+            ("binary_literals", row.binary_literals),
+            ("ternary_clauses", row.ternary_clauses),
+            ("ternary_literals", row.ternary_literals),
+            ("larger_clauses", row.larger_clauses),
+            ("larger_literals", row.larger_literals),
+        ] {
+            push_count(stats, &format!("{prefix}{metric}"), value);
+        }
+    }
 }
 
 /// A Tseitin formula after CNF inprocessing, plus the maps that lift a model of
@@ -1615,7 +1669,7 @@ mod tests {
 
         let mut ordinary_backend = SatBvBackend::new();
         let ordinary = ordinary_backend
-            .check(&arena, &[p], &SolverConfig::default())
+            .check(&arena, &[p, p], &SolverConfig::default())
             .unwrap();
         assert!(matches!(ordinary, CheckResult::Sat(_)));
         let ordinary_layers =
@@ -1624,12 +1678,19 @@ mod tests {
         assert!(!ordinary_layers.cnf_construction_profile_complete);
         assert_eq!(ordinary_layers.cnf_declared_clause_literals, 0);
         assert_eq!(ordinary_layers.cnf_primary_vacant_probes, 0);
+        assert_eq!(
+            stat(
+                ordinary_backend.last_stats().unwrap(),
+                "cnf_duplicate_origin_profile_complete"
+            ),
+            None
+        );
 
         let mut profiled_backend = SatBvBackend::new();
         let profiled = profiled_backend
             .check(
                 &arena,
-                &[p],
+                &[p, p],
                 &SolverConfig::default().with_cnf_construction_profile(true),
             )
             .unwrap();
@@ -1638,8 +1699,24 @@ mod tests {
             crate::layers::BvLayerStats::from_solve_stats(profiled_backend.last_stats().unwrap())
                 .unwrap();
         assert!(layers.cnf_construction_profile_complete);
-        assert_eq!(layers.cnf_declared_clause_literals, 1);
-        assert_eq!(layers.cnf_visited_clause_literals, 1);
+        assert_eq!(layers.cnf_declared_clause_literals, 2);
+        assert_eq!(layers.cnf_visited_clause_literals, 2);
+        let profiled_stats = profiled_backend.last_stats().unwrap();
+        assert_eq!(
+            stat(profiled_stats, "cnf_duplicate_origin_profile_complete"),
+            Some(1.0)
+        );
+        assert_eq!(
+            stat(profiled_stats, "cnf_duplicate_origin_clauses"),
+            Some(1.0)
+        );
+        assert_eq!(
+            stat(
+                profiled_stats,
+                "cnf_duplicate_origin|root/root/assertion/unit|root/root/assertion/unit|same|clauses"
+            ),
+            Some(1.0)
+        );
         assert_eq!(
             layers.cnf_clause_attempts - layers.cnf_tautological_clauses_skipped,
             layers.cnf_canonical_empty_clauses

@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: measurement protocol selected; implementation and observation
-not yet started
+Result state: artifact-v36 implementation complete; fixed real-query
+observation not yet started
 
 ## Context
 
@@ -84,6 +84,48 @@ policy:
 
 Profiled timing remains diagnostic. Preserve the raw artifact and independent
 analysis. Do not choose an optimization in this ADR.
+
+## Implementation boundary
+
+`CnfClauseOriginPhase`, `CnfClauseOriginTemplate`, and
+`CnfClauseOriginSite` give every emission site a stable
+`phase/family/direction/template` identity. The profiled encoder carries the
+owner node separately. `EnabledDuplicateOriginStore` retains one origin per
+emitted formula clause and a deterministic sparse matrix keyed by first site,
+duplicate site, and same/cross-owner relation. Collision-bucket duplicates use
+the origin attached to the actual equal collision entry rather than the primary
+fingerprint entry.
+
+The disabled store remains zero-sized. Ordinary `tseitin_encode` neither
+allocates origin metadata nor emits origin stats. The explicitly profiled
+`tseitin_encode_profiled_with_origins` route returns exact per-cell clause,
+canonical-literal, and empty/unit/binary/ternary/larger counts. The solver
+fails closed unless the origin total equals the existing duplicate count and
+both profiles satisfy their independent identities.
+
+Artifact v36 publishes the sparse cells per instance and in the corpus
+aggregate. The analyzer independently re-sums every cell, length/literal
+partition, family/outcome partition, participating-instance count, and largest
+single-instance share. It evaluates the fixed 50% / 10-query / 50% selection
+rule without selecting an optimization itself.
+
+Pre-observation gates pass:
+
+- all 304 `axeyum-cnf` library tests, including same-owner root duplicates,
+  same-template cross-owner, cross-template, root-versus-gate, and forced-
+  fingerprint-collision provenance;
+- all 880 `axeyum-solver` library tests;
+- all 43 `axeyum-bench` binary tests;
+- all five analyzer positive/fail-closed tests;
+- strict all-target/all-feature Clippy and warnings-as-errors rustdoc for the
+  three affected crates;
+- qfbv/no-default solver and benchmark checks; and
+- a two-query manifest/Z3/replay-complete artifact-v36 micro round trip through
+  the independent analyzer.
+
+No corrected-wide-v3 query was run through the origin profiler while this
+implementation was developed. Commit this implementation boundary next, then
+execute the fixed detached measurement from that exact commit.
 
 ## Follow-on selection rule
 

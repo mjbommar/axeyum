@@ -156,8 +156,9 @@ bench-glaurung-qfbv-canonical-demand-profile corpus_dir manifest tier="represent
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite default --profile-bit-demand --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
 
-# ADR-0259's diagnostic-only cold CNF construction profile. This is a separate
-# monomorphized encoder and must not be used as a client timing baseline.
+# ADR-0259/0260's diagnostic-only cold CNF construction and duplicate-origin
+# profile. This is a separate monomorphized encoder and must not be used as a
+# client timing baseline.
 bench-glaurung-qfbv-raw-cnf-construction-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-cnf-construction-profile.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --profile-cnf-construction --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"

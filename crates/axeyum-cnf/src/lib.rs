@@ -7,7 +7,7 @@
 
 use axeyum_aig::{Aig, AigLit, AigNode, AigNodeId};
 use std::cell::Cell;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::hash::{BuildHasherDefault, Hasher};
 use std::time::Duration;
 
@@ -2020,6 +2020,272 @@ pub struct CnfConstructionProfile {
     pub collision_inserts: u64,
 }
 
+/// Encoding phase that attempted a canonical CNF clause.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum CnfClauseOriginPhase {
+    /// Clause emitted while defining a retained non-root gate.
+    Gate,
+    /// Clause emitted while directly encoding or asserting a root.
+    Root,
+}
+
+impl CnfClauseOriginPhase {
+    /// Stable artifact spelling.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Gate => "gate",
+            Self::Root => "root",
+        }
+    }
+}
+
+/// Stable family/direction/template slot for one CNF clause attempt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[non_exhaustive]
+pub enum CnfClauseOriginTemplate {
+    /// XOR forward clause with positive inputs.
+    XorForwardPositiveInputs,
+    /// XOR forward clause with negative inputs.
+    XorForwardNegativeInputs,
+    /// XOR reverse clause negating the left input.
+    XorReverseLeftNegative,
+    /// XOR reverse clause negating the right input.
+    XorReverseRightNegative,
+    /// Not-ITE forward then-arm clause.
+    NotIteForwardThen,
+    /// Not-ITE forward else-arm clause.
+    NotIteForwardElse,
+    /// Not-ITE reverse then-arm clause.
+    NotIteReverseThen,
+    /// Not-ITE reverse else-arm clause.
+    NotIteReverseElse,
+    /// Not-AND forward clause for a literal factor.
+    NotAndForwardLiteral,
+    /// Not-AND forward clause for a complemented-AND factor.
+    NotAndForwardNested,
+    /// Not-AND reverse clause for two literal factors.
+    NotAndReverseLiteralPair,
+    /// Not-AND reverse clause for literal/nested factors, nested left child.
+    NotAndReverseLiteralNestedLeft,
+    /// Not-AND reverse clause for literal/nested factors, nested right child.
+    NotAndReverseLiteralNestedRight,
+    /// Not-AND reverse clause for nested/literal factors, nested left child.
+    NotAndReverseNestedLiteralLeft,
+    /// Not-AND reverse clause for nested/literal factors, nested right child.
+    NotAndReverseNestedLiteralRight,
+    /// Not-AND reverse nested/nested `aa` product.
+    NotAndReverseNestedNestedAa,
+    /// Not-AND reverse nested/nested `ab` product.
+    NotAndReverseNestedNestedAb,
+    /// Not-AND reverse nested/nested `ba` product.
+    NotAndReverseNestedNestedBa,
+    /// Not-AND reverse nested/nested `bb` product.
+    NotAndReverseNestedNestedBb,
+    /// AND-tree forward clause for a literal leaf.
+    AndTreeForwardLiteral,
+    /// AND-tree forward clause for a complemented-AND leaf.
+    AndTreeForwardNotAnd,
+    /// AND-tree forward parity-implication clause.
+    AndTreeForwardParity,
+    /// AND-tree reverse long clause.
+    AndTreeReverse,
+    /// Binary-AND forward clause for the left input.
+    BinaryAndForwardLhs,
+    /// Binary-AND forward clause for the right input.
+    BinaryAndForwardRhs,
+    /// Binary-AND reverse clause.
+    BinaryAndReverse,
+    /// Direct negative-AND distribution leaf clause.
+    DirectNegativeAndLeaf,
+    /// Ordinary unit root assertion.
+    RootUnit,
+}
+
+impl CnfClauseOriginTemplate {
+    /// Stable `family/direction/template` artifact spelling.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::XorForwardPositiveInputs => "xor/forward/positive_inputs",
+            Self::XorForwardNegativeInputs => "xor/forward/negative_inputs",
+            Self::XorReverseLeftNegative => "xor/reverse/left_negative",
+            Self::XorReverseRightNegative => "xor/reverse/right_negative",
+            Self::NotIteForwardThen => "not_ite/forward/then",
+            Self::NotIteForwardElse => "not_ite/forward/else",
+            Self::NotIteReverseThen => "not_ite/reverse/then",
+            Self::NotIteReverseElse => "not_ite/reverse/else",
+            Self::NotAndForwardLiteral => "not_and/forward/literal",
+            Self::NotAndForwardNested => "not_and/forward/nested",
+            Self::NotAndReverseLiteralPair => "not_and/reverse/literal_pair",
+            Self::NotAndReverseLiteralNestedLeft => "not_and/reverse/literal_nested_left",
+            Self::NotAndReverseLiteralNestedRight => "not_and/reverse/literal_nested_right",
+            Self::NotAndReverseNestedLiteralLeft => "not_and/reverse/nested_literal_left",
+            Self::NotAndReverseNestedLiteralRight => "not_and/reverse/nested_literal_right",
+            Self::NotAndReverseNestedNestedAa => "not_and/reverse/nested_nested_aa",
+            Self::NotAndReverseNestedNestedAb => "not_and/reverse/nested_nested_ab",
+            Self::NotAndReverseNestedNestedBa => "not_and/reverse/nested_nested_ba",
+            Self::NotAndReverseNestedNestedBb => "not_and/reverse/nested_nested_bb",
+            Self::AndTreeForwardLiteral => "and_tree/forward/literal",
+            Self::AndTreeForwardNotAnd => "and_tree/forward/not_and",
+            Self::AndTreeForwardParity => "and_tree/forward/parity",
+            Self::AndTreeReverse => "and_tree/reverse/long",
+            Self::BinaryAndForwardLhs => "binary_and/forward/lhs",
+            Self::BinaryAndForwardRhs => "binary_and/forward/rhs",
+            Self::BinaryAndReverse => "binary_and/reverse/clause",
+            Self::DirectNegativeAndLeaf => "direct_negative_and/direct/leaf",
+            Self::RootUnit => "root/assertion/unit",
+        }
+    }
+}
+
+/// Owner-independent origin site used in duplicate matrices.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CnfClauseOriginSite {
+    /// Gate or root encoding phase.
+    pub phase: CnfClauseOriginPhase,
+    /// Stable family/direction/template slot.
+    pub template: CnfClauseOriginTemplate,
+}
+
+impl CnfClauseOriginSite {
+    /// Creates a stable clause-origin site.
+    pub const fn new(phase: CnfClauseOriginPhase, template: CnfClauseOriginTemplate) -> Self {
+        Self { phase, template }
+    }
+
+    /// Stable `phase/family/direction/template` artifact key.
+    pub fn stable_key(self) -> String {
+        format!("{}/{}", self.phase.as_str(), self.template.as_str())
+    }
+}
+
+/// One nonzero first-origin/duplicate-origin/owner-relation cell.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CnfDuplicateOriginRow {
+    /// Origin site of the first emitted equal clause.
+    pub first_origin: CnfClauseOriginSite,
+    /// Origin site of the later rejected duplicate.
+    pub duplicate_origin: CnfClauseOriginSite,
+    /// Whether both attempts belong to the same AIG owner node.
+    pub same_owner: bool,
+    /// Exact duplicate attempts in this cell.
+    pub duplicate_clauses: u64,
+    /// Canonical literals visited by duplicate attempts in this cell.
+    pub duplicate_canonical_literals: u64,
+    /// Empty duplicate clauses.
+    pub empty_clauses: u64,
+    /// Canonical literals in empty duplicate clauses (always zero).
+    pub empty_literals: u64,
+    /// Unit duplicate clauses.
+    pub unit_clauses: u64,
+    /// Canonical literals in unit duplicate clauses.
+    pub unit_literals: u64,
+    /// Binary duplicate clauses.
+    pub binary_clauses: u64,
+    /// Canonical literals in binary duplicate clauses.
+    pub binary_literals: u64,
+    /// Ternary duplicate clauses.
+    pub ternary_clauses: u64,
+    /// Canonical literals in ternary duplicate clauses.
+    pub ternary_literals: u64,
+    /// Duplicate clauses containing four or more literals.
+    pub larger_clauses: u64,
+    /// Canonical literals in duplicate clauses containing four or more literals.
+    pub larger_literals: u64,
+}
+
+impl CnfDuplicateOriginRow {
+    fn new(first: CnfClauseOriginSite, duplicate: CnfClauseOriginSite, same_owner: bool) -> Self {
+        Self {
+            first_origin: first,
+            duplicate_origin: duplicate,
+            same_owner,
+            duplicate_clauses: 0,
+            duplicate_canonical_literals: 0,
+            empty_clauses: 0,
+            empty_literals: 0,
+            unit_clauses: 0,
+            unit_literals: 0,
+            binary_clauses: 0,
+            binary_literals: 0,
+            ternary_clauses: 0,
+            ternary_literals: 0,
+            larger_clauses: 0,
+            larger_literals: 0,
+        }
+    }
+
+    fn record(&mut self, len: usize) {
+        let literals = usize_to_u64_saturating(len);
+        self.duplicate_clauses = self.duplicate_clauses.saturating_add(1);
+        self.duplicate_canonical_literals =
+            self.duplicate_canonical_literals.saturating_add(literals);
+        let (clauses, bucket_literals) = match len {
+            0 => (&mut self.empty_clauses, &mut self.empty_literals),
+            1 => (&mut self.unit_clauses, &mut self.unit_literals),
+            2 => (&mut self.binary_clauses, &mut self.binary_literals),
+            3 => (&mut self.ternary_clauses, &mut self.ternary_literals),
+            _ => (&mut self.larger_clauses, &mut self.larger_literals),
+        };
+        *clauses = clauses.saturating_add(1);
+        *bucket_literals = bucket_literals.saturating_add(literals);
+    }
+
+    fn length_clauses(&self) -> u64 {
+        self.empty_clauses
+            .saturating_add(self.unit_clauses)
+            .saturating_add(self.binary_clauses)
+            .saturating_add(self.ternary_clauses)
+            .saturating_add(self.larger_clauses)
+    }
+
+    fn length_literals(&self) -> u64 {
+        self.empty_literals
+            .saturating_add(self.unit_literals)
+            .saturating_add(self.binary_literals)
+            .saturating_add(self.ternary_literals)
+            .saturating_add(self.larger_literals)
+    }
+}
+
+/// Opt-in exact duplicate-clause origin matrix.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct CnfDuplicateOriginProfile {
+    /// Whether origin metadata was collected for every exact duplicate.
+    pub profile_complete: bool,
+    /// Exact duplicates represented by `rows`.
+    pub duplicate_clauses: u64,
+    /// Canonical literals represented by duplicate attempts.
+    pub duplicate_canonical_literals: u64,
+    /// Deterministically sorted nonzero origin cells.
+    pub rows: Vec<CnfDuplicateOriginRow>,
+}
+
+impl CnfDuplicateOriginProfile {
+    /// Checks row, owner, clause-length, and literal partitions.
+    pub fn invariants_hold(&self) -> bool {
+        if !self.profile_complete {
+            return false;
+        }
+        self.duplicate_clauses
+            == self
+                .rows
+                .iter()
+                .fold(0, |total, row| total.saturating_add(row.duplicate_clauses))
+            && self.duplicate_canonical_literals
+                == self.rows.iter().fold(0, |total, row| {
+                    total.saturating_add(row.duplicate_canonical_literals)
+                })
+            && self
+                .rows
+                .iter()
+                .all(|row| row.duplicate_clauses == row.length_clauses())
+            && self
+                .rows
+                .iter()
+                .all(|row| row.duplicate_canonical_literals == row.length_literals())
+    }
+}
+
 /// Diagnostics for one AIG-to-CNF encoding.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CnfEncodingStats {
@@ -2228,6 +2494,33 @@ pub fn tseitin_encode(aig: &Aig, roots: &[AigLit]) -> Result<CnfEncoding, CnfErr
 pub fn tseitin_encode_profiled(aig: &Aig, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
     let encoder = TseitinEncoder::<EnabledConstructionProfile>::new_profiled(aig);
     encoder.encode(roots)
+}
+
+/// Encodes AIG roots while also returning exact duplicate-clause origins.
+///
+/// This is the ADR-0260 diagnostic route. Origin metadata is retained only in
+/// the enabled profiler; [`tseitin_encode`] still instantiates a zero-sized
+/// disabled store.
+///
+/// # Errors
+///
+/// Returns [`CnfError`] if the AIG graph is internally inconsistent.
+///
+/// # Panics
+///
+/// Panics only if the statically selected enabled profiler fails to return its
+/// own origin snapshot, which would be an internal implementation invariant
+/// violation.
+pub fn tseitin_encode_profiled_with_origins(
+    aig: &Aig,
+    roots: &[AigLit],
+) -> Result<(CnfEncoding, CnfDuplicateOriginProfile), CnfError> {
+    let encoder = TseitinEncoder::<EnabledConstructionProfile>::new_profiled(aig);
+    let (encoding, origins) = encoder.encode_with_origins(roots)?;
+    Ok((
+        encoding,
+        origins.expect("enabled construction profiler returns origin metadata"),
+    ))
 }
 
 /// Parses a DIMACS CNF string.
@@ -2459,21 +2752,114 @@ trait ConstructionProfiler: Default {
 
     #[inline(always)]
     fn record_collision_insert(&mut self) {}
+
+    #[inline(always)]
+    fn record_emitted_origin(&mut self, _clause_index: usize, _origin: CnfClauseOrigin) {}
+
+    #[inline(always)]
+    fn record_duplicate_origin(
+        &mut self,
+        _first_clause_index: usize,
+        _origin: CnfClauseOrigin,
+        _canonical_len: usize,
+    ) {
+    }
+
+    #[inline(always)]
+    fn duplicate_origin_snapshot(&self) -> Option<CnfDuplicateOriginProfile> {
+        None
+    }
 }
 
 #[derive(Default)]
-struct DisabledConstructionProfile;
+struct DisabledDuplicateOriginStore;
+
+#[derive(Default)]
+struct DisabledConstructionProfile(DisabledDuplicateOriginStore);
 
 impl ConstructionProfiler for DisabledConstructionProfile {}
 
-struct EnabledConstructionProfile(CnfConstructionProfile);
+#[derive(Debug, Clone, Copy)]
+struct CnfClauseOrigin {
+    site: CnfClauseOriginSite,
+    owner: AigNodeId,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct EmissionContext {
+    phase: CnfClauseOriginPhase,
+    owner: AigNodeId,
+}
+
+impl EmissionContext {
+    const fn origin(self, template: CnfClauseOriginTemplate) -> CnfClauseOrigin {
+        CnfClauseOrigin {
+            site: CnfClauseOriginSite::new(self.phase, template),
+            owner: self.owner,
+        }
+    }
+}
+
+#[derive(Default)]
+struct EnabledDuplicateOriginStore {
+    emitted_origins: Vec<CnfClauseOrigin>,
+    rows: BTreeMap<(CnfClauseOriginSite, CnfClauseOriginSite, bool), CnfDuplicateOriginRow>,
+    duplicate_clauses: u64,
+    duplicate_canonical_literals: u64,
+}
+
+impl EnabledDuplicateOriginStore {
+    fn record_emitted(&mut self, clause_index: usize, origin: CnfClauseOrigin) {
+        debug_assert_eq!(
+            clause_index,
+            self.emitted_origins.len(),
+            "origin metadata follows formula clause order"
+        );
+        self.emitted_origins.push(origin);
+    }
+
+    fn record_duplicate(
+        &mut self,
+        first_clause_index: usize,
+        origin: CnfClauseOrigin,
+        canonical_len: usize,
+    ) {
+        let first = self.emitted_origins[first_clause_index];
+        let key = (first.site, origin.site, first.owner == origin.owner);
+        self.rows
+            .entry(key)
+            .or_insert_with(|| CnfDuplicateOriginRow::new(key.0, key.1, key.2))
+            .record(canonical_len);
+        self.duplicate_clauses = self.duplicate_clauses.saturating_add(1);
+        self.duplicate_canonical_literals = self
+            .duplicate_canonical_literals
+            .saturating_add(usize_to_u64_saturating(canonical_len));
+    }
+
+    fn snapshot(&self) -> CnfDuplicateOriginProfile {
+        CnfDuplicateOriginProfile {
+            profile_complete: true,
+            duplicate_clauses: self.duplicate_clauses,
+            duplicate_canonical_literals: self.duplicate_canonical_literals,
+            rows: self.rows.values().cloned().collect(),
+        }
+    }
+}
+
+struct EnabledConstructionProfile {
+    counters: CnfConstructionProfile,
+    origins: EnabledDuplicateOriginStore,
+}
 
 impl Default for EnabledConstructionProfile {
     fn default() -> Self {
-        Self(CnfConstructionProfile {
-            profile_complete: true,
-            ..CnfConstructionProfile::default()
-        })
+        Self {
+            counters: CnfConstructionProfile {
+                profile_complete: true,
+                ..CnfConstructionProfile::default()
+            },
+            origins: EnabledDuplicateOriginStore::default(),
+        }
     }
 }
 
@@ -2481,87 +2867,118 @@ impl Default for EnabledConstructionProfile {
 impl ConstructionProfiler for EnabledConstructionProfile {
     #[inline(always)]
     fn snapshot(&self) -> CnfConstructionProfile {
-        self.0
+        self.counters
     }
 
     #[inline(always)]
     fn record_declared_literals(&mut self, count: usize) {
-        self.0.declared_clause_literals = self
-            .0
+        self.counters.declared_clause_literals = self
+            .counters
             .declared_clause_literals
             .saturating_add(usize_to_u64_saturating(count));
     }
 
     #[inline(always)]
     fn record_visited_literal(&mut self) {
-        self.0.visited_clause_literals = self.0.visited_clause_literals.saturating_add(1);
+        self.counters.visited_clause_literals =
+            self.counters.visited_clause_literals.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_false_constant(&mut self) {
-        self.0.false_constants_dropped = self.0.false_constants_dropped.saturating_add(1);
+        self.counters.false_constants_dropped =
+            self.counters.false_constants_dropped.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_repeated_literal(&mut self) {
-        self.0.repeated_literals_dropped = self.0.repeated_literals_dropped.saturating_add(1);
+        self.counters.repeated_literals_dropped =
+            self.counters.repeated_literals_dropped.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_true_tautology(&mut self) {
-        self.0.true_constant_tautologies = self.0.true_constant_tautologies.saturating_add(1);
+        self.counters.true_constant_tautologies =
+            self.counters.true_constant_tautologies.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_complementary_tautology(&mut self) {
-        self.0.complementary_literal_tautologies =
-            self.0.complementary_literal_tautologies.saturating_add(1);
+        self.counters.complementary_literal_tautologies = self
+            .counters
+            .complementary_literal_tautologies
+            .saturating_add(1);
     }
 
     #[inline(always)]
     fn record_canonical_clause(&mut self, len: usize) {
-        self.0.canonical_literals = self
-            .0
+        self.counters.canonical_literals = self
+            .counters
             .canonical_literals
             .saturating_add(usize_to_u64_saturating(len));
         let bucket = match len {
-            0 => &mut self.0.canonical_empty_clauses,
-            1 => &mut self.0.canonical_unit_clauses,
-            2 => &mut self.0.canonical_binary_clauses,
-            3 => &mut self.0.canonical_ternary_clauses,
-            _ => &mut self.0.canonical_larger_clauses,
+            0 => &mut self.counters.canonical_empty_clauses,
+            1 => &mut self.counters.canonical_unit_clauses,
+            2 => &mut self.counters.canonical_binary_clauses,
+            3 => &mut self.counters.canonical_ternary_clauses,
+            _ => &mut self.counters.canonical_larger_clauses,
         };
         *bucket = bucket.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_primary_vacant(&mut self) {
-        self.0.primary_vacant_probes = self.0.primary_vacant_probes.saturating_add(1);
+        self.counters.primary_vacant_probes = self.counters.primary_vacant_probes.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_primary_occupied(&mut self) {
-        self.0.primary_occupied_probes = self.0.primary_occupied_probes.saturating_add(1);
+        self.counters.primary_occupied_probes =
+            self.counters.primary_occupied_probes.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_primary_duplicate(&mut self) {
-        self.0.primary_exact_duplicates = self.0.primary_exact_duplicates.saturating_add(1);
+        self.counters.primary_exact_duplicates =
+            self.counters.primary_exact_duplicates.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_collision_comparison(&mut self) {
-        self.0.collision_bucket_comparisons = self.0.collision_bucket_comparisons.saturating_add(1);
+        self.counters.collision_bucket_comparisons =
+            self.counters.collision_bucket_comparisons.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_collision_duplicate(&mut self) {
-        self.0.collision_exact_duplicates = self.0.collision_exact_duplicates.saturating_add(1);
+        self.counters.collision_exact_duplicates =
+            self.counters.collision_exact_duplicates.saturating_add(1);
     }
 
     #[inline(always)]
     fn record_collision_insert(&mut self) {
-        self.0.collision_inserts = self.0.collision_inserts.saturating_add(1);
+        self.counters.collision_inserts = self.counters.collision_inserts.saturating_add(1);
+    }
+
+    #[inline(always)]
+    fn record_emitted_origin(&mut self, clause_index: usize, origin: CnfClauseOrigin) {
+        self.origins.record_emitted(clause_index, origin);
+    }
+
+    #[inline(always)]
+    fn record_duplicate_origin(
+        &mut self,
+        first_clause_index: usize,
+        origin: CnfClauseOrigin,
+        canonical_len: usize,
+    ) {
+        self.origins
+            .record_duplicate(first_clause_index, origin, canonical_len);
+    }
+
+    #[inline(always)]
+    fn duplicate_origin_snapshot(&self) -> Option<CnfDuplicateOriginProfile> {
+        Some(self.origins.snapshot())
     }
 }
 
@@ -2625,7 +3042,15 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         self.construction_profile.snapshot()
     }
 
-    fn encode(mut self, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
+    fn encode(self, roots: &[AigLit]) -> Result<CnfEncoding, CnfError> {
+        self.encode_with_origins(roots)
+            .map(|(encoding, _)| encoding)
+    }
+
+    fn encode_with_origins(
+        mut self,
+        roots: &[AigLit],
+    ) -> Result<(CnfEncoding, Option<CnfDuplicateOriginProfile>), CnfError> {
         let planning_start = Instant::now();
         self.plan_sparse_encoding(roots);
         let planning = planning_start.elapsed();
@@ -2650,13 +3075,17 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         let root_encoding = root_start.elapsed();
         let stats =
             self.encoding_stats(planning, variable_allocation, gate_encoding, root_encoding);
-        Ok(CnfEncoding {
-            formula: self.formula,
-            roots,
-            reachable_nodes: self.reachable_nodes,
-            variable_bindings: self.variable_bindings,
-            stats,
-        })
+        let origins = self.construction_profile.duplicate_origin_snapshot();
+        Ok((
+            CnfEncoding {
+                formula: self.formula,
+                roots,
+                reachable_nodes: self.reachable_nodes,
+                variable_bindings: self.variable_bindings,
+                stats,
+            },
+            origins,
+        ))
     }
 
     fn encoding_stats(
@@ -2895,30 +3324,53 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             let out = EncodedLit::Lit(CnfLit::positive(
                 self.node_vars[node_id.index()].expect("AND node has CNF variable"),
             ));
+            let context = EmissionContext {
+                phase: CnfClauseOriginPhase::Gate,
+                owner: node_id,
+            };
             let (encode_forward, encode_reverse) = self.clause_directions(node_id);
             if let Some(xor_gate) = self.xor_gates[node_id.index()] {
-                self.encode_xor_gate(out, xor_gate, encode_forward, encode_reverse)?;
+                self.encode_xor_gate(context, out, xor_gate, encode_forward, encode_reverse)?;
                 continue;
             }
             if let Some(not_ite_gate) = self.not_ite_gates[node_id.index()] {
-                self.encode_not_ite_gate(out, not_ite_gate, encode_forward, encode_reverse)?;
+                self.encode_not_ite_gate(
+                    context,
+                    out,
+                    not_ite_gate,
+                    encode_forward,
+                    encode_reverse,
+                )?;
                 continue;
             }
             if let Some(not_and_gate) = self.not_and_gates[node_id.index()].clone() {
-                self.encode_not_and_gate(out, &not_and_gate, encode_forward, encode_reverse)?;
+                self.encode_not_and_gate(
+                    context,
+                    out,
+                    &not_and_gate,
+                    encode_forward,
+                    encode_reverse,
+                )?;
                 continue;
             }
             if let Some(and_tree_gate) = self.and_tree_gates[node_id.index()].clone() {
-                self.encode_and_tree_gate(out, &and_tree_gate, encode_forward, encode_reverse)?;
+                self.encode_and_tree_gate(
+                    context,
+                    out,
+                    &and_tree_gate,
+                    encode_forward,
+                    encode_reverse,
+                )?;
                 continue;
             }
-            self.encode_binary_and_gate(out, lhs, rhs, encode_forward, encode_reverse)?;
+            self.encode_binary_and_gate(context, out, lhs, rhs, encode_forward, encode_reverse)?;
         }
         Ok(())
     }
 
     fn encode_xor_gate(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         gate: XorGate,
         encode_forward: bool,
@@ -2927,18 +3379,31 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         let lhs = self.encode_lit(gate.lhs);
         let rhs = self.encode_lit(gate.rhs);
         if encode_forward {
-            self.add_encoded_clause(&[out.negated(), lhs, rhs])?;
-            self.add_encoded_clause(&[out.negated(), lhs.negated(), rhs.negated()])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::XorForwardPositiveInputs),
+                &[out.negated(), lhs, rhs],
+            )?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::XorForwardNegativeInputs),
+                &[out.negated(), lhs.negated(), rhs.negated()],
+            )?;
         }
         if encode_reverse {
-            self.add_encoded_clause(&[out, lhs.negated(), rhs])?;
-            self.add_encoded_clause(&[out, lhs, rhs.negated()])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::XorReverseLeftNegative),
+                &[out, lhs.negated(), rhs],
+            )?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::XorReverseRightNegative),
+                &[out, lhs, rhs.negated()],
+            )?;
         }
         Ok(())
     }
 
     fn encode_not_ite_gate(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         gate: NotIteGate,
         encode_forward: bool,
@@ -2948,18 +3413,31 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         let then_lit = self.encode_lit(gate.then_lit);
         let else_lit = self.encode_lit(gate.else_lit);
         if encode_forward {
-            self.add_encoded_clause(&[out.negated(), condition.negated(), then_lit.negated()])?;
-            self.add_encoded_clause(&[out.negated(), condition, else_lit.negated()])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::NotIteForwardThen),
+                &[out.negated(), condition.negated(), then_lit.negated()],
+            )?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::NotIteForwardElse),
+                &[out.negated(), condition, else_lit.negated()],
+            )?;
         }
         if encode_reverse {
-            self.add_encoded_clause(&[out, condition.negated(), then_lit])?;
-            self.add_encoded_clause(&[out, condition, else_lit])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::NotIteReverseThen),
+                &[out, condition.negated(), then_lit],
+            )?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::NotIteReverseElse),
+                &[out, condition, else_lit],
+            )?;
         }
         Ok(())
     }
 
     fn encode_not_and_gate(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         gate: &NotAndGate,
         encode_forward: bool,
@@ -2969,45 +3447,67 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             for factor in &gate.factors {
                 match factor {
                     AndFactor::Lit(lit) => {
-                        self.add_encoded_clause(&[out.negated(), self.encode_lit(*lit)])?;
+                        self.add_encoded_clause(
+                            context.origin(CnfClauseOriginTemplate::NotAndForwardLiteral),
+                            &[out.negated(), self.encode_lit(*lit)],
+                        )?;
                     }
                     AndFactor::NotAnd(lhs, rhs) => {
-                        self.add_encoded_clause(&[
-                            out.negated(),
-                            self.encode_lit(*lhs).negated(),
-                            self.encode_lit(*rhs).negated(),
-                        ])?;
+                        self.add_encoded_clause(
+                            context.origin(CnfClauseOriginTemplate::NotAndForwardNested),
+                            &[
+                                out.negated(),
+                                self.encode_lit(*lhs).negated(),
+                                self.encode_lit(*rhs).negated(),
+                            ],
+                        )?;
                     }
                 }
             }
         }
 
         if encode_reverse {
-            self.encode_not_and_reverse(out, gate.factors)?;
+            self.encode_not_and_reverse(context, out, gate.factors)?;
         }
         Ok(())
     }
 
     fn encode_not_and_reverse(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         factors: [AndFactor; 2],
     ) -> Result<(), CnfError> {
         match factors {
-            [AndFactor::Lit(lhs), AndFactor::Lit(rhs)] => self.add_encoded_clause(&[
-                out,
-                self.encode_lit(lhs).negated(),
-                self.encode_lit(rhs).negated(),
-            ]),
+            [AndFactor::Lit(lhs), AndFactor::Lit(rhs)] => self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::NotAndReverseLiteralPair),
+                &[
+                    out,
+                    self.encode_lit(lhs).negated(),
+                    self.encode_lit(rhs).negated(),
+                ],
+            ),
             [AndFactor::Lit(lit), AndFactor::NotAnd(lhs, rhs)] => {
                 let lit = self.encode_lit(lit).negated();
-                self.add_encoded_clause(&[out, lit, self.encode_lit(lhs)])?;
-                self.add_encoded_clause(&[out, lit, self.encode_lit(rhs)])
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseLiteralNestedLeft),
+                    &[out, lit, self.encode_lit(lhs)],
+                )?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseLiteralNestedRight),
+                    &[out, lit, self.encode_lit(rhs)],
+                )
             }
             [AndFactor::NotAnd(lhs, rhs), AndFactor::Lit(lit)] => {
                 let lit = self.encode_lit(lit).negated();
-                self.add_encoded_clause(&[out, self.encode_lit(lhs), lit])?;
-                self.add_encoded_clause(&[out, self.encode_lit(rhs), lit])
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedLiteralLeft),
+                    &[out, self.encode_lit(lhs), lit],
+                )?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedLiteralRight),
+                    &[out, self.encode_lit(rhs), lit],
+                )
             }
             [
                 AndFactor::NotAnd(lhs_a, lhs_b),
@@ -3017,16 +3517,29 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 let lhs_b = self.encode_lit(lhs_b);
                 let rhs_a = self.encode_lit(rhs_a);
                 let rhs_b = self.encode_lit(rhs_b);
-                self.add_encoded_clause(&[out, lhs_a, rhs_a])?;
-                self.add_encoded_clause(&[out, lhs_a, rhs_b])?;
-                self.add_encoded_clause(&[out, lhs_b, rhs_a])?;
-                self.add_encoded_clause(&[out, lhs_b, rhs_b])
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedNestedAa),
+                    &[out, lhs_a, rhs_a],
+                )?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedNestedAb),
+                    &[out, lhs_a, rhs_b],
+                )?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedNestedBa),
+                    &[out, lhs_b, rhs_a],
+                )?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::NotAndReverseNestedNestedBb),
+                    &[out, lhs_b, rhs_b],
+                )
             }
         }
     }
 
     fn encode_and_tree_gate(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         gate: &AndTreeGate,
         encode_forward: bool,
@@ -3037,15 +3550,21 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 match leaf {
                     AndTreeLeaf::Lit(lit) => {
                         let lit = self.encode_lit(*lit);
-                        self.add_encoded_clause(&[out.negated(), lit])?;
+                        self.add_encoded_clause(
+                            context.origin(CnfClauseOriginTemplate::AndTreeForwardLiteral),
+                            &[out.negated(), lit],
+                        )?;
                     }
                     AndTreeLeaf::NotAnd { lhs, rhs } => {
                         let lhs = self.encode_lit(*lhs).negated();
                         let rhs = self.encode_lit(*rhs).negated();
-                        self.add_encoded_clause(&[out.negated(), lhs, rhs])?;
+                        self.add_encoded_clause(
+                            context.origin(CnfClauseOriginTemplate::AndTreeForwardNotAnd),
+                            &[out.negated(), lhs, rhs],
+                        )?;
                     }
                     AndTreeLeaf::Parity { lits, expected } => {
-                        self.encode_parity_implication(out, lits, *expected)?;
+                        self.encode_parity_implication(context, out, lits, *expected)?;
                     }
                 }
             }
@@ -3072,13 +3591,17 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                     ),
                 }
             }
-            self.add_encoded_clause(&long_clause)?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::AndTreeReverse),
+                &long_clause,
+            )?;
         }
         Ok(())
     }
 
     fn encode_parity_implication(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         lits: &[AigLit],
         expected: bool,
@@ -3103,13 +3626,17 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 let value = ((mask >> index) & 1) == 1;
                 clause.push(if value { lit.negated() } else { lit });
             }
-            self.add_encoded_clause(&clause)?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::AndTreeForwardParity),
+                &clause,
+            )?;
         }
         Ok(())
     }
 
     fn encode_binary_and_gate(
         &mut self,
+        context: EmissionContext,
         out: EncodedLit,
         lhs: AigLit,
         rhs: AigLit,
@@ -3119,11 +3646,20 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         let lhs = self.encode_lit(lhs);
         let rhs = self.encode_lit(rhs);
         if encode_forward {
-            self.add_encoded_clause(&[out.negated(), lhs])?;
-            self.add_encoded_clause(&[out.negated(), rhs])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::BinaryAndForwardLhs),
+                &[out.negated(), lhs],
+            )?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::BinaryAndForwardRhs),
+                &[out.negated(), rhs],
+            )?;
         }
         if encode_reverse {
-            self.add_encoded_clause(&[out, lhs.negated(), rhs.negated()])?;
+            self.add_encoded_clause(
+                context.origin(CnfClauseOriginTemplate::BinaryAndReverse),
+                &[out, lhs.negated(), rhs.negated()],
+            )?;
         }
         Ok(())
     }
@@ -3134,7 +3670,14 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             Ok(EncodedLit::Const(true))
         } else {
             let cnf_lit = self.encode_lit(root);
-            self.add_encoded_clause(&[cnf_lit])?;
+            self.add_encoded_clause(
+                EmissionContext {
+                    phase: CnfClauseOriginPhase::Root,
+                    owner: root.node(),
+                }
+                .origin(CnfClauseOriginTemplate::RootUnit),
+                &[cnf_lit],
+            )?;
             Ok(cnf_lit)
         }
     }
@@ -3144,6 +3687,10 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         let Some(AigNode::And(lhs, rhs)) = self.aig.node(node_id) else {
             unreachable!("direct root nodes are planned only for AND nodes");
         };
+        let context = EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: node_id,
+        };
         if root.is_inverted()
             && let Some(plan) =
                 distributable_negative_and_encoding(self.aig, lhs, rhs, &self.skip_nodes)
@@ -3151,7 +3698,10 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             let other = self.encode_lit(plan.other).negated();
             for leaf in plan.or_leaves {
                 let leaf = self.encode_lit(leaf).negated();
-                self.add_encoded_clause(&[other, leaf])?;
+                self.add_encoded_clause(
+                    context.origin(CnfClauseOriginTemplate::DirectNegativeAndLeaf),
+                    &[other, leaf],
+                )?;
             }
             return Ok(());
         }
@@ -3162,15 +3712,21 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             (true, false)
         };
         if let Some(xor_gate) = self.xor_gates[node_id.index()] {
-            self.encode_xor_gate(out, xor_gate, encode_forward, encode_reverse)?;
+            self.encode_xor_gate(context, out, xor_gate, encode_forward, encode_reverse)?;
         } else if let Some(not_ite_gate) = self.not_ite_gates[node_id.index()] {
-            self.encode_not_ite_gate(out, not_ite_gate, encode_forward, encode_reverse)?;
+            self.encode_not_ite_gate(context, out, not_ite_gate, encode_forward, encode_reverse)?;
         } else if let Some(not_and_gate) = self.not_and_gates[node_id.index()].clone() {
-            self.encode_not_and_gate(out, &not_and_gate, encode_forward, encode_reverse)?;
+            self.encode_not_and_gate(context, out, &not_and_gate, encode_forward, encode_reverse)?;
         } else if let Some(and_tree_gate) = self.and_tree_gates[node_id.index()].clone() {
-            self.encode_and_tree_gate(out, &and_tree_gate, encode_forward, encode_reverse)?;
+            self.encode_and_tree_gate(
+                context,
+                out,
+                &and_tree_gate,
+                encode_forward,
+                encode_reverse,
+            )?;
         } else {
-            self.encode_binary_and_gate(out, lhs, rhs, encode_forward, encode_reverse)?;
+            self.encode_binary_and_gate(context, out, lhs, rhs, encode_forward, encode_reverse)?;
         }
         Ok(())
     }
@@ -3200,7 +3756,11 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         }
     }
 
-    fn add_encoded_clause(&mut self, lits: &[EncodedLit]) -> Result<(), CnfError> {
+    fn add_encoded_clause(
+        &mut self,
+        origin: CnfClauseOrigin,
+        lits: &[EncodedLit],
+    ) -> Result<(), CnfError> {
         self.clause_attempts = self.clause_attempts.saturating_add(1);
         self.construction_profile
             .record_declared_literals(lits.len());
@@ -3236,13 +3796,14 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         self.construction_profile
             .record_canonical_clause(clause.len());
         let fingerprint = clause_fingerprint(&clause);
-        self.insert_canonical_clause(clause, fingerprint)
+        self.insert_canonical_clause(clause, fingerprint, origin)
     }
 
     fn insert_canonical_clause(
         &mut self,
         clause: Vec<CnfLit>,
         fingerprint: u64,
+        origin: CnfClauseOrigin,
     ) -> Result<(), CnfError> {
         let primary = &mut self.clause_index.primary;
         let collisions = &mut self.clause_index.collisions;
@@ -3252,11 +3813,18 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 let index = self.formula.clauses().len();
                 self.formula.add_clause(CnfClause::new(clause))?;
                 entry.insert(index);
+                self.construction_profile
+                    .record_emitted_origin(index, origin);
             }
             std::collections::hash_map::Entry::Occupied(entry) => {
                 self.construction_profile.record_primary_occupied();
                 if self.formula.clauses()[*entry.get()].lits() == clause.as_slice() {
                     self.construction_profile.record_primary_duplicate();
+                    self.construction_profile.record_duplicate_origin(
+                        *entry.get(),
+                        origin,
+                        clause.len(),
+                    );
                     self.duplicate_clauses_skipped =
                         self.duplicate_clauses_skipped.saturating_add(1);
                     return Ok(());
@@ -3266,6 +3834,11 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                         self.construction_profile.record_collision_comparison();
                         if self.formula.clauses()[index].lits() == clause.as_slice() {
                             self.construction_profile.record_collision_duplicate();
+                            self.construction_profile.record_duplicate_origin(
+                                index,
+                                origin,
+                                clause.len(),
+                            );
                             self.duplicate_clauses_skipped =
                                 self.duplicate_clauses_skipped.saturating_add(1);
                             return Ok(());
@@ -3277,6 +3850,8 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                 let index = self.formula.clauses().len();
                 self.formula.add_clause(CnfClause::new(clause))?;
                 collisions.entry(fingerprint).or_default().push(index);
+                self.construction_profile
+                    .record_emitted_origin(index, origin);
             }
         }
         Ok(())
@@ -4017,11 +4592,52 @@ mod tests {
     use axeyum_ir::{Sort, TermArena, Value, eval};
 
     use super::{
-        CnfClause, CnfError, CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats,
-        IncrementalSat, RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
-        parse_dimacs, rustsat_batsat_determinism, solve_with_rustsat_batsat,
-        solve_with_rustsat_batsat_limits, tseitin_encode, tseitin_encode_profiled,
+        CnfClause, CnfClauseOriginPhase, CnfClauseOriginSite, CnfClauseOriginTemplate, CnfError,
+        CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats, IncrementalSat,
+        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
+        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
+        tseitin_encode, tseitin_encode_profiled, tseitin_encode_profiled_with_origins,
     };
+
+    fn test_clause_origin(template: CnfClauseOriginTemplate) -> super::CnfClauseOrigin {
+        super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: AigLit::FALSE.node(),
+        }
+        .origin(template)
+    }
+
+    #[test]
+    fn profiled_duplicate_origins_partition_same_owner_root_units() {
+        let mut aig = Aig::new();
+        let input = aig.input("p");
+        let (encoding, origins) =
+            tseitin_encode_profiled_with_origins(&aig, &[input, input]).unwrap();
+
+        assert_eq!(encoding.stats().duplicate_clauses_skipped, 1);
+        assert!(origins.profile_complete);
+        assert_eq!(origins.duplicate_clauses, 1);
+        assert_eq!(origins.duplicate_canonical_literals, 1);
+        assert!(origins.invariants_hold());
+        assert_eq!(origins.rows.len(), 1);
+        let row = &origins.rows[0];
+        let root_unit = CnfClauseOriginSite::new(
+            CnfClauseOriginPhase::Root,
+            CnfClauseOriginTemplate::RootUnit,
+        );
+        assert_eq!(row.first_origin, root_unit);
+        assert_eq!(row.duplicate_origin, root_unit);
+        assert!(row.same_owner);
+        assert_eq!(row.duplicate_clauses, 1);
+        assert_eq!(row.duplicate_canonical_literals, 1);
+        assert_eq!(row.unit_clauses, 1);
+        assert_eq!(row.unit_literals, 1);
+        assert_eq!(
+            std::mem::size_of::<super::DisabledDuplicateOriginStore>(),
+            0,
+            "ordinary encoding must retain no origin metadata"
+        );
+    }
 
     #[test]
     fn clause_fingerprint_collision_requires_exact_equality() {
@@ -4032,17 +4648,18 @@ mod tests {
         encoder.formula = super::CnfFormula::new(2);
 
         let forced_fingerprint = 7;
+        let origin = test_clause_origin(CnfClauseOriginTemplate::RootUnit);
         encoder
-            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .insert_canonical_clause(vec![p], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .insert_canonical_clause(vec![q], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .insert_canonical_clause(vec![p], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .insert_canonical_clause(vec![q], forced_fingerprint, origin)
             .unwrap();
 
         assert_eq!(
@@ -4079,17 +4696,18 @@ mod tests {
         encoder.formula = super::CnfFormula::new(2);
 
         let forced_fingerprint = 7;
+        let origin = test_clause_origin(CnfClauseOriginTemplate::RootUnit);
         encoder
-            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .insert_canonical_clause(vec![p], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .insert_canonical_clause(vec![q], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![p], forced_fingerprint)
+            .insert_canonical_clause(vec![p], forced_fingerprint, origin)
             .unwrap();
         encoder
-            .insert_canonical_clause(vec![q], forced_fingerprint)
+            .insert_canonical_clause(vec![q], forced_fingerprint, origin)
             .unwrap();
 
         let profile = encoder.construction_profile();
@@ -4103,6 +4721,76 @@ mod tests {
     }
 
     #[test]
+    fn duplicate_origins_keep_first_collision_owner_and_cross_template_cells() {
+        let p = CnfLit::positive(CnfVar::new(0).unwrap());
+        let q = CnfLit::positive(CnfVar::new(1).unwrap());
+        let mut aig = Aig::new();
+        let owner_p = aig.input("owner-p").node();
+        let owner_q = aig.input("owner-q").node();
+        let mut encoder =
+            super::TseitinEncoder::<super::EnabledConstructionProfile>::new_profiled(&aig);
+        encoder.formula = super::CnfFormula::new(2);
+        let gate_lhs_p = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Gate,
+            owner: owner_p,
+        }
+        .origin(CnfClauseOriginTemplate::BinaryAndForwardLhs);
+        let gate_lhs_q = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Gate,
+            owner: owner_q,
+        }
+        .origin(CnfClauseOriginTemplate::BinaryAndForwardLhs);
+        let root_p = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_p,
+        }
+        .origin(CnfClauseOriginTemplate::RootUnit);
+        let root_q = super::EmissionContext {
+            phase: CnfClauseOriginPhase::Root,
+            owner: owner_q,
+        }
+        .origin(CnfClauseOriginTemplate::RootUnit);
+
+        let forced_fingerprint = 7;
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint, gate_lhs_p)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint, gate_lhs_q)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![p], forced_fingerprint, root_p)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint, root_q)
+            .unwrap();
+        encoder
+            .insert_canonical_clause(vec![q], forced_fingerprint, gate_lhs_q)
+            .unwrap();
+
+        let origins = encoder.construction_profile.origins.snapshot();
+        assert!(origins.invariants_hold());
+        assert_eq!(origins.duplicate_clauses, 3);
+        assert_eq!(origins.duplicate_canonical_literals, 3);
+        assert_eq!(origins.rows.len(), 3);
+        assert!(origins.rows.iter().any(|row| {
+            row.first_origin.template == CnfClauseOriginTemplate::BinaryAndForwardLhs
+                && row.duplicate_origin.template == CnfClauseOriginTemplate::BinaryAndForwardLhs
+                && !row.same_owner
+        }));
+        assert!(origins.rows.iter().any(|row| {
+            row.first_origin.template == CnfClauseOriginTemplate::BinaryAndForwardLhs
+                && row.duplicate_origin.template == CnfClauseOriginTemplate::RootUnit
+                && row.same_owner
+        }));
+        assert!(origins.rows.iter().any(|row| {
+            row.first_origin.template == CnfClauseOriginTemplate::RootUnit
+                && row.duplicate_origin.template == CnfClauseOriginTemplate::BinaryAndForwardLhs
+                && row.same_owner
+        }));
+    }
+
+    #[test]
     fn profiled_clause_construction_counts_canonicalization_paths() {
         let p = CnfLit::positive(CnfVar::new(0).unwrap());
         let q = CnfLit::positive(CnfVar::new(1).unwrap());
@@ -4110,30 +4798,40 @@ mod tests {
         let mut encoder =
             super::TseitinEncoder::<super::EnabledConstructionProfile>::new_profiled(&aig);
         encoder.formula = super::CnfFormula::new(2);
+        let origin = test_clause_origin(CnfClauseOriginTemplate::RootUnit);
 
         encoder
-            .add_encoded_clause(&[
-                EncodedLit::Const(false),
-                EncodedLit::Lit(p),
-                EncodedLit::Lit(p),
-            ])
+            .add_encoded_clause(
+                origin,
+                &[
+                    EncodedLit::Const(false),
+                    EncodedLit::Lit(p),
+                    EncodedLit::Lit(p),
+                ],
+            )
             .unwrap();
         encoder
-            .add_encoded_clause(&[
-                EncodedLit::Const(false),
-                EncodedLit::Lit(p),
-                EncodedLit::Lit(p),
-            ])
+            .add_encoded_clause(
+                origin,
+                &[
+                    EncodedLit::Const(false),
+                    EncodedLit::Lit(p),
+                    EncodedLit::Lit(p),
+                ],
+            )
             .unwrap();
         encoder
-            .add_encoded_clause(&[
-                EncodedLit::Lit(p),
-                EncodedLit::Lit(p.negated()),
-                EncodedLit::Lit(q),
-            ])
+            .add_encoded_clause(
+                origin,
+                &[
+                    EncodedLit::Lit(p),
+                    EncodedLit::Lit(p.negated()),
+                    EncodedLit::Lit(q),
+                ],
+            )
             .unwrap();
         encoder
-            .add_encoded_clause(&[EncodedLit::Const(true), EncodedLit::Lit(q)])
+            .add_encoded_clause(origin, &[EncodedLit::Const(true), EncodedLit::Lit(q)])
             .unwrap();
 
         let profile = encoder.construction_profile();
