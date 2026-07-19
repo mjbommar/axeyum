@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0268 implements but does not yet run the exact four-side
+  frontend-surface measurement.** Eight tests cover recursive-module function,
+  instruction, memory, control, call, global, pointer, malformed-input, and
+  current-reflector-blocker accounting. The planned LLVM-18 pipeline extracts
+  only the handler plus recursively defined direct callees, strips debug-only
+  inflation, and leaves frontend/detector status `not-run`. A discarded
+  vulnerable-only pilot confirms material inline-assembly and memory surface;
+  do not use its partial counts. Commit and hash-bind the analyzer before the
+  exact four-side observation.
+
 - **2026-07-19 — ADR-0267 retains complete symbolic-CVE artifact attrition and
   admits exactly two pairs to the frontend gate.** All twelve immutable sides
   run and the dedicated worktree restores cleanly: 4 pass, 8 fail. Both
@@ -4751,6 +4761,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0268 proposes exact admitted-LLVM surface measurement.**
+  The tested analyzer narrows each module to the registered handler and
+  recursively defined direct callees, strips debug-only inflation, and reports
+  complete operation/call/global/memory blockers without executing a frontend,
+  detector, or solver. Exact four-side execution waits for a committed
+  analyzer/tool registration.
 
 - **2026-07-19 — ADR-0267 retains 4/12 paired artifact admission.** The exact
   campaign attempts all twelve sides and restores the worktree. PCI endpoint
