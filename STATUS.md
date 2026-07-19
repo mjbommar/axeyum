@@ -337,7 +337,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   all-findings confidence partition, hash every resolved dynamic library and
   retained log, and reject escaped/unvalidated traces; 7 focused calibration
   tests plus the 20 paired-trace tests pass. There are zero real-driver v4 rows.
-  Register the exact release executable and linkage, then run all 42 calibration
+  The exact release executable is now registered at SHA-256 `d96520a0...db5f7`
+  together with all 12 resolved file-backed dynamic-library hashes, still with
+  zero real-driver v4 rows. Commit this registration, then run all 42 calibration
   processes; a second preregistration must commit the selected triplet before
   the 338-function confirmation. A1 remains configuration/measurement, A0
   remains complete, and symbolic memory remains closed.

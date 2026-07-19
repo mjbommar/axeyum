@@ -73,8 +73,27 @@ log hashes, producer validation, and trace confinement.
   the same bounded prefix used by ADR-0262. Historical wall-timeout results may
   motivate this population but are not v4 calibration rows.
 - Solver/runtime identities remain ADR-0272's registered Z3 4.13.3 and official
-  Bitwuzla 0.9.1 build. The release executable, complete `ldd` resolution, and
-  library hashes must be frozen before the first calibration process.
+  Bitwuzla 0.9.1 build. The registered release executable is
+  `/home/mjbommar/.cache/codex/glaurung-six-cell-target/release/examples/ioctlance`,
+  SHA-256
+  `d96520a04d5dd4825957dc3e07e1fd11a24bad220c55baae539ec9f8a10db5f7`.
+  Before the first calibration process, `ldd` resolved the following complete
+  file-backed set (the synthetic `linux-vdso.so.1` mapping has no file to hash):
+
+  | resolved library | SHA-256 |
+  |---|---|
+  | `/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzla.so.0` | `4e994b7a527e207dfdde3dcc289133f72e423e54e4ce67ba8ff2211c1b48bb1c` |
+  | `/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlabb.so` | `3bc0a9fb5f1d4f5799ba2c71aec40b3616ad04a03942e5d23f639bb96b64a75b` |
+  | `/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlabv.so` | `df3ffc2e41e92ff04c017b77b0e5b14b391ae687482542d47162b90aae0bfab3` |
+  | `/home/mjbommar/.cache/codex/bitwuzla-0.9.1/lib/x86_64-linux-gnu/libbitwuzlals.so` | `83e70c846dcf33d0c8a3ecdf88e74b9fc7ce48de3aa1fc034c130190ab1365da` |
+  | `/lib64/ld-linux-x86-64.so.2` | `223b94a42758f2434da331cc0aa62db1af5b456481762c5caceefa1a2d1eb8fb` |
+  | `/usr/lib/x86_64-linux-gnu/libc.so.6` | `d763925433ff9b757390549e1b20c085f5e6de27ae700fe89194178d96a8a2b0` |
+  | `/usr/lib/x86_64-linux-gnu/libgcc_s.so.1` | `9d339ecb409578d6a5d587e6c537a8f9589b8a13fefba30d167433a4b5758bee` |
+  | `/usr/lib/x86_64-linux-gnu/libgmp.so.10` | `fda9699eef15deda5f1c626e9140377a7f5d88c41516a54278ac02429cb20fa5` |
+  | `/usr/lib/x86_64-linux-gnu/libm.so.6` | `670fb59bd462ee2f833e2ed7c0a1814e0dcdbec0b8bfa048bec46e2e6fd66334` |
+  | `/usr/lib/x86_64-linux-gnu/libmpfr.so.6` | `1aed080b3143049fbe016cd82cdc5fb47db386386556cc1bb37cfccc133c0fae` |
+  | `/usr/lib/x86_64-linux-gnu/libstdc++.so.6` | `5bb0d21308f123b6ad46c6f35b42cedfcb8d6d439a53aa3dae04d880aaffdde3` |
+  | `/usr/lib/x86_64-linux-gnu/libz3.so.4` | `eff8f0f91482d0809aae7aa0ed54cb52ff5ee9b5fe1ed1d2bfa9153c4a2fcfaf` |
 
 Cold Z3 remains the sole exploration/model authority. Use A0's `AnyModel`
 default and do not enable minimum, maximum, site-hash, set-valued policies, or
