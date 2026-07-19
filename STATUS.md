@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0265 preregisters paired symbolic-CVE artifacts and
+  frontend executability before any candidate build.** The six corrected rows
+  bind one direct helper, two file IOCTLs, one DRM callback, and two block
+  helpers; each has an exact AArch64 translation unit, entry ABI, attacker
+  inputs, environment requirements, and vulnerable-reachable/fixed-infeasible
+  obligation. The clean Glaurung baseline is explicitly
+  `no-linux-symbolic-detector-v1`. Seven tests pass. A scalar embedded-bitcode
+  pilot succeeds; a noncandidate kernel-HEAD pilot rejects global embed flags
+  but confirms ordinary AArch64 Kbuild and selects per-TU command replay plus
+  executable-byte identity. No selected build, frontend, or detector row has
+  run.
+
 - **2026-07-19 — ADR-0264 accepts the corrected symbolic-CVE effective-handler join
   before any artifact execution.** The exact 22-row Linux IOCTL census and
   reachability result are source-hash pinned. Patch review partitions six
@@ -2658,9 +2670,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ9 auto cost model/docs** | **DONE for available families (ADR-0186).** Clean adaptive repeat clears every alarm over 92,721 checks; downstream explorer default has explicit off/fixed controls | Re-gate newly captured families; do not broaden this Glaurung-specific default into Axeyum's generic API |
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
-  **Next actions:** first materialize hash-bound vulnerable/fixed artifacts for
-  ADR-0264's six corrected declared/effective-handler candidates and
-  preregister the frontend-executability gate;
+  **Next actions:** first commit and accept ADR-0265's exact artifact/frontend
+  preflight, then materialize its hash-bound vulnerable/fixed artifacts;
   do not score recall until a row executes both sides of its pair. Then (1)
   coordinate with the active Glaurung explorer owner and
   integrate isolated branch `axeyum-concretization-policy-a0` at `7f682e5`
@@ -4705,6 +4716,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-19 — ADR-0265 preregisters paired symbolic-CVE artifacts and
+  frontend execution.** Exact translation units, handlers, entry ABIs,
+  attacker inputs, environment obligations, clean Linux source/Makefile joins,
+  and a clean no-Linux-detector Glaurung baseline are bound before candidate
+  build. The pilot selects per-TU embedded-bitcode command replay with
+  executable-byte identity; no selected outcome is observed.
 
 - **2026-07-19 — ADR-0264 accepts the corrected symbolic-CVE handler identity
   before execution.** The external `CVE-2024-49994` row names
