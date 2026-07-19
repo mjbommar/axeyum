@@ -41,8 +41,12 @@ def report(*, kind: str, taint: list[str], witness: dict[str, str]) -> dict:
                 "witness": witness,
             }
         ],
-        "exploration": {"runs": 1, "completed": 1, "memory_sites": {}},
-        "path_stops": {"returned": 1, "unmodeled_calls": {}},
+        "exploration": {"runs": 1, "completed": 1},
+        "path_stops": {
+            "returned": 1,
+            "unmodeled_calls": {},
+            "concrete_access_addresses": {},
+        },
         "concretization": {"policy": "glaurung-any-address-v1"},
     }
 
@@ -58,10 +62,10 @@ class SymbolicCveRecallTests(unittest.TestCase):
             "4100": {"30": 1},
         }
         self.assertEqual(
-            MODULE.memory_target_relocations(ordinary, embedded, delta=4096), 2
+            MODULE.concrete_address_relocations(ordinary, embedded, delta=4096), 2
         )
         with self.assertRaisesRegex(ValueError, "not relocation-equivalent"):
-            MODULE.memory_target_relocations(ordinary, embedded, delta=8192)
+            MODULE.concrete_address_relocations(ordinary, embedded, delta=8192)
 
     def test_repository_allows_registered_ancestor_with_exact_inputs(self) -> None:
         revision = "1" * 40
@@ -147,7 +151,7 @@ class SymbolicCveRecallTests(unittest.TestCase):
                 {
                     "handler": "handler",
                     "environment": "generic",
-                    "ordinary_embedded_memory_target_delta": 0,
+                    "ordinary_embedded_concrete_address_delta": 0,
                     "expected_sink": {
                         "kind": "NullDeref",
                         "tainted_by": ["IoctlCmd"],
@@ -172,7 +176,7 @@ class SymbolicCveRecallTests(unittest.TestCase):
                 {
                     "handler": "handler",
                     "environment": "generic",
-                    "ordinary_embedded_memory_target_delta": 0,
+                    "ordinary_embedded_concrete_address_delta": 0,
                     "expected_sink": {
                         "kind": "NullDeref",
                         "tainted_by": ["IoctlCmd"],
