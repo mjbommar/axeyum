@@ -114,6 +114,10 @@
     }
   ],
   "protocol": {
+    "runner": {
+      "path": "scripts/run-glaurung-six-cell-neutral.py",
+      "sha256": "daeec160c41862e3a70cc216831971a402d8b7392e3e6b60504b2503e89fbc7c"
+    },
     "repetitions_per_driver": 5,
     "process_order": "driver-major, repetition 1 through 5",
     "logical_cpu": 2,
