@@ -322,6 +322,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — A1 wiring is complete and ADR-0273 preregisters the
+  deterministic six-cell calibration before any census row.** Axeyum
+  `72375263` now bounds retained as well as cold BatSat checks with a reset-per-
+  solve progress-check limit. Isolated Glaurung `dc06a37` routes distinct Z3
+  rlimit, Axeyum progress-check, and Bitwuzla termination-poll controls through
+  all six cold/warm cells, preserves the wall only as a typed safety cap, and
+  emits validator-checked v4 traces. Axeyum `241dab31` consumes v4 with exact
+  unit/limit identity, outcome/stop-reason drift rejection, and separate
+  resource/wall/other accounting; 20 focused analyzer tests pass. ADR-0273
+  freezes all 14 first-20 tcpip calibration tiers, N=3, and the independent
+  smallest-limit-at-95%-decided selection rule. There are zero real-driver v4
+  rows. Run all 42 calibration processes next; a second preregistration must
+  commit the selected triplet before the 338-function confirmation. A1 remains
+  configuration/measurement, A0 remains complete, and symbolic memory remains
+  closed.
+
 - **2026-07-19 — ADR-0272 accepts the six-cell neutral warm map and closes the
   performance-leadership framing.** The exact 20-process campaign preserves
   12,902 checks per four-driver pass (10,647 SAT / 2,255 UNSAT), 64,510 repeated
@@ -2768,7 +2784,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
   | ID | Live status | Next acceptance boundary |
   |---|---|---|
-  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, six-cell in-process neutral warm map, complete three-solver timeout frontier, bounded/canonical/four-schedule plus wider timeout-sensitive raw authority cells, process-isolated corrected-representative plus wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, detector correction, corrected five-policy sweep, exhaustive difference adjudication, v6 hidden-work rejection, external DRAT controls, immutable symbolic-CVE artifact admission, and 2/2 selected-pair symbolic recall DONE (ADR-0187/0188/0213--0272 plus Glaurung `2961d7c`; campaign revision `ff3c0a7`).** ADR-0272 accepts 64,510 repeated occurrences and 387,060 in-process cell executions with complete six-way parity, zero fallback, and all four neutral gates green. Axeyum's warm Z3-relative result is workload-dependent while Bitwuzla leads all four warm drivers, ruling out a performance-lead headline. The symbolic-CVE result remains only two admitted pairs, not population recall; tcpip remains zero-high/unlabeled. | Preregister and run PLAN item 3's deterministic harder-driver tier; admit broader labeled artifacts separately; keep symbolic memory closed and treat A1 resource bounds as configuration |
+  | **GQ1 real-query profile** | **Map, query/internal attribution, fresh/retained exact-CNF controls, six-cell in-process neutral warm map, complete three-solver timeout frontier, bounded/canonical/four-schedule plus wider timeout-sensitive raw authority cells, process-isolated corrected-representative plus wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, taint/SystemBuffer baseline corrections, confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, detector correction, corrected five-policy sweep, exhaustive difference adjudication, v6 hidden-work rejection, external DRAT controls, immutable symbolic-CVE artifact admission, 2/2 selected-pair symbolic recall, and deterministic six-cell v4 wiring DONE (ADR-0187/0188/0213--0273 plus Glaurung `dc06a37`; campaign revision `ff3c0a7`).** ADR-0272 accepts 64,510 repeated occurrences and 387,060 in-process cell executions with complete six-way parity, zero fallback, and all four neutral gates green. Axeyum's warm Z3-relative result is workload-dependent while Bitwuzla leads all four warm drivers, ruling out a performance-lead headline. ADR-0273 has zero real-driver rows and freezes calibration before the census. The symbolic-CVE result remains only two admitted pairs, not population recall; tcpip remains zero-high/unlabeled. | Run ADR-0273's exact 42-process calibration, then preregister the selected triplet before the full census; admit broader labeled artifacts separately; keep symbolic memory closed |
   | **GQ2 cheap cold tier** | **WIP with three accepted rewrite tranches; batch integration deferred.** Canonical v4 reaches 5.625 s / 0.730x Z3; ADR-0156 preserves replay but is 18.8% slower than one-shot | Keep canonical v4 as the measured one-shot policy; do not recommend fresh incremental batch until its clause/entry overhead closes |
   | **GQ3 coercion/affine peepholes** | **DONE for current measured shapes (ADR-0159).** Clean repeated path-paired ablations are fail-closed; `extract_extend` is a material lowering-only win, while all four measured structural rules change zero AIG nodes/clauses | Keep rules enabled. Reopen only for a new residual shape with a specific downstream hypothesis and the same causal ablation gate |
   | **GQ4 cold relevant bits** | **v1 and v2 DEFERRED after failed real gates.** v1 regresses ~1.42x→4.49x. V2 rejection overhead is bounded, but defaults admit 0/128 and +0.62% total; a 33-query moderate policy removes 632 AIG nodes/zero clauses and regresses bit blast 3.14% | Keep both explicit/off. Reopen only with an AIG/CNF-cone estimator or after word rewrites materially change the residual; do not tune thresholds further |
@@ -2780,11 +2796,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   | **GQ10 real-lifter regression tier** | **Native continuation admission DONE; wider direct-delta default DEFERRED (ADR-0205--0212).** The accepted tcpip trace admits bounded continuation. The new complete 85,449-event / 17,400-check `dxgkrnl` trace and independent replay preserve exact no-op behavior and every correctness/lifecycle gauge, but ordinary-core time CV is 14.430%/8.306% and slower-core outcomes drift | Keep direct delta opt-in. Repeat under a quieter predeclared environment or add another no-timeout IOCTL driver; route `win32k` to a system-service/callout frontend |
 
   **Next actions:** ADR-0271 closes the bounded selected-pair symbolic-CVE gate,
-  and ADR-0272 closes PLAN item 2's topology-equivalent six-cell neutral map.
-  All four neutral gates pass; Axeyum's Z3-relative map is workload-dependent,
-  and warm Bitwuzla leads every driver. Preregister and run item 3's
-  timeout-sensitive/harder-driver tier next
-  under a deterministic work bound. Standing integration constraints: (1)
+  ADR-0272 closes PLAN item 2's topology-equivalent six-cell neutral map, and
+  ADR-0273 freezes item 3's zero-row deterministic calibration. All four
+  neutral gates pass; Axeyum's Z3-relative map is workload-dependent, and warm
+  Bitwuzla leads every driver. Run all 42 registered calibration processes,
+  select each named backend limit mechanically, and commit a second zero-census
+  ADR before the 338-function confirmation. Standing integration constraints: (1)
   coordinate with the active Glaurung explorer owner and
   integrate isolated branch `axeyum-concretization-policy-a0` at `7f682e5`
   (confidence implementation `931d8a8`, provenance implementation `845239f`,

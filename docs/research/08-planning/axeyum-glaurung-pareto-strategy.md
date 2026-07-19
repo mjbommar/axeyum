@@ -260,18 +260,17 @@ genuinely architectural; the rest are knobs or bounded explorer mechanics.
   control restores 14/14 precision and recall while the arbitrary-pointer row
   remains an arbitrary-read/write/null finding. This is a localized detector-
   correctness repair, not a new concretization research program.
-- **A1. Deterministic work-bounded timeout (a config value, not a project).**
-  Select the existing deterministic resource-budget surfaces instead of relying
-  only on the 250ms wall: Axeyum already exposes `SolverConfig::resource_limit`,
-  Z3 exposes `rlimit`, and ioctlance already has deterministic outer function and
-  exploration-work bounds. The remaining work is to wire and record one explicit
-  Glaurung policy/config value, not invent a new solver algorithm. Backend resource
-  units are not numerically equivalent, so calibrate and report each backend's
-  unit separately; reproducibility is a within-backend gate, while cross-backend
-  finding parity remains the user-visible comparison. Keep the wall timeout as a
-  safety cap and report any hit. This removes wall time from the accepted work
-  boundary without pretending the existing outer function bound already controls
-  each solver check.
+- **A1. Deterministic work-bounded timeout (wiring complete; calibration
+  preregistered in ADR-0273).** Axeyum `72375263` makes cold and retained SAT
+  checks honor `SolverConfig::resource_limit`. Glaurung `dc06a37` routes and
+  records Z3 `rlimit`, Axeyum progress-check limits, and Bitwuzla termination-
+  poll limits through the accepted six-cell topology, with typed resource/wall/
+  other stops and the wall retained only as a reported safety cap. The units
+  are explicitly not numerically equivalent. ADR-0273 now freezes a separate
+  first-20 calibration ladder and selection rule before any full-census row;
+  the remaining work is execution and a second preregistration that commits the
+  selected triplet. This remains configuration and measurement, not a solver
+  algorithm project.
 - **A3. Diverse / boundary concretization (a policy under A0 -- but NOT a
   guaranteed fix).** The `BoundarySet`/`DiverseEnum` policies fork a
   *deterministic diverse set* at value-dependent sinks. This is deterministic
@@ -414,8 +413,11 @@ support anyway.
   workload-dependent Z3 wins without a leadership claim. Preregister the
   separately scoped harder-driver tier next; do not rerun these four drivers to
   tune the result.
-- Remaining A1 is configuration/wiring: select and record backend-specific
-  deterministic resource budgets while retaining the wall as a safety cap.
+- A1's configuration/wiring is complete at Axeyum `72375263` and isolated
+  Glaurung `dc06a37`. ADR-0273 preregisters the zero-row backend-specific
+  calibration: execute every fixed tier, mechanically select one value per
+  named unit, and commit the triplet in a second ADR before the 338-function
+  census. Do not treat equal tier positions or numeric values as equal work.
   ADR-0262 completes the wider timeout-sensitive sole-authority tier under
   ADR-0250's v6 stop partition: all six first-20 cells are valid, timeout is a
   measured no-op from 100 to 1000 ms, AnyModel remains raw-divergent, and
