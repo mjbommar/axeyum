@@ -1,0 +1,630 @@
+{
+  "axeyum_execution_counts_per_repetition": {
+    "warm-created": 14,
+    "warm-retained": 5168
+  },
+  "by_axeyum_execution": {
+    "warm-created": {
+      "axeyum_median_per_occurrence_latency_nanos": {
+        "p50": 5463,
+        "p90": 9502,
+        "p95": 16665,
+        "p99": 16665
+      },
+      "bootstrap_95_percent_ci": [
+        34.38299848083023,
+        60.121493132205245
+      ],
+      "bootstrap_samples": 10000,
+      "occurrences": 14,
+      "per_occurrence_geomean_speedup": 43.15721985795286,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.03998654338738219,
+        "mean": 43.18580285324796,
+        "sample_standard_deviation": 1.7268509795103328,
+        "values": [
+          43.94845498724977,
+          40.14289645008908,
+          44.397095462090036,
+          43.564446803923616,
+          43.87612056288727
+        ]
+      },
+      "speedup_direction": "z3_nanos/axeyum_nanos; greater than 1 favors Axeyum",
+      "z3_median_per_occurrence_latency_nanos": {
+        "p50": 221523,
+        "p90": 279310,
+        "p95": 4737689,
+        "p99": 4737689
+      }
+    },
+    "warm-retained": {
+      "axeyum_median_per_occurrence_latency_nanos": {
+        "p50": 173646,
+        "p90": 1493879,
+        "p95": 1694719,
+        "p99": 1872678
+      },
+      "bootstrap_95_percent_ci": [
+        5.674644001666618,
+        6.061343629547264
+      ],
+      "bootstrap_samples": 10000,
+      "occurrences": 5168,
+      "per_occurrence_geomean_speedup": 5.862407246280583,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.010133169913629045,
+        "mean": 5.8626478928148895,
+        "sample_standard_deviation": 0.059407207241672554,
+        "values": [
+          5.808284180413927,
+          5.872859756082478,
+          5.798801615289863,
+          5.940615945244018,
+          5.89267796704416
+        ]
+      },
+      "speedup_direction": "z3_nanos/axeyum_nanos; greater than 1 favors Axeyum",
+      "z3_median_per_occurrence_latency_nanos": {
+        "p50": 1100949,
+        "p90": 2660862,
+        "p95": 2822360,
+        "p99": 3015527
+      }
+    }
+  },
+  "configuration_identity": {
+    "analysis_command": [
+      "/home/mjbommar/.cache/codex/glaurung-six-cell-target/release/examples/ioctlance",
+      "samples/binaries/platforms/windows/vendor/realworld/win10-vwififlt.sys"
+    ],
+    "analysis_configuration": {
+      "GLAURUNG_AXEYUM_REPLAY_SAT_CACHE": "1",
+      "GLAURUNG_AXEYUM_WARM_MAX_ASSERTIONS_PER_PATH": "512",
+      "GLAURUNG_AXEYUM_WARM_MAX_LIVE_PATHS": "9",
+      "GLAURUNG_CHECK_TIMEOUT_MS": "250",
+      "GLAURUNG_FAIR_SHADOW": "1",
+      "IOCTLANCE_DEADLINE_SECS": "600",
+      "IOCTLANCE_MAX_ANALYZED_FUNCTIONS": "100000",
+      "IOCTLANCE_SOLVE_BUDGET": "20000",
+      "IOCTLANCE_SOLVE_SECS": "60"
+    },
+    "check_measurement_schema": "glaurung-ordered-check-measurement-v3",
+    "driver_sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820",
+    "host_identity": {
+      "architecture": "x86_64",
+      "hostname": "server0",
+      "kernel": "Linux 7.0.0-27-generic x86_64 GNU/Linux",
+      "operating_system": "linux"
+    },
+    "neutral_measurement_backend": {
+      "authoritative_in_shadow_mode": false,
+      "backend": "bitwuzla",
+      "role": "benchmark-only-neutral",
+      "runtime_version": "0.9.1"
+    },
+    "schema": "glaurung-ordered-trace-v1",
+    "solver_features": [
+      "symbolic",
+      "solver-z3",
+      "solver-axeyum",
+      "solver-bitwuzla"
+    ],
+    "source": {
+      "dirty": false,
+      "repository": "/tmp/glaurung-concretization-a0.NEo0bV",
+      "revision": "2961d7c1bca03f14b77b12fb852d193413207982",
+      "status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "toolchain": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
+    "trusted_oracle": {
+      "authoritative_in_shadow_mode": true,
+      "backend": "z3",
+      "crate": "z3 0.12.1",
+      "runtime_version": "linked-runtime-unreported"
+    },
+    "version": 1,
+    "worker_count": 1
+  },
+  "driver": {
+    "label": "win10-vwififlt.sys",
+    "sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820"
+  },
+  "excluded_from_primary_for_any_nondecision": 0,
+  "fixed_work_checks_per_repetition": 5182,
+  "input_measurement_schema": "glaurung-ordered-check-measurement-v3",
+  "methodology": {
+    "bootstrap_seed": 0,
+    "latency_distribution_unit": "per-occurrence median across fixed-work repetitions",
+    "operational_errors_allowed": false,
+    "pairing_unit": "stable ordered check occurrence",
+    "primary_population": "occurrences decided by both backends in every repetition",
+    "quantiles": "nearest-rank",
+    "ratio_of_sums_reported": false
+  },
+  "neutral_regime_gate": {
+    "accepted": true,
+    "reasons": []
+  },
+  "outcome_buckets_per_repetition": [
+    {
+      "axeyum_only": 0,
+      "both_decided": 5182,
+      "neither": 0,
+      "z3_only": 0
+    },
+    {
+      "axeyum_only": 0,
+      "both_decided": 5182,
+      "neither": 0,
+      "z3_only": 0
+    },
+    {
+      "axeyum_only": 0,
+      "both_decided": 5182,
+      "neither": 0,
+      "z3_only": 0
+    },
+    {
+      "axeyum_only": 0,
+      "both_decided": 5182,
+      "neither": 0,
+      "z3_only": 0
+    },
+    {
+      "axeyum_only": 0,
+      "both_decided": 5182,
+      "neither": 0,
+      "z3_only": 0
+    }
+  ],
+  "primary_both_decided": {
+    "axeyum_median_per_occurrence_latency_nanos": {
+      "p50": 172397,
+      "p90": 1492598,
+      "p95": 1693273,
+      "p99": 1872678
+    },
+    "bootstrap_95_percent_ci": [
+      5.697188588861898,
+      6.089286108364667
+    ],
+    "bootstrap_samples": 10000,
+    "occurrences": 5182,
+    "per_occurrence_geomean_speedup": 5.894110349893817,
+    "per_run_geomean_speedup": {
+      "coefficient_of_variation": 0.01008058182424702,
+      "mean": 5.894349771043574,
+      "sample_standard_deviation": 0.059418475167736434,
+      "values": [
+        5.840127572110697,
+        5.903436075058203,
+        5.83077874998652,
+        5.972679691224443,
+        5.924726766838009
+      ]
+    },
+    "speedup_direction": "z3_nanos/axeyum_nanos; greater than 1 favors Axeyum",
+    "z3_median_per_occurrence_latency_nanos": {
+      "p50": 1099050,
+      "p90": 2660512,
+      "p95": 2822360,
+      "p99": 3018608
+    }
+  },
+  "pure_warm_execution_rate": 1.0,
+  "repetitions": 5,
+  "retained_warm_execution_rate": 0.9972983404091085,
+  "schema": "axeyum-glaurung-paired-analysis-v1",
+  "six_cell_comparisons": {
+    "axeyum_cold_over_warm": {
+      "bootstrap_95_percent_ci": [
+        8.21485839712982,
+        8.753220400778366
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 172397,
+        "p90": 1492598,
+        "p95": 1693273,
+        "p99": 1872678
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 2126287,
+        "p90": 3846696,
+        "p95": 4444534,
+        "p99": 5112942
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 8.478071249145646,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.01519620595525497,
+        "mean": 8.47885753915517,
+        "sample_standard_deviation": 0.1288464654302683,
+        "values": [
+          8.317775262372274,
+          8.566357447649319,
+          8.36058251455042,
+          8.589074372048767,
+          8.560498099155074
+        ]
+      },
+      "ratio_direction": "axeyum_cold_nanos/axeyum_warm_nanos"
+    },
+    "bitwuzla_cold_over_warm": {
+      "bootstrap_95_percent_ci": [
+        8.17898901958546,
+        8.42596579757975
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 146347,
+        "p90": 291798,
+        "p95": 330374,
+        "p99": 409254
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 968316,
+        "p90": 1994629,
+        "p95": 2107040,
+        "p99": 2487923
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 8.301690786379513,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.00822507046571071,
+        "mean": 8.301916308100704,
+        "sample_standard_deviation": 0.0682838466345612,
+        "values": [
+          8.355318951571832,
+          8.364784060626945,
+          8.193222485768658,
+          8.296807233616578,
+          8.299448808919506
+        ]
+      },
+      "ratio_direction": "bitwuzla_cold_nanos/bitwuzla_warm_nanos"
+    },
+    "cold_axeyum_over_bitwuzla": {
+      "bootstrap_95_percent_ci": [
+        1.6166406744482544,
+        1.6670432923918121
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 968316,
+        "p90": 1994629,
+        "p95": 2107040,
+        "p99": 2487923
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 2126287,
+        "p90": 3846696,
+        "p95": 4444534,
+        "p99": 5112942
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 1.6414710923522318,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.0030704519615564873,
+        "mean": 1.6414772862183231,
+        "sample_standard_deviation": 0.0050400771533194695,
+        "values": [
+          1.634472115431086,
+          1.644147709204584,
+          1.6429894664749722,
+          1.6384650080059548,
+          1.647312131975019
+        ]
+      },
+      "ratio_direction": "axeyum_cold_nanos/bitwuzla_cold_nanos"
+    },
+    "cold_z3_over_axeyum": {
+      "bootstrap_95_percent_ci": [
+        0.6815636030665063,
+        0.7090135694663657
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 2126287,
+        "p90": 3846696,
+        "p95": 4444534,
+        "p99": 5112942
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 1099050,
+        "p90": 2660512,
+        "p95": 2822360,
+        "p99": 3018608
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 0.695218308113155,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.007163095120164557,
+        "mean": 0.6952325662440383,
+        "sample_standard_deviation": 0.004980017002642153,
+        "values": [
+          0.7021261560804732,
+          0.6891419265580793,
+          0.6974129780836282,
+          0.6953810658178957,
+          0.6921007046801148
+        ]
+      },
+      "ratio_direction": "z3_cold_nanos/axeyum_cold_nanos"
+    },
+    "cold_z3_over_bitwuzla": {
+      "bootstrap_95_percent_ci": [
+        1.1320382991189626,
+        1.1504832382650003
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 968316,
+        "p90": 1994629,
+        "p95": 2107040,
+        "p99": 2487923
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 1099050,
+        "p90": 2660512,
+        "p95": 2822360,
+        "p99": 3018608
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 1.141180755641771,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.005063814416384759,
+        "mean": 1.141192470242102,
+        "sample_standard_deviation": 0.005778786882681691,
+        "values": [
+          1.1476056236283478,
+          1.1330511198672997,
+          1.1458421767743419,
+          1.1393575435725078,
+          1.140105887368013
+        ]
+      },
+      "ratio_direction": "z3_cold_nanos/bitwuzla_cold_nanos"
+    },
+    "warm_axeyum_over_bitwuzla": {
+      "bootstrap_95_percent_ci": [
+        1.5579129400174458,
+        1.6577850092373656
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 146347,
+        "p90": 291798,
+        "p95": 330374,
+        "p99": 409254
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 172397,
+        "p90": 1492598,
+        "p95": 1693273,
+        "p99": 1872678
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 1.6073214110888796,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.013607953885324408,
+        "mean": 1.6074398593527774,
+        "sample_standard_deviation": 0.021873967479504947,
+        "values": [
+          1.6418495825026815,
+          1.6054595708056447,
+          1.6101005183761006,
+          1.582711680165467,
+          1.5970779449139931
+        ]
+      },
+      "ratio_direction": "axeyum_warm_nanos/bitwuzla_warm_nanos"
+    },
+    "warm_z3_over_axeyum": {
+      "bootstrap_95_percent_ci": [
+        1.0190334669191259,
+        1.0879487540736614
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 172397,
+        "p90": 1492598,
+        "p95": 1693273,
+        "p99": 1872678
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 218785,
+        "p90": 456996,
+        "p95": 497229,
+        "p99": 615631
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 1.0523175624250058,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.013081756539325596,
+        "mean": 1.0523897041502523,
+        "sample_standard_deviation": 0.013767105894186494,
+        "values": [
+          1.0332033763745614,
+          1.050548056373024,
+          1.04773152766791,
+          1.0694183606189926,
+          1.0610471997167739
+        ]
+      },
+      "ratio_direction": "z3_warm_nanos/axeyum_warm_nanos"
+    },
+    "warm_z3_over_bitwuzla": {
+      "bootstrap_95_percent_ci": [
+        1.6691464530982119,
+        1.714031163686615
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 146347,
+        "p90": 291798,
+        "p95": 330374,
+        "p99": 409254
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 218785,
+        "p90": 456996,
+        "p95": 497229,
+        "p99": 615631
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 1.6914125493505705,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.0026243913888579226,
+        "mean": 1.6914172102337717,
+        "sample_standard_deviation": 0.004438940761503601,
+        "values": [
+          1.6963645321409346,
+          1.6866124316953395,
+          1.6869530758170856,
+          1.6925809303350854,
+          1.6945750811804123
+        ]
+      },
+      "ratio_direction": "z3_warm_nanos/bitwuzla_warm_nanos"
+    },
+    "z3_cold_over_warm": {
+      "bootstrap_95_percent_ci": [
+        5.540023976406387,
+        5.661172933580769
+      ],
+      "bootstrap_samples": 10000,
+      "denominator_median_per_occurrence_latency_nanos": {
+        "p50": 218785,
+        "p90": 456996,
+        "p95": 497229,
+        "p99": 615631
+      },
+      "numerator_median_per_occurrence_latency_nanos": {
+        "p50": 1099050,
+        "p90": 2660512,
+        "p95": 2822360,
+        "p99": 3018608
+      },
+      "occurrences": 5182,
+      "per_occurrence_geomean_speedup": 5.601075721202616,
+      "per_run_geomean_speedup": {
+        "coefficient_of_variation": 0.006198203942772593,
+        "mean": 5.601161616425481,
+        "sample_standard_deviation": 0.034717142015034924,
+        "values": [
+          5.65244723899693,
+          5.6193869849605775,
+          5.565145837469393,
+          5.584979565684081,
+          5.5838484550164225
+        ]
+      },
+      "ratio_direction": "z3_cold_nanos/z3_warm_nanos"
+    }
+  },
+  "six_cell_outcome_counts_per_repetition": [
+    {
+      "all_six_decided": 5182,
+      "any_nondecision": 0
+    },
+    {
+      "all_six_decided": 5182,
+      "any_nondecision": 0
+    },
+    {
+      "all_six_decided": 5182,
+      "any_nondecision": 0
+    },
+    {
+      "all_six_decided": 5182,
+      "any_nondecision": 0
+    },
+    {
+      "all_six_decided": 5182,
+      "any_nondecision": 0
+    }
+  ],
+  "stable_all_six_decided_occurrences": 5182,
+  "stable_both_decided_occurrences": 5182,
+  "trace_paths": [
+    "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r1/traces/glaurung-ordered-trace-3168940-aee28bcf2f94480eaae60ac7f380c9c2",
+    "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r2/traces/glaurung-ordered-trace-3173209-deca044cb9314e45baf05d7c44d45b04",
+    "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r3/traces/glaurung-ordered-trace-3177334-d20e98b4f783434cb129b42b555ae206",
+    "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r4/traces/glaurung-ordered-trace-3181558-14e163a73aba490f81faa70a7b8d6df0",
+    "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r5/traces/glaurung-ordered-trace-3185738-8aa0ea12cdaa4e2ca5fe0f32326c5462"
+  ],
+  "warm_execution_counts_per_repetition": [
+    {
+      "axeyum": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "bitwuzla": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "z3": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      }
+    },
+    {
+      "axeyum": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "bitwuzla": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "z3": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      }
+    },
+    {
+      "axeyum": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "bitwuzla": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "z3": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      }
+    },
+    {
+      "axeyum": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "bitwuzla": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "z3": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      }
+    },
+    {
+      "axeyum": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "bitwuzla": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      },
+      "z3": {
+        "warm-created": 14,
+        "warm-retained": 5168
+      }
+    }
+  ]
+}

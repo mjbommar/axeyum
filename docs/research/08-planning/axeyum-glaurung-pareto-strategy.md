@@ -318,14 +318,15 @@ cheap.
   `GLAURUNG_FAIR_SHADOW` four-cell map and cvc5 cold/reset plus
   source-owner-retained controls establish the starting regime. Glaurung
   `2961d7c` now adds benchmark-only Bitwuzla 0.9.1 as topology-equivalent cold
-  and retained in-process cells; ADR-0272 preregisters the additive v3 analyzer
-  and N>=5 four-driver run before any timing rows. Until that campaign passes,
-  Bitwuzla remains only a correctness oracle and mechanism-tested performance
-  candidate. The honest observed two-solver map is workload-dependent: Axeyum
-  wins warm on IntcSST/SurfacePen, ties on vwififlt, and loses on Dptf. Formula
-  size and the FFI floor do not by themselves explain the reversal. Publish the
-  six-cell characterization and separately scoped ADR-0233 hard-frontier cold
-  result, not a pooled ratio or inferred universal regime.
+  and retained in-process cells. ADR-0272's fixed N>=5 campaign passes every
+  all-six gate over 12,902 checks per four-driver pass. The honest map remains
+  workload-dependent against Z3: Axeyum wins warm on vwififlt,
+  IntcSST/SurfacePen and loses on Dptf. The neutral result prevents a stronger
+  headline: warm Bitwuzla wins all four, although cold Axeyum leads on IntcSST
+  and SurfacePen. Formula size and the FFI floor do not by themselves explain
+  the reversal. Publish this six-cell characterization and separately scoped
+  ADR-0233 hard-frontier cold result, not a pooled ratio, universal regime, or
+  Axeyum performance-leadership claim.
 - **B2. Attack the cold 84% via abstraction-refinement + word-level (not more
   bit-blasting).** The cold gap is bit_blast+cnf. Adopt the SOTA lever:
   incremental abstraction-refinement for `mul`/`div`/`rem` and word-level
@@ -404,13 +405,15 @@ support anyway.
   ADR-0233's 50/100/250/1000 ms Axeyum/Z3/cvc5 formula frontier are complete.
   ADR-0233 closes neutral timeout-sensitive formula breadth; do not schedule
   another neutral formula sweep under that name.
-- The missing in-process neutral mechanism is implemented on Glaurung
-  `2961d7c`: six rotated `{Z3, Axeyum, Bitwuzla} x {cold, warm}` cells preserve
-  cold-Z3 authority and one source-owner topology. ADR-0272 fixes the v3
-  consumer, four-driver population, runtime identities, N>=5 protocol, and
-  fail-closed gates at a zero-row boundary. Implement the registered analyzer
-  and execute that protocol next; do not tune from pilots or fold it into the
-  later harder-driver tier.
+- The missing in-process neutral control is complete. Glaurung `2961d7c` and
+  ADR-0272's frozen v3 consumer run six rotated
+  `{Z3, Axeyum, Bitwuzla} x {cold, warm}` cells under cold-Z3 authority and one
+  source-owner topology. All 20 processes, 64,510 repeated occurrences, and
+  387,060 cell executions pass parity, fallback, fixed-work, and variance
+  gates. Warm Bitwuzla leads every driver, so preserve Axeyum's named
+  workload-dependent Z3 wins without a leadership claim. Preregister the
+  separately scoped harder-driver tier next; do not rerun these four drivers to
+  tune the result.
 - Remaining A1 is configuration/wiring: select and record backend-specific
   deterministic resource budgets while retaining the wall as a safety cap.
   ADR-0262 completes the wider timeout-sensitive sole-authority tier under

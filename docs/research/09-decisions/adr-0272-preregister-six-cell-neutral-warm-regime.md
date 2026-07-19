@@ -1,6 +1,6 @@
 # ADR-0272: Preregister the six-cell neutral warm regime map
 
-Status: proposed
+Status: accepted
 Date: 2026-07-19
 
 ## Context
@@ -217,6 +217,36 @@ The experiment is intentionally not the timeout-sensitive/harder-driver tier.
 That remains PLAN item 3 and will use a deterministic resource bound after this
 neutral map is accepted or retained as inconclusive.
 
+The registered campaign completed without adaptation. All 20 fresh processes
+published one independently validated v3 trace. Each driver preserves exact
+work across five repetitions: 603 checks for DptfDevGen, 5,182 for vwififlt,
+2,309 for IntcSST, and 4,808 for SurfacePen. The complete pass contains 10,647
+SAT and 2,255 UNSAT checks; all six cells decide and agree on every one. All
+three warm solvers have the same created/retained populations, totaling 88
+created and 12,814 retained sessions per four-driver pass, with zero fallback.
+Every preregistered primary warm-pair process CV is below 1.86%, so all four
+neutral regime gates pass.
+
+Warm Z3/Axeyum remains workload-dependent: DptfDevGen is 0.8448x [0.7368,
+0.9692], favoring Z3, while vwififlt is 1.0523x [1.0190, 1.0879], IntcSST is
+2.2321x [2.1243, 2.3408], and SurfacePen is 2.2819x [2.2213, 2.3452], favoring
+Axeyum. The neutral cell changes the framing, not the validity of those paired
+results: warm Bitwuzla beats warm Z3 on all four drivers by 1.6158x--3.9066x
+and beats warm Axeyum by 1.0941x--1.9126x, with every interval excluding one.
+
+Cold ordering does not collapse to one winner: Bitwuzla leads DptfDevGen and
+vwififlt, while Axeyum leads IntcSST and SurfacePen. Retained topology benefits
+all three solvers on every driver, by 5.35x--8.17x for Z3/Axeyum and
+7.38x--18.06x for Bitwuzla. Thus neither a universal formula-size boundary nor
+an Axeyum performance-leadership claim survives the neutral control.
+
+The four committed reports and CDFs are under
+[`bench-results/glaurung-six-cell-neutral-20260719/`](../../../bench-results/glaurung-six-cell-neutral-20260719/README.md).
+The report SHA-256 values and exact populations are in `result-summary.json`;
+an independent same-input analyzer rerun reproduced all report bytes exactly. The
+1.4 GiB raw campaign is retained outside git at
+`/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1`.
+
 ## Alternatives
 
 - Treat cvc5 reset/retained text protocols as the missing in-process cell:
@@ -234,9 +264,14 @@ neutral map is accepted or retained as inconclusive.
 
 ## Consequences
 
-The immediate trajectory is now precise: implement and test the registered v3
-consumer, build the frozen executable, verify its dynamic linkage, run exactly
-the four-driver N=5 campaign, and accept or retain the result without tuning.
-Only then does the integration lane move to PLAN item 3's deterministic harder
-tier. A0 remains completed reproducibility infrastructure; this ADR does not
-reopen concretization coverage or symbolic memory.
+The neutral warm-baseline blocker is closed. The publication may state that
+Axeyum beats warm Z3 on three named workloads and loses on one, but must state
+beside that result that warm Bitwuzla wins all four. Performance is a
+characterized integration regime, not the paper's lead contribution; strict
+correctness, deployability, proof checking, and reproducibility remain the
+defensible spine.
+
+The integration lane now moves to preregistering PLAN item 3's separately
+scoped deterministic harder-driver tier. A0 remains completed reproducibility
+infrastructure; this ADR does not reopen concretization coverage or symbolic
+memory.

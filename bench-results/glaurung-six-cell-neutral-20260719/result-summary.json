@@ -1,0 +1,88 @@
+{
+  "schema": "axeyum-glaurung-six-cell-result-v1",
+  "date": "2026-07-19",
+  "status": "accepted",
+  "registration": "registration.json",
+  "raw_campaign": {
+    "path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1",
+    "campaign_sha256": "cf1c7f59ccf9faf6fc398ddfd668331d32b1bdb69a7d7e5c51c348480a3bb50b",
+    "processes": 20,
+    "producer_validated_processes": 20
+  },
+  "population": {
+    "checks_per_four_driver_pass": 12902,
+    "sat_per_four_driver_pass": 10647,
+    "unsat_per_four_driver_pass": 2255,
+    "repetitions": 5,
+    "repeated_check_occurrences": 64510,
+    "measured_solver_cells": 387060,
+    "unknown": 0,
+    "operational_error": 0,
+    "decided_disagreement": 0,
+    "warm_fallback": 0
+  },
+  "drivers": {
+    "dptf": {
+      "checks": 603,
+      "sat": 387,
+      "unsat": 216,
+      "warm_created": 7,
+      "warm_retained": 596,
+      "neutral_gate": "accepted",
+      "report_sha256": "f89f28b935b4e55840c3240e6ef0db78ae5c9db861eefa1f542a3b8ffa62aacc",
+      "warm_ratios": {
+        "z3_over_axeyum": [0.8447895855905234, 0.7368386142570622, 0.9691566300192415],
+        "z3_over_bitwuzla": [1.6157599951948232, 1.5080140861696127, 1.7327075394343927],
+        "axeyum_over_bitwuzla": [1.9126182693947122, 1.7050536253885504, 2.1460759631549045]
+      }
+    },
+    "vwififlt": {
+      "checks": 5182,
+      "sat": 3589,
+      "unsat": 1593,
+      "warm_created": 14,
+      "warm_retained": 5168,
+      "neutral_gate": "accepted",
+      "report_sha256": "f774645080431a60d33512e14e1ee61ab88ad9ca3edeb1caadecb7296634376e",
+      "warm_ratios": {
+        "z3_over_axeyum": [1.0523175624250058, 1.0190334669191259, 1.0879487540736614],
+        "z3_over_bitwuzla": [1.6914125493505705, 1.6691464530982119, 1.714031163686615],
+        "axeyum_over_bitwuzla": [1.6073214110888796, 1.5579129400174458, 1.6577850092373656]
+      }
+    },
+    "intcsst": {
+      "checks": 2309,
+      "sat": 2028,
+      "unsat": 281,
+      "warm_created": 24,
+      "warm_retained": 2285,
+      "neutral_gate": "accepted",
+      "report_sha256": "ffac9498972876b26e8b376903646c563f5166829672071bd663a7f4525a00fa",
+      "warm_ratios": {
+        "z3_over_axeyum": [2.2321409311830975, 2.1243390662116637, 2.3408220813096814],
+        "z3_over_bitwuzla": [2.4421845511806866, 2.3809504302855826, 2.507493660001954],
+        "axeyum_over_bitwuzla": [1.094099622950895, 1.0490380070663803, 1.1397500463034487]
+      }
+    },
+    "surfacepen": {
+      "checks": 4808,
+      "sat": 4643,
+      "unsat": 165,
+      "warm_created": 43,
+      "warm_retained": 4765,
+      "neutral_gate": "accepted",
+      "report_sha256": "1e89b36af22a6d42b7c659909b8e7942c87af034bcf7261ba0c064395356dc67",
+      "warm_ratios": {
+        "z3_over_axeyum": [2.2818744062992065, 2.2213106163673353, 2.345166930301163],
+        "z3_over_bitwuzla": [3.9065871320627426, 3.8348890026792124, 3.9796688147509443],
+        "axeyum_over_bitwuzla": [1.7120079533205033, 1.6738775572606774, 1.7509210363853722]
+      }
+    }
+  },
+  "analysis_reproduction": {
+    "independent_same-input_rerun_byte_identical": true,
+    "bootstrap_samples": 10000,
+    "bootstrap_seed": 0,
+    "ratio_direction": "numerator_nanos/denominator_nanos; greater than 1 favors denominator"
+  }
+}
