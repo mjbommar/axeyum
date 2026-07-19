@@ -1,5 +1,7 @@
 import importlib.util
 import pathlib
+import subprocess
+import tempfile
 import unittest
 
 
@@ -63,7 +65,7 @@ def recall() -> dict:
 
 def classification() -> dict:
     return {
-        "schema": "axeyum.glaurung-symbolic-cve-qualification.v1",
+        "schema": "axeyum.glaurung-symbolic-cve-qualification.v2",
         "cve_corpus_sha256": CORPUS_SHA,
         "cve_recall_sha256": RECALL_SHA,
         "expected_rows": 2,
@@ -96,6 +98,7 @@ def resolved() -> dict[str, dict]:
             "parent_commit": "3" * 40,
             "changed_files": ["drivers/test/direct.c"],
             "handler_files": ["drivers/test/direct.c"],
+            "handler_symbol": "direct_ioctl",
             "patch_sha256": "c" * 64,
         },
         "222222222222": {
@@ -103,6 +106,7 @@ def resolved() -> dict[str, dict]:
             "parent_commit": "4" * 40,
             "changed_files": ["drivers/test/actual.c"],
             "handler_files": ["drivers/test/actual.c"],
+            "handler_symbol": "race_ioctl",
             "patch_sha256": "d" * 64,
         },
     }
@@ -127,6 +131,73 @@ class SymbolicCveQualificationTests(unittest.TestCase):
             "drivers/test/actual.c",
         )
         self.assertFalse(report["rows"][1]["current_fragment_candidate"])
+        self.assertEqual(report["rows"][0]["declared_handler_fn"], "direct_ioctl")
+        self.assertEqual(report["rows"][0]["handler_fn"], "direct_ioctl")
+
+    def test_records_an_explicit_effective_handler_override(self) -> None:
+        corrected = classification()
+        corrected["rows"][0]["handler_symbol_override"] = "direct_ioctl_checked"
+        corrected_resolved = resolved()
+        corrected_resolved["111111111111"]["handler_symbol"] = "direct_ioctl_checked"
+        report = MODULE.validate_qualification(
+            corpus(),
+            recall(),
+            corrected,
+            corrected_resolved,
+            corpus_sha256=CORPUS_SHA,
+            recall_sha256=RECALL_SHA,
+        )
+        self.assertEqual(report["rows"][0]["declared_handler_fn"], "direct_ioctl")
+        self.assertEqual(report["rows"][0]["handler_fn"], "direct_ioctl_checked")
+
+    def test_resolver_searches_the_effective_handler_override(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = pathlib.Path(tmp)
+            subprocess.run(["git", "init", "-q", str(repo)], check=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "config", "user.email", "test@example.invalid"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(repo), "config", "user.name", "Test"],
+                check=True,
+            )
+            source = repo / "block/ioctl.c"
+            source.parent.mkdir(parents=True)
+            source.write_text(
+                "int declared_handler(void) { return 0; }\n"
+                "int effective_handler(void) { return 1; }\n"
+            )
+            subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm", "parent"], check=True)
+            source.write_text(
+                "int declared_handler(void) { return 0; }\n"
+                "int effective_handler(void) { return 2; }\n"
+            )
+            subprocess.run(["git", "-C", str(repo), "commit", "-qam", "fix"], check=True)
+            fixed = subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+            ).strip()
+            resolved_rows = MODULE.resolve_commits(
+                repo,
+                [
+                    {
+                        "cve": "CVE-TEST-OVERRIDE",
+                        "fixing_commit": fixed,
+                        "handler_fn": "declared_handler",
+                    }
+                ],
+                {
+                    "rows": [
+                        {
+                            "cve": "CVE-TEST-OVERRIDE",
+                            "handler_symbol_override": "effective_handler",
+                        }
+                    ]
+                },
+            )
+            self.assertEqual(resolved_rows[fixed]["handler_symbol"], "effective_handler")
+            self.assertEqual(resolved_rows[fixed]["handler_files"], ["block/ioctl.c"])
 
     def test_rejects_source_hash_drift(self) -> None:
         with self.assertRaisesRegex(ValueError, "cve corpus SHA-256"):
