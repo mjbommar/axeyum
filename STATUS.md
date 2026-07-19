@@ -333,8 +333,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   memo only for repeated visits to the same positive direct-root parity leaf.
   It must reduce exactly 107,000 attempts/duplicates, 321,000 declared/visited
   literals, and 214,000 canonical literals while preserving emitted CNF and
-  every correctness gate before any unprofiled timing. Implement and commit
-  that bounded candidate next; no other leaf/root kind or optimization is
+  every correctness gate before any unprofiled timing. Candidate `9533c508` is
+  now committed after its repeated-root regression began red at 12 versus 4
+  attempts; 309 CNF, 21 solver, and 44 benchmark tests plus strict Clippy,
+  rustdoc, no-default checks, and links pass. Run exactly one clean detached
+  profiled structural gate next. No other leaf/root kind or optimization is
   authorized.
 
 - **2026-07-19 — ADR-0276's GQ5 diagnostic is implemented and frozen before

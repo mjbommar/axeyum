@@ -76,6 +76,34 @@ primary vacant probes, collision work, nonbinary length buckets, and every
 non-parity origin cell must remain byte-for-structure identical. Any different
 delta rejects the candidate and forbids timing.
 
+## Implementation boundary
+
+Candidate commit `9533c508` adds one `BTreeSet<(AigNodeId, usize)>` to the
+one-shot encoder. `should_emit_parity_leaf` returns early only for a later
+root-phase, constant-true-output visit with the same owner and leaf index. Gate
+phase, constant-false output, different owner, and different leaf-index calls
+do not share or populate the memo.
+
+The repeated-equality-root test began red at 12 clause attempts versus the
+single-root requirement of 4. It now preserves byte-identical CNF and variable
+bindings, all three root records, the single-root attempt count, and zero
+parity-overlap duplicates. A second focused test exercises every registered
+scope distinction directly.
+
+Pre-observation gates pass:
+
+- all 309 `axeyum-cnf` library tests;
+- all 21 focused `axeyum-solver` library tests;
+- all 44 `axeyum-bench` binary tests;
+- strict all-target/all-feature Clippy and warnings-as-errors rustdoc for the
+  three affected crates;
+- `axeyum-solver`'s no-default `qfbv` check and `axeyum-bench`'s no-default
+  check; and
+- the documentation link checker and clean-diff gate.
+
+No corrected-wide-v3 query has been run through the candidate. The next action
+is exactly one clean detached profiled structural run, not timing.
+
 ## Conditional unprofiled performance protocol
 
 Only after the exact structural gate passes, compare baseline source
