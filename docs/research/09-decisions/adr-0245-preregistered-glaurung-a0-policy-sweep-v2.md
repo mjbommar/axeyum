@@ -1,9 +1,9 @@
 # ADR-0245: Preregister Glaurung A0 policy sweep v2 after the usbprint resource failure
 
-Status: proposed
+Status: deferred
 Date: 2026-07-18
 
-Result state: protocol preregistered; results pending
+Result state: v2 failed closed at maximum's positive-control precision gate
 
 ## Context
 
@@ -79,12 +79,36 @@ all directly runnable script tests must pass; the v2 JSON must resolve every
 source/driver/binary hash exactly. No v2 cell may be inspected before this
 protocol is committed.
 
+The exact committed run subsequently cleared AnyModel and minimum on both
+strata. Maximum also completed both authority reports with exact between-
+authority and repeated populations, retained all 14 expected positive-control
+findings, and produced zero high-confidence tcpip rows. Its positive validator
+nevertheless rejected one additional high-confidence `stack-overflow` at the
+existing attacker-controlled `RtlCopyMemory` in `test_physical_memory.sys`.
+The runner stopped before either site-hash policy.
+
+Source adjudication rejects that extra classification. `TargetAddress` is read
+from the METHOD_BUFFERED input structure and is not a local stack object.
+Glaurung `b79f269` classifies the destination as stack when the policy-chosen
+concrete `dst` falls within +/-64 KiB of a separately concretized `rsp`.
+Maximum can manufacture that accidental numeric proximity. V2 therefore
+establishes 14/14 recall but only 14/15 precision for maximum, plus a concrete
+correctness requirement: semantic memory-region classification must not depend
+on arbitrary model-selected scalar proximity.
+
 ## Consequences
 
-V2 can answer whether all five executable scalar policy settings preserve the
-14-row control and how their bounded tcpip diagnostic populations/work differ.
-It still cannot establish representative real-world recall, exhaustive model
-coverage, exploration equivalence, or solver-speed superiority.
+V2 was designed to answer whether all five executable scalar policy settings
+preserve the 14-row control and how their bounded tcpip diagnostic populations/
+work differ. Its fail-closed prefix still cannot establish representative real-
+world recall, exhaustive model coverage, exploration equivalence, or solver-
+speed superiority.
+
+The result answers only the executed prefix. AnyModel and minimum preserve the
+exact 14-row positive set. Maximum preserves recall but violates the exact-set
+precision gate; site-hash-zero and site-hash-one remain unobserved. Do not merge
+the partial cells into an accepted five-policy sweep. Repair and regression-test
+the stack-region predicate first, then preregister a corrected full sweep.
 
 The v1 usbprint failure remains a first-class result and a plan input. A later
 usbprint frontier should preregister bounded function counts or deterministic

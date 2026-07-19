@@ -1,0 +1,122 @@
+{
+  "schema": "axeyum.glaurung-concretization-sweep-preregistration.v1",
+  "name": "glaurung-a0-five-policy-sweep-v3",
+  "preregistered_on": "2026-07-18",
+  "purpose": "Rerun the complete five-policy scalar A0 sweep over the independently validated positive control and fixed tcpip discovery boundary after model-independent stack-region classification repaired v2's maximum-policy false positive.",
+  "supersedes_campaign": "glaurung-a0-five-policy-sweep-v2",
+  "excluded_resource_frontier": {
+    "stratum": "complete usbprint",
+    "reason": "All four min-unsigned v1 authority processes hit the preregistered 300-second wall-clock safety deadline; preserving complete usbprint in the all-policy matrix would require outcome-adaptive bounds.",
+    "follow_up": "Preregister a separate bounded usbprint function/work frontier; do not relabel the AnyModel-complete boundary as policy invariant."
+  },
+  "axeyum_source_policy": "Run from one clean detached commit containing this unchanged preregistration, runner, measurement harness, validator, and analyzer.",
+  "detector_correction": {
+    "glaurung_code_revision": "0581f57fe1df470cdeb5301f558f707913d09b4e",
+    "glaurung_documented_revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+    "accepted_maximum_authority_report_sha256": "8ff7eef2738c51c78de2576807fa7c27a1b8cf5c0c77e77951f0912f6392cc6e",
+    "accepted_maximum_validation_sha256": "281ccf95a5ca1ecf176f5b9bfddcddf6fb2bd4e098549b7a8844caf599d32dc8",
+    "accepted_result": "14/14 expected high-confidence findings, zero false negatives, zero unexpected high-confidence findings, and exact sole-authority parity in both repetitions"
+  },
+  "glaurung_revision": "7f682e5c82efef6a5c4b7ffc52a61dcfe8a87833",
+  "authority_binary_sha256": {
+    "z3": "027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e",
+    "axeyum": "ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd"
+  },
+  "source_manifest_path": "corpus/glaurung-finding-populations/source-backed-positive-v1.json",
+  "source_manifest_sha256": "8f78305beadacfe7cda92dca047ae99fe0f0544dadb10af6f47c32ecf2898f7f",
+  "source_verified_file_count": 18,
+  "policies": [
+    {
+      "label": "any-model",
+      "policy_id": "glaurung-any-model-v1",
+      "harness_choice": null,
+      "role": "behavior-preserving default control"
+    },
+    {
+      "label": "min-unsigned",
+      "policy_id": "glaurung-min-unsigned-v1",
+      "harness_choice": "min-unsigned",
+      "role": "deterministic global lower extremum"
+    },
+    {
+      "label": "max-unsigned",
+      "policy_id": "glaurung-max-unsigned-v1",
+      "harness_choice": "max-unsigned",
+      "role": "deterministic global upper extremum"
+    },
+    {
+      "label": "site-hash-0",
+      "policy_id": "glaurung-site-hash-0-v1",
+      "harness_choice": "site-hash-0",
+      "role": "deterministic site-stable mixed extremum schedule"
+    },
+    {
+      "label": "site-hash-1",
+      "policy_id": "glaurung-site-hash-1-v1",
+      "harness_choice": "site-hash-1",
+      "role": "complementary deterministic site-stable mixed extremum schedule"
+    }
+  ],
+  "strata": [
+    {
+      "name": "positive-control",
+      "kind": "validated-positive",
+      "driver_source": "source-manifest",
+      "driver_sha256": [
+        "61bdccd8ca47cfebfc46a222a05733e23a60b5f1e016c7ee91ded4c4a64824e3",
+        "090974c12d4482a6da46dcead100308e35da37108a7e4b16f9c73e0c947828c0",
+        "d730176b7726f219413b9c77482f1d7b8ae5619f5dfe3dbd76048acada1676be",
+        "0a42451df1cda23a5c55da4e8defcf7ec7bfa817e4a8f13f46aec70cf535e3d8",
+        "be7125bb3d9add9bcd6c3902f815b2cbe563044d128def9920f0f8519e723725",
+        "01d065a4ae7a40462c58c6e33ca2662ae67f3d54a8dad8c981ebb4d8990e4fec",
+        "0e9b893c287c8e3e92f9ba4a176a33ccfe612314708673c015df322901fce32b",
+        "9475e33f125b85c6cee60cafe07ed81214fc5386c25db4f322e20dbaf46f26c8",
+        "6f67605dad3ba73c15439071dd534eb6954e376c32d364409b3478e4ddf9a316"
+      ],
+      "coverage_boundary": "complete",
+      "expected_validated_finding_count": 14,
+      "work": {
+        "repetitions": 2,
+        "deadline_secs": 60,
+        "max_analyzed_functions": 100,
+        "solve_budget": 50000,
+        "solve_secs": 60,
+        "process_timeout_secs": 120,
+        "check_timeout_ms": 250
+      }
+    },
+    {
+      "name": "tcpip-discovery",
+      "kind": "unlabeled-discovery",
+      "driver_source": "tcpip",
+      "driver_sha256": [
+        "ff965206a37f2c258b7199bc87b49ee12c834e5fc50f58dae2f3de66a57022ea"
+      ],
+      "coverage_boundary": "fixed-work-limit",
+      "work": {
+        "repetitions": 2,
+        "deadline_secs": 1800,
+        "max_analyzed_functions": 15,
+        "solve_budget": 300000,
+        "solve_secs": 300,
+        "process_timeout_secs": 1800,
+        "check_timeout_ms": 250
+      }
+    }
+  ],
+  "acceptance": {
+    "source_and_binary_identity": "Every source tree, authority binary, manifest, and driver hash must match exactly and remain clean/stable.",
+    "positive_control": "Every policy/backend cell must reproduce all 14 independently validated findings with zero false negatives and zero unexpected high-confidence rows.",
+    "authority_parity": "Every cell must have stable, exact high-confidence finding parity between sole Z3 and sole Axeyum authority.",
+    "work": "Repetitions, order, environment, coverage boundary, solve counts, and policy telemetry must pass the fail-closed analyzer.",
+    "discovery": "No direction or magnitude of tcpip policy variation is an acceptance gate. Raw, high-confidence, and diagnostic populations are retained verbatim and remain unlabeled until independently validated."
+  },
+  "claim_limits": [
+    "The positive control is a planted regression denominator, not representative real-driver recall or prevalence.",
+    "Tcpip is an unlabeled discovery population and does not establish true or false positives without separate source and machine validation.",
+    "Complete usbprint failed the v1 policy-resource boundary and is excluded transparently, not counted as a zero or successful cell.",
+    "The campaign measures integration work and cost descriptively; it is not a solver-speed comparison.",
+    "BoundarySet and DiverseEnum are not executable at 7f682e5 and are excluded rather than approximated by a single boundary choice.",
+    "Symbolic or symcrete memory is memory-model work and remains gated on a measured validated coverage gap after the policy sweep."
+  ]
+}

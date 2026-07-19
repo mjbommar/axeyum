@@ -200,6 +200,18 @@ not a research program. Making concretization a first-class configurable policy
 (A0 below) is therefore the enabling move: it turns this table into an
 **empirical sweep** where each row is one config, measured on the driver corpus.
 
+The first two preregistered attempts add a critical constraint to that framing.
+Minimum preserved the exact 14-row positive set but made complete usbprint exceed
+the fixed resource boundary. Maximum preserved all 14 expected rows but added a
+source-rejected `stack-overflow` classification at an arbitrary-pointer
+`RtlCopyMemory`. Glaurung had inferred “stack” by comparing policy-selected
+concrete `dst` and `rsp` values within a +/-64 KiB window. Thus the knob is cheap,
+but detectors that derive semantic region facts from its arbitrary witnesses are
+not policy-robust. ADR-0246 closes that prerequisite with structural expression-
+DAG ancestry and restores the exact 14-row maximum-policy control. ADR-0247 now
+preregisters a clean corrected sweep; the rejected v2 prefix remains evidence of
+the bug, not a source of cells for the new matrix.
+
 ## 5. The Pareto-dominant program
 
 Three pillars. Each move is chosen because it improves at least one axis with no
@@ -208,35 +220,39 @@ regression on the others (or an explicitly bounded, disclosed cost).
 ### Pillar A -- Concretization quality (the flagship). Most of it is *configuration*, not research.
 
 **The load-bearing realization: concretization value-selection is a pluggable
-policy, not a fixed algorithm.** glaurung already versions it in-place -- the
-call site is tagged `"glaurung-any-address-v1"` (explore.rs:1079), and axeyum's
-ADR-0236 added `glaurung-min-unsigned-v1` as an opt-in alternative. So a policy
-abstraction is half-built; it just is not a first-class trait yet. Promoting it
-to one is a small, localized refactor that converts "which concretization is
+policy, not a fixed algorithm.** Glaurung A0 has now made that half-built seam a
+first-class public contract. `concretize_addr` and `eval_concrete` share one
+policy mechanism while the explorer retains solver calls, checked evaluation,
+address binding, and trace emission. This converts "which concretization is
 Pareto-dominant?" from a debate into an **empirical sweep you run, not research
 you speculate about**. Exactly one item in this pillar (symbolic memory) is
-genuinely architectural; the rest are knobs.
+genuinely architectural; the rest are knobs or bounded explorer mechanics.
 
-- **A0. Make concretization a first-class pluggable policy (enabling infra;
-  days).** Extract a `ConcretizationPolicy` at the two value-selection seams
-  (`concretize_addr` explore.rs:1066 and `eval_concrete` explore.rs:1157;
-  `witness_for_value` fixes its target by probe and needs no policy). Sketch:
+- **A0. Make concretization a first-class pluggable policy (DONE on isolated
+  Glaurung branch).** The accepted `ConcretizationPolicy` covers the two
+  value-selection seams; `witness_for_value` fixes its target by probe and
+  remains outside the abstraction. Its stable contract is:
   ```rust
-  trait ConcretizationPolicy {
-      fn name(&self) -> &str;                        // flows into the ordered-trace tag
-      fn choose(&self, st, expr, solver) -> Choice;  // One(u128) | Set(Vec<u128>) | Defer
+  pub trait ConcretizationPolicy {
+      fn policy_id(&self) -> &'static str;
+      fn choose(&self, request: ConcretizationRequest<'_>) -> ConcretizationChoice;
+      fn trace_policy_id(&self, site: ConcretizationSite) -> &'static str;
   }
   ```
-  Impls: `AnyModel` (default; preserves today's behavior byte-for-byte),
-  `LeastUnsigned`/`GreatestUnsigned`, `BoundarySet{0, MAX, len, off-by-one}`,
-  `DiverseEnum` (axeyum disjoint projected enumeration), and -- the important one
-  added after iteration-1 research -- **`Symcrete`** (`Defer` a concrete witness
-  while *retaining* the symbolic constraint; see A2/A2'). Selected by env/config;
-  the policy `name()` is written into the trace so every run self-documents which
-  policy produced it. `Set` -> the explorer forks over the set; `Defer` -> the
-  symcrete/symbolic path. This single seam makes A1/A3 measurable instead of
-  speculative and is the infrastructure the whole Pareto search rides on. Build
-  it first.
+  `AnyModel` remains byte-for-byte default. Minimum, maximum, and the two stable
+  site-hash schedules are executable settings selected by environment/config and
+  self-identify in traces. `BoundarySet` and `Defer` are contract values, but
+  fail closed until bounded successor forking or a changed memory model exists;
+  they are not simulated by one scalar choice.
+- **A0.5. Make semantic region classification model-independent (DONE,
+  ADR-0246).** A concrete witness may execute a memory access, but accidental
+  numeric proximity between two unconstrained witnesses must not prove that an
+  address denotes stack storage. Glaurung now requires the destination to equal,
+  contain the non-leaf DAG of, or share free-symbol ancestry with current
+  `rsp`/`rbp` before applying numeric refinement. The exact maximum-policy
+  control restores 14/14 precision and recall while the arbitrary-pointer row
+  remains an arbitrary-read/write/null finding. This is a localized detector-
+  correctness repair, not a new concretization research program.
 - **A1. Deterministic work-bounded timeout (a config value, not a project).**
   Replace the 250ms wall with a deterministic resource bound (conflicts/decisions;
   the fixed-work boundary already exists in ioctlance). Removes the
@@ -379,8 +395,15 @@ support anyway.
   no-regression stratum, not as evidence that value selection changes recall.
 
 **Phase 2 -- Recover coverage reproducibly (a sweep, then conditional memory-model work).**
-- Run the initial A0 policy sweep across the driver corpus using the five
-  executable cells at `b79f269`: {AnyModel, LeastUnsigned, GreatestUnsigned,
+- **Initial sweep prefixes measured; corrected full gate preregistered.** ADR-0244 fails closed
+  when minimum cannot complete usbprint under the fixed deadline. ADR-0245 then
+  clears AnyModel/minimum but rejects maximum at the positive-control precision
+  gate: 14/14 expected rows plus one model-dependent false `stack-overflow`.
+  ADR-0246 repairs and accepts A0.5; ADR-0247 preregisters v3 before observing
+  any corrected campaign cell. Site-hash cells remain unobserved until v3 runs.
+- Run the corrected A0 policy sweep across the driver corpus using the same five
+  executable policy identities at corrected Glaurung `7f682e5`:
+  {AnyModel, LeastUnsigned, GreatestUnsigned,
   SiteHashZero, SiteHashOne} x backends, measuring coverage /
   reproducibility / solve-cost with ADR-0243's 14/14 source-backed population as
   a hard regression stratum. Report policy-dependent real-driver rows as a

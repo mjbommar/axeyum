@@ -55,3 +55,89 @@ Exact attempt identities:
 
 No attempt-1 timing is a solver-speed comparison. Policy-dependent elapsed
 time, solver time, RSS, and solve counts are descriptive integration costs.
+
+## Attempt 2: rejected at maximum's positive-control precision gate
+
+ADR-0245 removed complete usbprint from the all-policy matrix without changing
+the remaining policies, sources, binaries, work, or order. The exact campaign
+ran from clean detached Axeyum
+`e11a2157b50115f38031520a587e7940767d787c` and the same clean isolated
+Glaurung `b79f26959378f9b8ea51eee6f1b3809a4a234c84`. The runner preserved the
+partial campaign under
+[`attempt-2-max-unexpected-high/`](attempt-2-max-unexpected-high/) and stopped
+before either site-hash policy, as preregistered.
+
+| Policy | Stratum | Validated/high findings | Raw Z3/Axeyum | Solves per authority/repetition |
+|---|---|---:|---:|---:|
+| AnyModel | positive control | 14/14 exact | 122/122 | 2,322 |
+| AnyModel | tcpip prefix 15 | 0/0 high | 128/126 | 3,079/2,991 |
+| minimum | positive control | 14/14 exact | 81/81 | 60,064 |
+| minimum | tcpip prefix 15 | 0/0 high | 110/110 | 80,563 |
+| maximum | positive control | 14 expected + 1 unexpected high | 69/69 | 60,721 |
+| maximum | tcpip prefix 15 | 0/0 high | 84/84 | 34,659 |
+
+Maximum retained every expected source-backed finding, but both authorities
+and both repetitions also emitted:
+
+```text
+stack-overflow va=0x2a09211bc fn=IoctlHandler sev=Arbitrary taint=["*SystemBuffer"]
+```
+
+The source at that address is `RtlCopyMemory(request->TargetAddress,
+request->SourceAddress, request->Size)`: the destination is an arbitrary
+attacker-supplied address, not a local stack object. Glaurung `b79f269` labels a
+copy as stack overflow when separately concretized `dst` and `rsp` values land
+within a +/-64 KiB numeric window. Maximum makes that accidental proximity
+possible. The source-backed validator therefore correctly rejects the row as a
+model-choice-dependent false-positive classification: recall remains 1.0,
+precision becomes 14/15, and the exact-positive-set gate fails.
+
+This is stronger than ordinary model divergence. A semantic region
+classification must not be inferred from the accidental proximity of two
+unconstrained concrete witnesses. The remaining site-hash cells stay unobserved
+until the detector uses model-independent stack-region evidence and a corrected
+sweep is preregistered.
+
+Exact attempt identities:
+
+- preregistration SHA-256:
+  `ad5ef20e61210efd8eabe94c4c6b71e3ddc2a6d78f531ef87c65e27fc6b9b17f`
+- execution manifest SHA-256:
+  `51c02bfeb8e971a73dcd4ce963d8244f57d4c238554910299eac242148c4f236`
+- rejected positive validation SHA-256:
+  `062a5beaf59c75cb929f893e77ef4495ff664e6e0de6277bcf045cf4c652c2cb`
+
+As in attempt 1, elapsed time is descriptive integration cost, not a
+solver-speed comparison.
+
+## Detector correction: accepted maximum-policy source control
+
+ADR-0246 preserves the complete correction trail under
+[`detector-correction-max-control/`](detector-correction-max-control/):
+
+| Candidate | Structural rule | Validation | Meaning |
+|---|---|---:|---|
+| Glaurung `52bd3c0` | `rsp` shared-symbol origin | 13/14, no unexpected | Removed the false row but missed genuine `[rbp-0x70]` storage |
+| Glaurung `3d0e2aa` | `rsp` or `rbp` shared-symbol origin | 13/14, no unexpected | Fresh-symbol unit test passed, but the real stack DAG has no free symbols |
+| Glaurung `0581f57` | non-leaf expression-DAG ancestry or shared-symbol origin | 14/14 exact | Accepted: precision=1.0, recall=1.0, zero unexpected high rows |
+
+The accepted exact N=2 control uses Z3 binary
+`027dad8802083021a278216ad471fc85f73c2a2aeeb228b08d6ebe6e9ea8031e`
+and Axeyum binary
+`ee7ef0f84000080700129fe12d49f34396f6be8aeae4d36b35bdb2a4912ae6cd`.
+Both authorities and both repetitions emit the same exact source-backed set.
+The accepted report SHA-256 is
+`8ff7eef2738c51c78de2576807fa7c27a1b8cf5c0c77e77951f0912f6392cc6e`;
+the validation SHA-256 is
+`281ccf95a5ca1ecf176f5b9bfddcddf6fb2bd4e098549b7a8844caf599d32dc8`.
+
+This gate accepts the detector correction only. It does not rehabilitate v2 or
+turn maximum into a preferred policy.
+
+## Attempt 3: preregistered corrected five-policy sweep
+
+ADR-0247 fixes v3 at final documented Glaurung `7f682e5`, rebuilt authority
+binaries with the hashes above, and the unchanged positive/tcpip v2 work
+boundaries. All five policies will be rerun from one clean detached Axeyum
+commit. No v3 cell was observed before committing the registration. Complete
+usbprint remains a separate resource-frontier result.
