@@ -10,6 +10,8 @@ use std::collections::BTreeMap;
 
 use axeyum_ir::{ArraySortKey, Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// Keep the first certificate slice small enough to be readable in Lean and cheap
 /// in dominance audits.
 pub const MAX_FINITE_ARRAY_EXT_READS: u128 = 16;
@@ -219,19 +221,6 @@ fn finite_bv_domain_size(width: u32) -> Option<u128> {
         Some(size)
     } else {
         None
-    }
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
     }
 }
 

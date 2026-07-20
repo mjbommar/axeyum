@@ -8,6 +8,8 @@
 
 use axeyum_ir::{ArraySortKey, Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 const MEMCPY_LEN: u128 = 2;
 
 /// A checked refutation of a guarded two-byte memcpy disequality.
@@ -210,19 +212,6 @@ fn match_two_byte_copy(
         Some(element_width)
     } else {
         None
-    }
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
     }
 }
 

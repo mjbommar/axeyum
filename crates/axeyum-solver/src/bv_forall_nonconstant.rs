@@ -9,6 +9,8 @@
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// The checked quantified-BV schema used by a refutation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BvForallNonconstantKind {
@@ -142,19 +144,6 @@ fn match_forall_nonconstant(
         result,
         variable_width,
     })
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 fn match_eq_with_fixed_result(

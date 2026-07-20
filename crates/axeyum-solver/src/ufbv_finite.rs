@@ -9,6 +9,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{FuncId, Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 const BOOL_UF_EXHAUSTIVE_MAX_BITS: usize = 12;
 
 /// A self-checking finite-domain pigeonhole refutation.
@@ -322,19 +324,6 @@ fn finite_sort_cardinality(sort: Sort) -> Option<u128> {
         | Sort::Datatype(_)
         | Sort::Uninterpreted(_)
         | Sort::Seq(_) => None,
-    }
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
     }
 }
 

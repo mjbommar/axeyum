@@ -11,6 +11,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Assignment, Op, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 const MAX_LOCAL_BV_WIDTH: u32 = 8;
 const MAX_LOCAL_ENUM_BITS: u32 = 12;
 
@@ -131,19 +133,6 @@ pub fn bv_uf_local_refutation(
     }
 
     None
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 fn match_equality(arena: &TermArena, term: TermId) -> Option<(TermId, TermId)> {

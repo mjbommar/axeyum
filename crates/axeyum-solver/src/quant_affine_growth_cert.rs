@@ -16,6 +16,8 @@ use std::collections::BTreeSet;
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// A self-checking refutation of an exact affine-growth universal (ADR-0097).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IntAffineGrowthRefutationCertificate {
@@ -126,20 +128,6 @@ fn peel_foralls(arena: &TermArena, mut term: TermId) -> Option<(Vec<SymbolId>, T
         term = *body;
     }
     (!vars.is_empty()).then_some((vars, term))
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(term)
-        && let [left, right] = &**args
-    {
-        collect_top_conjuncts(arena, *left, out);
-        collect_top_conjuncts(arena, *right, out);
-    } else {
-        out.push(term);
-    }
 }
 
 fn match_difference(arena: &TermArena, term: TermId) -> Option<(SymbolId, i128, TermId)> {
