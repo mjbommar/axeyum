@@ -339,3 +339,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0281](adr-0281-preregister-typed-llvm-scalar-definedness.md) | Preregister typed scalar LLVM instructions plus explicit poison/undefinedness predicates before migrating checked reflection | accepted |
 | [0282](adr-0282-preregister-typed-llvm-cfg-validation.md) | Preregister typed LLVM PHI/terminator syntax and whole-function CFG validation before checked graph execution | accepted |
 | [0283](adr-0283-preregister-checked-acyclic-llvm-cfg-execution.md) | Accept bounded checked acyclic LLVM CFG execution with path-conditioned value and definedness joins | accepted |
+| [0284](adr-0284-preregister-canonical-llvm-cfg-rendering.md) | Preregister canonical scalar LLVM CFG rendering and exact quoted-identifier byte escapes | proposed |

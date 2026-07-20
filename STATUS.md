@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0284 preregisters canonical scalar LLVM CFG rendering.**
+  T5.1.2's supported scalar graph still lacked its parse→print→parse exit gate,
+  and the audit found that quoted identifiers consumed one character after `\`
+  instead of LLVM's exact two-hex-digit byte escape. The frozen slice adds one
+  typed canonical renderer, an injective UTF-8/`\XX` name codec, structural and
+  semantic round-trip proofs, compiler-fixture `llvm-as` checks, and stable
+  malformed-escape diagnostics. It does not admit memory, loops, general calls,
+  `freeze`/`undef`, module resolution, or Glaurung lowering. Next: begin the red
+  codec/render/fixpoint gates and implement only this preregistered boundary.
+
 - **2026-07-19 — ADR-0283 accepts checked acyclic LLVM CFG execution.**
   The checked APIs now reuse ADR-0282's graph, enforce scalar return typing and
   function-wide SSA uniqueness, decline cycles and more than 4,096
