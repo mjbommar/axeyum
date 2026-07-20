@@ -254,8 +254,13 @@ session state.
 >    `31f7ebe` removes the machine-local Axeyum dependency and absolute report
 >    path and emits the actual selected authority. At least two genuine
 >    machines are mandatory; one host can close only run stability and backend
->    finding parity. Do not call containers or two labels cross-machine, or
->    require arbitrary SMT witnesses to be identical.
+>    finding parity. The first registered `server0` observation now closes those
+>    local gates: both repetitions are exact within each authority and all four
+>    runs have one finding/work digest, while two distinct replay-valid model
+>    digests remain. Its analysis is correctly `accepted=false` solely for
+>    `cross_machine_population_missing`. A second genuine machine is the next
+>    action; do not call containers or two labels cross-machine, or require
+>    arbitrary SMT witnesses to be identical.
 > 8. [AXEYUM] **DONE (ADR-0227).** Executable Node and Chromium runs cover
 >    75,000 measured solves each with zero mismatch/trap; small-query medians are
 >    13--71 us. The release browser runtime is 1,801,662 bytes / 541,248 bytes
