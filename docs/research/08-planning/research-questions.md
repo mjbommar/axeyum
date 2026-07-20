@@ -779,6 +779,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     five refutations replay. One mutation-tested runner is wired into `just`
     and dedicated CI. This validates the admitted fragment; it does not admit
     LLIR, loops, general places, or wider memory.
+  - [ADR-0291](../09-decisions/adr-0291-preregister-typed-canonical-llvm-loop-bridge.md)
+    preregisters the first T5.1.4 cycle route: normalize only a structurally
+    unique implicit numeric entry predecessor, detect one canonical scalar
+    self-loop in the typed CFG, preserve checked value/definedness in an
+    automatic `TransitionSystem`, and reproduce the existing `capsum8`
+    invariant proof. Exit abstraction is explicit: safe invariants are sound,
+    while abstract reachability requires separate source replay. This does not
+    admit MIR, multi-block/nested/memory loops, unrolling fallback, or LLIR.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

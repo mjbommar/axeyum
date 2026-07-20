@@ -346,3 +346,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0288](adr-0288-preregister-checked-mir-byte-memory.md) | Accept structured non-panicking MIR byte-memory reflection with explicit access panic and branch-state joins | accepted |
 | [0289](adr-0289-preregister-cargo-owned-mir-selection.md) | Accept explicit Cargo package/target selection through exact-toolchain MIR capture and checked reflection | accepted |
 | [0290](adr-0290-preregister-reflection-semantics-gate.md) | Accept exact source-derived ownership of 62 checked-frontend semantic variants with proof plus deterministic fuzz evidence | accepted |
+| [0291](adr-0291-preregister-typed-canonical-llvm-loop-bridge.md) | Preregister one typed, definedness-aware canonical LLVM self-loop to `TransitionSystem` bridge | proposed |
