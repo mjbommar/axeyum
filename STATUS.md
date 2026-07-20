@@ -5442,6 +5442,18 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split Tseitin CNF reconstruction ownership.** The distinct
+  1,578-line gate-introduction family now lives in `reconstruct/cnf.rs`; its
+  public rule entry point is unchanged. Eight shared context methods, one
+  assignment type/constructor, and six proof helpers are `pub(super)` only with
+  existing resolution-test, quantified-BV, direct-certificate, or bit-blast
+  consumers. Specialized n-ary `and_pos` and general `xor_neg1` generated Lean
+  modules remain byte-identical at 3,358 bytes / FNV-1a
+  `14531428178443531371` and 4,504 bytes / `11358181693276788078`; all 889
+  solver tests pass, and full-profile clippy plus focused rustdoc are clean
+  under the bounded one-job profile. The parent is now 9,680 lines / 433,992
+  bytes. Next R3 work is a measured bit-blast dependency/source census.
+
 - **2026-07-20 — Split propositional resolution reconstruction ownership.** The
   2,150-line resolution/RUP/CPS family now lives in
   `reconstruct/resolution.rs`; the separate CNF gate-introduction family remains

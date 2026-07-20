@@ -334,14 +334,26 @@ session state.
 >    consumer. The public resolution entry point is unchanged, a representative
 >    generated-source snapshot remains byte-identical, and all 888 tests,
 >    clippy, and rustdoc pass. The parent is now 11,225 lines / 498,127 bytes.
->    Continue R3 with a separate CNF-introduction source-stability census and
->    extraction; do not manufacture an array module around one thin dispatcher
->    or combine proof families merely to minimize seam count.
+>    The separate 1,578-line CNF gate-introduction family now lives in
+>    `reconstruct/cnf.rs`. Eight shared context methods, one assignment
+>    type/constructor, and six proof helpers are `pub(super)` only, each with an
+>    existing resolution-test, quantified-BV, direct-certificate, or bit-blast
+>    consumer. The public CNF-rule entry point is unchanged; specialized n-ary
+>    `and_pos` and general `xor_neg1` generated-source snapshots remain
+>    byte-identical. All 889 tests, clippy, and rustdoc pass. The parent is now
+>    9,680 lines / 433,992 bytes. Continue R3 with the bit-blast dependency and
+>    source-stability census; do not manufacture an array module around one thin
+>    dispatcher or combine proof families merely to minimize seam count.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
 > landed and rejects that framing. Full downstream/SOTA rationale and sequencing:
 > [`docs/research/08-planning/axeyum-glaurung-pareto-strategy.md`](docs/research/08-planning/axeyum-glaurung-pareto-strategy.md).
+> The 2026-07-16 consumer feedback remains binding where later evidence did not
+> supersede it: preserve strict sort checking and precise `IrError`s, structural
+> `Unknown`, lean scalar-model construction, shared replay memoization, and
+> self-rechecked DRAT. Its historical 2.8--4x warm claim is integration evidence,
+> not a paper headline after the fair six-cell Bitwuzla/Z3 result.
 
 > **WASM-safe speed: do not invest in SIMD (reviewed 2026-07-20).** A reported
 > scratch prototype explored portable SIMD against the WASM constraint, but its

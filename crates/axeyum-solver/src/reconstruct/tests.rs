@@ -2085,6 +2085,43 @@ fn cnf_intro_is_deterministic() {
     assert_eq!(p1, p2, "CNF-intro reconstruction must be deterministic");
 }
 
+/// R3 CNF extraction gate: both a specialized n-ary rule and the general
+/// truth-table route must keep emitting byte-identical Lean modules.
+#[test]
+fn cnf_family_generated_source_is_byte_stable() {
+    let fixtures = [
+        (
+            "and_pos",
+            vec![neg(and_t(&["a", "b", "c"])), pos(atom("b"))],
+        ),
+        (
+            "xor_neg1",
+            vec![pos(xor_t("a", "b")), pos(atom("a")), neg(atom("b"))],
+        ),
+    ];
+    let mut snapshots = Vec::new();
+    for (rule, conclusion) in fixtures {
+        let mut ctx = ReconstructCtx::new();
+        let proof = reconstruct_cnf_intro_rule(&mut ctx, rule, &conclusion)
+            .unwrap_or_else(|error| panic!("{rule} should reconstruct: {error:?}"));
+        let proposition = ctx.gate_clause_to_prop(&conclusion);
+        let inferred = ctx.kernel_mut().infer(proof).unwrap();
+        assert!(ctx.kernel_mut().def_eq(inferred, proposition));
+        let source = ctx
+            .kernel()
+            .render_lean_module("cnf_intro_fixture", proposition, proof);
+        snapshots.push((source.len(), stable_source_hash(&source)));
+    }
+
+    assert_eq!(
+        snapshots,
+        [
+            (3_358, 14_531_428_178_443_531_371),
+            (4_504, 11_358_181_693_276_788_078),
+        ]
+    );
+}
+
 /// **COMPOSITE**: combine two reconstructed CNF-intro clauses with the slice-3
 /// resolution layer to refute. Take `and_neg` ⊢ `(a∧b) ∨ ¬a ∨ ¬b` and the units
 /// `a`, `b`, `¬(a∧b)`: resolving them all yields the empty clause. We reconstruct
