@@ -3,8 +3,8 @@
 Status: proposed
 Date: 2026-07-19
 
-Result state: preregistered; implementation and corpus observation have not
-started
+Result state: implementation and fail-closed artifact validation complete;
+fixed corpus observation has not started
 
 ## Context
 
@@ -103,6 +103,36 @@ Tests begin red and then require:
 
 Implementation and tests must be committed before any corrected-wide-v3 query
 is run through the candidate. A failure rejects the candidate without timing.
+
+## Implementation checkpoint
+
+The production representation and complete consumer migration landed at
+`725858b1`. `CnfFormula` now retains one ordered literal arena and one `u32`
+end per clause; the Tseitin encoder reuses one canonicalization scratch; every
+formula consumer uses borrowed slices; stable overflow and mutation-before-
+validation regressions are covered; and storage accounting is threaded through
+solver and benchmark telemetry.
+
+The independent observation boundary landed separately at `a57d5ace`, still
+before reading the fixed corpus. Benchmark artifact v38 records exact formula
+counts and bytes plus explicit monotone, in-bounds, and terminal-end offset
+invariants. The analyzer remains backward-compatible with retained v36/v37
+artifacts, but `--require-flat-storage` rejects them for this experiment,
+re-sums every v38 instance, and fails closed on missing invariants, aggregate
+drift, or a logical-storage ratio above 80%.
+
+Pre-observation evidence is green: all 309 `axeyum-cnf` unit tests and its 35
+integration tests, all 44 `axeyum-bench` tests plus 12 ordered-trace and three
+integration tests, the focused solver profile test, 13 analyzer tests, strict
+workspace Clippy, strict rustdoc, formatting, links, the no-default/QF_BV
+profile, and ordinary plus `+simd128` wasm32 builds. The earlier full workspace
+suite for `725858b1` passed all functional tests; its final EVM doctest exhausted
+the shared `/tmp` quota and passed unchanged when rerun with `TMPDIR` on
+`/var/tmp`.
+
+No corrected-wide-v3 query has been run through artifact v38. The next action
+is exactly the one clean detached profiled structural observation below, not
+timing.
 
 ## Fixed structural observation
 
