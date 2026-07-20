@@ -306,8 +306,14 @@ session state.
 >    main file from 18,387 to 16,999 lines. Only a boolean finite-domain scan
 >    predicate crosses back to the parent; private certificate types stay
 >    private. All 884 tests, byte-equivalence checks, and clippy remain green.
->    Next R3 extracts one proof family per commit, beginning with the equality
->    core only after its private dependency and source-stability census.
+>    R3's first family is now complete: the Alethe equality builders live in
+>    `reconstruct/equality.rs`, while shared literal parsing and the universal
+>    kernel gate remain parent-owned. The public `reconstruct_eq_step` surface is
+>    unchanged; only three narrow clausal-walk helpers cross back to the parent.
+>    Transitivity and congruence generated-source snapshots remain byte-identical,
+>    and all 885 full-profile tests plus clippy pass. `reconstruct.rs` is now
+>    16,476 lines / 720,714 bytes. Continue R3 with a dependency/source-stability
+>    census for the datatype/array family before moving that family alone.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

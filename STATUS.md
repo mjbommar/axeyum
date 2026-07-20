@@ -5442,6 +5442,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split equality reconstruction ownership.** R3's first proof
+  family now lives in `reconstruct/equality.rs`: reflexivity, both symmetry
+  forms, binary/n-ary transitivity, and n-ary congruence. Shared literal parsers
+  and the universal kernel gate stay parent-owned; the existing public entry
+  point and three narrow clausal-walk seams preserve the surface. Two generated
+  Lean source snapshots remain byte-identical, and all 885 solver library tests
+  plus full-profile clippy pass under the bounded one-job profile.
+
 - **2026-07-20 — Split direct structural reconstruction ownership.** The
   34-variant lane moves to `reconstruct/direct.rs` behind one dispatch seam;
   main reconstruction drops below 17,000 lines with byte output, kernel gates,

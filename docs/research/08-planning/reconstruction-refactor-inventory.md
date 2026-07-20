@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1 and R2 complete
+Status: active; R1, R2, and the equality slice of R3 complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -20,9 +20,10 @@ accepted terms.
 
 | Surface | Current size / shape |
 |---|---:|
-| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2 |
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after the R3 equality slice |
 | `reconstruct/direct.rs` | 1,406 lines / 52,407 bytes after R2 |
-| `reconstruct/tests.rs` | 4,429 lines / 181,088 bytes |
+| `reconstruct/equality.rs` | 534 lines / 23,244 bytes after the first R3 family extraction |
+| `reconstruct/tests.rs` | 4,563 lines / 186,592 bytes |
 | `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
 | `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 43 |
@@ -114,9 +115,19 @@ before/after byte comparisons for their affected fixtures.
    certificate type or broad private surface was exposed. `reconstruct.rs`
    drops from 18,387 to 16,999 lines. All 884 tests, byte-equivalence checks,
    and clippy pass.
-3. **R3 — one proof family per commit.** Extract equality, datatype/array,
-   quantifier, resolution/CNF, bit-blast, and arithmetic regions separately.
-   Each commit carries its own byte-stability and kernel gates.
+3. **R3 — one proof family per commit (active; equality complete).** The first
+   slice moves the nine equality-owned entry/build/helper functions into
+   `reconstruct/equality.rs`: reflexivity, clause and premise symmetry,
+   binary/n-ary transitivity, and n-ary congruence. Shared `as_positive_eq`,
+   `as_negated_eq`, and `check_against` remain parent-owned because resolution,
+   quantifier, CNF, and bit-blast routes also consume them. The parent imports
+   only the three private helpers used by its clausal walk and publicly re-exports
+   the unchanged `reconstruct_eq_step`. Deterministic FNV-1a snapshots fix the
+   transitivity module at 1,480 bytes / `16524372807544528002` and the congruence
+   module at 1,558 bytes / `9142307883420495535`; kernel inference also remains
+   explicit. All 885 full-profile solver tests and clippy `-D warnings` pass.
+   Next census and extract datatype/array, then quantifier, resolution/CNF,
+   bit-blast, and arithmetic regions separately, with the same per-family gates.
 4. **R4 — visibility audit.** After the files settle, narrow private imports and
    only then evaluate the separate root-API namespacing work.
 

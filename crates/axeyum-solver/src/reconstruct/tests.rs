@@ -499,6 +499,62 @@ fn end_to_end_congruence_refutation_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+fn stable_source_hash(source: &str) -> u64 {
+    source.as_bytes().iter().fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+        (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
+}
+
+/// R3 extraction gate: representative transitivity and congruence proofs must
+/// keep emitting byte-identical Lean modules when their builders move into the
+/// equality-owned submodule.
+#[test]
+fn equality_family_generated_source_is_byte_stable() {
+    let mut fixtures = Vec::new();
+
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let c = bv_var(&mut arena, "c");
+    let transitivity = vec![arena.eq(a, b).unwrap(), arena.eq(b, c).unwrap(), {
+        let e = arena.eq(a, c).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &transitivity).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let a = bv_var(&mut arena, "a");
+    let b = bv_var(&mut arena, "b");
+    let f = arena
+        .declare_fun("f", &[Sort::BitVec(8)], Sort::BitVec(8))
+        .unwrap();
+    let fa = arena.apply(f, &[a]).unwrap();
+    let fb = arena.apply(f, &[b]).unwrap();
+    let congruence = vec![arena.eq(a, b).unwrap(), {
+        let e = arena.eq(fa, fb).unwrap();
+        arena.not(e).unwrap()
+    }];
+    let proof = crate::prove_qf_uf_unsat_alethe(&arena, &congruence).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_uf_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    assert_eq!(
+        fixtures,
+        [
+            (1_480, 16_524_372_807_544_528_002),
+            (1_558, 9_142_307_883_420_495_535),
+        ]
+    );
+}
+
 /// **`QF_UFBV` Ackermann certificate end-to-end (ADR-0013 task #19)**: take a REAL
 /// `prove_qf_ufbv_unsat_alethe` certificate for
 /// `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — decided via the Ackermann reduction —
