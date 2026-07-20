@@ -1,4 +1,4 @@
-//! Located typed syntax for the checked Rust MIR byte-memory profile.
+//! Located typed syntax for the checked Rust MIR scalar and byte-memory profiles.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -101,12 +101,16 @@ pub enum Operand {
 /// A binary rvalue opcode admitted by this slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinaryOpcode {
+    /// Modular integer addition.
+    Add,
     /// Equality.
     Eq,
     /// Signedness-directed less-than.
     Lt,
     /// Boolean or bit-vector AND.
     BitAnd,
+    /// Logical right shift of an unsigned integer.
+    Shr,
 }
 
 /// A typed right-hand side.
@@ -123,6 +127,15 @@ pub enum Rvalue {
         /// Right operand.
         right: Operand,
     },
+    /// Integer-to-integer cast with the exact MIR `IntToInt` spelling.
+    Cast {
+        /// Source scalar operand.
+        operand: Operand,
+        /// Declared destination integer type.
+        target: MirType,
+    },
+    /// Boolean or bit-vector complement.
+    Not(Operand),
     /// Read one byte from a fixed array local at an integer local index.
     ArrayRead {
         /// Array local.
@@ -203,6 +216,17 @@ pub enum TerminatorKind {
         cases: Vec<SwitchCase>,
         /// Required default destination.
         otherwise: String,
+    },
+    /// One assigned direct scalar call with an exact normal-return edge.
+    Call {
+        /// Destination local written on normal return.
+        destination: u32,
+        /// Bare direct callee name.
+        callee: String,
+        /// Ordered scalar call operands.
+        args: Vec<Operand>,
+        /// Normal-return destination block.
+        return_target: String,
     },
 }
 
@@ -618,10 +642,31 @@ fn parse_rvalue(raw: &str, span: SourceSpan) -> Result<Rvalue, ParseError> {
         let (array, index) = parse_indexed(place, span)?;
         return Ok(Rvalue::ArrayRead { array, index });
     }
+    if let Some((operand, cast)) = raw.split_once(" as ") {
+        let target = cast.strip_suffix(" (IntToInt)").ok_or_else(|| {
+            error(
+                ParseErrorKind::UnsupportedStatement,
+                span,
+                "only exact `IntToInt` scalar casts are admitted",
+            )
+        })?;
+        return Ok(Rvalue::Cast {
+            operand: parse_operand(operand, span)?,
+            target: parse_type(target, span)?,
+        });
+    }
+    if let Some(operand) = raw
+        .strip_prefix("Not(")
+        .and_then(|rest| rest.strip_suffix(')'))
+    {
+        return Ok(Rvalue::Not(parse_operand(operand, span)?));
+    }
     for (name, op) in [
+        ("Add", BinaryOpcode::Add),
         ("Eq", BinaryOpcode::Eq),
         ("Lt", BinaryOpcode::Lt),
         ("BitAnd", BinaryOpcode::BitAnd),
+        ("Shr", BinaryOpcode::Shr),
     ] {
         if let Some(args) = raw
             .strip_prefix(name)
@@ -643,6 +688,97 @@ fn parse_rvalue(raw: &str, span: SourceSpan) -> Result<Rvalue, ParseError> {
         }
     }
     Ok(Rvalue::Use(parse_operand(raw, span)?))
+}
+
+fn parse_call_terminator(text: &str, span: SourceSpan) -> Result<TerminatorKind, ParseError> {
+    let (assignment, edges) = text.split_once(" -> [").ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call lacks ` -> [` edge list",
+        )
+    })?;
+    let edges = edges.strip_suffix(']').ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call edge list lacks closing `]`",
+        )
+    })?;
+    let (destination, invocation) = assignment.split_once(" = ").ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call lacks an assigned destination",
+        )
+    })?;
+    let destination = parse_local(destination, span)?;
+    let (callee, args) = invocation.split_once('(').ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call lacks `(`",
+        )
+    })?;
+    let args = args.strip_suffix(')').ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call lacks closing `)`",
+        )
+    })?;
+    if callee.is_empty()
+        || !callee
+            .chars()
+            .all(|character| character == '_' || character.is_ascii_alphanumeric())
+    {
+        return Err(error(
+            ParseErrorKind::UnsupportedTerminator,
+            span,
+            "only bare direct call identifiers are admitted",
+        ));
+    }
+    let args = if args.is_empty() {
+        Vec::new()
+    } else {
+        args.split(", ")
+            .map(|argument| parse_operand(argument, span))
+            .collect::<Result<Vec<_>, _>>()?
+    };
+    let (normal, unwind) = edges.split_once(", ").ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call requires normal-return and unwind edges",
+        )
+    })?;
+    let return_target = normal.strip_prefix("return: ").ok_or_else(|| {
+        error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call lacks `return:` target",
+        )
+    })?;
+    if return_target.is_empty() {
+        return Err(error(
+            ParseErrorKind::MalformedTerminator,
+            span,
+            "direct call has an empty return target",
+        ));
+    }
+    if unwind != "unwind continue" {
+        return Err(error(
+            ParseErrorKind::UnsupportedTerminator,
+            span,
+            "only exact `unwind continue` direct calls are admitted",
+        ));
+    }
+    Ok(TerminatorKind::Call {
+        destination,
+        callee: callee.to_owned(),
+        args,
+        return_target: return_target.to_owned(),
+    })
 }
 
 fn parse_statement(line: Line<'_>) -> Result<Statement, ParseError> {
@@ -699,6 +835,8 @@ fn parse_terminator(line: Line<'_>) -> Result<Option<Terminator>, ParseError> {
         TerminatorKind::Goto {
             target: target.to_owned(),
         }
+    } else if text.contains(" = ") && text.contains(" -> [") {
+        parse_call_terminator(text, span)?
     } else if let Some(rest) = text.strip_prefix("assert(") {
         let (condition_raw, _) = rest.split_once(", \"").ok_or_else(|| {
             error(

@@ -332,6 +332,29 @@
       ]
     },
     {
+      "id": "mir-scalar-contract-call",
+      "members": [
+        "mir.binary_opcode::Add",
+        "mir.binary_opcode::Shr",
+        "mir.rvalue::Cast",
+        "mir.rvalue::Not",
+        "mir.terminator::Call"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_sum16_contract_reproves_checksum_module",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_contract_body_panic_and_totality_mutations_fail_closed"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_checksum_havoc_gate_classifies_100000_rows",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_result_symbols_are_deterministic_isolated_and_fresh"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_weak_relational_contract_exposes_real_havoc_countermodel",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_contract_body_panic_and_totality_mutations_fail_closed",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_contract_resolver_and_call_boundaries_fail_closed"
+      ]
+    },
+    {
       "id": "mir-scalar-control",
       "members": [
         "mir.rvalue::Use",

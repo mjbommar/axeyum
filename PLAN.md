@@ -224,15 +224,18 @@ session state.
 >    replayed weak-contract havoc countermodel. Its 100,000 inputs classify
 >    100,000 valid plus 100,000 violating result choices with zero dropped work;
 >    the standing gate is 76 variants / 16 groups / ten binaries / 108 tests.
->    No annotation syntax, MIR calls, loop havoc, or external effects are yet
->    authorized. ADR-0299 now preregisters the equivalent MIR-side modular
->    checksum call before code: extend only located typed scalar syntax, verify
->    the same relation against the checked MIR callee body, independently prove
->    its panic predicate false, discard that body, and require separate MIR/
->    LLVM havoc symbols, relations, weak-contract countermodels, and 100,000
->    dual-choice rows apiece. General panic contracts and unwind handling remain
->    later boundaries; an LLVM definedness proof cannot replace the MIR panic
->    proof.
+>    No annotation syntax, loop havoc, or external effects are yet authorized.
+>    ADR-0299 now accepts the equivalent MIR-side modular checksum call: the
+>    located typed scalar path verifies the same relation against the checked
+>    MIR callee body, independently proves its panic predicate false, discards
+>    that body, and retains a distinct havoc symbol plus relation. Separate MIR/
+>    LLVM weak-contract countermodels and 100,000 valid plus 100,000 violating
+>    choices per route pass with zero dropped work. The standing gate is now 81
+>    variants / 17 groups / ten binaries / 114 tests, and the complete package
+>    route passes at 1.8 GiB peak with zero swap inside the 4 GiB cap. General
+>    panic contracts, annotations, unwind handling, memory/effectful calls, and
+>    loops remain later boundaries; an LLVM definedness proof cannot replace
+>    the MIR panic proof.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

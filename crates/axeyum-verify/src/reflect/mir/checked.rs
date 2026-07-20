@@ -1,19 +1,27 @@
-//! Non-panicking symbolic execution for the authenticated MIR byte-memory slice.
+//! Non-panicking symbolic execution for authenticated MIR scalar and byte-memory slices.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::error::Error;
 use std::fmt;
+use std::time::Duration;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
+use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 use super::syntax::{
     BinaryOpcode, Function, IntegerConstant, MirType, Operand, ParseError, Rvalue, SourceSpan,
     StatementKind, TerminatorKind, parse_function,
 };
+use crate::reflect::llvm::loops::contracts::{
+    instantiate_total_relational_contract, validate_total_relational_contract,
+    verify_total_relational_contract_against_body,
+};
+use crate::reflect::llvm::loops::{LoopReflectErrorKind, ScalarCallContract};
 
 const MAX_MEMORY_BYTES: usize = 256;
 const MAX_BLOCK_EXECUTIONS: usize = 4_096;
 const REGISTERED_USIZE_WIDTH: u32 = 64;
+const DEFAULT_CONTRACT_VERIFICATION_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Named-function and target configuration for checked MIR reflection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -26,6 +34,26 @@ pub struct MirMemoryConfig {
 
 impl MirMemoryConfig {
     /// Creates a checked reflection configuration.
+    #[must_use]
+    pub fn new(function: impl Into<String>, target_usize_width: u32) -> Self {
+        Self {
+            function: function.into(),
+            target_usize_width,
+        }
+    }
+}
+
+/// Named-function and target configuration for checked scalar MIR reflection.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MirScalarConfig {
+    /// Function selected from the complete raw compiler MIR module.
+    pub function: String,
+    /// Target width used to interpret `usize` and `isize`.
+    pub target_usize_width: u32,
+}
+
+impl MirScalarConfig {
+    /// Creates a checked scalar reflection configuration.
     #[must_use]
     pub fn new(function: impl Into<String>, target_usize_width: u32) -> Self {
         Self {
@@ -68,6 +96,71 @@ pub struct MirValue {
     pub width: u32,
     /// Signedness used by comparisons.
     pub signed: bool,
+}
+
+/// Checked call-free scalar MIR reflection in a caller-owned arena.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CheckedMirScalar {
+    /// Returned scalar value, meaningful when `panic` is false.
+    pub result: MirValue,
+    /// Path-conditioned Rust panic predicate.
+    pub panic: TermId,
+}
+
+/// One source-attributed fresh result introduced by checked MIR call lowering.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MirRelationalCallSite {
+    callee: String,
+    span: SourceSpan,
+    result_symbol: SymbolId,
+    relation: TermId,
+}
+
+impl MirRelationalCallSite {
+    /// Contracted MIR callee name.
+    #[must_use]
+    pub fn callee(&self) -> &str {
+        &self.callee
+    }
+
+    /// Exact source span of the assigned direct call.
+    #[must_use]
+    pub const fn span(&self) -> SourceSpan {
+        self.span
+    }
+
+    /// Fresh internal bit-vector symbol chosen for this call result.
+    #[must_use]
+    pub const fn result_symbol(&self) -> SymbolId {
+        self.result_symbol
+    }
+
+    /// Path-guarded instantiated relation for this call.
+    #[must_use]
+    pub const fn relation(&self) -> TermId {
+        self.relation
+    }
+}
+
+/// Checked scalar MIR reflection with one body-independent relational call.
+#[derive(Debug)]
+pub struct CheckedMirRelationalScalar {
+    /// Returned modular value, meaningful when `panic` is false.
+    pub result: MirValue,
+    /// Caller panic predicate; the callee is admitted only after a separate
+    /// proof that its body cannot panic.
+    pub panic: TermId,
+    /// Path-conditioned conjunction of verified call relations.
+    pub assumptions: TermId,
+    call_sites: Vec<MirRelationalCallSite>,
+}
+
+impl CheckedMirRelationalScalar {
+    /// Ordered source call sites contributing relational assumptions.
+    #[must_use]
+    pub fn call_sites(&self) -> &[MirRelationalCallSite] {
+        &self.call_sites
+    }
 }
 
 /// Checked bounded MIR reflection in its owned arena.
@@ -114,6 +207,16 @@ pub enum ReflectErrorKind {
     InvalidReturn,
     /// Axeyum IR construction rejected an operation.
     IrConstruction,
+    /// A direct call has no compatible opt-in verified contract.
+    UnsupportedCall,
+    /// A scalar contract is malformed, ill-sorted, or non-total for this slice.
+    InvalidContract,
+    /// A body, panic-freedom, or postcondition claim was refuted.
+    ContractDisproved,
+    /// Contract verification exhausted its deterministic resource policy.
+    ContractUnknown,
+    /// Contract verification failed before producing a verdict.
+    ContractSolver,
 }
 
 /// Located checked-MIR reflection failure.
@@ -177,6 +280,68 @@ impl ScalarTy {
     }
 }
 
+#[derive(Debug, Clone)]
+struct VerifiedMirContract {
+    contract: ScalarCallContract,
+    argument_types: Vec<ScalarTy>,
+    result_type: ScalarTy,
+}
+
+/// Deterministic inventory of relational scalar contracts proved against MIR.
+///
+/// Successful construction independently reflects each checked MIR body,
+/// proves its panic predicate false, verifies the relation, and then retains no
+/// body text or body terms.
+#[derive(Debug, Clone)]
+pub struct MirVerifiedContractResolver {
+    contracts: BTreeMap<String, VerifiedMirContract>,
+}
+
+impl MirVerifiedContractResolver {
+    /// Verifies total relational contracts against exact checked MIR bodies.
+    ///
+    /// # Errors
+    ///
+    /// Fails closed for duplicate or malformed contracts, body/signature drift,
+    /// a panic or relation counterexample, `Unknown`, or solver failure.
+    pub fn from_contracts(entries: &[(ScalarCallContract, &str)]) -> Result<Self, ReflectError> {
+        let config = SolverConfig::default().with_timeout(DEFAULT_CONTRACT_VERIFICATION_TIMEOUT);
+        Self::from_contracts_with_config(entries, &config)
+    }
+
+    /// Verifies contracts with an explicit deterministic solver policy.
+    ///
+    /// # Errors
+    ///
+    /// Returns the same fail-closed classes as [`Self::from_contracts`].
+    pub fn from_contracts_with_config(
+        entries: &[(ScalarCallContract, &str)],
+        config: &SolverConfig,
+    ) -> Result<Self, ReflectError> {
+        let mut contracts = BTreeMap::new();
+        for (contract, body) in entries {
+            if contracts.contains_key(contract.name()) {
+                return Err(unlocated_error(
+                    ReflectErrorKind::InvalidContract,
+                    format!(
+                        "duplicate verified MIR scalar contract `{}`",
+                        contract.name()
+                    ),
+                ));
+            }
+            let verified = verify_mir_contract(contract, body, config)?;
+            contracts.insert(contract.name().to_owned(), verified);
+        }
+        Ok(Self { contracts })
+    }
+
+    /// Ordered callee names owned by this verified MIR contract inventory.
+    #[must_use]
+    pub fn contract_names(&self) -> Vec<&str> {
+        self.contracts.keys().map(String::as_str).collect()
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScalarValue {
     term: TermId,
@@ -188,21 +353,38 @@ struct State {
     scalars: HashMap<u32, ScalarValue>,
     bytes: Vec<TermId>,
     panic: TermId,
+    assumptions: TermId,
 }
 
 struct Outcome {
     result: ScalarValue,
     bytes: Vec<TermId>,
     panic: TermId,
+    assumptions: TermId,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct MemoryRegion {
+    local: u32,
+    bytes: usize,
 }
 
 struct Context<'a> {
     function: &'a Function,
     blocks: BTreeMap<&'a str, usize>,
     types: BTreeMap<u32, MirType>,
-    array_local: u32,
-    array_bytes: usize,
+    memory: Option<MemoryRegion>,
+    allow_reassignment: bool,
     target_width: u32,
+}
+
+enum CallMode<'a> {
+    Reject,
+    Relational {
+        resolver: &'a MirVerifiedContractResolver,
+        function: &'a str,
+        call_sites: Vec<MirRelationalCallSite>,
+    },
 }
 
 /// Reflect one named function from authenticated raw compiler MIR.
@@ -230,13 +412,20 @@ pub fn reflect_bounded_memory_checked(
         });
     }
     let function = parse_function(input, &config.function)?;
-    let context = validate_function(&function, config.target_usize_width)?;
+    let context = validate_memory_function(&function, config.target_usize_width)?;
+    let memory = context.memory.ok_or_else(|| {
+        unlocated_error(
+            ReflectErrorKind::RegionCount,
+            "validated memory profile did not retain its bounded region",
+        )
+    })?;
     let mut arena = TermArena::new();
     let never = arena.bool_const(false);
+    let always = arena.bool_const(true);
     let mut scalars = HashMap::new();
     let mut params = Vec::new();
     for parameter in &function.params {
-        if parameter.local == context.array_local {
+        if parameter.local == memory.local {
             continue;
         }
         let ty = scalar_type(parameter.ty, context.target_width, parameter.span)?;
@@ -259,16 +448,17 @@ pub fn reflect_bounded_memory_checked(
         });
     }
 
-    let mut input_symbols = Vec::with_capacity(context.array_bytes);
-    let mut bytes = Vec::with_capacity(context.array_bytes);
-    for index in 0..context.array_bytes {
-        let name = format!("mir.array._{}.byte.{index}", context.array_local);
+    let mut input_symbols = Vec::with_capacity(memory.bytes);
+    let mut bytes = Vec::with_capacity(memory.bytes);
+    for index in 0..memory.bytes {
+        let name = format!("mir.array._{}.byte.{index}", memory.local);
         let symbol = arena
             .declare(&name, Sort::BitVec(8))
             .map_err(|error| ir_error(function.span, error.to_string()))?;
         input_symbols.push(symbol);
         bytes.push(arena.var(symbol));
     }
+    let mut calls = CallMode::Reject;
     let outcome = execute_block(
         &mut arena,
         &context,
@@ -277,14 +467,16 @@ pub fn reflect_bounded_memory_checked(
             scalars,
             bytes,
             panic: never,
+            assumptions: always,
         },
         &mut 0,
+        &mut calls,
     )?;
     Ok(CheckedMirMemory {
         arena,
         params,
         region: CheckedByteRegion {
-            local: context.array_local,
+            local: memory.local,
             input: input_symbols,
             output: outcome.bytes,
         },
@@ -297,15 +489,266 @@ pub fn reflect_bounded_memory_checked(
     })
 }
 
-fn validate_function(function: &Function, target_width: u32) -> Result<Context<'_>, ReflectError> {
+/// Reflects one call-free scalar MIR function into a caller-owned term arena.
+///
+/// This ordinary route intentionally rejects every parsed call terminator. Use
+/// [`reflect_scalar_into_checked_with_contracts`] only after constructing a
+/// [`MirVerifiedContractResolver`].
+///
+/// # Errors
+///
+/// Returns a stable located error for syntax, signature/type drift, calls,
+/// cycles, invalid returns, or rejected IR construction.
+pub fn reflect_scalar_into_checked(
+    arena: &mut TermArena,
+    params: &[TermId],
+    input: &str,
+    config: &MirScalarConfig,
+) -> Result<CheckedMirScalar, ReflectError> {
+    require_registered_target(config.target_usize_width)?;
+    let function = parse_function(input, &config.function)?;
+    let mut calls = CallMode::Reject;
+    let outcome = reflect_scalar_parsed(
+        arena,
+        params,
+        &function,
+        config.target_usize_width,
+        &mut calls,
+    )?;
+    Ok(CheckedMirScalar {
+        result: mir_value(outcome.result),
+        panic: outcome.panic,
+    })
+}
+
+/// Reflects one scalar MIR caller through one independently MIR-verified
+/// relational contract.
+///
+/// The resolver retains no callee body. This route introduces one fresh
+/// internal result and returns its relation separately from Rust panic.
+///
+/// # Errors
+///
+/// Fails closed for malformed callers, incompatible or absent contracts,
+/// anything other than exactly one executed direct call, or rejected IR.
+pub fn reflect_scalar_into_checked_with_contracts(
+    arena: &mut TermArena,
+    params: &[TermId],
+    input: &str,
+    config: &MirScalarConfig,
+    resolver: &MirVerifiedContractResolver,
+) -> Result<CheckedMirRelationalScalar, ReflectError> {
+    require_registered_target(config.target_usize_width)?;
+    let function = parse_function(input, &config.function)?;
+    let mut calls = CallMode::Relational {
+        resolver,
+        function: &function.name,
+        call_sites: Vec::new(),
+    };
+    let outcome = reflect_scalar_parsed(
+        arena,
+        params,
+        &function,
+        config.target_usize_width,
+        &mut calls,
+    )?;
+    let CallMode::Relational { call_sites, .. } = calls else {
+        unreachable!("relational MIR reflection constructed the relational call mode");
+    };
+    if call_sites.len() != 1 {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            function.span,
+            format!(
+                "checked relational MIR reflection requires exactly one direct call; found {}",
+                call_sites.len()
+            ),
+        ));
+    }
+    Ok(CheckedMirRelationalScalar {
+        result: mir_value(outcome.result),
+        panic: outcome.panic,
+        assumptions: outcome.assumptions,
+        call_sites,
+    })
+}
+
+fn require_registered_target(target_width: u32) -> Result<(), ReflectError> {
+    if target_width == REGISTERED_USIZE_WIDTH {
+        Ok(())
+    } else {
+        Err(unlocated_error(
+            ReflectErrorKind::TargetWidth,
+            format!(
+                "registered MIR profile requires {REGISTERED_USIZE_WIDTH}-bit usize; found {target_width}"
+            ),
+        ))
+    }
+}
+
+fn reflect_scalar_parsed(
+    arena: &mut TermArena,
+    params: &[TermId],
+    function: &Function,
+    target_width: u32,
+    calls: &mut CallMode<'_>,
+) -> Result<Outcome, ReflectError> {
+    validate_call_inventory(function, calls)?;
+    let context = validate_scalar_function(function, target_width)?;
+    if params.len() != function.params.len() {
+        return Err(reflect_error(
+            ReflectErrorKind::TypeMismatch,
+            function.span,
+            format!(
+                "checked MIR function expects {} parameters; received {}",
+                function.params.len(),
+                params.len()
+            ),
+        ));
+    }
+    let mut scalars = HashMap::new();
+    for (parameter, term) in function.params.iter().zip(params.iter().copied()) {
+        let ty = scalar_type(parameter.ty, target_width, parameter.span)?;
+        let actual = arena.sort_of(term);
+        if actual != ty.sort() {
+            return Err(reflect_error(
+                ReflectErrorKind::TypeMismatch,
+                parameter.span,
+                format!(
+                    "parameter _{} expects {:?}; received {actual:?}",
+                    parameter.local,
+                    ty.sort()
+                ),
+            ));
+        }
+        scalars.insert(parameter.local, ScalarValue { term, ty });
+    }
+    let never = arena.bool_const(false);
+    let always = arena.bool_const(true);
+    execute_block(
+        arena,
+        &context,
+        "bb0",
+        State {
+            scalars,
+            bytes: Vec::new(),
+            panic: never,
+            assumptions: always,
+        },
+        &mut 0,
+        calls,
+    )
+}
+
+fn validate_call_inventory(function: &Function, calls: &CallMode<'_>) -> Result<(), ReflectError> {
+    let call_spans = function
+        .blocks
+        .iter()
+        .filter_map(|block| {
+            matches!(&block.terminator.kind, TerminatorKind::Call { .. })
+                .then_some(block.terminator.span)
+        })
+        .collect::<Vec<_>>();
+    match calls {
+        CallMode::Reject if let Some(span) = call_spans.first().copied() => Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            "checked scalar MIR is call-free unless an explicit verified resolver is supplied",
+        )),
+        CallMode::Relational { .. } if call_spans.len() != 1 => Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            function.span,
+            format!(
+                "checked relational MIR reflection requires exactly one static direct call; found {}",
+                call_spans.len()
+            ),
+        )),
+        _ => Ok(()),
+    }
+}
+
+const fn mir_value(value: ScalarValue) -> MirValue {
+    MirValue {
+        value: value.term,
+        width: value.ty.width,
+        signed: value.ty.signed,
+    }
+}
+
+fn validate_memory_function(
+    function: &Function,
+    target_width: u32,
+) -> Result<Context<'_>, ReflectError> {
     let (types, array_local, array_bytes) = validate_types_and_region(function, target_width)?;
     let blocks = validate_blocks(function)?;
     let context = Context {
         function,
         blocks,
         types,
-        array_local,
-        array_bytes,
+        memory: Some(MemoryRegion {
+            local: array_local,
+            bytes: array_bytes,
+        }),
+        allow_reassignment: false,
+        target_width,
+    };
+    validate_acyclic(&context)?;
+    Ok(context)
+}
+
+fn validate_scalar_function(
+    function: &Function,
+    target_width: u32,
+) -> Result<Context<'_>, ReflectError> {
+    let mut types = BTreeMap::new();
+    for (local, ty, span) in function
+        .params
+        .iter()
+        .map(|parameter| (parameter.local, parameter.ty, parameter.span))
+        .chain(
+            function
+                .locals
+                .iter()
+                .map(|local| (local.local, local.ty, local.span)),
+        )
+    {
+        if matches!(ty, MirType::ByteArray { .. }) {
+            return Err(reflect_error(
+                ReflectErrorKind::UnsupportedType,
+                span,
+                "byte arrays are outside the checked scalar MIR slice",
+            ));
+        }
+        scalar_type(ty, target_width, span)?;
+        if types.insert(local, ty).is_some() {
+            return Err(reflect_error(
+                ReflectErrorKind::DuplicateDefinition,
+                span,
+                format!("local _{local} is declared more than once"),
+            ));
+        }
+    }
+    let return_local = types.get(&0).copied().ok_or_else(|| {
+        reflect_error(
+            ReflectErrorKind::InvalidReturn,
+            function.span,
+            "MIR function has no `_0` return local",
+        )
+    })?;
+    if return_local != function.return_ty {
+        return Err(reflect_error(
+            ReflectErrorKind::TypeMismatch,
+            function.span,
+            "`_0` type differs from the declared return type",
+        ));
+    }
+    let blocks = validate_blocks(function)?;
+    let context = Context {
+        function,
+        blocks,
+        types,
+        memory: None,
+        allow_reassignment: true,
         target_width,
     };
     validate_acyclic(&context)?;
@@ -463,6 +906,7 @@ fn targets(kind: &TerminatorKind) -> Vec<&str> {
             .map(|case| case.target.as_str())
             .chain(std::iter::once(otherwise.as_str()))
             .collect(),
+        TerminatorKind::Call { return_target, .. } => vec![return_target],
     }
 }
 
@@ -489,6 +933,7 @@ fn execute_block(
     label: &str,
     mut state: State,
     executions: &mut usize,
+    calls: &mut CallMode<'_>,
 ) -> Result<Outcome, ReflectError> {
     *executions = executions.saturating_add(1);
     if *executions > MAX_BLOCK_EXECUTIONS {
@@ -500,7 +945,7 @@ fn execute_block(
     }
     let source = block(context, label)?;
     execute_statements(arena, context, &mut state, source)?;
-    execute_terminator(arena, context, state, source, executions)
+    execute_terminator(arena, context, state, source, executions, calls)
 }
 
 fn execute_statements(
@@ -521,14 +966,17 @@ fn execute_statements(
                 }
             }
             StatementKind::Assign { destination, value } => {
-                if *destination == context.array_local {
+                if context
+                    .memory
+                    .is_some_and(|memory| *destination == memory.local)
+                {
                     return Err(reflect_error(
                         ReflectErrorKind::TypeMismatch,
                         statement.span,
                         "whole-array assignment is outside the checked memory slice",
                     ));
                 }
-                if state.scalars.contains_key(destination) {
+                if !context.allow_reassignment && state.scalars.contains_key(destination) {
                     return Err(reflect_error(
                         ReflectErrorKind::DuplicateDefinition,
                         statement.span,
@@ -555,8 +1003,12 @@ fn execute_statements(
                     boolean: false,
                 };
                 require_type(value.ty, byte_ty, statement.span)?;
-                let in_bounds =
-                    access_in_bounds(arena, index, context.array_bytes, statement.span)?;
+                let in_bounds = access_in_bounds(
+                    arena,
+                    index,
+                    memory_region(context, statement.span)?.bytes,
+                    statement.span,
+                )?;
                 add_access_panic(arena, state, in_bounds, statement.span)?;
                 for (offset, byte) in state.bytes.iter_mut().enumerate() {
                     let selected = index_equals(arena, index, offset, statement.span)?;
@@ -576,6 +1028,7 @@ fn execute_terminator(
     mut state: State,
     source: &super::syntax::Block,
     executions: &mut usize,
+    calls: &mut CallMode<'_>,
 ) -> Result<Outcome, ReflectError> {
     match &source.terminator.kind {
         TerminatorKind::Return => {
@@ -596,9 +1049,12 @@ fn execute_terminator(
                 result,
                 bytes: state.bytes,
                 panic: state.panic,
+                assumptions: state.assumptions,
             })
         }
-        TerminatorKind::Goto { target } => execute_block(arena, context, target, state, executions),
+        TerminatorKind::Goto { target } => {
+            execute_block(arena, context, target, state, executions, calls)
+        }
         TerminatorKind::Assert {
             condition,
             expected,
@@ -617,40 +1073,219 @@ fn execute_terminator(
             state.panic = arena
                 .or(state.panic, failure)
                 .map_err(|error| ir_error(source.terminator.span, error.to_string()))?;
-            execute_block(arena, context, success, state, executions)
+            execute_block(arena, context, success, state, executions, calls)
         }
         TerminatorKind::Switch {
             discriminator,
             cases,
             otherwise,
+        } => execute_switch(
+            arena,
+            context,
+            &state,
+            discriminator,
+            cases,
+            otherwise,
+            source.terminator.span,
+            executions,
+            calls,
+        ),
+        TerminatorKind::Call {
+            destination,
+            callee,
+            args,
+            return_target,
         } => {
-            let discriminator = lower_operand(
+            lower_call(
                 arena,
                 context,
-                &state,
-                discriminator,
+                &mut state,
+                *destination,
+                callee,
+                args,
                 source.terminator.span,
+                calls,
             )?;
-            let mut seen = BTreeSet::new();
-            for case in cases {
-                if !seen.insert(case.value) {
-                    return Err(reflect_error(
-                        ReflectErrorKind::TypeMismatch,
-                        source.terminator.span,
-                        format!("switch repeats case {}", case.value),
-                    ));
-                }
-            }
-            let mut joined = execute_block(arena, context, otherwise, state.clone(), executions)?;
-            for case in cases.iter().rev() {
-                let selected =
-                    switch_case(arena, discriminator, case.value, source.terminator.span)?;
-                let branch =
-                    execute_block(arena, context, &case.target, state.clone(), executions)?;
-                joined = join_outcomes(arena, selected, branch, joined, source.terminator.span)?;
-            }
-            Ok(joined)
+            execute_block(arena, context, return_target, state, executions, calls)
         }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn execute_switch(
+    arena: &mut TermArena,
+    context: &Context<'_>,
+    state: &State,
+    discriminator: &Operand,
+    cases: &[super::syntax::SwitchCase],
+    otherwise: &str,
+    span: SourceSpan,
+    executions: &mut usize,
+    calls: &mut CallMode<'_>,
+) -> Result<Outcome, ReflectError> {
+    let discriminator = lower_operand(arena, context, state, discriminator, span)?;
+    let mut seen = BTreeSet::new();
+    for case in cases {
+        if !seen.insert(case.value) {
+            return Err(reflect_error(
+                ReflectErrorKind::TypeMismatch,
+                span,
+                format!("switch repeats case {}", case.value),
+            ));
+        }
+    }
+    let mut joined = execute_block(arena, context, otherwise, state.clone(), executions, calls)?;
+    for case in cases.iter().rev() {
+        let selected = switch_case(arena, discriminator, case.value, span)?;
+        let branch = execute_block(
+            arena,
+            context,
+            &case.target,
+            state.clone(),
+            executions,
+            calls,
+        )?;
+        joined = join_outcomes(arena, selected, branch, joined, span)?;
+    }
+    Ok(joined)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn lower_call(
+    arena: &mut TermArena,
+    context: &Context<'_>,
+    state: &mut State,
+    destination: u32,
+    callee: &str,
+    args: &[Operand],
+    span: SourceSpan,
+    calls: &mut CallMode<'_>,
+) -> Result<(), ReflectError> {
+    let CallMode::Relational {
+        resolver,
+        function,
+        call_sites,
+    } = calls
+    else {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            format!("direct call `{callee}` requires an opt-in verified MIR contract"),
+        ));
+    };
+    if !call_sites.is_empty() {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            "checked relational MIR reflection admits exactly one direct call",
+        ));
+    }
+    let verified = resolver.contracts.get(callee).ok_or_else(|| {
+        reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            format!("direct call `{callee}` has no supplied MIR-verified contract"),
+        )
+    })?;
+    if args.len() != verified.argument_types.len() {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            format!(
+                "direct call `{callee}` supplies {} arguments; contract expects {}",
+                args.len(),
+                verified.argument_types.len()
+            ),
+        ));
+    }
+    let mut arguments = Vec::with_capacity(args.len());
+    for (index, (argument, expected)) in args
+        .iter()
+        .zip(verified.argument_types.iter().copied())
+        .enumerate()
+    {
+        let actual = lower_operand(arena, context, state, argument, span)?;
+        if actual.ty != expected {
+            return Err(reflect_error(
+                ReflectErrorKind::UnsupportedCall,
+                span,
+                format!(
+                    "direct call `{callee}` argument {index} has type {:?}; expected {expected:?}",
+                    actual.ty
+                ),
+            ));
+        }
+        arguments.push(actual.term);
+    }
+    let destination_type = local_scalar_type(context, destination, span)?;
+    if destination_type != verified.result_type {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            format!(
+                "direct call `{callee}` destination _{destination} has type {destination_type:?}; expected {:?}",
+                verified.result_type
+            ),
+        ));
+    }
+    let result_symbol =
+        fresh_mir_result_symbol(arena, function, callee, span, verified.result_type.sort())?;
+    let result = arena.var(result_symbol);
+    let terms =
+        instantiate_total_relational_contract(arena, &verified.contract, &arguments, result)
+            .map_err(|error| map_loop_contract_error(&error, Some(span)))?;
+    let relation = arena
+        .or(state.panic, terms.ensures)
+        .map_err(|error| ir_error(span, error.to_string()))?;
+    state.assumptions = arena
+        .and(state.assumptions, relation)
+        .map_err(|error| ir_error(span, error.to_string()))?;
+    state.scalars.insert(
+        destination,
+        ScalarValue {
+            term: result,
+            ty: verified.result_type,
+        },
+    );
+    call_sites.push(MirRelationalCallSite {
+        callee: callee.to_owned(),
+        span,
+        result_symbol,
+        relation,
+    });
+    Ok(())
+}
+
+fn fresh_mir_result_symbol(
+    arena: &mut TermArena,
+    function: &str,
+    callee: &str,
+    span: SourceSpan,
+    sort: Sort,
+) -> Result<SymbolId, ReflectError> {
+    let stem = format!(
+        "mir.contract.havoc.{function}.{callee}@{}.{}.result",
+        span.line, span.column
+    );
+    let mut suffix = 0_usize;
+    loop {
+        let name = if suffix == 0 {
+            stem.clone()
+        } else {
+            format!("{stem}.{suffix}")
+        };
+        if arena.find_internal_symbol(&name).is_none() {
+            return arena
+                .declare_internal(&name, sort)
+                .map_err(|error| ir_error(span, error.to_string()));
+        }
+        suffix = suffix.checked_add(1).ok_or_else(|| {
+            reflect_error(
+                ReflectErrorKind::IrConstruction,
+                span,
+                "relational MIR result suffix overflowed",
+            )
+        })?;
     }
 }
 
@@ -663,11 +1298,44 @@ fn lower_rvalue(
 ) -> Result<ScalarValue, ReflectError> {
     match value {
         Rvalue::Use(operand) => lower_operand(arena, context, state, operand, span),
+        Rvalue::Cast { operand, target } => {
+            let source = lower_operand(arena, context, state, operand, span)?;
+            require_integer(source.ty, span, "cast source")?;
+            let target = scalar_type(*target, context.target_width, span)?;
+            require_integer(target, span, "cast destination")?;
+            let term = match target.width.cmp(&source.ty.width) {
+                std::cmp::Ordering::Greater if source.ty.signed => arena
+                    .sign_ext(target.width - source.ty.width, source.term)
+                    .map_err(|error| ir_error(span, error.to_string()))?,
+                std::cmp::Ordering::Greater => arena
+                    .zero_ext(target.width - source.ty.width, source.term)
+                    .map_err(|error| ir_error(span, error.to_string()))?,
+                std::cmp::Ordering::Less => arena
+                    .extract(target.width - 1, 0, source.term)
+                    .map_err(|error| ir_error(span, error.to_string()))?,
+                std::cmp::Ordering::Equal => source.term,
+            };
+            Ok(ScalarValue { term, ty: target })
+        }
+        Rvalue::Not(operand) => {
+            let operand = lower_operand(arena, context, state, operand, span)?;
+            let term = if operand.ty.boolean {
+                arena.not(operand.term)
+            } else {
+                arena.bv_not(operand.term)
+            }
+            .map_err(|error| ir_error(span, error.to_string()))?;
+            Ok(ScalarValue {
+                term,
+                ty: operand.ty,
+            })
+        }
         Rvalue::ArrayRead { array, index } => {
             require_array(context, *array, span)?;
             let index = local_scalar(state, *index, span)?;
             require_integer(index.ty, span, "array index")?;
-            let in_bounds = access_in_bounds(arena, index, context.array_bytes, span)?;
+            let in_bounds =
+                access_in_bounds(arena, index, memory_region(context, span)?.bytes, span)?;
             add_access_panic(arena, state, in_bounds, span)?;
             let mut result = arena
                 .bv_const(8, 0)
@@ -690,30 +1358,76 @@ fn lower_rvalue(
         Rvalue::Binary { op, left, right } => {
             let left = lower_operand(arena, context, state, left, span)?;
             let right = lower_operand(arena, context, state, right, span)?;
+            lower_binary(arena, *op, left, right, span)
+        }
+    }
+}
+
+fn lower_binary(
+    arena: &mut TermArena,
+    op: BinaryOpcode,
+    left: ScalarValue,
+    right: ScalarValue,
+    span: SourceSpan,
+) -> Result<ScalarValue, ReflectError> {
+    match op {
+        BinaryOpcode::Add => {
             require_type(left.ty, right.ty, span)?;
-            let term = match op {
-                BinaryOpcode::Eq => arena.eq(left.term, right.term),
-                BinaryOpcode::Lt => {
-                    require_integer(left.ty, span, "less-than operand")?;
-                    if left.ty.signed {
-                        arena.bv_slt(left.term, right.term)
-                    } else {
-                        arena.bv_ult(left.term, right.term)
-                    }
-                }
-                BinaryOpcode::BitAnd if left.ty.boolean => arena.and(left.term, right.term),
-                BinaryOpcode::BitAnd => arena.bv_and(left.term, right.term),
+            require_integer(left.ty, span, "addition operand")?;
+            let term = arena
+                .bv_add(left.term, right.term)
+                .map_err(|error| ir_error(span, error.to_string()))?;
+            Ok(ScalarValue { term, ty: left.ty })
+        }
+        BinaryOpcode::Eq => {
+            require_type(left.ty, right.ty, span)?;
+            let term = arena
+                .eq(left.term, right.term)
+                .map_err(|error| ir_error(span, error.to_string()))?;
+            Ok(ScalarValue {
+                term,
+                ty: bool_type(),
+            })
+        }
+        BinaryOpcode::Lt => {
+            require_type(left.ty, right.ty, span)?;
+            require_integer(left.ty, span, "less-than operand")?;
+            let term = if left.ty.signed {
+                arena.bv_slt(left.term, right.term)
+            } else {
+                arena.bv_ult(left.term, right.term)
             }
             .map_err(|error| ir_error(span, error.to_string()))?;
-            let ty = match op {
-                BinaryOpcode::Eq | BinaryOpcode::Lt => ScalarTy {
-                    width: 1,
-                    signed: false,
-                    boolean: true,
-                },
-                BinaryOpcode::BitAnd => left.ty,
-            };
-            Ok(ScalarValue { term, ty })
+            Ok(ScalarValue {
+                term,
+                ty: bool_type(),
+            })
+        }
+        BinaryOpcode::BitAnd => {
+            require_type(left.ty, right.ty, span)?;
+            let term = if left.ty.boolean {
+                arena.and(left.term, right.term)
+            } else {
+                arena.bv_and(left.term, right.term)
+            }
+            .map_err(|error| ir_error(span, error.to_string()))?;
+            Ok(ScalarValue { term, ty: left.ty })
+        }
+        BinaryOpcode::Shr => {
+            require_integer(left.ty, span, "shifted operand")?;
+            require_integer(right.ty, span, "shift amount")?;
+            if left.ty.signed {
+                return Err(reflect_error(
+                    ReflectErrorKind::TypeMismatch,
+                    span,
+                    "the checked checksum slice admits only unsigned logical `Shr`",
+                ));
+            }
+            let amount = resize_shift_amount(arena, right, left.ty.width, span)?;
+            let term = arena
+                .bv_lshr(left.term, amount)
+                .map_err(|error| ir_error(span, error.to_string()))?;
+            Ok(ScalarValue { term, ty: left.ty })
         }
     }
 }
@@ -792,6 +1506,23 @@ fn lower_integer(
         .bv_const(ty.width, bits)
         .map_err(|error| ir_error(span, error.to_string()))?;
     Ok(ScalarValue { term, ty })
+}
+
+fn resize_shift_amount(
+    arena: &mut TermArena,
+    amount: ScalarValue,
+    width: u32,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    match amount.ty.width.cmp(&width) {
+        std::cmp::Ordering::Greater => arena
+            .extract(width - 1, 0, amount.term)
+            .map_err(|error| ir_error(span, error.to_string())),
+        std::cmp::Ordering::Less => arena
+            .zero_ext(width - amount.ty.width, amount.term)
+            .map_err(|error| ir_error(span, error.to_string())),
+        std::cmp::Ordering::Equal => Ok(amount.term),
+    }
 }
 
 fn add_access_panic(
@@ -911,6 +1642,13 @@ fn join_outcomes(
     let panic = arena
         .ite(condition, then_outcome.panic, else_outcome.panic)
         .map_err(|error| ir_error(span, error.to_string()))?;
+    let assumptions = arena
+        .ite(
+            condition,
+            then_outcome.assumptions,
+            else_outcome.assumptions,
+        )
+        .map_err(|error| ir_error(span, error.to_string()))?;
     let bytes = then_outcome
         .bytes
         .into_iter()
@@ -928,6 +1666,7 @@ fn join_outcomes(
         },
         bytes,
         panic,
+        assumptions,
     })
 }
 
@@ -986,8 +1725,16 @@ fn scalar_type(ty: MirType, target_width: u32, span: SourceSpan) -> Result<Scala
     }
 }
 
+const fn bool_type() -> ScalarTy {
+    ScalarTy {
+        width: 1,
+        signed: false,
+        boolean: true,
+    }
+}
+
 fn require_array(context: &Context<'_>, local: u32, span: SourceSpan) -> Result<(), ReflectError> {
-    if local == context.array_local {
+    if context.memory.is_some_and(|memory| local == memory.local) {
         Ok(())
     } else {
         Err(reflect_error(
@@ -996,6 +1743,16 @@ fn require_array(context: &Context<'_>, local: u32, span: SourceSpan) -> Result<
             format!("local _{local} is not the configured byte array"),
         ))
     }
+}
+
+fn memory_region(context: &Context<'_>, span: SourceSpan) -> Result<MemoryRegion, ReflectError> {
+    context.memory.ok_or_else(|| {
+        reflect_error(
+            ReflectErrorKind::UnsupportedType,
+            span,
+            "memory operation is outside the checked scalar MIR slice",
+        )
+    })
 }
 
 fn require_type(
@@ -1035,6 +1792,153 @@ fn require_integer(ty: ScalarTy, span: SourceSpan, what: &str) -> Result<(), Ref
         ))
     } else {
         Ok(())
+    }
+}
+
+fn verify_mir_contract(
+    contract: &ScalarCallContract,
+    body: &str,
+    config: &SolverConfig,
+) -> Result<VerifiedMirContract, ReflectError> {
+    validate_total_relational_contract(contract)
+        .map_err(|error| map_loop_contract_error(&error, None))?;
+    let function = parse_function(body, contract.name())?;
+    if function.name != contract.name() {
+        return Err(reflect_error(
+            ReflectErrorKind::InvalidContract,
+            function.span,
+            format!(
+                "MIR scalar contract `{}` was paired with body `{}`",
+                contract.name(),
+                function.name
+            ),
+        ));
+    }
+    let argument_types = function
+        .params
+        .iter()
+        .map(|parameter| scalar_type(parameter.ty, REGISTERED_USIZE_WIDTH, parameter.span))
+        .collect::<Result<Vec<_>, _>>()?;
+    let argument_widths = argument_types
+        .iter()
+        .map(|argument| argument.width)
+        .collect::<Vec<_>>();
+    if argument_widths != contract.argument_widths() {
+        return Err(reflect_error(
+            ReflectErrorKind::InvalidContract,
+            function.span,
+            format!(
+                "MIR scalar contract `{}` argument widths {:?} do not match body widths {argument_widths:?}",
+                contract.name(),
+                contract.argument_widths()
+            ),
+        ));
+    }
+    let result_type = scalar_type(function.return_ty, REGISTERED_USIZE_WIDTH, function.span)?;
+    if result_type.width != contract.result_width() {
+        return Err(reflect_error(
+            ReflectErrorKind::InvalidContract,
+            function.span,
+            format!(
+                "MIR scalar contract `{}` result width {} does not match body width {}",
+                contract.name(),
+                contract.result_width(),
+                result_type.width
+            ),
+        ));
+    }
+
+    let mut arena = TermArena::new();
+    let mut arguments = Vec::with_capacity(argument_types.len());
+    for (index, ty) in argument_types.iter().copied().enumerate() {
+        let symbol = arena
+            .declare_internal(
+                &format!("mir.contract.{}.arg{index}", contract.name()),
+                ty.sort(),
+            )
+            .map_err(|error| ir_error(function.span, error.to_string()))?;
+        arguments.push(arena.var(symbol));
+    }
+    let mut calls = CallMode::Reject;
+    let body_terms = reflect_scalar_parsed(
+        &mut arena,
+        &arguments,
+        &function,
+        REGISTERED_USIZE_WIDTH,
+        &mut calls,
+    )?;
+    let no_panic = arena
+        .not(body_terms.panic)
+        .map_err(|error| ir_error(function.span, error.to_string()))?;
+    prove_mir_contract_goal(
+        &mut arena,
+        no_panic,
+        config,
+        contract.name(),
+        "panic freedom",
+    )?;
+    verify_total_relational_contract_against_body(
+        &mut arena,
+        contract,
+        &arguments,
+        body_terms.result.term,
+        config,
+    )
+    .map_err(|error| map_loop_contract_error(&error, Some(function.span)))?;
+    Ok(VerifiedMirContract {
+        contract: contract.clone(),
+        argument_types,
+        result_type,
+    })
+}
+
+fn prove_mir_contract_goal(
+    arena: &mut TermArena,
+    goal: TermId,
+    config: &SolverConfig,
+    name: &str,
+    component: &str,
+) -> Result<(), ReflectError> {
+    match prove(arena, &[], goal, config) {
+        Ok(ProofOutcome::Proved(_)) => Ok(()),
+        Ok(ProofOutcome::Disproved(_)) => Err(unlocated_error(
+            ReflectErrorKind::ContractDisproved,
+            format!("MIR scalar contract `{name}` disproved for {component}"),
+        )),
+        Ok(ProofOutcome::Unknown(reason)) => Err(unlocated_error(
+            ReflectErrorKind::ContractUnknown,
+            format!("MIR scalar contract `{name}` undecided for {component}: {reason:?}"),
+        )),
+        Err(error) => Err(unlocated_error(
+            ReflectErrorKind::ContractSolver,
+            format!("MIR scalar contract `{name}` solver failure for {component}: {error}"),
+        )),
+    }
+}
+
+fn map_loop_contract_error(
+    error: &crate::reflect::llvm::loops::LoopReflectError,
+    span: Option<SourceSpan>,
+) -> ReflectError {
+    let kind = match error.kind() {
+        LoopReflectErrorKind::ContractDisproved => ReflectErrorKind::ContractDisproved,
+        LoopReflectErrorKind::ContractUnknown => ReflectErrorKind::ContractUnknown,
+        LoopReflectErrorKind::ContractSolver => ReflectErrorKind::ContractSolver,
+        LoopReflectErrorKind::IrConstruction => ReflectErrorKind::IrConstruction,
+        _ => ReflectErrorKind::InvalidContract,
+    };
+    ReflectError {
+        kind,
+        span,
+        detail: error.to_string(),
+    }
+}
+
+fn unlocated_error(kind: ReflectErrorKind, detail: impl Into<String>) -> ReflectError {
+    ReflectError {
+        kind,
+        span: None,
+        detail: detail.into(),
     }
 }
 

@@ -863,15 +863,16 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     calls, annotations, and effects remain outside this experiment; MIR-side
     checksum composition is the next P5.2 boundary.
   - [ADR-0299](../09-decisions/adr-0299-preregister-checked-mir-relational-calls.md)
-    preregisters that MIR boundary before code. The located typed parser gains
-    only the source-derived checksum scalar operations and assigned direct-call
-    terminator. A separate MIR resolver must prove the same relational contract
-    against the checked MIR `sum16` body and independently prove its panic term
-    false before body discard; the LLVM proof cannot stand in for that gate.
-    The modular MIR and LLVM callers then need separate havoc symbols,
-    relations, 100,000 dual-choice rows apiece, and weak-contract countermodels.
-    General panic contracts, annotations, unwind paths, memory, loops,
-    recursion, and effects remain outside the proposal.
+    accepts that MIR boundary. The located typed parser gains only the
+    source-derived checksum scalar operations and assigned direct-call
+    terminator. A separate MIR resolver proves the shared relational contract
+    against the checked MIR `sum16` body and independently proves its panic term
+    false before body discard; the LLVM proof does not stand in for that gate.
+    The modular MIR and LLVM callers use separate havoc symbols and relations;
+    each passes 100,000 valid plus 100,000 violating choices and replays a
+    weak-contract countermodel. The standing gate is 81 variants / 17 groups /
+    ten binaries / 114 tests. General panic contracts, annotations, unwind
+    paths, memory, loops, recursion, and effects remain outside this result.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

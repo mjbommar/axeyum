@@ -1,6 +1,6 @@
 # ADR-0299: Preregister checked MIR relational scalar call composition
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -161,6 +161,37 @@ return. The accepted contract language already expresses the independent
 one's-complement relation; the missing work is typed MIR syntax/execution and
 separate MIR body verification, not a new logic feature.
 
+## Accepted implementation and evidence
+
+The accepted route lives in the checked MIR parser/executor, not the legacy
+line reflector. `MirVerifiedContractResolver` verifies the shared
+`ScalarCallContract` AST against the exact checked MIR callee, independently
+proves the callee panic predicate false, and retains only the typed contract.
+`reflect_scalar_into_checked_with_contracts` then introduces a deterministic
+internal result symbol, exposes the instantiated relation as an assumption,
+and follows the exact normal-return target. The default scalar API inventories
+and rejects calls, including unreachable call blocks.
+
+The checksum evidence passes all frozen gates:
+
+- checked MIR and LLVM independently verify the exact `sum16` relation and
+  independently reproduce the modular checksum result;
+- each IR classifies 100,000 valid and 100,000 deliberately invalid result
+  choices with nonempty carry/no-carry populations and no dropped rows;
+- weak-postcondition countermodels replay, and body, relation, type,
+  signedness, target, unwind, multiplicity, cycle, namespace, and explicit
+  zero-resource `Unknown` mutations fail closed;
+- the source-derived manifest now owns 81 variants in 17 evidence groups, and
+  the standing ten-binary semantics gate passes all 114 tests;
+- strict Clippy, warning-denied rustdoc, formatting, links, MIR exact-replay
+  provenance, LLVM fixture validation, and complete all-feature package tests
+  and doctests pass. The complete package route used one build/test job,
+  `CARGO_PROFILE_TEST_DEBUG=0`, and peaked at 1.8 GiB with zero swap inside the
+  4 GiB cgroup.
+
+These are correctness and mechanism results only. No latency, throughput,
+coverage, or general-call claim is inferred from them.
+
 ## Rejected alternatives
 
 - **Teach the legacy MIR line executor one call spelling:** rejected; it panics
@@ -179,14 +210,12 @@ separate MIR body verification, not a new logic feature.
 
 ## Consequences
 
-If every gate passes, the checksum module will compose body-independently on
-both checked IRs, closing the runtime half of T5.2.2 and strengthening T5.2.4.
-P5.2 will still require source annotation lowering, general panic-contract
-composition, and their replayed violation UX before phase exit.
-
-If MIR body verification, panic separation, havoc teeth, strict syntax, or the
-resource gate fails, remove the implementation and retain ADR-0298 as the
-accepted boundary.
+The checksum module now composes body-independently on both checked IRs,
+closing the runtime half of T5.2.2 and strengthening T5.2.4. P5.2 still
+requires source annotation lowering, general panic-contract composition, and
+their replayed violation UX before phase exit. General calls, effects, memory,
+loops, and unwind paths remain rejected rather than being inferred from this
+one total scalar boundary.
 
 ## References
 

@@ -80,7 +80,7 @@ enum ScalarContractResult {
     Relational { ensures: ScalarContractExpr },
 }
 
-/// An explicit exact or relational contract for one scalar LLVM callee.
+/// An explicit exact or relational contract for one scalar checked-IR callee.
 ///
 /// ADR-0296 supplies exact functional results, ADR-0297 adds guarded body
 /// verification and explicit loop-call requirement obligations, and ADR-0298
@@ -237,7 +237,7 @@ impl ScalarCallContract {
         Ok(contract)
     }
 
-    /// Contracted LLVM callee name without `@`.
+    /// Contracted scalar callee name without an IR sigil.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.name
@@ -864,6 +864,74 @@ struct InstantiatedScalarContract {
     immediate_defined: TermId,
     result: InstantiatedContractResult,
     result_defined: TermId,
+}
+
+/// Instantiated relation for the deliberately total MIR/LLVM checksum slice.
+///
+/// This crate-private bridge keeps one contract AST and one strict sort checker
+/// while allowing the checked MIR reflector to verify its own body and panic
+/// semantics independently.
+pub(crate) struct TotalRelationalContractTerms {
+    pub(crate) ensures: TermId,
+}
+
+pub(crate) fn validate_total_relational_contract(
+    contract: &ScalarCallContract,
+) -> Result<(), LoopReflectError> {
+    if !matches!(contract.requires, ScalarContractExpr::Bool(true)) {
+        return Err(contract_error(&format!(
+            "scalar contract `@{}` requires must be literal true for the total MIR slice",
+            contract.name
+        )));
+    }
+    if !matches!(contract.immediate_defined, ScalarContractExpr::Bool(true)) {
+        return Err(contract_error(&format!(
+            "scalar contract `@{}` immediate definedness must be literal true for the total MIR slice",
+            contract.name
+        )));
+    }
+    if !matches!(contract.result_defined, ScalarContractExpr::Bool(true)) {
+        return Err(contract_error(&format!(
+            "scalar contract `@{}` result definedness must be literal true for the total MIR slice",
+            contract.name
+        )));
+    }
+    if !matches!(contract.result, ScalarContractResult::Relational { .. }) {
+        return Err(contract_error(&format!(
+            "scalar contract `@{}` must be relational for the MIR havoc slice",
+            contract.name
+        )));
+    }
+    Ok(())
+}
+
+/// Instantiates one already bounded, total relational scalar contract.
+pub(crate) fn instantiate_total_relational_contract(
+    arena: &mut TermArena,
+    contract: &ScalarCallContract,
+    arguments: &[TermId],
+    result: TermId,
+) -> Result<TotalRelationalContractTerms, LoopReflectError> {
+    validate_total_relational_contract(contract)?;
+    let terms = instantiate_scalar_contract(arena, contract, arguments, Some(result))?;
+    let InstantiatedContractResult::Relational { ensures } = terms.result else {
+        unreachable!("total relational contract validation rejected exact results");
+    };
+    Ok(TotalRelationalContractTerms { ensures })
+}
+
+/// Verifies the total relational postcondition against independently reflected
+/// body terms. MIR callers additionally prove their panic predicate false.
+pub(crate) fn verify_total_relational_contract_against_body(
+    arena: &mut TermArena,
+    contract: &ScalarCallContract,
+    arguments: &[TermId],
+    body_result: TermId,
+    config: &SolverConfig,
+) -> Result<(), LoopReflectError> {
+    let terms = instantiate_total_relational_contract(arena, contract, arguments, body_result)?;
+    let total = arena.bool_const(true);
+    verify_contract_postcondition(arena, total, total, terms.ensures, config, &contract.name)
 }
 
 fn verify_scalar_contract(

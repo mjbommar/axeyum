@@ -109,8 +109,9 @@ exact checked body; external/indirect/void/variadic/nested calls remain outside
 the profile. ADR-0296 adds only one exact functional scalar contract; ADR-0297
 adds nontrivial scalar requirements by making reached violations explicit bad
 states before restricting the transition. ADR-0298 adds one opt-in checked
-straight-line relational scalar result with a fresh internal symbol and a
-separate body-verified assumption. Loop havoc, annotations, MIR calls,
-recursion, memory, and external calls remain outside the profile. The ten owned
-binaries currently contain 108 tests and the manifest owns 76 variants in 16
-evidence groups.
+straight-line LLVM relational scalar result with a fresh internal symbol and a
+separate body-verified assumption. ADR-0299 adds the equivalent one-call MIR
+checksum route only after independent checked-body relation and panic-freedom
+proofs. Loop havoc, annotations, general MIR calls, recursion, memory effects,
+and external calls remain outside the profile. The ten owned binaries currently
+contain 114 tests and the manifest owns 81 variants in 17 evidence groups.
