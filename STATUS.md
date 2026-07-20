@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — The Glaurung correctness-oracle result is consolidated and
+  its exact diagnostics are standing contracts.** The reviewer-facing methods
+  note separates three consumer defects by mechanism: strict width/sort
+  checking exposed the declared extension and concat bugs; fail-closed result
+  typing plus ordered model-read replay exposed empty-model steering. It also
+  separates Glaurung's linked-Z3 W128 truncation from the Z3 solver core. The
+  existing named fuzz controls now assert both typed `IrError` variants and the
+  exact actionable messages (`width 57`, `(_ BitVec 96) vs (_ BitVec 64)`, and
+  the over-wide constant), while normalized positives, model-less UNSAT versus
+  legitimate empty SAT, and the W128 high bit remain distinct controls. This
+  consolidates ADR-0224/0237's 4,000-row three-way and 12,000-row four-way
+  evidence without inflating invalid consumer states into valid-formula fuzz
+  coverage or reviving the retired speed headline.
+
 - **2026-07-20 — ADR-0300 rejects dense memo indexing at the frozen variance
   gate; production returns to BTree.**
   The audited mechanism is exact lookup on dense insertion-order `TermId`s:
@@ -5344,6 +5358,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Consolidated the strict consumer-boundary methods result.** A
+  new verification note gives the exact empty-model, declared-extension,
+  declared-concat, and W128-adapter failure shapes; identifies which layer
+  exposed each; records the Glaurung fix revisions; and binds them to Axeyum's
+  named negative, normalized-positive, model-state, replay, and four-oracle
+  gates. The Glaurung width-contract regression now checks exact `IrError`
+  variants and complete actionable messages instead of loose substrings.
 
 - **2026-07-20 — ADR-0300 closes dense memo indexing as negative evidence.**
   Six frozen order-balanced pairs preserve every decision, oracle/manifest

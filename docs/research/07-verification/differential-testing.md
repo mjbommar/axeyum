@@ -1,7 +1,7 @@
 # Differential Testing
 
 Status: draft
-Last updated: 2026-06-10
+Last updated: 2026-07-20
 
 ## Purpose
 
@@ -35,6 +35,17 @@ Out of scope:
 - Serialization round trips.
 - Regression queries from real clients.
 
+## Measured Client Case Study
+
+The [Glaurung correctness-oracle case study](glaurung-correctness-oracle-case-study.md)
+records why valid-formula multi-oracle fuzzing and invalid-consumer contract
+tests must remain separate. Strict sort/width diagnostics exposed malformed
+extension and concat metadata; ordered result/model replay exposed a distinct
+empty-model state-machine defect; and a full-width control caught truncation in
+the consumer's Z3 adapter. The standing gate now combines exact negative
+controls, normalized positives, original-model replay, and bounded four-oracle
+agreement rather than treating any one layer as sufficient.
+
 ## Design Implications
 
 - Add corpus directories early, even before full implementation.
@@ -59,4 +70,3 @@ Out of scope:
 - cvc5: https://cvc5.github.io/
 - Bitwuzla: https://bitwuzla.github.io/docs/
 - SAT Competition: https://satcompetition.github.io/
-

@@ -76,7 +76,7 @@ use std::path::Path;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use axeyum_ir::{Sort, SymbolId, TermArena, TermId, Value, eval};
+use axeyum_ir::{IrError, Sort, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{
     CheckResult, EndToEndUnsatOutcome, SolverBackend, SolverConfig, UnsatProofOutcome, Z3Backend,
     certify_qf_bv_unsat_end_to_end_within, export_qf_bv_unsat_proof_within, solve,
@@ -1897,24 +1897,43 @@ fn glaurung_width_contract_regressions_are_strict() {
     let low = arena.bv_const(1, 1).unwrap();
     let malformed_concat = arena.concat(high, low).unwrap();
     let concat_error = arena.extract(63, 8, malformed_concat).unwrap_err();
-    assert!(
-        concat_error.to_string().contains("out of range"),
-        "unexpected concat-contract error: {concat_error}"
+    assert_eq!(
+        concat_error,
+        IrError::ExtractOutOfRange {
+            hi: 63,
+            lo: 8,
+            width: 57,
+        }
+    );
+    assert_eq!(
+        concat_error.to_string(),
+        "extract [63:8] out of range for width 57"
     );
 
     let child = arena.bv_var("child", 64).unwrap();
     let malformed_extension = arena.zero_ext(32, child).unwrap();
     let expected_64 = arena.bv_const(64, 0).unwrap();
     let extension_error = arena.eq(malformed_extension, expected_64).unwrap_err();
-    assert!(
-        extension_error.to_string().contains("sort"),
-        "unexpected extension-contract error: {extension_error}"
+    assert_eq!(
+        extension_error,
+        IrError::SortsDiffer(Sort::BitVec(96), Sort::BitVec(64))
+    );
+    assert_eq!(
+        extension_error.to_string(),
+        "operands must share a sort: (_ BitVec 96) vs (_ BitVec 64)"
     );
 
     let constant_error = arena.bv_const(8, 0x1000).unwrap_err();
-    assert!(
-        constant_error.to_string().contains("fit"),
-        "unexpected constant-contract error: {constant_error}"
+    assert_eq!(
+        constant_error,
+        IrError::ValueOutOfRange {
+            width: 8,
+            value: 0x1000,
+        }
+    );
+    assert_eq!(
+        constant_error.to_string(),
+        "value 4096 does not fit in 8 bits"
     );
 }
 

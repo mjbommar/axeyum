@@ -1504,6 +1504,14 @@ artifact evidence below governs.
 | 9 | Self-rechecked DRAT UNSAT evidence is a deployability/correctness advantage over the current Z3 crate path. | Keep `UnsatProof::recheck()` prominent in examples, capability tables, and performance reporting. No optimization may bypass proof generation/recheck where proof-bearing UNSAT is promised. |
 | 10 | Pure Rust/no-C and the `qfbv`-only profile reduce deployment cost; benchmark methodology must reject fast failure. | Preserve the no-native default and lean feature profile; gate WASM claims on an actual target build rather than aspiration. Every comparison must report per-backend SAT, UNSAT, Unknown, Error, decided rate, replay, and exact work/finding identity. A faster number with reduced work or increased nondecisions is invalid until attributed—the pre-fix tcpip/dxgkrnl ratios are explicitly withdrawn. |
 
+The reviewer-facing [Glaurung correctness-oracle case study](docs/research/07-verification/glaurung-correctness-oracle-case-study.md)
+now consolidates the three consumer defects plus the wide-value adapter defect,
+pins their exact regression ownership, and corrects an important shorthand:
+strict width/sort checking exposed the extension and concat bugs, while
+fail-closed result typing and ordered model replay exposed empty-model steering.
+The standing named controls retain exact actionable diagnostics separately from
+the 12,000-row four-oracle valid-formula campaign.
+
 **Publication execution order (2026-07-18, ADR-0213--0239 plus ranked review;
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
