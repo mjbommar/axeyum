@@ -1,0 +1,108 @@
+{
+  "schema": "axeyum.glaurung-llvm-loop-census.v1",
+  "result_state": "zero-row",
+  "glaurung": {
+    "revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+    "sources": [
+      {
+        "path": "samples/source/c/c2_demo.c",
+        "sha256": "78a13f3a689d6736f84393058f2911fb5170cb1b9010880409ad69a55d49be75"
+      },
+      {
+        "path": "samples/source/c/hello.c",
+        "sha256": "faa0f97afdb282005bac7e128771f5293e84a65da1beddddc195056a8ca40ee8"
+      },
+      {
+        "path": "samples/source/c/pe_tls.c",
+        "sha256": "7ba818542e2e68692ce2789f8e2b578e292cf26481b0c506d35df74895b12871"
+      },
+      {
+        "path": "samples/source/c/suspicious_linux.c",
+        "sha256": "d0f3f2cad7e6657ffeeb9371a5a457cd383597a8810c4bab9aef621c7ebcaf1e"
+      },
+      {
+        "path": "samples/source/c/suspicious_win.c",
+        "sha256": "36ba18a83f823431b9f530d293928bdcba22c8ceaa491e9766ac50b14e469321"
+      },
+      {
+        "path": "samples/source/c/vulnparse.c",
+        "sha256": "2b34549fb4c60f66a292e946ff1a05ce1fb2c84cb2c9592affbeba825e6e12f4"
+      },
+      {
+        "path": "samples/source/library/mathlib.c",
+        "sha256": "483a4be36dec362d1132c97f1f749ab9e1bf411ec32bf95954d305551296b23d"
+      },
+      {
+        "path": "samples/source/library/test_mathlib.c",
+        "sha256": "4a57666159b837621af430a8455041585f1ac2bfbdfc6302aac6169de67332f1"
+      },
+      {
+        "path": "samples/source/multi_import.c",
+        "sha256": "49f22625d7f68eed5043ab95344130140365a5af5f7859571c32a8c19d5117cc"
+      },
+      {
+        "path": "tests/fixtures/android/drv.c",
+        "sha256": "83ca1409d35d25f360bbf0099e0b4b5a1e179bee5da7b89b4ad639f84c53b715"
+      },
+      {
+        "path": "tests/fixtures/android/pac.c",
+        "sha256": "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+      },
+      {
+        "path": "tests/fixtures/android/relocs.c",
+        "sha256": "c5a6072945ffd37ceb25056a79a284313afd387595a31785ce2ed2668eab6e85"
+      }
+    ]
+  },
+  "toolchain": {
+    "clang": {
+      "command": "clang-21",
+      "realpath": "/usr/lib/llvm-21/bin/clang",
+      "sha256": "412bbe8c60571a1eb06f48fde89635033621caeb01a9b4ee76d46711bae8e932",
+      "version_first_line": "Ubuntu clang version 21.1.8 (6ubuntu1)"
+    },
+    "llvm_as": {
+      "command": "llvm-as-21",
+      "realpath": "/usr/lib/llvm-21/bin/llvm-as",
+      "sha256": "50526d303ae33ed44002023d8d9611186e916f4b8eaf70a608bdbf1d81122784",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    },
+    "opt": {
+      "command": "opt-21",
+      "realpath": "/usr/lib/llvm-21/bin/opt",
+      "sha256": "f3a0c71473eb573797c003382bbe096e6a6468f4da5caf406246f2dbb5e86531",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    }
+  },
+  "compile": {
+    "args": [
+      "--target=x86_64-pc-linux-gnu",
+      "-O1",
+      "-fno-unroll-loops",
+      "-fno-vectorize",
+      "-fno-slp-vectorize",
+      "-fno-strict-aliasing",
+      "-S",
+      "-emit-llvm"
+    ],
+    "include_dirs": [
+      "samples/source/library"
+    ]
+  },
+  "loop_analysis": {
+    "args": [
+      "-passes=print<loops>",
+      "-disable-output"
+    ],
+    "profiles": [
+      "adr0291_self_loop_shape",
+      "adr0292_single_latch_shape",
+      "single_latch_early_exit_shape",
+      "single_latch_no_exit_shape",
+      "multi_latch_shape",
+      "nested_shape",
+      "other_shape"
+    ]
+  },
+  "formal_output": "docs/consumer-track/verify/glaurung-llvm-loop-census-v1-result.json"
+}
