@@ -771,6 +771,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     artifact is retained. Two runs reproduce 1,438 raw bytes and the typed/term
     summary; source replay and stable no-partial-output failures pass. This is
     target-build selection, not broader MIR semantics or LLIR admission.
+  - [ADR-0290](../09-decisions/adr-0290-preregister-reflection-semantics-gate.md)
+    preregisters T5.1.6 before another semantic widening: derive the current 62
+    checked LLVM/MIR semantic variants from source, require exact manifest
+    ownership with proof/spec plus deterministic fuzz/replay evidence, close the
+    five missing ordinary cross-IR fuzz pairs, and expose the bounded gate in
+    `just check` and dedicated CI. This validates the admitted fragment; it does
+    not admit LLIR, loops, general places, or wider memory.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

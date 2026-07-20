@@ -345,3 +345,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0287](adr-0287-preregister-reproducible-mir-capture.md) | Accept exact compiler-MIR provenance, byte reproduction, and stale-fixture detection before extending MIR semantics | accepted |
 | [0288](adr-0288-preregister-checked-mir-byte-memory.md) | Accept structured non-panicking MIR byte-memory reflection with explicit access panic and branch-state joins | accepted |
 | [0289](adr-0289-preregister-cargo-owned-mir-selection.md) | Accept explicit Cargo package/target selection through exact-toolchain MIR capture and checked reflection | accepted |
+| [0290](adr-0290-preregister-reflection-semantics-gate.md) | Preregister exact checked-frontend semantic-variant ownership with proof plus deterministic fuzz evidence | proposed |
