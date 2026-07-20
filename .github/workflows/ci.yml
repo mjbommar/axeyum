@@ -95,6 +95,22 @@ jobs:
           exit 1
       - run: cargo test --workspace --all-features
 
+  cargo-mir-build:
+    name: checked Cargo MIR build (nightly-2026-05-01)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_PROFILE_DEV_DEBUG: 0
+      CARGO_PROFILE_TEST_DEBUG: 0
+      AXEYUM_VERIFY_MIR_REQUIRE_CARGO_BUILD: 1
+    steps:
+      - uses: actions/checkout@v5
+      # ADR-0287 binds this channel to rustc commit f53b654a8 and LLVM 22.1.4.
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2026-05-01
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p axeyum-verify --test cargo_mir_build -- --nocapture
+
   bench-micro:
     name: benchmark micro corpus
     runs-on: ubuntu-latest

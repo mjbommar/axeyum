@@ -1,10 +1,9 @@
 # ADR-0289: Preregister Cargo-owned MIR target selection
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; no target fixture crate, Cargo capture command, build
-selector, generated MIR, or build-backed reflection test exists under this ADR
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -121,9 +120,61 @@ The gates may be strengthened before the target fixture or first command code
 is added. They may not be weakened after a Cargo capture or semantic result is
 observed.
 
+## Result
+
+`axeyum-mir-build` now requires canonical absolute manifest, Cargo, rustc,
+target-directory, and output paths; explicit package, lib/bin target, function,
+and 64-bit width; a nonexisting isolated target directory and output; and the
+exact ADR-0287 rustc identity. It runs the selected target through a locked,
+quiet, code-owned `cargo rustc` command, removes ambient compiler wrappers and
+rustflags, captures raw stdout, and retains it through a no-clobber atomic hard
+link only after strict syntax and checked reflection succeed. The command help
+states that the selected target's build scripts may execute.
+
+Success emits `axeyum.verify-mir-build.v1` JSON with full Cargo/rustc identities,
+ordered Cargo and appended rustc arguments, canonical selection, typed shape,
+and canonical result/panic/final-memory terms. Errors emit a separate stable
+JSON schema and class. A newly created target directory is removed on every
+failure; existing output or target directories are rejected before compiler
+execution and never modified.
+
+The standalone locked `axeyum-mir-target-fixture` package is not a workspace
+member and has no dependencies. Its library owns `cargo_store_then_load` plus
+an intentionally unsupported neighboring reference function. Two clean runs
+under Cargo 1.97.0-nightly commit `eb9b60f1f6604b5e022c56be31692c215b8ba11d`
+and the registered rustc produce the same 1,438 raw bytes and byte-identical
+JSON summaries. The successful summary reports `[u8;4], usize, u8`, three
+blocks, a four-byte region, and an unsigned eight-bit result.
+
+The first real target also exposed a selection-boundary defect: the MIR parser
+previously parsed every unrelated function's full header while searching for a
+name, so an unsupported neighboring function rejected a valid selected one.
+Selection now reads only unrelated header names. The selected function still
+receives full strict typing, and explicitly selecting `unsupported_reference`
+still returns located `UnsupportedType`; no coercion or skip was added.
+
+The build-backed reflection proves `panic <-> index >= 4`, guarded result
+equality to the stored byte, the exact selected-byte update, and preservation
+of all other bytes. All four in-bounds source calls replay, and a solver-produced
+out-of-bounds index replays as a panic through the fixture source. Together
+with ADR-0288's direct-rustc/LLVM roundtrip gate, all three ingestion routes now
+carry the same bounded contract.
+
+Five command unit tests and three integration tests cover exact two-run
+reproduction, current-directory and wrapper independence, source replay,
+missing/escaping manifests, wrong compiler/package/target/function, unsupported
+neighbor selection, non-UTF-8 compiler output, existing output/target refusal,
+output-write failure, and no partial state. A dedicated
+`nightly-2026-05-01` CI job sets `AXEYUM_VERIFY_MIR_REQUIRE_CARGO_BUILD=1`, so
+the exact positive path cannot silently skip on stable CI. The complete
+`axeyum-verify --all-features` suite and doctests, strict all-target Clippy,
+warning-denied rustdoc, formatting, exact ADR-0287 replay, and repository links
+pass. ADR-0287's accepted source/output/provenance/checksum bytes are unchanged,
+and no dependency or feature surface changed.
+
 ## Consequences
 
-If accepted, T5.1.3 gains its first honest one-command target-package path:
+T5.1.3 gains its first honest one-command target-package path:
 Cargo selects and compiles the function's owning target, while Axeyum strictly
 checks the emitted artifact before retaining or describing a reflection. The
 same command and summary can later support compiler/build reproducibility

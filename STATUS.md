@@ -322,17 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0289 preregisters Cargo-owned MIR target selection.**
-  ADR-0288 accepts checked semantics over an authenticated direct-rustc module,
-  but no target Cargo package can reach that path from its own build. The
-  zero-row follow-up freezes one explicit manifest/package/lib-or-bin/function/
-  compiler/64-bit/target-dir/output command, `cargo rustc --locked`, raw stdout,
-  checked parse+reflection before atomic retention, deterministic typed/term
-  summary, stable failures, and a standalone dependency-free fixture package.
-  Two captures, exact byte/summary reproduction, three-way LLVM/direct-rustc/
-  Cargo-build semantics, source witness replay, no-partial-output controls, and
-  unchanged ADR-0287 bytes are required. Next: commit this ADR before creating
-  the target crate, command, capture, or semantic test.
+- **2026-07-20 — ADR-0289 accepts Cargo-owned MIR target selection.**
+  `axeyum-mir-build` now binds canonical manifest/package/lib-or-bin/function,
+  exact rustc, Cargo identity/arguments, 64-bit width, isolated target dir, and
+  nonexisting output in one command. It checks strict named syntax and bounded
+  semantics before atomic raw retention and emits deterministic typed/term
+  JSON. Two target-package builds reproduce all 1,438 raw bytes and the summary;
+  the exact panic/result/final-memory contract and source OOB witness replay
+  pass.
+  Stable selection/encoding/write failures leave no partial target or output.
+  A real unsupported neighbor also exposed and fixed over-eager module scanning
+  while preserving strict errors when that neighbor is selected. Exact nightly
+  CI, five command units, three integration tests, the complete verify suite,
+  strict Clippy/rustdoc, fixture replay, and links pass. This is one bounded
+  profile, not general places or `stable_mir`. Next: preregister the small T5.1.6
+  standing semantics/coverage gate before widening memory or touching LLIR.
 
 - **2026-07-20 — ADR-0288 accepts checked MIR byte-memory CFG reflection.**
   The 3,262-byte authenticated module now includes a byte-identical replayed
@@ -5120,7 +5124,7 @@ plan is built and committed on the current branch:
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
 |---|---|---|
-| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions with explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0288):** exact compiler-MIR capture/replay now feeds a named located checked path; LLVM and MIR each prove one initialized four-byte store/load contract with explicit access safety and final-memory joins, and MIR adds path-sensitive conditional writes. Remaining T5.1.3–6: whole-target build selection, automatic loop bridging, general MIR places and wide/aliased memory, and the broader semantics gate. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
+| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions with explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. Remaining T5.1.3–6: automatic loop bridging, general MIR places and wide/aliased memory, `stable_mir`, and the standing semantics gate. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | TODO — the architectural unlock for cross-function claims; exit: the checksum module re-proves modularly (without the MIR inliner), with a modular-vs-inlined differential gate at DISAGREE=0 |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
@@ -5128,14 +5132,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-20 — ADR-0289 freezes the Cargo-owned MIR selection seam.** Before
-  adding another semantic construct, the next T5.1.3 slice must explicitly
-  select a locked target package and lib/bin, compile it with the registered
-  rustc, validate one named function through the checked parser/reflector, and
-  only then atomically retain raw MIR and emit a deterministic summary. The
-  zero-row gates require byte/summary reproduction, the same four-byte contract
-  across Cargo MIR/direct MIR/LLVM, source replay, precise failure classes, and
-  no changes to the accepted fixture or dependency/deployment surfaces.
+- **2026-07-20 — ADR-0289 accepts the Cargo-owned MIR selection seam.** A
+  standalone locked fixture now reaches the checked reflector from its own
+  explicit Cargo build in one command. Two runs reproduce 1,438 raw bytes and
+  identical typed/term summaries; exact store/load safety and final-memory
+  proofs plus source replay pass. The command is no-clobber/no-partial, exact-
+  compiler CI is mandatory, and precise target/syntax/reflection failures stay
+  visible. Fixing selected-name scanning permits unrelated unsupported
+  functions without softening the selected function's types.
 
 - **2026-07-20 — ADR-0288 accepts authenticated checked MIR byte memory.** The
   exact rustc fixture grows to five functions / 3,262 raw bytes with a

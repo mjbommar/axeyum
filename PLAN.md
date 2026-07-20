@@ -140,12 +140,15 @@ session state.
 >    explicit access panic independent of `assert`, stores, branch memory joins,
 >    source replay, migrated bounds proofs, and the same bounded roundtrip
 >    specification on MIR and LLVM. Whole-crate build selection and general MIR
->    places remain open. ADR-0289 now preregisters the target-build prerequisite:
->    one explicit Cargo manifest/package/target/function selection must compile
->    with the registered toolchain, pass the checked MIR path, and retain raw
->    output in one command before broader places or LLIR work. Do not extend the
->    existing panic-oriented line parser or perturb the accepted Linux recall
->    route.
+>    places remain open. ADR-0289 now accepts the target-build prerequisite:
+>    `axeyum-mir-build` explicitly selects a locked Cargo manifest/package/
+>    lib-or-bin/function under the registered toolchain, checks before atomic
+>    raw retention, and reproduces both 1,438-byte output and deterministic
+>    typed/term JSON. The build-backed four-byte contract and source OOB replay
+>    pass; precise no-partial-output failures are tested. Close the small T5.1.6
+>    standing semantics gate before widening general places or admitting LLIR;
+>    do not extend the panic-oriented compatibility parser or perturb the
+>    accepted Linux recall route.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

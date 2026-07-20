@@ -495,6 +495,18 @@ fn parse_header(line: Line<'_>) -> Result<(String, Vec<Parameter>, MirType), Par
     Ok((name.to_owned(), params, return_ty))
 }
 
+fn selected_header_name(text: &str) -> Option<&str> {
+    let rest = text.strip_prefix("fn ")?;
+    let end = rest
+        .char_indices()
+        .find_map(|(index, character)| {
+            (character == '(' || character.is_whitespace()).then_some(index)
+        })
+        .unwrap_or(rest.len());
+    let name = &rest[..end];
+    (!name.is_empty()).then_some(name)
+}
+
 fn parse_local_decl(line: Line<'_>) -> Result<LocalDecl, ParseError> {
     let span = line.span();
     let text = line
@@ -879,11 +891,8 @@ pub fn parse_function(input: &str, selected: &str) -> Result<Function, ParseErro
     let source_lines = lines(input);
     let mut matches = Vec::new();
     for (index, line) in source_lines.iter().copied().enumerate() {
-        if line.trimmed().starts_with("fn ") {
-            let (name, _, _) = parse_header(line)?;
-            if name == selected {
-                matches.push(index);
-            }
+        if selected_header_name(line.trimmed()) == Some(selected) {
+            matches.push(index);
         }
     }
     let start = match matches.as_slice() {

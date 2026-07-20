@@ -765,11 +765,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     source replay and the same bounded LLVM/MIR roundtrip spec pass. Whole-crate
     build selection and general MIR places remain open.
   - [ADR-0289](../09-decisions/adr-0289-preregister-cargo-owned-mir-selection.md)
-    preregisters the next T5.1.3 prerequisite: one explicit Cargo manifest,
+    accepts the next T5.1.3 prerequisite: one explicit Cargo manifest,
     package, target, function, compiler, target width, target directory, and
     output must flow through the checked MIR path in one command before a raw
-    artifact is retained. This is target-build selection, not broader MIR
-    semantics or LLIR admission.
+    artifact is retained. Two runs reproduce 1,438 raw bytes and the typed/term
+    summary; source replay and stable no-partial-output failures pass. This is
+    target-build selection, not broader MIR semantics or LLIR admission.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -110,6 +110,22 @@ fn authenticated_module_selects_located_typed_write_cfg() {
             .kind(),
         axeyum_verify::reflect::mir::syntax::ParseErrorKind::DuplicateFunction
     );
+
+    let with_unrelated_unsupported = format!(
+        "{MIR}\nfn unrelated(_1: &[u8]) -> u8 {{\n    let mut _0: u8;\n    bb0: {{\n        _0 = copy (*_1)[const 0_usize];\n        return;\n    }}\n}}\n"
+    );
+    assert_eq!(
+        parse_function(&with_unrelated_unsupported, "store_then_load")
+            .unwrap()
+            .name,
+        "store_then_load"
+    );
+    assert_eq!(
+        parse_function(&with_unrelated_unsupported, "unrelated")
+            .unwrap_err()
+            .kind(),
+        axeyum_verify::reflect::mir::syntax::ParseErrorKind::UnsupportedType
+    );
 }
 
 #[test]

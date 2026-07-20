@@ -160,7 +160,39 @@ python3 scripts/check-verify-mir-fixture.py --require-replay
 
 `--verify` reports `compiler_replay=unavailable` rather than fabricating replay
 success on another toolchain; source/output/provenance drift still fails through
-the committed hashes. This accepts capture provenance only. The MIR reflector
-remains prototype-grade and panic-oriented; non-panicking typed parsing,
-explicit access definedness, memory joins, and store/load proofs require the
-next ADR.
+the committed hashes. ADR-0288 subsequently adds the separate checked path:
+named located syntax, non-panicking stable errors, access-derived panic,
+initialized byte stores, branch memory joins, and source-replayed store/load
+proofs. The old compatibility reflector remains panic-oriented, but it is no
+longer the checked consumer boundary.
+
+## One-command Cargo-owned reflection (2026-07-20, ADR-0289)
+
+`axeyum-mir-build` now selects a function from a target package's own locked
+Cargo build instead of compiling a copied source directly. Every path is
+absolute and canonical; the target directory and output must not already exist.
+For example, from the Axeyum root with two fresh `/tmp` names:
+
+```sh
+cargo run -p axeyum-verify --bin axeyum-mir-build -- \
+  --manifest-path "$(pwd)/crates/axeyum-verify/tests/fixtures/mir-target-crate/Cargo.toml" \
+  --package axeyum-mir-target-fixture --lib \
+  --function cargo_store_then_load --target-usize-width 64 \
+  --cargo "$(rustup which cargo)" --rustc "$(rustup which rustc)" \
+  --target-dir /tmp/axeyum-mir-build-target-1 \
+  --output /tmp/axeyum-cargo-store-1.mir
+```
+
+The command requires the ADR-0287 compiler (`nightly-2026-05-01`), clears
+ambient rustc wrappers/rustflags, invokes one explicit `cargo rustc --locked`
+target, and captures raw stdout. It selects and checks the requested function
+before atomically retaining the bytes, then prints stable JSON containing the
+Cargo/rustc identities and arguments, typed shape, and canonical result/panic/
+final-memory terms. Existing outputs are never overwritten and failures remove
+a newly created target directory.
+
+The selected Cargo build can execute its own build scripts and is therefore not
+a sandbox for hostile packages. The accepted profile is still intentionally
+narrow: one acyclic function with scalar values and one by-value bounded byte
+array. General places, references, calls, loops, drops/unwinds, generics,
+cross-target builds, and `stable_mir` remain future gates.
