@@ -1,0 +1,78 @@
+{
+  "schema": "axeyum.glaurung-llvm-loop-semantic-census.v1",
+  "result_state": "zero-row",
+  "structural_manifest": {
+    "path": "docs/consumer-track/verify/glaurung-llvm-loop-census-v1.json",
+    "sha256": "d5796feeaa8e6b421b1199d3d05c18d7337f01527f38e3edd58cbbe30e7e99b2"
+  },
+  "structural_result": {
+    "path": "docs/consumer-track/verify/glaurung-llvm-loop-census-v1-result.json",
+    "sha256": "f5ef6c3fdb8ff7b7ceebba23ad7ce029db2a92668a3f938b025b427e5c38f918"
+  },
+  "toolchain": {
+    "cargo": {
+      "command": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/cargo",
+      "realpath": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/cargo",
+      "sha256": "c0e51f3ecbd2030d8dcd86586e438e78468dce4d745b2f1d7165b75b91e9a49b",
+      "version_first_line": "cargo 1.97.0-nightly (eb9b60f1f 2026-04-24)"
+    },
+    "llvm_extract": {
+      "command": "/usr/lib/llvm-21/bin/llvm-extract",
+      "realpath": "/usr/lib/llvm-21/bin/llvm-extract",
+      "sha256": "7c02041b5306536670c74f16c463f5026776f819f66a63effe11d88d352c069a",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    },
+    "rustc": {
+      "command": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/rustc",
+      "realpath": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/rustc",
+      "sha256": "69bbd1aed973b74c1932212284872efbb11991f91bce888655633a41c9d278ad",
+      "version_first_line": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)"
+    }
+  },
+  "cargo_args": [
+    "build",
+    "--locked",
+    "--offline",
+    "--quiet",
+    "-p",
+    "axeyum-verify",
+    "--bin",
+    "axeyum-llvm-loop-classify"
+  ],
+  "producer_files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "24d903a6c2a8d2a039705f58ecba800efaea563af8634119c0f7c27755ae9ea7"
+    },
+    {
+      "path": "crates/axeyum-verify/Cargo.toml",
+      "sha256": "edb09b1675e0f7e982d4ba9bf65800f83cb7c9a646e65243541a4a9c898c9e8d"
+    },
+    {
+      "path": "crates/axeyum-verify/src/bin/axeyum-llvm-loop-classify.rs",
+      "sha256": "d034322a80bfd709d61233c19a81762af0f4cf27085b674ba59520b82805dfb6"
+    },
+    {
+      "path": "crates/axeyum-verify/src/reflect/llvm/loops.rs",
+      "sha256": "9bfcfdaed0f4d2efdc447e083777624eb36f552b6e6cd2545b5ed9ce094f683a"
+    },
+    {
+      "path": "crates/axeyum-verify/src/reflect/llvm/syntax.rs",
+      "sha256": "ad4bfa8f87138267385b87253ac2be6a2a20945d9726338371919d1af0af42cd"
+    },
+    {
+      "path": "crates/axeyum-verify/src/reflect/llvm/syntax/cfg.rs",
+      "sha256": "2a126e88496bb198df9d3d48404a4bb4de011cd4f02b6d5c4712968e079b235f"
+    },
+    {
+      "path": "scripts/census-glaurung-llvm-loop-semantics.py",
+      "sha256": "8aad9f2e0b0f54fc6ae0353aef978e1c3f376b3a3078b3dc92c711f516c0eea7"
+    }
+  ],
+  "selection": {
+    "minimum_functions": 2,
+    "minimum_sources": 2,
+    "require_strict_plurality": true
+  },
+  "formal_output": "docs/consumer-track/verify/glaurung-llvm-loop-semantic-census-v1-result.json"
+}

@@ -171,9 +171,13 @@ session state.
 >    `mathlib_is_prime`. The sole rejected profile occurs in only one function
 >    and one source, fails the frozen diversity rule, and authorizes no code.
 >    Structural matching is not semantic acceptance. T5.1.4 remains WIP: next
->    preregister semantic eligibility/rejection measurement over real loops or
->    independently broaden the population; do not build early-exit support from
->    this singleton. General rejected-loop unrolling, MIR, multi-latch/
+>    ADR-0294 preregisters semantic eligibility/rejection measurement over all
+>    12 exact functions before observing a result. It recompiles and
+>    hash-matches every source, extracts functions with pinned LLVM, preserves
+>    the checked parser/loop error class and diagnostic, and forbids dropped
+>    rows; its cross-function/source plurality rule can select only a later
+>    audit lane, not code. Do not build early-exit support from the ADR-0293
+>    singleton. General rejected-loop unrolling, MIR, multi-latch/
 >    early-exit/switch/memory loops, general places, and LLIR remain open, and
 >    the accepted Linux recall route stays untouched.
 >

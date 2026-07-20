@@ -806,6 +806,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     selected. Structural matching is not semantic eligibility; the next loop
     step must measure real semantic rejection or independently broaden the
     population.
+  - [ADR-0294](../09-decisions/adr-0294-preregister-glaurung-llvm-loop-semantic-census.md)
+    preregisters that semantic measurement over all 12 exact loop functions.
+    It preserves the existing typed-parser and loop-reflector error kinds,
+    retains every diagnostic, tries all non-Boolean PHIs only to remove
+    property-name bias, and forbids dropped rows. A strict-plurality rejection
+    bucket must span two functions and two sources before it can select a next
+    audit lane. The formal result remains unobserved.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
