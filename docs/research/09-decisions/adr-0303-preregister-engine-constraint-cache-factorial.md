@@ -1,10 +1,11 @@
 # ADR-0303: Preregister a bounded engine-cache versus warm-solver factorial
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero cache implementation timing rows; prior immutable-trace
-opportunity analysis selects the experiment
+Result state: implementation/runner/analyzer/registration frozen with zero
+cache timing rows; prior immutable-trace opportunity analysis selects the
+experiment
 
 ## Context
 
@@ -13,7 +14,7 @@ over, or largely subsumed by, the constraint caching long established in
 symbolic execution by GREEN, GreenTrie, and counterexample caches. The layers
 are distinct:
 
-- Glaurung's proposed engine cache stores complete query results above the
+- Glaurung's experimental engine cache stores complete query results above the
   backend and may avoid a solver call; while
 - Axeyum's warm path retains translated AIG/CNF, SAT state, learned clauses,
   lifted models, and a replay-SAT cache inside a path-owned solver.
@@ -130,6 +131,23 @@ versioned registration and committed before the first timed replay. That later
 freeze may correct a pre-observation implementation defect but may not change
 the six modes, inputs, capacities, soundness rules, or acceptance logic here.
 
+That freeze is now complete:
+
+- isolated Glaurung `8b53c5038b50f3b717ad59970830b0c9bf54cdb8`
+  implements the cache, warm interaction, and v2 report against tracked-clean
+  Axeyum `da24b016543d1843f25019eba3675228c853f892`;
+- the Axeyum-only release replay executable is
+  `fbde4ee8dfa6681a6d8068adfb8aa31a03d736c2ae998b952271b5bd760a0d84`;
+- Axeyum tooling commit `14834d2f3b7df1cd077988409a3216bfd8388041`
+  supplies the fail-closed runner and analyzer; and
+- the exact 20 inputs, executable/libraries, scripts, six modes, environment,
+  4 GiB cgroup, CPU, and statistical gates are bound in the
+  [zero-row registration](../../../bench-results/glaurung-engine-cache-factorial-20260720/registration.json).
+
+Read-only preflight accepts every registered identity without invoking the
+replay executable. Seventeen focused producer tests and seven tooling tests
+pass. These are implementation and protocol facts, not timing observations.
+
 ### Required telemetry
 
 Every process reports:
@@ -188,11 +206,12 @@ authorize a general speed headline.
 
 ## Zero-row boundary
 
-No cache implementation, registration, timed replay, or timing analyzer exists
-at this decision. The only result is the disclosed read-only structural
-opportunity artifact. Unit fixtures for the future implementation may exercise
-cache semantics and counters; no real trace timing row may be observed before
-the implementation/runner/analyzer freeze is committed.
+The cache implementation, registration, runner, and analyzer now exist and are
+committed, so the preregistered experiment is executable. No real trace has yet
+been replayed through any cache mode: timing rows, ratios, confidence intervals,
+and driver conclusions remain empty. The only observed workload result remains
+the disclosed read-only structural opportunity artifact. Unit fixtures exercise
+semantics, counters, and fail-closed analysis without becoming benchmark rows.
 
 ## Alternatives
 

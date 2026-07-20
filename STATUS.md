@@ -322,8 +322,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — Real traces show enough engine-cache opportunity to justify
-  the GREEN additivity experiment, without answering it yet.** A fail-closed
+- **2026-07-20 — The engine-cache factorial is implemented and fully frozen,
+  but remains zero-row before execution.** A fail-closed
   analyzer reconstructs all 64,510 ordered check occurrences from ADR-0272's
   immutable four-driver/five-repetition campaign. Per four-driver pass, exact
   reuse can answer 5,868/12,902 checks (45.48%); cached SAT supersets and UNSAT
@@ -335,7 +335,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   off/exact/implication crossed with cold/warm Axeyum in separate fixed-stream
   processes, with a 4,096-entry multi-resource LRU, replay-checked SAT hits,
   monotone UNSAT reuse, complete stage/resource telemetry, and a bootstrap/CV
-  additivity gate. Zero cache timing rows exist.
+  additivity gate. Isolated Glaurung `8b53c50` now implements strict exact and
+  monotone structural reuse, full-width SAT-model replay, deterministic bounded
+  eviction, warm catch-up accounting, and v2 per-check telemetry. All 17 focused
+  Rust tests pass under one-job 4 GiB discipline. Axeyum `14834d2f` adds a
+  fail-closed runner/analyzer with seven passing unit tests. The versioned
+  registration binds the 20 immutable traces, original finding streams, four
+  offline reports, opportunity result, clean Axeyum `da24b016`, the Axeyum-only
+  replay executable `fbde4ee8...0a0d84`, resolved libraries, six modes, fixed
+  environment, 4 GiB cgroup, process order, and statistics. Read-only preflight
+  passes across every bound artifact. Zero cache timing rows still exist; the
+  next action is the exact committed 120-process campaign and unchanged analyzer.
 
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
@@ -5405,6 +5415,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Froze the executable engine-cache factorial at zero rows.**
+  Glaurung `8b53c50` implements the sound bounded cache and complete v2 replay
+  telemetry; Axeyum `14834d2f` provides the six-mode runner/analyzer. Seventeen
+  focused Rust tests and seven tooling tests pass. A clean-source one-job build
+  produced the registered pure-Rust replay executable, and read-only preflight
+  validates all 20 traces plus every source, artifact, tool, executable, library,
+  environment, CPU, and cgroup binding. No trace replay or timing ratio has yet
+  been observed.
 
 - **2026-07-20 — Preregistered the engine-cache/warm-state factorial.** ADR-0303
   freezes six fixed-stream modes, sound exact/SAT-superset/UNSAT-subset rules,

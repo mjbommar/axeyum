@@ -286,8 +286,13 @@ session state.
 >    six-mode form: cache off/exact/implication crossed with cold/warm Axeyum,
 >    one isolated process per accepted trace, a 4,096-entry multi-resource LRU,
 >    complete stage/work telemetry, and a bootstrap/CV additivity criterion.
->    It has zero implementation timing rows; implement and pin the producer,
->    runner, and analyzer before observation.
+>    Glaurung `8b53c50` now implements the cache and v2 replay telemetry against
+>    tracked-clean Axeyum `da24b016`; Axeyum `14834d2f` supplies the fail-closed
+>    runner/analyzer, and the dated zero-row registration binds all 20 traces,
+>    finding/offline artifacts, source commits, executable/libraries, six modes,
+>    cgroup, environment, and analysis gates. Its read-only preflight passes.
+>    Zero timing rows still exist. Next execute exactly the committed 120-process
+>    campaign, then analyze it without changing modes, bounds, or thresholds.
 > 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
 >    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
 >    related-work positioning vs Veritas, attacker-control, and the MS agentic system.
