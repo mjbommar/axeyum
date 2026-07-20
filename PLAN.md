@@ -329,9 +329,16 @@ session state.
 > lookup/hit/write and payload/storage accounting, root-width invariants, and
 > deterministic ordered lowering/CNF regression digests. A separate fail-closed
 > analyzer re-sums every row and permits only the registered representation
-> deltas. The immediate next action is a clean detached 162-query BTree profile;
-> only an accepted committed baseline permits the dense implementation. Exact
-> structural/storage comparison then gates six order-balanced unprofiled pairs
+> deltas. The clean detached BTree profile is now frozen from `d13d1f92`:
+> artifact v39 decides 162/162 (88 SAT, 74 UNSAT), agrees with the manifest and
+> in-process Z3 on 162/162, replays every SAT model, and passes all per-instance
+> memo invariants. Its aggregate memo accounts for 24,470 occupied/source terms,
+> 656,638 payload literals, 5,938,264 conservative logical bytes, and 162
+> deterministic structure-digest samples. The independent analysis accepts it;
+> artifact/analysis SHA-256 values are `d8258399...b39f5` and
+> `205bdfcf...4f25`. This committed baseline now permits only the preregistered
+> dense implementation. Exact structural/storage comparison then gates six
+> order-balanced unprofiled pairs
 > on bit-blast time, family tails, cold total, variance, and RSS. Failure restores
 > the tree representation. Clause storage, scratch reuse, reverse traversal,
 > and capacity hints remain closed; interning and packed-literal ideas require

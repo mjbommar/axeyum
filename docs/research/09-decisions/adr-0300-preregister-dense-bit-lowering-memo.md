@@ -111,6 +111,37 @@ profile. The candidate commit and its tests must be committed before the
 candidate profile. No corrected-wide-v3 result may be used to alter these
 gates.
 
+## Frozen baseline observation
+
+The clean detached BTree baseline was captured from telemetry revision
+`d13d1f92446e86113702a7cc27d3e1a5eb67c687` under the registered configuration.
+Artifact version 39 records a clean source tree, exact manifest content hash
+`sha256:7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064`,
+one job, raw/rewrite-off `sat-bv`, and the fixed deterministic resource limits.
+
+The result satisfies the frozen population and soundness gates: 162/162 are
+decided (88 SAT, 74 UNSAT), manifest and in-process Z3 agreement are 162/162,
+all SAT models replay, and no query is unknown, unsupported, erroneous, or in
+disagreement. All 162 memo rows satisfy their registered invariants and provide
+deterministic lowering/CNF structure digests.
+
+The representation-neutral BTree totals are 24,470 source terms, slots,
+occupied entries, and writes; 64,901 lookups; 20,367 hits; 656,638 payload and
+payload-capacity literals; 7,865 actual and expected root bits; and 5,938,264
+conservative logical bytes (685,160 header plus 5,253,104 payload). The
+independent analyzer accepts the artifact. The retained files are:
+
+- `bench-results/glaurung-dense-bit-memo-20260720/baseline/artifact.json`,
+  SHA-256 `d82583993e21b9a1872cd301f61edb45f7df9720fb9ee4e2487aa90dbf3b39f5`;
+- `bench-results/glaurung-dense-bit-memo-20260720/baseline/analysis.json`,
+  SHA-256 `205bdfcffffa696336821ea69c4f3de0ee5aed6840fffa84daeec457032a4f25`.
+
+The capped process completed in 3 minutes 2.659 seconds wall time with a 1.3 GiB
+memory peak and zero swap. This is operational evidence that the measurement
+respected the resource discipline, not a candidate performance result. The
+baseline is now frozen; only the already preregistered dense representation may
+be implemented and compared against it.
+
 ## Fixed structural observation
 
 Run one clean detached baseline profile and one clean detached candidate profile

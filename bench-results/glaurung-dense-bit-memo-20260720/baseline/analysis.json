@@ -1,0 +1,36 @@
+{
+  "accepted": true,
+  "families": {
+    "arithmetic": 36,
+    "comparison": 12,
+    "mixed": 7,
+    "register-slice": 52,
+    "slice-partial": 54,
+    "trivial": 1
+  },
+  "memo_totals": {
+    "expected_root_bits": 7865,
+    "hits": 20367,
+    "logical_header_bytes": 685160,
+    "logical_payload_bytes": 5253104,
+    "logical_total_bytes": 5938264,
+    "lookups": 64901,
+    "occupied": 24470,
+    "payload_capacity_bytes": 5253104,
+    "payload_capacity_literals": 656638,
+    "payload_literals": 656638,
+    "root_bits": 7865,
+    "slots": 24470,
+    "source_terms": 24470,
+    "writes": 24470
+  },
+  "oracle_and_manifest_agreement": true,
+  "per_instance_invariants_hold": true,
+  "population": {
+    "files": 162,
+    "sat": 88,
+    "unsat": 74
+  },
+  "representation": "btree-v1",
+  "schema": "axeyum.bit-lowering-memo-profile-analysis.v1"
+}

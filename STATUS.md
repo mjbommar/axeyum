@@ -322,8 +322,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0300's BTree telemetry and independent structural gate are
-  ready for the frozen baseline.**
+- **2026-07-20 — ADR-0300's frozen BTree baseline is accepted; the isolated
+  dense implementation is now unblocked.**
   The audited mechanism is exact lookup on dense insertion-order `TermId`s:
   production currently uses `BTreeMap<TermId, Vec<AigLit>>` without semantic
   iteration. The reported 3.89x dense-plus-`Rc` scratch result is explicitly
@@ -338,8 +338,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   per-query structure delta. Focused BV/solver/bench tests, strict Clippy,
   warning-denied rustdoc, QF_BV-only, scalar-WASM, `+simd128` WASM, analyzer,
   formatting, and link gates pass inside the serialized 4 GiB envelope (largest
-  observed peak 2.4 GiB, zero swap). The immediate next action is the clean
-  detached 162-query BTree profile; only its accepted committed artifact permits
+  observed peak 2.4 GiB, zero swap). The clean detached profile from `d13d1f92`
+  now decides 162/162 (88 SAT, 74 UNSAT), agrees with both the exact manifest and
+  in-process Z3 on 162/162, replays every SAT model, and passes all 162 memo and
+  structure-digest rows. The accepted BTree totals are 24,470 source/occupied
+  terms, 656,638 payload literals, and 5,938,264 conservative logical bytes;
+  artifact and analysis hashes are `d8258399...b39f5` and
+  `205bdfcf...4f25`. The run peaked at 1.3 GiB with zero swap inside the
+  serialized cgroup. This frozen artifact now permits only the preregistered
   dense implementation. Exact structural/storage identity then gates six
   order-balanced unprofiled pairs on bit-blast time, cold total, variance,
   family tails, and RSS. Failure restores the BTree map; success is bounded
