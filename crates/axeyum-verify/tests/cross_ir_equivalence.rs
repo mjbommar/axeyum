@@ -531,7 +531,11 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
         ("sel/br+phi", SEL_MIR, SEL_BR_LL, 32),
         ("sar", SAR_MIR, SAR_LL, 32),
         ("scale", SCALE_MIR, SCALE_LL, 32),
-        ("lut", LUT_MIR, LUT_LL, 8),
+        ("lut/select", LUT_MIR, LUT_LL, 8),
+        ("lut/switch", LUT_MIR, LUT_SWITCH_LL, 8),
+        ("ext", EXT_MIR, EXT_LL, 8),
+        ("notx", NOTX_MIR, NOTX_LL, 32),
+        ("negate", NEG_MIR, NEG_LL, 32),
     ];
     for (name, mir, ll, width) in pairs {
         let _canonical = canonical_llvm(ll);
@@ -544,6 +548,45 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
         DiffFuzz::new(vec![(x_sym, *width)], 10_000)
             .check_agree(&arena, from_mir, from_llvm)
             .assert_agreed(&format!("{name}: mir/llvm reflections"));
+    }
+
+    let mut arena = TermArena::new();
+    let a_sym = arena.declare("a", Sort::BitVec(32)).unwrap();
+    let b_sym = arena.declare("b", Sort::BitVec(32)).unwrap();
+    let a = arena.var(a_sym);
+    let b = arena.var(b_sym);
+    let from_mir = reflect_mir_into(&mut arena, &[a, b], UMIN_MIR);
+    let from_llvm = reflect_into(&mut arena, &[a, b], UMIN_LL);
+    DiffFuzz::new(vec![(a_sym, 32), (b_sym, 32)], 10_000)
+        .check_agree(&arena, from_mir, from_llvm)
+        .assert_agreed("umin: mir/llvm reflections");
+}
+
+/// The `unreachable` pair has a registered source invariant, so its concrete
+/// differential gate exhausts exactly that defined domain instead of comparing
+/// LLVM's undefined placeholder outside `x < 3`.
+#[test]
+fn differential_lut3_defined_domain_mir_vs_llvm() {
+    let canonical = canonical_llvm(LUT3_UNREACH_LL);
+    let mut arena = TermArena::new();
+    let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
+    let x = arena.var(x_sym);
+    let from_mir = reflect_mir_unary(&mut arena, x, LUT3_MIR);
+    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], &canonical).unwrap();
+
+    for value in 0..3 {
+        let mut assignment = Assignment::new();
+        assignment.set(x_sym, Value::Bv { width: 8, value });
+        assert_eq!(
+            eval(&arena, from_llvm.defined, &assignment).unwrap(),
+            Value::Bool(true),
+            "lut3 must be defined at x={value}"
+        );
+        assert_eq!(
+            eval(&arena, from_mir, &assignment).unwrap(),
+            eval(&arena, from_llvm.value, &assignment).unwrap(),
+            "lut3 reflections disagree at x={value}"
+        );
     }
 }
 

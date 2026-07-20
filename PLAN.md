@@ -145,14 +145,15 @@ session state.
 >    lib-or-bin/function under the registered toolchain, checks before atomic
 >    raw retention, and reproduces both 1,438-byte output and deterministic
 >    typed/term JSON. The build-backed four-byte contract and source OOB replay
->    pass; precise no-partial-output failures are tested. ADR-0290 now
->    preregisters the small T5.1.6 standing gate: derive all 62 checked LLVM/MIR
->    semantic variants from source, require exact proof/spec plus deterministic
->    fuzz/replay ownership, close the 6/11 ordinary cross-IR fuzz gap, and expose
->    one bounded local/CI command. Commit that zero row before the manifest,
->    checker, or tests; do not widen general places, admit LLIR, extend the
->    panic-oriented compatibility parser, or perturb the accepted Linux recall
->    route first.
+>    pass; precise no-partial-output failures are tested. ADR-0290 now accepts
+>    the T5.1.6 standing gate: all 62 source-derived checked LLVM/MIR semantic
+>    variants have exact proof/spec plus deterministic fuzz/replay ownership;
+>    96 scalar goals, 11,248 exhaustive rows, 11 cross-IR pairs / 110,000 tuples,
+>    five refutations, ten checker mutations, and the dedicated local/CI runner
+>    pass. Next preregister the smallest automatic reducible-loop bridge
+>    (T5.1.4) before widening general places or admitting LLIR; do not extend the
+>    panic-oriented compatibility parser or perturb the accepted Linux recall
+>    route.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

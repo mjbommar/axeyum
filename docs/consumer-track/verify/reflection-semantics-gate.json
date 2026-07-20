@@ -1,0 +1,309 @@
+{
+  "schema": "axeyum.reflection-semantics-gate.v1",
+  "surfaces": [
+    {
+      "id": "llvm.binary_opcode",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "BinaryOpcode"
+    },
+    {
+      "id": "llvm.int_predicate",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "IntPredicate"
+    },
+    {
+      "id": "llvm.cast_opcode",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "CastOpcode"
+    },
+    {
+      "id": "llvm.intrinsic",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "Intrinsic"
+    },
+    {
+      "id": "llvm.semantic_flag",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "SemanticFlag"
+    },
+    {
+      "id": "llvm.gep_flag",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "GepFlag"
+    },
+    {
+      "id": "llvm.instruction",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/instruction.rs",
+      "enum": "ScalarInstructionKind"
+    },
+    {
+      "id": "llvm.terminator",
+      "source": "crates/axeyum-verify/src/reflect/llvm/syntax/cfg.rs",
+      "enum": "TerminatorKind"
+    },
+    {
+      "id": "mir.binary_opcode",
+      "source": "crates/axeyum-verify/src/reflect/mir/syntax.rs",
+      "enum": "BinaryOpcode"
+    },
+    {
+      "id": "mir.rvalue",
+      "source": "crates/axeyum-verify/src/reflect/mir/syntax.rs",
+      "enum": "Rvalue"
+    },
+    {
+      "id": "mir.statement",
+      "source": "crates/axeyum-verify/src/reflect/mir/syntax.rs",
+      "enum": "StatementKind"
+    },
+    {
+      "id": "mir.terminator",
+      "source": "crates/axeyum-verify/src/reflect/mir/syntax.rs",
+      "enum": "TerminatorKind"
+    }
+  ],
+  "evidence_groups": [
+    {
+      "id": "llvm-scalar-binary",
+      "members": [
+        "llvm.binary_opcode::Add",
+        "llvm.binary_opcode::Sub",
+        "llvm.binary_opcode::Mul",
+        "llvm.binary_opcode::And",
+        "llvm.binary_opcode::Or",
+        "llvm.binary_opcode::Xor",
+        "llvm.binary_opcode::Shl",
+        "llvm.binary_opcode::Lshr",
+        "llvm.binary_opcode::Ashr",
+        "llvm.binary_opcode::Udiv",
+        "llvm.binary_opcode::Sdiv",
+        "llvm.binary_opcode::Urem",
+        "llvm.binary_opcode::Srem",
+        "llvm.instruction::Binary"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_binary_opcode_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_binary_opcode_specs_and_exhaustive_fuzz"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/cross_ir_refutation.rs::off_by_one_strength_reduction_refuted",
+        "crates/axeyum-verify/tests/cross_ir_refutation.rs::lshr_for_ashr_refuted",
+        "crates/axeyum-verify/tests/cross_ir_refutation.rs::dropped_mask_refuted"
+      ]
+    },
+    {
+      "id": "llvm-scalar-predicate",
+      "members": [
+        "llvm.int_predicate::Eq",
+        "llvm.int_predicate::Ne",
+        "llvm.int_predicate::Ult",
+        "llvm.int_predicate::Ule",
+        "llvm.int_predicate::Ugt",
+        "llvm.int_predicate::Uge",
+        "llvm.int_predicate::Slt",
+        "llvm.int_predicate::Sle",
+        "llvm.int_predicate::Sgt",
+        "llvm.int_predicate::Sge",
+        "llvm.instruction::Icmp"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_integer_predicate_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_integer_predicate_specs_and_exhaustive_fuzz"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/cross_ir_refutation.rs::unsigned_compare_of_signed_test_refuted"
+      ]
+    },
+    {
+      "id": "llvm-scalar-cast",
+      "members": [
+        "llvm.cast_opcode::Zext",
+        "llvm.cast_opcode::Sext",
+        "llvm.cast_opcode::Trunc",
+        "llvm.instruction::Cast"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_cast_and_intrinsic_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_cast_and_intrinsic_specs_and_exhaustive_fuzz"
+      ]
+    },
+    {
+      "id": "llvm-scalar-intrinsic",
+      "members": [
+        "llvm.intrinsic::UnsignedMin",
+        "llvm.intrinsic::UnsignedMax",
+        "llvm.instruction::Intrinsic"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_cast_and_intrinsic_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_cast_and_intrinsic_specs_and_exhaustive_fuzz"
+      ]
+    },
+    {
+      "id": "llvm-scalar-flags",
+      "members": [
+        "llvm.semantic_flag::Nuw",
+        "llvm.semantic_flag::Nsw",
+        "llvm.semantic_flag::Exact",
+        "llvm.semantic_flag::Disjoint",
+        "llvm.semantic_flag::Nneg"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_semantic_flag_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_semantic_flag_specs_and_exhaustive_fuzz"
+      ]
+    },
+    {
+      "id": "llvm-scalar-select",
+      "members": [
+        "llvm.instruction::Select"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_select_spec_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::llvm_select_spec_and_exhaustive_fuzz"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/cross_ir_refutation.rs::flipped_select_polarity_refuted"
+      ]
+    },
+    {
+      "id": "llvm-bounded-memory",
+      "members": [
+        "llvm.gep_flag::InBounds",
+        "llvm.gep_flag::Nuw",
+        "llvm.instruction::GetElementPtr",
+        "llvm.instruction::Load",
+        "llvm.instruction::Store"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_checked_memory.rs::store_load_roundtrip_and_final_memory_are_exact",
+        "crates/axeyum-verify/tests/llvm_checked_memory.rs::gep_bounds_wrap_flags_and_pointer_names_are_exact"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/llvm_checked_memory.rs::store_load_roundtrip_and_final_memory_are_exact",
+        "crates/axeyum-verify/tests/llvm_checked_memory.rs::out_of_bounds_accesses_are_path_conditioned",
+        "crates/axeyum-verify/tests/llvm_checked_memory.rs::deterministic_memory_noise_never_panics"
+      ]
+    },
+    {
+      "id": "llvm-return",
+      "members": [
+        "llvm.instruction::Return",
+        "llvm.terminator::Return"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_checked_cfg.rs::straight_line_checked_apis_are_equivalent"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::differential_fuzz_mir_vs_llvm_reflections"
+      ]
+    },
+    {
+      "id": "llvm-branch-control",
+      "members": [
+        "llvm.terminator::Branch",
+        "llvm.terminator::CondBranch"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_checked_cfg.rs::branch_phi_and_select_agree_with_selected_arm_poison"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::differential_fuzz_mir_vs_llvm_reflections"
+      ]
+    },
+    {
+      "id": "llvm-switch-control",
+      "members": [
+        "llvm.terminator::Switch"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::lut_mir_switchint_equals_llvm_switch"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::differential_fuzz_mir_vs_llvm_reflections"
+      ]
+    },
+    {
+      "id": "llvm-unreachable-control",
+      "members": [
+        "llvm.terminator::Unreachable"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::lut3_equivalence_holds_exactly_under_the_range_hypothesis",
+        "crates/axeyum-verify/tests/llvm_checked_cfg.rs::unreachable_default_is_false_definedness_not_a_fabricated_value"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/cross_ir_equivalence.rs::differential_lut3_defined_domain_mir_vs_llvm"
+      ]
+    },
+    {
+      "id": "mir-scalar-operations",
+      "members": [
+        "mir.binary_opcode::Eq",
+        "mir.binary_opcode::Lt",
+        "mir.binary_opcode::BitAnd",
+        "mir.rvalue::Binary"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::mir_scalar_opcode_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::mir_scalar_opcode_specs_and_exhaustive_fuzz"
+      ]
+    },
+    {
+      "id": "mir-scalar-control",
+      "members": [
+        "mir.rvalue::Use",
+        "mir.statement::Assign",
+        "mir.statement::StorageMarker",
+        "mir.terminator::Return",
+        "mir.terminator::Goto",
+        "mir.terminator::Switch"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::mir_scalar_opcode_specs_and_exhaustive_fuzz"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/reflection_semantics_gate.rs::mir_scalar_opcode_specs_and_exhaustive_fuzz"
+      ]
+    },
+    {
+      "id": "mir-bounded-memory",
+      "members": [
+        "mir.rvalue::ArrayRead",
+        "mir.statement::ArrayStore",
+        "mir.terminator::Assert"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/mir_checked_memory.rs::store_then_load_has_exact_panic_result_and_final_memory",
+        "crates/axeyum-verify/tests/checked_bounds.rs::clamped_read_proved_panic_free_for_all_indices"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/mir_checked_memory.rs::source_replay_and_mir_llvm_roundtrip_specs_agree",
+        "crates/axeyum-verify/tests/checked_bounds.rs::read_values_match_real_rust_in_bounds"
+      ]
+    }
+  ],
+  "test_binaries": [
+    "reflection_semantics_gate",
+    "cross_ir_equivalence",
+    "cross_ir_refutation",
+    "llvm_checked_cfg",
+    "llvm_checked_memory",
+    "mir_checked_memory",
+    "checked_bounds"
+  ]
+}

@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code links
 
 fmt:
     cargo fmt --all --check
@@ -53,6 +53,11 @@ doc:
 
 qfbv-profile:
     ./scripts/check-qfbv-profile.sh
+
+# T5.1.6: source-derived proof + deterministic fuzz ownership for every checked
+# LLVM/MIR semantic variant, followed by the exact bounded evidence suites.
+reflection-semantics-gate:
+    python3 scripts/check-reflection-semantics-gate.py --run
 
 benchmark-repetition-tests:
     python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_shards.py scripts/tests/test_summarize_glaurung_shard_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_summarize_glaurung_warm_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_shard_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py scripts/tests/test_compare_glaurung_native_replay.py scripts/tests/test_analyze_glaurung_paired_traces.py scripts/tests/test_analyze_glaurung_regime_features.py scripts/tests/test_analyze_glaurung_profiled_trace.py scripts/tests/test_analyze_qfbv_faithfulness.py scripts/tests/test_measure_glaurung_authoritative_findings.py

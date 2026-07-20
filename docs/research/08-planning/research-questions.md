@@ -772,12 +772,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     summary; source replay and stable no-partial-output failures pass. This is
     target-build selection, not broader MIR semantics or LLIR admission.
   - [ADR-0290](../09-decisions/adr-0290-preregister-reflection-semantics-gate.md)
-    preregisters T5.1.6 before another semantic widening: derive the current 62
-    checked LLVM/MIR semantic variants from source, require exact manifest
-    ownership with proof/spec plus deterministic fuzz/replay evidence, close the
-    five missing ordinary cross-IR fuzz pairs, and expose the bounded gate in
-    `just check` and dedicated CI. This validates the admitted fragment; it does
-    not admit LLIR, loops, general places, or wider memory.
+    accepts T5.1.6 before another semantic widening: 62 source-derived checked
+    LLVM/MIR variants have exact manifest ownership with proof/spec plus
+    deterministic fuzz/replay evidence. The scalar matrix proves 96 goals and
+    exhausts 11,248 bounded rows; 11 cross-IR pairs agree on 110,000 tuples; all
+    five refutations replay. One mutation-tested runner is wired into `just`
+    and dedicated CI. This validates the admitted fragment; it does not admit
+    LLIR, loops, general places, or wider memory.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -1,10 +1,9 @@
 # ADR-0290: Preregister the reflection semantics coverage gate
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; no semantics manifest, manifest checker, dedicated gate
-test, or dedicated CI job exists under this ADR
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -135,10 +134,50 @@ satisfy all of the following:
 The gates may be strengthened before the first manifest observation. They may
 not be weakened after the source inventory or coverage result is observed.
 
+## Result
+
+The versioned `axeyum.reflection-semantics-gate.v1` manifest registers the 12
+source enum declarations named by this ADR. The checker derives exactly 62
+variants and requires exact one-owner coverage across 14 evidence groups. The
+accepted report contains 15 distinct proof/spec tests, 13 deterministic
+fuzz/replay tests, and all five replay-checked refutation tests. No semantic key
+is missing, duplicated, or orphaned.
+
+The new scalar matrix constructs independent finite truth-table specifications
+inside the Axeyum arena and proves reflected value/definedness equal to them.
+It covers all 13 LLVM binary operations, 10 integer predicates, three casts,
+two intrinsics, five flags in every currently legal operation family, `select`,
+and all three checked MIR scalar binary operations. Its six tests discharge 96
+symbolic goals and exhaustively compare 11,248 concrete bounded assignments.
+Values are compared only where LLVM definedness is true; division, shift,
+signed-overflow, wrap, `exact`, `disjoint`, truncation, and `nneg` boundaries
+all have explicit false-definedness rows.
+
+The ordinary cross-IR differential table now contains all 11 admitted pairs:
+the six prior rows plus LLVM-switch `lut`, `ext`, `notx`, `negate`, and the
+two-input `umin`. It checks 110,000 deterministic tuples at `DISAGREE = 0`.
+The `lut3` control separately exhausts its three registered `x < 3` values and
+continues to refute unconditional LLVM definedness. The five deliberately wrong
+transforms still yield replay-checked countermodels.
+
+`check-reflection-semantics-gate.py` rejects schema, source/path, enum,
+ownership, evidence-side, active-test, and command-list drift. Ten mutation
+tests exercise a valid nested-payload enum plus new/missing/duplicate/orphan
+members, missing proof/fuzz evidence, bad tests, path escape, duplicate groups,
+and command drift. `--run` executes those mutation tests and then the exact
+seven manifest-owned Rust binaries; the dedicated stable CI job and
+`just reflection-semantics-gate` invoke that one runner. The bounded Rust gate
+contains 60 tests and passes.
+
+The complete `axeyum-verify --all-features` suite and doctests, workspace
+all-target/all-feature Clippy, warning-denied `axeyum-verify` rustdoc,
+formatting, exact MIR fixture replay, and repository links pass. No dependency,
+feature, native library, unsafe, MSRV, or WASM surface changed.
+
 ## Consequences
 
-If accepted, T5.1.6 becomes an executable admission contract rather than a
-convention. The frontend can still grow, but every semantic variant makes its
+T5.1.6 is now an executable admission contract rather than a convention. The
+frontend can still grow, but every semantic variant makes its
 proof and concrete oracle obligations visible in the same change. Reviewers can
 inspect a small deterministic gate instead of inferring coverage from test
 volume.
