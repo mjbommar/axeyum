@@ -350,3 +350,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0292](adr-0292-preregister-single-latch-llvm-natural-loop.md) | Accept one checked single-latch LLVM natural loop with path-conditioned internal control flow | accepted |
 | [0293](adr-0293-preregister-glaurung-llvm-loop-shape-census.md) | Accept the exact Glaurung loop census: 11 existing-shape rows and one under-diverse early-exit row select no new implementation | accepted |
 | [0294](adr-0294-preregister-glaurung-llvm-loop-semantic-census.md) | Accept the corrected exact census: 0/12 loops pass typed CFG; diverse unsupported-instruction causes select an audit lane, not code | accepted |
+| [0295](adr-0295-preregister-checked-llvm-direct-body-calls.md) | Preregister an opt-in checked direct-body baseline for the two exact Glaurung PAC loop calls; keep ordinary/external calls rejected by default | proposed |

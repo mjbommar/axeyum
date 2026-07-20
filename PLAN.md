@@ -188,7 +188,17 @@ session state.
 >    wide-memory rows, three cross-source call rows, one `alloca`, and one
 >    non-scalar result; no mechanism receives code authorization. Next
 >    preregister a broader cross-source semantic population or an executable
->    call-boundary experiment, not a syntax-only shim. Do not build early-exit
+>    call-boundary experiment, not a syntax-only shim. ADR-0295 now
+>    preregisters the latter: an opt-in checked direct-body resolver for the two
+>    exact PAC `@leaf` callers, with the unchanged default still rejecting
+>    ordinary calls. It requires exact compiler/source/function identity,
+>    value+definedness-preserving callee execution, an independent transition
+>    specification, at least 100,000 tuples, source replay, canonical syntax,
+>    and precise negative boundaries. This is the inlined baseline required by
+>    P5.2's later modular-versus-inlined differential, not contracts, external
+>    effects, a cross-source acceptance claim, or a revised 12-row census.
+>    `puts` remains rejected because it neither has a supplied body nor unlocks
+>    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
 >    multi-latch/
 >    early-exit/switch/memory loops, general places, and LLIR remain open, and

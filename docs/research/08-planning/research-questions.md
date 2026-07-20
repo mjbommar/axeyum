@@ -820,6 +820,16 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     seven one-source wide-memory rows, three cross-source call rows, one
     `alloca`, and one non-scalar result. The frozen bucket selects a T5.1.2 audit
     lane, not code; no individual mechanism receives retroactive authorization.
+  - [ADR-0295](../09-decisions/adr-0295-preregister-checked-llvm-direct-body-calls.md)
+    preregisters the separately gated executable call experiment. The two PAC
+    loops may use an explicitly supplied, exact checked `leaf` body as an
+    opt-in inlining baseline; the unchanged default still rejects ordinary
+    calls, and `puts` receives no effect-erasing model. Exact compiler/source/
+    function identity, independent value+definedness and transition formulas,
+    at least 100,000 tuples, source replay, precise call-boundary negatives,
+    canonical rendering, and the standing semantics gate are required before
+    acceptance. This is a T5.2.4 prerequisite, not modular contracts or a
+    revised 12-row census.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
