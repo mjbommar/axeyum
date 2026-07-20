@@ -61,3 +61,29 @@ printf '%s\n' '#include <stdint.h>' \
 
 All three source modules and their canonical function projections pass LLVM
 21.1.8 `llvm-as` in the ADR-0286 test gate.
+
+## ADR-0291 canonical scalar loop
+
+`clang_capsum8.ll` is the exact canonical loop fixture emitted for:
+
+```c
+unsigned char capsum8(unsigned char n) {
+    unsigned char acc = 0;
+    for (unsigned char i = 0; i < n; i++) {
+        acc++;
+        if (acc > 100) acc = 100;
+    }
+    return acc;
+}
+```
+
+The historical capture used clang's canonical-loop controls:
+
+```sh
+clang -O1 -fno-unroll-loops -fno-vectorize -S -emit-llvm capsum8.c -o -
+```
+
+The committed function retains the compiler's implicit `%1` entry-block slot,
+two loop PHIs, `llvm.umin.i8`, `add nuw nsw`, `add nuw`, and the conditional
+self/exit edge. Tests consume the file byte-for-byte; do not add a synthetic
+entry label.

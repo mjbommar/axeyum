@@ -1276,7 +1276,7 @@ fn select_memory_byte(
     Ok(selected)
 }
 
-fn lower_assignment(
+pub(super) fn lower_assignment(
     arena: &mut TermArena,
     env: &HashMap<String, DefinedValue>,
     kind: ScalarInstructionKind,
@@ -1531,7 +1531,7 @@ fn lower_intrinsic_assignment(
     ))
 }
 
-fn resolve(
+pub(super) fn resolve(
     arena: &mut TermArena,
     env: &HashMap<String, DefinedValue>,
     operand: &Operand,

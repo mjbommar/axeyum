@@ -322,16 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0291 preregisters a typed canonical LLVM loop bridge.** The
-  existing `capsum8` proof validates the architecture but lives in a private
-  split/unwrap parser, drops flags/definedness, and silently extends the
-  recurrence after the source exit. The exact compiler text also exposes an
-  implicit `%1` entry-PHI identity that the structured CFG currently rejects.
-  The zero row freezes a unique structural normalization, one canonical typed
-  self-loop, PHI plus immutable-parameter state, checked transition
-  definedness, an explicit unsigned-bound property, automatic reproduction of
-  the safe/unreachable results, and source replay before any abstract reachable
-  state is called a bug. Next: commit this ADR before parser or loop code.
+- **2026-07-20 — ADR-0291 accepts the first typed canonical LLVM loop bridge.**
+  The exact compiler's implicit `%1` entry-PHI slot is recovered only under a
+  unique shared structural substitution and retained through canonical
+  render/reparse. `reflect::llvm::loops` detects one scalar self-loop and builds
+  deterministic PHI-plus-immutable-parameter state with checked poison,
+  immediate-UB, branch-definedness, and exit-over-approximation semantics. The
+  exact `capsum8` fixture proves `acc <= 100` unbounded, rejects `acc > 100`
+  through depth 8, and separately source-replays abstract `acc > 2` at step 3.
+  Automatic formulas match an independent spec; 20,000 recurrence tuples have
+  `DISAGREE = 0`; negative shape/error tests pass. The standing gate remains
+  62/62 semantic variants and grows to eight binaries / 70 tests. Complete
+  verify tests/doctests, strict workspace Clippy, rustdoc, exact MIR replay,
+  formatting, and links pass. Next: audit and preregister the bounded-unroll
+  fallback versus the first multi-block/MIR loop continuation; T5.1.4 remains
+  WIP and LLIR is still deferred.
 
 - **2026-07-20 — ADR-0290 accepts the reflection semantics gate.** A versioned
   manifest now owns all 62 source-derived checked LLVM/MIR semantic variants
@@ -5148,7 +5153,7 @@ plan is built and committed on the current branch:
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
 |---|---|---|
-| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions with explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291 zero-row):** a typed, definedness-aware canonical LLVM self-loop bridge is frozen before implementation. **T5.1.6 DONE (ADR-0290):** all 62 source-derived semantic variants have exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five refutations, ten checker mutations, and a dedicated seven-binary gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader loop/unroll routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
+| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions with explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291 first slice accepted):** one canonical scalar LLVM self-loop now routes automatically to a checked `TransitionSystem`; exact compiler identity, deterministic PHI/parameter state, unbounded/bounded safety, independent formulas, 20,000 fuzz tuples, poison/UB negatives, and source-replayed abstract reachability pass. **T5.1.6 DONE (ADR-0290):** all 62 source-derived semantic variants retain exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five refutations, ten checker mutations, and the expanded eight-binary/70-test gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader loop/unroll routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | TODO — the architectural unlock for cross-function claims; exit: the checksum module re-proves modularly (without the MIR inliner), with a modular-vs-inlined differential gate at DISAGREE=0 |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
@@ -5156,13 +5161,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-20 — ADR-0291 freezes the first typed LLVM loop bridge.** Before
-  replacing the manual `capsum8` proof, the structured CFG must strictly
-  reconcile its implicit entry slot, detect exactly one canonical self-loop,
-  preserve PHI/parameter state and scalar definedness in a reusable
-  `TransitionSystem`, reproduce safe/bounded results, and keep abstract
-  recurrence reachability distinct from a source bug. No loop implementation
-  exists under this zero row.
+- **2026-07-20 — ADR-0291 accepts the first typed LLVM loop bridge.** The exact
+  `capsum8` compiler fixture now parses with a strict implicit-entry identity,
+  round-trips canonically, and automatically yields a checked PHI/parameter
+  `TransitionSystem`. Unbounded/bounded safety, independent formulas, 20,000
+  recurrence tuples, poison/UB/shape negatives, and separate source replay for
+  abstract reachability pass in the expanded standing semantics gate. The
+  historical parser is only a differential control; broader loops and unroll
+  fallback remain open.
 
 - **2026-07-20 — ADR-0290 accepts the T5.1.6 semantics admission gate.** The
   source-derived manifest owns 62/62 checked variants with proof plus

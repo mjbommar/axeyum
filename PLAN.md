@@ -150,14 +150,16 @@ session state.
 >    variants have exact proof/spec plus deterministic fuzz/replay ownership;
 >    96 scalar goals, 11,248 exhaustive rows, 11 cross-IR pairs / 110,000 tuples,
 >    five refutations, ten checker mutations, and the dedicated local/CI runner
->    pass. ADR-0291 now preregisters the smallest automatic reducible-loop
->    bridge (T5.1.4): structurally normalize the real compiler's implicit entry
->    PHI predecessor, detect one canonical typed LLVM self-loop, preserve scalar
->    value+definedness in a `TransitionSystem`, and reproduce the existing
->    `capsum8` invariant proof while labeling exit abstraction and replaying any
->    reachable claim. Commit the zero row before implementation; do not widen
->    general places, admit LLIR, extend the panic-oriented compatibility parser,
->    or perturb the accepted Linux recall route first.
+>    pass. ADR-0291 now accepts the smallest automatic reducible-loop bridge
+>    (T5.1.4): the real compiler's implicit entry PHI slot is normalized under a
+>    strict structural rule; one canonical typed LLVM self-loop preserves scalar
+>    value+definedness in a `TransitionSystem`; and the exact `capsum8` fixture
+>    reproduces unbounded/bounded safety. Independent formulas, 20,000 concrete
+>    recurrence tuples at zero disagreement, poison/UB negatives, precise shape
+>    errors, and source-replayed abstract reachability pass in the standing
+>    eight-binary/70-test gate. T5.1.4 remains WIP: next preregister bounded
+>    unrolling and either MIR or multi-block reducible loops; do not widen general
+>    places, admit LLIR, or perturb the accepted Linux recall route first.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

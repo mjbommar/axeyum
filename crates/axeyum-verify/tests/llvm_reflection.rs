@@ -30,6 +30,7 @@ use axeyum_verify::reflect::llvm::{
         BoundedMemoryConfig, CheckedMemoryCfgReflected, reflect_bounded_memory_cfg_checked,
         reflect_scalar_checked,
     },
+    loops::{UnsignedPhiUpperBound, reflect_canonical_loop_checked},
     lower_body, lower_rhs, reflect_ll, reflect_unary_into,
 };
 use axeyum_verify::reflect::width_of;
@@ -441,7 +442,7 @@ fn llvm_mixed_width_matches_real_rust_under_fuzz() {
     }
 }
 
-// ---- N: reflect an LLVM loop into a TransitionSystem, prove all iterations ------
+// ---- N: historical loop parser retained only as a differential control ---------
 //
 // A canonical loop (clang -O1 -fno-unroll-loops) has a header/latch block with a
 // `phi` per loop-carried variable and a body that computes the back-edge values.
@@ -458,25 +459,7 @@ fn llvm_mixed_width_matches_real_rust_under_fuzz() {
 /// state stays fast (the 32-bit version bit-blasts to 64 bits of state and PDR's
 /// frame search over the unbounded counter blows up — the same width lesson as the
 /// modular-arithmetic proofs; the loop *structure* reflected is width-agnostic).
-const CAPSUM_LOOP_LL: &str = r"
-define dso_local zeroext range(i8 0, 101) i8 @capsum8(i8 noundef zeroext %0) local_unnamed_addr {
-  %2 = icmp eq i8 %0, 0
-  br i1 %2, label %3, label %5
-
-3:
-  %4 = phi i8 [ 0, %1 ], [ %9, %5 ]
-  ret i8 %4
-
-5:
-  %6 = phi i8 [ %10, %5 ], [ 0, %1 ]
-  %7 = phi i8 [ %9, %5 ], [ 0, %1 ]
-  %8 = tail call i8 @llvm.umin.i8(i8 %7, i8 99)
-  %9 = add nuw nsw i8 %8, 1
-  %10 = add nuw i8 %6, 1
-  %11 = icmp eq i8 %10, %0
-  br i1 %11, label %3, label %5
-}
-";
+const CAPSUM_LOOP_LL: &str = include_str!("fixtures/llvm/clang_capsum8.ll");
 
 /// A loop-carried variable: its `phi` name, width, the entry-incoming init value,
 /// and the register feeding its back-edge.
@@ -699,7 +682,7 @@ impl TransitionSystem for LoopSystem {
 /// LLVM `phi`/back-edge structure (`acc' = umin(acc,99)+1 <= 100` is 1-inductive,
 /// so k-induction closes it without PDR's frame search).
 #[test]
-fn llvm_loop_acc_bounded_all_iterations() {
+fn legacy_loop_safe_result_matches_typed_bridge() {
     let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 100);
     let mut arena = TermArena::new();
     let outcome = prove_safety_k_induction(&mut arena, &sys, 4, &SolverConfig::default())
@@ -708,13 +691,20 @@ fn llvm_loop_acc_bounded_all_iterations() {
         matches!(outcome, SafetyOutcome::Safe { .. }),
         "acc <= 100 must hold for all loop iterations, got {outcome:?}"
     );
+    let typed =
+        reflect_canonical_loop_checked(CAPSUM_LOOP_LL, UnsignedPhiUpperBound::new("7", 100))
+            .unwrap();
+    let mut arena = TermArena::new();
+    let typed_outcome =
+        prove_safety_k_induction(&mut arena, &typed, 4, &SolverConfig::default()).unwrap();
+    assert!(matches!(typed_outcome, SafetyOutcome::Safe { .. }));
 }
 
 /// A (false) bound the loop genuinely exceeds is refuted, not falsely proved: the
 /// accumulator climbs past `2` within a few iterations, so bounded model checking
 /// finds a concrete `Reachable` counterexample trace.
 #[test]
-fn llvm_loop_false_bound_is_reachable() {
+fn legacy_loop_reachable_result_matches_typed_bridge() {
     let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 2);
     let mut arena = TermArena::new();
     let outcome = bounded_model_check(&mut arena, &sys, 8, &SolverConfig::default())
@@ -723,13 +713,19 @@ fn llvm_loop_false_bound_is_reachable() {
         matches!(outcome, BmcOutcome::Reachable { .. }),
         "acc climbs past 2 within a few steps; expected Reachable, got {outcome:?}"
     );
+    let typed =
+        reflect_canonical_loop_checked(CAPSUM_LOOP_LL, UnsignedPhiUpperBound::new("7", 2)).unwrap();
+    let mut arena = TermArena::new();
+    let typed_outcome =
+        bounded_model_check(&mut arena, &typed, 8, &SolverConfig::default()).unwrap();
+    assert!(matches!(typed_outcome, BmcOutcome::Reachable { .. }));
 }
 
 /// Bounded model checking of the loop finds no `acc > 100` within a depth bound
 /// (`UnreachableWithinBound`, not a proof), consistent with the unbounded PDR
 /// `Safe` — bounded and unbounded agree.
 #[test]
-fn llvm_loop_bounded_agrees_with_unbounded() {
+fn legacy_loop_bounded_result_matches_typed_bridge() {
     let sys = LoopSystem::new(CAPSUM_LOOP_LL, "7", 100);
     let mut arena = TermArena::new();
     let outcome = bounded_model_check(&mut arena, &sys, 8, &SolverConfig::default())
@@ -738,6 +734,16 @@ fn llvm_loop_bounded_agrees_with_unbounded() {
         matches!(outcome, BmcOutcome::UnreachableWithinBound { .. }),
         "no acc>100 within bound (consistent with the unbounded proof), got {outcome:?}"
     );
+    let typed =
+        reflect_canonical_loop_checked(CAPSUM_LOOP_LL, UnsignedPhiUpperBound::new("7", 100))
+            .unwrap();
+    let mut arena = TermArena::new();
+    let typed_outcome =
+        bounded_model_check(&mut arena, &typed, 8, &SolverConfig::default()).unwrap();
+    assert!(matches!(
+        typed_outcome,
+        BmcOutcome::UnreachableWithinBound { .. }
+    ));
 }
 
 // ---- O: memory — reflect constant-offset buffer reads (the parser primitive) ----

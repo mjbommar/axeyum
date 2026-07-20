@@ -31,13 +31,13 @@ pub fn render_scalar_cfg(cfg: &ScalarCfg) -> String {
     output.push_str(") {\n");
 
     for block in &cfg.blocks {
-        render_block(&mut output, block);
+        render_block(&mut output, block, cfg.implicit_entry_label.as_deref());
     }
     output.push_str("}\n");
     output
 }
 
-fn render_block(output: &mut String, block: &CfgBlock) {
+fn render_block(output: &mut String, block: &CfgBlock, implicit_entry_label: Option<&str>) {
     if let BlockId::Label(label) = &block.id {
         writeln!(output, "{}:", quoted_name(label)).expect("writing to a String cannot fail");
     }
@@ -57,7 +57,7 @@ fn render_block(output: &mut String, block: &CfgBlock) {
                 output,
                 "[ {}, {} ]",
                 operand(&incoming.value),
-                block_ref(&incoming.predecessor)
+                block_ref(&incoming.predecessor, implicit_entry_label)
             )
             .expect("writing to a String cannot fail");
         }
@@ -69,7 +69,7 @@ fn render_block(output: &mut String, block: &CfgBlock) {
         output.push('\n');
     }
     output.push_str("  ");
-    render_terminator(output, block);
+    render_terminator(output, block, implicit_entry_label);
     for metadata in &block.terminator.metadata {
         write!(output, ", {metadata}").expect("writing to a String cannot fail");
     }
@@ -302,14 +302,15 @@ fn render_intrinsic(
     .expect("writing to a String cannot fail");
 }
 
-fn render_terminator(output: &mut String, block: &CfgBlock) {
+fn render_terminator(output: &mut String, block: &CfgBlock, implicit_entry_label: Option<&str>) {
     match &block.terminator.kind {
         TerminatorKind::Return { width, value } => {
             write!(output, "ret i{width} {}", operand(value))
                 .expect("writing to a String cannot fail");
         }
         TerminatorKind::Branch { target } => {
-            write!(output, "br {}", label_ref(target)).expect("writing to a String cannot fail");
+            write!(output, "br {}", label_ref(target, implicit_entry_label))
+                .expect("writing to a String cannot fail");
         }
         TerminatorKind::CondBranch {
             condition,
@@ -320,8 +321,8 @@ fn render_terminator(output: &mut String, block: &CfgBlock) {
                 output,
                 "br i1 {}, {}, {}",
                 operand(condition),
-                label_ref(true_target),
-                label_ref(false_target)
+                label_ref(true_target, implicit_entry_label),
+                label_ref(false_target, implicit_entry_label)
             )
             .expect("writing to a String cannot fail");
         }
@@ -336,7 +337,7 @@ fn render_terminator(output: &mut String, block: &CfgBlock) {
                 "switch i{} {}, {} [",
                 width,
                 operand(value),
-                label_ref(default_target)
+                label_ref(default_target, implicit_entry_label)
             )
             .expect("writing to a String cannot fail");
             for case in cases {
@@ -345,7 +346,7 @@ fn render_terminator(output: &mut String, block: &CfgBlock) {
                     "\n    i{} {}, {}",
                     width,
                     case.value,
-                    label_ref(&case.target)
+                    label_ref(&case.target, implicit_entry_label)
                 )
                 .expect("writing to a String cannot fail");
             }
@@ -378,13 +379,16 @@ fn operand(value: &Operand) -> String {
     }
 }
 
-fn label_ref(block: &BlockId) -> String {
-    format!("label {}", block_ref(block))
+fn label_ref(block: &BlockId, implicit_entry_label: Option<&str>) -> String {
+    format!("label {}", block_ref(block, implicit_entry_label))
 }
 
-fn block_ref(block: &BlockId) -> String {
+fn block_ref(block: &BlockId, implicit_entry_label: Option<&str>) -> String {
     match block {
-        BlockId::Entry => "%\"<entry>\"".to_owned(),
+        BlockId::Entry => implicit_entry_label.map_or_else(
+            || "%\"<entry>\"".to_owned(),
+            |label| format!("%{}", quoted_name(label)),
+        ),
         BlockId::Label(label) => format!("%{}", quoted_name(label)),
     }
 }

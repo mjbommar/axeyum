@@ -223,10 +223,11 @@ deferred behind an ADR (it changes the dependency/trust surface).
 
 Rust compiles MIR → **LLVM IR** → machine code, and LLVM IR is the *shared* target
 of C/C++/Swift/Zig/Julia/Rust (design: [`llvm-ir-frontend.md`](llvm-ir-frontend.md)).
-A driverless `.ll`-text reflector (`llvm_reflection.rs`, committed clang/rustc
-fixtures — no toolchain at test time) lowers single-block SSA (binops / `icmp` /
-`select` / `llvm.umin`-`umax` / `ret`) to `axeyum-ir` BV terms and proves
-properties symbolically. 6 tests green.
+A driverless `.ll`-text reflector (committed clang/rustc fixtures — no toolchain
+at test time) now owns typed scalar CFGs, checked value/definedness, one bounded
+byte object, and one canonical self-loop route in addition to the historical
+single-block SSA surface. The standing semantics gate runs eight binaries / 70
+tests.
 
 | What | Result |
 |---|---|
@@ -239,7 +240,7 @@ properties symbolically. 6 tests green.
 | **`be16` byte→word field pack** (`zext`+`shl`+`or`) | **parse∘pack round-trip Proved** (extract bytes back == inputs) |
 | `classify` (nested `select` after `-O` if-conversion) | in `1..=3` **Proved** |
 | `day` (a `match`, `-O`-lowered to `icmp`+`add`+`select`) | `<= 9` **Proved** |
-| **`capsum` loop** (`phi`+back-edge) → `TransitionSystem` | `acc <= 100` **Proved for ALL iterations** (k-induction, 4 ms); false bound `Reachable` (BMC) |
+| **`capsum` loop** (`phi`+back-edge) → checked `TransitionSystem` | `acc <= 100` **Proved for ALL iterations**; `acc > 100` bounded-unreachable; abstract `acc > 2` source-replayed at `n=3`; 20k recurrence tuples `DISAGREE = 0` |
 | **`read_be16(const u8*)`** — buffer loads (`load`/`gep`) | **≡ value-passing `be16`** Proved (cross-form equivalence over memory-reading code) |
 | **IPv4 IHL** — clang's `(p0<<2)&60` strength-reduction | **≡ spec `zext(p0&0x0f)*4`** Proved (mini translation-validation); `≤ 60 ∧ ≡0 mod 4` Proved |
 | **`p[i & 3]`** — masked symbolic index (`gep` w/ register offset) | **in-bounds Proved** (load offset `< 4` for all `i`) |
@@ -251,16 +252,16 @@ functions to `select` — `classify`'s `if/else-if` → *nested selects*, a `mat
 already spans **straight-line + if-converted-branch + mixed-width** leaf
 functions — the bulk of a protocol parser's per-field code.
 
-**Loops (N):** true `br`/`phi` multi-block IR appears with **loops** — which now
-also land. A canonical loop (`clang -O1 -fno-unroll-loops`) reflects into the
-solver's `TransitionSystem` (`phi`s → state, entry-incoming → init, back-edge →
-`trans`, spec → `bad`), and k-induction/PDR prove the property for *every*
-iteration — connecting the LLVM front end to the **same unbounded-safety
-machinery** as the protocol FSMs. Modeled at `i8` (the `i32` loop bit-blasts to
-64 bits and PDR's frame search over the unbounded counter blows up >60 s — the
-recurring width lesson; the reflected structure is width-agnostic). Real `-O`
-loop IR (unrolled / SCEV-closed / memory) needs a larger SCEV-aware parser — the
-deferred frontier.
+**Loops (N):** ADR-0291's first automatic route consumes the typed CFG rather
+than reparsing strings. It strictly reconciles clang's implicit `%1` entry PHI
+identity, orders PHIs then immutable parameters as state, and carries checked
+poison/immediate-UB/branch-definedness into `trans`. K-induction proves the
+invariant for every recurrence iteration. Because the source exit value is
+abstracted, BMC reachability is labeled abstract until separately source
+replayed. Independent formulas, 20,000 deterministic tuples, and precise
+negative shapes guard the route. Real `-O` unrolled/SCEV-closed forms,
+multi-block/MIR/memory loops, and unroll fallback remain deferred. Contract:
+[canonical LLVM loop bridge](canonical-llvm-loop-bridge.md).
 
 **Memory (O):** buffer reads — the packet-parser primitive — now reflect by
 **partial evaluation of memory**: a `readonly` pointer param to a size-N buffer

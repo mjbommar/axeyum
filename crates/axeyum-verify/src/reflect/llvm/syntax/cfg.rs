@@ -127,6 +127,9 @@ pub struct ScalarCfg {
     pub params: Vec<Parameter>,
     /// Entry block identity.
     pub entry: BlockId,
+    /// Compiler-assigned numeric slot used to name the unlabeled entry block
+    /// from PHIs, when one was structurally recovered.
+    pub implicit_entry_label: Option<String>,
     /// Blocks in source order.
     pub blocks: Vec<CfgBlock>,
 }
@@ -168,20 +171,6 @@ pub fn parse_scalar_cfg(function: &Function) -> Result<ScalarCfg, ParseError> {
                 ));
             }
         }
-        for phi in &block.phis {
-            for incoming in &phi.incomings {
-                if !positions.contains_key(&incoming.predecessor) {
-                    return Err(from_span(
-                        ParseErrorKind::UndefinedBlockLabel,
-                        phi.span,
-                        &format!(
-                            "undefined PHI predecessor {}",
-                            display_block(&incoming.predecessor)
-                        ),
-                    ));
-                }
-            }
-        }
     }
 
     let block_order = blocks
@@ -205,7 +194,23 @@ pub fn parse_scalar_cfg(function: &Function) -> Result<ScalarCfg, ParseError> {
             "entry block must not have a predecessor",
         ));
     }
+    let implicit_entry_label =
+        normalize_implicit_entry_phi_predecessors(&mut blocks, &positions, &entry)?;
     for block in &blocks {
+        for phi in &block.phis {
+            for incoming in &phi.incomings {
+                if !positions.contains_key(&incoming.predecessor) {
+                    return Err(from_span(
+                        ParseErrorKind::UndefinedBlockLabel,
+                        phi.span,
+                        &format!(
+                            "undefined PHI predecessor {}",
+                            display_block(&incoming.predecessor)
+                        ),
+                    ));
+                }
+            }
+        }
         validate_phis(block)?;
         if let TerminatorKind::Return { width, .. } = block.terminator.kind
             && width != return_width
@@ -223,8 +228,65 @@ pub fn parse_scalar_cfg(function: &Function) -> Result<ScalarCfg, ParseError> {
         return_width,
         params: function.params.clone(),
         entry,
+        implicit_entry_label,
         blocks,
     })
+}
+
+fn normalize_implicit_entry_phi_predecessors(
+    blocks: &mut [CfgBlock],
+    positions: &BTreeMap<BlockId, usize>,
+    entry: &BlockId,
+) -> Result<Option<String>, ParseError> {
+    if *entry != BlockId::Entry {
+        return Ok(None);
+    }
+
+    let mut recovered = None::<String>;
+    for block in blocks {
+        if !block.predecessors.contains(&BlockId::Entry) {
+            continue;
+        }
+        let expected = block.predecessors.iter().cloned().collect::<BTreeSet<_>>();
+        for phi in &mut block.phis {
+            let actual = phi
+                .incomings
+                .iter()
+                .map(|incoming| incoming.predecessor.clone())
+                .collect::<BTreeSet<_>>();
+            if actual == expected {
+                continue;
+            }
+            let missing = expected.difference(&actual).cloned().collect::<Vec<_>>();
+            let extra = actual.difference(&expected).cloned().collect::<Vec<_>>();
+            let [BlockId::Entry] = missing.as_slice() else {
+                continue;
+            };
+            let [BlockId::Label(candidate)] = extra.as_slice() else {
+                continue;
+            };
+            if candidate.is_empty()
+                || !candidate.bytes().all(|byte| byte.is_ascii_digit())
+                || positions.contains_key(&BlockId::Label(candidate.clone()))
+            {
+                continue;
+            }
+            if recovered.as_ref().is_some_and(|prior| prior != candidate) {
+                return Err(from_span(
+                    ParseErrorKind::InvalidPhi,
+                    phi.span,
+                    "PHIs disagree on the compiler's implicit entry block slot",
+                ));
+            }
+            recovered.get_or_insert_with(|| candidate.clone());
+            for incoming in &mut phi.incomings {
+                if incoming.predecessor == BlockId::Label(candidate.clone()) {
+                    incoming.predecessor = BlockId::Entry;
+                }
+            }
+        }
+    }
+    Ok(recovered)
 }
 
 fn scalar_width(ty: &str, span: SourceSpan) -> Result<u32, ParseError> {

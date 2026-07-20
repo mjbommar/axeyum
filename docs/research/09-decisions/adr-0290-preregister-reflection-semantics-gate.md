@@ -165,9 +165,10 @@ ownership, evidence-side, active-test, and command-list drift. Ten mutation
 tests exercise a valid nested-payload enum plus new/missing/duplicate/orphan
 members, missing proof/fuzz evidence, bad tests, path escape, duplicate groups,
 and command drift. `--run` executes those mutation tests and then the exact
-seven manifest-owned Rust binaries; the dedicated stable CI job and
+eight manifest-owned Rust binaries; the dedicated stable CI job and
 `just reflection-semantics-gate` invoke that one runner. The bounded Rust gate
-contains 60 tests and passes.
+contains 70 tests and passes. ADR-0291 adds the loop binary without changing or
+duplicating ownership of the original 62 source-derived semantic variants.
 
 The complete `axeyum-verify --all-features` suite and doctests, workspace
 all-target/all-feature Clippy, warning-denied `axeyum-verify` rustdoc,

@@ -304,6 +304,7 @@
     "llvm_checked_cfg",
     "llvm_checked_memory",
     "mir_checked_memory",
-    "checked_bounds"
+    "checked_bounds",
+    "llvm_checked_loop"
   ]
 }

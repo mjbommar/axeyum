@@ -23,6 +23,7 @@ EXPECTED_TEST_BINARIES = [
     "llvm_checked_memory",
     "mir_checked_memory",
     "checked_bounds",
+    "llvm_checked_loop",
 ]
 CHECKER_TEST_MODULE = "scripts/tests/test_check_reflection_semantics_gate.py"
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")

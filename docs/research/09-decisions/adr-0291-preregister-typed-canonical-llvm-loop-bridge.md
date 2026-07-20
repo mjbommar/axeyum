@@ -1,11 +1,11 @@
 # ADR-0291: Preregister a typed canonical LLVM loop bridge
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; no structured loop bridge, implicit-entry PHI
-normalization, automatic transition system, or build-backed loop test exists
-under this ADR
+Result state: accepted; strict implicit-entry PHI normalization, canonical
+rendering, the typed scalar self-loop transition system, exact compiler fixture,
+and the standing proof/fuzz/replay gate are implemented
 
 ## Context
 
@@ -131,12 +131,55 @@ satisfy all of the following:
 The gates may be strengthened before the first structured loop result is
 observed. They may not be weakened afterward.
 
+## Accepted result
+
+The structured CFG now recovers the exact compiler's implicit `%1` entry slot
+only when an unlabeled entry predecessor differs from each relevant PHI set by
+one shared undefined all-decimal label. `ScalarCfg` retains that spelling for
+canonical rendering while the graph keeps `BlockId::Entry`. Conflicting, named,
+duplicate, extant, and unrelated predecessors remain located failures. The
+exact `clang_capsum8.ll` fixture parses and reaches a render/reparse fixpoint
+without a synthetic source label.
+
+`reflect::llvm::loops::reflect_canonical_loop_checked` detects one reachable
+scalar self-loop, exposes stable located `LoopReflectErrorKind` failures, and
+returns an owned `CanonicalLoopSystem`. Its deterministic state is the two PHIs
+`%6:i8`, `%7:i8`, then referenced immutable parameter `%0:i8`. `init`, `trans`,
+and `bad` reuse the checked typed lowering. Transition validity includes every
+immediate-UB obligation, transitive back-value definedness, branch definedness,
+post-PHI equalities, and parameter preservation. The public metadata reports
+the omitted exit and that recurrence continuation is an over-approximation.
+
+The dedicated `llvm_checked_loop` binary has ten tests. It proves `acc <= 100`
+unbounded by k-induction, checks `acc > 100` unreachable through depth 8, finds
+abstract `acc > 2` at step 3, and separately replays `capsum8(3) == 3` in source.
+Automatic formulas are solver-proved equivalent to an independently built
+recurrence; 20,000 deterministic concrete transition tuples report
+`DISAGREE = 0`. Poison, immediate division UB, undefined branch conditions,
+memory, external SSA, malformed PHIs, no/multiple/multi-block/self-only cycles,
+invalid properties, and deterministic malformed inputs fail at the intended
+boundaries.
+
+ADR-0290's manifest still owns exactly 12 enums, 62 variants, 14 evidence
+groups, 15 distinct proof tests, 13 fuzz/replay tests, and five refutations.
+Its runner now includes the loop binary without changing semantic ownership:
+eight Rust binaries / 70 tests plus ten checker mutations pass. The complete
+`axeyum-verify --all-features` suite and doctests, workspace all-target/
+all-feature Clippy with warnings denied, warning-denied package rustdoc, exact
+MIR replay, formatting, and link checks pass. No dependency, feature, unsafe,
+native, MSRV, or WASM surface changed.
+
+The historical split/unwrap loop parser now consumes the one committed fixture
+and remains only as a differential result control against the typed bridge. It
+is not in the standing acceptance runner and is not an implementation
+dependency.
+
 ## Consequences
 
-If accepted, T5.1.4 gains its first reusable automatic compiler-loop route and
-the historical proof moves onto typed, definedness-aware syntax. The recurrence
-abstraction becomes explicit enough for reviewers to distinguish sound invariant
-proofs from abstract reachability.
+T5.1.4 gains its first reusable automatic compiler-loop route and the accepted
+proof now lives on typed, definedness-aware syntax. The recurrence abstraction
+is explicit enough for reviewers to distinguish sound invariant proofs from
+abstract reachability.
 
 T5.1.4 remains in progress. A later ADR must add bounded-unroll fallback and
 either MIR or multi-block reducible loops before the phase can claim general

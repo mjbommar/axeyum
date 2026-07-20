@@ -50,7 +50,12 @@ is:
   countermodels are replay-checked;
 - `llvm_checked_cfg`, `llvm_checked_memory`, `mir_checked_memory`, and
   `checked_bounds`: exact control-flow, definedness/panic, byte-memory, final
-  state, and source-replay evidence.
+  state, and source-replay evidence;
+- `llvm_checked_loop`: the ADR-0291 typed self-loop bridge, independent
+  recurrence formulas, deterministic concrete fuzz, poison/UB guards,
+  malformed-shape rejection, invariant proof, and source-replayed abstract
+  reachability. Its exact contract is documented in the
+  [canonical loop bridge](canonical-llvm-loop-bridge.md).
 
 For LLVM operations that can produce poison or immediate undefined behavior,
 the scalar matrix compares definedness separately and compares values only
@@ -82,6 +87,7 @@ best-effort importer.
 This is exact coverage of the currently admitted checked semantic variants, not
 a proof of arbitrary rustc/LLVM correctness. Parser noise tests establish
 non-panicking rejection, while the semantic cells establish meaning only for
-accepted input. The gate does not admit cycles, general MIR places,
-wide/aliased memory, `stable_mir`, Glaurung LLIR lowering, or a shared frontend
-crate.
+accepted input. The gate admits only ADR-0291's one canonical scalar LLVM
+self-loop. It does not admit MIR, multi-block/nested/irreducible, or memory
+loops, general MIR places, wide/aliased memory, `stable_mir`, Glaurung LLIR
+lowering, or a shared frontend crate.

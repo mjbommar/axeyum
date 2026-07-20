@@ -1,7 +1,7 @@
 # Verifying LLVM IR — feasibility & design
 
-> **Status:** scalar prototype + checked definedness boundary (2026-07-19,
-> ADR-0280/0281). Extends the
+> **Status:** checked scalar CFG, bounded byte memory, and first canonical
+> self-loop bridge (2026-07-20, ADR-0280--0291). Extends the
 > [real-Rust front end](real-rust-frontend.md) *downward*: Rust compiles
 > MIR → **LLVM IR** → machine code, and LLVM IR is the **shared target of the
 > whole family** (C, C++, Swift, Zig, Julia, Rust-via-LLVM). Reflecting LLVM IR
@@ -58,8 +58,10 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
    This prototype targets **`-O` register-SSA** functions (`mem2reg` promotes most
    memory to registers), sidestepping memory — the same lesson as `-O` cleaning up
    MIR's overflow checks.
-3. **Control flow.** Single basic block first (`select`-based); `br`/`switch`/`phi`
-   CFG is the next increment (transposes from the MIR `switchInt → ite` work).
+3. **Control flow.** Typed `br`/`switch`/`phi` plus checked bounded acyclic
+   execution are accepted. ADR-0291 adds one scalar self-loop route to
+   `TransitionSystem`; multi-block/nested/irreducible and memory loops remain
+   outside the admitted profile.
 
 ## The path
 
@@ -69,8 +71,10 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
 | **L3** | **the same function from C *and* Rust `.ll`**, proved equivalent through one reflector | done |
 | **L4** | structured function parser plus typed scalar instructions and explicit definedness | done (ADR-0280/0281) |
 | **L5** | typed `phi`/terminators plus exact predecessor/successor validation on clang/rustc diamonds | done (ADR-0282) |
-| next | checked acyclic CFG execution with path-conditioned value and definedness joins | preregister |
-| deferred | cyclic CFG→`TransitionSystem`; memory (arrays/provenance); complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
+| **L6** | checked acyclic CFG execution with path-conditioned value and definedness joins | done (ADR-0283/0284) |
+| **L7** | one checked initialized byte object with typed GEP/load/store and final-memory joins | done (ADR-0286) |
+| **L8** | one canonical typed scalar self-loop → `TransitionSystem`, with strict implicit-entry identity and explicit exit over-approximation | done (ADR-0291) |
+| deferred | multi-block/MIR/memory loops and unroll fallback; general memory/provenance; complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
 
 Fixtures are *committed* `.ll` (captured once from clang/rustc) — **not** invoked
 at test time, so the tests are toolchain-independent (CI-robust), exactly as the
@@ -138,29 +142,41 @@ the loop block carries two `phi`s and a clean body:
   br i1 %11, label %3, label %5
 ```
 
-**The reflection scheme (reusing the `lower_rhs` op-lowering):**
+**Accepted ADR-0291 scheme.** The implementation no longer uses `lower_rhs`.
+`reflect::llvm::loops` consumes the validated typed CFG and reuses the checked
+value-plus-definedness lowering:
 
-- **state vars** = the loop block's `phi` targets (`i`, `acc`) → one BV symbol each.
-- **init** = each `phi`'s *entry* incoming value (the pair NOT labelled with the
-  loop block): `i=0 ∧ acc=0`.
-- **trans** = seed an env mapping each `phi` name → the *pre*-state symbol, lower
-  the loop body (`umin`/`add`/…) via `lower_rhs`, then set each post-state symbol
-  to the `phi`'s *back-edge* incoming value (`i' = %10 = i+1`, `acc' = %9 =
-  umin(acc,99)+1`).
-- **bad** = the safety property (the user's spec, not in the IR): here `acc > 100`.
+- **state vars** = loop PHIs in source order, then referenced scalar parameters
+  in declaration order;
+- **init** = each PHI's constant/parameter entry incoming, with parameters
+  unconstrained but present as immutable state;
+- **trans** = checked body lowering from pre-state PHIs/parameters, every
+  immediate-UB condition, defined back-edge values, defined branch condition,
+  post-PHI equalities, and unchanged parameters; and
+- **bad** = one explicit `UnsignedPhiUpperBound`, here `acc > 100`.
 
-`prove_safety_pdr` / `prove_safety_k_induction` then prove `acc ≤ 100` for **all
-iterations** — a property of *real compiled C loop code*, unbounded. (It is even
-1-inductive: `acc' = umin(acc,99)+1 ≤ 100` from any `acc`.)
+The exact compiler's unlabeled entry is referenced as `%1` by its PHIs. The
+structured parser now recovers that identity only under a unique all-decimal
+predecessor-set substitution, retains it for canonical rendering, and rejects
+named, conflicting, extant, or unrelated labels.
 
-**Honest scope:** canonical single-loop-block form only; real `-O` IR (unrolled,
-SCEV-closed, `llvm.assume`, memory) needs a much larger, SCEV-aware parser — the
-deferred frontier. Loops with memory or nested control are out. Fixtures are
-committed `.ll` (no clang at test time → CI-robust).
+`prove_safety_k_induction` proves `acc <= 100` for every recurrence iteration.
+The exit Boolean value is deliberately abstracted, so this is conservative for
+invariants. A BMC `Reachable` result is only an abstract recurrence witness until
+an ordinary source input reaches the same state; the accepted `acc > 2` row is
+therefore separately replayed with `capsum8(3) == 3`.
 
-**N plan:** N2 reflect `capsum`'s canonical loop → `TransitionSystem`, prove
-`acc ≤ 100` via PDR (all iterations); N3 cross-check bounded BMC vs unbounded PDR
-+ scoreboard; N4 gates.
+**Accepted evidence:** automatic/independent `init`/`trans`/`bad` formula
+equivalence, 20,000 deterministic concrete recurrence tuples at `DISAGREE = 0`,
+poison/immediate-UB/branch-definedness negatives, strict shape/error tests,
+unbounded and bounded safety, and source replay all run in the standing
+reflection gate. See the
+[canonical LLVM loop bridge](canonical-llvm-loop-bridge.md).
+
+**Honest scope:** the single canonical scalar self-loop is admitted. Real `-O`
+unrolled/SCEV-closed forms, multi-block/nested/irreducible loops, memory, MIR,
+and bounded-unroll fallback remain deferred and require new preregistered
+slices. Fixtures stay committed so CI does not invoke clang.
 
 ## O — memory: reflect buffer reads (the packet-parser primitive)
 
