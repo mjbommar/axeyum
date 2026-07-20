@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0281 freezes typed scalar LLVM instructions and checked
+  definedness before implementation.** The next T5.1.2 slice parses the existing
+  QF_BV scalar op family into span-carrying enums, retains `nuw`/`nsw`/`exact`/
+  `disjoint`/`nneg`, and exposes value plus a Boolean definedness term. The
+  acceptance gates cover real clang/rustc fixtures, every supported opcode and
+  flag, malformed/unsupported failures, overflow/shift/division witnesses, and
+  LLVM `select`'s chosen-arm poison semantics. One existing proof must migrate
+  to the checked API. CFG, memory, `freeze`/`undef`, a shared crate, and the
+  Glaurung lowerer remain outside this slice.
+
 - **2026-07-19 — ADR-0280 accepts the first T5.1.2 structured LLVM parser
   slice.** `reflect::llvm::syntax::parse_function` now exposes owned
   function/parameter/block/instruction records, byte+line+column spans, quoted

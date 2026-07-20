@@ -726,6 +726,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     first prerequisite: structured parsing with diagnostics. A second lowerer
     requires explicit LLIR widths/successors plus a fail-closed LLVM semantics
     profile before a shared crate boundary is considered.
+  - [ADR-0281](../09-decisions/adr-0281-preregister-typed-llvm-scalar-definedness.md)
+    freezes the first semantic step: typed scalar instructions and explicit
+    LLVM definedness predicates. It does not admit a shared crate or Glaurung
+    lowering; CFG and memory semantics remain prerequisites.
 
 ## Source Pointers
 
