@@ -293,9 +293,15 @@ session state.
 >    cgroup, environment, and analysis gates. Its read-only preflight passes.
 >    The first cold-off pilot failed closed before report publication because
 >    cold replay mutated warm owner leases; the retained zero-report artifact
->    selected and tests the `202786c` lifecycle correction. Zero timing rows
->    still exist. Next execute exactly the corrected committed 120-process
->    campaign, then analyze it without changing modes, bounds, or thresholds.
+>    selected and tests the `202786c` lifecycle correction. The corrected
+>    120-process ADR-0303 campaign then passed every producer gate but is
+>    rejected before ratios: the v1 opportunity artifact keyed exact hits by
+>    textual query SHA while the ADR and implementation use canonical assertion
+>    sets. With zero eviction/bypass, the frozen analyzer correctly failed.
+>    ADR-0304 now binds opportunity v2 (8,001/12,902 canonical exact, 8,563
+>    structural) and a fresh otherwise-identical zero-row registration. Commit
+>    and push that correction, then rerun all 120 fresh processes; never reuse
+>    or report the rejected timing.
 > 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
 >    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
 >    related-work positioning vs Veritas, attacker-control, and the MS agentic system.

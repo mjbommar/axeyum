@@ -1,0 +1,30 @@
+{
+  "schema": "axeyum-glaurung-engine-cache-factorial-rejection-v1",
+  "decision": "ADR-0303",
+  "campaign_path": "/nas4/data/workspace-infosec/.axeyum-engine-cache-factorial-20260720.uHcg5l",
+  "campaign_sha256": "d0b44696c263834892b3f70f69eac60b540ccc993e11f0c48b11abf998a310cb",
+  "registration_sha256": "127bf551f9ea2029b3cffe606be60b14c43a93302a818a1b060f7ef94e69d6ed",
+  "processes": 120,
+  "producer_reports_accepted": 120,
+  "check_executions": 387060,
+  "producer_correctness_failures": 0,
+  "evictions": 0,
+  "oversize_bypasses": 0,
+  "sat_replay_failures": 0,
+  "analyzer_gate": "reject",
+  "analyzer_failure": "cold-exact: cache classification differs without eviction/bypass",
+  "cause": "the committed v1 opportunity artifact keyed exact hits by textual query SHA-256, while ADR-0303 and the implementation use the sorted duplicate-elided assertion-identity set",
+  "per_process_classification": [
+    {"driver":"DptfDevGen","checks":603,"v1_exact_hits":240,"canonical_exact_hits":255,"structural_hits":279,"misses":324},
+    {"driver":"vwififlt","checks":5182,"v1_exact_hits":1879,"canonical_exact_hits":2609,"structural_hits":3001,"misses":2181},
+    {"driver":"IntcSST","checks":2309,"v1_exact_hits":1095,"canonical_exact_hits":1196,"structural_hits":1253,"misses":1056},
+    {"driver":"SurfacePen","checks":4808,"v1_exact_hits":2654,"canonical_exact_hits":3941,"structural_hits":4030,"misses":778}
+  ],
+  "canonical_opportunity_path": "bench-results/glaurung-constraint-cache-opportunity-v2-20260720/opportunity.json",
+  "canonical_opportunity_sha256": "23d32e734cb38da9338ffae2215a4fef7198ec03d91ebf70c39a21d9f087ac85",
+  "accepted_timing_rows": 0,
+  "ratios": [],
+  "confidence_intervals": [],
+  "driver_conclusions": [],
+  "claim_boundary": "all raw timing is disqualified; no speed or warm-additivity conclusion may be computed from this campaign"
+}

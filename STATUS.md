@@ -348,9 +348,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   report publication with one warm serial owner/71 references because cold mode
   replayed warm owner-share events while its close path was correctly inert.
   The artifact is retained; a red/green regression now keeps cold owner state
-  inert while still counting source lifecycle events. Zero cache timing rows
-  still exist; the next action is the corrected committed 120-process campaign
-  and unchanged analyzer.
+  inert while still counting source lifecycle events. The corrected ADR-0303
+  campaign completed 120/120 producer reports and 387,060 checks, all with zero
+  correctness, replay, eviction, bypass, or resource failure, but the frozen
+  analyzer rejects before timing: opportunity v1 used textual query SHA for
+  exact identity while the ADR/implementation use canonical assertion sets.
+  The structural total stays 8,563/12,902, but canonical exact is 8,001 (62.01%)
+  rather than 5,868 (45.48%). ADR-0304 freezes that v2 correction and a fresh
+  otherwise-identical zero-row registration. The next action is its complete
+  rerun; rejected ADR-0303 timing must never be reused or reported.
 
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
@@ -5420,6 +5426,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Rejected the first engine-cache factorial and froze the exact-
+  identity correction.** All 120 producer reports pass, but the independent
+  analyzer correctly rejects because opportunity v1 classified exact hits by
+  textual query SHA instead of ADR-0303's canonical assertion set. No eviction,
+  bypass, or replay failure permits a bounded-delta exception. The rejected
+  campaign retains zero accepted ratios. Opportunity v2 moves 2,133 occurrences
+  from implication to exact (8,001 exact; 8,563 structural unchanged), and
+  ADR-0304 freezes a fresh otherwise-identical zero-row rerun.
 
 - **2026-07-20 — Froze the executable engine-cache factorial at zero rows.**
   Glaurung `202786c` implements the sound bounded cache and complete v2 replay

@@ -715,8 +715,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     finds a 45.48% exact and 66.37% unbounded exact-plus-implication structural
     ceiling. It does not measure cache cost or additivity;
     [ADR-0303](../09-decisions/adr-0303-preregister-engine-constraint-cache-factorial.md)
-    now freezes the implemented bounded six-mode producer, runner, analyzer,
-    executable, and zero-row registration before timing.
+    froze the implemented bounded six-mode producer, runner, and analyzer, but
+    its first campaign is rejected on textual-query versus canonical-set exact
+    classification drift. [ADR-0304](../09-decisions/adr-0304-correct-canonical-cache-identity-and-rerun.md)
+    freezes the corrected opportunity v2 and a fresh otherwise-identical rerun.
 - [ ] Is disjoint projected enumeration cheaper than per-expression optimization
   (least-unsigned probing cost measured at 27x solves) for deterministic diverse
   concretization?

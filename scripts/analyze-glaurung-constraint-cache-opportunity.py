@@ -17,7 +17,10 @@ from typing import Any, Iterable
 REGISTRATION_SCHEMA = "axeyum-glaurung-six-cell-registration-v1"
 REPORT_SCHEMA = "axeyum-glaurung-paired-analysis-v1"
 TRACE_SCHEMA = "glaurung-ordered-trace-v1"
-RESULT_SCHEMA = "axeyum.glaurung-constraint-cache-opportunity.v1"
+RESULT_SCHEMAS = {
+    "textual-query": "axeyum.glaurung-constraint-cache-opportunity.v1",
+    "canonical-constraint-set": "axeyum.glaurung-constraint-cache-opportunity.v2",
+}
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -148,8 +151,11 @@ class CacheCounts:
 
 
 class StructuralCache:
-    def __init__(self) -> None:
-        self.exact: dict[str, str] = {}
+    def __init__(self, exact_identity: str = "textual-query") -> None:
+        if exact_identity not in RESULT_SCHEMAS:
+            raise ValueError(f"unsupported exact identity: {exact_identity}")
+        self.exact_identity = exact_identity
+        self.exact: dict[str | tuple[str, ...], str] = {}
         self.unsat = UnsatSubsetTrie()
         self.sat = SatSupersetIndex()
         self.counts = CacheCounts()
@@ -169,7 +175,12 @@ class StructuralCache:
         else:
             raise ValueError(f"cache opportunity requires a decided outcome: {outcome}")
 
-        previous = self.exact.get(query_sha256)
+        exact_key: str | tuple[str, ...] = (
+            query_sha256
+            if self.exact_identity == "textual-query"
+            else tuple(sorted(constraints))
+        )
+        previous = self.exact.get(exact_key)
         if previous is not None:
             if previous != outcome:
                 raise ValueError(f"conflicting exact outcome for query {query_sha256}")
@@ -197,7 +208,7 @@ class StructuralCache:
                 self.counts.misses += 1
                 classification = "miss"
 
-        self.exact[query_sha256] = outcome
+        self.exact[exact_key] = outcome
         if outcome == "sat":
             self.sat.insert(constraints)
         else:
@@ -220,9 +231,11 @@ def validate_trace_files(trace_dir: pathlib.Path) -> tuple[dict[str, Any], bytes
     return manifest, events_raw
 
 
-def analyze_events(events_raw: bytes) -> dict[str, Any]:
+def analyze_events(
+    events_raw: bytes, *, exact_identity: str = "textual-query"
+) -> dict[str, Any]:
     paths: dict[str, list[Scope]] = {}
-    cache = StructuralCache()
+    cache = StructuralCache(exact_identity)
     sequence_rows: list[dict[str, Any]] = []
     assertion_counts: list[int] = []
     event_count = 0
@@ -346,12 +359,14 @@ def analyze_events(events_raw: bytes) -> dict[str, Any]:
     }
 
 
-def analyze_trace(trace_dir: pathlib.Path, *, driver_sha256: str) -> dict[str, Any]:
+def analyze_trace(
+    trace_dir: pathlib.Path, *, driver_sha256: str, exact_identity: str
+) -> dict[str, Any]:
     manifest, events_raw = validate_trace_files(trace_dir)
     driver = manifest.get("driver")
     if not isinstance(driver, dict) or driver.get("sha256") != driver_sha256:
         raise ValueError(f"{trace_dir}: driver SHA-256 differs")
-    result = analyze_events(events_raw)
+    result = analyze_events(events_raw, exact_identity=exact_identity)
     if result["event_count"] != manifest.get("event_count"):
         raise ValueError(f"{trace_dir}: event count differs from manifest")
     native_replay = manifest.get("native_replay")
@@ -393,7 +408,11 @@ def sum_counts(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
 def analyze_campaign(
     registration_path: pathlib.Path,
     report_paths: list[pathlib.Path],
+    *,
+    exact_identity: str = "textual-query",
 ) -> dict[str, Any]:
+    if exact_identity not in RESULT_SCHEMAS:
+        raise ValueError(f"unsupported exact identity: {exact_identity}")
     registration, registration_raw = read_json(
         registration_path, label="six-cell registration"
     )
@@ -428,7 +447,11 @@ def analyze_campaign(
         if not isinstance(trace_paths, list) or len(trace_paths) != 5:
             raise ValueError(f"{report_path}: expected five trace paths")
         repetitions = [
-            analyze_trace(pathlib.Path(path), driver_sha256=driver_sha256)
+            analyze_trace(
+                pathlib.Path(path),
+                driver_sha256=driver_sha256,
+                exact_identity=exact_identity,
+            )
             for path in trace_paths
         ]
         sequence_digests = {row["sequence_digest"] for row in repetitions}
@@ -455,7 +478,8 @@ def analyze_campaign(
         for repetition in driver["repetitions"]
     )
     return {
-        "schema": RESULT_SCHEMA,
+        "schema": RESULT_SCHEMAS[exact_identity],
+        "exact_identity": exact_identity,
         "claim_boundary": (
             "structurally cache-addressable verdict opportunities only; no cache "
             "implementation, model replay, timing, or warm-additivity result"
@@ -482,9 +506,18 @@ def main() -> int:
     parser.add_argument("--registration", type=pathlib.Path, required=True)
     parser.add_argument("--reports", type=pathlib.Path, nargs="+", required=True)
     parser.add_argument("--output", type=pathlib.Path, required=True)
+    parser.add_argument(
+        "--exact-identity",
+        choices=tuple(RESULT_SCHEMAS),
+        default="textual-query",
+    )
     args = parser.parse_args()
     try:
-        result = analyze_campaign(args.registration, args.reports)
+        result = analyze_campaign(
+            args.registration,
+            args.reports,
+            exact_identity=args.exact_identity,
+        )
         write_new_json(args.output, result)
         print(json.dumps(result["all_processes"], sort_keys=True))
         return 0

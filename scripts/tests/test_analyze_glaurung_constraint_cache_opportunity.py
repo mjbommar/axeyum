@@ -128,6 +128,21 @@ class ConstraintCacheOpportunityTests(unittest.TestCase):
                 events([("same", "sat", ["a"]), ("same", "unsat", ["a"])])
             )
 
+    def test_canonical_constraint_identity_ignores_textual_query_order(self) -> None:
+        raw = events(
+            [
+                ("query-a-b", "sat", ["a", "b"]),
+                ("query-b-a", "sat", ["b", "a"]),
+            ]
+        )
+        textual = MODULE.analyze_events(raw)
+        canonical = MODULE.analyze_events(
+            raw, exact_identity="canonical-constraint-set"
+        )
+        self.assertEqual(textual["cache"]["exact_hits"], 0)
+        self.assertEqual(canonical["cache"]["exact_sat_hits"], 1)
+        self.assertEqual(canonical["cache"]["sat_superset_hits"], 0)
+
     def test_unsat_subset_cannot_predict_recorded_sat(self) -> None:
         with self.assertRaisesRegex(ValueError, "contradicts recorded SAT"):
             MODULE.analyze_events(

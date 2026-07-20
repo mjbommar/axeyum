@@ -3,9 +3,8 @@
 Status: accepted
 Date: 2026-07-20
 
-Result state: implementation/runner/analyzer/registration frozen with zero
-cache timing rows; prior immutable-trace opportunity analysis selects the
-experiment
+Result state: first 120-process campaign rejected at the independent cache-
+classification gate; zero accepted ratios or driver conclusions
 
 ## Context
 
@@ -210,15 +209,17 @@ negative when wholly below one. Separately report whether cache-on improves the
 cold and warm modes. These labels characterize the interaction; they do not
 authorize a general speed headline.
 
-## Zero-row boundary
+## Rejected first campaign
 
-The cache implementation, registration, runner, and analyzer now exist and are
-committed, so the preregistered experiment is executable. One attempted real
-trace process failed its terminal-state gate and emitted no report. Therefore
-timing rows, ratios, confidence intervals, and driver conclusions remain empty.
-The only accepted workload result remains the disclosed read-only structural
-opportunity artifact. Unit fixtures exercise semantics, counters, and
-fail-closed analysis without becoming benchmark rows.
+After the zero-report cold-owner pilot and its disclosed correction, the frozen
+campaign completed 120/120 passing producer reports and 387,060 check
+executions. The independent analyzer rejected before computing ratios because
+the committed v1 opportunity artifact used textual query SHA for exact identity
+while this ADR and the implementation use canonical assertion sets. With zero
+evictions or oversize bypasses, gate 3 permits no delta. Raw timing is retained
+but disqualified; ratios, confidence intervals, and driver conclusions remain
+empty. [ADR-0304](adr-0304-correct-canonical-cache-identity-and-rerun.md)
+freezes the corrected read-only identity and requires a wholly fresh rerun.
 
 ## Alternatives
 
@@ -243,3 +244,7 @@ another ADR justify promotion. A negative result is valuable: if cold plus a
 bounded engine cache matches or beats warm plus the same cache, the paper must
 not frame solver-internal reuse as an independent SE advantage. A positive
 result supports only the measured drivers and policies.
+
+The first execution did not cross that boundary: its classification oracle was
+inconsistent with the written identity, and the fail-closed analyzer rejected
+it. No performance statement follows from ADR-0303.
