@@ -1,0 +1,118 @@
+# Reconstruction refactor inventory
+
+Status: active; R1 complete
+Date: 2026-07-20
+Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
+
+## Purpose
+
+Reduce the artifact-review cost of `axeyum-solver`'s proof reconstruction code
+without weakening its trust boundary or changing generated Lean source. This is
+an internal organization and duplication project, not a new proof rule, solver
+capability, or public API project.
+
+The non-negotiable identity is still **untrusted fast search, trusted small
+checking**. Moving a reconstructor must not move certificate validation into an
+untrusted layer, replace kernel inference with an assertion, or widen the set of
+accepted terms.
+
+## Measured baseline
+
+| Surface | Current size / shape |
+|---|---:|
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 18,387 lines / 795,323 bytes after R1 |
+| `reconstruct/tests.rs` | 4,429 lines / 181,088 bytes |
+| `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
+| `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
+| `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 43 |
+| `ProofFragment` variants in the general dispatcher | 61 |
+| direct structural variants in the pre-dispatch seam | 34 |
+
+The file is large for two different reasons that should not be conflated:
+
+1. it contains several genuinely different proof calculi and kernel encodings;
+2. its direct structural lane repeats one small checked-wrapper emitter around
+   many different certificate validators.
+
+Only the second is safe for immediate parameterization.
+
+## Direct structural lane
+
+`reconstruct_direct_structural_fragment_to_lean_module` owns 34 variants. They
+fall into three groups:
+
+| Group | Count | Treatment |
+|---|---:|---|
+| Custom constructive encodings | 5 | Keep explicit: finite-domain pigeonhole, reflexive disequality, term identity, array axiom, finite-array extensionality |
+| Checked certificate plus the same opaque-proposition emitter | 26 | Keep each named validator and error contract; route only its final emission through one helper |
+| Already routed through that helper | 3 | Keep: const-array default mismatch, store-chain readback, cross-store array disequality |
+
+The 29 shared-emitter rows all construct the same kernel-checked shape:
+
+```text
+axiom asserted : P
+axiom refuter : Not P
+exact refuter asserted
+```
+
+This is not permission to table-drive the certificate checks. Their validation
+rules, failure details, recheck requirements, and source modules remain distinct.
+Only the final deterministic Lean wrapper is common.
+
+## File families
+
+The remaining monolith divides into reviewable ownership families:
+
+| Family | Approximate current region | Natural destination |
+|---|---|---|
+| Shared context, names, equality reconstruction | start through direct-certificate helpers | `reconstruct/core.rs` and `reconstruct/equality.rs` |
+| Direct structural certificate adapters | finite-domain/direct lane through line 3,665 | `reconstruct/direct.rs` |
+| Fragment selection and top-level dispatch | normalization and lines around 3,805--4,236 | keep in `reconstruct/mod.rs` |
+| ABV and structural datatype source | starts around 4,237 and 4,885 | `reconstruct/array.rs`, `reconstruct/datatype.rs` |
+| Quantifier and Skolem evidence | starts around 7,339 | `reconstruct/quantifier.rs` plus the existing BV instance-set module |
+| Resolution/RUP/CNF introduction | starts around 8,236 and 10,813 | `reconstruct/resolution.rs`, `reconstruct/cnf.rs` |
+| Bit-blast and QF_BV evidence | starts around 12,292 and 12,745 | `reconstruct/bitblast.rs` |
+| LRA/SOS evidence | starts around 15,833 | `reconstruct/arithmetic.rs` |
+
+These are ownership targets, not a command to move all regions at once. Private
+cross-family dependencies must be made explicit before each extraction; broad
+`pub(crate)` visibility is not an acceptable shortcut.
+
+## Required gates
+
+Every extraction or parameterization increment must preserve all of the
+following:
+
+1. the public `prove_unsat_to_lean_module` and `ProofFragment` surface;
+2. exact fragment selection for accepted and rejected inputs;
+3. validator order, recheck calls, error variant, rule string, and detail text;
+4. byte-for-byte generated Lean source for every affected accepted row;
+5. successful independent kernel inference of `False`;
+6. deterministic naming and declaration order;
+7. the `qfbv` default feature boundary and native-free default build; and
+8. no new trusted axiom shape, unsafe code, or public re-export.
+
+The ordinary full-profile solver suite is necessary but insufficient for item
+4. Shared-emitter work therefore needs a test that compares the helper against
+the pre-refactor emission algorithm over every registered `(proposition stem,
+refuter role)` pair. Later file moves should add source snapshots or equivalent
+before/after byte comparisons for their affected fixtures.
+
+## Staged sequence
+
+1. **R1 — emitter parameterization (complete).** The exhaustive
+   legacy-equivalence test covers all 29 registered stem/role pairs; all 26
+   formerly inline adapters now use the shared helper, while every validator
+   remains named and unchanged. This removes 130 lines / 8,924 bytes from
+   `reconstruct.rs`. All 884 full-profile solver tests and clippy `-D warnings`
+   pass.
+2. **R2 — direct-lane ownership.** Move the 34 direct adapters and their private
+   helpers into `reconstruct/direct.rs`; leave one explicit dispatcher seam.
+3. **R3 — one proof family per commit.** Extract equality, datatype/array,
+   quantifier, resolution/CNF, bit-blast, and arithmetic regions separately.
+   Each commit carries its own byte-stability and kernel gates.
+4. **R4 — visibility audit.** After the files settle, narrow private imports and
+   only then evaluate the separate root-API namespacing work.
+
+Do not combine R1--R4 with solver behavior, proof-rule additions, or public API
+renaming. Small reviewable commits are the artifact-readiness objective.

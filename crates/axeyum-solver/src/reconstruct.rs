@@ -2719,15 +2719,10 @@ fn reconstruct_bool_simplification_to_lean_module(
         },
     )?;
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const(&format!("bool_simplification_{}", cert.assertion.index()));
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_simplification")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        &format!("bool_simplification_{}", cert.assertion.index()),
+        "bool_simplification",
+    )
 }
 
 fn reconstruct_bool_uf_exhaustive_to_lean_module(
@@ -2748,15 +2743,10 @@ fn reconstruct_bool_uf_exhaustive_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bool_uf_exhaustive_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_uf_exhaustive")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bool_uf_exhaustive_assertions",
+        "bool_uf_exhaustive",
+    )
 }
 
 fn reconstruct_bool_euf_exhaustive_to_lean_module(
@@ -2777,15 +2767,10 @@ fn reconstruct_bool_euf_exhaustive_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bool_euf_exhaustive_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_euf_exhaustive")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bool_euf_exhaustive_assertions",
+        "bool_euf_exhaustive",
+    )
 }
 
 fn reconstruct_bool_euf_online_to_lean_module(
@@ -2805,15 +2790,10 @@ fn reconstruct_bool_euf_online_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bool_euf_online_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_euf_online")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bool_euf_online_assertions",
+        "bool_euf_online",
+    )
 }
 
 fn reconstruct_uf_arith_congruence_to_lean_module(
@@ -2834,15 +2814,10 @@ fn reconstruct_uf_arith_congruence_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("uf_arith_congruence_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "uf_arith_congruence")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "uf_arith_congruence_assertions",
+        "uf_arith_congruence",
+    )
 }
 
 fn reconstruct_datatype_structural_to_lean_module(
@@ -2856,15 +2831,10 @@ fn reconstruct_datatype_structural_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("datatype_structural_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "datatype_structural")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "datatype_structural_assertions",
+        "datatype_structural",
+    )
 }
 
 fn reconstruct_finite_domain_enum_to_lean_module(
@@ -2895,15 +2865,10 @@ fn reconstruct_finite_domain_enum_to_lean_module(
         }
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("finite_domain_enum_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "finite_domain_enum")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "finite_domain_enum_assertions",
+        "finite_domain_enum",
+    )
 }
 
 fn reconstruct_term_level_enum_to_lean_module(
@@ -2934,15 +2899,10 @@ fn reconstruct_term_level_enum_to_lean_module(
         }
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("term_level_enum_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "term_level_enum")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "term_level_enum_assertions",
+        "term_level_enum",
+    )
 }
 
 fn reconstruct_bv_defined_enum_to_lean_module(
@@ -2956,15 +2916,10 @@ fn reconstruct_bv_defined_enum_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bv_defined_enum_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_defined_enum")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bv_defined_enum_assertions",
+        "bv_defined_enum",
+    )
 }
 
 fn reconstruct_set_cardinality_to_lean_module(
@@ -2978,15 +2933,10 @@ fn reconstruct_set_cardinality_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("set_cardinality_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "set_cardinality")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "set_cardinality_assertions",
+        "set_cardinality",
+    )
 }
 
 fn reconstruct_bv_forall_nonconstant_to_lean_module(
@@ -3007,15 +2957,10 @@ fn reconstruct_bv_forall_nonconstant_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bv_forall_nonconstant_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_forall_nonconstant")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bv_forall_nonconstant_assertions",
+        "bv_forall_nonconstant",
+    )
 }
 
 fn reconstruct_bv_uf_local_to_lean_module(
@@ -3037,15 +2982,10 @@ fn reconstruct_bv_uf_local_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bv_uf_local_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_uf_local")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bv_uf_local_assertions",
+        "bv_uf_local",
+    )
 }
 
 fn reconstruct_lra_dpll_to_lean_module(
@@ -3091,15 +3031,10 @@ fn reconstruct_lra_dpll_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("lra_dpll_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "lra_dpll")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "lra_dpll_assertions",
+        "lra_dpll",
+    )
 }
 
 fn reconstruct_arith_dpll_to_lean_module(
@@ -3148,15 +3083,10 @@ fn reconstruct_arith_dpll_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("arith_dpll_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "arith_dpll")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "arith_dpll_assertions",
+        "arith_dpll",
+    )
 }
 
 fn reconstruct_bounded_int_blast_to_lean_module(
@@ -3186,15 +3116,10 @@ fn reconstruct_bounded_int_blast_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bounded_int_blast_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bounded_int_blast")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bounded_int_blast_assertions",
+        "bounded_int_blast",
+    )
 }
 
 fn reconstruct_nra_even_power_to_lean_module(
@@ -3217,15 +3142,10 @@ fn reconstruct_nra_even_power_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("nra_even_power_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "nra_even_power")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "nra_even_power_assertions",
+        "nra_even_power",
+    )
 }
 
 fn reconstruct_array_axiom_to_lean_module(
@@ -3358,15 +3278,10 @@ fn reconstruct_bv_abstraction_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("bv_abstraction_assertions");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bv_abstraction")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "bv_abstraction_assertions",
+        "bv_abstraction",
+    )
 }
 
 fn reconstruct_two_byte_memcpy_to_lean_module(
@@ -3387,15 +3302,10 @@ fn reconstruct_two_byte_memcpy_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("two_byte_memcpy_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "two_byte_memcpy")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "two_byte_memcpy_assertion",
+        "two_byte_memcpy",
+    )
 }
 
 fn reconstruct_two_element_bubble_sort_to_lean_module(
@@ -3414,15 +3324,10 @@ fn reconstruct_two_element_bubble_sort_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("two_element_bubble_sort_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "two_element_bubble_sort")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "two_element_bubble_sort_assertion",
+        "two_element_bubble_sort",
+    )
 }
 
 fn reconstruct_two_element_selection_sort_to_lean_module(
@@ -3441,15 +3346,10 @@ fn reconstruct_two_element_selection_sort_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("two_element_selection_sort_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "two_element_selection_sort")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "two_element_selection_sort_assertion",
+        "two_element_selection_sort",
+    )
 }
 
 fn reconstruct_aligned_write_chain_to_lean_module(
@@ -3469,15 +3369,10 @@ fn reconstruct_aligned_write_chain_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("aligned_write_chain_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "aligned_write_chain")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "aligned_write_chain_assertion",
+        "aligned_write_chain",
+    )
 }
 
 fn reconstruct_two_cell_xor_swap_to_lean_module(
@@ -3497,15 +3392,10 @@ fn reconstruct_two_cell_xor_swap_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("two_cell_xor_swap_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "two_cell_xor_swap")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "two_cell_xor_swap_assertion",
+        "two_cell_xor_swap",
+    )
 }
 
 fn reconstruct_two_byte_xor_swap_roundtrip_to_lean_module(
@@ -3524,15 +3414,10 @@ fn reconstruct_two_byte_xor_swap_roundtrip_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("two_byte_xor_swap_roundtrip_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "two_byte_xor_swap_roundtrip")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "two_byte_xor_swap_roundtrip_assertion",
+        "two_byte_xor_swap_roundtrip",
+    )
 }
 
 fn reconstruct_binary_search16_to_lean_module(
@@ -3552,15 +3437,10 @@ fn reconstruct_binary_search16_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("binary_search16_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "binary_search16")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "binary_search16_assertion",
+        "binary_search16",
+    )
 }
 
 fn reconstruct_fifo_bc04_to_lean_module(
@@ -3580,15 +3460,10 @@ fn reconstruct_fifo_bc04_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const("fifo_bc04_assertion");
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "fifo_bc04")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        "fifo_bc04_assertion",
+        "fifo_bc04",
+    )
 }
 
 fn reconstruct_bool_array_read_collapse_to_lean_module(
@@ -3607,20 +3482,15 @@ fn reconstruct_bool_array_read_collapse_to_lean_module(
         });
     }
 
-    let mut ctx = ReconstructCtx::new();
-    let prop_name = ctx.prop_atom_const(&format!(
-        "bool_array_read_collapse_{}_{}_{}",
-        cert.array.index(),
-        cert.concrete_equality.index(),
-        cert.disequality.index()
-    ));
-    let prop = ctx.kernel.const_(prop_name, vec![]);
-    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
-    let refuter_prop = ctx.mk_not(prop);
-    let refuter = fresh_axiom(&mut ctx, refuter_prop, "bool_array_read_collapse")?;
-    let proof = ctx.kernel.app(refuter, asserted);
-    require_infers_false(&mut ctx, proof)?;
-    Ok(render_ctx_module(&mut ctx, proof))
+    reconstruct_checked_structural_certificate_to_lean_module(
+        &format!(
+            "bool_array_read_collapse_{}_{}_{}",
+            cert.array.index(),
+            cert.concrete_equality.index(),
+            cert.disequality.index()
+        ),
+        "bool_array_read_collapse",
+    )
 }
 
 fn reconstruct_finite_array_extensionality_to_lean_module(

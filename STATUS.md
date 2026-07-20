@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — Reconstruction cleanup R1 parameterizes only the shared
+  checked wrapper.** The new inventory measures the 18,517-line monolith and
+  classifies its 34 direct structural variants into five custom constructive
+  encodings and 29 validators sharing one deterministic opaque-proposition
+  wrapper. A characterization test proves the helper byte-identical to the
+  pre-refactor algorithm over all 29 registered stem/role pairs. All 26 inline
+  emission tails now call it; each validator, recheck, error string, dispatcher
+  arm, and kernel `False` gate stays explicit. `reconstruct.rs` falls by 130
+  lines / 8,924 bytes. All 884 full-profile solver tests and clippy pass under
+  the bounded one-job discipline. Next: R2 moves this direct lane, one ownership
+  boundary only, into `reconstruct/direct.rs` with the same byte-stability gate.
+
 - **2026-07-20 — Artifact cleanup starts with one semantics-preserving internal
   walker consolidation.** Fifteen byte-equivalent binary top-level conjunction
   walkers now use one tested crate-private helper, removing 102 net source
@@ -5418,6 +5430,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Parameterized 29 direct structural Lean wrappers.** A measured
+  reconstruction inventory and exhaustive legacy-equivalence test precede the
+  change. Twenty-six repeated emission tails now use the existing three-row
+  helper; named certificate validation and kernel checking remain unchanged.
 
 - **2026-07-20 — Deduplicated binary conjunction walkers.** One crate-private
   helper replaces 15 identical `collect_top_conjuncts` implementations; the two

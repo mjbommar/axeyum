@@ -10,9 +10,87 @@ use axeyum_cnf::{AletheLit, AletheTerm};
 use axeyum_lean_kernel::ExprNode;
 
 use super::{
-    ProofFragment, ReconstructCtx, ReconstructError, prove_unsat_to_lean_module,
-    reconstruct_eq_step, scan_proof_fragment,
+    ProofFragment, ReconstructCtx, ReconstructError, fresh_axiom, prove_unsat_to_lean_module,
+    reconstruct_checked_structural_certificate_to_lean_module, reconstruct_eq_step,
+    render_ctx_module, require_infers_false, scan_proof_fragment,
 };
+
+fn legacy_checked_structural_certificate_module(
+    prop_stem: &str,
+    refuter_role: &str,
+) -> Result<String, ReconstructError> {
+    let mut ctx = ReconstructCtx::new();
+    let prop_name = ctx.prop_atom_const(prop_stem);
+    let prop = ctx.kernel.const_(prop_name, vec![]);
+    let asserted = fresh_axiom(&mut ctx, prop, "assume")?;
+    let refuter_prop = ctx.mk_not(prop);
+    let refuter = fresh_axiom(&mut ctx, refuter_prop, refuter_role)?;
+    let proof = ctx.kernel.app(refuter, asserted);
+    require_infers_false(&mut ctx, proof)?;
+    Ok(render_ctx_module(&mut ctx, proof))
+}
+
+#[test]
+fn checked_structural_emitter_is_byte_identical_for_every_registered_role() {
+    let roles = [
+        ("bool_simplification_42", "bool_simplification"),
+        ("bool_uf_exhaustive_assertions", "bool_uf_exhaustive"),
+        ("bool_euf_exhaustive_assertions", "bool_euf_exhaustive"),
+        ("bool_euf_online_assertions", "bool_euf_online"),
+        ("uf_arith_congruence_assertions", "uf_arith_congruence"),
+        ("datatype_structural_assertions", "datatype_structural"),
+        ("finite_domain_enum_assertions", "finite_domain_enum"),
+        ("term_level_enum_assertions", "term_level_enum"),
+        ("bv_defined_enum_assertions", "bv_defined_enum"),
+        ("set_cardinality_assertions", "set_cardinality"),
+        ("bv_forall_nonconstant_assertions", "bv_forall_nonconstant"),
+        ("bv_uf_local_assertions", "bv_uf_local"),
+        ("lra_dpll_assertions", "lra_dpll"),
+        ("arith_dpll_assertions", "arith_dpll"),
+        ("bounded_int_blast_assertions", "bounded_int_blast"),
+        ("nra_even_power_assertions", "nra_even_power"),
+        (
+            "const_array_default_mismatch_assertions",
+            "const_array_default_mismatch",
+        ),
+        ("store_chain_readback_assertions", "store_chain_readback"),
+        (
+            "cross_store_array_disequality_assertions",
+            "cross_store_array_disequality",
+        ),
+        ("bv_abstraction_assertions", "bv_abstraction"),
+        ("two_byte_memcpy_assertion", "two_byte_memcpy"),
+        (
+            "two_element_bubble_sort_assertion",
+            "two_element_bubble_sort",
+        ),
+        (
+            "two_element_selection_sort_assertion",
+            "two_element_selection_sort",
+        ),
+        ("aligned_write_chain_assertion", "aligned_write_chain"),
+        ("two_cell_xor_swap_assertion", "two_cell_xor_swap"),
+        (
+            "two_byte_xor_swap_roundtrip_assertion",
+            "two_byte_xor_swap_roundtrip",
+        ),
+        ("binary_search16_assertion", "binary_search16"),
+        ("fifo_bc04_assertion", "fifo_bc04"),
+        (
+            "bool_array_read_collapse_1_2_3",
+            "bool_array_read_collapse",
+        ),
+    ];
+
+    for (prop_stem, refuter_role) in roles {
+        let legacy = legacy_checked_structural_certificate_module(prop_stem, refuter_role)
+            .expect("legacy structural wrapper must reconstruct");
+        let shared =
+            reconstruct_checked_structural_certificate_to_lean_module(prop_stem, refuter_role)
+                .expect("shared structural wrapper must reconstruct");
+        assert_eq!(shared.as_bytes(), legacy.as_bytes(), "{refuter_role}");
+    }
+}
 
 /// A bare atom literal `a` (positive). Helper for building clauses.
 fn atom(s: &str) -> AletheTerm {
