@@ -87,3 +87,33 @@ The committed function retains the compiler's implicit `%1` entry-block slot,
 two loop PHIs, `llvm.umin.i8`, `add nuw nsw`, `add nuw`, and the conditional
 self/exit edge. Tests consume the file byte-for-byte; do not add a synthetic
 entry label.
+
+## ADR-0292 preregistered multi-block natural loop
+
+`clang21_capdiv_natural_loop.ll` is the unmodified complete module emitted by
+Ubuntu clang 21.1.8 (6ubuntu1) for:
+
+```c
+#include <stdint.h>
+uint8_t capdiv(uint8_t n, uint8_t d) {
+    uint8_t acc = 0;
+    for (uint8_t i = 0; i < n; i++) {
+        if ((i & 1) != 0) {
+            uint8_t next = (uint8_t)(acc + i / d);
+            acc = next > 100 ? 100 : next;
+        }
+    }
+    return acc;
+}
+```
+
+```sh
+clang-21 -O1 -fno-unroll-loops -fno-vectorize -fno-strict-aliasing \
+  -S -emit-llvm -x c capdiv.c -o clang21_capdiv_natural_loop.ll
+```
+
+The module freezes the next T5.1.4 input before implementation: implicit `%2`
+entry identity; header `%6`; conditional division block `%11`; latch `%15`;
+latch PHI `%16`; one `%15 -> %6` back-edge; path-sensitive `udiv`; `umin`; and
+`add nuw`. It passes `llvm-as-21` unchanged. No multi-block loop semantics are
+implemented under the ADR-0292 zero row.

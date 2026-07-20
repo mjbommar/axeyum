@@ -158,8 +158,14 @@ session state.
 >    recurrence tuples at zero disagreement, poison/UB negatives, precise shape
 >    errors, and source-replayed abstract reachability pass in the standing
 >    eight-binary/70-test gate. T5.1.4 remains WIP: next preregister bounded
->    unrolling and either MIR or multi-block reducible loops; do not widen general
->    places, admit LLIR, or perturb the accepted Linux recall route first.
+>    unrolling and either MIR or multi-block reducible loops. ADR-0292 now freezes
+>    the selected continuation: one exact clang-21 single-latch natural loop with
+>    two internal paths and path-conditioned division UB. Derive one checked
+>    transition and reuse the existing replay-checked BMC k-unrolling rather than
+>    building a second textual-CFG semantics engine. Commit the zero row and exact
+>    fixture before implementation; general rejected-loop unrolling, MIR,
+>    multi-latch/early-exit/switch/memory loops, general places, and LLIR remain
+>    open, and the accepted Linux recall route stays untouched.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

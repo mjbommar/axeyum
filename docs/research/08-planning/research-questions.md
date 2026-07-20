@@ -789,6 +789,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     the abstract reachable row. Exit abstraction is explicit: safe invariants
     are sound, while abstract reachability requires separate source replay. This does not
     admit MIR, multi-block/nested/memory loops, unrolling fallback, or LLIR.
+  - [ADR-0292](../09-decisions/adr-0292-preregister-single-latch-llvm-natural-loop.md)
+    preregisters the next T5.1.4 route after auditing the bounded fallback:
+    derive one checked transition from a real single-latch natural loop with an
+    acyclic internal region, then reuse the existing replay-checked BMC
+    k-unrolling. The frozen `capdiv` module distinguishes path-conditioned UB:
+    `d=0` is permitted on the even path that skips `udiv` and forbidden on the
+    odd path that executes it. General rejected-loop unrolling, MIR,
+    multi-latch/early-exit/switch/memory loops, and LLIR remain open.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
