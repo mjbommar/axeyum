@@ -1,10 +1,10 @@
 # ADR-0294: Preregister a Glaurung LLVM loop semantic census
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: first formal artifact rejected at byte-reproduction; corrected
-producer is zero-row and no accepted result exists
+Result state: accepted after disclosed reproduction correction; exact corrected
+result reproduces byte-for-byte
 
 ## Context
 
@@ -146,9 +146,51 @@ in four sources. This is not yet an accepted result. The corrected producer and
 this disclosure must be committed and pushed before a fresh two-run
 reproduction.
 
+## Accepted corrected result
+
+After correction commit `2784aba4`, the fresh first run created and the
+immediate second run reproduced
+`docs/consumer-track/verify/glaurung-llvm-loop-semantic-census-v1-result.json`
+byte-for-byte, SHA-256
+`14d440fe1c2129a79ad768a3683e52cc1ba055e4594078a6dc33d39289d4a0f7`.
+The retained-result validator recomputes producer/manifest/structural identity,
+all source and loop rows, acceptance metadata, diagnostics, outcome totals, and
+the source-qualified selection. Six adversarial result mutations fail closed.
+
+The exact result is:
+
+- 12/12 sources and 12/12 loop rows retained;
+- 0 accepted and 12 rejected;
+- all 12 stop at `scalar_cfg:unsupported_instruction`; and
+- the frozen bucket selection qualifies across 12 source-qualified functions
+  in four sources, selecting the T5.1.2 audit lane.
+
+No registered function reaches loop reflection. In particular, ADR-0293's 11
+self-loop structural rows are not 11 semantically admitted loops.
+
+The precise first diagnostics show that the selected bucket is not one
+implementation mechanism:
+
+- seven rows reject non-`i8` memory operations, all in `mathlib.c`;
+- three rows reject ordinary calls (`puts` once and `leaf` twice), spanning
+  three functions in two sources;
+- one row rejects `alloca`; and
+- one row rejects a non-scalar function result.
+
+The rule selected a T5.1.2 **audit lane**, not parser code. Wide memory fails the
+cross-source diversity guard. The ordinary-call family has cross-source demand,
+but that grouping was observed after the frozen `stage:kind` selection and
+requires executable call/contracts semantics rather than a syntax-only shim.
+It does not receive retroactive authorization. The next step is a separately
+preregistered broader cross-source semantic population or a call-boundary
+experiment with explicit downstream semantics and complete-work accounting.
+No generic `UnsupportedInstruction` catch-all, coercion, silent fallback, or
+semantic acceptance claim is admitted.
+
 ## Consequences
 
-The next implementation decision will be grounded in precise real rejection
-causes rather than topology or a singleton pilot. The measurement reuses the
-strict checked frontend and its stable diagnostics, adds no coercion or fallback,
-and cannot improve its numbers by dropping work.
+The next implementation decision is grounded in precise real rejection causes
+rather than topology or a singleton pilot. The measurement reuses the strict
+checked frontend and its stable diagnostics, adds no coercion or fallback, and
+cannot improve its numbers by dropping work. T5.1.4 and P5.1 remain in progress;
+this result closes only the exact Glaurung semantic census.

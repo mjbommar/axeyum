@@ -180,10 +180,15 @@ session state.
 >    typed-CFG `unsupported_instruction` declines, but the immediate rerun
 >    rejected all 12 raw extracted-file hashes: `llvm-extract` embeds the random
 >    temporary input path in its ModuleID comment. The rejected artifact is
->    retained. ADR-0294 now freezes a ModuleID-agnostic hash over the otherwise
->    exact bytes and fixes function identity from bare name to source+name;
->    commit/push this correction before a fresh two-run result. Do not build
->    parser support from the rejected artifact, and do not build early-exit
+>    retained. ADR-0294's pushed correction uses a ModuleID-agnostic hash over
+>    the otherwise exact bytes and source-qualified function identities. Its
+>    fresh corrected result creates then reproduces byte-for-byte: 0/12 accepted,
+>    all 12 stop at typed-CFG `unsupported_instruction`. The frozen bucket
+>    selects only a T5.1.2 audit lane. Exact causes split into seven one-source
+>    wide-memory rows, three cross-source call rows, one `alloca`, and one
+>    non-scalar result; no mechanism receives code authorization. Next
+>    preregister a broader cross-source semantic population or an executable
+>    call-boundary experiment, not a syntax-only shim. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
 >    multi-latch/
 >    early-exit/switch/memory loops, general places, and LLIR remain open, and

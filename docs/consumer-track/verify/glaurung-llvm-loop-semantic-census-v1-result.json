@@ -1,0 +1,266 @@
+{
+  "classifier_binary_sha256": "45afc6156dad77c352ec937fb9469be3193772580337d5747ed63b7de93e39d1",
+  "glaurung_revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+  "manifest_sha256": "4e752af9487f4956208720233a6e69500ededf02645c47587f07eaeefd62d2f7",
+  "schema": "axeyum.glaurung-llvm-loop-semantic-census-result.v1",
+  "selection": {
+    "bucket": "scalar_cfg:unsupported_instruction",
+    "functions": 12,
+    "rows": 12,
+    "sources": 4
+  },
+  "sources": [
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "5c080d299d60d7341c6c892f779b076527eab016253e1a4e9cdef66ef34b435a",
+      "loops": [],
+      "path": "samples/source/c/c2_demo.c",
+      "source_sha256": "78a13f3a689d6736f84393058f2911fb5170cb1b9010880409ad69a55d49be75"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "75a6f0fedd4729722181c56f86ea2b45293a84a6fb1d17c7a9bacd787a499233",
+      "loops": [
+        {
+          "diagnostic": "unsupported scalar call `@puts` at 13:22",
+          "function": "main",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "9a7bdc4b7aa1be1fd6f8ac3e646cc5fe3aeed1fe3482e670af5c4128259623b5",
+          "source_path": "samples/source/c/hello.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "path": "samples/source/c/hello.c",
+      "source_sha256": "faa0f97afdb282005bac7e128771f5293e84a65da1beddddc195056a8ca40ee8"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "fdb0d1414a9222dabcb432ac368cecf6ad19f42ceae19bcd207b0065a0cbc513",
+      "loops": [],
+      "path": "samples/source/c/pe_tls.c",
+      "source_sha256": "7ba818542e2e68692ce2789f8e2b578e292cf26481b0c506d35df74895b12871"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "451f4898ee573496a42d4fd62e7fe66853d719a410af8bf0b0e63023fd63529d",
+      "loops": [],
+      "path": "samples/source/c/suspicious_linux.c",
+      "source_sha256": "d0f3f2cad7e6657ffeeb9371a5a457cd383597a8810c4bab9aef621c7ebcaf1e"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "e660d0d814f9ef5e69dd9b676152e6927cf8114e48d2a9a3d33ac2e20fadaa79",
+      "loops": [],
+      "path": "samples/source/c/suspicious_win.c",
+      "source_sha256": "36ba18a83f823431b9f530d293928bdcba22c8ceaa491e9766ac50b14e469321"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "58e8935eceeae875b3bc1546cc2cdac5a0c121b53a09f8b26f5ced70801c801a",
+      "loops": [],
+      "path": "samples/source/c/vulnparse.c",
+      "source_sha256": "2b34549fb4c60f66a292e946ff1a05ce1fb2c84cb2c9592affbeba825e6e12f4"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "c7b5140a95378cc6580f534fe3518c28369a89d35723af6f110321ccb7ebc475",
+      "loops": [
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_factorial",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "58a53dfb70c78bc6df723a11f3f0ac7c25505445e84adf228512c19d6cde32ec",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_fibonacci",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "82e20d72e3215d5f1d8f4ee385305eae18af8025680cd7bde80ad50b06b6173a",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 13:13",
+          "function": "mathlib_gcd",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "9cd70ed941347d816ec202b6784fb70d9b0308169caf04c0482aee5affe5130d",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_is_prime",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "0f2058ee11f48fe6e223284d791a44af1b4a391a7c52cb90473d91fac7384ffb",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "single_latch_early_exit_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_array_sum",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "54d8a08eb337a2a804f378d807446f8451f706c8b5df5324bde61a8692cf9070",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "scalar CFG requires an i1 through i128 function result at 9:25",
+          "function": "mathlib_array_average",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "bb1a7748eaae768591643c16cd100b61210f745d1d0e21380ecb8920d0819185",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_array_max",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "7c7a6d27936bef7fce7d9a7164ce8663d973bb57153e869a003ce5522aaf368d",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "bounded byte memory supports only i8 loads and stores at 10:13",
+          "function": "mathlib_array_min",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "eeacc4e68e6d1a734b53009c48184b6d84610df97f06ca2bc16870955abfaf57",
+          "source_path": "samples/source/library/mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "path": "samples/source/library/mathlib.c",
+      "source_sha256": "483a4be36dec362d1132c97f1f749ab9e1bf411ec32bf95954d305551296b23d"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "60756e53804c7535433a441124facea52cf1103640e4f92e20d536493cd67e4f",
+      "loops": [
+        {
+          "diagnostic": "unsupported scalar instruction `alloca` at 43:8",
+          "function": "main",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "0ae55860ed929823bf5fd0186cd220526762c4d47df62f40195624a51fb9b692",
+          "source_path": "samples/source/library/test_mathlib.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "path": "samples/source/library/test_mathlib.c",
+      "source_sha256": "4a57666159b837621af430a8455041585f1ac2bfbdfc6302aac6169de67332f1"
+    },
+    {
+      "compile_stderr": "samples/source/multi_import.c:5:12: warning: incompatible redeclaration of library function 'strlen' [-Wincompatible-library-redeclaration]\n    5 | extern int strlen(const char *);\n      |            ^\nsamples/source/multi_import.c:5:12: note: 'strlen' is a builtin with type 'unsigned long (const char *)'\n1 warning generated.\n",
+      "llvm_sha256": "7d6d392be82b14c88498d65f13d345a351a108a36a245619183611b1327c8f06",
+      "loops": [],
+      "path": "samples/source/multi_import.c",
+      "source_sha256": "49f22625d7f68eed5043ab95344130140365a5af5f7859571c32a8c19d5117cc"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "e860a1b360a9beb41ff983846e416cf775a743f5458164df2ae88bf653876e58",
+      "loops": [],
+      "path": "tests/fixtures/android/drv.c",
+      "source_sha256": "83ca1409d35d25f360bbf0099e0b4b5a1e179bee5da7b89b4ad639f84c53b715"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00",
+      "loops": [
+        {
+          "diagnostic": "unsupported scalar call `@leaf` at 21:22",
+          "function": "compute",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "3a311ade22a7ab574ea99303411b79f7fb53fb7ca7004b30dbf51788d20e7091",
+          "source_path": "tests/fixtures/android/pac.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        },
+        {
+          "diagnostic": "unsupported scalar call `@leaf` at 17:22",
+          "function": "main",
+          "iteration_paths": 0,
+          "kind": "unsupported_instruction",
+          "moduleid_agnostic_extracted_llvm_sha256": "0a995633dd9bb81d9b3858f5e3d0b3da0f994eded67c93b75244f653125f8be9",
+          "source_path": "tests/fixtures/android/pac.c",
+          "stage": "scalar_cfg",
+          "state_components": 0,
+          "structural_profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "path": "tests/fixtures/android/pac.c",
+      "source_sha256": "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+    },
+    {
+      "compile_stderr": "",
+      "llvm_sha256": "d8ee4275d81571c3803e74d21dce67e3696f812174e23a3124e5031b49c625ca",
+      "loops": [],
+      "path": "tests/fixtures/android/relocs.c",
+      "source_sha256": "c5a6072945ffd37ceb25056a79a284313afd387595a31785ce2ed2668eab6e85"
+    }
+  ],
+  "summary": {
+    "accepted": 0,
+    "outcome_counts": {
+      "scalar_cfg:unsupported_instruction": 12
+    },
+    "rejected": 12,
+    "rows": 12,
+    "sources": 12,
+    "stage_counts": {
+      "accepted": 0,
+      "function_syntax": 0,
+      "loop_reflection": 0,
+      "scalar_cfg": 12
+    }
+  },
+  "toolchain": {
+    "cargo": {
+      "realpath": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/cargo",
+      "sha256": "c0e51f3ecbd2030d8dcd86586e438e78468dce4d745b2f1d7165b75b91e9a49b",
+      "version_first_line": "cargo 1.97.0-nightly (eb9b60f1f 2026-04-24)"
+    },
+    "llvm_extract": {
+      "realpath": "/usr/lib/llvm-21/bin/llvm-extract",
+      "sha256": "7c02041b5306536670c74f16c463f5026776f819f66a63effe11d88d352c069a",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    },
+    "rustc": {
+      "realpath": "/home/mjbommar/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/bin/rustc",
+      "sha256": "69bbd1aed973b74c1932212284872efbb11991f91bce888655633a41c9d278ad",
+      "version_first_line": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)"
+    }
+  }
+}

@@ -815,8 +815,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     audit lane. The first artifact observed 12 typed-CFG
     `unsupported_instruction` declines but was rejected because
     `llvm-extract`'s temporary ModuleID path changed all extracted-file hashes.
-    The rejected artifact is retained; a corrected ModuleID-agnostic hash and
-    source-qualified function identity are frozen before a fresh two-run result.
+    The rejected artifact is retained. The corrected result then reproduces
+    exactly: 0/12 accepted, all 12 at typed-CFG `unsupported_instruction`, with
+    seven one-source wide-memory rows, three cross-source call rows, one
+    `alloca`, and one non-scalar result. The frozen bucket selects a T5.1.2 audit
+    lane, not code; no individual mechanism receives retroactive authorization.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
