@@ -180,7 +180,19 @@ universally true requirement is deliberate: a later call-site obligation route
 must make failed nontrivial requirements bad states rather than silently prune
 their transitions.
 
-The ADR-0290 runner now owns nine binaries and runs 94 tests. Exact ownership
+ADR-0297 supplies that route. A checked nontrivial `requires` contributes
+`prefix && args_defined && !requires` to `bad`, while `trans` assumes the
+complement before using the summary. `prefix` contains only earlier checked
+instructions and selected edges: an untaken internal-path call does not fail,
+and later division UB cannot erase an already reached violation. Both PAC
+callers retain exact `@leaf` spans and reach replay-checked `leaf(1)` witnesses
+at depth 1; defined `n=2` source executions reproduce the call. Independent
+formulas pass, and the stratified 100,000 rows split 33,334 valid / 33,334
+defined violation / 33,332 source undefined with 16,666 omission controls,
+zero disagreement, and zero dropped work. This remains an exact scalar result,
+not relational havoc or annotation syntax.
+
+The ADR-0290 runner now owns nine binaries and runs 98 tests. Exact ownership
 grows from 62 to 63 checked LLVM/MIR semantic variants; the direct-call form is
 owned once by its independent formula, fuzz/replay, and mutation evidence.
 

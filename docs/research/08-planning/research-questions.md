@@ -846,12 +846,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     is retained; the accepted verifier uses structural exactness plus a bounded
     replayed fallback.
   - [ADR-0297](../09-decisions/adr-0297-preregister-call-requirement-obligations.md)
-    preregisters the next composition rule: verify a nontrivial scalar
+    accepts the next composition rule: verify a nontrivial scalar
     requirement, assume it only after exposing its path-conditioned complement
     as a replayable `TransitionSystem::bad` obligation, and retain exact
-    call-site attribution. The frozen gate requires 100,000 completely
-    classified rows with zero disagreement or dropped work; it adds neither
-    annotation syntax nor relational havoc.
+    call-site attribution. Its 100,000 rows split 33,334 valid / 33,334 defined
+    violation / 33,332 source undefined with zero disagreement or dropped work;
+    depth-1 PAC and path-conditioned natural-loop witnesses replay. It adds
+    neither annotation syntax nor relational havoc.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

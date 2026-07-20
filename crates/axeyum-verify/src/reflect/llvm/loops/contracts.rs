@@ -7,8 +7,9 @@ use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 use super::{
-    BuildError, DirectCallResolver, LoopReflectError, LoopReflectErrorKind, loop_error,
-    scalar_width, sort_for_width, validate_direct_callee,
+    BuildError, CallRequirementSite, CallRequirementTerms, DirectCallResolver, LoopReflectError,
+    LoopReflectErrorKind, LoweredCall, loop_error, scalar_width, sort_for_width,
+    validate_direct_callee,
 };
 use crate::reflect::llvm::checked::{DefinedValue, reflect_parsed_components_into, resolve};
 use crate::reflect::llvm::syntax::{ScalarInstruction, ScalarInstructionKind, parse_function};
@@ -32,7 +33,7 @@ pub enum ScalarContractExpr {
     BitVec {
         /// Bit-vector width in `2..=128`.
         width: u32,
-        /// Unsigned modular value, truncated by the checked arena constructor.
+        /// Unsigned value, rejected if it does not fit `width`.
         value: u128,
     },
     /// Boolean negation.
@@ -53,10 +54,9 @@ pub enum ScalarContractExpr {
 
 /// An explicit exact functional contract for one scalar LLVM callee.
 ///
-/// ADR-0296 version one admits only contracts whose `requires` predicate is
-/// proved universally true and whose result/definedness exactly match one
-/// supplied checked body. General relational `ensures` and nontrivial
-/// preconditions remain outside this representation.
+/// ADR-0296 admitted only a universally true requirement. ADR-0297 extends the
+/// same representation with guarded body verification and explicit call-site
+/// obligations; general relational `ensures` remains outside this type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScalarCallContract {
     name: String,
@@ -177,9 +177,10 @@ pub struct VerifiedContractResolver {
 impl VerifiedContractResolver {
     /// Verifies exact scalar contracts against their supplied checked bodies.
     ///
-    /// Exact term/conjunction matches use the bounded structural checker. A
-    /// non-identical claim is submitted with a two-second default timeout so a
-    /// difficult contract cannot turn construction into an unbounded query.
+    /// Requirements must be satisfiable. Exact term/conjunction matches use the
+    /// bounded structural checker; other body/contract equalities are proved
+    /// under `requires` with a two-second default timeout so a difficult
+    /// contract cannot turn construction into an unbounded query.
     ///
     /// # Errors
     ///
@@ -299,7 +300,7 @@ impl VerifiedContractResolver {
         arena: &mut TermArena,
         env: &HashMap<String, DefinedValue>,
         instruction: &ScalarInstruction,
-    ) -> Result<(String, DefinedValue, TermId), BuildError> {
+    ) -> Result<LoweredCall, BuildError> {
         self.validate_call(instruction).map_err(BuildError::call)?;
         let ScalarInstructionKind::DirectCall {
             dest, callee, args, ..
@@ -336,14 +337,32 @@ impl VerifiedContractResolver {
         let immediate = arena
             .and(argument_defined, terms.immediate_defined)
             .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
-        Ok((
-            dest.clone(),
-            DefinedValue {
+        let requirement = if matches!(contract.requires, ScalarContractExpr::Bool(true)) {
+            None
+        } else {
+            let requirement_satisfied = arena
+                .and(argument_defined, terms.requires)
+                .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+            let requirement_negated = arena
+                .not(terms.requires)
+                .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+            let requirement_violated = arena
+                .and(argument_defined, requirement_negated)
+                .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+            Some(CallRequirementTerms {
+                satisfied: requirement_satisfied,
+                violated: requirement_violated,
+            })
+        };
+        Ok(LoweredCall {
+            destination: dest.clone(),
+            value: DefinedValue {
                 defined: result_defined,
                 ..terms.result
             },
-            immediate,
-        ))
+            immediate_defined: immediate,
+            requirement,
+        })
     }
 }
 
@@ -369,11 +388,31 @@ impl CallResolver {
         arena: &mut TermArena,
         env: &HashMap<String, DefinedValue>,
         instruction: &ScalarInstruction,
-    ) -> Result<(String, DefinedValue, TermId), BuildError> {
+    ) -> Result<LoweredCall, BuildError> {
         match self {
             Self::DirectBody(resolver) => resolver.lower_call(arena, env, instruction),
             Self::VerifiedContract(resolver) => resolver.lower_call(arena, env, instruction),
         }
+    }
+
+    pub(super) fn requirement_site(
+        &self,
+        instruction: &ScalarInstruction,
+    ) -> Option<CallRequirementSite> {
+        let Self::VerifiedContract(resolver) = self else {
+            return None;
+        };
+        let ScalarInstructionKind::DirectCall { callee, .. } = &instruction.kind else {
+            return None;
+        };
+        let verified = resolver.contracts.get(callee)?;
+        if matches!(verified.contract.requires, ScalarContractExpr::Bool(true)) {
+            return None;
+        }
+        Some(CallRequirementSite {
+            callee: callee.clone(),
+            span: instruction.span,
+        })
     }
 }
 
@@ -432,31 +471,28 @@ fn verify_scalar_contract(
         .map_err(|error| contract_error(&format!("contract body is not executable: {error}")))?;
     let contract_terms = instantiate_scalar_contract(&mut arena, contract, &params)?;
 
-    verify_contract_true(
+    verify_contract_satisfiable(&mut arena, contract_terms.requires, config, &contract.name)?;
+    verify_contract_equal_under(
         &mut arena,
         contract_terms.requires,
-        config,
-        &contract.name,
-        "requires is universally true",
-    )?;
-    verify_contract_equal(
-        &mut arena,
         contract_terms.immediate_defined,
         body_terms.immediate_defined,
         config,
         &contract.name,
         "immediate definedness",
     )?;
-    verify_contract_equal(
+    verify_contract_equal_under(
         &mut arena,
+        contract_terms.requires,
         contract_terms.result.defined,
         body_terms.result.defined,
         config,
         &contract.name,
         "result definedness",
     )?;
-    verify_contract_equal(
+    verify_contract_equal_under(
         &mut arena,
+        contract_terms.requires,
         contract_terms.result.value,
         body_terms.result.value,
         config,
@@ -465,22 +501,53 @@ fn verify_scalar_contract(
     )
 }
 
-fn verify_contract_true(
+fn verify_contract_satisfiable(
     arena: &mut TermArena,
-    term: TermId,
+    requires: TermId,
     config: &SolverConfig,
     name: &str,
-    component: &str,
 ) -> Result<(), LoopReflectError> {
-    let true_term = arena.bool_const(true);
-    if boolean_conjunction_equal(arena, term, true_term) {
-        return Ok(());
+    match arena.node(requires) {
+        TermNode::BoolConst(true) => return Ok(()),
+        TermNode::BoolConst(false) => {
+            return Err(loop_error(
+                LoopReflectErrorKind::ContractDisproved,
+                None,
+                &format!("scalar contract `@{name}` requires is unsatisfiable"),
+            ));
+        }
+        _ => {}
     }
-    prove_contract_goal(arena, term, config, name, component)
+    let impossible = arena
+        .not(requires)
+        .map_err(|error| contract_error(&error.to_string()))?;
+    match prove(arena, &[], impossible, config) {
+        Ok(ProofOutcome::Disproved(_)) => Ok(()),
+        Ok(ProofOutcome::Proved(_)) => Err(loop_error(
+            LoopReflectErrorKind::ContractDisproved,
+            None,
+            &format!("scalar contract `@{name}` requires is unsatisfiable"),
+        )),
+        Ok(ProofOutcome::Unknown(reason)) => Err(loop_error(
+            LoopReflectErrorKind::ContractUnknown,
+            None,
+            &format!(
+                "scalar contract `@{name}` requirement satisfiability is undecided: {reason:?}"
+            ),
+        )),
+        Err(error) => Err(loop_error(
+            LoopReflectErrorKind::ContractSolver,
+            None,
+            &format!(
+                "scalar contract `@{name}` solver failure for requirement satisfiability: {error}"
+            ),
+        )),
+    }
 }
 
-fn verify_contract_equal(
+fn verify_contract_equal_under(
     arena: &mut TermArena,
+    requires: TermId,
     left: TermId,
     right: TermId,
     config: &SolverConfig,
@@ -494,13 +561,42 @@ fn verify_contract_equal(
     {
         return Ok(());
     }
+    if arena.sort_of(left) == Sort::Bool && arena.sort_of(right) == Sort::Bool {
+        if matches!(arena.node(left), TermNode::BoolConst(true))
+            && boolean_conjunction_implies(arena, requires, right)
+        {
+            return Ok(());
+        }
+        if matches!(arena.node(right), TermNode::BoolConst(true))
+            && boolean_conjunction_implies(arena, requires, left)
+        {
+            return Ok(());
+        }
+    }
     let equal = arena
         .eq(left, right)
         .map_err(|error| contract_error(&error.to_string()))?;
-    prove_contract_goal(arena, equal, config, name, component)
+    let outside_domain = arena
+        .not(requires)
+        .map_err(|error| contract_error(&error.to_string()))?;
+    let guarded = arena
+        .or(outside_domain, equal)
+        .map_err(|error| contract_error(&error.to_string()))?;
+    prove_contract_goal(arena, guarded, config, name, component)
 }
 
 fn boolean_conjunction_equal(arena: &TermArena, left: TermId, right: TermId) -> bool {
+    boolean_conjunction_atoms(arena, left) == boolean_conjunction_atoms(arena, right)
+}
+
+fn boolean_conjunction_implies(arena: &TermArena, premise: TermId, conclusion: TermId) -> bool {
+    let premise_atoms = boolean_conjunction_atoms(arena, premise);
+    boolean_conjunction_atoms(arena, conclusion)
+        .iter()
+        .all(|atom| premise_atoms.binary_search(atom).is_ok())
+}
+
+fn boolean_conjunction_atoms(arena: &TermArena, term: TermId) -> Vec<TermId> {
     fn collect(arena: &TermArena, term: TermId, atoms: &mut Vec<TermId>) {
         match arena.node(term) {
             TermNode::BoolConst(true) => {}
@@ -516,13 +612,10 @@ fn boolean_conjunction_equal(arena: &TermArena, left: TermId, right: TermId) -> 
         }
     }
 
-    let mut left_atoms = Vec::new();
-    let mut right_atoms = Vec::new();
-    collect(arena, left, &mut left_atoms);
-    collect(arena, right, &mut right_atoms);
-    left_atoms.sort_unstable();
-    right_atoms.sort_unstable();
-    left_atoms == right_atoms
+    let mut atoms = Vec::new();
+    collect(arena, term, &mut atoms);
+    atoms.sort_unstable();
+    atoms
 }
 
 fn prove_contract_goal(

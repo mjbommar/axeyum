@@ -164,6 +164,46 @@ fn contract_resolver() -> VerifiedContractResolver {
         .expect("the explicit leaf contract must verify against the exact registered body")
 }
 
+fn leaf_zero_requirement() -> ScalarContractExpr {
+    ScalarContractExpr::Not(boxed(ScalarContractExpr::BvUnsignedAddOverflow(
+        boxed(ScalarContractExpr::Argument(0)),
+        boxed(ScalarContractExpr::BitVec {
+            width: 32,
+            value: u128::from(u32::MAX),
+        }),
+    )))
+}
+
+fn restricted_leaf_contract() -> ScalarCallContract {
+    leaf_contract_from(
+        leaf_zero_requirement(),
+        ScalarContractExpr::Bool(true),
+        leaf_value(1),
+        ScalarContractExpr::Bool(true),
+    )
+}
+
+fn requirement_contract_resolver() -> VerifiedContractResolver {
+    assert_contract_fixture_identity();
+    VerifiedContractResolver::from_contracts(&[(
+        restricted_leaf_contract(),
+        function(PAC_MODULE, "leaf"),
+    )])
+    .expect("the restricted leaf contract must verify under its nontrivial requirement")
+}
+
+fn requirement_contract_system(
+    caller: &str,
+    phi: &str,
+) -> axeyum_verify::reflect::llvm::loops::CanonicalLoopSystem {
+    reflect_single_latch_loop_with_contracts_checked(
+        function(PAC_MODULE, caller),
+        UnsignedPhiUpperBound::new(phi, u128::from(u32::MAX)),
+        &requirement_contract_resolver(),
+    )
+    .unwrap_or_else(|error| panic!("restricted `{caller}` contract must compose: {error}"))
+}
+
 fn system(
     caller: &str,
     phi: &str,
@@ -836,6 +876,330 @@ fn modular_and_inlined_contract_routes_agree_over_100000_tuples() {
         }
     }
     assert_eq!(total, 100_000);
+}
+
+#[test]
+fn nontrivial_requirement_verifies_the_contract_only_inside_its_domain() {
+    let leaf = function(PAC_MODULE, "leaf");
+    let resolver = requirement_contract_resolver();
+    assert_eq!(resolver.contract_names(), vec!["leaf"]);
+
+    let (zero_sum, zero_overflow) = 0_u32.overflowing_add(u32::MAX);
+    let (_, one_overflow) = 1_u32.overflowing_add(u32::MAX);
+    assert_eq!(zero_sum, u32::MAX);
+    assert!(!zero_overflow, "the selected requirement admits x=0");
+    assert!(one_overflow, "the selected requirement rejects x=1");
+
+    let outside_only_result =
+        ScalarContractExpr::BvAdd(boxed(leaf_value(1)), boxed(ScalarContractExpr::Argument(0)));
+    let outside_only_mutation = leaf_contract_from(
+        leaf_zero_requirement(),
+        ScalarContractExpr::Bool(true),
+        outside_only_result,
+        ScalarContractExpr::Bool(true),
+    );
+    VerifiedContractResolver::from_contracts(&[(outside_only_mutation, leaf)])
+        .expect("adding x changes the result only outside the admitted x=0 domain");
+
+    let in_domain_mutation = leaf_contract_from(
+        leaf_zero_requirement(),
+        ScalarContractExpr::Bool(true),
+        leaf_value(2),
+        ScalarContractExpr::Bool(true),
+    );
+    let error =
+        VerifiedContractResolver::from_contracts(&[(in_domain_mutation, leaf)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::ContractDisproved);
+    assert!(error.to_string().contains("result value"), "{error}");
+}
+
+#[test]
+fn call_requirement_bad_state_is_attributed_and_replayed_in_source() {
+    assert_contract_fixture_identity();
+    for (caller, phi, index_name) in [("compute", "7", "6"), ("main", "6", "5")] {
+        let system = requirement_contract_system(caller, phi);
+        let sites = system.call_requirement_sites();
+        assert_eq!(sites.len(), 1);
+        assert_eq!(sites[0].callee(), "leaf");
+        let cfg = parse_scalar_cfg(&parse_function(function(PAC_MODULE, caller)).unwrap()).unwrap();
+        let expected_span = cfg
+            .blocks
+            .iter()
+            .flat_map(|block| &block.instructions)
+            .find(|instruction| {
+                matches!(instruction.kind, ScalarInstructionKind::DirectCall { .. })
+            })
+            .expect("the exact caller has one direct call")
+            .span;
+        assert_eq!(sites[0].span(), expected_span);
+
+        let mut arena = TermArena::new();
+        let state = system.state_vars(&mut arena, 0).unwrap();
+        let bad = system.bad(&mut arena, &state).unwrap();
+        let index = arena.var(state[0]);
+        let max = arena.bv_const(32, u128::from(u32::MAX)).unwrap();
+        let expected = arena.bv_uaddo(index, max).unwrap();
+        let equivalent = arena.eq(bad, expected).unwrap();
+        assert!(
+            proved(&mut arena, equivalent),
+            "{caller} obligation drifted"
+        );
+
+        let mut arena = TermArena::new();
+        let outcome = bounded_model_check(&mut arena, &system, 1, &SolverConfig::default())
+            .expect("the replay-checked requirement query must not hard-error");
+        let BmcOutcome::Reachable { steps, model } = outcome else {
+            panic!("{caller} must expose the reached leaf(1) requirement violation");
+        };
+        assert_eq!(steps, 1);
+        let index_at_one = arena
+            .find_symbol(&format!("llvm.loop.{caller}.{index_name}@1"))
+            .expect("the witnessed loop index must be retained in the model");
+        assert_eq!(
+            model.get(index_at_one),
+            Some(Value::Bv {
+                width: 32,
+                value: 1,
+            })
+        );
+    }
+
+    assert_eq!(concrete_compute(2), Some(3));
+    assert_eq!(concrete_compute(2).map(|value| value & 0xff), Some(3));
+}
+
+#[derive(Clone, Copy, Default)]
+struct RequirementRowCounts {
+    valid: u64,
+    violation: u64,
+    source_undefined: u64,
+    omission_transition_controls: u64,
+    total: u64,
+}
+
+impl RequirementRowCounts {
+    fn merge(&mut self, other: Self) {
+        self.valid += other.valid;
+        self.violation += other.violation;
+        self.source_undefined += other.source_undefined;
+        self.omission_transition_controls += other.omission_transition_controls;
+        self.total += other.total;
+    }
+}
+
+#[derive(Clone, Copy)]
+struct RequirementRowContext<'a> {
+    arena: &'a TermArena,
+    pre: &'a [axeyum_ir::SymbolId],
+    post: &'a [axeyum_ir::SymbolId],
+    inlined_trans: TermId,
+    modular_trans: TermId,
+    inlined_bad: TermId,
+    modular_bad: TermId,
+}
+
+fn classify_requirement_rows(
+    context: RequirementRowContext<'_>,
+    mut seed: u64,
+) -> RequirementRowCounts {
+    let mut counts = RequirementRowCounts::default();
+    for case in 0..50_000_usize {
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let random_i = low_word(seed);
+        let i = match case % 3 {
+            0 => 0,
+            1 => 1 + random_i % 1_024,
+            _ => [46_341, 0x8000_0000, 0x7fff_ffff][case % 9 / 3],
+        };
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let acc = if case % 3 == 2 {
+            low_word(seed)
+        } else {
+            low_word(seed) % 10_000
+        };
+        seed = seed
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        let n = high_word(seed);
+        let expected = expected_step(i, acc);
+        let random_post = (high_word(seed), low_word(seed.rotate_left(17)), n ^ 1);
+        let post_values = expected.map_or(random_post, |(next_i, next_acc)| {
+            if case % 2 == 0 {
+                (next_i, next_acc, n)
+            } else {
+                random_post
+            }
+        });
+        let mut assignment = Assignment::new();
+        assign_words(
+            &mut assignment,
+            context.pre.iter().chain(context.post).copied(),
+            [i, acc, n, post_values.0, post_values.1, post_values.2],
+        );
+        let inlined_value = eval(context.arena, context.inlined_trans, &assignment).unwrap();
+        let modular_value = eval(context.arena, context.modular_trans, &assignment).unwrap();
+        let inlined_bad = eval(context.arena, context.inlined_bad, &assignment).unwrap();
+        let modular_bad = eval(context.arena, context.modular_bad, &assignment).unwrap();
+        assert_eq!(inlined_bad, Value::Bool(false));
+        if expected.is_none() {
+            counts.source_undefined += 1;
+            assert_eq!(modular_value, Value::Bool(false));
+            assert_eq!(modular_bad, Value::Bool(true));
+        } else if i == 0 {
+            counts.valid += 1;
+            assert_eq!(modular_value, inlined_value);
+            assert_eq!(modular_bad, Value::Bool(false));
+        } else {
+            counts.violation += 1;
+            counts.omission_transition_controls += u64::from(inlined_value == Value::Bool(true));
+            assert_eq!(modular_value, Value::Bool(false));
+            assert_eq!(modular_bad, Value::Bool(true));
+        }
+        counts.total += 1;
+    }
+    counts
+}
+
+#[test]
+fn requirement_gate_classifies_100000_rows_without_dropped_work() {
+    let mut counts = RequirementRowCounts::default();
+    for (caller, phi, salt) in [
+        ("compute", "7", 0x0297_0000_0000_0001_u64),
+        ("main", "6", 0x0297_0000_0000_0002_u64),
+    ] {
+        let inlined = system(caller, phi, u128::from(u32::MAX));
+        let modular = requirement_contract_system(caller, phi);
+        let mut arena = TermArena::new();
+        let pre = inlined.state_vars(&mut arena, 0).unwrap();
+        let post = inlined.state_vars(&mut arena, 1).unwrap();
+        let inlined_trans = inlined.trans(&mut arena, &pre, &post).unwrap();
+        let modular_trans = modular.trans(&mut arena, &pre, &post).unwrap();
+        let inlined_bad = inlined.bad(&mut arena, &pre).unwrap();
+        let modular_bad = modular.bad(&mut arena, &pre).unwrap();
+        let i = arena.var(pre[0]);
+        let max = arena.bv_const(32, u128::from(u32::MAX)).unwrap();
+        let violates = arena.bv_uaddo(i, max).unwrap();
+        let requires = arena.not(violates).unwrap();
+        let expected_modular = arena.and(inlined_trans, requires).unwrap();
+        let transition_equal = arena.eq(modular_trans, expected_modular).unwrap();
+        assert!(
+            proved(&mut arena, transition_equal),
+            "{caller} restricted transition must equal inlined && requires"
+        );
+        let bad_equal = arena.eq(modular_bad, violates).unwrap();
+        assert!(
+            proved(&mut arena, bad_equal),
+            "{caller} bad must equal the independently built requirement violation"
+        );
+
+        counts.merge(classify_requirement_rows(
+            RequirementRowContext {
+                arena: &arena,
+                pre: &pre,
+                post: &post,
+                inlined_trans,
+                modular_trans,
+                inlined_bad,
+                modular_bad,
+            },
+            salt,
+        ));
+    }
+    assert_eq!(counts.total, 100_000);
+    assert_eq!(
+        counts.valid + counts.violation + counts.source_undefined,
+        counts.total
+    );
+    assert!(counts.valid > 0);
+    assert!(counts.violation > 0);
+    assert!(counts.source_undefined > 0);
+    assert!(counts.omission_transition_controls > 0);
+    eprintln!(
+        "ADR-0297 classified rows: total={} valid={} violation={} source_undefined={} omission_transition_controls={} dropped=0 disagree=0",
+        counts.total,
+        counts.valid,
+        counts.violation,
+        counts.source_undefined,
+        counts.omission_transition_controls,
+    );
+}
+
+#[test]
+fn natural_loop_requirement_uses_only_the_reaching_path_prefix() {
+    let callee_body = "define i8 @id(i8 %x) {\nentry:\n  ret i8 %x\n}\n";
+    let requirement = ScalarContractExpr::Not(boxed(ScalarContractExpr::BvUnsignedAddOverflow(
+        boxed(ScalarContractExpr::Argument(0)),
+        boxed(ScalarContractExpr::BitVec {
+            width: 8,
+            value: u8::MAX.into(),
+        }),
+    )));
+    let contract = ScalarCallContract::new(
+        "id",
+        vec![8],
+        8,
+        requirement,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Argument(0),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap();
+    let resolver = VerifiedContractResolver::from_contracts(&[(contract, callee_body)]).unwrap();
+    let caller_module = r"
+define i8 @path_requirement(i8 %n) {
+entry:
+  br label %header
+header:
+  %i = phi i8 [ 0, %entry ], [ %next, %latch ]
+  %is_zero = icmp eq i8 %i, 0
+  br i1 %is_zero, label %skip, label %call
+call:
+  %result = call i8 @id(i8 noundef %i)
+  %later_ub = udiv i8 1, 0
+  br label %latch
+skip:
+  br label %latch
+latch:
+  %next = add nuw nsw i8 %i, 1
+  %done = icmp eq i8 %next, %n
+  br i1 %done, label %exit, label %header
+exit:
+  ret i8 %i
+}
+";
+    let system = reflect_single_latch_loop_with_contracts_checked(
+        caller_module,
+        UnsignedPhiUpperBound::new("i", u8::MAX.into()),
+        &resolver,
+    )
+    .unwrap();
+    assert_eq!(system.iteration_paths().len(), 2);
+    assert_eq!(system.call_requirement_sites().len(), 1);
+
+    let mut arena = TermArena::new();
+    let state = system.state_vars(&mut arena, 0).unwrap();
+    let bad = system.bad(&mut arena, &state).unwrap();
+    for (i, expected) in [(0_u8, false), (1, true)] {
+        let mut assignment = Assignment::new();
+        for (symbol, value) in state.iter().copied().zip([i, 2]) {
+            assignment.set(
+                symbol,
+                Value::Bv {
+                    width: 8,
+                    value: value.into(),
+                },
+            );
+        }
+        assert_eq!(
+            eval(&arena, bad, &assignment).unwrap(),
+            Value::Bool(expected),
+            "i={i}: untaken calls must not fail, and later UB must not erase a reached violation"
+        );
+    }
 }
 
 #[test]

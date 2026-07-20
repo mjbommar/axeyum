@@ -57,14 +57,18 @@ is:
   rejection, invariant/BMC proof, and source-replayed abstract reachability.
   Its exact contract is documented in the
   [canonical loop bridge](canonical-llvm-loop-bridge.md).
-- `llvm_direct_calls`: the ADR-0295 opt-in exact-body baseline plus ADR-0296's
-  first body-verified exact contract composition, including frozen
+- `llvm_direct_calls`: the ADR-0295 opt-in exact-body baseline plus
+  ADR-0296/0297 body-verified exact contract composition and explicit
+  call-requirement obligations, including frozen
   Glaurung source/module/function identities, unchanged default rejection,
   independent callee-definedness and recurrence formulas, 100,000 transition
   tuples, source-replayed reachability, canonical syntax, and fail-closed call
   boundary mutations, exact normalized modular/inlined formulas, a second
   100,000-tuple differential, component/body contract refutations, explicit
-  `Unknown`, and matching bounded/unbounded safety verdicts.
+  `Unknown`, matching bounded/unbounded safety verdicts, exact call-site/span
+  attribution, replayed depth-1 violations, internal-path/later-UB controls,
+  and a balanced 100,000-row valid/violation/source-undefined gate with zero
+  disagreement or dropped work.
 
 For LLVM operations that can produce poison or immediate undefined behavior,
 the scalar matrix compares definedness separately and compares values only
@@ -102,7 +106,8 @@ multi-latch/early-exit/switch/nested/irreducible or memory loops, general MIR
 places, wide/aliased memory, `stable_mir`, Glaurung LLIR lowering, or a shared
 frontend crate. ADR-0295 adds only opt-in assigned direct scalar calls with an
 exact checked body; external/indirect/void/variadic/nested calls remain outside
-the profile. ADR-0296 adds only one exact functional scalar contract whose
-requirement is proved universally true; nontrivial preconditions, relational
-havoc, annotations, recursion, memory, and external calls remain outside the
-profile. The nine owned binaries currently contain 94 tests.
+the profile. ADR-0296 adds only one exact functional scalar contract; ADR-0297
+adds nontrivial scalar requirements by making reached violations explicit bad
+states before restricting the transition. Relational havoc, annotations, MIR
+calls, recursion, memory, and external calls remain outside the profile. The
+nine owned binaries currently contain 98 tests.

@@ -1,6 +1,6 @@
 # ADR-0297: Preregister explicit scalar call-requirement obligations
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -139,3 +139,41 @@ results, the checksum module, MIR parity, panic propagation, and annotations.
 If any formula, path-prefix, replay, mutation, resource, or zero-dropped-row gate
 fails, reject the implementation and retain ADR-0296's universally true
 requirement boundary.
+
+## Observed result and acceptance
+
+The frozen experiment passes without widening LLVM syntax or weakening an
+error boundary:
+
+- `VerifiedContractResolver` now rejects unsatisfiable requirements, proves
+  each contract/body component under a satisfiable nontrivial requirement, and
+  keeps counterexample/`Unknown`/solver failures distinct. The selected
+  `leaf(0)` contract verifies with immediate/result definedness stated as
+  `true`; an `x*x+2` in-domain mutation is disproved, while the independently
+  checked `x*x+1+x` outside-domain-only mutation is accepted.
+- Contract call lowering returns separate satisfied and violated requirement
+  terms. The transition assumes the former; `CanonicalLoopSystem::bad` ORs the
+  latter under only the already executed instruction/selected-edge prefix.
+  Literal-`true` ADR-0296 contracts bypass this machinery and retain their
+  prior exact formulas.
+- Both PAC callers retain one exact `@leaf` source span. Replay-checked BMC
+  reaches the violation at depth 1 with loop index 1, and the independent
+  defined source execution at `n = 2` reaches the same `leaf(1)` call.
+- Independent formulas prove `bad == bv_uaddo(i, UINT_MAX)` and
+  `restricted_trans == inlined_trans and requires`. The stratified 100,000-row
+  gate reports 33,334 valid-domain rows, 33,334 defined requirement violations,
+  33,332 source-undefined rows, 16,666 omission controls where the inlined
+  transition would continue, zero disagreements, and zero dropped rows.
+- A two-path checked natural loop proves that the untaken call does not fail,
+  the taken invalid call does fail, and a later division-by-zero condition does
+  not suppress the earlier requirement violation.
+- The focused binary passes 17/17 tests at a 487.7 MiB peak. The standing gate
+  passes 63 variants / 15 groups / nine binaries / 98 tests plus ten checker
+  mutations at a 1.9 GiB peak. The complete all-feature `axeyum-verify` suite
+  and doctests pass under a 4 GiB hard cap (28.1 MiB swap, no OOM).
+
+This accepts explicit nontrivial scalar call requirements as replayable
+obligations. It does not accept relational result havoc, annotation syntax,
+MIR calls, external effects, recursion, memory contracts, or a performance
+claim. The next P5.2 experiment must freeze a relational scalar result rule on
+the checksum module before broadening syntax.

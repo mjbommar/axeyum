@@ -352,4 +352,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0294](adr-0294-preregister-glaurung-llvm-loop-semantic-census.md) | Accept the corrected exact census: 0/12 loops pass typed CFG; diverse unsupported-instruction causes select an audit lane, not code | accepted |
 | [0295](adr-0295-preregister-checked-llvm-direct-body-calls.md) | Accept an opt-in checked direct-body baseline for the two exact Glaurung PAC loop calls; keep ordinary/external calls rejected by default | accepted |
 | [0296](adr-0296-preregister-verified-scalar-contract-composition.md) | Accept one verified exact scalar contract for modular-versus-inlined comparison on the two Glaurung PAC loop callers | accepted |
-| [0297](adr-0297-preregister-call-requirement-obligations.md) | Preregister path-conditioned scalar call requirements as explicit transition-system bad states rather than silently pruning violating callers | proposed |
+| [0297](adr-0297-preregister-call-requirement-obligations.md) | Accept path-conditioned scalar call requirements as explicit transition-system bad states rather than silently pruning violating callers | accepted |

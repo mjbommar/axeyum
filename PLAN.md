@@ -209,13 +209,17 @@ session state.
 >    The general nonlinear-equivalence proof attempted during validation is
 >    rejected after a disclosed 67.4 GiB anonymous-RSS OOM; the accepted exact
 >    checker uses term identity plus conjunction associativity/`true`, a
->    two-second fallback, and a dedicated `loops/contracts.rs` module. The standing gate is now nine
->    binaries / 94 tests. ADR-0297 now preregisters explicit call-site
->    requirement failures as path-conditioned obligations/bad states: assume a
->    nontrivial `requires` in the transition only after its reached complement
->    is replayable and source-attributed through `bad`. Its frozen gate requires
->    100,000 valid/violation/source-undefined rows with zero disagreement and
->    zero dropped work. No annotation syntax or relational havoc is authorized.
+>    two-second fallback, and a dedicated `loops/contracts.rs` module. At
+>    ADR-0296 acceptance the standing gate was nine binaries / 94 tests.
+>    ADR-0297 now accepts explicit call-site requirement
+>    failures as path-conditioned obligations/bad states: a nontrivial
+>    `requires` enters the transition only after its reached complement is
+>    replayable and source-attributed through `bad`. The 100,000-row result is
+>    33,334 valid / 33,334 defined violation / 33,332 source undefined, with
+>    zero disagreement or dropped work; depth-1 PAC and internal-path/later-UB
+>    controls pass. The standing gate is now nine binaries / 98 tests. Next,
+>    preregister a relational scalar result/havoc rule on the checksum module;
+>    no annotation syntax, MIR calls, or external effects are yet authorized.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

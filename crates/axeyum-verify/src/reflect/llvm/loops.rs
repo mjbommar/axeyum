@@ -33,6 +33,20 @@ const MAX_PATH_BLOCK_EXECUTIONS: usize = 4_096;
 
 type LoopParameterInventory = (BTreeMap<String, (u32, SourceSpan)>, BTreeSet<String>);
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct CallRequirementTerms {
+    pub(super) satisfied: TermId,
+    pub(super) violated: TermId,
+}
+
+#[derive(Debug)]
+pub(super) struct LoweredCall {
+    pub(super) destination: String,
+    pub(super) value: DefinedValue,
+    pub(super) immediate_defined: TermId,
+    pub(super) requirement: Option<CallRequirementTerms>,
+}
+
 /// Stable failure classes for the canonical LLVM loop profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoopReflectErrorKind {
@@ -271,7 +285,7 @@ impl DirectCallResolver {
         arena: &mut TermArena,
         env: &HashMap<String, DefinedValue>,
         instruction: &ScalarInstruction,
-    ) -> Result<(String, DefinedValue, TermId), BuildError> {
+    ) -> Result<LoweredCall, BuildError> {
         self.validate_call(instruction).map_err(BuildError::call)?;
         let ScalarInstructionKind::DirectCall {
             dest, callee, args, ..
@@ -309,7 +323,12 @@ impl DirectCallResolver {
         let immediate = arena
             .and(argument_defined, components.immediate_defined)
             .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
-        Ok((dest.clone(), result, immediate))
+        Ok(LoweredCall {
+            destination: dest.clone(),
+            value: result,
+            immediate_defined: immediate,
+            requirement: None,
+        })
     }
 }
 
@@ -337,6 +356,27 @@ pub struct LoopStateComponent {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LoopIterationPath {
     blocks: Vec<BlockId>,
+}
+
+/// Source identity for one verified scalar call requirement in the recurrence.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CallRequirementSite {
+    callee: String,
+    span: SourceSpan,
+}
+
+impl CallRequirementSite {
+    /// Contracted LLVM callee name without `@`.
+    #[must_use]
+    pub fn callee(&self) -> &str {
+        &self.callee
+    }
+
+    /// Exact source span of the assigned direct call.
+    #[must_use]
+    pub const fn span(&self) -> SourceSpan {
+        self.span
+    }
 }
 
 impl LoopIterationPath {
@@ -382,6 +422,9 @@ enum LoopBody {
 /// This system intentionally over-approximates the source exit edge. Use it to
 /// prove invariants. Treat [`axeyum_solver::BmcOutcome::Reachable`] as an
 /// abstract recurrence witness until the same state is replayed in source code.
+/// Verified-contract requirements are additional source-attributed bad states,
+/// evaluated under the exact instruction/selected-edge prefix reaching each
+/// call.
 #[derive(Debug, Clone)]
 pub struct CanonicalLoopSystem {
     function: String,
@@ -394,6 +437,7 @@ pub struct CanonicalLoopSystem {
     parameters: Vec<LoopParameter>,
     body: LoopBody,
     direct_calls: Option<CallResolver>,
+    call_requirement_sites: Vec<CallRequirementSite>,
     branch_span: SourceSpan,
     bad_component: usize,
     bad_bound: u128,
@@ -442,6 +486,12 @@ impl CanonicalLoopSystem {
         self.state
             .iter()
             .position(|component| component.name == name)
+    }
+
+    /// Ordered verified-contract call sites contributing requirement bad states.
+    #[must_use]
+    pub fn call_requirement_sites(&self) -> &[CallRequirementSite] {
+        &self.call_requirement_sites
     }
 
     /// Whether the source exit decision is abstracted by this system.
@@ -508,18 +558,7 @@ impl CanonicalLoopSystem {
     ) -> Result<TermId, BuildError> {
         self.require_state_arity(pre)?;
         self.require_state_arity(post)?;
-        let always = arena.bool_const(true);
-        let mut env = HashMap::new();
-        for (index, component) in self.state.iter().enumerate() {
-            env.insert(
-                component.name.clone(),
-                DefinedValue {
-                    value: arena.var(pre[index]),
-                    defined: always,
-                    width: component.width,
-                },
-            );
-        }
+        let env = self.state_environment(arena, pre);
 
         match &self.body {
             LoopBody::SelfLoop {
@@ -560,6 +599,7 @@ impl CanonicalLoopSystem {
             instructions,
             &mut conditions,
             self.direct_calls.as_ref(),
+            None,
         )?;
         let branch = resolve(arena, &env, branch_condition, 1, self.branch_span)
             .map_err(BuildError::reflection)?;
@@ -588,6 +628,7 @@ impl CanonicalLoopSystem {
                 &block.instructions,
                 &mut conditions,
                 self.direct_calls.as_ref(),
+                None,
             )?;
 
             if index + 1 == path.blocks.len() {
@@ -646,8 +687,33 @@ impl CanonicalLoopSystem {
         Ok(())
     }
 
-    fn build_bad(&self, arena: &mut TermArena, state: &[SymbolId]) -> Result<TermId, BuildError> {
-        self.require_state_arity(state)?;
+    fn state_environment(
+        &self,
+        arena: &mut TermArena,
+        state: &[SymbolId],
+    ) -> HashMap<String, DefinedValue> {
+        let always = arena.bool_const(true);
+        self.state
+            .iter()
+            .enumerate()
+            .map(|(index, component)| {
+                (
+                    component.name.clone(),
+                    DefinedValue {
+                        value: arena.var(state[index]),
+                        defined: always,
+                        width: component.width,
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn build_property_bad(
+        &self,
+        arena: &mut TermArena,
+        state: &[SymbolId],
+    ) -> Result<TermId, BuildError> {
         let component = &self.state[self.bad_component];
         let bound = arena
             .bv_const(component.width, self.bad_bound)
@@ -658,6 +724,65 @@ impl CanonicalLoopSystem {
         arena.bv_ugt(value, bound).map_err(|error| {
             BuildError::ir(Some(self.phis[self.bad_component].span), error.to_string())
         })
+    }
+
+    fn build_call_requirement_bad(
+        &self,
+        arena: &mut TermArena,
+        state: &[SymbolId],
+    ) -> Result<TermId, BuildError> {
+        if self.call_requirement_sites.is_empty() {
+            return Ok(arena.bool_const(false));
+        }
+        let initial_env = self.state_environment(arena, state);
+        let mut violations = Vec::new();
+        match &self.body {
+            LoopBody::SelfLoop { instructions, .. } => {
+                let mut env = initial_env;
+                let mut prefix = Vec::new();
+                lower_instructions(
+                    arena,
+                    &mut env,
+                    instructions,
+                    &mut prefix,
+                    self.direct_calls.as_ref(),
+                    Some(&mut violations),
+                )?;
+            }
+            LoopBody::NaturalLoop { paths, .. } => {
+                for path in paths {
+                    let mut env = initial_env.clone();
+                    let mut prefix = Vec::new();
+                    for (index, block) in path.blocks.iter().enumerate() {
+                        if index > 0 {
+                            let predecessor = &path.blocks[index - 1].id;
+                            lower_selected_phis(arena, &mut env, &block.phis, predecessor)?;
+                        }
+                        lower_instructions(
+                            arena,
+                            &mut env,
+                            &block.instructions,
+                            &mut prefix,
+                            self.direct_calls.as_ref(),
+                            Some(&mut violations),
+                        )?;
+                        if let Some(next) = path.blocks.get(index + 1) {
+                            lower_selected_edge(arena, &env, block, &next.id, &mut prefix)?;
+                        }
+                    }
+                }
+            }
+        }
+        disjoin(arena, &violations, self.branch_span)
+    }
+
+    fn build_bad(&self, arena: &mut TermArena, state: &[SymbolId]) -> Result<TermId, BuildError> {
+        self.require_state_arity(state)?;
+        let property = self.build_property_bad(arena, state)?;
+        let call_requirement = self.build_call_requirement_bad(arena, state)?;
+        arena
+            .or(property, call_requirement)
+            .map_err(|error| BuildError::ir(Some(self.branch_span), error.to_string()))
     }
 
     fn require_state_arity(&self, state: &[SymbolId]) -> Result<(), BuildError> {
@@ -846,8 +971,13 @@ fn reflect_canonical_loop_with_resolver(
         });
     }
 
+    let mut call_requirement_sites = Vec::new();
     for instruction in &block.instructions {
         validate_call_instruction(instruction, direct_calls)?;
+        if let Some(site) = direct_calls.and_then(|resolver| resolver.requirement_site(instruction))
+        {
+            call_requirement_sites.push(site);
+        }
         if matches!(
             instruction.kind,
             ScalarInstructionKind::GetElementPtr { .. }
@@ -934,6 +1064,7 @@ fn reflect_canonical_loop_with_resolver(
             branch_condition,
         },
         direct_calls: direct_calls.cloned(),
+        call_requirement_sites,
         branch_span: block.terminator.span,
         bad_component,
         bad_bound: property_bound,
@@ -992,7 +1123,9 @@ pub fn reflect_single_latch_loop_with_direct_calls_checked(
 ///
 /// Every contract in `resolver` was proved against an exact checked body when
 /// the resolver was constructed, but the body is not retained. This route
-/// therefore supplies ADR-0296's modular side while
+/// supplies ADR-0296's modular side. ADR-0297 requirements constrain the
+/// transition only after their reached complement becomes an explicit bad
+/// state. The exact-body route
 /// [`reflect_single_latch_loop_with_direct_calls_checked`] remains the inlined
 /// comparison baseline.
 ///
@@ -1331,6 +1464,7 @@ fn build_natural_loop_system(
         .iter()
         .flat_map(|path| path.iter().copied())
         .collect::<BTreeSet<_>>();
+    let mut call_requirement_sites = Vec::new();
     for index in &region {
         let block = &cfg.blocks[*index];
         for phi in &block.phis {
@@ -1344,6 +1478,11 @@ fn build_natural_loop_system(
         }
         for instruction in &block.instructions {
             validate_call_instruction(instruction, direct_calls)?;
+            if let Some(site) =
+                direct_calls.and_then(|resolver| resolver.requirement_site(instruction))
+            {
+                call_requirement_sites.push(site);
+            }
             if matches!(
                 instruction.kind,
                 ScalarInstructionKind::GetElementPtr { .. }
@@ -1440,6 +1579,7 @@ fn build_natural_loop_system(
             latch_condition: profile.latch_condition,
         },
         direct_calls: direct_calls.cloned(),
+        call_requirement_sites,
         branch_span: latch.terminator.span,
         bad_component,
         bad_bound: property_bound,
@@ -1825,24 +1965,41 @@ fn lower_instructions(
     instructions: &[ScalarInstruction],
     conditions: &mut Vec<TermId>,
     direct_calls: Option<&CallResolver>,
+    mut requirement_violations: Option<&mut Vec<TermId>>,
 ) -> Result<(), BuildError> {
     for instruction in instructions {
-        let (dest, value, immediate) =
-            if matches!(instruction.kind, ScalarInstructionKind::DirectCall { .. }) {
-                let resolver = direct_calls.ok_or_else(|| {
-                    BuildError::call(loop_error(
-                        LoopReflectErrorKind::UnsupportedCall,
-                        Some(instruction.span),
-                        "direct call reached transition lowering without a checked resolver",
-                    ))
-                })?;
-                resolver.lower_call(arena, env, instruction)?
-            } else {
+        let lowered = if matches!(instruction.kind, ScalarInstructionKind::DirectCall { .. }) {
+            let resolver = direct_calls.ok_or_else(|| {
+                BuildError::call(loop_error(
+                    LoopReflectErrorKind::UnsupportedCall,
+                    Some(instruction.span),
+                    "direct call reached transition lowering without a checked resolver",
+                ))
+            })?;
+            resolver.lower_call(arena, env, instruction)?
+        } else {
+            let (destination, value, immediate_defined) =
                 lower_assignment(arena, env, instruction.kind.clone(), instruction.span)
-                    .map_err(BuildError::reflection)?
-            };
-        conditions.push(immediate);
-        env.insert(dest, value);
+                    .map_err(BuildError::reflection)?;
+            LoweredCall {
+                destination,
+                value,
+                immediate_defined,
+                requirement: None,
+            }
+        };
+        if let Some(requirement) = lowered.requirement {
+            if let Some(violations) = requirement_violations.as_deref_mut() {
+                let prefix = conjoin(arena, conditions, instruction.span)?;
+                let violation = arena
+                    .and(prefix, requirement.violated)
+                    .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+                violations.push(violation);
+            }
+            conditions.push(requirement.satisfied);
+        }
+        conditions.push(lowered.immediate_defined);
+        env.insert(lowered.destination, lowered.value);
     }
     Ok(())
 }

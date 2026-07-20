@@ -322,17 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0297 preregisters explicit scalar call-requirement
-  obligations.** A verified nontrivial `requires` may constrain the transition
-  only after `prefix && args_defined && !requires` is independently exposed in
+- **2026-07-20 — ADR-0297 accepts explicit scalar call-requirement
+  obligations.** A verified nontrivial `requires` constrains the transition only
+  after `prefix && args_defined && !requires` is independently exposed in
   `TransitionSystem::bad`. The prefix contains only earlier checked operations
   and selected edges, so untaken natural-loop calls do not fail and later UB
-  cannot erase an already reached violation. The exact PAC gate uses an
-  existing-AST requirement true only at `leaf(0)`, demands a source-replayed
-  `leaf(1)` violation, exact site/span attribution, and 100,000 fully classified
-  valid/violation/source-undefined rows with zero disagreement or dropped work.
-  This is a correctness/composition gate, not annotation syntax, relational
-  havoc, a revised census, or a performance claim.
+  cannot erase an already reached violation. Both exact PAC callers retain
+  source-attributed depth-1 `leaf(1)` witnesses and replay at defined `n=2`.
+  Independent formulas plus 100,000 rows split 33,334 valid / 33,334 defined
+  violation / 33,332 source undefined, with 16,666 omission controls, zero
+  disagreement, and zero dropped work. Focused 17/17, standing nine-binary/98,
+  and complete all-feature package/doctest gates pass under memory caps. Next:
+  preregister relational scalar result/havoc on the checksum module before
+  annotation syntax, MIR calls, or external effects.
 
 - **2026-07-20 — ADR-0296 accepts verified scalar contract composition.**
   `ScalarCallContract` states the exact `leaf` requirement, value, poison, and
@@ -344,9 +346,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fail closed. A general nonlinear equivalence attempt was rejected after a
   disclosed 67.4 GiB anonymous-RSS OOM; the accepted small structural checker
   plus bounded fallback completes the suite at 61.3 MiB without rebuild.
-  Version one admits only a universally true requirement: until call-site precondition failures
-  become explicit obligations/bad states, pruning them would be unsound. Next:
-  design that obligation route before annotations or relational havoc.
+  ADR-0297 has since added the explicit call-site obligation route required
+  before nontrivial requirements. Relational result havoc and annotations
+  remain separate work.
 
 - **2026-07-20 — ADR-0295 accepts the executable direct-call baseline.**
   The three ADR-0294 call declines are not one sound mechanism: both PAC loops
@@ -364,8 +366,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   variants in 15 groups and nine binaries / 88 tests; ADR-0296 expands it to
   94 tests. This is the accepted inlined T5.2.4
   baseline, not modular contracts, cross-source evidence, or a revised census.
-  ADR-0296 now supplies the exact `leaf` contract comparison; do not broaden
-  call syntax without the explicit precondition-obligation gate.
+  ADR-0296 supplies the exact `leaf` contract comparison; ADR-0297 now supplies
+  its explicit precondition-obligation gate. Do not broaden call syntax before
+  relational result semantics are separately frozen.
 
 - **2026-07-20 — ADR-0294 accepts the corrected reproducible semantic census;
   no capability is selected.** A private classifier
@@ -5249,22 +5252,23 @@ plan is built and committed on the current branch:
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
 | Phase | Title | Status |
 |---|---|---|
-| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284/0295):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions including opt-in exact direct-body calls, explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291/0292/0295 accepted):** the canonical scalar LLVM self-loop, first single-latch natural loop, and two exact PAC loops with a supplied checked `leaf` body route to checked `TransitionSystem`s. Exact compiler identity, deterministic PHI/parameter/path state, selected-edge/call/poison/UB semantics, unbounded/bounded safety exercise, independent formulas, 20,000 + 50,000 + 100,000 tuples, precise rejection boundaries, and source-replayed abstract reachability pass. Existing solver BMC supplies bounded unrolling for accepted relations; measured broader rejected-loop routing remains open. **T5.1.6 DONE (ADR-0290, expanded by ADR-0295/0296):** all 63 source-derived semantic variants retain exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five base refutations plus direct-call/contract mutations, checker mutations, and the expanded nine-binary/94-test gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader rejected-loop routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
+| P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, array bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284/0295):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions including opt-in exact direct-body calls, explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291/0292/0295 accepted):** the canonical scalar LLVM self-loop, first single-latch natural loop, and two exact PAC loops with a supplied checked `leaf` body route to checked `TransitionSystem`s. Exact compiler identity, deterministic PHI/parameter/path state, selected-edge/call/poison/UB semantics, unbounded/bounded safety exercise, independent formulas, 20,000 + 50,000 + 100,000 tuples, precise rejection boundaries, and source-replayed abstract reachability pass. Existing solver BMC supplies bounded unrolling for accepted relations; measured broader rejected-loop routing remains open. **T5.1.6 DONE (ADR-0290, expanded by ADR-0295--0297):** all 63 source-derived semantic variants retain exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five base refutations plus direct-call/contract/requirement mutations, checker mutations, and the expanded nine-binary/98-test gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader rejected-loop routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | ↳ P5.1 measured gate | Glaurung LLVM loop-shape demand census | DONE — **ADR-0293 accepted:** exact result reproduces 12 loops / 12 functions: 11 existing self-loop structural rows plus one under-diverse early-exit row; no new implementation selected |
 | ↳ P5.1 measured gate | Glaurung LLVM loop semantic census | DONE — **ADR-0294 accepted:** disclosed first-artifact rejection followed by exact corrected reproduction; 0/12 reach loop reflection, and diverse first causes select a T5.1.2 audit lane but no code |
-| P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once, the body is discarded, modular/inlined formulas and 100,000 tuples agree, and all contract components retain mutation controls. **ADR-0297 now preregisters the missing nontrivial-requirement rule:** assume it in `trans` only after the exact reached complement becomes a replayable, source-attributed `bad` state, with path conditioning and zero dropped rows. Relational havoc/annotations remain next; phase exit remains the checksum module on both IRs with DISAGREE=0 |
+| P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. The balanced 100,000-row valid/violation/undefined gate has zero disagreement or dropped work. Next freeze relational scalar result/havoc on the checksum module; phase exit remains that module on both IRs with DISAGREE=0 |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
 
-- **2026-07-20 — ADR-0297 preregisters scalar call-requirement bad states.**
-  The frozen rule makes `prefix && args_defined && !requires` an explicit
-  replayable obligation before the transition may assume `requires`. It
-  requires exact path conditioning, site/span attribution, a defined PAC
-  source witness, and 100,000 completely classified rows with zero disagreement
-  or dropped work; annotations and relational results remain out of scope.
+- **2026-07-20 — ADR-0297 accepts scalar call-requirement bad states.** The
+  frozen `prefix && args_defined && !requires` rule passes exact formula,
+  path-prefix/later-UB, site/span, depth-1 BMC, defined PAC source replay, and
+  balanced 100,000-row gates: 33,334 valid / 33,334 defined violation / 33,332
+  source undefined, 16,666 omission controls, zero disagreement, zero dropped.
+  Focused 17/17, standing nine-binary/98, and full package/doctests pass under
+  memory caps. Relational results, annotations, and MIR calls remain open.
 
 - **2026-07-20 — ADR-0296 accepts verified scalar contracts.** The exact
   `leaf` summary is checked against its body once and caller lowering stores
@@ -5272,8 +5276,8 @@ plan is built and committed on the current branch:
   bounded/unbounded verdicts, component/body mutations, precise failures, and
   live provenance pass. A rejected general proof route's 67.4 GiB anonymous-RSS
   OOM is retained; the small exact checker and bounded fallback replace it. The
-  standing gate expands to nine binaries / 94 tests. Nontrivial requirements
-  still wait for an explicit call-site obligation/bad-state route.
+  standing gate expands to nine binaries / 94 tests at that checkpoint;
+  ADR-0297 subsequently lands the explicit call-site obligation route.
 
 - **2026-07-20 — ADR-0295 accepts checked direct-body calls.** The exact PAC
   source/module/functions reproduce from registered Glaurung and clang-21
