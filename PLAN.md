@@ -198,8 +198,13 @@ session state.
 >    nine-binary/88-test standing gate pass. This is now the inlined baseline
 >    required by P5.2's modular-versus-inlined differential, not contracts,
 >    external effects, a cross-source acceptance claim, or a revised 12-row
->    census. The next call work is explicit contract composition measured
->    against this baseline, not another syntax-only widening.
+>    census. ADR-0296 now preregisters the next call work: verify one explicit
+>    exact scalar `leaf` contract against its body once, retain only the checked
+>    summary in caller reflection, and measure modular-versus-inlined agreement.
+>    Its first slice requires a universally true precondition so a failed
+>    `requires` cannot be hidden by pruning a transition. General call-site
+>    obligations, relational havoc, annotations, recursion, memory, and
+>    external effects remain separate work; do not widen syntax around them.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
