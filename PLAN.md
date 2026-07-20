@@ -165,15 +165,17 @@ session state.
 >    safety, precise boundary errors, and source replay pass; the standing gate
 >    is eight binaries / 81 tests. Existing replay-checked BMC supplies bounded
 >    k-unrolling for accepted relations rather than a second textual-CFG engine.
->    ADR-0293 now preregisters that measurement before observing its formal
->    result: 12 hash-pinned Glaurung C sources, exact clang/LLVM identities and
->    arguments, a fail-closed LoopInfo taxonomy, byte-identical retention, and a
->    diversity-gated selection rule. A disclosed three-source pilot influenced
->    the taxonomy but cannot authorize code. T5.1.4 remains WIP: push the
->    zero-row gate, run it twice, then either preregister the measured dominant
->    profile or add no capability; general rejected-loop unrolling, MIR,
->    multi-latch/early-exit/switch/memory loops, general places, and LLIR remain
->    open, and the accepted Linux recall route stays untouched.
+>    ADR-0293 now accepts that measurement: the exact 12-source result
+>    reproduces byte-for-byte with 12 loops in 12 functions, 11 matching the
+>    existing ADR-0291 structural shape and one early-exit row in
+>    `mathlib_is_prime`. The sole rejected profile occurs in only one function
+>    and one source, fails the frozen diversity rule, and authorizes no code.
+>    Structural matching is not semantic acceptance. T5.1.4 remains WIP: next
+>    preregister semantic eligibility/rejection measurement over real loops or
+>    independently broaden the population; do not build early-exit support from
+>    this singleton. General rejected-loop unrolling, MIR, multi-latch/
+>    early-exit/switch/memory loops, general places, and LLIR remain open, and
+>    the accepted Linux recall route stays untouched.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

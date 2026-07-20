@@ -14,6 +14,13 @@ import unittest
 REPO = pathlib.Path(__file__).parents[2]
 SCRIPT = REPO / "scripts" / "census-glaurung-llvm-loops.py"
 MANIFEST = REPO / "docs" / "consumer-track" / "verify" / "glaurung-llvm-loop-census-v1.json"
+RESULT = (
+    REPO
+    / "docs"
+    / "consumer-track"
+    / "verify"
+    / "glaurung-llvm-loop-census-v1-result.json"
+)
 SPEC = importlib.util.spec_from_file_location("glaurung_llvm_loop_census", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 census = importlib.util.module_from_spec(SPEC)
@@ -134,6 +141,45 @@ Parallel Loop at depth 1 containing: %19<header><exiting>,%23<exiting>,%15<latch
                 path.write_text(json.dumps(candidate), encoding="utf-8")
                 with self.subTest(name=name), self.assertRaises(census.CensusError):
                     census.load_manifest(path)
+
+    def test_formal_result_recomputes_exactly(self) -> None:
+        manifest = census.load_manifest(MANIFEST)
+        result = census.load_result(RESULT, MANIFEST, manifest)
+
+        self.assertEqual(result["summary"]["loops"], 12)
+        self.assertEqual(result["summary"]["functions_with_loops"], 12)
+        self.assertEqual(result["summary"]["profile_counts"]["adr0291_self_loop_shape"], 11)
+        self.assertEqual(
+            result["summary"]["profile_counts"]["single_latch_early_exit_shape"], 1
+        )
+
+    def test_formal_result_drift_fails_closed(self) -> None:
+        manifest = census.load_manifest(MANIFEST)
+        original = json.loads(RESULT.read_text(encoding="utf-8"))
+        mutations = [
+            ("total", lambda value: value["summary"].__setitem__("loops", 13)),
+            (
+                "profile",
+                lambda value: value["sources"][1]["loops"][0].__setitem__(
+                    "profile", "single_latch_no_exit_shape"
+                ),
+            ),
+            (
+                "function",
+                lambda value: value["sources"][1]["loops"][0].__setitem__(
+                    "function", "missing"
+                ),
+            ),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            for name, mutate in mutations:
+                candidate = copy.deepcopy(original)
+                mutate(candidate)
+                path = root / f"{name}.json"
+                path.write_text(json.dumps(candidate), encoding="utf-8")
+                with self.subTest(name=name), self.assertRaises(census.CensusError):
+                    census.load_result(path, MANIFEST, manifest)
 
     def test_retain_exact_creates_reproduces_and_rejects_drift(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -1,0 +1,423 @@
+{
+  "compile": {
+    "args": [
+      "--target=x86_64-pc-linux-gnu",
+      "-O1",
+      "-fno-unroll-loops",
+      "-fno-vectorize",
+      "-fno-slp-vectorize",
+      "-fno-strict-aliasing",
+      "-S",
+      "-emit-llvm"
+    ],
+    "include_dirs": [
+      "samples/source/library"
+    ]
+  },
+  "glaurung_revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+  "loop_analysis": {
+    "args": [
+      "-passes=print<loops>",
+      "-disable-output"
+    ],
+    "profiles": [
+      "adr0291_self_loop_shape",
+      "adr0292_single_latch_shape",
+      "single_latch_early_exit_shape",
+      "single_latch_no_exit_shape",
+      "multi_latch_shape",
+      "nested_shape",
+      "other_shape"
+    ]
+  },
+  "manifest_sha256": "d5796feeaa8e6b421b1199d3d05c18d7337f01527f38e3edd58cbbe30e7e99b2",
+  "schema": "axeyum.glaurung-llvm-loop-census-result.v1",
+  "sources": [
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "5c080d299d60d7341c6c892f779b076527eab016253e1a4e9cdef66ef34b435a",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/c/c2_demo.c",
+      "source_sha256": "78a13f3a689d6736f84393058f2911fb5170cb1b9010880409ad69a55d49be75"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main",
+        "print_sum"
+      ],
+      "llvm_sha256": "75a6f0fedd4729722181c56f86ea2b45293a84a6fb1d17c7a9bacd787a499233",
+      "loops": [
+        {
+          "blocks": [
+            {
+              "name": "%13",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "main",
+          "profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "opt_stderr_sha256": "ccc4cc086fa5b6fa57f856d741d7a27b3b9c8a7f45d116199531652786410427",
+      "path": "samples/source/c/hello.c",
+      "source_sha256": "faa0f97afdb282005bac7e128771f5293e84a65da1beddddc195056a8ca40ee8"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "fdb0d1414a9222dabcb432ac368cecf6ad19f42ceae19bcd207b0065a0cbc513",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/c/pe_tls.c",
+      "source_sha256": "7ba818542e2e68692ce2789f8e2b578e292cf26481b0c506d35df74895b12871"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "451f4898ee573496a42d4fd62e7fe66853d719a410af8bf0b0e63023fd63529d",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/c/suspicious_linux.c",
+      "source_sha256": "d0f3f2cad7e6657ffeeb9371a5a457cd383597a8810c4bab9aef621c7ebcaf1e"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "e660d0d814f9ef5e69dd9b676152e6927cf8114e48d2a9a3d33ac2e20fadaa79",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/c/suspicious_win.c",
+      "source_sha256": "36ba18a83f823431b9f530d293928bdcba22c8ceaa491e9766ac50b14e469321"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "58e8935eceeae875b3bc1546cc2cdac5a0c121b53a09f8b26f5ced70801c801a",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/c/vulnparse.c",
+      "source_sha256": "2b34549fb4c60f66a292e946ff1a05ce1fb2c84cb2c9592affbeba825e6e12f4"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "mathlib_cleanup",
+        "mathlib_version",
+        "mathlib_version_major",
+        "mathlib_version_minor",
+        "mathlib_add",
+        "mathlib_subtract",
+        "mathlib_multiply",
+        "mathlib_divide",
+        "mathlib_factorial",
+        "mathlib_fibonacci",
+        "mathlib_gcd",
+        "mathlib_is_prime",
+        "mathlib_array_sum",
+        "mathlib_array_average",
+        "mathlib_array_max",
+        "mathlib_array_min",
+        "mathlib_apply_operation",
+        "mathlib_set_global_seed",
+        "mathlib_get_global_seed",
+        "mathlib_random",
+        "mathlib_point_distance",
+        "mathlib_get_call_count"
+      ],
+      "llvm_sha256": "c7b5140a95378cc6580f534fe3518c28369a89d35723af6f110321ccb7ebc475",
+      "loops": [
+        {
+          "blocks": [
+            {
+              "name": "%12",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_factorial",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%7",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_fibonacci",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%9",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_gcd",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%19",
+              "tags": [
+                "header",
+                "exiting"
+              ]
+            },
+            {
+              "name": "%23",
+              "tags": [
+                "exiting"
+              ]
+            },
+            {
+              "name": "%15",
+              "tags": [
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_is_prime",
+          "profile": "single_latch_early_exit_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%10",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_array_sum",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%11",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_array_average",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%13",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_array_max",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%13",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "mathlib_array_min",
+          "profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "opt_stderr_sha256": "c32d43acf77fda9faa8b3a6711c30a4b71c53b72639688a61cee8526e8edd456",
+      "path": "samples/source/library/mathlib.c",
+      "source_sha256": "483a4be36dec362d1132c97f1f749ab9e1bf411ec32bf95954d305551296b23d"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "square_callback",
+        "main"
+      ],
+      "llvm_sha256": "60756e53804c7535433a441124facea52cf1103640e4f92e20d536493cd67e4f",
+      "loops": [
+        {
+          "blocks": [
+            {
+              "name": "%55",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "main",
+          "profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "opt_stderr_sha256": "a31cb576b1792e52acc1117cc2fabfb7b7c64348273561893a534d0cf5b9f6aa",
+      "path": "samples/source/library/test_mathlib.c",
+      "source_sha256": "4a57666159b837621af430a8455041585f1ac2bfbdfc6302aac6169de67332f1"
+    },
+    {
+      "compile_stderr": "samples/source/multi_import.c:5:12: warning: incompatible redeclaration of library function 'strlen' [-Wincompatible-library-redeclaration]\n    5 | extern int strlen(const char *);\n      |            ^\nsamples/source/multi_import.c:5:12: note: 'strlen' is a builtin with type 'unsigned long (const char *)'\n1 warning generated.\n",
+      "functions_seen": [
+        "main"
+      ],
+      "llvm_sha256": "7d6d392be82b14c88498d65f13d345a351a108a36a245619183611b1327c8f06",
+      "loops": [],
+      "opt_stderr_sha256": "6dca3f8306cb1a1d4e946614c23dab440329a48223ff6607754f1e3599eb3c7a",
+      "path": "samples/source/multi_import.c",
+      "source_sha256": "49f22625d7f68eed5043ab95344130140365a5af5f7859571c32a8c19d5117cc"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "foo_ioctl",
+        "foo_compat_ioctl",
+        "foo_open",
+        "foo_release"
+      ],
+      "llvm_sha256": "e860a1b360a9beb41ff983846e416cf775a743f5458164df2ae88bf653876e58",
+      "loops": [],
+      "opt_stderr_sha256": "560b19c6eba1896a20cf9a9b62bb01a2b925a671685480c498614e5eabe713a3",
+      "path": "tests/fixtures/android/drv.c",
+      "source_sha256": "83ca1409d35d25f360bbf0099e0b4b5a1e179bee5da7b89b4ad639f84c53b715"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [
+        "leaf",
+        "pick",
+        "compute",
+        "main"
+      ],
+      "llvm_sha256": "a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00",
+      "loops": [
+        {
+          "blocks": [
+            {
+              "name": "%5",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "compute",
+          "profile": "adr0291_self_loop_shape"
+        },
+        {
+          "blocks": [
+            {
+              "name": "%4",
+              "tags": [
+                "header",
+                "latch",
+                "exiting"
+              ]
+            }
+          ],
+          "depth": 1,
+          "function": "main",
+          "profile": "adr0291_self_loop_shape"
+        }
+      ],
+      "opt_stderr_sha256": "844b9d650467c95132a929f79dc3efa3c918582dafe302413a562175328b16f6",
+      "path": "tests/fixtures/android/pac.c",
+      "source_sha256": "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+    },
+    {
+      "compile_stderr": "",
+      "functions_seen": [],
+      "llvm_sha256": "d8ee4275d81571c3803e74d21dce67e3696f812174e23a3124e5031b49c625ca",
+      "loops": [],
+      "opt_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "path": "tests/fixtures/android/relocs.c",
+      "source_sha256": "c5a6072945ffd37ceb25056a79a284313afd387595a31785ce2ed2668eab6e85"
+    }
+  ],
+  "summary": {
+    "functions_with_loops": 12,
+    "loops": 12,
+    "profile_counts": {
+      "adr0291_self_loop_shape": 11,
+      "adr0292_single_latch_shape": 0,
+      "multi_latch_shape": 0,
+      "nested_shape": 0,
+      "other_shape": 0,
+      "single_latch_early_exit_shape": 1,
+      "single_latch_no_exit_shape": 0
+    },
+    "sources": 12
+  },
+  "toolchain": {
+    "clang": {
+      "realpath": "/usr/lib/llvm-21/bin/clang",
+      "sha256": "412bbe8c60571a1eb06f48fde89635033621caeb01a9b4ee76d46711bae8e932",
+      "version_first_line": "Ubuntu clang version 21.1.8 (6ubuntu1)"
+    },
+    "llvm_as": {
+      "realpath": "/usr/lib/llvm-21/bin/llvm-as",
+      "sha256": "50526d303ae33ed44002023d8d9611186e916f4b8eaf70a608bdbf1d81122784",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    },
+    "opt": {
+      "realpath": "/usr/lib/llvm-21/bin/opt",
+      "sha256": "f3a0c71473eb573797c003382bbe096e6a6468f4da5caf406246f2dbb5e86531",
+      "version_first_line": "Ubuntu LLVM version 21.1.8"
+    }
+  }
+}

@@ -322,17 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0293 preregisters the real Glaurung LLVM loop-shape
-  census; result unobserved.** The zero-row gate pins Glaurung `403a5c5c`, 12
-  clean tracked C sources by hash, exact clang/LLVM 21.1.8 binaries and flags,
-  seven fail-closed LoopInfo profiles, deterministic output, and byte-identical
-  reproduction. A pre-freeze pilot on `hello.c`, `mathlib.c`, and `pac.c`
-  influenced the taxonomy and is disclosed; it supplies no formal totals and
-  authorizes no implementation. The fixed rule requires a strict plurality in
-  at least two functions and two source files, while nested/multi-latch shapes
-  always require a separate architecture decision. Next: push this zero-row
-  checkpoint, execute the formal 12-source census twice, and apply the rule
-  without weakening it.
+- **2026-07-20 — ADR-0293 accepts the reproducible Glaurung LLVM loop-shape
+  census and selects no implementation.** Both formal runs retain identical
+  bytes: 12 loops in 12 functions, with 11 ADR-0291 self-loop structural rows,
+  one early-exit `mathlib_is_prime` row, and zero rows in every other profile.
+  The only rejected profile occurs in one function and one source, failing both
+  frozen diversity thresholds. The earlier pilot remains disclosed and does
+  not count again. A committed validator recomputes source/tool/manifest
+  identity and every count with precise fail-closed errors. Structural shape is
+  not semantic eligibility. Next: preregister semantic acceptance/rejection
+  measurement over real loops or independently broaden the source population;
+  do not implement early exits from this singleton.
 
 - **2026-07-20 — ADR-0292 accepts the checked single-latch LLVM natural-loop
   bridge.** `reflect_single_latch_loop_checked` preserves the exact ADR-0291
@@ -5184,13 +5184,20 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions with explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291/0292 accepted):** the canonical scalar LLVM self-loop and first single-latch natural loop route automatically to checked `TransitionSystem`s. Exact compiler identity, deterministic PHI/parameter/path state, selected-edge and poison/UB semantics, unbounded/bounded safety, independent formulas, 20,000 + 50,000 tuples, precise rejection boundaries, and source-replayed abstract reachability pass. Existing solver BMC supplies bounded unrolling for accepted relations; measured broader rejected-loop routing remains open. **T5.1.6 DONE (ADR-0290):** all 62 source-derived semantic variants retain exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five refutations, ten checker mutations, and the expanded eight-binary/81-test gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader rejected-loop routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
-| ↳ P5.1 next gate | Glaurung LLVM loop-shape demand census | WIP — **ADR-0293 proposed, zero-row:** exact 12-source/tool/flag manifest and fail-closed taxonomy are frozen; formal totals remain unobserved until the preregistration commit is pushed |
+| ↳ P5.1 measured gate | Glaurung LLVM loop-shape demand census | DONE — **ADR-0293 accepted:** exact result reproduces 12 loops / 12 functions: 11 existing self-loop structural rows plus one under-diverse early-exit row; no new implementation selected, semantic eligibility still unmeasured |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | TODO — the architectural unlock for cross-function claims; exit: the checksum module re-proves modularly (without the MIR inliner), with a modular-vs-inlined differential gate at DISAGREE=0 |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0293 accepts a negative loop-shape selection.** The exact
+  result was created then reproduced byte-for-byte: 11/12 loop rows match the
+  existing self-loop structure and the sole rejected early-exit row is confined
+  to one function/source. It fails the frozen diversity gate, so no capability
+  is added. The retained-result validator recomputes every identity and total;
+  semantic eligibility remains the next evidence step.
 
 - **2026-07-20 — ADR-0293 preregisters a real Glaurung LLVM loop-shape
   census.** The zero-row manifest, fail-closed analyzer, captured-output unit

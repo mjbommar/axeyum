@@ -1,9 +1,10 @@
 # ADR-0293: Preregister a Glaurung LLVM loop-shape census
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; the formal 12-source result does not exist
+Result state: accepted; the exact 12-source result reproduces byte-for-byte and
+selects no new loop implementation
 
 ## Context
 
@@ -76,9 +77,45 @@ code changes.
 5. Report every source row and every zero-count profile; do not discard compile
    warnings or unsupported shapes.
 
+## Result
+
+The formal result is retained at
+`docs/consumer-track/verify/glaurung-llvm-loop-census-v1-result.json`, SHA-256
+`f5ef6c3fdb8ff7b7ceebba23ad7ce029db2a92668a3f938b025b427e5c38f918`.
+The first run reported `created`; an immediate second run reported `reproduced`
+over the same bytes. All 12 registered sources compiled and assembled. The
+pre-existing incompatible `strlen` redeclaration warning in `multi_import.c` is
+retained rather than suppressed; that source contains no LoopInfo row.
+
+The exact census contains 12 loops in 12 functions:
+
+- `adr0291_self_loop_shape`: 11;
+- `single_latch_early_exit_shape`: 1, `mathlib_is_prime` in `mathlib.c`; and
+- `adr0292_single_latch_shape`, single-latch no-exit, multi-latch, nested, and
+  other: 0 each.
+
+The sole rejected structural profile is therefore a strict plurality, but it
+appears in only one function from one source. It fails both frozen diversity
+thresholds. ADR-0293 selects no implementation, and the observed row does not
+authorize weakening the thresholds or treating the pre-freeze pilot as a
+second observation.
+
+The 11 self-loop rows are structural matches only. This census does not prove
+that their instructions, memory, calls, PHIs, or poison behavior are accepted
+by Axeyum's checked semantic profile. The next evidence-backed T5.1.4 step is a
+separately preregistered semantic eligibility/rejection census over real loops,
+or an independently sourced broader structural population. It is not an
+early-exit implementation inferred from this single function.
+
+The retained-result validator recomputes source order and identity, tool and
+manifest identity, every profile count, total loop/function/source counts, and
+the exact schema. It fails closed on unknown fields, functions, profiles, or
+count drift with precise errors.
+
 ## Consequences
 
-T5.1.4 advances through measured consumer structure. A small corpus or a
-negative selection remains useful evidence: it prevents a single pilot loop
-from silently becoming the roadmap. No loop capability, performance claim, or
-Glaurung finding claim is added by this zero-row decision.
+T5.1.4 advances through measured consumer structure without adding an
+under-supported shape. The result prevents one pilot loop from silently
+becoming the roadmap and shows why structural presence must not be conflated
+with semantic acceptance. No loop capability, performance claim, or Glaurung
+finding claim is added by this decision.

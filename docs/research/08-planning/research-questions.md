@@ -799,12 +799,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     pass. General rejected-loop unrolling, MIR, multi-latch/early-exit/switch/
     memory loops, and LLIR remain open.
   - [ADR-0293](../09-decisions/adr-0293-preregister-glaurung-llvm-loop-shape-census.md)
-    preregisters the next selection step rather than another implementation:
-    classify every loop in 12 hash-pinned Glaurung C fixtures under exact
-    clang/LLVM identities, retain a byte-identical formal result, and admit a
-    successor profile only under a fixed cross-function/source diversity rule.
-    The formal result remains unobserved; a disclosed three-source pilot
-    influenced the taxonomy but cannot authorize code.
+    accepts the exact reproducible 12-source result: 11 rows match the existing
+    ADR-0291 structural shape and the sole rejected row is the early-exit
+    `mathlib_is_prime` loop. One function in one source fails the frozen
+    two-function/two-source diversity rule, so no new implementation is
+    selected. Structural matching is not semantic eligibility; the next loop
+    step must measure real semantic rejection or independently broaden the
+    population.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

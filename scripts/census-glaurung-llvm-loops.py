@@ -196,6 +196,189 @@ def load_manifest(path: Path) -> dict[str, Any]:
     return manifest
 
 
+def load_result(
+    path: Path, manifest_path: Path, manifest: dict[str, Any]
+) -> dict[str, Any]:
+    """Load and fully recompute the retained formal result."""
+
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise CensusError(f"cannot decode result {path}: {error}") from error
+    result = require_object(value, "result")
+    require_exact_keys(
+        result,
+        {
+            "compile",
+            "glaurung_revision",
+            "loop_analysis",
+            "manifest_sha256",
+            "schema",
+            "sources",
+            "summary",
+            "toolchain",
+        },
+        "result",
+    )
+    require(result["schema"] == RESULT_SCHEMA, f"result.schema: expected {RESULT_SCHEMA}")
+    require(
+        result["glaurung_revision"] == manifest["glaurung"]["revision"],
+        "result Glaurung revision drift",
+    )
+    require(result["compile"] == manifest["compile"], "result compile specification drift")
+    require(
+        result["loop_analysis"] == manifest["loop_analysis"],
+        "result LoopInfo specification drift",
+    )
+    require(
+        result["manifest_sha256"] == sha256_file(manifest_path),
+        "result manifest SHA-256 drift",
+    )
+
+    result_tools = require_object(result["toolchain"], "result.toolchain")
+    require_exact_keys(result_tools, {"clang", "llvm_as", "opt"}, "result.toolchain")
+    for name in ("clang", "llvm_as", "opt"):
+        tool = require_object(result_tools[name], f"result.toolchain.{name}")
+        require_exact_keys(
+            tool,
+            {"realpath", "sha256", "version_first_line"},
+            f"result.toolchain.{name}",
+        )
+        registered = manifest["toolchain"][name]
+        for field in ("realpath", "sha256", "version_first_line"):
+            require(tool[field] == registered[field], f"result tool drift: {name}.{field}")
+
+    sources = require_list(result["sources"], "result.sources")
+    registered_sources = manifest["glaurung"]["sources"]
+    require(len(sources) == len(registered_sources), "result source count drift")
+    profile_counts: Counter[str] = Counter()
+    functions_with_loops = 0
+    for index, (raw_source, registered) in enumerate(zip(sources, registered_sources)):
+        source = require_object(raw_source, f"result.source[{index}]")
+        require_exact_keys(
+            source,
+            {
+                "compile_stderr",
+                "functions_seen",
+                "llvm_sha256",
+                "loops",
+                "opt_stderr_sha256",
+                "path",
+                "source_sha256",
+            },
+            f"result.source[{index}]",
+        )
+        require(source["path"] == registered["path"], f"result source[{index}] path drift")
+        require(
+            source["source_sha256"] == registered["sha256"],
+            f"result source[{index}] SHA-256 drift",
+        )
+        require(isinstance(source["compile_stderr"], str), f"result source[{index}] stderr")
+        for field in ("llvm_sha256", "opt_stderr_sha256"):
+            require(
+                isinstance(source[field], str) and bool(SHA256_RE.fullmatch(source[field])),
+                f"result source[{index}] invalid {field}",
+            )
+        functions = require_list(source["functions_seen"], f"result.source[{index}].functions")
+        require(
+            all(isinstance(function, str) and function for function in functions),
+            f"result source[{index}] invalid function name",
+        )
+        require(len(functions) == len(set(functions)), f"result source[{index}] duplicate function")
+        loops = require_list(source["loops"], f"result.source[{index}].loops")
+        loop_functions: set[str] = set()
+        parsed_rows: list[tuple[str, LoopRow]] = []
+        for loop_index, raw_loop in enumerate(loops):
+            loop = require_object(raw_loop, f"result.source[{index}].loop[{loop_index}]")
+            require_exact_keys(
+                loop,
+                {"blocks", "depth", "function", "profile"},
+                f"result.source[{index}].loop[{loop_index}]",
+            )
+            function = require_string(
+                loop["function"], f"result.source[{index}].loop[{loop_index}].function"
+            )
+            require(function in functions, f"result loop function was not reported: {function}")
+            require(
+                isinstance(loop["depth"], int)
+                and not isinstance(loop["depth"], bool)
+                and loop["depth"] >= 1,
+                f"result source[{index}] invalid loop depth",
+            )
+            profile = require_string(
+                loop["profile"], f"result.source[{index}].loop[{loop_index}].profile"
+            )
+            require(profile in PROFILES, f"result source[{index}] unknown profile: {profile}")
+            blocks = require_list(
+                loop["blocks"], f"result.source[{index}].loop[{loop_index}].blocks"
+            )
+            require(bool(blocks), f"result source[{index}] loop has no blocks")
+            parsed_blocks: list[LoopBlock] = []
+            for block_index, raw_block in enumerate(blocks):
+                block = require_object(
+                    raw_block,
+                    f"result.source[{index}].loop[{loop_index}].block[{block_index}]",
+                )
+                require_exact_keys(
+                    block,
+                    {"name", "tags"},
+                    f"result.source[{index}].loop[{loop_index}].block[{block_index}]",
+                )
+                name = require_string(block["name"], "result loop block name")
+                require(name.startswith("%"), "result loop block name lacks `%`")
+                tags = require_list(block["tags"], "result loop block tags")
+                require(
+                    all(isinstance(tag, str) and tag for tag in tags),
+                    "result loop block has invalid tag",
+                )
+                require(len(tags) == len(set(tags)), "result loop block has duplicate tag")
+                require(
+                    set(tags) <= {"header", "latch", "exiting"},
+                    "result loop block has unknown tag",
+                )
+                parsed_blocks.append(LoopBlock(name=name, tags=tuple(tags)))
+            parsed_rows.append(
+                (
+                    profile,
+                    LoopRow(
+                        function=function,
+                        depth=loop["depth"],
+                        blocks=tuple(parsed_blocks),
+                    ),
+                )
+            )
+            loop_functions.add(function)
+        nested_functions = {row.function for _, row in parsed_rows if row.depth > 1}
+        for profile, parsed_row in parsed_rows:
+            expected_profile = classify_loop(
+                parsed_row,
+                function_has_nested_loop=parsed_row.function in nested_functions,
+            )
+            require(
+                profile == expected_profile,
+                f"result profile drift for {parsed_row.function}: "
+                f"reported={profile} recomputed={expected_profile}",
+            )
+            profile_counts[profile] += 1
+        functions_with_loops += len(loop_functions)
+
+    summary = require_object(result["summary"], "result.summary")
+    require_exact_keys(
+        summary,
+        {"functions_with_loops", "loops", "profile_counts", "sources"},
+        "result.summary",
+    )
+    expected_counts = {profile: profile_counts[profile] for profile in PROFILES}
+    require(summary["profile_counts"] == expected_counts, "result profile counts drift")
+    require(summary["loops"] == sum(profile_counts.values()), "result loop total drift")
+    require(
+        summary["functions_with_loops"] == functions_with_loops,
+        "result function-with-loop total drift",
+    )
+    require(summary["sources"] == len(sources), "result source total drift")
+    return result
+
+
 def parse_blocks(raw: str) -> tuple[LoopBlock, ...]:
     blocks: list[LoopBlock] = []
     for index, piece in enumerate(raw.split(",")):
@@ -418,12 +601,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--validate", action="store_true")
+    parser.add_argument("--validate-result", action="store_true")
     parser.add_argument("--run", action="store_true")
     parser.add_argument("--glaurung-root", type=Path)
     parser.add_argument("--out", type=Path)
     args = parser.parse_args(argv)
     try:
-        require(args.validate != args.run, "select exactly one of --validate or --run")
+        require(
+            sum((args.validate, args.validate_result, args.run)) == 1,
+            "select exactly one of --validate, --validate-result, or --run",
+        )
         manifest = load_manifest(args.manifest)
         if args.validate:
             if args.glaurung_root is not None:
@@ -441,8 +628,23 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
             return 0
-        require(args.glaurung_root is not None, "--run requires --glaurung-root")
         registered_out = Path(manifest["formal_output"])
+        if args.validate_result:
+            require(args.glaurung_root is None, "--validate-result does not accept --glaurung-root")
+            require(args.out is None, "--validate-result does not accept --out")
+            result = load_result(registered_out, args.manifest, manifest)
+            print(
+                json.dumps(
+                    {
+                        "output": registered_out.as_posix(),
+                        "status": "valid-result",
+                        **result["summary"],
+                    },
+                    sort_keys=True,
+                )
+            )
+            return 0
+        require(args.glaurung_root is not None, "--run requires --glaurung-root")
         out = args.out if args.out is not None else registered_out
         require(out == registered_out, f"formal output path drift: {out}")
         result = run_census(args.manifest, manifest, args.glaurung_root.resolve())

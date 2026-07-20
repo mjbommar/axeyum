@@ -348,4 +348,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0290](adr-0290-preregister-reflection-semantics-gate.md) | Accept exact source-derived ownership of 62 checked-frontend semantic variants with proof plus deterministic fuzz evidence | accepted |
 | [0291](adr-0291-preregister-typed-canonical-llvm-loop-bridge.md) | Accept one typed, definedness-aware canonical LLVM self-loop to `TransitionSystem` bridge | accepted |
 | [0292](adr-0292-preregister-single-latch-llvm-natural-loop.md) | Accept one checked single-latch LLVM natural loop with path-conditioned internal control flow | accepted |
-| [0293](adr-0293-preregister-glaurung-llvm-loop-shape-census.md) | Preregister an exact 12-source Glaurung LLVM LoopInfo census before selecting another checked loop profile | proposed |
+| [0293](adr-0293-preregister-glaurung-llvm-loop-shape-census.md) | Accept the exact Glaurung loop census: 11 existing-shape rows and one under-diverse early-exit row select no new implementation | accepted |
