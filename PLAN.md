@@ -316,6 +316,24 @@ session state.
 > history, not reproducible or accepted evidence; any successor requires a new
 > independently justified zero-row ADR.
 
+> **Data-structure candidate sweep selects an in-tree dense-memo gate
+> (2026-07-20, ADR-0300).** After ADR-0285 closed the flat clause arena, the
+> follow-up audit found one independent mechanism: `axeyum-bv` uses
+> `BTreeMap<TermId, Vec<AigLit>>` for exact lookups on dense insertion-order
+> `u32` IDs and never iterates it for semantic output. The reported 3.89x
+> dense-plus-`Rc` scratch result is not accepted evidence: every named
+> scratchpad and diary path is absent from this checkout, and it combines two
+> mechanisms. ADR-0300 therefore preregisters only `Vec<Option<Vec<AigLit>>>`,
+> retaining all literal-vector clones and lift maps. Representation-neutral
+> artifact-v39 telemetry must land on the BTree baseline first; exact 162-query
+> structural/storage comparison then gates six order-balanced unprofiled pairs
+> on bit-blast time, family tails, cold total, variance, and RSS. Failure restores
+> the tree representation. Clause storage, scratch reuse, reverse traversal,
+> and capacity hints remain closed; interning and packed-literal ideas require
+> separate ADRs. This is bounded cold engineering, not a performance headline.
+> Full ranked context:
+> [`cold-path-datastructure-candidates.md`](docs/research/08-planning/cold-path-datastructure-candidates.md).
+
 > **Glaurung publication-evidence reset (2026-07-17, ADR-0213).** The reviewer
 > checklist confirms that the integration evidence is correctness-strong but
 > not yet sufficient for headline performance claims. Strict typed translation

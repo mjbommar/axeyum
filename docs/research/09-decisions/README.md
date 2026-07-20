@@ -355,3 +355,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0297](adr-0297-preregister-call-requirement-obligations.md) | Accept path-conditioned scalar call requirements as explicit transition-system bad states rather than silently pruning violating callers | accepted |
 | [0298](adr-0298-preregister-relational-scalar-call-results.md) | Straight-line relational scalar call results as explicit internal havoc symbols plus separate replayable constraints | accepted |
 | [0299](adr-0299-preregister-checked-mir-relational-calls.md) | Accept typed MIR relational scalar calls with separate MIR-body panic and postcondition verification | accepted |
+| [0300](adr-0300-preregister-dense-bit-lowering-memo.md) | Preregister dense `TermId` indexing for the private full bit-lowering memo under exact client gates | proposed |

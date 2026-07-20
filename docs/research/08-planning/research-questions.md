@@ -873,14 +873,24 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     weak-contract countermodel. The standing gate is 81 variants / 17 groups /
     ten binaries / 114 tests. General panic contracts, annotations, unwind
     paths, memory, loops, recursion, and effects remain outside this result.
-- [ ] Can one flat append-only CNF formula representation reduce the retained
+- [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
   - [ADR-0285](../09-decisions/adr-0285-preregister-flat-cnf-formula-arena.md)
     freezes a literal arena, monotone clause ends, reusable Tseitin scratch,
     complete public-consumer migration, exact storage accounting, and a fixed
     structural-then-paired client-corpus gate. Missing scratch prototypes are
-    motivating evidence only; total CNF time selects or rejects production.
+    motivating evidence only. The candidate preserves every structural identity
+    but fails its frozen per-instance storage gate on 5/162 rows; timing is not
+    run and production is restored.
+- [ ] Can dense `TermId` indexing reduce full bit-lowering memo cost without
+  changing lift maps, exact construction, warm reuse, or client correctness?
+  - [ADR-0300](../09-decisions/adr-0300-preregister-dense-bit-lowering-memo.md)
+    isolates `Vec<Option<Vec<AigLit>>>` from the absent reported `Rc` prototype.
+    Representation-neutral telemetry must first capture the BTree baseline;
+    exact 162-query structure/storage gates then precede balanced bit-blast,
+    cold-total, family, variance, and RSS timing. This cannot soften IR errors
+    or become a performance-lead claim.
 
 ## Source Pointers
 
