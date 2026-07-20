@@ -1,6 +1,6 @@
 # ADR-0296: Preregister verified scalar LLVM contract composition
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -35,7 +35,7 @@ The experiment may add an explicit scalar contract and a contract-backed loop
 resolver only under all of these boundaries:
 
 1. A contract declares a stable callee name, ordered scalar argument widths,
-   one scalar result width, and a deterministic term builder for `requires`,
+   one scalar result width, and a bounded typed expression tree for `requires`,
    immediate definedness, result value, and result definedness. Every produced
    term is sort-checked. Contract construction and instantiation are fallible;
    malformed terms never panic or coerce.
@@ -83,7 +83,8 @@ of the following without weakening after result observation:
    callee body. The unchanged default still fails at `@leaf`; the direct-body
    route remains independently usable as the inlined baseline.
 3. Prove modular and inlined `init`, `trans`, and `bad` terms equivalent for
-   both callers. Repeat ADR-0295's deterministic 100,000-tuple comparison with
+   both callers through exact terms modulo checked Boolean-conjunction
+   associativity/`true` identity. Repeat ADR-0295's deterministic 100,000-tuple comparison with
    `DISAGREE = 0`, explicit multiplication/addition/counter overflow coverage,
    and source replay for every claimed reachable source state.
 4. Exercise unbounded safety and replay-checked bounded reachability through
@@ -120,6 +121,54 @@ returned value/poison are distinct from immediate undefined behavior. The loop
 lowerer already conjoins actual-argument definedness at the call boundary.
 Therefore the experiment can share those semantics and replace only the
 resolver's body execution with a verified contract instantiation.
+
+## Accepted result
+
+The frozen experiment passes without widening its scope:
+
+- `ScalarContractExpr` is a bounded, data-only Boolean/BV expression language;
+  `ScalarCallContract` fixes name/signature plus requirement, immediate
+  definedness, result value, and result definedness. The implementation lives
+  in `loops/contracts.rs` rather than enlarging the loop reflector monolith.
+- `VerifiedContractResolver` checks the exact `leaf` signature and body, proves
+  its universally true requirement, and checks exact value/definedness terms
+  modulo only Boolean-conjunction associativity and `true` identity. It stores
+  the contract but discards the body. Non-identical claims use the ordinary
+  replay-checked prover under a two-second default timeout; `Disproved`,
+  `Unknown`, and solver failure remain distinct fail-closed results.
+- `compute` and `main` compose through the verified contract while the default
+  API still rejects `@leaf` and ADR-0295's direct-body route remains the
+  inlined baseline. Normalized `init`, `trans`, and `bad` atoms match exactly;
+  a second 100,000-tuple modular-versus-inlined differential has zero
+  disagreements. Unbounded safety and bounded reachability verdicts agree.
+- Requirement, immediate-definedness, result-definedness, result-value, and
+  callee-body mutations all fail with replayed countermodels. Duplicate,
+  missing, ill-sorted, signature-drift, and explicit zero-budget cases retain
+  precise `InvalidContract`, `ContractDisproved`, `ContractUnknown`, or located
+  `UnsupportedCall` boundaries.
+- The final focused measured run reports a 0.840 ms direct-body resolver versus
+  0.322 ms verified-contract construction. Across 1,000 transition builds,
+  `compute` uses 84 versus 79 arena nodes and 50.91 versus 37.22 ms; `main`
+  uses the same node counts and 48.90 versus 37.26 ms. These are mechanism
+  observations, not a performance claim.
+- An initial validation attempt sent logically equivalent 32-bit nonlinear
+  transition formulas through the general solver. The process reached
+  70,656,996 kB (~67.4 GiB) anonymous RSS and was globally OOM-killed. That
+  route is rejected and retained as negative evidence: exact successful
+  contracts now use the small structural checker, fallback proving is
+  time-bounded, and the full focused
+  suite subsequently peaks at 61.3 MB without a rebuild (910 MB including a
+  single-job rebuild).
+- The focused 13-test binary, 100,000-row differential, complete
+  `axeyum-verify` all-feature tests/doctests, strict Clippy, warning-denied
+  rustdoc, live Glaurung reproduction, links, and the expanded standing gate
+  pass. The standing gate remains 63 checked variants / 15 groups / nine
+  binaries and now runs 94 tests.
+
+This accepts the first exact modular call mechanism, not the full P5.2 phase.
+Nontrivial requirements still need explicit call-site obligations; relational
+havoc, annotations, MIR composition, recursion, memory, and external effects
+remain open.
 
 ## Alternatives
 

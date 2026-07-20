@@ -832,13 +832,19 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     contracts or a revised 12-row census; next compose an explicit contract and
     compare it with this inlined baseline.
   - [ADR-0296](../09-decisions/adr-0296-preregister-verified-scalar-contract-composition.md)
-    preregisters that first composition rule without trusting a summary or
+    accepts that first composition rule without trusting a summary or
     erasing failed preconditions. One exact scalar contract must verify against
     the exact `leaf` body once; caller reflection then retains only the verified
     contract and must match the ADR-0295 inlined baseline. Version one permits
     only a universally true requirement and exact functional result, deferring
     nontrivial call-site obligations, havoc, annotations, recursion, memory,
-    and external effects until their soundness boundaries are explicit.
+    and external effects until their soundness boundaries are explicit. The
+    exact contract and inlined formulas match modulo a small checked
+    conjunction rule, 100,000 modular/inlined tuples have zero disagreement,
+    every component mutation is refuted, and the body is discarded before
+    caller lowering. A rejected general nonlinear-equivalence query OOM event
+    is retained; the accepted verifier uses structural exactness plus a bounded
+    replayed fallback.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

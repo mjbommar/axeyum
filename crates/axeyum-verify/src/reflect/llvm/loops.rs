@@ -14,6 +14,11 @@ use std::fmt;
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{SolverError, TransitionSystem};
 
+mod contracts;
+
+use contracts::CallResolver;
+pub use contracts::{ScalarCallContract, ScalarContractExpr, VerifiedContractResolver};
+
 use super::checked::{
     DefinedValue, ReflectError, ReflectErrorKind, lower_assignment, reflect_parsed_components_into,
     reflect_parsed_into, resolve,
@@ -51,9 +56,17 @@ pub enum LoopReflectErrorKind {
     UnsupportedBody,
     /// The loop reaches memory, which this scalar profile does not model.
     UnsupportedMemory,
-    /// A direct call lacks an exact eligible checked callee body or has an
+    /// A direct call lacks explicit eligible body/contract semantics or has an
     /// incompatible call boundary.
     UnsupportedCall,
+    /// A scalar contract is malformed, ill-sorted, or exceeds its resource bound.
+    InvalidContract,
+    /// A scalar contract claim was refuted by a replay-checked countermodel.
+    ContractDisproved,
+    /// Scalar contract verification returned a classified undecided result.
+    ContractUnknown,
+    /// The contract-verification solver failed before producing a verdict.
+    ContractSolver,
     /// The recurrence depends on SSA state outside PHIs and function parameters.
     ExternalSsaDependency,
     /// The requested unsigned bound does not name a compatible loop PHI.
@@ -380,7 +393,7 @@ pub struct CanonicalLoopSystem {
     phis: Vec<LoopPhi>,
     parameters: Vec<LoopParameter>,
     body: LoopBody,
-    direct_calls: Option<DirectCallResolver>,
+    direct_calls: Option<CallResolver>,
     branch_span: SourceSpan,
     bad_component: usize,
     bad_bound: u128,
@@ -722,7 +735,7 @@ pub fn reflect_canonical_loop_checked(
 fn reflect_canonical_loop_with_resolver(
     llvm: &str,
     property: UnsignedPhiUpperBound,
-    direct_calls: Option<&DirectCallResolver>,
+    direct_calls: Option<&CallResolver>,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let UnsignedPhiUpperBound {
         phi: property_phi,
@@ -967,13 +980,43 @@ pub fn reflect_single_latch_loop_with_direct_calls_checked(
     property: UnsignedPhiUpperBound,
     resolver: &DirectCallResolver,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
-    reflect_single_latch_loop_with_resolver(llvm, property, Some(resolver))
+    reflect_single_latch_loop_with_resolver(
+        llvm,
+        property,
+        Some(&CallResolver::DirectBody(resolver.clone())),
+    )
+}
+
+/// Reflects one admitted loop by composing assigned direct scalar calls with
+/// explicitly verified contracts.
+///
+/// Every contract in `resolver` was proved against an exact checked body when
+/// the resolver was constructed, but the body is not retained. This route
+/// therefore supplies ADR-0296's modular side while
+/// [`reflect_single_latch_loop_with_direct_calls_checked`] remains the inlined
+/// comparison baseline.
+///
+/// # Errors
+///
+/// Returns the ordinary stable loop failures plus
+/// [`LoopReflectErrorKind::UnsupportedCall`] for a missing/incompatible
+/// contract or direct-call syntax outside the admitted profile.
+pub fn reflect_single_latch_loop_with_contracts_checked(
+    llvm: &str,
+    property: UnsignedPhiUpperBound,
+    resolver: &VerifiedContractResolver,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    reflect_single_latch_loop_with_resolver(
+        llvm,
+        property,
+        Some(&CallResolver::VerifiedContract(resolver.clone())),
+    )
 }
 
 fn reflect_single_latch_loop_with_resolver(
     llvm: &str,
     property: UnsignedPhiUpperBound,
-    direct_calls: Option<&DirectCallResolver>,
+    direct_calls: Option<&CallResolver>,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let function = parse_function(llvm)?;
     let cfg = parse_scalar_cfg(&function)?;
@@ -1209,7 +1252,7 @@ fn build_natural_loop_system(
     cfg: ScalarCfg,
     profile: NaturalLoopProfile,
     property: UnsignedPhiUpperBound,
-    direct_calls: Option<&DirectCallResolver>,
+    direct_calls: Option<&CallResolver>,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let UnsignedPhiUpperBound {
         phi: property_phi,
@@ -1662,7 +1705,7 @@ fn validate_direct_callee(function: &Function) -> Result<(), LoopReflectError> {
 
 fn validate_call_instruction(
     instruction: &ScalarInstruction,
-    resolver: Option<&DirectCallResolver>,
+    resolver: Option<&CallResolver>,
 ) -> Result<(), LoopReflectError> {
     let ScalarInstructionKind::DirectCall { callee, .. } = &instruction.kind else {
         return Ok(());
@@ -1781,7 +1824,7 @@ fn lower_instructions(
     env: &mut HashMap<String, DefinedValue>,
     instructions: &[ScalarInstruction],
     conditions: &mut Vec<TermId>,
-    direct_calls: Option<&DirectCallResolver>,
+    direct_calls: Option<&CallResolver>,
 ) -> Result<(), BuildError> {
     for instruction in instructions {
         let (dest, value, immediate) =

@@ -198,13 +198,20 @@ session state.
 >    nine-binary/88-test standing gate pass. This is now the inlined baseline
 >    required by P5.2's modular-versus-inlined differential, not contracts,
 >    external effects, a cross-source acceptance claim, or a revised 12-row
->    census. ADR-0296 now preregisters the next call work: verify one explicit
->    exact scalar `leaf` contract against its body once, retain only the checked
->    summary in caller reflection, and measure modular-versus-inlined agreement.
+>    census. ADR-0296 now accepts the next call step: one explicit exact scalar
+>    `leaf` contract verifies against its body once, retains only the checked
+>    summary in caller reflection, and matches the inlined route over exact
+>    normalized formulas plus 100,000 tuples at zero disagreement.
 >    Its first slice requires a universally true precondition so a failed
 >    `requires` cannot be hidden by pruning a transition. General call-site
 >    obligations, relational havoc, annotations, recursion, memory, and
 >    external effects remain separate work; do not widen syntax around them.
+>    The general nonlinear-equivalence proof attempted during validation is
+>    rejected after a disclosed 67.4 GiB anonymous-RSS OOM; the accepted exact
+>    checker uses term identity plus conjunction associativity/`true`, a
+>    two-second fallback, and a dedicated `loops/contracts.rs` module. The standing gate is now nine
+>    binaries / 94 tests. Next, design explicit call-site requirement failures
+>    as obligations/bad states before adding nontrivial `requires` or syntax.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

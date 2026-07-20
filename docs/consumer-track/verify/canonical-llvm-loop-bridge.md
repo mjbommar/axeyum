@@ -167,9 +167,20 @@ unobserved poison return remains lazy, and missing/external/indirect/nested/
 memory/signature/attribute boundaries fail closed. Exact source, module,
 function, compiler, and command provenance reproduce live from the registered
 Glaurung tree. This is the inlined baseline for a later P5.2
-modular-versus-inlined differential, not a contract model.
+modular-versus-inlined differential, not itself a contract model.
 
-The ADR-0290 runner now owns nine binaries and runs 88 tests. Exact ownership
+ADR-0296 adds the first contract side of that differential. A bounded typed
+expression tree states the exact `leaf` value plus poison/immediate-definedness
+contract. `VerifiedContractResolver` checks it against the registered body,
+then discards the body before caller reflection. The modular `compute`/`main`
+relations have the same normalized conjunction atoms as the inlined route,
+100,000 deterministic tuples have `DISAGREE = 0`, bounded/unbounded verdicts
+match, and requirement/value/definedness/body mutations are refuted. The
+universally true requirement is deliberate: a later call-site obligation route
+must make failed nontrivial requirements bad states rather than silently prune
+their transitions.
+
+The ADR-0290 runner now owns nine binaries and runs 94 tests. Exact ownership
 grows from 62 to 63 checked LLVM/MIR semantic variants; the direct-call form is
 owned once by its independent formula, fuzz/replay, and mutation evidence.
 

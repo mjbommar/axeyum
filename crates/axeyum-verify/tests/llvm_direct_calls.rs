@@ -1,14 +1,16 @@
 //! ADR-0295 acceptance gates for opt-in checked direct-body LLVM calls.
 
-use axeyum_ir::{Assignment, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, Op, TermArena, TermId, TermNode, Value, eval};
 use axeyum_solver::{
     BmcOutcome, ProofOutcome, SafetyOutcome, SolverConfig, TransitionSystem, bounded_model_check,
     prove, prove_safety_k_induction,
 };
 use axeyum_verify::reflect::llvm::{
     loops::{
-        DirectCallResolver, LoopReflectErrorKind, UnsignedPhiUpperBound,
-        reflect_single_latch_loop_checked, reflect_single_latch_loop_with_direct_calls_checked,
+        DirectCallResolver, LoopReflectErrorKind, ScalarCallContract, ScalarContractExpr,
+        UnsignedPhiUpperBound, VerifiedContractResolver, reflect_single_latch_loop_checked,
+        reflect_single_latch_loop_with_contracts_checked,
+        reflect_single_latch_loop_with_direct_calls_checked,
     },
     syntax::{
         ParseErrorKind, ScalarInstructionKind, SemanticFlag, parse_function, parse_scalar_cfg,
@@ -17,6 +19,7 @@ use axeyum_verify::reflect::llvm::{
 };
 use sha2::{Digest, Sha256};
 use std::fmt::Write as _;
+use std::time::Instant;
 
 const PAC_SOURCE: &str = include_str!("fixtures/llvm/clang21_glaurung_pac.c");
 const PAC_MODULE: &str = include_str!("fixtures/llvm/clang21_glaurung_pac.ll");
@@ -67,6 +70,100 @@ fn resolver() -> DirectCallResolver {
         .expect("the exact leaf body must satisfy the checked direct-call profile")
 }
 
+fn assert_contract_fixture_identity() {
+    assert_eq!(
+        sha256(PAC_SOURCE.as_bytes()),
+        "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+    );
+    assert_eq!(
+        sha256(PAC_MODULE.as_bytes()),
+        "a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00"
+    );
+    assert_eq!(
+        sha256(function(PAC_MODULE, "leaf").as_bytes()),
+        "5543c27e5c872cd83ca32345a81191820885f4688d2d2e0884d91975247bf30b"
+    );
+}
+
+fn boxed(expression: ScalarContractExpr) -> Box<ScalarContractExpr> {
+    Box::new(expression)
+}
+
+fn leaf_contract() -> ScalarCallContract {
+    leaf_contract_from(
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        leaf_value(1),
+        leaf_defined(1),
+    )
+}
+
+fn leaf_contract_from(
+    requires: ScalarContractExpr,
+    immediate_defined: ScalarContractExpr,
+    result: ScalarContractExpr,
+    result_defined: ScalarContractExpr,
+) -> ScalarCallContract {
+    ScalarCallContract::new(
+        "leaf",
+        vec![32],
+        32,
+        requires,
+        immediate_defined,
+        result,
+        result_defined,
+    )
+    .unwrap()
+}
+
+fn leaf_square() -> ScalarContractExpr {
+    ScalarContractExpr::BvMul(
+        boxed(ScalarContractExpr::Argument(0)),
+        boxed(ScalarContractExpr::Argument(0)),
+    )
+}
+
+fn leaf_value(increment: u128) -> ScalarContractExpr {
+    ScalarContractExpr::BvAdd(
+        boxed(leaf_square()),
+        boxed(ScalarContractExpr::BitVec {
+            width: 32,
+            value: increment,
+        }),
+    )
+}
+
+fn leaf_defined(increment: u128) -> ScalarContractExpr {
+    let one = || ScalarContractExpr::BitVec {
+        width: 32,
+        value: increment,
+    };
+    let multiplication = ScalarContractExpr::Not(boxed(ScalarContractExpr::BvSignedMulOverflow(
+        boxed(ScalarContractExpr::Argument(0)),
+        boxed(ScalarContractExpr::Argument(0)),
+    )));
+    let unsigned_addition = ScalarContractExpr::Not(boxed(
+        ScalarContractExpr::BvUnsignedAddOverflow(boxed(leaf_square()), boxed(one())),
+    ));
+    let signed_addition = ScalarContractExpr::Not(boxed(ScalarContractExpr::BvSignedAddOverflow(
+        boxed(leaf_square()),
+        boxed(one()),
+    )));
+    ScalarContractExpr::And(
+        boxed(multiplication),
+        boxed(ScalarContractExpr::And(
+            boxed(unsigned_addition),
+            boxed(signed_addition),
+        )),
+    )
+}
+
+fn contract_resolver() -> VerifiedContractResolver {
+    assert_contract_fixture_identity();
+    VerifiedContractResolver::from_contracts(&[(leaf_contract(), function(PAC_MODULE, "leaf"))])
+        .expect("the explicit leaf contract must verify against the exact registered body")
+}
+
 fn system(
     caller: &str,
     phi: &str,
@@ -78,6 +175,19 @@ fn system(
         &resolver(),
     )
     .unwrap_or_else(|error| panic!("exact `{caller}` loop must reflect: {error}"))
+}
+
+fn contract_system(
+    caller: &str,
+    phi: &str,
+    bound: u128,
+) -> axeyum_verify::reflect::llvm::loops::CanonicalLoopSystem {
+    reflect_single_latch_loop_with_contracts_checked(
+        function(PAC_MODULE, caller),
+        UnsignedPhiUpperBound::new(phi, bound),
+        &contract_resolver(),
+    )
+    .unwrap_or_else(|error| panic!("exact `{caller}` loop contract must compose: {error}"))
 }
 
 fn proved(arena: &mut TermArena, goal: TermId) -> bool {
@@ -93,6 +203,28 @@ fn conjoin(arena: &mut TermArena, terms: &[TermId]) -> TermId {
         result = arena.and(result, *term).unwrap();
     }
     result
+}
+
+fn conjunction_atoms(arena: &TermArena, term: TermId) -> Vec<TermId> {
+    fn collect(arena: &TermArena, term: TermId, atoms: &mut Vec<TermId>) {
+        match arena.node(term) {
+            TermNode::BoolConst(true) => {}
+            TermNode::App {
+                op: Op::BoolAnd,
+                args,
+            } => {
+                for argument in args.iter().copied() {
+                    collect(arena, argument, atoms);
+                }
+            }
+            _ => atoms.push(term),
+        }
+    }
+
+    let mut atoms = Vec::new();
+    collect(arena, term, &mut atoms);
+    atoms.sort_unstable();
+    atoms
 }
 
 fn expected_formulas(
@@ -208,14 +340,7 @@ fn concrete_compute(n: i32) -> Option<i32> {
 
 #[test]
 fn exact_glaurung_provenance_call_shape_and_canonical_syntax_are_frozen() {
-    assert_eq!(
-        sha256(PAC_SOURCE.as_bytes()),
-        "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
-    );
-    assert_eq!(
-        sha256(PAC_MODULE.as_bytes()),
-        "a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00"
-    );
+    assert_contract_fixture_identity();
     for (name, digest) in [
         (
             "leaf",
@@ -577,4 +702,391 @@ fn direct_call_boundary_mutations_fail_closed_or_refute_semantic_equivalence() {
         prove(&mut arena, &[], equivalent, &SolverConfig::default()).unwrap(),
         ProofOutcome::Disproved(_)
     ));
+}
+
+#[test]
+fn verified_leaf_contract_composes_without_retaining_body_and_matches_inlining() {
+    const TRANSITION_REPETITIONS: usize = 1_000;
+    let body_resolver_started = Instant::now();
+    let bodies = resolver();
+    let body_resolver_elapsed = body_resolver_started.elapsed();
+    let verification_started = Instant::now();
+    let contracts = contract_resolver();
+    let verification_elapsed = verification_started.elapsed();
+    assert_eq!(contracts.contract_names(), vec!["leaf"]);
+
+    for (caller, phi) in [("compute", "7"), ("main", "6")] {
+        let inlined = reflect_single_latch_loop_with_direct_calls_checked(
+            function(PAC_MODULE, caller),
+            UnsignedPhiUpperBound::new(phi, u128::from(u32::MAX >> 1)),
+            &bodies,
+        )
+        .unwrap();
+        let modular = reflect_single_latch_loop_with_contracts_checked(
+            function(PAC_MODULE, caller),
+            UnsignedPhiUpperBound::new(phi, u128::from(u32::MAX >> 1)),
+            &contracts,
+        )
+        .unwrap();
+        assert_eq!(inlined.state_components(), modular.state_components());
+
+        let mut arena = TermArena::new();
+        let pre = inlined.state_vars(&mut arena, 0).unwrap();
+        let post = inlined.state_vars(&mut arena, 1).unwrap();
+        let inlined_init = inlined.init(&mut arena, &pre).unwrap();
+        let modular_init = modular.init(&mut arena, &pre).unwrap();
+        let inlined_trans = inlined.trans(&mut arena, &pre, &post).unwrap();
+        let modular_trans = modular.trans(&mut arena, &pre, &post).unwrap();
+        let inlined_bad = inlined.bad(&mut arena, &pre).unwrap();
+        let modular_bad = modular.bad(&mut arena, &pre).unwrap();
+        for (component, left, right) in [
+            ("init", inlined_init, modular_init),
+            ("trans", inlined_trans, modular_trans),
+            ("bad", inlined_bad, modular_bad),
+        ] {
+            assert_eq!(
+                conjunction_atoms(&arena, left),
+                conjunction_atoms(&arena, right),
+                "{caller} {component} must have identical normalized conjunction atoms after verified substitution"
+            );
+        }
+
+        let mut inlined_arena = TermArena::new();
+        let inlined_pre = inlined.state_vars(&mut inlined_arena, 0).unwrap();
+        let inlined_post = inlined.state_vars(&mut inlined_arena, 1).unwrap();
+        let inlined_started = Instant::now();
+        for _ in 0..TRANSITION_REPETITIONS {
+            let _ = inlined
+                .trans(&mut inlined_arena, &inlined_pre, &inlined_post)
+                .unwrap();
+        }
+        let inlined_elapsed = inlined_started.elapsed();
+        let mut modular_arena = TermArena::new();
+        let modular_pre = modular.state_vars(&mut modular_arena, 0).unwrap();
+        let modular_post = modular.state_vars(&mut modular_arena, 1).unwrap();
+        let modular_started = Instant::now();
+        for _ in 0..TRANSITION_REPETITIONS {
+            let _ = modular
+                .trans(&mut modular_arena, &modular_pre, &modular_post)
+                .unwrap();
+        }
+        let modular_elapsed = modular_started.elapsed();
+        eprintln!(
+            "ADR-0296 {caller}: body_resolver={body_resolver_elapsed:?} verify_contract={verification_elapsed:?} repetitions={TRANSITION_REPETITIONS} inlined_nodes={} modular_nodes={} inlined_trans={inlined_elapsed:?} modular_trans={modular_elapsed:?}",
+            inlined_arena.len(),
+            modular_arena.len(),
+        );
+    }
+}
+
+#[test]
+fn modular_and_inlined_contract_routes_agree_over_100000_tuples() {
+    let mut total = 0_u64;
+    for (caller, phi, salt) in [
+        ("compute", "7", 0x0296_0000_0000_0001_u64),
+        ("main", "6", 0x0296_0000_0000_0002_u64),
+    ] {
+        let inlined = system(caller, phi, u128::from(u32::MAX >> 1));
+        let modular = contract_system(caller, phi, u128::from(u32::MAX >> 1));
+        let mut arena = TermArena::new();
+        let pre = inlined.state_vars(&mut arena, 0).unwrap();
+        let post = inlined.state_vars(&mut arena, 1).unwrap();
+        let inlined_trans = inlined.trans(&mut arena, &pre, &post).unwrap();
+        let modular_trans = modular.trans(&mut arena, &pre, &post).unwrap();
+        let mut seed = salt;
+        for case in 0..50_000_usize {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let i = if case < 8 {
+                [0, 1, 46_340, 46_341, u32::MAX, 0x7fff_ffff, 0x8000_0000, 2][case]
+            } else {
+                low_word(seed)
+            };
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let acc = low_word(seed);
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            let n = high_word(seed);
+            let post_values = expected_step(i, acc).map_or(
+                (high_word(seed), low_word(seed.rotate_left(17)), n ^ 1),
+                |(next_i, next_acc)| {
+                    if case % 2 == 0 {
+                        (next_i, next_acc, n)
+                    } else {
+                        (next_i ^ 1, next_acc, n)
+                    }
+                },
+            );
+            let mut assignment = Assignment::new();
+            assign_words(
+                &mut assignment,
+                pre.iter().chain(&post).copied(),
+                [i, acc, n, post_values.0, post_values.1, post_values.2],
+            );
+            assert_eq!(
+                eval(&arena, inlined_trans, &assignment).unwrap(),
+                eval(&arena, modular_trans, &assignment).unwrap(),
+                "{caller} modular/inlined disagreement at tuple {case}"
+            );
+            total += 1;
+        }
+    }
+    assert_eq!(total, 100_000);
+}
+
+#[test]
+fn every_leaf_contract_component_and_body_mutation_is_rejected() {
+    let leaf = function(PAC_MODULE, "leaf");
+    let cases = [
+        (
+            "requires",
+            leaf_contract_from(
+                ScalarContractExpr::Bool(false),
+                ScalarContractExpr::Bool(true),
+                leaf_value(1),
+                leaf_defined(1),
+            ),
+        ),
+        (
+            "immediate definedness",
+            leaf_contract_from(
+                ScalarContractExpr::Bool(true),
+                ScalarContractExpr::Bool(false),
+                leaf_value(1),
+                leaf_defined(1),
+            ),
+        ),
+        (
+            "result value",
+            leaf_contract_from(
+                ScalarContractExpr::Bool(true),
+                ScalarContractExpr::Bool(true),
+                leaf_value(2),
+                leaf_defined(1),
+            ),
+        ),
+        (
+            "result definedness",
+            leaf_contract_from(
+                ScalarContractExpr::Bool(true),
+                ScalarContractExpr::Bool(true),
+                leaf_value(1),
+                ScalarContractExpr::Bool(true),
+            ),
+        ),
+    ];
+    for (component, contract) in cases {
+        let error = VerifiedContractResolver::from_contracts(&[(contract, leaf)]).unwrap_err();
+        assert_eq!(error.kind(), LoopReflectErrorKind::ContractDisproved);
+        assert!(error.to_string().contains(component), "{error}");
+    }
+
+    let mutated_body = leaf.replace("%2, 1", "%2, 2");
+    let error =
+        VerifiedContractResolver::from_contracts(&[(leaf_contract(), &mutated_body)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::ContractDisproved);
+    assert!(error.to_string().contains("result"), "{error}");
+}
+
+#[test]
+fn contract_declaration_boundaries_fail_closed() {
+    let leaf = function(PAC_MODULE, "leaf");
+    let empty_name = ScalarCallContract::new(
+        "",
+        vec![32],
+        32,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Argument(0),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap_err();
+    assert_eq!(empty_name.kind(), LoopReflectErrorKind::InvalidContract);
+    let missing_argument = ScalarCallContract::new(
+        "leaf",
+        vec![32],
+        32,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Argument(1),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap_err();
+    assert_eq!(
+        missing_argument.kind(),
+        LoopReflectErrorKind::InvalidContract
+    );
+    let overflowing_constant = ScalarCallContract::new(
+        "leaf",
+        vec![32],
+        32,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::BitVec {
+            width: 8,
+            value: 256,
+        },
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap_err();
+    assert_eq!(
+        overflowing_constant.kind(),
+        LoopReflectErrorKind::InvalidContract
+    );
+
+    let duplicate = VerifiedContractResolver::from_contracts(&[
+        (leaf_contract(), leaf),
+        (leaf_contract(), leaf),
+    ])
+    .unwrap_err();
+    assert_eq!(duplicate.kind(), LoopReflectErrorKind::InvalidContract);
+
+    let wrong_signature = ScalarCallContract::new(
+        "leaf",
+        vec![16],
+        32,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Argument(0),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap();
+    let error = VerifiedContractResolver::from_contracts(&[(wrong_signature, leaf)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::InvalidContract);
+}
+
+#[test]
+fn contract_sort_and_resource_boundaries_fail_closed() {
+    let leaf = function(PAC_MODULE, "leaf");
+    let ill_sorted = leaf_contract_from(
+        ScalarContractExpr::BitVec {
+            width: 32,
+            value: 1,
+        },
+        ScalarContractExpr::Bool(true),
+        leaf_value(1),
+        leaf_defined(1),
+    );
+    let error = VerifiedContractResolver::from_contracts(&[(ill_sorted, leaf)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::InvalidContract);
+    let wrong_result_sort = leaf_contract_from(
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(false),
+        ScalarContractExpr::Bool(true),
+    );
+    let error = VerifiedContractResolver::from_contracts(&[(wrong_result_sort, leaf)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::InvalidContract);
+    let wrong_definedness_sort = leaf_contract_from(
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        leaf_value(1),
+        ScalarContractExpr::BitVec {
+            width: 32,
+            value: 1,
+        },
+    );
+    let error =
+        VerifiedContractResolver::from_contracts(&[(wrong_definedness_sort, leaf)]).unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::InvalidContract);
+
+    let limited = SolverConfig::default().with_node_budget(0);
+    let solver_checked_requirement =
+        ScalarContractExpr::Not(boxed(ScalarContractExpr::BvSignedMulOverflow(
+            boxed(ScalarContractExpr::Argument(0)),
+            boxed(ScalarContractExpr::BitVec {
+                width: 32,
+                value: 0,
+            }),
+        )));
+    let solver_checked_contract = leaf_contract_from(
+        solver_checked_requirement,
+        ScalarContractExpr::Bool(true),
+        leaf_value(1),
+        leaf_defined(1),
+    );
+    let error = VerifiedContractResolver::from_contracts_with_config(
+        &[(solver_checked_contract, leaf)],
+        &limited,
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::ContractUnknown);
+}
+
+#[test]
+fn contract_call_boundaries_and_safety_verdicts_fail_closed() {
+    let empty = VerifiedContractResolver::from_contracts(&[]).unwrap();
+    let error = reflect_single_latch_loop_with_contracts_checked(
+        function(PAC_MODULE, "compute"),
+        UnsignedPhiUpperBound::new("7", u128::from(u32::MAX >> 1)),
+        &empty,
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), LoopReflectErrorKind::UnsupportedCall);
+    assert!(error.span().is_some());
+
+    let contracts = contract_resolver();
+    let compute = function(PAC_MODULE, "compute");
+    for (mutation, detail) in [
+        (
+            compute.replace("@leaf(i32 noundef %6)", "@leaf()"),
+            "supplies 0 arguments",
+        ),
+        (
+            compute.replace("@leaf(i32 noundef %6)", "@leaf(i16 noundef %6)"),
+            "argument 0 declares i16",
+        ),
+        (
+            compute.replace("call i32 @leaf", "call i16 @leaf"),
+            "declares i16",
+        ),
+        (
+            compute.replace("i32 noundef %6", "i32 %6"),
+            "must retain the `noundef`",
+        ),
+    ] {
+        let error = reflect_single_latch_loop_with_contracts_checked(
+            &mutation,
+            UnsignedPhiUpperBound::new("7", u128::from(u32::MAX >> 1)),
+            &contracts,
+        )
+        .unwrap_err();
+        assert_eq!(error.kind(), LoopReflectErrorKind::UnsupportedCall);
+        assert!(error.span().is_some());
+        assert!(error.to_string().contains(detail), "{error}");
+    }
+
+    for (caller, phi) in [("compute", "7"), ("main", "6")] {
+        let inlined = system(caller, phi, u128::from(u32::MAX));
+        let modular = contract_system(caller, phi, u128::from(u32::MAX));
+        let mut inlined_arena = TermArena::new();
+        let inlined_safety =
+            prove_safety_k_induction(&mut inlined_arena, &inlined, 1, &SolverConfig::default())
+                .unwrap();
+        let mut modular_arena = TermArena::new();
+        let modular_safety =
+            prove_safety_k_induction(&mut modular_arena, &modular, 1, &SolverConfig::default())
+                .unwrap();
+        assert!(matches!(inlined_safety, SafetyOutcome::Safe { .. }));
+        assert!(matches!(modular_safety, SafetyOutcome::Safe { .. }));
+
+        let mut inlined_arena = TermArena::new();
+        let inlined_bmc =
+            bounded_model_check(&mut inlined_arena, &inlined, 3, &SolverConfig::default()).unwrap();
+        let mut modular_arena = TermArena::new();
+        let modular_bmc =
+            bounded_model_check(&mut modular_arena, &modular, 3, &SolverConfig::default()).unwrap();
+        assert!(matches!(
+            inlined_bmc,
+            BmcOutcome::UnreachableWithinBound { bound: 3 }
+        ));
+        assert!(matches!(
+            modular_bmc,
+            BmcOutcome::UnreachableWithinBound { bound: 3 }
+        ));
+    }
 }
