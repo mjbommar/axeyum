@@ -718,6 +718,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     remain open. Any continuation must preregister a real workload and measure
     proof prevalence, nontrivial traces, and requested second-pass cost;
     ordinary pruning cost and whole-CFG proof coverage remain separate.
+- [ ] Can one structured LLVM syntax/semantics front end feed both Axeyum term
+  reflection and a hardened Glaurung LLIR lowerer without coupling either
+  consumer to the other's execution policy?
+  - [ADR-0279](../09-decisions/adr-0279-gate-glaurung-llvm-frontend-on-llir-contract.md)
+    rejects a direct importer into current LLIR. Axeyum P5.1/T5.1.2 owns the
+    first prerequisite: structured parsing with diagnostics. A second lowerer
+    requires explicit LLIR widths/successors plus a fail-closed LLVM semantics
+    profile before a shared crate boundary is considered.
 
 ## Source Pointers
 

@@ -39,8 +39,8 @@ not a premise of the plan.
 | **Precision** | fraction of findings that are real | 14/14 with no unexpected producer-high row on the planted control; real-driver precision remains unquantified beyond the corrected producer confidence policy |
 | **Performance (cold)** | one-shot small formulas | ~parity to 1.34x slower on the deduped corpus; bit_blast+cnf = 84% of cost |
 | **Performance (warm)** | retained-state, real streams | Workload-dependent: favors z3 on DptfDevGen, favors Axeyum on IntcSST and SurfacePen, and is parity on vwififlt; formula size alone does not explain the split |
-| **Deployability** | pure-Rust / no-C / WASM / footprint | Strong and unique: zero `unsafe`, wheel-shippable, WASM-buildable; qfbv-minimal profile now enforced (ADR-025) |
-| **Verifiability** | checkable evidence for verdicts | Strong and unique: DRAT unsat certificates with self-recheck; unused downstream so far |
+| **Deployability** | pure-Rust / no-C / WASM / footprint | Strong and measured: zero `unsafe`, wheel-shippable, qfbv profile enforced, and ADR-0227 executes 75,000 Node plus 75,000 Chromium solves with a 1,801,662-byte release browser runtime; the shared parser prevents a minimum-footprint claim |
+| **Verifiability** | checkable evidence for verdicts | Strong but bounded: DRAT unsat certificates self-recheck, and ADR-0278 attaches one source-rebound certificate to a Glaurung infeasible-path verdict with external `drat-trim`; prevalence, nontrivial traces, and whole-CFG composition remain open |
 
 No single backend dominates. The frontier we must characterize is
 **reproducibility x validated coverage** while holding soundness and
@@ -481,7 +481,9 @@ support anyway.
   not proceed.
 
 **Phase 4 -- Differentiators + write-up.**
-- C2 proof-carrying detection; C3 CI determinism gating; B3 parallel exploration.
+- C2's minimal downstream attachment/external-consumption cell is complete in
+  ADR-0278; broader proof prevalence, cost, and whole-CFG composition remain
+  evidence-gated. C3 CI determinism gating and B3 parallel exploration remain.
   Assemble the paper around the Section-6 thesis.
 
 ## 8. Risks and honest threats
