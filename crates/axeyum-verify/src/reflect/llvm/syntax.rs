@@ -12,6 +12,7 @@ use std::fmt;
 
 mod cfg;
 mod instruction;
+mod print;
 
 pub use cfg::{
     BlockId, CfgBlock, Phi, PhiIncoming, ScalarCfg, SwitchCase, Terminator, TerminatorKind,
@@ -21,6 +22,7 @@ pub use instruction::{
     BinaryOpcode, CastOpcode, IntPredicate, Intrinsic, Operand, ScalarInstruction,
     ScalarInstructionKind, SemanticFlag, parse_scalar_instruction,
 };
+pub use print::render_scalar_cfg;
 
 /// Half-open byte range plus one-based line and column of its first byte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -96,6 +98,8 @@ pub enum ParseErrorKind {
     MalformedParameter,
     /// A quoted token reached end of input without a closing quote.
     UnterminatedQuotedToken,
+    /// A quoted identifier contained a malformed LLVM byte escape or invalid UTF-8.
+    MalformedIdentifierEscape,
     /// Parentheses, brackets, or braces were not balanced.
     UnbalancedDelimiter,
     /// A function body did not have a closing brace.
@@ -592,19 +596,34 @@ fn lex(input: &str) -> Result<Vec<Token>, ParseError> {
 fn lex_quoted(input: &str, quote: usize) -> Result<(String, usize), ParseError> {
     let bytes = input.as_bytes();
     let mut index = quote + 1;
-    let mut decoded = String::new();
+    let mut decoded = Vec::new();
+    let mut source_positions = Vec::new();
     while index < bytes.len() {
         match bytes[index] {
-            b'"' => return Ok((decoded, index + 1)),
+            b'"' => {
+                let decoded = String::from_utf8(decoded).map_err(|error| {
+                    let decoded_index = error.utf8_error().valid_up_to();
+                    let source_index = source_positions
+                        .get(decoded_index)
+                        .copied()
+                        .unwrap_or(index);
+                    error_at(
+                        input,
+                        ParseErrorKind::MalformedIdentifierEscape,
+                        source_index,
+                        "quoted LLVM identifier does not decode to UTF-8",
+                    )
+                })?;
+                return Ok((decoded, index + 1));
+            }
             b'\\' => {
-                if index + 1 >= bytes.len() {
-                    break;
-                }
-                decoded.push(bytes[index + 1] as char);
-                index += 2;
+                decoded.push(decode_escape(input, bytes, index, 0)?);
+                source_positions.push(index);
+                index += 3;
             }
             byte => {
-                decoded.push(byte as char);
+                decoded.push(byte);
+                source_positions.push(index);
                 index += 1;
             }
         }
@@ -618,17 +637,68 @@ fn lex_quoted(input: &str, quote: usize) -> Result<(String, usize), ParseError> 
 }
 
 fn decode_quoted(input: &str, inner: &str, start: usize) -> Result<String, ParseError> {
-    let synthetic = format!("\"{inner}\"");
-    lex_quoted(&synthetic, 0)
-        .map(|(decoded, _)| decoded)
-        .map_err(|_| {
-            error_at(
-                input,
-                ParseErrorKind::UnterminatedQuotedToken,
-                start.saturating_sub(1),
-                "unterminated quoted token",
-            )
-        })
+    let bytes = inner.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut source_positions = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while index < bytes.len() {
+        if bytes[index] == b'\\' {
+            decoded.push(decode_escape(input, bytes, index, start)?);
+            source_positions.push(start + index);
+            index += 3;
+        } else {
+            decoded.push(bytes[index]);
+            source_positions.push(start + index);
+            index += 1;
+        }
+    }
+    String::from_utf8(decoded).map_err(|error| {
+        let decoded_index = error.utf8_error().valid_up_to();
+        let source_index = source_positions
+            .get(decoded_index)
+            .copied()
+            .unwrap_or(start + inner.len());
+        error_at(
+            input,
+            ParseErrorKind::MalformedIdentifierEscape,
+            source_index,
+            "quoted LLVM identifier does not decode to UTF-8",
+        )
+    })
+}
+
+fn decode_escape(
+    input: &str,
+    bytes: &[u8],
+    slash: usize,
+    source_start: usize,
+) -> Result<u8, ParseError> {
+    let Some(high) = bytes.get(slash + 1).and_then(|byte| hex_value(*byte)) else {
+        return Err(error_at(
+            input,
+            ParseErrorKind::MalformedIdentifierEscape,
+            source_start + slash,
+            "LLVM identifier escape requires exactly two hexadecimal digits",
+        ));
+    };
+    let Some(low) = bytes.get(slash + 2).and_then(|byte| hex_value(*byte)) else {
+        return Err(error_at(
+            input,
+            ParseErrorKind::MalformedIdentifierEscape,
+            source_start + slash,
+            "LLVM identifier escape requires exactly two hexadecimal digits",
+        ));
+    };
+    Ok((high << 4) | low)
+}
+
+fn hex_value(byte: u8) -> Option<u8> {
+    match byte {
+        b'0'..=b'9' => Some(byte - b'0'),
+        b'a'..=b'f' => Some(byte - b'a' + 10),
+        b'A'..=b'F' => Some(byte - b'A' + 10),
+        _ => None,
+    }
 }
 
 fn matching_token(

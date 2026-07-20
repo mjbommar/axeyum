@@ -1,9 +1,9 @@
-# ADR-0284: Preregister canonical scalar LLVM CFG rendering
+# ADR-0284: Accept canonical scalar LLVM CFG rendering
 
-Status: proposed
+Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; implementation has not started
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -97,6 +97,34 @@ Tests begin red and then require:
 
 The gates may become stricter before implementation observes a new fixture or
 corpus. They may not be weakened after a failure.
+
+## Result
+
+The accepted implementation adds `render_scalar_cfg` as the sole canonical
+renderer for the validated scalar graph and makes quoted-name decoding obey the
+exact `\XX` byte rule. The parser now returns the stable located
+`MalformedIdentifierEscape` kind for truncated/non-hex escapes and for decoded
+names that are not UTF-8. No lossy replacement path exists.
+
+Six dedicated tests cover the full typed opcode/control/metadata surface,
+span-free structural round trips, exact quote/backslash/control/non-ASCII name
+identity, malformed-name rejection, negative constants, deterministic
+1,024-case structured noise, optional `llvm-as` admission, and checked
+value+definedness equivalence. All 16 cross-IR equivalence tests now require the
+LLVM side to pass the canonical render/reparse fixpoint before proof; total
+fixtures execute the canonical text through the checked reflector. The
+unreachable-default proof remains explicitly hypothesis- and
+definedness-conditioned.
+
+The red-to-green sequence found one independent writer defect before
+acceptance: PHI predecessors are value labels (`%pred`), not typed branch
+operands (`label %pred`). The structural round-trip test rejected the first
+rendering and the writer was corrected without weakening a gate.
+
+The dedicated renderer suite (6/6), cross-IR suite (16/16), existing LLVM
+syntax/typed suites (21/21), complete `axeyum-verify --all-features` suite,
+workspace formatting, strict workspace Clippy, strict workspace rustdoc, and
+documentation link checker pass.
 
 ## Consequences
 

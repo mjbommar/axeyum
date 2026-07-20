@@ -741,9 +741,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     value claims explicitly conditioned on defined execution. Cycles, memory,
     LLIR hardening, and Glaurung lowering remain separate prerequisites.
   - [ADR-0284](../09-decisions/adr-0284-preregister-canonical-llvm-cfg-rendering.md)
-    preregisters the missing parse-print-parse boundary over that typed scalar
-    graph, including exact LLVM `\XX` identifier escapes. It adds reproducible
-    syntax, not memory, module resolution, a shared crate, or a second consumer.
+    accepts the missing parse-print-parse boundary over that typed scalar graph,
+    including exact LLVM `\XX` identifier escapes. The canonical path preserves
+    checked value+definedness proofs and adds reproducible syntax, not memory,
+    module resolution, a shared crate, or a second consumer.
 
 ## Source Pointers
 

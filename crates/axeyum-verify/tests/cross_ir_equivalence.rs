@@ -18,7 +18,7 @@ use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 use axeyum_verify::reflect::llvm::{
     checked::reflect_cfg_into_checked,
     reflect_into, reflect_unary_into,
-    syntax::{parse_function, parse_scalar_cfg},
+    syntax::{parse_function, parse_scalar_cfg, render_scalar_cfg},
 };
 use axeyum_verify::reflect::mir::{reflect_mir_into, reflect_mir_unary};
 use axeyum_verify::reflect::oracle::DiffFuzz;
@@ -225,13 +225,13 @@ join:                                             ; preds = %ret7, %ret5, %other
 /// Prove `mir(f) == llvm(f)` for all inputs, and separately exhaustively/fuzz the
 /// two reflected terms agree — belt and suspenders across proof and execution.
 fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
-    validate_llvm_cfg(ll);
+    let canonical = canonical_llvm(ll);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
     let x = arena.var(x_sym);
 
     let from_mir = reflect_mir_unary(&mut arena, x, mir);
-    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], ll)
+    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], &canonical)
         .expect("LLVM fixture must satisfy checked CFG reflection");
 
     let defined = prove(&mut arena, &[], from_llvm.defined, &SolverConfig::default())
@@ -266,9 +266,14 @@ fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
     }
 }
 
-fn validate_llvm_cfg(ll: &str) {
+fn canonical_llvm(ll: &str) -> String {
     let function = parse_function(ll).expect("LLVM fixture must have structured function syntax");
-    parse_scalar_cfg(&function).expect("LLVM fixture must satisfy the typed scalar CFG contract");
+    let graph = parse_scalar_cfg(&function).expect("LLVM fixture must satisfy typed scalar CFG");
+    let rendered = render_scalar_cfg(&graph);
+    let reparsed = parse_function(&rendered).expect("canonical LLVM fixture must reparse");
+    let reparsed = parse_scalar_cfg(&reparsed).expect("canonical LLVM CFG must revalidate");
+    assert_eq!(rendered, render_scalar_cfg(&reparsed));
+    rendered
 }
 
 /// `masked`: straight-line MIR `BitAnd`/`BitOr` == LLVM `and`/`or`, for all `u32`.
@@ -325,13 +330,13 @@ fn sel_mir_diamond_equals_llvm_br_phi() {
 /// pipeline (translation-validation *within* LLVM, à la Alive2, on our stack).
 #[test]
 fn sel_llvm_br_phi_equals_llvm_select() {
-    validate_llvm_cfg(SEL_BR_LL);
-    validate_llvm_cfg(SEL_LL);
+    let o0_text = canonical_llvm(SEL_BR_LL);
+    let o2_text = canonical_llvm(SEL_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(32)).unwrap();
     let x = arena.var(x_sym);
-    let o0 = reflect_cfg_into_checked(&mut arena, &[x], SEL_BR_LL).unwrap();
-    let o2 = reflect_cfg_into_checked(&mut arena, &[x], SEL_LL).unwrap();
+    let o0 = reflect_cfg_into_checked(&mut arena, &[x], &o0_text).unwrap();
+    let o2 = reflect_cfg_into_checked(&mut arena, &[x], &o2_text).unwrap();
     let both_defined = arena.and(o0.defined, o2.defined).unwrap();
     let eq = arena.eq(o0.value, o2.value).unwrap();
     let obligation = arena.and(both_defined, eq).unwrap();
@@ -392,13 +397,13 @@ fn lut_mir_switchint_equals_llvm_switch() {
 /// `select` form, for all u8 — switch elimination validated within LLVM.
 #[test]
 fn lut_llvm_switch_equals_llvm_selects() {
-    validate_llvm_cfg(LUT_SWITCH_LL);
-    validate_llvm_cfg(LUT_LL);
+    let o0_text = canonical_llvm(LUT_SWITCH_LL);
+    let o2_text = canonical_llvm(LUT_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
-    let o0 = reflect_cfg_into_checked(&mut arena, &[x], LUT_SWITCH_LL).unwrap();
-    let o2 = reflect_cfg_into_checked(&mut arena, &[x], LUT_LL).unwrap();
+    let o0 = reflect_cfg_into_checked(&mut arena, &[x], &o0_text).unwrap();
+    let o2 = reflect_cfg_into_checked(&mut arena, &[x], &o2_text).unwrap();
     let both_defined = arena.and(o0.defined, o2.defined).unwrap();
     let eq = arena.eq(o0.value, o2.value).unwrap();
     let obligation = arena.and(both_defined, eq).unwrap();
@@ -477,12 +482,12 @@ join:                                             ; preds = %r9, %r7, %r5
 /// its deterministic placeholder on the `unreachable` path.
 #[test]
 fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
-    validate_llvm_cfg(LUT3_UNREACH_LL);
+    let canonical = canonical_llvm(LUT3_UNREACH_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
     let from_mir = reflect_mir_unary(&mut arena, x, LUT3_MIR);
-    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], LUT3_UNREACH_LL).unwrap();
+    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], &canonical).unwrap();
     let eq = arena.eq(from_mir, from_llvm.value).unwrap();
 
     let three = arena.bv_const(8, 3).unwrap();
@@ -529,6 +534,7 @@ fn differential_fuzz_mir_vs_llvm_reflections() {
         ("lut", LUT_MIR, LUT_LL, 8),
     ];
     for (name, mir, ll, width) in pairs {
+        let _canonical = canonical_llvm(ll);
         let mut arena = TermArena::new();
         let x_sym = arena.declare("x", Sort::BitVec(*width)).unwrap();
         let x = arena.var(x_sym);
