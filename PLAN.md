@@ -325,9 +325,18 @@ session state.
 >    are unchanged, only the existing test-only forall-axiom helper crosses the
 >    seam, and universal plus existential generated-source snapshots are
 >    byte-identical. All 887 tests, clippy, and rustdoc pass. The parent is now
->    13,350 lines / 580,831 bytes. Continue R3 with a resolution/CNF dependency
->    and source-stability census; do not manufacture an array module around one
->    thin dispatcher or pre-commit to a broad combined move.
+>    13,350 lines / 580,831 bytes. The resolution/CNF census confirms two proof
+>    families rather than one broad move. The 2,150-line propositional
+>    resolution/RUP family now lives in `reconstruct/resolution.rs`; CNF gate
+>    introduction remains parent-owned for the next slice. Four shared context
+>    methods, two clausal types, and thirteen helper seams are `pub(super)` only,
+>    each with a measured CNF, quantified-BV, direct-certificate, or bit-blast
+>    consumer. The public resolution entry point is unchanged, a representative
+>    generated-source snapshot remains byte-identical, and all 888 tests,
+>    clippy, and rustdoc pass. The parent is now 11,225 lines / 498,127 bytes.
+>    Continue R3 with a separate CNF-introduction source-stability census and
+>    extraction; do not manufacture an array module around one thin dispatcher
+>    or combine proof families merely to minimize seam count.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

@@ -5442,6 +5442,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split propositional resolution reconstruction ownership.** The
+  2,150-line resolution/RUP/CPS family now lives in
+  `reconstruct/resolution.rs`; the separate CNF gate-introduction family remains
+  parent-owned for the next R3 slice. The existing public entry point is
+  unchanged, and all cross-family context, type, and helper seams are
+  `pub(super)` with measured consumers in CNF, quantified-BV, direct-certificate,
+  or bit-blast code. A representative multi-step generated Lean module remains
+  byte-identical at 1,651 bytes / FNV-1a `3433224910840366031`; all 888 solver
+  tests pass, and full-profile clippy plus focused rustdoc are clean under the
+  bounded one-job profile. The parent is now 11,225 lines / 498,127 bytes.
+
 - **2026-07-20 — Split quantifier reconstruction ownership.** The cohesive
   853-line general universal-instantiation and existential-elimination family
   now lives in `reconstruct/quantifier.rs`; the specialized quantified-BV

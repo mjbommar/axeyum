@@ -1409,6 +1409,29 @@ fn three_clause_refutation_reconstructs() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// R3 resolution extraction gate: a representative multi-step refutation must
+/// keep emitting a byte-identical Lean module when its proof family moves.
+#[test]
+fn resolution_family_generated_source_is_byte_stable() {
+    let commands = vec![
+        assume("c1", vec![p_lit("a"), p_lit("b")]),
+        assume("c2", vec![n_lit("a")]),
+        assume("c3", vec![n_lit("b")]),
+        res_step("s1", vec![p_lit("b")], &["c1", "c2"]),
+        res_step("s2", vec![], &["s1", "c3"]),
+    ];
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_resolution_proof(&mut ctx, &commands)
+        .expect("the representative resolution refutation reconstructs");
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+
+    assert_eq!(
+        (source.len(), stable_source_hash(&source)),
+        (1_651, 3_433_224_910_840_366_031)
+    );
+}
+
 /// The native LRAT emitter orders RUP hints by forward unit propagation. A
 /// substantial implication chain must reconstruct by replaying those pivots and
 /// resolving backwards, without a Davis–Putnam search over the whole premise set.
