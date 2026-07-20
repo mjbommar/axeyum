@@ -295,9 +295,15 @@ session state.
 >    one tested crate-private helper, removing 102 net source lines with no
 >    public API change. `auto` intentionally keeps its arbitrary-arity walker;
 >    `array_axiom` intentionally keeps BV1 asserted-conjunction semantics. All
->    883 full-profile solver library tests and clippy `-D warnings` pass. Next,
->    inventory the reconstruction twins by shared contract before moving code;
->    preserve each evidence checker and generated Lean text byte-for-byte.
+>    883 full-profile solver library tests and clippy `-D warnings` pass. The
+>    measured reconstruction inventory then classifies all 34 direct variants:
+>    5 custom constructive encodings and 29 checked validators sharing one
+>    deterministic wrapper. R1 routes all 26 formerly inline emission tails
+>    through that helper, shrinking `reconstruct.rs` by 130 lines / 8,924 bytes.
+>    A legacy-equivalence test covers every registered stem/role pair; all 884
+>    full-profile tests and clippy pass. Next R2 moves only the direct lane into
+>    `reconstruct/direct.rs`, preserving validators, errors, fragment selection,
+>    kernel inference, and generated Lean source byte-for-byte.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
