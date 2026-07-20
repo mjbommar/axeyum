@@ -874,7 +874,7 @@ impl IncrementalLoweringStats {
 #[derive(Debug, Default)]
 pub struct IncrementalLowering {
     aig: Aig,
-    memo: DenseTermMemo,
+    memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
@@ -925,7 +925,7 @@ impl IncrementalLowering {
             return IncrementalLoweringStats::default();
         }
         IncrementalLoweringStats {
-            memoized_terms: usize_to_u64_saturating(self.memo.occupied()),
+            memoized_terms: usize_to_u64_saturating(self.memo.len()),
             term_bit_bindings: usize_to_u64_saturating(self.term_bits.len()),
             symbol_bit_inputs: usize_to_u64_saturating(self.symbol_inputs.len()),
             ..self.stats
@@ -1167,7 +1167,7 @@ struct LoweringBuilder<'a> {
     arena: &'a TermArena,
     deadline: Option<Instant>,
     aig: Aig,
-    memo: DenseTermMemo,
+    memo: BTreeMap<TermId, Vec<AigLit>>,
     term_bits: Vec<TermBitBinding>,
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
@@ -1179,62 +1179,6 @@ struct SymbolModelBits {
     sort: Sort,
     bits: Vec<bool>,
     seen: Vec<bool>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DenseTermMemoInsertError {
-    OutOfBounds,
-    Occupied,
-}
-
-/// Private full-lowering memo indexed by the arena-stable dense `TermId`.
-///
-/// The slot vector is allocated only when ordinary full lowering starts. Sparse
-/// demanded lowerers share `LoweringBuilder` but never call `ensure_slots`.
-#[derive(Debug, Default)]
-struct DenseTermMemo {
-    slots: Vec<Option<Vec<AigLit>>>,
-    occupied: usize,
-}
-
-impl DenseTermMemo {
-    fn ensure_slots(&mut self, source_terms: usize) {
-        if self.slots.len() < source_terms {
-            self.slots.resize_with(source_terms, || None);
-        }
-    }
-
-    fn slots(&self) -> usize {
-        self.slots.len()
-    }
-
-    fn occupied(&self) -> usize {
-        self.occupied
-    }
-
-    fn get(&self, term: TermId) -> Option<&Vec<AigLit>> {
-        self.slots.get(term.index()).and_then(Option::as_ref)
-    }
-
-    fn contains(&self, term: TermId) -> bool {
-        self.get(term).is_some()
-    }
-
-    fn insert(&mut self, term: TermId, bits: Vec<AigLit>) -> Result<(), DenseTermMemoInsertError> {
-        let Some(slot) = self.slots.get_mut(term.index()) else {
-            return Err(DenseTermMemoInsertError::OutOfBounds);
-        };
-        if slot.is_some() {
-            return Err(DenseTermMemoInsertError::Occupied);
-        }
-        *slot = Some(bits);
-        self.occupied += 1;
-        Ok(())
-    }
-
-    fn values(&self) -> impl Iterator<Item = &Vec<AigLit>> {
-        self.slots.iter().filter_map(Option::as_ref)
-    }
 }
 
 impl SymbolModelBits {
@@ -1258,7 +1202,7 @@ impl<'a> LoweringBuilder<'a> {
             arena,
             deadline,
             aig: Aig::new(),
-            memo: DenseTermMemo::default(),
+            memo: BTreeMap::new(),
             term_bits: Vec::new(),
             term_bit_ranges: vec![None; arena.len()],
             symbol_inputs: Vec::new(),
@@ -1282,17 +1226,18 @@ impl<'a> LoweringBuilder<'a> {
         if !self.profiling_enabled {
             return BitLoweringMemoStats::default();
         }
-        let slots = usize_to_u64_saturating(self.memo.slots());
-        let occupied = usize_to_u64_saturating(self.memo.occupied());
+        let occupied = usize_to_u64_saturating(self.memo.len());
         let payload_literals = self.memo.values().fold(0_u64, |total, bits| {
             total.saturating_add(usize_to_u64_saturating(bits.len()))
         });
         let payload_capacity_literals = self.memo.values().fold(0_u64, |total, bits| {
             total.saturating_add(usize_to_u64_saturating(bits.capacity()))
         });
-        let header_unit = usize_to_u64_saturating(core::mem::size_of::<Option<Vec<AigLit>>>());
+        let header_unit = usize_to_u64_saturating(
+            core::mem::size_of::<TermId>() + core::mem::size_of::<Vec<AigLit>>(),
+        );
         let literal_bytes = usize_to_u64_saturating(core::mem::size_of::<AigLit>());
-        let logical_header_bytes = slots.saturating_mul(header_unit);
+        let logical_header_bytes = occupied.saturating_mul(header_unit);
         let logical_payload_bytes = payload_literals.saturating_mul(literal_bytes);
         let payload_capacity_bytes = payload_capacity_literals.saturating_mul(literal_bytes);
         let writes = self.incremental_stats.terms_lowered;
@@ -1301,7 +1246,7 @@ impl<'a> LoweringBuilder<'a> {
         let root_bits = roots.iter().fold(0_u64, |total, root| {
             total.saturating_add(
                 self.memo
-                    .get(*root)
+                    .get(root)
                     .map_or(0, |bits| usize_to_u64_saturating(bits.len())),
             )
         });
@@ -1312,9 +1257,9 @@ impl<'a> LoweringBuilder<'a> {
         });
         BitLoweringMemoStats {
             profile_complete: true,
-            representation: BitLoweringMemoRepresentation::DenseV1,
+            representation: BitLoweringMemoRepresentation::BtreeV1,
             source_terms: usize_to_u64_saturating(self.arena.len()),
-            slots,
+            slots: occupied,
             occupied,
             lookups,
             hits,
@@ -1327,8 +1272,7 @@ impl<'a> LoweringBuilder<'a> {
             payload_capacity_bytes,
             root_bits,
             expected_root_bits,
-            invariants_hold: slots == usize_to_u64_saturating(self.arena.len())
-                && occupied == writes
+            invariants_hold: occupied == writes
                 && hits <= lookups
                 && payload_literals == usize_to_u64_saturating(self.term_bits.len())
                 && root_bits == expected_root_bits,
@@ -1878,7 +1822,6 @@ impl<'a> LoweringBuilder<'a> {
     }
 
     fn lower_term(&mut self, root: TermId) -> Result<Vec<AigLit>, BitLowerError> {
-        self.memo.ensure_slots(self.arena.len());
         if self.profiling_enabled {
             self.incremental_stats.lower_calls =
                 self.incremental_stats.lower_calls.saturating_add(1);
@@ -1890,7 +1833,7 @@ impl<'a> LoweringBuilder<'a> {
                 self.incremental_stats.term_memo_lookups =
                     self.incremental_stats.term_memo_lookups.saturating_add(1);
             }
-            if self.memo.contains(term) {
+            if self.memo.contains_key(&term) {
                 if self.profiling_enabled {
                     self.incremental_stats.term_memo_hits =
                         self.incremental_stats.term_memo_hits.saturating_add(1);
@@ -1941,7 +1884,7 @@ impl<'a> LoweringBuilder<'a> {
                         let copied = args.iter().fold(0_u64, |total, arg| {
                             total.saturating_add(
                                 self.memo
-                                    .get(*arg)
+                                    .get(arg)
                                     .map_or(0, |bits| usize_to_u64_saturating(bits.len())),
                             )
                         });
@@ -1954,7 +1897,7 @@ impl<'a> LoweringBuilder<'a> {
                         .iter()
                         .map(|arg| {
                             self.memo
-                                .get(*arg)
+                                .get(arg)
                                 .cloned()
                                 .expect("children are lowered before parent")
                         })
@@ -1970,7 +1913,7 @@ impl<'a> LoweringBuilder<'a> {
                 }
             }
         }
-        let root_bits = self.memo.get(root).expect("root has been lowered");
+        let root_bits = self.memo.get(&root).expect("root has been lowered");
         if self.profiling_enabled {
             self.incremental_stats.root_bits_copied = self
                 .incremental_stats
@@ -2980,9 +2923,7 @@ impl<'a> LoweringBuilder<'a> {
             start,
             len: bits.len(),
         });
-        self.memo
-            .insert(term, bits)
-            .expect("full lowering records each in-bounds term at most once");
+        self.memo.insert(term, bits);
         Ok(())
     }
 
@@ -4007,14 +3948,14 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use axeyum_aig::{AigLit, AigNode};
-    use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
+    use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval};
 
     use super::{
         BitLowerError, BitLowering, BitLoweringMemoRepresentation, BitLoweringMemoStats,
-        DenseTermMemo, DenseTermMemoInsertError, IncrementalLowering, RangeDemandDecision,
-        RangeDemandPolicy, eval_lowered_once, lower_terms, lower_terms_demanded,
-        lower_terms_demanded_with_deadline, lower_terms_profiled, lower_terms_range_demanded,
-        lower_terms_range_demanded_with_deadline, usize_to_u64_saturating,
+        IncrementalLowering, RangeDemandDecision, RangeDemandPolicy, eval_lowered_once,
+        lower_terms, lower_terms_demanded, lower_terms_demanded_with_deadline,
+        lower_terms_profiled, lower_terms_range_demanded, lower_terms_range_demanded_with_deadline,
+        usize_to_u64_saturating,
     };
 
     fn bv(width: u32, value: u128) -> Value {
@@ -4901,50 +4842,7 @@ mod tests {
     }
 
     #[test]
-    fn dense_term_memo_checks_slots_holes_growth_and_replacement() {
-        let mut arena = TermArena::new();
-        let x = arena.bv_var("x", 1).unwrap();
-        let y = arena.bv_var("y", 1).unwrap();
-        let mut memo = DenseTermMemo::default();
-
-        assert_eq!(memo.slots(), 0);
-        assert_eq!(memo.occupied(), 0);
-        assert_eq!(memo.values().count(), 0);
-
-        memo.ensure_slots(arena.len());
-        assert_eq!(memo.slots(), arena.len());
-        assert_eq!(memo.get(x), None);
-        assert_eq!(memo.get(y), None);
-
-        memo.insert(x, vec![AigLit::TRUE]).unwrap();
-        assert_eq!(memo.get(x), Some(&vec![AigLit::TRUE]));
-        assert_eq!(memo.get(y), None, "an unfilled dense slot remains a hole");
-        assert_eq!(memo.occupied(), 1);
-        assert_eq!(memo.values().map(Vec::len).sum::<usize>(), 1);
-
-        assert_eq!(
-            memo.insert(x, vec![AigLit::FALSE]),
-            Err(DenseTermMemoInsertError::Occupied)
-        );
-        assert_eq!(memo.get(x), Some(&vec![AigLit::TRUE]));
-        assert_eq!(memo.occupied(), 1);
-
-        let late = arena.bv_var("late", 2).unwrap();
-        assert_eq!(
-            memo.insert(late, vec![AigLit::FALSE, AigLit::TRUE]),
-            Err(DenseTermMemoInsertError::OutOfBounds)
-        );
-        memo.ensure_slots(arena.len());
-        assert_eq!(memo.get(x), Some(&vec![AigLit::TRUE]));
-        assert_eq!(memo.get(y), None);
-        memo.insert(late, vec![AigLit::FALSE, AigLit::TRUE])
-            .unwrap();
-        assert_eq!(memo.occupied(), 2);
-        assert_eq!(memo.values().map(Vec::len).sum::<usize>(), 3);
-    }
-
-    #[test]
-    fn profiled_batch_lowering_reports_exact_dense_memo_accounting() {
+    fn profiled_batch_lowering_reports_exact_btree_memo_accounting() {
         let mut arena = TermArena::new();
         let x = arena.bv_var("x", 8).unwrap();
         let one = arena.bv_const(8, 1).unwrap();
@@ -4956,9 +4854,9 @@ mod tests {
         let profiled = lower_terms_profiled(&arena, &[root, sum]).unwrap();
         let stats = profiled.memo_stats();
         assert!(stats.profile_complete);
-        assert_eq!(stats.representation, BitLoweringMemoRepresentation::DenseV1);
+        assert_eq!(stats.representation, BitLoweringMemoRepresentation::BtreeV1);
         assert_eq!(stats.source_terms, usize_to_u64_saturating(arena.len()));
-        assert_eq!(stats.slots, stats.source_terms);
+        assert_eq!(stats.slots, stats.occupied);
         assert_eq!(stats.occupied, stats.writes);
         assert!(stats.occupied < stats.source_terms);
         assert!(stats.lookups > stats.writes);
@@ -4968,9 +4866,11 @@ mod tests {
             usize_to_u64_saturating(profiled.term_bits().len())
         );
         assert!(stats.payload_capacity_literals >= stats.payload_literals);
-        let header_unit = usize_to_u64_saturating(core::mem::size_of::<Option<Vec<AigLit>>>());
+        let header_unit = usize_to_u64_saturating(
+            core::mem::size_of::<TermId>() + core::mem::size_of::<Vec<AigLit>>(),
+        );
         let literal_bytes = usize_to_u64_saturating(core::mem::size_of::<AigLit>());
-        assert_eq!(stats.logical_header_bytes, stats.slots * header_unit);
+        assert_eq!(stats.logical_header_bytes, stats.occupied * header_unit);
         assert_eq!(
             stats.logical_payload_bytes,
             stats.payload_literals * literal_bytes
@@ -5005,8 +4905,6 @@ mod tests {
         let x_range = incremental.term_bit_ranges[x.index()].unwrap();
         let first_arena_len = arena.len();
         assert_eq!(incremental.term_bit_ranges.len(), first_arena_len);
-        assert_eq!(incremental.memo.slots(), first_arena_len);
-        assert_eq!(incremental.memo.occupied(), 1);
 
         let one = arena.bv_const(8, 1).unwrap();
         let sum = arena.bv_add(x, one).unwrap();
@@ -5014,8 +4912,6 @@ mod tests {
         incremental.lower(&arena, sum).unwrap();
 
         assert_eq!(incremental.term_bit_ranges.len(), arena.len());
-        assert_eq!(incremental.memo.slots(), arena.len());
-        assert_eq!(incremental.memo.occupied(), 3);
         assert_eq!(incremental.term_bit_ranges[x.index()], Some(x_range));
         assert!(incremental.term_bit_ranges[one.index()].is_some());
         assert!(incremental.term_bit_ranges[sum.index()].is_some());

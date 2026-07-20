@@ -1,0 +1,95 @@
+{
+  "baseline_binary_sha256": "65d819528f10645042103275e4c79904e47f377326dc9e1159f8c36d8795c515",
+  "baseline_source": "d13d1f92446e86113702a7cc27d3e1a5eb67c687",
+  "candidate_binary_sha256": "06d417ef0e0082be87c4a311b5bc92a3a669d5accde5dbd27a349f78f1c93377",
+  "candidate_source": "2c9209fe9c4442cf87b6c121a04997849c05930b",
+  "runs": [
+    {
+      "artifact": "run-01-B/artifact.json",
+      "cell": "B",
+      "index": 1,
+      "time": "run-01-B/time.json"
+    },
+    {
+      "artifact": "run-02-C/artifact.json",
+      "cell": "C",
+      "index": 2,
+      "time": "run-02-C/time.json"
+    },
+    {
+      "artifact": "run-03-C/artifact.json",
+      "cell": "C",
+      "index": 3,
+      "time": "run-03-C/time.json"
+    },
+    {
+      "artifact": "run-04-B/artifact.json",
+      "cell": "B",
+      "index": 4,
+      "time": "run-04-B/time.json"
+    },
+    {
+      "artifact": "run-05-B/artifact.json",
+      "cell": "B",
+      "index": 5,
+      "time": "run-05-B/time.json"
+    },
+    {
+      "artifact": "run-06-C/artifact.json",
+      "cell": "C",
+      "index": 6,
+      "time": "run-06-C/time.json"
+    },
+    {
+      "artifact": "run-07-C/artifact.json",
+      "cell": "C",
+      "index": 7,
+      "time": "run-07-C/time.json"
+    },
+    {
+      "artifact": "run-08-B/artifact.json",
+      "cell": "B",
+      "index": 8,
+      "time": "run-08-B/time.json"
+    },
+    {
+      "artifact": "run-09-B/artifact.json",
+      "cell": "B",
+      "index": 9,
+      "time": "run-09-B/time.json"
+    },
+    {
+      "artifact": "run-10-C/artifact.json",
+      "cell": "C",
+      "index": 10,
+      "time": "run-10-C/time.json"
+    },
+    {
+      "artifact": "run-11-C/artifact.json",
+      "cell": "C",
+      "index": 11,
+      "time": "run-11-C/time.json"
+    },
+    {
+      "artifact": "run-12-B/artifact.json",
+      "cell": "B",
+      "index": 12,
+      "time": "run-12-B/time.json"
+    }
+  ],
+  "schedule": [
+    "B",
+    "C",
+    "C",
+    "B",
+    "B",
+    "C",
+    "C",
+    "B",
+    "B",
+    "C",
+    "C",
+    "B"
+  ],
+  "schema": "axeyum.bit-lowering-memo-timing-run.v1"
+}

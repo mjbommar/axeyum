@@ -1,6 +1,6 @@
 # ADR-0300: Preregister a dense bit-lowering term memo
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -229,17 +229,48 @@ gates. Do not rerun to select a quieter sample or combine another optimization.
 On rejection, restore the `BTreeMap` representation and retain the ADR and
 measurements as negative evidence.
 
+## Fixed timing observation
+
+The frozen 12-process schedule completed once with the registered source and
+binary identities. All runs decided 162/162 queries (88 SAT, 74 UNSAT), agreed
+with the manifest and in-process Z3, replayed every SAT model, and preserved
+the exact per-query AIG/CNF structure. The correctness and structure gate is
+therefore complete.
+
+The dense candidate passed the point-estimate and non-variance timing guards:
+
+- paired bit-blast geometric mean `0.9221983132`, with exhaustive paired-
+  bootstrap 95% upper bound `0.9773621737`;
+- paired cold-total geometric mean `0.9927101734`, with upper bound
+  `1.0183412905`;
+- qualifying register-slice and slice-partial family geometric means
+  `0.8933800014` and `0.9579482630`, respectively; and
+- maximum paired process-RSS ratio `1.0051822893`.
+
+The experiment nevertheless rejects the candidate because both frozen
+run-total variance gates fail. Baseline bit-blast CV is `3.0023493323%`, just
+above the `3%` ceiling, and candidate CV is `6.8664253997%`. Two of the six
+paired bit-blast ratios also exceed one (`1.0411293367` and `1.0270868843`),
+which is consistent with the measured instability. The preregistration
+explicitly forbids rescuing a failed variance gate with favorable point
+estimates or rerunning to select a quieter sample.
+
+The retained run manifest SHA-256 is
+`26e91d674c7f1a13c65f623fe132676a0186c578ac8d65a38033aac030d15acd`.
+The retained analysis SHA-256 is
+`0df23d791c2323f3552f33d91f420dda708b1598381959c4d8156b8926efe0dc`.
+Production is restored to `BTreeMap`; artifact-v39 telemetry and the timing
+runner/analyzer remain as reproducible infrastructure and negative evidence.
+
 ## Consequences
 
-If every gate passes, dense indexing becomes the private full-lowering memo and
-the result is reported as a bounded cold-path implementation improvement. It
-does not establish solver leadership, change the neutral Bitwuzla result,
-expand decided coverage, or support the missing scratch number.
-
-If any gate fails, production remains on `BTreeMap`; the exact failure and
-artifact remain useful negative evidence. `Rc` sharing, lift-map unification,
-term-interning changes, packed CNF literals, and other data-structure candidates
-require separate ADRs.
+Dense indexing does not become the private full-lowering memo. Production
+remains on `BTreeMap`; the exact variance failure and artifacts are retained as
+negative evidence. The favorable point estimates do not establish a bounded
+cold-path improvement, solver leadership, a change to the neutral Bitwuzla
+result, expanded decided coverage, or support for the missing scratch number.
+`Rc` sharing, lift-map unification, term-interning changes, packed CNF literals,
+and other data-structure candidates require separate ADRs.
 
 ## Rejected alternatives
 

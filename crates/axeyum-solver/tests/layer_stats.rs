@@ -59,7 +59,7 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     assert!(layers.bit_lowering_memo_profile_complete);
     assert_eq!(
         layers.bit_lowering_memo_representation,
-        BitLoweringMemoRepresentation::DenseV1
+        BitLoweringMemoRepresentation::BtreeV1
     );
     assert_eq!(
         layers.bit_lowering_memo_slots,
