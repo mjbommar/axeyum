@@ -734,6 +734,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     any checked graph executor is admitted. It does not admit a shared crate or
     Glaurung lowering; checked CFG execution and memory semantics remain
     prerequisites.
+  - [ADR-0283](../09-decisions/adr-0283-preregister-checked-acyclic-llvm-cfg-execution.md)
+    preregisters bounded acyclic execution with selected-edge PHIs,
+    path-conditioned immediate UB, explicit branch/switch condition
+    definedness, and `unreachable => defined=false`. Cycles, memory, LLIR
+    hardening, and Glaurung lowering remain separate prerequisites.
 
 ## Source Pointers
 
