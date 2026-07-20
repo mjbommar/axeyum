@@ -9,6 +9,13 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 
+mod instruction;
+
+pub use instruction::{
+    BinaryOpcode, CastOpcode, IntPredicate, Intrinsic, Operand, ScalarInstruction,
+    ScalarInstructionKind, SemanticFlag, parse_scalar_instruction,
+};
+
 /// Half-open byte range plus one-based line and column of its first byte.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SourceSpan {
@@ -87,6 +94,12 @@ pub enum ParseErrorKind {
     UnclosedBody,
     /// Two blocks declared the same source label.
     DuplicateBlockLabel,
+    /// A scalar instruction had malformed tokens, arity, flags, or widths.
+    MalformedInstruction,
+    /// The instruction opcode or type is outside the typed scalar slice.
+    UnsupportedInstruction,
+    /// Syntax was recognized but its LLVM semantics are not modeled by the slice.
+    UnsupportedSemantics,
 }
 
 /// Located syntax failure.

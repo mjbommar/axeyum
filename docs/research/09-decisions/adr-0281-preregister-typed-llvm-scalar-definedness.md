@@ -3,7 +3,26 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: interface and tests frozen before implementation
+Result state: accepted; implementation and gates complete
+
+## Observed result
+
+The implementation adds a typed, span-carrying scalar instruction parser and a
+fail-closed checked reflector that returns each SSA value with its LLVM
+definedness predicate. Three unmodified compiler fixtures (clang 21.1.8 and
+rustc 1.97 nightly) exercise the convergent scalar shapes. The checked tests
+cover every admitted opcode, integer predicate, cast, intrinsic, and flag;
+located malformed/unsupported failures; modular-value parity with the legacy
+reflector; selected-arm poison; shift/division immediate-undefined cases; and
+explicit violation witnesses for overflow, exactness, disjointness, `nneg`, and
+truncation promises. The `i1` cases are handled at their Boolean sort, including
+the signed interpretation required by `zext nneg i1`.
+
+The existing BE16 round-trip proof now uses checked reflection and proves the
+result's definedness together with the value property. The complete
+`axeyum-verify --all-features` suite, strict Clippy, and strict rustdoc pass.
+CFG, memory, `freeze`/`undef`, general calls, and module-wide resolution remain
+outside the accepted surface.
 
 ## Context
 

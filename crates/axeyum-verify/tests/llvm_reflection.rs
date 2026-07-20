@@ -9,9 +9,10 @@
 //! via `rustc -O --emit=llvm-ir` / `clang -O1 -S -emit-llvm`) — not invoked at
 //! test time, so the tests are toolchain-independent (CI-robust). The reflector
 //! handles one basic block of SSA: binary int ops, `icmp`, `select`, the
-//! `llvm.umin`/`umax` intrinsics, and `ret`. It models arithmetic as **total /
-//! wrapping** BV and **ignores `nsw`/`nuw`/poison** (the UB boundary — Alive2
-//! territory; sound for the unsigned/wrapping ops here). Memory (`load`/`store`/
+//! `llvm.umin`/`umax` intrinsics, and `ret`. Most historical tests exercise the
+//! legacy total/wrapping compatibility reflector. The migrated BE16 proof uses
+//! the checked reflector and proves its explicit LLVM-definedness term; new
+//! scalar work must use that fail-closed API. Memory (`load`/`store`/
 //! `getelementptr`) and `br`/`switch`/`phi` CFG are deferred.
 
 use std::collections::{HashMap, HashSet};
@@ -23,7 +24,8 @@ use axeyum_solver::{
 };
 
 use axeyum_verify::reflect::llvm::{
-    Reflected, lower_body, lower_rhs, reflect_ll, reflect_unary_into, resolve,
+    Reflected, checked::reflect_scalar_checked, lower_body, lower_rhs, reflect_ll,
+    reflect_unary_into, resolve,
 };
 use axeyum_verify::reflect::width_of;
 
@@ -329,17 +331,27 @@ fn day(x: u32) -> u32 {
 /// `hi`/`lo`. The core correctness property of packet-header field packing.
 #[test]
 fn llvm_be16_field_roundtrip() {
-    let mut r = reflect_ll(BE16_LL);
-    let hi = r.param("hi");
-    let lo = r.param("lo");
-    let hi_back = r.arena.extract(15, 8, r.result).unwrap();
-    let lo_back = r.arena.extract(7, 0, r.result).unwrap();
+    let mut r = reflect_scalar_checked(BE16_LL).expect("be16 is in the checked scalar fragment");
+    let hi = r.param("hi").unwrap().value;
+    let lo = r.param("lo").unwrap().value;
+    let hi_back = r.arena.extract(15, 8, r.result.value).unwrap();
+    let lo_back = r.arena.extract(7, 0, r.result.value).unwrap();
     let g_hi = r.arena.eq(hi_back, hi).unwrap();
     let g_lo = r.arena.eq(lo_back, lo).unwrap();
     let goal = r.arena.and(g_hi, g_lo).unwrap();
+    let defined_and_goal = r.arena.and(r.result.defined, goal).unwrap();
     assert!(
-        matches!(r.prove_goal(goal), ProofOutcome::Proved(_)),
-        "be16 parse∘pack round-trip (high byte == hi, low byte == lo) must hold"
+        matches!(
+            prove(
+                &mut r.arena,
+                &[],
+                defined_and_goal,
+                &SolverConfig::default()
+            )
+            .unwrap(),
+            ProofOutcome::Proved(_)
+        ),
+        "be16 must be defined and preserve both packed bytes for every input"
     );
 }
 

@@ -1,6 +1,7 @@
 # Verifying LLVM IR — feasibility & design
 
-> **Status:** feasibility spike + design (2026-06-30). Extends the
+> **Status:** scalar prototype + checked definedness boundary (2026-07-19,
+> ADR-0280/0281). Extends the
 > [real-Rust front end](real-rust-frontend.md) *downward*: Rust compiles
 > MIR → **LLVM IR** → machine code, and LLVM IR is the **shared target of the
 > whole family** (C, C++, Swift, Zig, Julia, Rust-via-LLVM). Reflecting LLVM IR
@@ -43,12 +44,15 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
 
 ## The honest boundaries (where soundness is won or lost)
 
-1. **UB / poison / `nsw` / `nuw` — the soundness minefield.** This prototype models
-   arithmetic as **total / wrapping** BV. That is *sound* for the unsigned/wrapping
-   ops it targets, but it **ignores** `nsw`/`nuw` flags, where LLVM says overflow is
-   *poison* (UB). A property that relies on "overflow can't happen" could be
-   mismodeled. **Alive2 exists precisely because this is subtle.** Faithful UB
-   modeling is deferred and is the bulk of a real LLVM verifier's work.
+1. **UB / poison / semantic flags — the soundness minefield.** The historical
+   compatibility reflector models arithmetic as total/wrapping BV and must not
+   be used as a checked LLVM boundary. ADR-0281 adds a fail-closed scalar API
+   that preserves `nuw`, `nsw`, `exact`, `disjoint`, and `nneg`; returns a
+   Boolean definedness term with every SSA value; and models shift, division,
+   and selected-arm poison for its admitted straight-line fragment. `freeze`,
+   `undef`, pointers, memory, general calls, and CFG-wide poison propagation are
+   still rejected or deferred. **Alive2 exists precisely because the remaining
+   semantics are subtle.**
 2. **Memory.** `load`/`store`/`getelementptr`/`alloca` → array theory; expressible
    but a faithful, scalable model (regions, aliasing, provenance) is substantial.
    This prototype targets **`-O` register-SSA** functions (`mem2reg` promotes most
@@ -61,10 +65,10 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
 
 | Increment | Reflects | Status |
 |---|---|---|
-| **L2** | single-block `.ll` SSA: binops / `icmp` / `select` / `umin`/`umax` / `ret` → BV term, proved symbolically | build now |
-| **L3** | **the same function from C *and* Rust `.ll`**, proved equivalent through one reflector | build now |
-| L4 | gates, scoreboard, plan | — |
-| deferred | `br`/`switch`/`phi` CFG; memory (arrays); UB/poison (Alive2-style); the heavy `llvm-sys` path behind an ADR | documented |
+| **L2** | single-block `.ll` SSA: binops / `icmp` / `select` / `umin`/`umax` / `ret` → BV term, proved symbolically | done |
+| **L3** | **the same function from C *and* Rust `.ll`**, proved equivalent through one reflector | done |
+| **L4** | structured function parser plus typed scalar instructions and explicit definedness | done (ADR-0280/0281) |
+| deferred | typed `br`/`switch`/`phi` CFG; memory (arrays/provenance); complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
 
 Fixtures are *committed* `.ll` (captured once from clang/rustc) — **not** invoked
 at test time, so the tests are toolchain-independent (CI-robust), exactly as the

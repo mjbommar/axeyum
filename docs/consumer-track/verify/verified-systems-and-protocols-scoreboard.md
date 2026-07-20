@@ -290,9 +290,13 @@ Headline: **one front end verifies code from two source languages**, and proves
 two structurally-different LLVM forms of the same function equivalent. Measured
 nicety — at `-O`, C and Rust `clamp` *both* canonicalize to `@llvm.umin`, so the
 reflections are the *identical* interned term: the IR converged completely.
-**Honest boundary:** arithmetic is modeled total/wrapping with `nsw`/`nuw`/poison
-**ignored** (the UB minefield — Alive2 territory); memory (`load`/`store`) and
-`br`/`switch`/`phi` CFG are deferred; the heavy `llvm-sys` path stays behind an ADR.
+**Honest boundary:** historical scoreboard rows use the total/wrapping
+compatibility reflector. ADR-0281 now provides a separate fail-closed scalar
+path with explicit `nuw`/`nsw`/`exact`/`disjoint`/`nneg`, shift/division, and
+selected-arm definedness, and the BE16 round-trip has migrated to it. The other
+legacy rows are not retroactively poison-aware. Memory (`load`/`store`) and
+typed `br`/`switch`/`phi` CFG remain deferred; the heavy `llvm-sys` path stays
+behind an ADR.
 
 ## Next
 

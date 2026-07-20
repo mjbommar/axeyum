@@ -3,6 +3,8 @@
 //! loop/buffer reflectors, and the cross-IR equivalence suite all lower through
 //! one parser and one op vocabulary (`super::{binop, compare, width_of}`).
 
+/// Fail-closed scalar reflection with explicit LLVM definedness predicates.
+pub mod checked;
 /// Structured, span-carrying syntax for one textual LLVM function.
 pub mod syntax;
 
