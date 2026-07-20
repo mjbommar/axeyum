@@ -1,11 +1,11 @@
 # ADR-0292: Preregister a checked single-latch LLVM natural loop
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; the exact compiler module is registered, but no
-multi-block loop discovery, internal-path semantics, latch-PHI lowering, or new
-public constructor exists under this ADR
+Result state: accepted; the registered compiler module routes through checked
+multi-block discovery, deterministic path semantics, simultaneous latch PHIs,
+and the existing replay-checked BMC engine
 
 ## Context
 
@@ -135,11 +135,59 @@ It must then satisfy all of the following:
 The gates may be strengthened before the first multi-block semantic result is
 observed. They may not be weakened afterward.
 
+## Result
+
+`reflect_single_latch_loop_checked` now preserves the ADR-0291 self-loop route
+and admits the registered natural loop. `CanonicalLoopSystem` exposes the
+unique latch and deterministic path inventory. Discovery reports header `%6`,
+latch `%15`, exit `%4`, one `%15 -> %6` back-edge, and exactly `%6 -> %15`
+then `%6 -> %11 -> %15`. Enumeration is iterative and bounded before relation
+construction, so path-count and total-block limits fail with a located
+`PathLimit` rather than risking recursive input handling.
+
+Each path has an independent checked environment. Header instructions execute
+on both paths; internal PHIs select the actual predecessor simultaneously;
+conditional edges require definedness plus the selected polarity; and only
+executed instructions contribute immediate UB. A selected PHI retains poison
+without turning it into immediate UB; the poison is required defined only when
+observed by control or a header back-edge. The latch branch is required defined
+while its value remains abstract. The complete transition is the deterministic
+disjunction of the two path relations.
+
+The exact path-sensitive control succeeds where an eager flattening does not:
+an even counter with `d=0` takes `%6 -> %15`, while an odd counter with `d=0`
+cannot execute `%11`. A deliberately eager global division guard is false on
+the valid even row. Automatic `init`/`trans`/`bad` terms are solver-equivalent
+to an independently constructed recurrence. The concrete oracle checks 50,000
+deterministic pre/post tuples at `DISAGREE = 0`, including `add nuw`, immutable
+parameters, both path updates, and division definedness.
+
+K-induction proves `acc <= 100` for the recurrence, and BMC reports `acc > 100`
+unreachable through depth 8. A separate `acc > 0` recurrence witness appears at
+step 2 and is source-replayed by `capdiv(2, 1) == 1`; it is not presented as an
+exact source trace without that replay. The same solver BMC implementation is
+therefore the accepted bounded unrolling route for this checked relation.
+
+Negative gates cover no/two cycles, multiple latches, a cycle without the
+required exit, early exits, switches, external region predecessors, 65+ paths,
+a 4,096-block live path, memory, malformed PHIs, duplicate definitions, width
+mismatch, external SSA, missing dominance, and deterministic malformed-input
+mutations. The prior
+self-loop constructor remains self-loop-only, and the generalized constructor
+produces the exact same self-loop formula IDs and results.
+
+The standing gate retains exact ownership of all 62 pre-existing semantic enum
+variants and now executes eight binaries / 81 tests plus ten checker mutations.
+The focused test, complete `axeyum-verify --all-features` suite and doctests,
+workspace all-target/all-feature Clippy, warning-denied rustdoc, formatting,
+exact MIR replay, fixture SHA-256 and `llvm-as-21`, and repository links pass.
+No dependency, feature, unsafe, native, MSRV, or WASM surface changes.
+
 ## Consequences
 
-If accepted, T5.1.4 will cover the first real reducible natural loop with an
+T5.1.4 now covers the first real reducible natural loop with an
 internal branch and path-sensitive UB, not merely a syntactically split
-self-loop. The same checked one-step relation will support both unbounded
+self-loop. The same checked one-step relation supports both unbounded
 invariant proving and bounded BMC unrolling without a second semantics engine.
 
 T5.1.4 remains in progress. General rejected-loop unrolling, MIR loops,

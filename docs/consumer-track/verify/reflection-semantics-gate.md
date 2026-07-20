@@ -51,10 +51,11 @@ is:
 - `llvm_checked_cfg`, `llvm_checked_memory`, `mir_checked_memory`, and
   `checked_bounds`: exact control-flow, definedness/panic, byte-memory, final
   state, and source-replay evidence;
-- `llvm_checked_loop`: the ADR-0291 typed self-loop bridge, independent
-  recurrence formulas, deterministic concrete fuzz, poison/UB guards,
-  malformed-shape rejection, invariant proof, and source-replayed abstract
-  reachability. Its exact contract is documented in the
+- `llvm_checked_loop`: the ADR-0291/0292 typed self-loop and single-latch
+  bridges, independent recurrence formulas, 20,000 + 50,000 deterministic
+  concrete tuples, path-conditioned poison/UB guards, malformed-shape
+  rejection, invariant/BMC proof, and source-replayed abstract reachability.
+  Its exact contract is documented in the
   [canonical loop bridge](canonical-llvm-loop-bridge.md).
 
 For LLVM operations that can produce poison or immediate undefined behavior,
@@ -87,7 +88,8 @@ best-effort importer.
 This is exact coverage of the currently admitted checked semantic variants, not
 a proof of arbitrary rustc/LLVM correctness. Parser noise tests establish
 non-panicking rejection, while the semantic cells establish meaning only for
-accepted input. The gate admits only ADR-0291's one canonical scalar LLVM
-self-loop. It does not admit MIR, multi-block/nested/irreducible, or memory
-loops, general MIR places, wide/aliased memory, `stable_mir`, Glaurung LLIR
-lowering, or a shared frontend crate.
+accepted input. The gate admits ADR-0291's canonical scalar LLVM self-loop and
+ADR-0292's one single-latch natural-loop profile. It does not admit MIR,
+multi-latch/early-exit/switch/nested/irreducible or memory loops, general MIR
+places, wide/aliased memory, `stable_mir`, Glaurung LLIR lowering, or a shared
+frontend crate. The eight owned binaries currently contain 81 tests.

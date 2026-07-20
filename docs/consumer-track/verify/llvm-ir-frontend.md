@@ -60,8 +60,9 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
    MIR's overflow checks.
 3. **Control flow.** Typed `br`/`switch`/`phi` plus checked bounded acyclic
    execution are accepted. ADR-0291 adds one scalar self-loop route to
-   `TransitionSystem`; multi-block/nested/irreducible and memory loops remain
-   outside the admitted profile.
+   `TransitionSystem`; ADR-0292 adds one single-latch natural loop with an
+   acyclic internal region and path-conditioned UB. Multi-latch, early-exit,
+   switch, nested/irreducible, and memory loops remain outside the profile.
 
 ## The path
 
@@ -74,7 +75,8 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
 | **L6** | checked acyclic CFG execution with path-conditioned value and definedness joins | done (ADR-0283/0284) |
 | **L7** | one checked initialized byte object with typed GEP/load/store and final-memory joins | done (ADR-0286) |
 | **L8** | one canonical typed scalar self-loop → `TransitionSystem`, with strict implicit-entry identity and explicit exit over-approximation | done (ADR-0291) |
-| deferred | multi-block/MIR/memory loops and unroll fallback; general memory/provenance; complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
+| **L9** | one single-latch natural loop → deterministic path-disjoined `TransitionSystem`; selected-edge PHIs/UB; existing replay-checked BMC as bounded unrolling | done (ADR-0292) |
+| deferred | rejected-loop fallback, multi-latch/early-exit/switch/nested/MIR/memory loops; general memory/provenance; complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
 
 Fixtures are *committed* `.ll` (captured once from clang/rustc) — **not** invoked
 at test time, so the tests are toolchain-independent (CI-robust), exactly as the
@@ -166,17 +168,27 @@ invariants. A BMC `Reachable` result is only an abstract recurrence witness unti
 an ordinary source input reaches the same state; the accepted `acc > 2` row is
 therefore separately replayed with `capsum8(3) == 3`.
 
-**Accepted evidence:** automatic/independent `init`/`trans`/`bad` formula
+**ADR-0291 accepted evidence:** automatic/independent `init`/`trans`/`bad` formula
 equivalence, 20,000 deterministic concrete recurrence tuples at `DISAGREE = 0`,
 poison/immediate-UB/branch-definedness negatives, strict shape/error tests,
 unbounded and bounded safety, and source replay all run in the standing
 reflection gate. See the
 [canonical LLVM loop bridge](canonical-llvm-loop-bridge.md).
 
-**Honest scope:** the single canonical scalar self-loop is admitted. Real `-O`
-unrolled/SCEV-closed forms, multi-block/nested/irreducible loops, memory, MIR,
-and bounded-unroll fallback remain deferred and require new preregistered
-slices. Fixtures stay committed so CI does not invoke clang.
+**ADR-0292 continuation.** The exact clang-21 `capdiv` loop separates header
+`%6`, conditional division block `%11`, and latch `%15`. The checked relation
+enumerates `%6 -> %15` and `%6 -> %11 -> %15`, selects latch PHIs by actual
+predecessor, and requires division definedness only on the second path. Its
+automatic formulas equal an independent path spec; 50,000 concrete recurrence
+tuples have `DISAGREE = 0`; `acc <= 100` is inductive; bounded safety and a
+separately source-replayed reachability row pass. `bounded_model_check` supplies
+k-unrolling of this accepted relation instead of a second textual-CFG engine.
+
+**Honest scope:** the canonical self-loop and one single-latch scalar natural
+loop are admitted. Real `-O` unrolled/SCEV-closed forms, rejected-loop fallback,
+multi-latch/early-exit/switch/nested/irreducible loops, memory, and MIR remain
+deferred and require new preregistered slices. Fixtures stay committed so CI
+does not invoke clang.
 
 ## O — memory: reflect buffer reads (the packet-parser primitive)
 

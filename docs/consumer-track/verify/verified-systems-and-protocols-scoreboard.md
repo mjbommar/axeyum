@@ -241,6 +241,7 @@ tests.
 | `classify` (nested `select` after `-O` if-conversion) | in `1..=3` **Proved** |
 | `day` (a `match`, `-O`-lowered to `icmp`+`add`+`select`) | `<= 9` **Proved** |
 | **`capsum` loop** (`phi`+back-edge) → checked `TransitionSystem` | `acc <= 100` **Proved for ALL iterations**; `acc > 100` bounded-unreachable; abstract `acc > 2` source-replayed at `n=3`; 20k recurrence tuples `DISAGREE = 0` |
+| **`capdiv` natural loop** (header + conditional `udiv` + latch PHI) → checked `TransitionSystem` | `acc <= 100` **Proved for ALL recurrence iterations**; even `d=0` path admitted / odd `d=0` path rejected; `acc > 100` bounded-unreachable; abstract `acc > 0` source-replayed by `capdiv(2,1)==1`; 50k tuples `DISAGREE = 0` |
 | **`read_be16(const u8*)`** — buffer loads (`load`/`gep`) | **≡ value-passing `be16`** Proved (cross-form equivalence over memory-reading code) |
 | **IPv4 IHL** — clang's `(p0<<2)&60` strength-reduction | **≡ spec `zext(p0&0x0f)*4`** Proved (mini translation-validation); `≤ 60 ∧ ≡0 mod 4` Proved |
 | **`p[i & 3]`** — masked symbolic index (`gep` w/ register offset) | **in-bounds Proved** (load offset `< 4` for all `i`) |
@@ -259,8 +260,13 @@ poison/immediate-UB/branch-definedness into `trans`. K-induction proves the
 invariant for every recurrence iteration. Because the source exit value is
 abstracted, BMC reachability is labeled abstract until separately source
 replayed. Independent formulas, 20,000 deterministic tuples, and precise
-negative shapes guard the route. Real `-O` unrolled/SCEV-closed forms,
-multi-block/MIR/memory loops, and unroll fallback remain deferred. Contract:
+negative shapes guard the route. ADR-0292 adds one exact single-latch natural
+loop: deterministic header-to-latch paths, predecessor-selected simultaneous
+PHIs, selected edge polarity, and path-local division UB. Independent formulas,
+50,000 tuples, a wrong eager-UB refutation, unbounded/bounded safety, and source
+replay pass. Existing solver BMC provides bounded unrolling for accepted
+relations. Real `-O` unrolled/SCEV-closed forms, general rejected-loop fallback,
+multi-latch/early-exit/switch/nested/MIR/memory loops remain deferred. Contract:
 [canonical LLVM loop bridge](canonical-llvm-loop-bridge.md).
 
 **Memory (O):** buffer reads — the packet-parser primitive — now reflect by

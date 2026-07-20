@@ -1,14 +1,14 @@
-# Canonical LLVM loop bridge
+# Checked LLVM loop bridge
 
-Status: accepted first T5.1.4 slice (ADR-0291, 2026-07-20)
+Status: accepted self-loop and single-latch slices (ADR-0291/0292, 2026-07-20)
 
 ## Purpose
 
-`axeyum_verify::reflect::llvm::loops` turns one typed, compiler-produced LLVM
-self-loop into Axeyum's existing `TransitionSystem` contract. It is the cycle
-route next to the checked acyclic executor: PHIs become state, the entry edge
-becomes `init`, the self edge becomes `trans`, and one explicit unsigned PHI
-bound becomes `bad`.
+`axeyum_verify::reflect::llvm::loops` turns admitted typed, compiler-produced
+LLVM loops into Axeyum's existing `TransitionSystem` contract. It is the cycle
+route next to the checked acyclic executor: header PHIs become state, the entry
+edge becomes `init`, one complete header-to-latch iteration becomes `trans`,
+and one explicit unsigned PHI bound becomes `bad`.
 
 The identity remains **untrusted fast search, trusted small checking**. The
 bridge uses the checked LLVM syntax and value-plus-definedness lowering; it does
@@ -17,7 +17,7 @@ models are replayed by the ordinary Axeyum backend. A source bug claim still
 requires source replay because this first recurrence deliberately abstracts the
 source exit edge.
 
-## Accepted shape
+## Accepted shapes
 
 The constructor `reflect_canonical_loop_checked` accepts exactly:
 
@@ -35,8 +35,19 @@ self-only loops, malformed PHIs, pointer parameters, memory, external preheader
 SSA state, duplicate definitions, unsupported body semantics, and invalid
 properties with stable `LoopReflectErrorKind` classes and source spans.
 
-MIR loops, bounded unrolling, general preheaders, arbitrary properties, memory
-loops, and LLIR are not admitted by this slice.
+ADR-0292 adds `reflect_single_latch_loop_checked`. It preserves the self-loop
+route above and additionally accepts exactly one reachable header, one distinct
+latch, one latch-to-header back-edge, entry+latch header predecessors, an
+acyclic scalar internal region, branch-only internal control, no exit before
+the latch, and at most 64 deterministic paths / 4,096 path block executions.
+The latch must branch to the header and one distinct exit. Switches, multiple
+latches/back-edges, early exits, external region predecessors, nested or
+irreducible cycles, memory, and path overflow fail closed with located errors.
+
+MIR loops, general rejected-loop fallback, general preheaders, arbitrary
+properties, memory loops, and LLIR are not admitted by these slices. Existing
+replay-checked BMC is the bounded unrolling route for every accepted relation;
+it does not make a rejected loop supported.
 
 ## Implicit entry identity
 
@@ -69,8 +80,17 @@ State order is deterministic:
 Parameters are immutable state so the same input is visible at every step.
 `init` equates every PHI with its constant/parameter entry incoming. `trans`
 seeds the checked environment with pre-state PHIs and parameters, executes the
-typed body in source order, equates post-state PHIs with self-edge incoming
+typed body in source order, equates post-state PHIs with back-edge incoming
 values, and preserves parameters.
+
+For a multi-block loop, each deterministic header-to-latch path has a separate
+checked environment. Internal PHIs select their actual predecessor
+simultaneously. Internal conditional branches contribute both condition
+definedness and selected polarity. Only the path's executed instructions
+contribute immediate UB, and the full transition is the disjunction of its
+path relations. Selected PHI poison is retained as definedness state rather
+than promoted to immediate UB; it becomes constraining only when control or a
+back-edge observes it.
 
 The transition relation additionally conjoins:
 
@@ -120,9 +140,27 @@ used by the manual prototype. Its automatic state is `%6:i8` (counter), `%7:i8`
   and
 - deterministic malformed-input non-panic checks.
 
-The ADR-0290 runner now owns eight binaries and 70 tests. Adding this binary
-does not change or duplicate the exact evidence ownership of the original 62
-checked LLVM/MIR semantic variants.
+ADR-0292 adds the exact clang-21 `capdiv` module. Its state is `%7:i8`
+(accumulator), `%8:i8` (counter), immutable `%0:i8` (`n`), then immutable
+`%1:i8` (`d`). Its path inventory is `%6 -> %15` and `%6 -> %11 -> %15`.
+The gate additionally establishes:
+
+- exact implicit `%2` entry recovery, loop metadata, and render/reparse fixpoint;
+- deterministic header/latch/exit/back-edge/path metadata;
+- exact predecessor-selected, simultaneous latch PHIs;
+- even-counter `d=0` acceptance and odd-counter `d=0` rejection, plus a
+  concrete refutation of the wrong eager division-UB relation;
+- independent multi-path `init`/`trans`/`bad` formula equivalence;
+- 50,000 deterministic concrete transition tuples with `DISAGREE = 0`;
+- unobserved poison preservation and observed branch-poison rejection;
+- k-induction safety for `acc <= 100`, BMC unreachability through depth 8, and
+  separate source replay of abstract step-2 reachability with
+  `capdiv(2, 1) == 1`; and
+- located rejection of the frozen cycle/region/path/type/dependency boundary.
+
+The ADR-0290 runner still owns eight binaries and now runs 81 tests. The new
+loop evidence does not change or duplicate exact enum-variant ownership of the
+original 62 checked LLVM/MIR semantic variants.
 
 Run the focused and standing gates with:
 

@@ -1,11 +1,11 @@
-//! Checked reflection of one canonical scalar LLVM self-loop.
+//! Checked reflection of canonical scalar LLVM loops.
 //!
-//! The first T5.1.4 profile deliberately recognizes only a single block with
-//! one self back-edge, one exit edge, and two-incoming PHIs. The exit decision
-//! is abstracted: the returned recurrence may continue after the source loop
-//! exits. This is a sound over-approximation for state-invariant proofs, while
-//! a reachable recurrence state is not a source counterexample until it is
-//! separately replayed against the original program.
+//! The first T5.1.4 profile recognizes a single-block self-loop. The second
+//! admits one single-latch natural loop whose internal region is acyclic. Both
+//! abstract the exit decision: the returned recurrence may continue after the
+//! source loop exits. This is a sound over-approximation for state-invariant
+//! proofs, while a reachable recurrence state is not a source counterexample
+//! until it is separately replayed against the original program.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::error::Error;
@@ -16,9 +16,12 @@ use axeyum_solver::{SolverError, TransitionSystem};
 
 use super::checked::{DefinedValue, ReflectError, ReflectErrorKind, lower_assignment, resolve};
 use super::syntax::{
-    BlockId, Operand, ParseError, ScalarCfg, ScalarInstruction, ScalarInstructionKind, SourceSpan,
-    TerminatorKind, parse_function, parse_scalar_cfg,
+    BlockId, CfgBlock, Operand, ParseError, Phi, ScalarCfg, ScalarInstruction,
+    ScalarInstructionKind, SourceSpan, TerminatorKind, parse_function, parse_scalar_cfg,
 };
+
+const MAX_ITERATION_PATHS: usize = 64;
+const MAX_PATH_BLOCK_EXECUTIONS: usize = 4_096;
 
 /// Stable failure classes for the canonical LLVM loop profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,10 +30,14 @@ pub enum LoopReflectErrorKind {
     Syntax,
     /// The CFG contains no cycle.
     NoCycle,
-    /// More than one self-loop candidate exists.
+    /// More than one admitted loop candidate exists.
     MultipleCycles,
-    /// A cycle exists, but it is not the admitted single-block shape.
+    /// A cycle exists, but it is not an admitted self-loop or natural-loop shape.
     NonCanonicalCycle,
+    /// A multi-block loop violates the admitted single-header/single-latch region.
+    NonCanonicalLoopRegion,
+    /// Deterministic path enumeration exceeded the admitted resource bound.
+    PathLimit,
     /// Loop PHIs do not have the exact entry/back-edge structure.
     InvalidPhi,
     /// A PHI initializer is not a constant or scalar function parameter.
@@ -135,6 +142,20 @@ pub struct LoopStateComponent {
     pub role: LoopStateRole,
 }
 
+/// Deterministic block inventory for one header-to-latch iteration path.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoopIterationPath {
+    blocks: Vec<BlockId>,
+}
+
+impl LoopIterationPath {
+    /// Blocks executed by this path, from the loop header through the latch.
+    #[must_use]
+    pub fn blocks(&self) -> &[BlockId] {
+        &self.blocks
+    }
+}
+
 #[derive(Debug, Clone)]
 struct LoopPhi {
     init: Operand,
@@ -148,7 +169,24 @@ struct LoopParameter {
     span: SourceSpan,
 }
 
-/// One owned, typed canonical LLVM recurrence.
+#[derive(Debug, Clone)]
+struct CompiledPath {
+    blocks: Vec<CfgBlock>,
+}
+
+#[derive(Debug, Clone)]
+enum LoopBody {
+    SelfLoop {
+        instructions: Vec<ScalarInstruction>,
+        branch_condition: Operand,
+    },
+    NaturalLoop {
+        paths: Vec<CompiledPath>,
+        latch_condition: Operand,
+    },
+}
+
+/// One owned, typed recurrence from an admitted canonical LLVM loop profile.
 ///
 /// This system intentionally over-approximates the source exit edge. Use it to
 /// prove invariants. Treat [`axeyum_solver::BmcOutcome::Reachable`] as an
@@ -157,12 +195,13 @@ struct LoopParameter {
 pub struct CanonicalLoopSystem {
     function: String,
     loop_block: BlockId,
+    latch_block: BlockId,
     exit_block: BlockId,
+    iteration_paths: Vec<LoopIterationPath>,
     state: Vec<LoopStateComponent>,
     phis: Vec<LoopPhi>,
     parameters: Vec<LoopParameter>,
-    instructions: Vec<ScalarInstruction>,
-    branch_condition: Operand,
+    body: LoopBody,
     branch_span: SourceSpan,
     bad_component: usize,
     bad_bound: u128,
@@ -175,10 +214,22 @@ impl CanonicalLoopSystem {
         &self.function
     }
 
-    /// Identity of the unique self-looping block.
+    /// Identity of the loop header (and of the latch for a self-loop).
     #[must_use]
     pub fn loop_block(&self) -> &BlockId {
         &self.loop_block
+    }
+
+    /// Identity of the unique loop latch.
+    #[must_use]
+    pub fn latch_block(&self) -> &BlockId {
+        &self.latch_block
+    }
+
+    /// Deterministic header-to-latch path inventory.
+    #[must_use]
+    pub fn iteration_paths(&self) -> &[LoopIterationPath] {
+        &self.iteration_paths
     }
 
     /// Identity of the source exit edge omitted by the recurrence.
@@ -278,22 +329,86 @@ impl CanonicalLoopSystem {
             );
         }
 
-        let mut conditions = Vec::new();
-        for instruction in &self.instructions {
-            let (dest, value, immediate) =
-                lower_assignment(arena, &env, instruction.kind.clone(), instruction.span)
-                    .map_err(BuildError::reflection)?;
-            conditions.push(immediate);
-            env.insert(dest, value);
+        match &self.body {
+            LoopBody::SelfLoop {
+                instructions,
+                branch_condition,
+            } => self.build_self_loop_trans(arena, post, env, instructions, branch_condition),
+            LoopBody::NaturalLoop {
+                paths,
+                latch_condition,
+            } => {
+                let mut path_relations = Vec::with_capacity(paths.len());
+                for path in paths {
+                    path_relations.push(self.build_path_trans(
+                        arena,
+                        post,
+                        env.clone(),
+                        path,
+                        latch_condition,
+                    )?);
+                }
+                disjoin(arena, &path_relations, self.branch_span)
+            }
         }
+    }
 
-        let branch = resolve(arena, &env, &self.branch_condition, 1, self.branch_span)
+    fn build_self_loop_trans(
+        &self,
+        arena: &mut TermArena,
+        post: &[SymbolId],
+        mut env: HashMap<String, DefinedValue>,
+        instructions: &[ScalarInstruction],
+        branch_condition: &Operand,
+    ) -> Result<TermId, BuildError> {
+        let mut conditions = Vec::new();
+        lower_instructions(arena, &mut env, instructions, &mut conditions)?;
+        let branch = resolve(arena, &env, branch_condition, 1, self.branch_span)
             .map_err(BuildError::reflection)?;
         conditions.push(branch.defined);
+        self.bind_post_state(arena, post, &env, &mut conditions)?;
+        conjoin(arena, &conditions, self.branch_span)
+    }
 
+    fn build_path_trans(
+        &self,
+        arena: &mut TermArena,
+        post: &[SymbolId],
+        mut env: HashMap<String, DefinedValue>,
+        path: &CompiledPath,
+        latch_condition: &Operand,
+    ) -> Result<TermId, BuildError> {
+        let mut conditions = Vec::new();
+        for (index, block) in path.blocks.iter().enumerate() {
+            if index > 0 {
+                let predecessor = &path.blocks[index - 1].id;
+                lower_selected_phis(arena, &mut env, &block.phis, predecessor)?;
+            }
+            lower_instructions(arena, &mut env, &block.instructions, &mut conditions)?;
+
+            if index + 1 == path.blocks.len() {
+                let branch = resolve(arena, &env, latch_condition, 1, block.terminator.span)
+                    .map_err(BuildError::reflection)?;
+                conditions.push(branch.defined);
+            } else {
+                let next = &path.blocks[index + 1].id;
+                lower_selected_edge(arena, &env, block, next, &mut conditions)?;
+            }
+        }
+        self.bind_post_state(arena, post, &env, &mut conditions)?;
+        conjoin(arena, &conditions, self.branch_span)
+    }
+
+    fn bind_post_state(
+        &self,
+        arena: &mut TermArena,
+        post: &[SymbolId],
+        env: &HashMap<String, DefinedValue>,
+        conditions: &mut Vec<TermId>,
+    ) -> Result<(), BuildError> {
         for (index, phi) in self.phis.iter().enumerate() {
             let component = &self.state[index];
-            let next = resolve(arena, &env, &phi.back, component.width, phi.span)
+            let next = resolve(arena, env, &phi.back, component.width, phi.span)
                 .map_err(BuildError::reflection)?;
             conditions.push(next.defined);
             let post_value = arena.var(post[index]);
@@ -305,14 +420,26 @@ impl CanonicalLoopSystem {
         }
         for parameter in &self.parameters {
             let post_value = arena.var(post[parameter.component]);
-            let pre_value = arena.var(pre[parameter.component]);
+            let component = &self.state[parameter.component];
+            let pre_value = env
+                .get(&component.name)
+                .ok_or_else(|| {
+                    BuildError::ir(
+                        Some(parameter.span),
+                        format!(
+                            "validated immutable parameter `%{}` disappeared from loop state",
+                            component.name
+                        ),
+                    )
+                })?
+                .value;
             conditions.push(
                 arena
                     .eq(post_value, pre_value)
                     .map_err(|error| BuildError::ir(Some(parameter.span), error.to_string()))?,
             );
         }
-        conjoin(arena, &conditions, self.branch_span)
+        Ok(())
     }
 
     fn build_bad(&self, arena: &mut TermArena, state: &[SymbolId]) -> Result<TermId, BuildError> {
@@ -603,13 +730,485 @@ pub fn reflect_canonical_loop_checked(
     let system = CanonicalLoopSystem {
         function: cfg.name,
         loop_block: block.id.clone(),
+        latch_block: block.id.clone(),
         exit_block,
+        iteration_paths: vec![LoopIterationPath {
+            blocks: vec![block.id.clone()],
+        }],
         state,
         phis,
         parameters,
-        instructions: block.instructions.clone(),
-        branch_condition,
+        body: LoopBody::SelfLoop {
+            instructions: block.instructions.clone(),
+            branch_condition,
+        },
         branch_span: block.terminator.span,
+        bad_component,
+        bad_bound: property_bound,
+    };
+    system.validate_terms()?;
+    Ok(system)
+}
+
+/// Reflects one admitted scalar LLVM self-loop or single-latch natural loop.
+///
+/// The multi-block profile requires an acyclic header-to-latch region and
+/// builds one path-conditioned relation per deterministic CFG path. Only the
+/// selected path contributes instruction UB and branch polarity. The latch
+/// exit choice remains over-approximated exactly as in the self-loop profile.
+///
+/// # Errors
+///
+/// Returns a stable, located failure for malformed syntax, ambiguous/multiple
+/// loops, early exits, unsupported terminators or instructions, path-resource
+/// overflow, invalid PHIs/properties, or rejected checked semantics. Source
+/// input is never handled with a panic.
+pub fn reflect_single_latch_loop_checked(
+    llvm: &str,
+    property: UnsignedPhiUpperBound,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    let function = parse_function(llvm)?;
+    let cfg = parse_scalar_cfg(&function)?;
+    match canonical_loop_index(&cfg) {
+        Ok(_) => return reflect_canonical_loop_checked(llvm, property),
+        Err(error) if error.kind() == LoopReflectErrorKind::MultipleCycles => return Err(error),
+        Err(_) => {}
+    }
+    let profile = single_latch_profile(&cfg)?;
+    build_natural_loop_system(cfg, profile, property)
+}
+
+#[derive(Debug)]
+struct NaturalLoopProfile {
+    header: usize,
+    latch: usize,
+    exit: BlockId,
+    latch_condition: Operand,
+    paths: Vec<Vec<usize>>,
+}
+
+fn single_latch_profile(cfg: &ScalarCfg) -> Result<NaturalLoopProfile, LoopReflectError> {
+    let positions = cfg
+        .blocks
+        .iter()
+        .enumerate()
+        .map(|(index, block)| (block.id.clone(), index))
+        .collect::<BTreeMap<_, _>>();
+    let mut candidates = Vec::new();
+    for (source_index, source) in cfg.blocks.iter().enumerate() {
+        for target in &source.successors {
+            if target == &source.id || target == &cfg.entry {
+                continue;
+            }
+            let target_index = positions[target];
+            let header = &cfg.blocks[target_index];
+            let expected = BTreeSet::from([cfg.entry.clone(), source.id.clone()]);
+            let actual = header.predecessors.iter().cloned().collect::<BTreeSet<_>>();
+            if actual != expected
+                || !graph_is_acyclic_without(cfg, Some((&source.id, target)))
+                || !reachable_from_entry(cfg, &source.id)
+            {
+                continue;
+            }
+            let Some((condition, exit)) = latch_edge(source, target) else {
+                continue;
+            };
+            candidates.push((target_index, source_index, condition, exit));
+        }
+    }
+
+    let (header, latch, latch_condition, exit) = match candidates.as_slice() {
+        [] if graph_is_acyclic_without(cfg, None) => {
+            return Err(loop_error(
+                LoopReflectErrorKind::NoCycle,
+                cfg.blocks.first().map(|block| block.span),
+                "LLVM CFG contains no cycle",
+            ));
+        }
+        [] => {
+            return Err(loop_error(
+                LoopReflectErrorKind::NonCanonicalCycle,
+                cfg.blocks.first().map(|block| block.span),
+                "LLVM CFG cycle has no unique admitted single-latch back-edge",
+            ));
+        }
+        [(header, latch, condition, exit)] => (*header, *latch, condition.clone(), exit.clone()),
+        [_, second, ..] => {
+            return Err(loop_error(
+                LoopReflectErrorKind::MultipleCycles,
+                Some(cfg.blocks[second.1].terminator.span),
+                "LLVM CFG contains more than one admitted loop back-edge",
+            ));
+        }
+    };
+
+    let paths = enumerate_iteration_paths(cfg, &positions, header, latch)?;
+    if paths.is_empty() {
+        return Err(loop_error(
+            LoopReflectErrorKind::NonCanonicalLoopRegion,
+            Some(cfg.blocks[header].span),
+            "natural-loop header has no path to its latch",
+        ));
+    }
+
+    let region = paths
+        .iter()
+        .flat_map(|path| path.iter().copied())
+        .collect::<BTreeSet<_>>();
+    for index in &region {
+        let block = &cfg.blocks[*index];
+        if *index == header {
+            continue;
+        }
+        if block
+            .predecessors
+            .iter()
+            .any(|predecessor| !region.contains(&positions[predecessor]))
+        {
+            return Err(loop_error(
+                LoopReflectErrorKind::NonCanonicalLoopRegion,
+                Some(block.span),
+                "natural-loop internal block has a predecessor outside the admitted region",
+            ));
+        }
+    }
+
+    Ok(NaturalLoopProfile {
+        header,
+        latch,
+        exit,
+        latch_condition,
+        paths,
+    })
+}
+
+fn latch_edge(block: &CfgBlock, header: &BlockId) -> Option<(Operand, BlockId)> {
+    match &block.terminator.kind {
+        TerminatorKind::CondBranch {
+            condition,
+            true_target,
+            false_target,
+        } if true_target == header && false_target != header => {
+            Some((condition.clone(), false_target.clone()))
+        }
+        TerminatorKind::CondBranch {
+            condition,
+            true_target,
+            false_target,
+        } if false_target == header && true_target != header => {
+            Some((condition.clone(), true_target.clone()))
+        }
+        _ => None,
+    }
+}
+
+fn enumerate_iteration_paths(
+    cfg: &ScalarCfg,
+    positions: &BTreeMap<BlockId, usize>,
+    header: usize,
+    latch: usize,
+) -> Result<Vec<Vec<usize>>, LoopReflectError> {
+    let mut paths = Vec::new();
+    let mut total_executions = 0_usize;
+    let mut stack = vec![(header, 0_usize)];
+    while let Some((current, next_successor)) = stack.last_mut() {
+        let current_index = *current;
+        let block = &cfg.blocks[current_index];
+        if current_index == latch {
+            if paths.len() == MAX_ITERATION_PATHS {
+                return Err(loop_error(
+                    LoopReflectErrorKind::PathLimit,
+                    Some(block.span),
+                    "natural-loop iteration path count exceeds 64",
+                ));
+            }
+            total_executions = total_executions
+                .checked_add(stack.len())
+                .filter(|total| *total <= MAX_PATH_BLOCK_EXECUTIONS)
+                .ok_or_else(|| {
+                    loop_error(
+                        LoopReflectErrorKind::PathLimit,
+                        Some(block.span),
+                        "natural-loop path block executions exceed 4096",
+                    )
+                })?;
+            paths.push(stack.iter().map(|(index, _)| *index).collect());
+            stack.pop();
+            continue;
+        }
+
+        if *next_successor == 0 {
+            match &block.terminator.kind {
+                TerminatorKind::Branch { .. } => {}
+                TerminatorKind::CondBranch {
+                    true_target,
+                    false_target,
+                    ..
+                } if true_target != false_target => {}
+                TerminatorKind::CondBranch { .. } => {
+                    return Err(loop_error(
+                        LoopReflectErrorKind::UnsupportedBody,
+                        Some(block.terminator.span),
+                        "natural-loop conditional branch must have distinct destinations",
+                    ));
+                }
+                TerminatorKind::Switch { .. } => {
+                    return Err(loop_error(
+                        LoopReflectErrorKind::UnsupportedBody,
+                        Some(block.terminator.span),
+                        "natural-loop internal switch is outside the admitted profile",
+                    ));
+                }
+                TerminatorKind::Return { .. } | TerminatorKind::Unreachable => {
+                    return Err(loop_error(
+                        LoopReflectErrorKind::NonCanonicalLoopRegion,
+                        Some(block.terminator.span),
+                        "natural-loop path exits before reaching the unique latch",
+                    ));
+                }
+            }
+        }
+        let Some(successor) = block.successors.get(*next_successor) else {
+            stack.pop();
+            continue;
+        };
+        *next_successor += 1;
+        let next = positions[successor];
+        if stack.iter().any(|(index, _)| *index == next) {
+            return Err(loop_error(
+                LoopReflectErrorKind::NonCanonicalLoopRegion,
+                Some(cfg.blocks[next].span),
+                "natural-loop internal region contains a nested or irreducible cycle",
+            ));
+        }
+        if stack.len() == MAX_PATH_BLOCK_EXECUTIONS {
+            return Err(loop_error(
+                LoopReflectErrorKind::PathLimit,
+                Some(cfg.blocks[next].span),
+                "natural-loop path block executions exceed 4096",
+            ));
+        }
+        stack.push((next, 0));
+    }
+    Ok(paths)
+}
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "the natural-loop profile keeps structural, typing, state, and property gates together"
+)]
+fn build_natural_loop_system(
+    cfg: ScalarCfg,
+    profile: NaturalLoopProfile,
+    property: UnsignedPhiUpperBound,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    let UnsignedPhiUpperBound {
+        phi: property_phi,
+        bound: property_bound,
+    } = property;
+    let header = &cfg.blocks[profile.header];
+    let latch = &cfg.blocks[profile.latch];
+    let mut parameter_widths = BTreeMap::new();
+    for parameter in &cfg.params {
+        let width = scalar_width(&parameter.ty).ok_or_else(|| {
+            loop_error(
+                LoopReflectErrorKind::UnsupportedBody,
+                Some(parameter.span),
+                &format!(
+                    "canonical scalar loop requires i1 through i128 parameters; `%{}` has `{}`",
+                    parameter.name, parameter.ty
+                ),
+            )
+        })?;
+        if parameter_widths
+            .insert(parameter.name.clone(), (width, parameter.span))
+            .is_some()
+        {
+            return Err(loop_error(
+                LoopReflectErrorKind::UnsupportedBody,
+                Some(parameter.span),
+                &format!("duplicate LLVM parameter `%{}`", parameter.name),
+            ));
+        }
+    }
+    validate_unique_definitions(&cfg, &parameter_widths)?;
+
+    if header.phis.is_empty() {
+        return Err(loop_error(
+            LoopReflectErrorKind::InvalidPhi,
+            Some(header.span),
+            "single-latch natural loop requires at least one loop-carried header PHI",
+        ));
+    }
+    let mut state = Vec::new();
+    let mut phis = Vec::new();
+    let mut referenced_parameters = BTreeSet::new();
+    for phi in &header.phis {
+        if phi.incomings.len() != 2 {
+            return Err(loop_error(
+                LoopReflectErrorKind::InvalidPhi,
+                Some(phi.span),
+                "natural-loop header PHI must have exactly one entry and one latch incoming",
+            ));
+        }
+        let entry = phi
+            .incomings
+            .iter()
+            .find(|incoming| incoming.predecessor == cfg.entry)
+            .ok_or_else(|| {
+                loop_error(
+                    LoopReflectErrorKind::InvalidPhi,
+                    Some(phi.span),
+                    "natural-loop header PHI is missing its entry incoming",
+                )
+            })?;
+        let back = phi
+            .incomings
+            .iter()
+            .find(|incoming| incoming.predecessor == latch.id)
+            .ok_or_else(|| {
+                loop_error(
+                    LoopReflectErrorKind::InvalidPhi,
+                    Some(phi.span),
+                    "natural-loop header PHI is missing its latch incoming",
+                )
+            })?;
+        if let Operand::Local(name) = &entry.value {
+            if !parameter_widths.contains_key(name) {
+                return Err(loop_error(
+                    LoopReflectErrorKind::UnsupportedInitializer,
+                    Some(phi.span),
+                    &format!("entry PHI value `%{name}` is not a scalar function parameter"),
+                ));
+            }
+            referenced_parameters.insert(name.clone());
+        }
+        collect_parameter_operand(&back.value, &parameter_widths, &mut referenced_parameters);
+        state.push(LoopStateComponent {
+            name: phi.dest.clone(),
+            width: phi.width,
+            role: LoopStateRole::Phi,
+        });
+        phis.push(LoopPhi {
+            init: entry.value.clone(),
+            back: back.value.clone(),
+            span: phi.span,
+        });
+    }
+
+    let region = profile
+        .paths
+        .iter()
+        .flat_map(|path| path.iter().copied())
+        .collect::<BTreeSet<_>>();
+    for index in &region {
+        let block = &cfg.blocks[*index];
+        for phi in &block.phis {
+            for incoming in &phi.incomings {
+                collect_parameter_operand(
+                    &incoming.value,
+                    &parameter_widths,
+                    &mut referenced_parameters,
+                );
+            }
+        }
+        for instruction in &block.instructions {
+            if matches!(
+                instruction.kind,
+                ScalarInstructionKind::GetElementPtr { .. }
+                    | ScalarInstructionKind::Load { .. }
+                    | ScalarInstructionKind::Store { .. }
+            ) {
+                return Err(loop_error(
+                    LoopReflectErrorKind::UnsupportedMemory,
+                    Some(instruction.span),
+                    "canonical scalar loop does not admit memory instructions",
+                ));
+            }
+            collect_instruction_parameters(
+                &instruction.kind,
+                &parameter_widths,
+                &mut referenced_parameters,
+            );
+        }
+        collect_terminator_parameters(
+            &block.terminator.kind,
+            &parameter_widths,
+            &mut referenced_parameters,
+        );
+    }
+
+    let phi_count = state.len();
+    let mut parameters = Vec::new();
+    for parameter in &cfg.params {
+        if !referenced_parameters.contains(&parameter.name) {
+            continue;
+        }
+        let (width, span) = parameter_widths[&parameter.name];
+        let component = state.len();
+        state.push(LoopStateComponent {
+            name: parameter.name.clone(),
+            width,
+            role: LoopStateRole::Parameter,
+        });
+        parameters.push(LoopParameter { component, span });
+    }
+
+    let bad_component = state[..phi_count]
+        .iter()
+        .position(|component| component.name == property_phi)
+        .ok_or_else(|| {
+            loop_error(
+                LoopReflectErrorKind::InvalidProperty,
+                Some(header.span),
+                &format!("unsigned-bound target `%{property_phi}` is not a loop PHI"),
+            )
+        })?;
+    let bad_width = state[bad_component].width;
+    if bad_width == 1 || (bad_width < 128 && property_bound >= (1_u128 << bad_width)) {
+        return Err(loop_error(
+            LoopReflectErrorKind::InvalidProperty,
+            Some(header.phis[bad_component].span),
+            &format!(
+                "unsigned bound {property_bound} does not fit non-Boolean i{bad_width} PHI `%{property_phi}`"
+            ),
+        ));
+    }
+
+    let iteration_paths = profile
+        .paths
+        .iter()
+        .map(|path| LoopIterationPath {
+            blocks: path
+                .iter()
+                .map(|index| cfg.blocks[*index].id.clone())
+                .collect(),
+        })
+        .collect::<Vec<_>>();
+    let compiled_paths = profile
+        .paths
+        .iter()
+        .map(|path| CompiledPath {
+            blocks: path
+                .iter()
+                .map(|index| cfg.blocks[*index].clone())
+                .collect(),
+        })
+        .collect::<Vec<_>>();
+    let system = CanonicalLoopSystem {
+        function: cfg.name,
+        loop_block: header.id.clone(),
+        latch_block: latch.id.clone(),
+        exit_block: profile.exit,
+        iteration_paths,
+        state,
+        phis,
+        parameters,
+        body: LoopBody::NaturalLoop {
+            paths: compiled_paths,
+            latch_condition: profile.latch_condition,
+        },
+        branch_span: latch.terminator.span,
         bad_component,
         bad_bound: property_bound,
     };
@@ -787,6 +1386,23 @@ fn collect_instruction_parameters(
     }
 }
 
+fn collect_terminator_parameters(
+    terminator: &TerminatorKind,
+    parameters: &BTreeMap<String, (u32, SourceSpan)>,
+    referenced: &mut BTreeSet<String>,
+) {
+    match terminator {
+        TerminatorKind::Return { value, .. }
+        | TerminatorKind::CondBranch {
+            condition: value, ..
+        }
+        | TerminatorKind::Switch { value, .. } => {
+            collect_parameter_operand(value, parameters, referenced);
+        }
+        TerminatorKind::Branch { .. } | TerminatorKind::Unreachable => {}
+    }
+}
+
 fn collect_parameter_operand(
     operand: &Operand,
     parameters: &BTreeMap<String, (u32, SourceSpan)>,
@@ -830,6 +1446,85 @@ const fn sort_for_width(width: u32) -> Sort {
     }
 }
 
+fn lower_instructions(
+    arena: &mut TermArena,
+    env: &mut HashMap<String, DefinedValue>,
+    instructions: &[ScalarInstruction],
+    conditions: &mut Vec<TermId>,
+) -> Result<(), BuildError> {
+    for instruction in instructions {
+        let (dest, value, immediate) =
+            lower_assignment(arena, env, instruction.kind.clone(), instruction.span)
+                .map_err(BuildError::reflection)?;
+        conditions.push(immediate);
+        env.insert(dest, value);
+    }
+    Ok(())
+}
+
+fn lower_selected_phis(
+    arena: &mut TermArena,
+    env: &mut HashMap<String, DefinedValue>,
+    phis: &[Phi],
+    predecessor: &BlockId,
+) -> Result<(), BuildError> {
+    let before = env.clone();
+    let mut bindings = Vec::with_capacity(phis.len());
+    for phi in phis {
+        let incoming = phi
+            .incomings
+            .iter()
+            .find(|incoming| &incoming.predecessor == predecessor)
+            .ok_or_else(|| {
+                BuildError::ir(
+                    Some(phi.span),
+                    format!(
+                        "validated loop PHI `%{}` has no selected predecessor",
+                        phi.dest
+                    ),
+                )
+            })?;
+        let value = resolve(arena, &before, &incoming.value, phi.width, phi.span)
+            .map_err(BuildError::reflection)?;
+        bindings.push((phi.dest.clone(), value));
+    }
+    env.extend(bindings);
+    Ok(())
+}
+
+fn lower_selected_edge(
+    arena: &mut TermArena,
+    env: &HashMap<String, DefinedValue>,
+    block: &CfgBlock,
+    next: &BlockId,
+    conditions: &mut Vec<TermId>,
+) -> Result<(), BuildError> {
+    match &block.terminator.kind {
+        TerminatorKind::Branch { target } if target == next => Ok(()),
+        TerminatorKind::CondBranch {
+            condition,
+            true_target,
+            false_target,
+        } if true_target != false_target && (true_target == next || false_target == next) => {
+            let branch = resolve(arena, env, condition, 1, block.terminator.span)
+                .map_err(BuildError::reflection)?;
+            conditions.push(branch.defined);
+            if true_target == next {
+                conditions.push(branch.value);
+            } else {
+                conditions.push(arena.not(branch.value).map_err(|error| {
+                    BuildError::ir(Some(block.terminator.span), error.to_string())
+                })?);
+            }
+            Ok(())
+        }
+        _ => Err(BuildError::ir(
+            Some(block.terminator.span),
+            "validated natural-loop path does not match its selected CFG edge".to_owned(),
+        )),
+    }
+}
+
 fn conjoin(
     arena: &mut TermArena,
     conditions: &[TermId],
@@ -839,6 +1534,20 @@ fn conjoin(
     for condition in conditions {
         result = arena
             .and(result, *condition)
+            .map_err(|error| BuildError::ir(Some(span), error.to_string()))?;
+    }
+    Ok(result)
+}
+
+fn disjoin(
+    arena: &mut TermArena,
+    conditions: &[TermId],
+    span: SourceSpan,
+) -> Result<TermId, BuildError> {
+    let mut result = arena.bool_const(false);
+    for condition in conditions {
+        result = arena
+            .or(result, *condition)
             .map_err(|error| BuildError::ir(Some(span), error.to_string()))?;
     }
     Ok(result)

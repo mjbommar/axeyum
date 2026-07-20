@@ -347,4 +347,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0289](adr-0289-preregister-cargo-owned-mir-selection.md) | Accept explicit Cargo package/target selection through exact-toolchain MIR capture and checked reflection | accepted |
 | [0290](adr-0290-preregister-reflection-semantics-gate.md) | Accept exact source-derived ownership of 62 checked-frontend semantic variants with proof plus deterministic fuzz evidence | accepted |
 | [0291](adr-0291-preregister-typed-canonical-llvm-loop-bridge.md) | Accept one typed, definedness-aware canonical LLVM self-loop to `TransitionSystem` bridge | accepted |
-| [0292](adr-0292-preregister-single-latch-llvm-natural-loop.md) | Preregister one checked single-latch LLVM natural loop with path-conditioned internal control flow | proposed |
+| [0292](adr-0292-preregister-single-latch-llvm-natural-loop.md) | Accept one checked single-latch LLVM natural loop with path-conditioned internal control flow | accepted |

@@ -167,8 +167,11 @@ members, missing proof/fuzz evidence, bad tests, path escape, duplicate groups,
 and command drift. `--run` executes those mutation tests and then the exact
 eight manifest-owned Rust binaries; the dedicated stable CI job and
 `just reflection-semantics-gate` invoke that one runner. The bounded Rust gate
-contains 70 tests and passes. ADR-0291 adds the loop binary without changing or
+contained 70 tests after ADR-0291 added the loop binary without changing or
 duplicating ownership of the original 62 source-derived semantic variants.
+ADR-0292 expands that same binary to a current total of 81 tests; enum-variant
+ownership remains exactly 62/62 because the new route composes already-owned
+typed semantics rather than adding an enum variant.
 
 The complete `axeyum-verify --all-features` suite and doctests, workspace
 all-target/all-feature Clippy, warning-denied `axeyum-verify` rustdoc,

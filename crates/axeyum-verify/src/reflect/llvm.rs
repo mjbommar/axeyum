@@ -5,7 +5,7 @@
 
 /// Fail-closed scalar reflection with explicit LLVM definedness predicates.
 pub mod checked;
-/// Typed canonical LLVM self-loops reflected as symbolic transition systems.
+/// Typed canonical LLVM loop profiles reflected as symbolic transition systems.
 pub mod loops;
 /// Structured, span-carrying syntax for one textual LLVM function.
 pub mod syntax;

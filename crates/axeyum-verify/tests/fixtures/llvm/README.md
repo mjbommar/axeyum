@@ -115,5 +115,7 @@ clang-21 -O1 -fno-unroll-loops -fno-vectorize -fno-strict-aliasing \
 The module freezes the next T5.1.4 input before implementation: implicit `%2`
 entry identity; header `%6`; conditional division block `%11`; latch `%15`;
 latch PHI `%16`; one `%15 -> %6` back-edge; path-sensitive `udiv`; `umin`; and
-`add nuw`. It passes `llvm-as-21` unchanged. No multi-block loop semantics are
-implemented under the ADR-0292 zero row.
+`add nuw`. It passes `llvm-as-21` unchanged. ADR-0292 now accepts this exact
+module through `reflect_single_latch_loop_checked`; the even path skips division
+UB, the odd path requires a nonzero divisor, and 50,000 transition tuples agree
+with an independent concrete recurrence.
