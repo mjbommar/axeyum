@@ -845,6 +845,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     caller lowering. A rejected general nonlinear-equivalence query OOM event
     is retained; the accepted verifier uses structural exactness plus a bounded
     replayed fallback.
+  - [ADR-0297](../09-decisions/adr-0297-preregister-call-requirement-obligations.md)
+    preregisters the next composition rule: verify a nontrivial scalar
+    requirement, assume it only after exposing its path-conditioned complement
+    as a replayable `TransitionSystem::bad` obligation, and retain exact
+    call-site attribution. The frozen gate requires 100,000 completely
+    classified rows with zero disagreement or dropped work; it adds neither
+    annotation syntax nor relational havoc.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

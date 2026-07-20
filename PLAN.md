@@ -210,8 +210,12 @@ session state.
 >    rejected after a disclosed 67.4 GiB anonymous-RSS OOM; the accepted exact
 >    checker uses term identity plus conjunction associativity/`true`, a
 >    two-second fallback, and a dedicated `loops/contracts.rs` module. The standing gate is now nine
->    binaries / 94 tests. Next, design explicit call-site requirement failures
->    as obligations/bad states before adding nontrivial `requires` or syntax.
+>    binaries / 94 tests. ADR-0297 now preregisters explicit call-site
+>    requirement failures as path-conditioned obligations/bad states: assume a
+>    nontrivial `requires` in the transition only after its reached complement
+>    is replayable and source-attributed through `bad`. Its frozen gate requires
+>    100,000 valid/violation/source-undefined rows with zero disagreement and
+>    zero dropped work. No annotation syntax or relational havoc is authorized.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
