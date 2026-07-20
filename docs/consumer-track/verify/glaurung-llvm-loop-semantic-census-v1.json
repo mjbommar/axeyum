@@ -66,7 +66,7 @@
     },
     {
       "path": "scripts/census-glaurung-llvm-loop-semantics.py",
-      "sha256": "8aad9f2e0b0f54fc6ae0353aef978e1c3f376b3a3078b3dc92c711f516c0eea7"
+      "sha256": "5f3979609fc743bdb3137f5f1454c352347efab727672b6811214bac15e2eb5c"
     }
   ],
   "selection": {

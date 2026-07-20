@@ -812,7 +812,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     retains every diagnostic, tries all non-Boolean PHIs only to remove
     property-name bias, and forbids dropped rows. A strict-plurality rejection
     bucket must span two functions and two sources before it can select a next
-    audit lane. The formal result remains unobserved.
+    audit lane. The first artifact observed 12 typed-CFG
+    `unsupported_instruction` declines but was rejected because
+    `llvm-extract`'s temporary ModuleID path changed all extracted-file hashes.
+    The rejected artifact is retained; a corrected ModuleID-agnostic hash and
+    source-qualified function identity are frozen before a fresh two-run result.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

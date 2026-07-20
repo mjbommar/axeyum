@@ -123,6 +123,31 @@ class GlaurungLlvmLoopSemanticCensusTests(unittest.TestCase):
                 selection,
             )
         )
+        repeated_name = census.select_rejection(
+            [row("main", "one.c"), row("main", "two.c")], selection
+        )
+        self.assertIsNotNone(repeated_name)
+        assert repeated_name is not None
+        self.assertEqual(repeated_name["functions"], 2)
+
+    def test_extracted_hash_ignores_only_the_path_bearing_module_id(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            first = root / "first.ll"
+            second = root / "second.ll"
+            changed = root / "changed.ll"
+            first.write_text("; ModuleID = '/tmp/one.ll'\ndefine i1 @f() { ret i1 true }\n")
+            second.write_text("; ModuleID = '/tmp/two.ll'\ndefine i1 @f() { ret i1 true }\n")
+            changed.write_text("; ModuleID = '/tmp/one.ll'\ndefine i1 @f() { ret i1 false }\n")
+
+            self.assertEqual(
+                census.moduleid_agnostic_sha256(first),
+                census.moduleid_agnostic_sha256(second),
+            )
+            self.assertNotEqual(
+                census.moduleid_agnostic_sha256(first),
+                census.moduleid_agnostic_sha256(changed),
+            )
 
     def test_manifest_drift_fails_closed(self) -> None:
         original = census.load_manifest(MANIFEST)

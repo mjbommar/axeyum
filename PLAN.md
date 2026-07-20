@@ -172,12 +172,20 @@ session state.
 >    and one source, fails the frozen diversity rule, and authorizes no code.
 >    Structural matching is not semantic acceptance. T5.1.4 remains WIP: next
 >    ADR-0294 preregisters semantic eligibility/rejection measurement over all
->    12 exact functions before observing a result. It recompiles and
+>    12 exact functions. It recompiles and
 >    hash-matches every source, extracts functions with pinned LLVM, preserves
 >    the checked parser/loop error class and diagnostic, and forbids dropped
 >    rows; its cross-function/source plurality rule can select only a later
->    audit lane, not code. Do not build early-exit support from the ADR-0293
->    singleton. General rejected-loop unrolling, MIR, multi-latch/
+>    audit lane, not code. Its first formal artifact observed 0 accepted / 12
+>    typed-CFG `unsupported_instruction` declines, but the immediate rerun
+>    rejected all 12 raw extracted-file hashes: `llvm-extract` embeds the random
+>    temporary input path in its ModuleID comment. The rejected artifact is
+>    retained. ADR-0294 now freezes a ModuleID-agnostic hash over the otherwise
+>    exact bytes and fixes function identity from bare name to source+name;
+>    commit/push this correction before a fresh two-run result. Do not build
+>    parser support from the rejected artifact, and do not build early-exit
+>    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
+>    multi-latch/
 >    early-exit/switch/memory loops, general places, and LLIR remain open, and
 >    the accepted Linux recall route stays untouched.
 >

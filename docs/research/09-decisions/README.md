@@ -349,4 +349,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0291](adr-0291-preregister-typed-canonical-llvm-loop-bridge.md) | Accept one typed, definedness-aware canonical LLVM self-loop to `TransitionSystem` bridge | accepted |
 | [0292](adr-0292-preregister-single-latch-llvm-natural-loop.md) | Accept one checked single-latch LLVM natural loop with path-conditioned internal control flow | accepted |
 | [0293](adr-0293-preregister-glaurung-llvm-loop-shape-census.md) | Accept the exact Glaurung loop census: 11 existing-shape rows and one under-diverse early-exit row select no new implementation | accepted |
-| [0294](adr-0294-preregister-glaurung-llvm-loop-semantic-census.md) | Preregister exact semantic acceptance and precise rejection accounting for all 12 Glaurung loop functions | proposed |
+| [0294](adr-0294-preregister-glaurung-llvm-loop-semantic-census.md) | Correct a rejected path-bearing-hash reproduction; accepted 12-function semantic result remains pending | proposed |

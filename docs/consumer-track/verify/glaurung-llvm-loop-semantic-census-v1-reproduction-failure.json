@@ -1,0 +1,32 @@
+{
+  "schema": "axeyum.glaurung-llvm-loop-semantic-census-reproduction-failure.v1",
+  "preregistration_revision": "b4fec06102e0e91db1ffc6297b4204a628259a7e",
+  "first_run": {
+    "path": "docs/consumer-track/verify/glaurung-llvm-loop-semantic-census-v1-rejected-first-run.json",
+    "sha256": "13c97b6e3a2227464e3beb2c1329d267dc1afd6ed82e8e157608b69cda221649",
+    "state": "created"
+  },
+  "second_run": {
+    "state": "rejected_nonidentical",
+    "differing_fields": 12,
+    "field": "sources[].loops[].extracted_llvm_sha256"
+  },
+  "stable_observation": {
+    "rows": 12,
+    "accepted": 0,
+    "rejected": 12,
+    "outcome_counts": {
+      "scalar_cfg:unsupported_instruction": 12
+    },
+    "selection": {
+      "bucket": "scalar_cfg:unsupported_instruction",
+      "reported_bare_name_functions": 10,
+      "source_qualified_functions": 12,
+      "rows": 12,
+      "sources": 4
+    }
+  },
+  "cause": "llvm-extract copies its temporary input path into the leading ModuleID comment; the raw extracted-file hash therefore changes with the temporary directory",
+  "correction": "hash all extracted LLVM bytes after the required leading ModuleID comment while keeping the unmodified file as classifier and llvm-as input; count function identity as source path plus function name",
+  "accepted_result_state": "absent_pending_corrected_reproduction"
+}

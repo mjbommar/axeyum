@@ -301,6 +301,21 @@ def parse_classifier_output(
     }
 
 
+def moduleid_agnostic_sha256(path: Path) -> str:
+    """Hash extracted LLVM after removing llvm-extract's path-bearing comment."""
+
+    try:
+        lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+    except (OSError, UnicodeError) as error:
+        raise SemanticCensusError(f"cannot read extracted LLVM {path}: {error}") from error
+    require(bool(lines), f"extracted LLVM is empty: {path}")
+    require(
+        lines[0].startswith("; ModuleID = "),
+        f"extracted LLVM lacks the expected ModuleID comment: {path}",
+    )
+    return BASE.sha256_bytes("".join(lines[1:]).encode("utf-8"))
+
+
 def select_rejection(rows: list[dict[str, Any]], selection: dict[str, Any]) -> dict[str, Any] | None:
     buckets: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -311,7 +326,7 @@ def select_rejection(rows: list[dict[str, Any]], selection: dict[str, Any]) -> d
     ranked = sorted(buckets.items(), key=lambda item: (-len(item[1]), item[0]))
     bucket, selected_rows = ranked[0]
     second_count = len(ranked[1][1]) if len(ranked) > 1 else 0
-    functions = {row["function"] for row in selected_rows}
+    functions = {(row["source_path"], row["function"]) for row in selected_rows}
     sources = {row["source_path"] for row in selected_rows}
     if selection["require_strict_plurality"] and len(selected_rows) <= second_count:
         return None
@@ -393,7 +408,9 @@ def run_census(
                 )
                 row = {
                     **semantic,
-                    "extracted_llvm_sha256": BASE.sha256_file(extracted),
+                    "moduleid_agnostic_extracted_llvm_sha256": moduleid_agnostic_sha256(
+                        extracted
+                    ),
                     "source_path": relative,
                     "structural_profile": structural_loop["profile"],
                 }

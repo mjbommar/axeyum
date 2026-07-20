@@ -3,8 +3,8 @@
 Status: proposed
 Date: 2026-07-20
 
-Result state: zero-row; no registered Glaurung loop has been passed through the
-semantic classifier
+Result state: first formal artifact rejected at byte-reproduction; corrected
+producer is zero-row and no accepted result exists
 
 ## Context
 
@@ -22,11 +22,11 @@ a Glaurung correctness oracle. Silent extraction loss, collapsed diagnostics,
 or treating a parse failure as an unsupported loop would repeat the
 methodology error of mistaking dropped work for a favorable result.
 
-No semantic classifier has been run on the registered Glaurung population.
-Pre-observation smoke tests use only the already accepted `capsum8` and `capdiv`
-compiler fixtures plus a deliberate unsupported-instruction and memory
-mutation. Those tests validate the measurement route; they do not reveal the
-formal population result.
+At preregistration, no semantic classifier had been run on the registered
+Glaurung population. Pre-observation smoke tests used only the already accepted
+`capsum8` and `capdiv` compiler fixtures plus a deliberate
+unsupported-instruction and memory mutation. The first post-push formal
+observation is recorded below, including its rejected reproduction.
 
 ## Decision
 
@@ -71,7 +71,8 @@ located diagnostic. No solver call, proof, finding, timing, or performance claim
 is part of this census.
 
 Every formal row retains source/function identity, structural profile,
-extracted LLVM hash, stage, stable kind, exact diagnostic, and accepted metadata.
+ModuleID-agnostic extracted LLVM hash, stage, stable kind, exact diagnostic, and
+accepted metadata.
 The result must account for all 12 registered sources and all 12 loop rows.
 Accepted plus rejected must equal 12; no error/unknown bucket may disappear.
 
@@ -113,6 +114,37 @@ replay.
 
 The gates may be strengthened before the first registered semantic result is
 observed. They may not be weakened afterward.
+
+## First formal observation and reproduction correction
+
+The first post-preregistration run created
+`glaurung-llvm-loop-semantic-census-v1-rejected-first-run.json`, SHA-256
+`13c97b6e3a2227464e3beb2c1329d267dc1afd6ed82e8e157608b69cda221649`.
+The immediate second run correctly refused to overwrite it because all 12 raw
+`extracted_llvm_sha256` fields differed. A field-by-field in-memory comparison
+showed every classification, diagnostic, count, and selected bucket was
+identical; only those hashes drifted.
+
+The cause is precise: `llvm-extract` copies its temporary input path into the
+leading `; ModuleID = '...'` comment. Different temporary directories therefore
+produce different whole-file hashes while the complete LLVM module after that
+comment is byte-identical. The rejected artifact and machine-readable
+reproduction-failure report are retained; they are not accepted evidence.
+
+The corrected producer requires the exact leading ModuleID comment, feeds the
+unmodified extracted file to `llvm-as` and the classifier, but hashes all bytes
+after that non-semantic path-bearing comment. A unit test proves two different
+ModuleID paths hash equally while a changed function body does not. The same
+review also found that the selection summary counted bare function names,
+collapsing repeated `main` functions across sources from 12 source-qualified
+identities to 10. The corrected rule counts `(source path, function name)`.
+Neither correction changes the observed rejection bucket or its eligibility.
+
+The rejected observation was 0 accepted / 12 rejected, all at
+`scalar_cfg:unsupported_instruction`, spanning all 12 source-qualified functions
+in four sources. This is not yet an accepted result. The corrected producer and
+this disclosure must be committed and pushed before a fresh two-run
+reproduction.
 
 ## Consequences
 
