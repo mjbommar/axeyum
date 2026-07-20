@@ -408,8 +408,8 @@ pub fn vivify_within(
     //   * unchanged → keep verbatim, no step.
     let mut clauses: Vec<Option<Vec<CnfLit>>> = Vec::with_capacity(formula.clauses().len());
     for clause in formula.clauses() {
-        let original = clause.lits().to_vec();
-        match NormClause::from_clause(clause) {
+        let original = clause.to_vec();
+        match NormClause::from_lits(clause) {
             Some(nc) => {
                 if !same_literal_multiset(&original, &nc.lits) {
                     // Deduped: Add the shorter normalized clause (RUP), Delete the
@@ -600,15 +600,13 @@ mod tests {
         let has_ab = out
             .formula
             .clauses()
-            .iter()
-            .any(|c| lit_set(c.lits()) == lit_set(&[p(0), p(1)]));
+            .any(|c| lit_set(c) == lit_set(&[p(0), p(1)]));
         assert!(
             has_ab,
             "expected (a∨b) after prefix-conflict vivification, got {:?}",
             out.formula
                 .clauses()
-                .iter()
-                .map(|c| c.lits().to_vec())
+                .map(<[CnfLit]>::to_vec)
                 .collect::<Vec<_>>()
         );
         assert!(out.stats.literals_removed >= 1, "c removed");
@@ -631,15 +629,13 @@ mod tests {
         let has_ab = out
             .formula
             .clauses()
-            .iter()
-            .any(|c| lit_set(c.lits()) == lit_set(&[p(0), p(1)]));
+            .any(|c| lit_set(c) == lit_set(&[p(0), p(1)]));
         assert!(
             has_ab,
             "expected (a∨b) via implied-literal strengthening, got {:?}",
             out.formula
                 .clauses()
-                .iter()
-                .map(|c| c.lits().to_vec())
+                .map(<[CnfLit]>::to_vec)
                 .collect::<Vec<_>>()
         );
         assert!(out.stats.literals_removed >= 1);
@@ -753,10 +749,7 @@ mod tests {
             assert!(
                 check_drat(&f, &out.proof).is_ok(),
                 "DRAT must self-verify against the original; formula {:?}",
-                f.clauses()
-                    .iter()
-                    .map(|c| c.lits().to_vec())
-                    .collect::<Vec<_>>()
+                f.clauses().map(<[CnfLit]>::to_vec).collect::<Vec<_>>()
             );
             assert!(out.formula.clauses().len() <= f.clauses().len());
             checked += 1;

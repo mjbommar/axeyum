@@ -133,7 +133,7 @@ pub fn compact(formula: &CnfFormula) -> (CnfFormula, CompactMap) {
     // Live set: every variable that appears in some clause, sorted ascending.
     let mut live: BTreeSet<usize> = BTreeSet::new();
     for clause in formula.clauses() {
-        for lit in clause.lits() {
+        for lit in clause {
             live.insert(lit.var().index());
         }
     }
@@ -151,7 +151,6 @@ pub fn compact(formula: &CnfFormula) -> (CnfFormula, CompactMap) {
     let mut out = CnfFormula::new(new_to_old.len());
     for clause in formula.clauses() {
         let lits: Vec<CnfLit> = clause
-            .lits()
             .iter()
             .map(|lit| {
                 let new_index = old_to_new[lit.var().index()]
@@ -214,7 +213,7 @@ mod tests {
             assert_eq!(map.original_of(i), i);
         }
         // The clause structure is unchanged.
-        assert_eq!(c.clauses(), f.clauses());
+        assert!(c.clauses().eq(f.clauses()));
     }
 
     #[test]

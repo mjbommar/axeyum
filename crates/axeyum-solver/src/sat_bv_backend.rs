@@ -25,13 +25,13 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding,
-    CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome,
-    Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
-    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
-    extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_with_limits,
-    solve_with_rustsat_batsat_limits, solve_with_xor_cdcl, tseitin_encode,
-    tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
-    xor_propagate,
+    CnfEncodingStats, CnfError, CnfFormula, CnfStorageProfile, CompactMap,
+    DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome, Reconstruction, SatError, SatProofStatus,
+    SatResult, SatUnknownReason, SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation,
+    check_drat, compact, eliminate_variables_within, extract_xors, simplify_within,
+    solve_with_drat_proof, solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits,
+    solve_with_xor_cdcl, tseitin_encode, tseitin_encode_profiled_with_origins, vivify_within,
+    write_drat, xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
@@ -395,10 +395,7 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
     push_count(stats, "symbol_bits_lowered", demand.symbol_bits_lowered);
 
     let cnf = encoding.stats();
-    push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
-    push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);
-    push_duration_ms(stats, "cnf_gate_encode_ms", cnf.gate_encoding);
-    push_duration_ms(stats, "cnf_root_encode_ms", cnf.root_encoding);
+    record_cnf_timing(stats, &cnf);
     push_count(stats, "cnf_reachable_nodes", cnf.reachable_nodes);
     push_count(stats, "cnf_skipped_helper_nodes", cnf.skipped_helper_nodes);
     push_count(stats, "cnf_direct_root_nodes", cnf.direct_root_nodes);
@@ -419,7 +416,49 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
         cnf.duplicate_clauses_skipped,
     );
     push_count(stats, "cnf_clauses_emitted", cnf.clauses_emitted);
+    record_cnf_storage_profile(stats, cnf.storage);
     record_cnf_construction_profile(stats, cnf.construction_profile);
+}
+
+fn record_cnf_timing(stats: &mut SolveStats, cnf: &CnfEncodingStats) {
+    push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
+    push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);
+    push_duration_ms(stats, "cnf_gate_encode_ms", cnf.gate_encoding);
+    push_duration_ms(stats, "cnf_root_encode_ms", cnf.root_encoding);
+}
+
+fn record_cnf_storage_profile(stats: &mut SolveStats, storage: CnfStorageProfile) {
+    push_count(stats, "cnf_formula_clauses", usize_to_u64(storage.clauses));
+    push_count(
+        stats,
+        "cnf_formula_literals",
+        usize_to_u64(storage.literals),
+    );
+    push_count(
+        stats,
+        "cnf_formula_clause_end_logical_bytes",
+        usize_to_u64(storage.clause_end_logical_bytes),
+    );
+    push_count(
+        stats,
+        "cnf_formula_literal_logical_bytes",
+        usize_to_u64(storage.literal_logical_bytes),
+    );
+    push_count(
+        stats,
+        "cnf_formula_arena_logical_bytes",
+        usize_to_u64(storage.arena_logical_bytes),
+    );
+    push_count(
+        stats,
+        "cnf_formula_arena_capacity_bytes",
+        usize_to_u64(storage.arena_capacity_bytes),
+    );
+    push_count(
+        stats,
+        "cnf_formula_legacy_logical_lower_bound_bytes",
+        usize_to_u64(storage.legacy_logical_lower_bound_bytes),
+    );
 }
 
 fn record_cnf_construction_profile(stats: &mut SolveStats, profile: CnfConstructionProfile) {
@@ -1702,6 +1741,24 @@ mod tests {
             .map(|(_, v)| *v)
     }
 
+    fn assert_formula_storage_profile(layers: &crate::layers::BvLayerStats) {
+        assert_eq!(layers.cnf_formula_clauses, layers.cnf_clauses);
+        assert_eq!(layers.cnf_formula_literals, 1);
+        assert_eq!(
+            layers.cnf_formula_arena_logical_bytes,
+            layers
+                .cnf_formula_clause_end_logical_bytes
+                .saturating_add(layers.cnf_formula_literal_logical_bytes)
+        );
+        assert!(layers.cnf_formula_arena_capacity_bytes >= layers.cnf_formula_arena_logical_bytes);
+        assert!(
+            layers.cnf_formula_arena_logical_bytes.saturating_mul(5)
+                <= layers
+                    .cnf_formula_legacy_logical_lower_bound_bytes
+                    .saturating_mul(4)
+        );
+    }
+
     #[test]
     fn cold_cnf_construction_profile_is_opt_in_and_partitioned() {
         let mut arena = TermArena::new();
@@ -1718,6 +1775,7 @@ mod tests {
         assert!(!ordinary_layers.cnf_construction_profile_complete);
         assert_eq!(ordinary_layers.cnf_declared_clause_literals, 0);
         assert_eq!(ordinary_layers.cnf_primary_vacant_probes, 0);
+        assert_formula_storage_profile(&ordinary_layers);
         assert_eq!(
             stat(
                 ordinary_backend.last_stats().unwrap(),
@@ -1748,6 +1806,18 @@ mod tests {
         assert!(layers.cnf_construction_profile_complete);
         assert_eq!(layers.cnf_declared_clause_literals, 2);
         assert_eq!(layers.cnf_visited_clause_literals, 2);
+        assert_eq!(
+            layers.cnf_formula_clauses,
+            ordinary_layers.cnf_formula_clauses
+        );
+        assert_eq!(
+            layers.cnf_formula_literals,
+            ordinary_layers.cnf_formula_literals
+        );
+        assert_eq!(
+            layers.cnf_formula_arena_logical_bytes,
+            ordinary_layers.cnf_formula_arena_logical_bytes
+        );
         let profiled_stats = profiled_backend.last_stats().unwrap();
         assert_eq!(
             stat(profiled_stats, "cnf_duplicate_origin_profile_complete"),
@@ -1979,7 +2049,9 @@ mod tests {
         let pad_start = f.variable_count();
         let mut padded = CnfFormula::new(pad_start + 1);
         for clause in f.clauses() {
-            padded.add_clause(clause.clone()).expect("re-add clause");
+            padded
+                .add_clause(CnfClause::new(clause.to_vec()))
+                .expect("re-add clause");
         }
         let pad_var = pad_start;
         for _ in 0..=XOR_CDCL_FALLBACK_MAX_CLAUSES {

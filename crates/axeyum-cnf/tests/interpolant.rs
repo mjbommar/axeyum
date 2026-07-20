@@ -72,7 +72,7 @@ fn is_craig_interpolant(a: &CnfFormula, b: &CnfFormula, i: &BoolExpr) -> bool {
 fn vars_of(formula: &CnfFormula) -> std::collections::BTreeSet<CnfVar> {
     let mut out = std::collections::BTreeSet::new();
     for clause in formula.clauses() {
-        for l in clause.lits() {
+        for l in clause {
             out.insert(l.var());
         }
     }
@@ -84,8 +84,7 @@ fn vars_of(formula: &CnfFormula) -> std::collections::BTreeSet<CnfVar> {
 fn clone_over(formula: &CnfFormula) -> CnfFormula {
     let mut out = CnfFormula::new(formula.variable_count());
     for clause in formula.clauses() {
-        out.add_clause(CnfClause::new(clause.lits().to_vec()))
-            .unwrap();
+        out.add_clause(CnfClause::new(clause.to_vec())).unwrap();
     }
     out
 }
@@ -192,9 +191,9 @@ fn bool_expr_eval() {
 /// Combines A's then B's clauses and reports whether the conjunction is unsat.
 fn is_unsat_combined(a: &CnfFormula, b: &CnfFormula) -> bool {
     let mut combined = CnfFormula::new(a.variable_count().max(b.variable_count()));
-    for clause in a.clauses().iter().chain(b.clauses()) {
+    for clause in a.clauses().chain(b.clauses()) {
         combined
-            .add_clause(CnfClause::new(clause.lits().to_vec()))
+            .add_clause(CnfClause::new(clause.to_vec()))
             .unwrap();
     }
     is_unsat(&combined)

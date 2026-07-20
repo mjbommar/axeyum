@@ -108,8 +108,8 @@ pub(crate) struct NormClause {
 
 impl NormClause {
     /// Normalizes a clause; returns `None` if it is a tautology (always true).
-    pub(crate) fn from_clause(clause: &CnfClause) -> Option<Self> {
-        let mut lits = clause.lits().to_vec();
+    pub(crate) fn from_lits(clause: &[CnfLit]) -> Option<Self> {
+        let mut lits = clause.to_vec();
         lits.sort_unstable();
         lits.dedup();
         // Tautology: some variable appears both positive and negative.
@@ -344,7 +344,7 @@ pub fn simplify_within(
     // Normalize; drop tautologies up front (they constrain nothing).
     let mut clauses: Vec<Option<NormClause>> = Vec::with_capacity(formula.clauses().len());
     for clause in formula.clauses() {
-        match NormClause::from_clause(clause) {
+        match NormClause::from_lits(clause) {
             Some(nc) => clauses.push(Some(nc)),
             None => stats.tautologies_removed += 1,
         }
@@ -419,7 +419,7 @@ mod tests {
         let (out, stats) = simplify(&f);
         assert_eq!(stats.clauses_subsumed, 1);
         assert_eq!(out.clauses().len(), 1);
-        assert_eq!(out.clauses()[0].lits(), &[p(0)]);
+        assert_eq!(out.clause(0), Some(&[p(0)][..]));
         equivalent(&f, &out, 2);
     }
 
@@ -442,7 +442,7 @@ mod tests {
         let (out, stats) = simplify(&f);
         assert_eq!(stats.tautologies_removed, 1);
         assert_eq!(out.clauses().len(), 1);
-        assert_eq!(out.clauses()[0].lits(), &[p(1)]);
+        assert_eq!(out.clause(0), Some(&[p(1)][..]));
         equivalent(&f, &out, 2);
     }
 

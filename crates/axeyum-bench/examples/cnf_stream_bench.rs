@@ -182,9 +182,10 @@ fn load_snapshots(directory: &Path, profile: &[ProfileCheck]) -> Result<Vec<Snap
         {
             return Err(format!("DIMACS shape mismatch at {}", cnf_path.display()));
         }
-        let assumptions = formula.clauses()[expected.persistent_clauses..]
-            .iter()
-            .map(|clause| match clause.lits() {
+        let assumptions = formula
+            .clauses()
+            .skip(expected.persistent_clauses)
+            .map(|clause| match clause {
                 [lit] if !lit.is_negated() => Ok(*lit),
                 _ => Err(format!(
                     "non-positive-unit selector at {}",
@@ -198,7 +199,11 @@ fn load_snapshots(directory: &Path, profile: &[ProfileCheck]) -> Result<Vec<Snap
             query_hash: query_hash.to_string(),
             outcome: outcome.to_string(),
             variable_count: formula.variable_count(),
-            persistent: formula.clauses()[..expected.persistent_clauses].to_vec(),
+            persistent: formula
+                .clauses()
+                .take(expected.persistent_clauses)
+                .map(|clause| CnfClause::new(clause.to_vec()))
+                .collect(),
             assumptions,
         });
     }

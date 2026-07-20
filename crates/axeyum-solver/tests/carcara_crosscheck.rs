@@ -433,7 +433,7 @@ fn cnf_to_smt2(formula: &axeyum_cnf::CnfFormula) -> String {
     use std::fmt::Write as _;
     let mut max_var = 0usize;
     for clause in formula.clauses() {
-        for lit in clause.lits() {
+        for lit in clause {
             max_var = max_var.max(lit.var().index());
         }
     }
@@ -443,7 +443,6 @@ fn cnf_to_smt2(formula: &axeyum_cnf::CnfFormula) -> String {
     }
     for clause in formula.clauses() {
         let lits: Vec<String> = clause
-            .lits()
             .iter()
             .map(|lit| {
                 let name = format!("v{}", lit.var().index());

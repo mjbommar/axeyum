@@ -691,7 +691,7 @@ fn grow_to(formula: &mut CnfFormula, count: usize) {
     for clause in formula.clauses() {
         // Existing clauses reference only in-range variables, so this add cannot
         // fail; ignore the impossible error rather than panic.
-        let _ = grown.add_clause(CnfClause::new(clause.lits().to_vec()));
+        let _ = grown.add_clause(CnfClause::new(clause.to_vec()));
     }
     *formula = grown;
 }

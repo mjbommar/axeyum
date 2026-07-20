@@ -2446,9 +2446,9 @@ pub fn lrat_to_alethe(formula: &CnfFormula, proof: &[LratStep]) -> Vec<AletheCom
     let mut clause_form: BTreeMap<u64, String> = BTreeMap::new();
     // All `assume`s first (Alethe convention; some checkers warn otherwise), with
     // the `or`-unpacking steps for multi-literal clauses deferred until after them.
-    for (i, clause) in formula.clauses().iter().enumerate() {
+    for (i, clause) in formula.clauses().enumerate() {
         let lrat_id = i as u64 + 1;
-        let lits = clause.lits();
+        let lits = clause;
         if lits.len() >= 2 {
             // Multi-literal: assume the disjunction, then `or`-unpack to a clause.
             let assume_id = format!("a{lrat_id}");

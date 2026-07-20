@@ -162,6 +162,10 @@ impl CnfClause {
         &self.lits
     }
 
+    fn into_lits(self) -> Vec<CnfLit> {
+        self.lits
+    }
+
     fn evaluate(&self, assignment: &[bool]) -> bool {
         self.lits
             .iter()
@@ -174,7 +178,96 @@ impl CnfClause {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CnfFormula {
     variable_count: usize,
-    clauses: Vec<CnfClause>,
+    literals: Vec<CnfLit>,
+    clause_ends: Vec<u32>,
+}
+
+/// Exact retained-storage accounting for a CNF formula.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CnfStorageProfile {
+    /// Number of clauses.
+    pub clauses: usize,
+    /// Number of literals across all clauses.
+    pub literals: usize,
+    /// Logical bytes occupied by the monotone clause-end array.
+    pub clause_end_logical_bytes: usize,
+    /// Logical bytes occupied by the literal arena.
+    pub literal_logical_bytes: usize,
+    /// Total logical bytes occupied by both flat arrays.
+    pub arena_logical_bytes: usize,
+    /// Allocated-capacity bytes held by both flat arrays.
+    pub arena_capacity_bytes: usize,
+    /// Conservative logical lower bound for the prior `Vec<CnfClause>` layout.
+    pub legacy_logical_lower_bound_bytes: usize,
+}
+
+impl CnfStorageProfile {
+    /// Returns whether all additive byte-accounting identities hold.
+    pub fn invariants_hold(self) -> bool {
+        self.arena_logical_bytes
+            == self
+                .clause_end_logical_bytes
+                .saturating_add(self.literal_logical_bytes)
+            && self.arena_capacity_bytes >= self.arena_logical_bytes
+            && self.legacy_logical_lower_bound_bytes >= self.literal_logical_bytes
+    }
+}
+
+/// Ordered borrowed clauses from one flat [`CnfFormula`].
+#[derive(Debug, Clone)]
+pub struct CnfClauses<'a> {
+    formula: &'a CnfFormula,
+    front: usize,
+    back: usize,
+}
+
+impl<'a> Iterator for CnfClauses<'a> {
+    type Item = &'a [CnfLit];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.front == self.back {
+            return None;
+        }
+        let index = self.front;
+        self.front += 1;
+        self.formula.clause(index)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.back - self.front;
+        (remaining, Some(remaining))
+    }
+}
+
+impl DoubleEndedIterator for CnfClauses<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.front == self.back {
+            return None;
+        }
+        self.back -= 1;
+        self.formula.clause(self.back)
+    }
+}
+
+impl ExactSizeIterator for CnfClauses<'_> {}
+impl std::iter::FusedIterator for CnfClauses<'_> {}
+
+impl CnfFormula {
+    fn checked_clause_end(&self, additional: usize) -> Result<u32, CnfError> {
+        checked_literal_end(self.literals.len(), additional)
+    }
+
+    fn check_clause_lits(&self, lits: &[CnfLit]) -> Result<(), CnfError> {
+        for lit in lits {
+            self.check_var(lit.var())?;
+        }
+        Ok(())
+    }
+
+    fn append_clause_lits(&mut self, lits: &[CnfLit], end: u32) {
+        self.literals.extend_from_slice(lits);
+        self.clause_ends.push(end);
+    }
 }
 
 impl CnfFormula {
@@ -182,7 +275,8 @@ impl CnfFormula {
     pub fn new(variable_count: usize) -> Self {
         Self {
             variable_count,
-            clauses: Vec::new(),
+            literals: Vec::new(),
+            clause_ends: Vec::new(),
         }
     }
 
@@ -191,9 +285,67 @@ impl CnfFormula {
         self.variable_count
     }
 
-    /// Formula clauses.
-    pub fn clauses(&self) -> &[CnfClause] {
-        &self.clauses
+    /// Number of clauses.
+    pub fn clause_count(&self) -> usize {
+        self.clause_ends.len()
+    }
+
+    /// Number of stored clause literals.
+    pub fn literal_count(&self) -> usize {
+        self.literals.len()
+    }
+
+    /// Returns one clause by insertion index.
+    pub fn clause(&self, index: usize) -> Option<&[CnfLit]> {
+        let end = usize::try_from(*self.clause_ends.get(index)?).ok()?;
+        let start = if index == 0 {
+            0
+        } else {
+            usize::try_from(self.clause_ends[index - 1]).ok()?
+        };
+        self.literals.get(start..end)
+    }
+
+    /// Formula clauses in stored order.
+    pub fn clauses(&self) -> CnfClauses<'_> {
+        CnfClauses {
+            formula: self,
+            front: 0,
+            back: self.clause_count(),
+        }
+    }
+
+    /// Exact retained-storage accounting for this formula.
+    pub fn storage_profile(&self) -> CnfStorageProfile {
+        let clause_end_logical_bytes = self
+            .clause_count()
+            .saturating_mul(std::mem::size_of::<u32>());
+        let literal_logical_bytes = self
+            .literal_count()
+            .saturating_mul(std::mem::size_of::<CnfLit>());
+        let arena_logical_bytes = clause_end_logical_bytes.saturating_add(literal_logical_bytes);
+        let arena_capacity_bytes = self
+            .clause_ends
+            .capacity()
+            .saturating_mul(std::mem::size_of::<u32>())
+            .saturating_add(
+                self.literals
+                    .capacity()
+                    .saturating_mul(std::mem::size_of::<CnfLit>()),
+            );
+        let legacy_logical_lower_bound_bytes = self
+            .clause_count()
+            .saturating_mul(std::mem::size_of::<CnfClause>())
+            .saturating_add(literal_logical_bytes);
+        CnfStorageProfile {
+            clauses: self.clause_count(),
+            literals: self.literal_count(),
+            clause_end_logical_bytes,
+            literal_logical_bytes,
+            arena_logical_bytes,
+            arena_capacity_bytes,
+            legacy_logical_lower_bound_bytes,
+        }
     }
 
     /// Adds one clause.
@@ -201,12 +353,27 @@ impl CnfFormula {
     /// # Errors
     ///
     /// Returns [`CnfError::InvalidVariable`] if a literal references a variable
-    /// outside this formula.
+    /// outside this formula, or [`CnfError::LiteralIndexTooLarge`] if the total
+    /// literal count does not fit the formula's stable offset representation.
     pub fn add_clause(&mut self, clause: CnfClause) -> Result<(), CnfError> {
-        for lit in clause.lits() {
-            self.check_var(lit.var())?;
-        }
-        self.clauses.push(clause);
+        self.check_clause_lits(clause.lits())?;
+        let end = self.checked_clause_end(clause.lits().len())?;
+        self.literals.extend(clause.into_lits());
+        self.clause_ends.push(end);
+        Ok(())
+    }
+
+    /// Adds one clause by copying its literal slice into the formula arena.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CnfError::InvalidVariable`] if a literal references a variable
+    /// outside this formula, or [`CnfError::LiteralIndexTooLarge`] if the total
+    /// literal count does not fit the formula's stable offset representation.
+    pub fn add_clause_from_slice(&mut self, lits: &[CnfLit]) -> Result<(), CnfError> {
+        self.check_clause_lits(lits)?;
+        let end = self.checked_clause_end(lits.len())?;
+        self.append_clause_lits(lits, end);
         Ok(())
     }
 
@@ -224,16 +391,15 @@ impl CnfFormula {
             });
         }
         Ok(self
-            .clauses
-            .iter()
-            .all(|clause| clause.evaluate(assignment)))
+            .clauses()
+            .all(|clause| clause.iter().copied().any(|lit| eval_lit(lit, assignment))))
     }
 
     /// Renders this formula as DIMACS CNF.
     pub fn to_dimacs(&self) -> String {
-        let mut out = format!("p cnf {} {}\n", self.variable_count, self.clauses.len());
-        for clause in &self.clauses {
-            for lit in clause.lits() {
+        let mut out = format!("p cnf {} {}\n", self.variable_count, self.clause_count());
+        for clause in self.clauses() {
+            for lit in clause {
                 out.push_str(&lit.dimacs().to_string());
                 out.push(' ');
             }
@@ -721,12 +887,20 @@ impl IncrementalSat {
     /// Learned clauses are intentionally absent: this is the stable problem
     /// presented to the incremental core, not a serialization of opaque solver
     /// internals. The snapshot is suitable for exact cross-core diagnostics.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if the solver's already-validated persistent clause database
+    /// violates the formula representation invariant.
     #[must_use]
     pub fn formula_snapshot(&self) -> CnfFormula {
-        CnfFormula {
-            variable_count: self.variable_count,
-            clauses: self.clauses.clone(),
+        let mut formula = CnfFormula::new(self.variable_count);
+        for clause in &self.clauses {
+            formula
+                .add_clause(clause.clone())
+                .expect("incremental clauses were validated when inserted");
         }
+        formula
     }
 
     /// Reserves variable space up to `variable_count` variables.
@@ -759,7 +933,7 @@ impl IncrementalSat {
         }
         reserve_rustsat_variables(&mut self.solver, self.variable_count)?;
         self.solver
-            .add_clause(rustsat_clause(&clause)?)
+            .add_clause(rustsat_clause(clause.lits())?)
             .map_err(|error| SatError::Solver(error.to_string()))?;
         self.clauses.push(clause);
         Ok(())
@@ -2629,6 +2803,8 @@ pub struct CnfEncodingStats {
     pub duplicate_clauses_skipped: u64,
     /// Clauses retained in the final formula.
     pub clauses_emitted: u64,
+    /// Exact retained-storage accounting for the final formula arena.
+    pub storage: CnfStorageProfile,
     /// Opt-in literal-canonicalization and clause-index attribution.
     pub construction_profile: CnfConstructionProfile,
 }
@@ -2839,7 +3015,7 @@ pub fn tseitin_encode_profiled_with_origins(
 pub fn parse_dimacs(input: &str) -> Result<CnfFormula, CnfError> {
     let mut variable_count = None;
     let mut expected_clauses = None;
-    let mut clauses = Vec::new();
+    let mut formula = None;
     let mut current_clause = Vec::new();
 
     for line in input.lines() {
@@ -2855,7 +3031,9 @@ pub fn parse_dimacs(input: &str) -> Result<CnfFormula, CnfError> {
             if parts.len() != 4 || parts[0] != "p" || parts[1] != "cnf" {
                 return Err(CnfError::InvalidProblemLine(trimmed.to_owned()));
             }
-            variable_count = Some(parse_usize(parts[2])?);
+            let count = parse_usize(parts[2])?;
+            variable_count = Some(count);
+            formula = Some(CnfFormula::new(count));
             expected_clauses = Some(parse_usize(parts[3])?);
             continue;
         }
@@ -2864,7 +3042,10 @@ pub fn parse_dimacs(input: &str) -> Result<CnfFormula, CnfError> {
         for token in trimmed.split_whitespace() {
             let value = parse_dimacs_lit_token(token)?;
             if value == 0 {
-                clauses.push(CnfClause::new(std::mem::take(&mut current_clause)));
+                formula
+                    .as_mut()
+                    .ok_or(CnfError::MissingProblemLine)?
+                    .add_clause(CnfClause::new(std::mem::take(&mut current_clause)))?;
             } else {
                 current_clause.push(lit_from_dimacs(value, count)?);
             }
@@ -2873,19 +3054,18 @@ pub fn parse_dimacs(input: &str) -> Result<CnfFormula, CnfError> {
 
     let variable_count = variable_count.ok_or(CnfError::MissingProblemLine)?;
     let expected_clauses = expected_clauses.ok_or(CnfError::MissingProblemLine)?;
+    let formula = formula.ok_or(CnfError::MissingProblemLine)?;
     if !current_clause.is_empty() {
         return Err(CnfError::MissingClauseTerminator);
     }
-    if clauses.len() != expected_clauses {
+    if formula.clause_count() != expected_clauses {
         return Err(CnfError::ClauseCountMismatch {
             expected: expected_clauses,
-            found: clauses.len(),
+            found: formula.clause_count(),
         });
     }
-    Ok(CnfFormula {
-        variable_count,
-        clauses,
-    })
+    debug_assert_eq!(formula.variable_count(), variable_count);
+    Ok(formula)
 }
 
 /// CNF layer errors.
@@ -2904,6 +3084,11 @@ pub enum CnfError {
     VariableIndexTooLarge {
         /// Requested zero-based index.
         index: usize,
+    },
+    /// The formula's total literal count does not fit its stable offset type.
+    LiteralIndexTooLarge {
+        /// Requested total literal count.
+        literals: usize,
     },
     /// A literal referenced a variable outside the formula.
     InvalidVariable {
@@ -2972,6 +3157,9 @@ impl core::fmt::Display for CnfError {
             }
             CnfError::VariableIndexTooLarge { index } => {
                 write!(f, "CNF variable index {index} does not fit in u32")
+            }
+            CnfError::LiteralIndexTooLarge { literals } => {
+                write!(f, "CNF literal count {literals} does not fit in u32")
             }
             CnfError::InvalidVariable {
                 variable,
@@ -3362,6 +3550,7 @@ struct TseitinEncoder<'a, P = DisabledConstructionProfile> {
     not_ite_gates: Vec<Option<NotIteGate>>,
     not_and_gates: Vec<Option<NotAndGate>>,
     and_tree_gates: Vec<Option<AndTreeGate>>,
+    clause_scratch: Vec<CnfLit>,
     clause_index: ClauseIndex,
     variable_bindings: Vec<CnfVarBinding>,
     clause_attempts: u64,
@@ -3396,6 +3585,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             not_ite_gates: vec![None; aig.node_count()],
             not_and_gates: vec![None; aig.node_count()],
             and_tree_gates: vec![None; aig.node_count()],
+            clause_scratch: Vec::with_capacity(4),
             clause_index: ClauseIndex::default(),
             variable_bindings: Vec::new(),
             clause_attempts: 0,
@@ -3495,6 +3685,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
             tautological_clauses_skipped: self.tautological_clauses_skipped,
             duplicate_clauses_skipped: self.duplicate_clauses_skipped,
             clauses_emitted: usize_to_u64_saturating(self.formula.clauses().len()),
+            storage: self.formula.storage_profile(),
             construction_profile: self.construction_profile.snapshot(),
         }
     }
@@ -4138,7 +4329,7 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         self.clause_attempts = self.clause_attempts.saturating_add(1);
         self.construction_profile
             .record_declared_literals(lits.len());
-        let mut clause = Vec::new();
+        self.clause_scratch.clear();
         for lit in lits {
             self.construction_profile.record_visited_literal();
             match lit {
@@ -4152,25 +4343,33 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                     self.construction_profile.record_false_constant();
                 }
                 EncodedLit::Lit(cnf_lit) => {
-                    if clause.iter().any(|lit| *lit == cnf_lit.negated()) {
+                    if self
+                        .clause_scratch
+                        .iter()
+                        .any(|lit| *lit == cnf_lit.negated())
+                    {
                         self.construction_profile.record_complementary_tautology();
                         self.tautological_clauses_skipped =
                             self.tautological_clauses_skipped.saturating_add(1);
                         return Ok(());
                     }
-                    if clause.contains(cnf_lit) {
+                    if self.clause_scratch.contains(cnf_lit) {
                         self.construction_profile.record_repeated_literal();
                     } else {
-                        clause.push(*cnf_lit);
+                        self.clause_scratch.push(*cnf_lit);
                     }
                 }
             }
         }
-        clause.sort_unstable();
+        self.clause_scratch.sort_unstable();
         self.construction_profile
-            .record_canonical_clause(clause.len());
-        let fingerprint = clause_fingerprint(&clause);
-        self.insert_canonical_clause(clause, fingerprint, origin)
+            .record_canonical_clause(self.clause_scratch.len());
+        let fingerprint = clause_fingerprint(&self.clause_scratch);
+        let clause = core::mem::take(&mut self.clause_scratch);
+        let mut clause = self.insert_canonical_clause(clause, fingerprint, origin)?;
+        clause.clear();
+        self.clause_scratch = clause;
+        Ok(())
     }
 
     fn insert_canonical_clause(
@@ -4178,21 +4377,21 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
         clause: Vec<CnfLit>,
         fingerprint: u64,
         origin: CnfClauseOrigin,
-    ) -> Result<(), CnfError> {
+    ) -> Result<Vec<CnfLit>, CnfError> {
         let primary = &mut self.clause_index.primary;
         let collisions = &mut self.clause_index.collisions;
         match primary.entry(fingerprint) {
             std::collections::hash_map::Entry::Vacant(entry) => {
                 self.construction_profile.record_primary_vacant();
-                let index = self.formula.clauses().len();
-                self.formula.add_clause(CnfClause::new(clause))?;
+                let index = self.formula.clause_count();
+                self.formula.add_clause_from_slice(&clause)?;
                 entry.insert(index);
                 self.construction_profile
                     .record_emitted_origin(index, origin);
             }
             std::collections::hash_map::Entry::Occupied(entry) => {
                 self.construction_profile.record_primary_occupied();
-                if self.formula.clauses()[*entry.get()].lits() == clause.as_slice() {
+                if self.formula.clause(*entry.get()) == Some(clause.as_slice()) {
                     self.construction_profile.record_primary_duplicate();
                     self.construction_profile.record_duplicate_origin(
                         *entry.get(),
@@ -4201,12 +4400,12 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                     );
                     self.duplicate_clauses_skipped =
                         self.duplicate_clauses_skipped.saturating_add(1);
-                    return Ok(());
+                    return Ok(clause);
                 }
                 if let Some(indices) = collisions.get(&fingerprint) {
                     for &index in indices {
                         self.construction_profile.record_collision_comparison();
-                        if self.formula.clauses()[index].lits() == clause.as_slice() {
+                        if self.formula.clause(index) == Some(clause.as_slice()) {
                             self.construction_profile.record_collision_duplicate();
                             self.construction_profile.record_duplicate_origin(
                                 index,
@@ -4215,20 +4414,20 @@ impl<'a, P: ConstructionProfiler> TseitinEncoder<'a, P> {
                             );
                             self.duplicate_clauses_skipped =
                                 self.duplicate_clauses_skipped.saturating_add(1);
-                            return Ok(());
+                            return Ok(clause);
                         }
                     }
                 }
 
                 self.construction_profile.record_collision_insert();
-                let index = self.formula.clauses().len();
-                self.formula.add_clause(CnfClause::new(clause))?;
+                let index = self.formula.clause_count();
+                self.formula.add_clause_from_slice(&clause)?;
                 collisions.entry(fingerprint).or_default().push(index);
                 self.construction_profile
                     .record_emitted_origin(index, origin);
             }
         }
-        Ok(())
+        Ok(clause)
     }
 }
 
@@ -4831,6 +5030,15 @@ fn eval_lit(lit: CnfLit, assignment: &[bool]) -> bool {
     assignment[lit.var().index()] ^ lit.is_negated()
 }
 
+fn checked_literal_end(current: usize, additional: usize) -> Result<u32, CnfError> {
+    let literals = current
+        .checked_add(additional)
+        .ok_or(CnfError::LiteralIndexTooLarge {
+            literals: usize::MAX,
+        })?;
+    u32::try_from(literals).map_err(|_| CnfError::LiteralIndexTooLarge { literals })
+}
+
 fn reserve_rustsat_variables<Cb: batsat::Callbacks>(
     solver: &mut rustsat_batsat::Solver<Cb>,
     variable_count: usize,
@@ -4848,9 +5056,8 @@ fn reserve_rustsat_variables<Cb: batsat::Callbacks>(
         .map_err(|error| SatError::Solver(error.to_string()))
 }
 
-fn rustsat_clause(clause: &CnfClause) -> Result<RustSatClause, SatError> {
+fn rustsat_clause(clause: &[CnfLit]) -> Result<RustSatClause, SatError> {
     clause
-        .lits()
         .iter()
         .copied()
         .map(rustsat_lit)
@@ -5008,9 +5215,10 @@ mod tests {
     use super::{
         CnfClause, CnfClauseOriginPhase, CnfClauseOriginSite, CnfClauseOriginTemplate, CnfError,
         CnfLit, CnfVar, EncodedLit, IncrementalCnf, IncrementalCnfStats, IncrementalSat,
-        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value, parse_dimacs,
-        rustsat_batsat_determinism, solve_with_rustsat_batsat, solve_with_rustsat_batsat_limits,
-        tseitin_encode, tseitin_encode_profiled, tseitin_encode_profiled_with_origins,
+        RustSatBatsatSolver, SatProofStatus, SatResult, SatSolver, aig_lit_value,
+        checked_literal_end, parse_dimacs, rustsat_batsat_determinism, solve_with_rustsat_batsat,
+        solve_with_rustsat_batsat_limits, tseitin_encode, tseitin_encode_profiled,
+        tseitin_encode_profiled_with_origins,
     };
 
     fn test_clause_origin(template: CnfClauseOriginTemplate) -> super::CnfClauseOrigin {
@@ -5019,6 +5227,22 @@ mod tests {
             owner: AigLit::FALSE.node(),
         }
         .origin(template)
+    }
+
+    #[test]
+    fn flat_clause_end_rejects_overflow_without_allocating() {
+        let current = usize::try_from(u32::MAX).unwrap();
+        let literals = current.saturating_add(1);
+        assert_eq!(
+            checked_literal_end(current, 1),
+            Err(CnfError::LiteralIndexTooLarge { literals })
+        );
+        assert_eq!(
+            checked_literal_end(usize::MAX, 1),
+            Err(CnfError::LiteralIndexTooLarge {
+                literals: usize::MAX,
+            })
+        );
     }
 
     #[test]
@@ -5160,8 +5384,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            encoder.formula.clauses(),
-            &[CnfClause::new(vec![p]), CnfClause::new(vec![q])],
+            encoder
+                .formula
+                .clauses()
+                .map(<[CnfLit]>::to_vec)
+                .collect::<Vec<_>>(),
+            vec![vec![p], vec![q]],
             "a fingerprint collision must retain both distinct clauses"
         );
         assert_eq!(encoder.duplicate_clauses_skipped, 2);
@@ -5171,6 +5399,36 @@ mod tests {
             encoder.clause_index.collisions[&forced_fingerprint],
             vec![1]
         );
+    }
+
+    #[test]
+    fn tseitin_clause_scratch_grows_and_is_clean_between_attempts() {
+        let aig = Aig::new();
+        let mut encoder = super::TseitinEncoder::new(&aig);
+        encoder.formula = super::CnfFormula::new(6);
+        let lits = (0..6)
+            .map(|index| CnfLit::positive(CnfVar::new(index).unwrap()))
+            .collect::<Vec<_>>();
+        let encoded_lits = lits
+            .iter()
+            .copied()
+            .map(EncodedLit::Lit)
+            .collect::<Vec<_>>();
+        let origin = test_clause_origin(CnfClauseOriginTemplate::RootUnit);
+
+        encoder.add_encoded_clause(origin, &encoded_lits).unwrap();
+        assert!(encoder.clause_scratch.capacity() >= encoded_lits.len());
+        encoder
+            .add_encoded_clause(origin, &[EncodedLit::Lit(lits[0].negated())])
+            .unwrap();
+        encoder.add_encoded_clause(origin, &encoded_lits).unwrap();
+
+        assert_eq!(encoder.formula.clause(0), Some(lits.as_slice()));
+        assert_eq!(encoder.formula.clause(1), Some(&[lits[0].negated()][..]));
+        assert_eq!(encoder.formula.clause_count(), 2);
+        assert_eq!(encoder.duplicate_clauses_skipped, 1);
+        assert!(encoder.clause_scratch.is_empty());
+        assert!(encoder.clause_scratch.capacity() >= encoded_lits.len());
     }
 
     #[test]
@@ -5354,7 +5612,7 @@ mod tests {
         assert_eq!(encoder.clause_attempts, 4);
         assert_eq!(encoder.tautological_clauses_skipped, 2);
         assert_eq!(encoder.duplicate_clauses_skipped, 1);
-        assert_eq!(encoder.formula.clauses(), &[CnfClause::new(vec![p])]);
+        assert_eq!(encoder.formula.clause(0), Some(&[p][..]));
     }
 
     #[test]
@@ -6053,7 +6311,7 @@ mod tests {
         assert_eq!(true_encoding.formula().variable_count(), 0);
         assert!(true_encoding.formula().evaluate(&[]).unwrap());
         assert!(!false_encoding.formula().evaluate(&[]).unwrap());
-        assert_eq!(false_encoding.formula().clauses()[0].lits(), &[]);
+        assert_eq!(false_encoding.formula().clause(0), Some(&[][..]));
         assert_eq!(true_encoding.roots()[0].cnf_lit, EncodedLit::Const(true));
     }
 

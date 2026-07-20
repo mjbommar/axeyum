@@ -197,11 +197,11 @@ fn verify_addition(
 /// conflict.
 pub fn check_lrat(formula: &CnfFormula, proof: &[LratStep]) -> Result<bool, LratError> {
     let mut active: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::new();
-    for (index, clause) in formula.clauses().iter().enumerate() {
+    for (index, clause) in formula.clauses().enumerate() {
         let id = u64::try_from(index + 1).map_err(|_| {
             LratError::Parse(format!("formula clause index {index} does not fit in u64"))
         })?;
-        active.insert(id, clause.lits().to_vec());
+        active.insert(id, clause.to_vec());
     }
     let mut derived_empty = false;
 
@@ -453,11 +453,11 @@ pub fn elaborate_drat_to_lrat(
     drat: &[DratStep],
 ) -> Result<Vec<LratStep>, LratError> {
     let mut active: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::new();
-    for (index, clause) in formula.clauses().iter().enumerate() {
+    for (index, clause) in formula.clauses().enumerate() {
         let id = u64::try_from(index + 1).map_err(|_| {
             LratError::Parse(format!("formula clause index {index} does not fit in u64"))
         })?;
-        active.insert(id, clause.lits().to_vec());
+        active.insert(id, clause.to_vec());
     }
     let mut next_id = u64::try_from(formula.clauses().len() + 1)
         .map_err(|_| LratError::Parse("formula clause count does not fit in u64".to_owned()))?;

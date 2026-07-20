@@ -217,7 +217,7 @@ fn grow_to(formula: &mut CnfFormula, count: usize) {
         for clause in formula.clauses() {
             // Existing clauses reference only in-range variables, so this cannot
             // fail; the impossible error is ignored rather than panicked on.
-            let _ = grown.add_clause(CnfClause::new(clause.lits().to_vec()));
+            let _ = grown.add_clause(CnfClause::new(clause.to_vec()));
         }
         *formula = grown;
     }
@@ -257,14 +257,10 @@ pub fn propositional_interpolant(a: &CnfFormula, b: &CnfFormula) -> Option<BoolE
     let a_len = a.clauses().len();
     let mut combined = CnfFormula::new(shared_vars);
     for clause in a.clauses() {
-        combined
-            .add_clause(CnfClause::new(clause.lits().to_vec()))
-            .ok()?;
+        combined.add_clause(CnfClause::new(clause.to_vec())).ok()?;
     }
     for clause in b.clauses() {
-        combined
-            .add_clause(CnfClause::new(clause.lits().to_vec()))
-            .ok()?;
+        combined.add_clause(CnfClause::new(clause.to_vec())).ok()?;
     }
 
     // 2. Refute and elaborate to an LRAT resolution proof.
@@ -303,14 +299,14 @@ impl VarClasses {
         let mut in_a = vec![false; count];
         let mut in_b = vec![false; count];
         for clause in a.clauses() {
-            for lit in clause.lits() {
+            for lit in clause {
                 if let Some(slot) = in_a.get_mut(lit.var().index()) {
                     *slot = true;
                 }
             }
         }
         for clause in b.clauses() {
-            for lit in clause.lits() {
+            for lit in clause {
                 if let Some(slot) = in_b.get_mut(lit.var().index()) {
                     *slot = true;
                 }
@@ -346,10 +342,10 @@ fn fold_interpolant(
     let mut clause_of: BTreeMap<u64, Vec<CnfLit>> = BTreeMap::new();
 
     // Input clauses take ids 1..=n in combined order; A first, then B.
-    for (index, clause) in combined.clauses().iter().enumerate() {
+    for (index, clause) in combined.clauses().enumerate() {
         let id = u64::try_from(index + 1).ok()?;
         let is_a = index < a_len;
-        let lits = clause.lits().to_vec();
+        let lits = clause.to_vec();
         let interp = if is_a {
             input_a_interpolant(&lits, classes)
         } else {
@@ -560,10 +556,7 @@ fn unsat_with_expr(base: &CnfFormula, expr: &BoolExpr, negate: bool) -> bool {
     // Start from `base` over the shared space, then grow with aux Tseitin vars.
     let mut formula = CnfFormula::new(base.variable_count());
     for clause in base.clauses() {
-        if formula
-            .add_clause(CnfClause::new(clause.lits().to_vec()))
-            .is_err()
-        {
+        if formula.add_clause(CnfClause::new(clause.to_vec())).is_err() {
             return false;
         }
     }
