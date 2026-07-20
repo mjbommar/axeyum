@@ -335,3 +335,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0277](adr-0277-preregister-direct-root-parity-leaf-emission-memo.md) | Reject the exact-delta direct-root parity memo at its variance/family timing gates and remove it despite a 0.9601 aggregate ratio | accepted |
 | [0278](adr-0278-preregister-glaurung-infeasible-path-certificate.md) | Accept one source-bound Glaurung infeasible-path certificate attachment consumed by pinned external drat-trim | accepted |
 | [0279](adr-0279-gate-glaurung-llvm-frontend-on-llir-contract.md) | Gate a general Glaurung LLVM frontend on Axeyum's structured parser and an explicit executable-LLIR contract; keep the accepted AArch64 ELF route | accepted |
+| [0280](adr-0280-preregister-structured-llvm-function-parser-slice.md) | Preregister a span-carrying, non-panicking LLVM function syntax parser and migrate parameter declarations before instruction semantics | accepted |

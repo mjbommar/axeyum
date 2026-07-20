@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0280 freezes the first T5.1.2 structured LLVM parser
+  slice before code.** Add `reflect::llvm::syntax::parse_function` with owned
+  function/parameter/block/instruction records, byte+line+column spans, quoted
+  names, delimiter-aware parameters, and typed failures for malformed or
+  ambiguous input. Migrate only `param_decls` through it; preserve all existing
+  reflection semantics and compatibility panics. Tests begin red and cover
+  compiler-shaped plus unlabeled functions, malformed spans, duplicate labels,
+  multiple definitions, and determinism before the current LLVM/cross-IR suites
+  and strict quality gates run.
+
 - **2026-07-19 — ADR-0279 conditionally defers the general Glaurung LLVM
   importer and selects Axeyum P5.1/T5.1.2 as the reusable prerequisite.** The
   live-source audit confirms that `LlirFunction` and `Machine<D: Domain>` are a
