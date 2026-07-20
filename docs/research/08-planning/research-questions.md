@@ -745,6 +745,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     including exact LLVM `\XX` identifier escapes. The canonical path preserves
     checked value+definedness proofs and adds reproducible syntax, not memory,
     module resolution, a shared crate, or a second consumer.
+- [ ] Can one flat append-only CNF formula representation reduce the retained
+  allocation footprint and total cold CNF time without changing any clause,
+  proof, verdict, or replay identity?
+  - [ADR-0285](../09-decisions/adr-0285-preregister-flat-cnf-formula-arena.md)
+    freezes a literal arena, monotone clause ends, reusable Tseitin scratch,
+    complete public-consumer migration, exact storage accounting, and a fixed
+    structural-then-paired client-corpus gate. Missing scratch prototypes are
+    motivating evidence only; total CNF time selects or rejects production.
 
 ## Source Pointers
 

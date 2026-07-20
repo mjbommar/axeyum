@@ -340,3 +340,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0282](adr-0282-preregister-typed-llvm-cfg-validation.md) | Preregister typed LLVM PHI/terminator syntax and whole-function CFG validation before checked graph execution | accepted |
 | [0283](adr-0283-preregister-checked-acyclic-llvm-cfg-execution.md) | Accept bounded checked acyclic LLVM CFG execution with path-conditioned value and definedness joins | accepted |
 | [0284](adr-0284-preregister-canonical-llvm-cfg-rendering.md) | Accept canonical scalar LLVM CFG rendering and exact quoted-identifier byte escapes | accepted |
+| [0285](adr-0285-preregister-flat-cnf-formula-arena.md) | Preregister a flat append-only CNF formula arena and reusable Tseitin clause scratch before fixed structural and paired timing gates | proposed |
