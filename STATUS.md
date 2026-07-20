@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — Artifact cleanup starts with one semantics-preserving internal
+  walker consolidation.** Fifteen byte-equivalent binary top-level conjunction
+  walkers now use one tested crate-private helper, removing 102 net source
+  lines without changing public API or evidence behavior. The two non-equivalent
+  implementations remain explicit: `auto` accepts arbitrary arity, while
+  `array_axiom` additionally flattens asserted BV1 conjunctions. Two focused
+  order/duplicate/leaf tests, all 883 full-profile solver library tests, and
+  full-profile clippy `-D warnings` pass under the one-job 4 GiB discipline.
+  Next: inventory the reconstruction twins and define their shared contract
+  before any file split; generated Lean text and checker selection must remain
+  byte-for-byte stable.
+
 - **2026-07-20 — ADR-0304 closes the engine-cache factorial with a bounded
   mixed result.** The fresh successor completed 120/120 processes and 387,060
   checks; every producer and frozen-analyzer correctness, classification,
@@ -5406,6 +5418,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Deduplicated binary conjunction walkers.** One crate-private
+  helper replaces 15 identical `collect_top_conjuncts` implementations; the two
+  semantically different walkers remain local. The full 883-test solver library
+  suite and full-profile clippy pass.
 
 - **2026-07-20 — Accepted the corrected engine-cache factorial.** The fresh
   ADR-0304 successor passes all 120 producer reports and the unchanged analyzer.

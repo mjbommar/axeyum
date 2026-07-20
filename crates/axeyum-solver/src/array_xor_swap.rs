@@ -7,6 +7,8 @@
 
 use axeyum_ir::{ArraySortKey, Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// A checked refutation of a two-stage ordinary-swap versus XOR-swap
 /// disequality.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -369,19 +371,6 @@ fn match_xor_swap(arena: &TermArena, term: TermId) -> Option<SwapShape> {
         index_width,
         element_width,
     })
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 fn collect_bv_and_operands(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {

@@ -8,6 +8,8 @@
 
 use axeyum_ir::{ArraySortKey, Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 const BINARY_SEARCH_INDEX_WIDTH: u32 = 4;
 const BINARY_SEARCH_LEN: usize = 16;
 const BINARY_SEARCH_STEPS: usize = 5;
@@ -365,19 +367,6 @@ fn match_const_select(arena: &TermArena, term: TermId) -> Option<ConstSelect> {
         index_width: *width,
         index_value: *value,
     })
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 fn collect_bv_and_operands(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {

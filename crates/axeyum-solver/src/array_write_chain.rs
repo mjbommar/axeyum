@@ -8,6 +8,8 @@
 
 use axeyum_ir::{ArraySortKey, Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// A checked refutation of a guarded aligned write-chain disequality.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AlignedWriteChainCommutationCertificate {
@@ -93,19 +95,6 @@ struct WriteBlock {
 struct StoreWrite {
     index: TermId,
     value: TermId,
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 fn match_negated_bv1_zero_equality(arena: &TermArena, term: TermId) -> Option<TermId> {

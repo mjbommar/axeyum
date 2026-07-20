@@ -16,6 +16,8 @@
 
 use axeyum_ir::{Op, Sort, SymbolId, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// A self-checking refutation of the exact nested-XOR theorem in ADR-0099.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct IntNestedXorRefutationCertificate {
@@ -269,18 +271,4 @@ fn as_forall(arena: &TermArena, term: TermId) -> Option<(SymbolId, TermId)> {
         return None;
     };
     Some((*var, *body))
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    if let TermNode::App {
-        op: Op::BoolAnd,
-        args,
-    } = arena.node(term)
-        && let [left, right] = &**args
-    {
-        collect_top_conjuncts(arena, *left, out);
-        collect_top_conjuncts(arena, *right, out);
-    } else {
-        out.push(term);
-    }
 }

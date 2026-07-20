@@ -11,6 +11,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Op, Sort, TermArena, TermId, TermNode};
 
+use crate::term_walk::collect_top_binary_conjuncts as collect_top_conjuncts;
+
 /// A self-checking refutation of inconsistent lowered set-cardinality bounds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SetCardinalityRefutationCertificate {
@@ -105,19 +107,6 @@ pub fn set_cardinality_refutation(
         }
     }
     None
-}
-
-fn collect_top_conjuncts(arena: &TermArena, term: TermId, out: &mut Vec<TermId>) {
-    match arena.node(term) {
-        TermNode::App {
-            op: Op::BoolAnd,
-            args,
-        } if args.len() == 2 => {
-            collect_top_conjuncts(arena, args[0], out);
-            collect_top_conjuncts(arena, args[1], out);
-        }
-        _ => out.push(term),
-    }
 }
 
 /// Collects every bit-vector-sorted subterm, walking the term **DAG** once per

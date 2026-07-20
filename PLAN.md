@@ -287,9 +287,17 @@ session state.
 >    Glaurung engine cache experimental/cold-policy-specific. Report only the
 >    per-driver intervals in the committed result, never a pooled headline. The
 >    first ADR-0303 campaign remains rejected and contributes no timing claim.
-> 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
->    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
->    related-work positioning vs Veritas, attacker-control, and the MS agentic system.
+> 10. [AXEYUM] **WIP.** Staged artifact cleanup (split `reconstruct.rs` 18.5k,
+>    namespace the ~567-item public API, dedup repeated term walkers, and model
+>    config as types), plus related-work positioning vs Veritas,
+>    attacker-control, and the MS agentic system. The first bounded cleanup
+>    consolidates 15 byte-equivalent binary `collect_top_conjuncts` copies into
+>    one tested crate-private helper, removing 102 net source lines with no
+>    public API change. `auto` intentionally keeps its arbitrary-arity walker;
+>    `array_axiom` intentionally keeps BV1 asserted-conjunction semantics. All
+>    883 full-profile solver library tests and clippy `-D warnings` pass. Next,
+>    inventory the reconstruction twins by shared contract before moving code;
+>    preserve each evidence checker and generated Lean text byte-for-byte.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

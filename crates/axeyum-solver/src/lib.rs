@@ -169,6 +169,7 @@ macro_rules! full_modules {
         pub mod support_matrix;
         mod symexec;
         mod term_identity;
+        mod term_walk;
         mod theory_combination;
         mod toy_bv_vm;
         pub mod trust;
