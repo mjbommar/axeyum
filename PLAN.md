@@ -312,8 +312,15 @@ session state.
 >    unchanged; only three narrow clausal-walk helpers cross back to the parent.
 >    Transitivity and congruence generated-source snapshots remain byte-identical,
 >    and all 885 full-profile tests plus clippy pass. `reconstruct.rs` is now
->    16,476 lines / 720,714 bytes. Continue R3 with a dependency/source-stability
->    census for the datatype/array family before moving that family alone.
+>    16,476 lines / 720,714 bytes. The follow-on census separates the two names:
+>    direct array certificates already moved in R2 and the remaining ABV path is
+>    only 44 lines of orchestration, while datatype owns a cohesive proof family.
+>    That 2,313-line family now lives in `reconstruct/datatype.rs`; tester,
+>    distinctness, injectivity, and acyclicity source snapshots are byte-identical,
+>    and all 886 tests, clippy, and rustdoc pass. The parent is 14,189 lines /
+>    618,110 bytes. Continue R3 with the quantifier-family dependency and
+>    source-stability census; do not manufacture an array module around one thin
+>    dispatcher.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

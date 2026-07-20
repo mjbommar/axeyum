@@ -555,6 +555,113 @@ fn equality_family_generated_source_is_byte_stable() {
     );
 }
 
+/// R3 datatype extraction gate: each specialized axiom-free route must keep
+/// emitting byte-identical Lean when its proof family moves behind one module.
+#[test]
+fn datatype_family_generated_source_is_byte_stable() {
+    let mut fixtures = Vec::new();
+
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("Color");
+    let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+    let green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+    let a = {
+        let symbol = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let green_a = arena.construct(green, &[a]).unwrap();
+    let tester = arena.dt_test(red, green_a).unwrap();
+    let source = super::reconstruct_qf_dt_tester_to_lean_module(&arena, &[tester])
+        .expect("tester route recognizes fixture")
+        .expect("tester route reconstructs");
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let color = arena.declare_datatype("Color");
+    let red = arena.add_constructor(color, "Red", &[("v".into(), Sort::BitVec(2))]);
+    let green = arena.add_constructor(color, "Green", &[("w".into(), Sort::BitVec(2))]);
+    let a = {
+        let symbol = arena.declare("a", Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let b = {
+        let symbol = arena.declare("b", Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let red_a = arena.construct(red, &[a]).unwrap();
+    let green_b = arena.construct(green, &[b]).unwrap();
+    let distinct = arena.eq(red_a, green_b).unwrap();
+    let source = super::reconstruct_qf_dt_distinct_to_lean_module(&arena, &[distinct])
+        .expect("distinctness route recognizes fixture")
+        .expect("distinctness route reconstructs");
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let pair = arena.declare_datatype("Pair");
+    let pair_mk = arena.add_constructor(
+        pair,
+        "mk",
+        &[
+            ("fst".into(), Sort::BitVec(2)),
+            ("snd".into(), Sort::BitVec(2)),
+        ],
+    );
+    let mut bv = |name: &str| {
+        let symbol = arena.declare(name, Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let a = bv("a");
+    let b = bv("b");
+    let c = bv("c");
+    let d = bv("d");
+    let lhs = arena.construct(pair_mk, &[a, b]).unwrap();
+    let rhs = arena.construct(pair_mk, &[c, d]).unwrap();
+    let pair_eq = arena.eq(lhs, rhs).unwrap();
+    let field_eq = arena.eq(a, c).unwrap();
+    let field_ne = arena.not(field_eq).unwrap();
+    let source =
+        super::reconstruct_qf_dt_injective_to_lean_module(&arena, &[pair_eq, field_ne])
+            .expect("injectivity route recognizes fixture")
+            .expect("injectivity route reconstructs");
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let list = arena.declare_datatype("IntList");
+    let _nil = arena.add_constructor(list, "nil", &[]);
+    let cons = arena.add_constructor(
+        list,
+        "cons",
+        &[
+            ("head".into(), Sort::BitVec(2)),
+            ("tail".into(), Sort::Datatype(list)),
+        ],
+    );
+    let h = {
+        let symbol = arena.declare("h", Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let x = {
+        let symbol = arena.declare("x", Sort::Datatype(list)).unwrap();
+        arena.var(symbol)
+    };
+    let cons_h_x = arena.construct(cons, &[h, x]).unwrap();
+    let cycle = arena.eq(x, cons_h_x).unwrap();
+    let source = super::reconstruct_qf_dt_acyclic_to_lean_module(&arena, &[cycle])
+        .expect("acyclicity route recognizes fixture")
+        .expect("acyclicity route reconstructs");
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    assert_eq!(
+        fixtures,
+        [
+            (2_057, 12_042_421_301_549_597_275),
+            (3_069, 15_726_968_749_404_357_215),
+            (2_640, 1_434_913_494_449_130_936),
+            (3_940, 2_520_869_314_195_085_188),
+        ]
+    );
+}
+
 /// **`QF_UFBV` Ackermann certificate end-to-end (ADR-0013 task #19)**: take a REAL
 /// `prove_qf_ufbv_unsat_alethe` certificate for
 /// `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — decided via the Ackermann reduction —

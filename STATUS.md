@@ -5442,6 +5442,14 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split datatype reconstruction ownership.** The cohesive
+  2,313-line axiom-free tester/distinctness/injectivity/acyclicity family now
+  lives in `reconstruct/datatype.rs`; the parent retains datatype-aware term
+  translation and one four-route dispatch import. Four generated Lean source
+  snapshots remain byte-identical, all 886 solver tests pass, and full-profile
+  clippy plus focused rustdoc are clean under the bounded one-job profile.
+  The remaining ABV reconstructor is only orchestration and stays parent-owned.
+
 - **2026-07-20 — Split equality reconstruction ownership.** R3's first proof
   family now lives in `reconstruct/equality.rs`: reflexivity, both symmetry
   forms, binary/n-ary transitivity, and n-ary congruence. Shared literal parsers

@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and the equality slice of R3 complete
+Status: active; R1, R2, and the equality/datatype slices of R3 complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -20,10 +20,11 @@ accepted terms.
 
 | Surface | Current size / shape |
 |---|---:|
-| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after the R3 equality slice |
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after equality; 14,189 lines / 618,110 bytes after datatype |
 | `reconstruct/direct.rs` | 1,406 lines / 52,407 bytes after R2 |
 | `reconstruct/equality.rs` | 534 lines / 23,244 bytes after the first R3 family extraction |
-| `reconstruct/tests.rs` | 4,563 lines / 186,592 bytes |
+| `reconstruct/datatype.rs` | 2,313 lines / 103,818 bytes after the second R3 family extraction |
+| `reconstruct/tests.rs` | 4,670 lines / 190,715 bytes |
 | `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
 | `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 43 |
@@ -126,8 +127,19 @@ before/after byte comparisons for their affected fixtures.
    transitivity module at 1,480 bytes / `16524372807544528002` and the congruence
    module at 1,558 bytes / `9142307883420495535`; kernel inference also remains
    explicit. All 885 full-profile solver tests and clippy `-D warnings` pass.
-   Next census and extract datatype/array, then quantifier, resolution/CNF,
-   bit-blast, and arithmetic regions separately, with the same per-family gates.
+   The second slice's dependency census shows that datatype is one cohesive
+   2,313-line family, while direct array adapters already belong to R2 and the
+   remaining `reconstruct_qf_abv_to_lean_source` is a 44-line orchestrator.
+   Datatype therefore moves alone. The parent imports only its four specialized
+   routes and retains datatype-aware Alethe term translation; eight Nat-lemma
+   builders are visible only to the existing unit tests. FNV-1a snapshots pin
+   tester at 2,057 bytes / `12042421301549597275`, distinctness at 3,069 bytes /
+   `15726968749404357215`, injectivity at 2,640 bytes /
+   `1434913494449130936`, and acyclicity at 3,940 bytes /
+   `2520869314195085188`. All 886 full-profile tests, clippy, and rustdoc pass.
+   Next census and extract quantifier, resolution/CNF, bit-blast, and arithmetic
+   regions separately, with the same per-family gates. Do not create an array
+   module solely to relocate the thin orchestration function.
 4. **R4 — visibility audit.** After the files settle, narrow private imports and
    only then evaluate the separate root-API namespacing work.
 
