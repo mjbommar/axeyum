@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ADR-0289 preregisters Cargo-owned MIR target selection.**
+  ADR-0288 accepts checked semantics over an authenticated direct-rustc module,
+  but no target Cargo package can reach that path from its own build. The
+  zero-row follow-up freezes one explicit manifest/package/lib-or-bin/function/
+  compiler/64-bit/target-dir/output command, `cargo rustc --locked`, raw stdout,
+  checked parse+reflection before atomic retention, deterministic typed/term
+  summary, stable failures, and a standalone dependency-free fixture package.
+  Two captures, exact byte/summary reproduction, three-way LLVM/direct-rustc/
+  Cargo-build semantics, source witness replay, no-partial-output controls, and
+  unchanged ADR-0287 bytes are required. Next: commit this ADR before creating
+  the target crate, command, capture, or semantic test.
+
 - **2026-07-20 — ADR-0288 accepts checked MIR byte-memory CFG reflection.**
   The 3,262-byte authenticated module now includes a byte-identical replayed
   conditional write fixture and feeds a separate located, typed, non-panicking
@@ -5115,6 +5127,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0289 freezes the Cargo-owned MIR selection seam.** Before
+  adding another semantic construct, the next T5.1.3 slice must explicitly
+  select a locked target package and lib/bin, compile it with the registered
+  rustc, validate one named function through the checked parser/reflector, and
+  only then atomically retain raw MIR and emit a deterministic summary. The
+  zero-row gates require byte/summary reproduction, the same four-byte contract
+  across Cargo MIR/direct MIR/LLVM, source replay, precise failure classes, and
+  no changes to the accepted fixture or dependency/deployment surfaces.
 
 - **2026-07-20 — ADR-0288 accepts authenticated checked MIR byte memory.** The
   exact rustc fixture grows to five functions / 3,262 raw bytes with a

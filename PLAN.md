@@ -140,8 +140,12 @@ session state.
 >    explicit access panic independent of `assert`, stores, branch memory joins,
 >    source replay, migrated bounds proofs, and the same bounded roundtrip
 >    specification on MIR and LLVM. Whole-crate build selection and general MIR
->    places remain open; do not extend the existing panic-oriented line parser
->    or perturb the accepted Linux recall route.
+>    places remain open. ADR-0289 now preregisters the target-build prerequisite:
+>    one explicit Cargo manifest/package/target/function selection must compile
+>    with the registered toolchain, pass the checked MIR path, and retain raw
+>    output in one command before broader places or LLIR work. Do not extend the
+>    existing panic-oriented line parser or perturb the accepted Linux recall
+>    route.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical
