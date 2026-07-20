@@ -459,6 +459,21 @@ fn record_cnf_storage_profile(stats: &mut SolveStats, storage: CnfStorageProfile
         "cnf_formula_legacy_logical_lower_bound_bytes",
         usize_to_u64(storage.legacy_logical_lower_bound_bytes),
     );
+    push_count(
+        stats,
+        "cnf_formula_clause_ends_monotone",
+        u64::from(storage.clause_ends_monotone),
+    );
+    push_count(
+        stats,
+        "cnf_formula_clause_ends_in_bounds",
+        u64::from(storage.clause_ends_in_bounds),
+    );
+    push_count(
+        stats,
+        "cnf_formula_terminal_end_matches_literals",
+        u64::from(storage.terminal_end_matches_literals),
+    );
 }
 
 fn record_cnf_construction_profile(stats: &mut SolveStats, profile: CnfConstructionProfile) {
@@ -1757,6 +1772,7 @@ mod tests {
                     .cnf_formula_legacy_logical_lower_bound_bytes
                     .saturating_mul(4)
         );
+        assert!(layers.cnf_formula_storage_invariants.all_hold());
     }
 
     #[test]

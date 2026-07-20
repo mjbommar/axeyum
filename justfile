@@ -165,7 +165,7 @@ bench-glaurung-qfbv-raw-cnf-construction-profile corpus_dir manifest tier="repre
 
 analyze-glaurung-qfbv-raw-cnf-construction-profile artifact out="bench-results/glaurung-qfbv-raw-cnf-construction-profile-analysis.json":
     mkdir -p "$(dirname '{{ out }}')"
-    python3 scripts/analyze-cnf-construction-profile.py "{{ artifact }}" --expected-files 162 --expected-sat 88 --expected-unsat 74 --expected-manifest-sha256 7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064 --expected-same-owner-parity-duplicates 107000 --expected-baseline-analysis bench-results/glaurung-cnf-duplicate-origin-profile-20260719/analysis.json --expected-family arithmetic=36 --expected-family comparison=12 --expected-family mixed=7 --expected-family register-slice=52 --expected-family slice-partial=54 --expected-family trivial=1 --out "{{ out }}"
+    python3 scripts/analyze-cnf-construction-profile.py "{{ artifact }}" --require-flat-storage --expected-files 162 --expected-sat 88 --expected-unsat 74 --expected-manifest-sha256 7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064 --expected-same-owner-parity-duplicates 107000 --expected-baseline-analysis bench-results/glaurung-cnf-duplicate-origin-profile-20260719/analysis.json --expected-family arithmetic=36 --expected-family comparison=12 --expected-family mixed=7 --expected-family register-slice=52 --expected-family slice-partial=54 --expected-family trivial=1 --out "{{ out }}"
 
 # GQ4's production experiment is a distinct policy from observational demand
 # profiling. The first recipe measures the whole selected tier; the second

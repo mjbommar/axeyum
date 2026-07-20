@@ -114,6 +114,9 @@ fn structured_formula_matches_vec_oracle_and_reports_storage_exactly() {
 
     let profile = formula.storage_profile();
     assert!(profile.invariants_hold());
+    assert!(profile.clause_ends_monotone);
+    assert!(profile.clause_ends_in_bounds);
+    assert!(profile.terminal_end_matches_literals);
     assert_eq!(profile.clauses, CLAUSES);
     assert_eq!(
         profile.literals,

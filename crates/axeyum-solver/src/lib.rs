@@ -200,7 +200,7 @@ pub use incremental::{
     AssumptionOutcome, IncrementalBvSolver, IncrementalBvStats, IncrementalModelLiftStats,
     IncrementalSolver, ReplayCheckedSatCachePolicy, ReplayCheckedSatCacheStats,
 };
-pub use layers::BvLayerStats;
+pub use layers::{BvLayerStats, CnfStorageInvariants};
 pub use model::Model;
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,

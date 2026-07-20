@@ -199,6 +199,12 @@ pub struct CnfStorageProfile {
     pub arena_capacity_bytes: usize,
     /// Conservative logical lower bound for the prior `Vec<CnfClause>` layout.
     pub legacy_logical_lower_bound_bytes: usize,
+    /// Whether clause ends are nondecreasing in insertion order.
+    pub clause_ends_monotone: bool,
+    /// Whether every clause end is within the literal arena.
+    pub clause_ends_in_bounds: bool,
+    /// Whether the final clause end equals the literal-arena length.
+    pub terminal_end_matches_literals: bool,
 }
 
 impl CnfStorageProfile {
@@ -210,6 +216,9 @@ impl CnfStorageProfile {
                 .saturating_add(self.literal_logical_bytes)
             && self.arena_capacity_bytes >= self.arena_logical_bytes
             && self.legacy_logical_lower_bound_bytes >= self.literal_logical_bytes
+            && self.clause_ends_monotone
+            && self.clause_ends_in_bounds
+            && self.terminal_end_matches_literals
     }
 }
 
@@ -337,6 +346,15 @@ impl CnfFormula {
             .clause_count()
             .saturating_mul(std::mem::size_of::<CnfClause>())
             .saturating_add(literal_logical_bytes);
+        let clause_ends_monotone = self.clause_ends.windows(2).all(|ends| ends[0] <= ends[1]);
+        let clause_ends_in_bounds = self
+            .clause_ends
+            .iter()
+            .all(|&end| usize::try_from(end).is_ok_and(|end| end <= self.literal_count()));
+        let terminal_end_matches_literals = self.clause_ends.last().map_or_else(
+            || self.literals.is_empty(),
+            |&end| usize::try_from(end).is_ok_and(|end| end == self.literal_count()),
+        );
         CnfStorageProfile {
             clauses: self.clause_count(),
             literals: self.literal_count(),
@@ -345,6 +363,9 @@ impl CnfFormula {
             arena_logical_bytes,
             arena_capacity_bytes,
             legacy_logical_lower_bound_bytes,
+            clause_ends_monotone,
+            clause_ends_in_bounds,
+            terminal_end_matches_literals,
         }
     }
 
