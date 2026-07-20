@@ -170,6 +170,25 @@ memo bytes. This is a deterministic guard, not a memory claim. Any structural,
 soundness, accounting, or logical-storage failure rejects the candidate before
 timing.
 
+The clean detached candidate observation from
+`2c9209fe9c4442cf87b6c121a04997849c05930b` passes this gate. It decides
+162/162 (88 SAT, 74 UNSAT), agrees with both the exact manifest and in-process
+Z3 on 162/162, replays every SAT model, and preserves every registered
+per-query outcome, neutral memo counter, AIG/CNF counter, and deterministic
+lowering/CNF structure digest. All dense rows satisfy `slots = source_terms`,
+`occupied = writes`, payload/binding equality, and root-width equality.
+
+Aggregate candidate logical bytes are 5,840,384 (587,280 dense headers plus
+5,253,104 payload), 98.35% of the 5,938,264-byte conservative BTree baseline.
+The independent comparison sets `per_instance_structure_preserved=true`,
+`logical_bytes_within_gate=true`, and `timing_authorized=true`. The candidate
+process peaked at 1.2 GiB with zero swap. Retained files are:
+
+- `bench-results/glaurung-dense-bit-memo-20260720/candidate/artifact.json`,
+  SHA-256 `e4db458f28df939e1527a0849a56cd6092f45f7e2258a44c9e77b6088c6f0eac`;
+- `bench-results/glaurung-dense-bit-memo-20260720/candidate/analysis.json`,
+  SHA-256 `dbb2d65cacf61957afc68b0b6e0dae4f686ae46cf45792fbd89b66184cf56256`.
+
 ## Conditional unprofiled timing protocol
 
 Only after the structural gate passes, compare distinct prebuilt release

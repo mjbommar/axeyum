@@ -336,9 +336,14 @@ session state.
 > 656,638 payload literals, 5,938,264 conservative logical bytes, and 162
 > deterministic structure-digest samples. The independent analysis accepts it;
 > artifact/analysis SHA-256 values are `d8258399...b39f5` and
-> `205bdfcf...4f25`. This committed baseline now permits only the preregistered
-> dense implementation. Exact structural/storage comparison then gates six
-> order-balanced unprofiled pairs
+> `205bdfcf...4f25`. The isolated dense implementation is now committed at
+> `2c9209fe`, and its clean detached profile passes the exact structural gate:
+> all 162 rows preserve outcomes, replay, every neutral memo counter, and both
+> ordered structure digests. Conservative logical memo bytes fall
+> 5,938,264 -> 5,840,384 (-1.65%), below the preregistered 110% ceiling; the
+> fail-closed analysis sets `timing_authorized=true`. Candidate artifact/analysis
+> hashes are `e4db458f...f0eac` and `dbb2d65c...56256`. The immediate next action
+> is the registered six order-balanced unprofiled pairs
 > on bit-blast time, family tails, cold total, variance, and RSS. Failure restores
 > the tree representation. Clause storage, scratch reuse, reverse traversal,
 > and capacity hints remain closed; interning and packed-literal ideas require

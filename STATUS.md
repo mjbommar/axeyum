@@ -322,8 +322,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0300's frozen BTree baseline is accepted; the isolated
-  dense implementation is now unblocked.**
+- **2026-07-20 — ADR-0300's dense candidate passes the structural/storage gate;
+  six-pair timing is authorized.**
   The audited mechanism is exact lookup on dense insertion-order `TermId`s:
   production currently uses `BTreeMap<TermId, Vec<AigLit>>` without semantic
   iteration. The reported 3.89x dense-plus-`Rc` scratch result is explicitly
@@ -344,9 +344,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   structure-digest rows. The accepted BTree totals are 24,470 source/occupied
   terms, 656,638 payload literals, and 5,938,264 conservative logical bytes;
   artifact and analysis hashes are `d8258399...b39f5` and
-  `205bdfcf...4f25`. The run peaked at 1.3 GiB with zero swap inside the
-  serialized cgroup. This frozen artifact now permits only the preregistered
-  dense implementation. Exact structural/storage identity then gates six
+  `205bdfcf...4f25`. The baseline run peaked at 1.3 GiB with zero swap inside
+  the serialized cgroup. The isolated dense candidate is committed at
+  `2c9209fe`; its clean detached v39 profile decides and agrees 162/162, replays
+  88/88 SAT models, preserves every neutral per-query counter plus both ordered
+  structure digests, and passes every memo invariant. Conservative logical
+  bytes fall 5,938,264 -> 5,840,384 (-1.65%), and the fail-closed comparison
+  sets `timing_authorized=true`. Candidate artifact and analysis hashes are
+  `e4db458f...f0eac` and `dbb2d65c...56256`; its capped process peaked at
+  1.2 GiB with zero swap. Full all-feature workspace tests and doctests,
+  warning-denied workspace rustdoc, strict focused Clippy, QF_BV-only, scalar
+  WASM, `+simd128` WASM, analyzer, formatting, and link gates pass. Exact
+  structural/storage identity now permits six
   order-balanced unprofiled pairs on bit-blast time, cold total, variance,
   family tails, and RSS. Failure restores the BTree map; success is bounded
   cold-path engineering, not a solver-speed headline.
