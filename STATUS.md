@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ADR-0288 preregisters checked MIR byte-memory CFG reflection.**
+  The authenticated raw MIR now exposes the real write shape, but the only
+  semantic path still panics, trusts a preceding `assert` for bounds, and cannot
+  return or join memory. The zero-row follow-up freezes named selection from the
+  complete module, located typed `Result` syntax, explicit target-width
+  configuration, access-derived panic predicates, initialized byte reads/stores,
+  acyclic switch joins over return/panic/final memory, source replay, migration
+  of the embedded bounds tests, and the same four-byte roundtrip specification
+  on checked MIR and LLVM. It also requires one authenticated conditional-store
+  fixture after registration. Next: commit this ADR before changing the source,
+  regenerating MIR, or running a semantic test.
+
 - **2026-07-20 — ADR-0287 accepts reproducible compiler-MIR capture before MIR
   writes.** One ordinary source is bound to raw 2,304-byte
   `rustc 1.97.0-nightly` stdout, exact compiler/LLVM identity and argv, and

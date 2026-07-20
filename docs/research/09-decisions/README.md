@@ -343,3 +343,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0285](adr-0285-preregister-flat-cnf-formula-arena.md) | Reject the flat CNF formula arena at its fixed per-instance storage gate before timing and restore production | accepted |
 | [0286](adr-0286-preregister-bounded-llvm-byte-memory.md) | Accept checked bounded initialized byte memory for typed LLVM GEP/load/store reflection | accepted |
 | [0287](adr-0287-preregister-reproducible-mir-capture.md) | Accept exact compiler-MIR provenance, byte reproduction, and stale-fixture detection before extending MIR semantics | accepted |
+| [0288](adr-0288-preregister-checked-mir-byte-memory.md) | Preregister structured non-panicking MIR byte-memory reflection with explicit access panic and branch-state joins | proposed |
