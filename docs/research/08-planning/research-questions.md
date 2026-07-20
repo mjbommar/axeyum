@@ -745,6 +745,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     including exact LLVM `\XX` identifier escapes. The canonical path preserves
     checked value+definedness proofs and adds reproducible syntax, not memory,
     module resolution, a shared crate, or a second consumer.
+  - [ADR-0286](../09-decisions/adr-0286-preregister-bounded-llvm-byte-memory.md)
+    preregisters the first T5.1.5 memory slice: one explicit initialized bounded
+    byte object, typed `inbounds` GEP plus `i8` load/store, pointer/byte
+    definedness, final-memory joins, and canonical syntax. It does not admit
+    general provenance, multiple/aliasing objects, MIR writes, LLIR lowering,
+    or a shared crate.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

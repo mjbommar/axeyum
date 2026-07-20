@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ADR-0286 preregisters checked bounded LLVM byte memory.** The
+  post-ADR-0285 ranked queue returns to the deferred Glaurung importer
+  prerequisite. The live Axeyum audit finds two useful but panic-oriented test
+  reflectors for constant and symbolic byte loads; the live Glaurung `403a5c5`
+  audit confirms a domain-generic byte-addressed memory center but no LLVM
+  object/poison contract. The frozen first T5.1.5 slice therefore binds exactly
+  one `ptr` parameter to 1--256 initialized non-aliasing bytes, types only
+  `inbounds` byte GEP plus `i8` load/store, carries pointer and stored-byte
+  definedness through checked acyclic paths, exposes final memory, and keeps the
+  canonical parse/render boundary. General provenance, wide accesses, MIR
+  writes, LLIR hardening, and Glaurung lowering remain separate. Next: commit
+  this zero-row registration before red tests or new compiler fixture output.
+
 - **2026-07-20 — ADR-0285's flat CNF arena is rejected before timing and
   removed.** The one clean artifact-v38 process at `02e770c2` passes all
   162 decisions, 162 manifest/Z3 agreements, 88 SAT replays, exact legacy
