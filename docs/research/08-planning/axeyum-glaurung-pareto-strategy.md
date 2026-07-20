@@ -326,15 +326,65 @@ cheap.
   the reversal. Publish this six-cell characterization and separately scoped
   ADR-0233 hard-frontier cold result, not a pooled ratio, universal regime, or
   Axeyum performance-leadership claim.
-- **B2. Attack the cold 84% via abstraction-refinement + word-level (not more
-  bit-blasting).** The cold gap is bit_blast+cnf. Adopt the SOTA lever:
-  incremental abstraction-refinement for `mul`/`div`/`rem` and word-level
-  preprocessing (cf. PolySAT direction), which is where z3's maturity actually
-  wins. This is the only principled path to cold parity.
-- **B3. Parallel path exploration.** axeyum solvers are `Send`; z3's thread-hostile
-  context forces sequential passes. Per-path warm solvers unlock parallel
-  exploration -- a scaling axis z3 structurally cannot match, aligned with the
-  Bitwuzla+Mallob parallel trend but *in-process and per-path*.
+- **B2. Attack the cold 84% via *reduction + memory layout*, not SIMD (reported
+  scratch prototypes plus the ADR-0285 in-tree gate).** The cold gap is
+  bit_blast+cnf. Two levers, both
+  WASM-safe. **(a) Algorithmic reduction:** incremental abstraction-refinement for
+  `mul`/`div`/`rem` and word-level preprocessing (cf. PolySAT direction) -- fewer
+  terms/gates/clauses, the principled path toward cold parity. **(b) Data-structure
+  / memory layout -- a historically motivated candidate:** `axeyum-cnf` currently stores
+  `CnfClause { lits: Vec<CnfLit> }` (one heap allocation per clause; ~272k tiny
+  clauses per the ADR-0259 profile), the classic SAT anti-pattern. A reported
+  scratch flat-clause prototype (Kissat/CaDiCaL; Varisat in Rust) used a
+  real-derived distribution and reported **3.9x faster construction, 1.61x
+  faster fragmented-heap scan, and 2.4x less memory**. The representation is
+  append-only (no compaction downside), pure-Rust, and WASM-safe. Honest scope:
+  that is the
+  emission/allocation sub-phase, not all of CNF -- measure end-to-end in-tree
+  before any number, and do NOT touch the fingerprint map (ADR-0200 regressed
+  8.55%) or the AIG table (already index-based). **SIMD is ruled out** for this
+  layer -- the hot loops are hash-probe/pointer-chase, not vectorizable (B4). Both
+  levers are "do less work / touch less memory," so they help native and WASM
+  alike. Historical context and the retained-evidence correction:
+  [`cold-path-data-structures.md`](cold-path-data-structures.md). **Production
+  result (ADR-0285): closed negative before timing.** The in-tree flat arena
+  preserved all 162 decisions/replays/construction identities and cut aggregate
+  logical storage to 54.08% of the legacy lower bound, but the preregistered
+  per-instance <=80% rule failed on five payload-dominated singleton clauses
+  (92.86--96.27%). The candidate is removed; do not promote the prototype
+  ratios, relax the gate post-observation, or treat this layout as the active
+  near-term win. Algorithmic reduction remains the open B2 direction; a future
+  layout needs a new independently justified zero-row ADR.
+- **B3. Parallel path exploration (native-throughput only, NOT a WASM lever).**
+  axeyum solvers are `Send`; z3's thread-hostile context forces sequential
+  passes. Per-path warm solvers unlock parallel exploration -- a scaling axis z3
+  structurally cannot match, aligned with the Bitwuzla+Mallob parallel trend but
+  *in-process and per-path*. Label it honestly: browser WASM will not benefit
+  (threads need nightly + `build-std` + SharedArrayBuffer/COOP-COEP), so this is
+  a native-server play, orthogonal to the deployability thesis.
+- **B4. WASM-safe speed guardrail (reported scratch prototype 2026-07-19;
+  artifacts not retained).** Two observations guide how to chase speed without
+  sawing off the WASM branch. (1) **Portable SIMD works and is WASM-safe:** one
+  `wide::u64x4` / `+simd128` source lowers to AVX2 on native
+  (`vpand/vpor/vpxor %ymm`) AND simd128 on wasm32 (`v128.xor/and/or`, `i64x2.*`),
+  pure-Rust (`bytemuck` only), toggled by a single compile flag with no code
+  change; a clean scalar loop autovectorizes to the *same* v128 under
+  `+simd128`, so the flag alone is the free win, and a scalar-fallback build
+  (0 v128) covers WASM's lack of runtime SIMD detection (ship two builds).
+  (2) **But axeyum's dominant cold cost does NOT vectorize:** the 84% lives in
+  AIG `AndUniqueTable` hash-probe insertion and CNF `tseitin_encode`
+  fingerprint-index/collision/clause-emit work (ADR-0200/0259) -- pointer-chasing
+  and hashing, the same class as SAT-core BCP. Portable SIMD has near-zero
+  surface on the cost that matters. **Decision: do NOT invest in SIMD.** A future
+  simd128/scalar dual build is an admissible deployment experiment, not a landed
+  configuration or accepted speed claim until independently gated. The real
+  cold-path lever is B2 algorithmic reduction, which is inherently WASM-safe because "do fewer
+  operations" helps every target. **Forbidden (breaks the pure-Rust / no-C / WASM
+  envelope):** linking a C SAT core, hand-written AVX-512 / `pulp`-style
+  native-only multiversioning, and heavy threading. The WASM-safe lever and the
+  actual-bottleneck lever coincide (both are *do less work*), so keeping WASM and
+  pursuing cold parity point the same direction -- portability is not a speed
+  sacrifice here.
 
 ### Pillar C -- The differentiators as first-class contributions
 

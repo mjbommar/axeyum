@@ -12,6 +12,206 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+> **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
+> ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
+> validated policy difference, no residual coverage gap, symbolic memory not
+> admitted. A0 stays as reproducibility infrastructure, not a coverage project.
+> The surviving spine is **correctness + deployability + a characterized
+> performance regime + reproducibility-for-free**. New levers this cycle: the
+> self-owned IOCTL-census stack (Windows + Linux census -> glaurung/ioctlance ->
+> axeyum, with 22-CVE ground truth and an LLM-ranked handler worklist) and a
+> candidate LLVM-IR Linux frontend. Ranked next actions, balanced across the
+> solver lane (STATUS current focus: decide-rate ~73%, reduction-depth
+> performance, proofs) and the integration lane (open: broader labeled recall,
+> reproducibility, and frontend breadth; the neutral baseline and this exact
+> timeout tier are closed):
+>
+> Critical path (paper evidence):
+> 1. [INTEGRATION] Symbolic CVE recall first admitted slice -- ADR-0263--0271
+>    preserve the 22-CVE qualification and 4/12 artifact attrition, then accept
+>    the only two frontend-eligible vulnerable/fixed pairs at 2/2 paired recall,
+>    2/2 fixed-side cleanliness, and byte-identical rerun output. This is bounded
+>    selected-pair detection recall, not 22-CVE population recall or precision.
+>    Broader labeled evidence remains open when new artifacts/frontends are
+>    independently admitted, but it no longer blocks item 2's neutral baseline.
+> 2. [BOTH] Fair in-process warm neutral baseline -- the benchmark-only Bitwuzla
+>    adapter and six-cell `{z3, axeyum, Bitwuzla} x {cold, warm}` producer are
+>    frozen at Glaurung `2961d7c`; ADR-0272 preregisters the four-driver N>=5
+>    run, and the v3 analyzer is frozen at Axeyum `5d74283b` with the exact
+>    release/linkage registration. ADR-0272 now accepts the exact 20-process
+>    result: all six cells decide and agree on all 12,902 checks/pass with zero
+>    fallback; Axeyum beats warm Z3 on three drivers and loses on Dptf, while
+>    warm Bitwuzla wins all four. The neutral blocker is closed and rules out an
+>    Axeyum performance-lead headline; cvc5 remains the external-textual point.
+> 3. [INTEGRATION] Timeout-sensitive / harder-driver tier under a deterministic
+>    work-bound (not the 250 ms wall); measure the accepted six-cell topology +
+>    cold-Z3-authoritative findings at census scale. A1 wiring is complete at
+>    Axeyum `72375263` / isolated Glaurung `dc06a37`; ADR-0273 preregisters a
+>    zero-row, 14-tier first-20 tcpip calibration with distinct backend units.
+>    All 42 processes are validator-clean, but ADR-0273 rejects calibration:
+>    Z3 qualifies at rlimit 100,000 and Bitwuzla at 4 polls on their respective
+>    tier streams, while Axeyum never reaches 95% in both cells (at 8,192:
+>    cold 4,233/4,846, warm 3,280/4,846; all residuals typed resource-limit).
+>    No 338-function row is authorized. Because the Z3 authority limit changes
+>    the explored check stream, do not combine independently selected tier
+>    values. ADR-0274 now preregisters the fixed-Z3-authority correction: hold
+>    Z3 at 100,000, require the exact invariant 4,846-check stream, and sweep ten
+>    Axeyum/Bitwuzla shadow-limit pairs at N=3 and accepts the invariant-stream
+>    triplet Z3 100,000, Axeyum 32,768, Bitwuzla 512. No census row exists;
+>    ADR-0275 now preregisters N=3 joint first-20 reproduction and permits an
+>    unchanged N=3 338/338 census only if that gate passes. Phase A passes 3/3
+>    with all six cells 4,846/4,846 and exact authority/finding reproduction;
+>    Phase B executes 3/3 but rejects: only 210/338 functions are analyzed and
+>    every row has 102 assertion-cap fallbacks. Byte-identical findings and
+>    97,112/97,112 verdict agreement do not rescue dropped work. Close this exact
+>    harder-driver protocol negative and advance item 4.
+>    Item 2 remains closed; any successor result would be a bounded one-authority
+>    census, not labeled recall or cross-authority finding parity.
+>
+> Solver mission (STATUS central gap):
+> 4. [AXEYUM] Cold-path decide-rate + reduction depth (GQ5) -- the measured lever is
+>    word-level reduction, not lazy CEGAR (`lazy_ops_total=0`); bit_blast+cnf=84%.
+>    The ADR-0259--0261 duplicate-origin mechanism is closed: its selected
+>    candidate changed every required construction counter by zero and was
+>    removed before timing. Resume with a preregistered leaf-shape/clause-overlap
+>    diagnostic that can name a new fixed structural delta, not with another
+>    implementation inferred from the same origin counts. ADR-0276 now freezes
+>    that zero-row diagnostic: partition parity duplicates into within-leaf,
+>    cross-leaf/same-owner, and cross-owner cells with bounded leaf shapes before
+>    observing the fixed corpus or authorizing any production change. The
+>    artifact-v37 diagnostic is frozen at `b02b6ab4`; its fixed observation
+>    passes and puts all 107,000 parity duplicates in one ordinary two-input
+>    `within_leaf` cell, with zero cross-leaf/cross-owner overlap. ADR-0277 now
+>    tests only a same-positive-direct-root leaf-emission memo. It hits every
+>    exact structural delta and a favorable 0.9601 aggregate timing ratio, but
+>    fails the preregistered variance and family guards; candidate `9533c508` is
+>    removed at `4fc45767`. This fixed duplicate-clause lane stays closed unless
+>    a new population independently motivates another mechanism; ADR-0278 has
+>    since completed item 5's bounded reviewer cell, so the active queue advances
+>    to the structural/deployability items below rather than another inferred
+>    clause tweak or an unmeasured proof expansion.
+> 5. [BOTH] **Bounded reviewer cell DONE (ADR-0278).** Isolated Glaurung
+>    `f01a057` now returns a source-rebound `InfeasiblePathCertificate`; its fixed
+>    bundle rechecks internally and under pinned external `drat-trim`, while a
+>    satisfiable control is rejected. This closes attachment and downstream
+>    consumption only: the retained DRAT is a two-byte empty-clause proof over
+>    complementary input units. Broader work now requires a separately
+>    preregistered real workload that can measure proof prevalence, nontrivial
+>    traces, and second-pass cost. Whole-CFG/SV-COMP witness composition and the
+>    full Lean tactic backend P3.7 remain separate evidence-gated lanes.
+>
+> Conditional structural lever:
+> 6. [BOTH] **Direct Glaurung importer DEFERRED; prerequisite selected
+>    (ADR-0268/0279).** The measured kernel surface made a general LLVM importer
+>    the larger route, so the accepted selected-pair campaign uses Glaurung's
+>    existing AArch64 ELF -> LLIR frontend. The LLIR audit finds a reusable
+>    `LlirFunction` + `Machine<D: Domain>` center, but not a compiler-IR-neutral
+>    contract: temporary/value widths, explicit false successors, ABI/sink
+>    policy, and LLVM poison/memory/call semantics remain gaps. Advance Axeyum
+>    P5.1/T5.1.2's structured `.ll` parser first. ADR-0280's accepted opening
+>    slice now provides a non-panicking function/parameter/block boundary and
+>    migrates `param_decls`. ADR-0281 now accepts typed scalar instructions and
+>    value+definedness reflection: LLVM poison flags fail visibly instead of
+>    being discarded, the semantic witness gates pass, and one proof has moved
+>    to the checked path. ADR-0282 now accepts typed PHIs/terminators and exact
+>    predecessor/successor validation on real clang/rustc diamonds, without
+>    inheriting the legacy executor's unreachable-arm semantics. ADR-0283 now
+>    accepts bounded checked acyclic execution with path-conditioned
+>    value+definedness joins, selected-edge PHIs, explicit cycle decline, and
+>    `unreachable => defined=false`; all total cross-IR fixtures and the
+>    unreachable-default proof use the checked path with definedness explicit.
+>    ADR-0284 now accepts the scalar syntax reproducibility gate: canonical
+>    typed CFG rendering, exact LLVM `\XX` identifier escapes, structural
+>    render/reparse fixpoints, and preservation of checked value+definedness.
+>    ADR-0286 now accepts the first bounded T5.1.5 memory slice:
+>    one initialized non-aliasing byte object, typed `inbounds` byte GEP plus
+>    `i8` load/store, explicit pointer/stored-byte definedness, final-memory
+>    joins, canonical rendering, compiler fixtures, and replay-checked proofs.
+>    It is not general provenance, wide memory,
+>    MIR writes, LLIR hardening, or Glaurung lowering. Only
+>    after those should LLIR hardening and a same-object binary-vs-IR
+>    differential be admitted. ADR-0287 now accepts the immediate T5.1.3
+>    prerequisite: exact compiler identity/argv, raw MIR capture, committed
+>    source/output/provenance hashes, stable-CI drift detection, pinned-compiler
+>    byte replay, and adversarial tamper/regeneration gates before checked MIR
+>    writes. Capture adds no semantics;
+>    the following ADR must make MIR memory and rejection checked rather than
+>    extending the existing panic-oriented line parser. Do not build a second
+>    line parser or perturb the accepted Linux recall route.
+>
+> Convert survived strengths (cheap):
+> 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical
+>    policy -> identical findings run/machine/backend on the recall corpus.
+> 8. [AXEYUM] **DONE (ADR-0227).** Executable Node and Chromium runs cover
+>    75,000 measured solves each with zero mismatch/trap; small-query medians are
+>    13--71 us. The release browser runtime is 1,801,662 bytes / 541,248 bytes
+>    as separately gzip-9-compressed assets. This is absolute deployment
+>    evidence, not native parity or a minimum parser footprint.
+>
+> Rigor / defense:
+> 9. [BOTH] Warm-reuse additivity vs a GREEN/GreenTrie constraint cache in front of
+>    a cold solver -- measure whether solver-internal warm state is additive or
+>    subsumed by known SE-level constraint caching.
+> 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
+>    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
+>    related-work positioning vs Veritas, attacker-control, and the MS agentic system.
+>
+> Do NOT reopen symbolic memory / concretization coverage, chase raw-union
+> coverage, or claim performance leadership: the neutral warm baseline (#2) has
+> landed and rejects that framing. Full downstream/SOTA rationale and sequencing:
+> [`docs/research/08-planning/axeyum-glaurung-pareto-strategy.md`](docs/research/08-planning/axeyum-glaurung-pareto-strategy.md).
+
+> **WASM-safe speed: do not invest in SIMD (reviewed 2026-07-20).** A reported
+> scratch prototype explored portable SIMD against the WASM constraint, but its
+> named source directories are absent and its numbers are not accepted evidence.
+> The reported finding was: (1) portable SIMD is WASM-safe
+> -- one pure-Rust `wide`/`+simd128` source lowers to AVX2 on native and simd128
+> on wasm32, and clean loops autovectorize under `+simd128` (the free win, plus a
+> scalar-fallback build for WASM's lack of runtime SIMD detection); BUT (2)
+> axeyum's dominant cold cost (AIG `AndUniqueTable` hash-probe + CNF
+> `tseitin_encode` fingerprint/clause work, ADR-0200/0259) is
+> pointer-chasing/hashing and does NOT vectorize -- near-zero SIMD surface on the
+> 84%. **Decision:** do not invest in SIMD. A future simd128/scalar dual build is
+> permissible only behind its own committed gate; it is not a landed
+> configuration or speed claim. The cold-path lever stays algorithmic reduction (word-level
+> / abstraction-refinement per GQ5/B2), which is inherently WASM-safe because
+> "do fewer operations" helps every target. **Forbidden as envelope-breaking:**
+> linking a C SAT core, AVX-512 / `pulp`-style native-only multiversioning, and
+> SharedArrayBuffer threading (parallel exploration is a native-throughput play,
+> not a WASM lever). The WASM-safe lever and the actual-bottleneck lever coincide
+> (both are *do less work*), so keeping WASM and pursuing cold parity point the
+> same direction. Detail + prototype evidence:
+> [`axeyum-glaurung-pareto-strategy.md`](docs/research/08-planning/axeyum-glaurung-pareto-strategy.md)
+> Pillar B4.
+
+> **Cold-path layout tested and rejected at its fixed gate (2026-07-20).** A
+> scratch prototype motivated a data-structure alternative on a real-derived
+> cold hot path. `axeyum-cnf`'s `CnfClause { lits: Vec<CnfLit> }` is one heap
+> allocation per clause (~272k tiny clauses, ADR-0259) -- the classic SAT
+> anti-pattern. A flat clause arena (Kissat/CaDiCaL; Varisat in Rust) measured, on
+> the real distribution, **3.9x faster construction, 1.61x faster fragmented-heap
+> scan, 2.4x less memory**; the DB is append-only (grep-confirmed: `clauses.push`,
+> no remove/retain), so no compaction downside. Pure-Rust, WASM-safe, and the
+> memory win doubles as a deployability win (amplified under wasm `dlmalloc`).
+> Honest scope: emission/allocation sub-phase only, not all of CNF -- measure
+> end-to-end in-tree before any number; do NOT touch the fingerprint map (ADR-0200
+> regressed 8.55%) or the AIG table (already index-based). Net: the cold-path lever
+> is **algorithmic reduction + memory layout** (both "do less work", WASM-safe by
+> nature); SIMD stays ruled out. That historical implementation recommendation
+> is superseded by ADR-0285. Context:
+> [`cold-path-data-structures.md`](docs/research/08-planning/cold-path-data-structures.md).
+> ADR-0285's in-tree production test is now **closed negative before timing**.
+> The implementation and artifact-v38 validator passed pre-observation at
+> `725858b1` / `a57d5ace`; the one clean 162-query process then preserved every
+> decision, replay, construction count, and offset invariant. Aggregate logical
+> storage was favorable at 54.08% of the legacy lower bound, but the frozen
+> per-instance <=80% gate failed on five payload-dominated singleton clauses
+> (92.86--96.27%). Do not relax that rule post-observation or time the candidate.
+> The artifact is retained and production is restored at `56936920` /
+> `f3456365`. The named scratch prototypes are absent and remain motivating
+> history, not reproducible or accepted evidence; any successor requires a new
+> independently justified zero-row ADR.
+
 > **Glaurung publication-evidence reset (2026-07-17, ADR-0213).** The reviewer
 > checklist confirms that the integration evidence is correctness-strong but
 > not yet sufficient for headline performance claims. Strict typed translation
@@ -1108,11 +1308,11 @@ count as decisions or speedups.
 
 | ID | Roadmap item | Scope and exit criterion |
 |---|---|---|
-| **GQ1** | **Capture and profile real queries first** | **Four-driver map, query/internal attribution, fresh/retained exact-CNF controls, neutral cold-reset plus source-owner-retained SMT breadth, complete three-solver timeout frontier, independent four-oracle fuzz, bounded/canonical/four-schedule plus wider timeout-sensitive raw authority cells, process-isolated corrected-representative and wider-holdout end-to-end faithfulness, deadline-aware generated proof widening, isolated behavior-preserving Glaurung A0, corrected taint/SystemBuffer baselines, versioned confidence partition, source-backed nonzero positive control, rejected usbprint resource protocols, corrected five-policy sweep, exhaustive source-backed difference adjudication, v6 hidden-work rejection, one neutral standard DRAT consumer plus checker-sanity control, and the capped nontrivial-proof no-selection DONE (ADR-0187/0188/0197/0213--0262 plus Glaurung `7f682e5`).** The independent/edge campaign reaches 12,000/12,000 four-way agreements and 4,471/4,471 SAT replays with all 14 edge families nonvacuous; cvc5 agrees on all 9,526 real checks in both external protocols; ADR-0233 closes the neutral timeout control; ADR-0262 closes the first-20 tcpip v6 authority matrix with timeout-invariant raw sets, stable AnyModel divergence, and exact LeastUnsigned parity at substantial cost. The real-query proof union covers 1,186 decisions, 603 SAT replays, all 583 UNSAT CNF DRAT proofs, and 582/583 stronger certificates. Add a genuinely broader labeled finding population and wire A1's backend-specific deterministic resource configuration. No symbolic-memory work is admitted. |
+| **GQ1** | **Capture and profile real queries first** | **Real-query mapping, neutral external controls, the six-cell in-process warm map, four-oracle fuzzing, proof denominators, authoritative policy controls, process-isolated certificates, behavior-preserving Glaurung A0, corrected finding semantics, source-backed controls, symbolic-CVE artifact admission, 2/2 selected-pair recall, deterministic six-cell work-bound calibration, and one bounded downstream infeasible-path certificate are complete through ADR-0278.** ADR-0272 accepts 64,510 repeated occurrences with complete six-way parity and zero fallback: Axeyum beats warm Z3 on three named drivers and loses on Dptf, while warm Bitwuzla leads all four. ADR-0273 rejects independent backend-limit calibration because Axeyum never reaches the fixed 95% gate; ADR-0274 accepts only the invariant-stream triplet (Z3 100,000, Axeyum 32,768, Bitwuzla 512); and ADR-0275 accepts its first-20 reproduction but rejects the attempted 338-function census because every repetition analyzes only 210/338 functions and incurs 102 assertion-cap fallbacks. This exact harder-driver protocol is closed negative despite byte-identical findings and 97,112/97,112 verdict agreement. ADR-0276/0277 close the fixed GQ5 duplicate-clause lane without an accepted change. ADR-0278 then closes only the reviewer-minimum proof attachment/source-rebinding/external-consumption cell; proof prevalence, nontrivial traces, cost, and whole-CFG composition remain unmeasured. Broaden labeled recall only with independently admitted artifacts, keep symbolic memory closed, and reopen proof integration only around a separately preregistered real workload; otherwise advance the next structural or deployability item. |
 | **GQ2** | **Cheap always-on cold simplification tier** | Add a bounded, denotation-preserving one-shot tier for constant folding and trivial identities whose own cost is measured. Add a size/shape and cold-vs-warm policy that selects cheap, configured, or no preprocessing. Exit only when cold end-to-end time is non-worse in aggregate and improves the target class at the GQ1 validity gates. |
 | **GQ3** | **Coercion-cancellation peepholes and causal telemetry** | **Current measured tranche complete; use ablation as policy evidence.** Exact nested/concat/extension/coercion rules and ADR-0159's repeated default-minus-rule comparator are landed. `extract_extend` improves lowering, but all four measured rules change zero AIG nodes and clauses. Do not globally delete sound rewrites because one corpus does not fire them; instead, keep a Glaurung policy only for rules with measured reach/cost and reopen register-slice-specific work only when an ablation demonstrates downstream AIG/CNF or native-time reduction. |
 | **GQ4** | **Cold demand-driven bit-slice reduction** | **Out of the active queue.** ADR-0157 v1 is correct but regresses the real ratio about 1.42x→4.49x; ADR-0158's conservative admission is a safe no-op but does not improve the required family. Both remain explicit/off. Do not tune thresholds further on this corpus; only a qualitatively different constant-cost admission proof and a fresh client gate can reopen GQ4. |
-| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **Current duplicate-origin lane CLOSED without optimization (ADR-0259--0261); broad warm construction lane remains closed by ADR-0219.** Artifact v36's dominant same-owner parity-origin cell did not imply identical parity leaves: candidate `8b95d42a` preserves all 162 correctness/shape gates but changes attempts, duplicates, and attempted literals by exactly zero. Timing was correctly not run and the no-op code is removed. Reopen only with a separately preregistered leaf-shape/clause-overlap mechanism, not another interpretation of the origin count. |
+| **GQ5** | **Cheaper AIG construction and measured CNF encoding** | **The fixed duplicate-clause and flat-storage lanes are both CLOSED negative (ADR-0259--0285).** Candidate `9533c508` removes the exact v37 duplicate cell but fails fixed CV/family gates and is removed at `4fc45767`. ADR-0285's independent flat arena preserves all 162 decisions/replays/construction identities and reaches a favorable 0.540824 aggregate logical-storage ratio, but fails the frozen per-instance <=80% rule on 5/162 payload-dominated singleton-clause rows. Timing is forbidden; commits `56936920` / `f3456365` restore production. Reopen only from a new independently motivated mechanism and zero-row ADR, not another partition, rerun, threshold relaxation, or candidate inferred from these failures. |
 | **GQ6** | **Cold SAT/CDCL tuning** | **Fresh and retained exact-CNF controls DONE (ADR-0220/0221).** The proof core beats fresh BatSat before checking, while retained BatSat beats retained Z3 Boolean by 3.5527x on the ordered Axeyum CNF stream. Do not select a custom-core rewrite from Dptf; reopen only on a SAT-dominant family with a neutral core gap and deterministic limits. |
 | **GQ7** | **Cheaper warm entry and delta preprocessing** | **Source identity, fair map, query/internal attribution, fresh/retained exact-CNF controls, four-driver neutral cold-reset and source-owner-retained SMT, bounded raw finding parity, canonical tcpip authority, four-schedule union, isolated configurable-policy A0, corrected taint/SystemBuffer baselines, versioned confidence partition, 14-row source-backed positive control, v1 resource rejection, v2 maximum-precision rejection, detector repair, corrected sweep, exhaustive source-backed difference adjudication, and a full v6-gated wider authority campaign DONE (ADR-0201--0205/0213--0248/0262 plus Glaurung `7f682e5`; campaign revision `ff3c0a7`).** ADR-0232 shows 16.4x--57.0x within-cvc5 retained/full-reset reductions while preserving the external textual boundary. A0's public `ConcretizationPolicy` covers both concretization seams and preserves default value selection. ADR-0247 completes all five scalar cells; ADR-0248 then proves their 54 varying planted-fixture rows contain zero independent primitives. ADR-0262 confirms on the wider prefix that LeastUnsigned restores exact authority parity but overlaps only 147 rows with AnyModel's 220-row union and costs 96,075 solves / about 191 MiB under Axeyum. Publish raw, confidence-gated, validated, work, and cost partitions; never use raw `>= AnyModel` or producer confidence alone as a recall target. Keep symbolic-address memory gated off pending a genuinely broader labeled residual gap. The companion cross-repository Pareto strategy owns the downstream/SOTA analysis and sequencing. |
 | **GQ8** | **Verdict and CNF reuse for duplicate/prefix queries** | **Exact replay-checked SAT reuse is done for available families (ADR-0192); stronger subsumption remains open.** Exact hits replay under fixed bounds; ordinary UNSAT/Unknown and prefix verdict reuse remain forbidden. Investigate only replay-checked stronger-model reuse where a cached model is proven to satisfy the complete weaker later query. |
@@ -1158,9 +1358,10 @@ artifact evidence below governs.
 supersedes performance-claim ordering below).** Product admission and paper
 evidence are now distinct:
 
-1. **Map the honest performance regime — mechanism, four-driver fair map, and
-   trace-available feature join DONE; internal causal and timeout-sensitive
-   evidence WIP:** the v2 marked path and
+1. **Map the honest performance regime — mechanism, four-driver fair map,
+   trace-available feature join, in-process neutral control, and the exact
+   deterministic harder-driver protocol DONE (the latter closed negative):**
+   the v2 marked path and
    fail-closed analyzer already provide N>=5 fixed-work four-cell outcomes,
    geomean paired ratios, deterministic bootstrap 95% confidence intervals,
    p50/p90/p95/p99, CDFs, process CV, and exact warm/fallback partitions.
@@ -1175,9 +1376,17 @@ evidence are now distinct:
    cold-reset external SMT point on Dptf; ADR-0223 widens exact cvc5 parity to
    all 9,526 four-driver checks. ADR-0232 adds a source-owner-retained cvc5
    control over the same stream with exact persistent-prefix and temporary-
-   assumption topology. Add a harder driver whose buckets cross a timeout
-   boundary. The publication claim is the measured map and
-   only a causally supported boundary, never a preselected speedup.
+   assumption topology. ADR-0272 closes the topology-equivalent in-process
+   neutral point: all six Z3/Axeyum/Bitwuzla cold/warm cells decide and agree,
+   while warm Bitwuzla leads all four drivers and rules out an Axeyum
+   performance-lead headline. ADR-0273--0275 carry the harder tcpip tier through
+   backend-specific work calibration, invariant-stream triplet selection, and
+   joint reproduction, but reject the 338-function census at 210/338 analyzed
+   functions plus 102 assertion-cap fallbacks per repetition. Do not retune
+   that protocol or treat identical findings/verdicts as complete work. The
+   publication claim is the measured map and only a causally supported boundary,
+   never a preselected speedup. Solver work returns to a new GQ5 diagnostic; any
+   future harder-driver successor requires a new zero-row ADR.
 2. **Correctness as the lead contribution — standing/exhaustive-neutral seed
    round and first proof denominator DONE (ADR-0224--0226), independent/real
    coverage WIP:**
@@ -1208,20 +1417,24 @@ evidence are now distinct:
    real assurance denominators or report the retained row as certified.
    Keep invalid consumer states separate from valid-formula fuzz.
 3. **Neutral baselines and oracles — four-driver cold-reset, source-owner-
-   retained breadth, and the three-solver timeout frontier DONE
-   (ADR-0222/0223/0232/0233):** cvc5 1.3.4 agrees on all 9,526 accepted checks with exact model-output
+   retained breadth, the three-solver timeout frontier, and the six-cell
+   in-process neutral map DONE (ADR-0222/0223/0232/0233/0272):** cvc5 1.3.4 agrees on all 9,526 accepted checks with exact model-output
    accounting and stable N=5 throughput in both protocols. ADR-0232 matches
    persistent-prefix, temporary-assumption, and owner-session topology while
    remaining explicitly external/textual. ADR-0233 separately sweeps the exact
    52-formula tcpip hard frontier at 50/100/250/1000 ms across Axeyum, Z3, and
-   cvc5 and closes the neutral formula-timeout blocker. Keep in-process, FFI,
-   and external SMT boundary costs separately named; do not use Z3 as both sole
-   oracle and sole comparator. The remaining timeout-sensitive item is wider
-   sole-authority **finding** evidence, not another neutral formula sweep.
-4. **Authoritative finding parity — bounded four-driver, first canonical
-   tcpip, extremal, mixed-site raw-union, taint/SystemBuffer baselines, and
-   confidence-schema tiers, source-backed positive control, and policy-sweep
-   fail-closed prefixes DONE; detector correction WIP (ADR-0229/0236/0238/0239/0240/0241/0242/0243/0244/0245):** sole-authority Z3 and Axeyum
+   cvc5 and closes the neutral formula-timeout blocker. ADR-0272 adds the fair
+   in-process Bitwuzla cold/warm point with complete six-way decisions,
+   agreement, and zero fallback. Keep in-process, FFI, and external SMT boundary
+   costs separately named; do not use Z3 as both sole oracle and sole comparator.
+   ADR-0275's wider sole-authority **finding** attempt is retained as a negative
+   completeness result, not a performance or recall row; a successor is not an
+   automatic continuation of this protocol.
+4. **Authoritative finding parity — bounded four-driver, canonical and wider
+   tcpip controls, extremal/mixed-site policy sweeps, corrected taint/SystemBuffer
+   semantics, the source-backed positive control, and bounded symbolic-CVE
+   recall slice DONE; broader labeled recall remains open only when independently
+   admitted (ADR-0229/0236/0238--0248/0262--0271/0273--0275):** sole-authority Z3 and Axeyum
    binaries emit byte-identical ordered raw sink lists on Dptf, vwififlt,
    IntcSST, and SurfacePen across N=3 order-balanced repetitions: 302 canonical
    sinks and 1,812 stable emitted rows. Differing vwififlt/IntcSST solve counts
@@ -1265,12 +1478,19 @@ evidence are now distinct:
    tcpip remains an unlabeled zero-high diagnostic population whose exact
    deterministic counts vary 84--110. ADR-0248 exhaustively closes the complete
    source-backed difference as 30 ordinary plumbing rows plus 24 duplicate sink
-   presentations, with zero independent primitives. Add BoundarySet/DiverseEnum only as
-   later settings of the same policy surface after bounded successor forking is
-   executable; do not fake them by collapsing a set to one value. Deterministic
-   work bounds are configuration; symbolic-address memory remains gated off
-   until a genuinely broader labeled population demonstrates residual coverage
-   headroom, not from a detector classification artifact.
+   presentations, with zero independent primitives. ADR-0262's wider tcpip
+   control remains unlabeled and policy-sensitive despite exact LeastUnsigned
+   authority parity. ADR-0263--0271 admit only two frontend-eligible symbolic-
+   CVE pairs and accept 2/2 vulnerable-side detections with 2/2 fixed sides
+   clean; this is selected-pair recall, not 22-CVE population recall or
+   precision. ADR-0273--0275 then reject the exact full-census protocol because
+   complete function work and zero fallback do not hold. Add
+   BoundarySet/DiverseEnum only as later settings of the same policy surface
+   after bounded successor forking is executable; do not fake them by collapsing
+   a set to one value. Deterministic work bounds are configuration; symbolic-
+   address memory remains gated off until a genuinely broader labeled population
+   demonstrates residual coverage headroom, not from a detector classification
+   artifact.
    Require genuinely broader labeled evidence before any finding-preservation
    claim.
 5. **Deployability and artifact readiness — profile, WebAssembly, bounded warm
@@ -1304,9 +1524,10 @@ evidence are now distinct:
    behavior and evidence identity across each bounded refactor.
 
 No ratio of sums, single-run ratio, timeout-mixed population, or warm aggregate
-containing unnamed one-shot fallbacks is a paper speedup. The accepted GQ5
-engineering sequence resumes through item 1's harness; it does not wait for all
-five publication items.
+containing unnamed one-shot fallbacks is a paper speedup. GQ5 resumes with a
+new preregistered diagnostic, not with the rejected ADR-0261 candidate or an
+unmeasured implementation; it does not wait for every remaining publication
+item.
 
 ADR-0200 tests and rejects the first bounded implementation of rank 1. Replacing
 only the cold CNF primary fingerprint map with deterministic no-delete open
