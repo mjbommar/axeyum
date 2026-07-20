@@ -818,13 +818,6 @@ mod run {
         cnf_clause_attempts: u64,
         cnf_tautological_clauses_skipped: u64,
         cnf_duplicate_clauses_skipped: u64,
-        cnf_formula_clauses: u64,
-        cnf_formula_literals: u64,
-        cnf_formula_clause_end_logical_bytes: u64,
-        cnf_formula_literal_logical_bytes: u64,
-        cnf_formula_arena_logical_bytes: u64,
-        cnf_formula_arena_capacity_bytes: u64,
-        cnf_formula_legacy_logical_lower_bound_bytes: u64,
         cnf_construction_profile_complete: bool,
         cnf_declared_clause_literals: u64,
         cnf_visited_clause_literals: u64,
@@ -1356,14 +1349,6 @@ mod run {
                 cnf_clause_attempts: layers.cnf_clause_attempts,
                 cnf_tautological_clauses_skipped: layers.cnf_tautological_clauses_skipped,
                 cnf_duplicate_clauses_skipped: layers.cnf_duplicate_clauses_skipped,
-                cnf_formula_clauses: layers.cnf_formula_clauses,
-                cnf_formula_literals: layers.cnf_formula_literals,
-                cnf_formula_clause_end_logical_bytes: layers.cnf_formula_clause_end_logical_bytes,
-                cnf_formula_literal_logical_bytes: layers.cnf_formula_literal_logical_bytes,
-                cnf_formula_arena_logical_bytes: layers.cnf_formula_arena_logical_bytes,
-                cnf_formula_arena_capacity_bytes: layers.cnf_formula_arena_capacity_bytes,
-                cnf_formula_legacy_logical_lower_bound_bytes: layers
-                    .cnf_formula_legacy_logical_lower_bound_bytes,
                 cnf_construction_profile_complete: layers.cnf_construction_profile_complete,
                 cnf_declared_clause_literals: layers.cnf_declared_clause_literals,
                 cnf_visited_clause_literals: layers.cnf_visited_clause_literals,
@@ -3032,25 +3017,6 @@ mod run {
                 ),
                 "clauses_emitted": count(|sample| sample.cnf_clauses),
                 "clause_outcomes_partition_attempts": cnf_clause_outcomes == cnf_attempts,
-                "storage": {
-                    "formula_clauses": count(|sample| sample.cnf_formula_clauses),
-                    "formula_literals": count(|sample| sample.cnf_formula_literals),
-                    "clause_end_logical_bytes": count(
-                        |sample| sample.cnf_formula_clause_end_logical_bytes,
-                    ),
-                    "literal_logical_bytes": count(
-                        |sample| sample.cnf_formula_literal_logical_bytes,
-                    ),
-                    "arena_logical_bytes": count(
-                        |sample| sample.cnf_formula_arena_logical_bytes,
-                    ),
-                    "arena_capacity_bytes": count(
-                        |sample| sample.cnf_formula_arena_capacity_bytes,
-                    ),
-                    "legacy_logical_lower_bound_bytes": count(
-                        |sample| sample.cnf_formula_legacy_logical_lower_bound_bytes,
-                    ),
-                },
                 "detailed_profile": {
                     "profile_complete": profile_complete,
                     "profiled_instances": profiled_instances,
@@ -3916,32 +3882,6 @@ mod run {
                     "clauses_emitted": layers.cnf_clauses,
                     "clause_outcomes_partition_attempts":
                         sample.cnf_clause_outcomes() == sample.cnf_clause_attempts,
-                    "storage": {
-                        "formula_clauses": layers.cnf_formula_clauses,
-                        "formula_literals": layers.cnf_formula_literals,
-                        "clause_end_logical_bytes":
-                            layers.cnf_formula_clause_end_logical_bytes,
-                        "literal_logical_bytes": layers.cnf_formula_literal_logical_bytes,
-                        "arena_logical_bytes": layers.cnf_formula_arena_logical_bytes,
-                        "arena_capacity_bytes": layers.cnf_formula_arena_capacity_bytes,
-                        "legacy_logical_lower_bound_bytes":
-                            layers.cnf_formula_legacy_logical_lower_bound_bytes,
-                        "invariants_hold": layers.cnf_formula_clauses == layers.cnf_clauses
-                            && layers.cnf_formula_arena_logical_bytes
-                                == layers
-                                    .cnf_formula_clause_end_logical_bytes
-                                    .saturating_add(layers.cnf_formula_literal_logical_bytes)
-                            && layers.cnf_formula_arena_capacity_bytes
-                                >= layers.cnf_formula_arena_logical_bytes
-                            && layers.cnf_formula_legacy_logical_lower_bound_bytes
-                                >= layers.cnf_formula_literal_logical_bytes,
-                        "logical_ratio_at_most_80_percent": layers
-                            .cnf_formula_arena_logical_bytes
-                            .saturating_mul(5)
-                            <= layers
-                                .cnf_formula_legacy_logical_lower_bound_bytes
-                                .saturating_mul(4),
-                    },
                     "detailed_profile": instance_cnf_construction_profile_record(
                         &sample,
                         Some(&record.stats),
@@ -8278,13 +8218,6 @@ mod run {
                 cnf_clause_attempts: 7,
                 cnf_tautological_clauses_skipped: 2,
                 cnf_duplicate_clauses_skipped: 2,
-                cnf_formula_clauses: 3,
-                cnf_formula_literals: 6,
-                cnf_formula_clause_end_logical_bytes: 12,
-                cnf_formula_literal_logical_bytes: 48,
-                cnf_formula_arena_logical_bytes: 60,
-                cnf_formula_arena_capacity_bytes: 64,
-                cnf_formula_legacy_logical_lower_bound_bytes: 120,
                 cnf_construction_profile_complete: true,
                 cnf_declared_clause_literals: 21,
                 cnf_visited_clause_literals: 18,
@@ -8309,12 +8242,6 @@ mod run {
             assert_eq!(profile["profile_complete"], json!(true));
             assert_eq!(profile["declared_clause_literals"], json!(21));
             assert_eq!(profile["canonical_literals"], json!(9));
-            assert_eq!(aggregate["cnf"]["storage"]["formula_clauses"], json!(3));
-            assert_eq!(aggregate["cnf"]["storage"]["formula_literals"], json!(6));
-            assert_eq!(
-                aggregate["cnf"]["storage"]["arena_logical_bytes"],
-                json!(60)
-            );
             assert!(
                 profile["invariants"]
                     .as_object()

@@ -56,7 +56,11 @@ impl core::error::Error for DratError {}
 ///
 /// Returns [`DratError::StepNotVerified`] for an unjustified clause addition.
 pub fn check_drat(formula: &CnfFormula, proof: &[DratStep]) -> Result<bool, DratError> {
-    let mut active: Vec<Vec<CnfLit>> = formula.clauses().map(<[CnfLit]>::to_vec).collect();
+    let mut active: Vec<Vec<CnfLit>> = formula
+        .clauses()
+        .iter()
+        .map(|clause| clause.lits().to_vec())
+        .collect();
     let mut derived_empty = false;
 
     for (step, action) in proof.iter().enumerate() {

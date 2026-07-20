@@ -233,7 +233,7 @@ impl Eliminator {
                 let n = self.clauses[ni].as_ref().expect("live");
                 let mut merged: Vec<CnfLit> = p.iter().copied().filter(|&l| l != pos_lit).collect();
                 merged.extend(n.iter().copied().filter(|&l| l != neg_lit));
-                match NormClause::from_lits(&merged) {
+                match NormClause::from_clause(&CnfClause::new(merged)) {
                     Some(nc) => {
                         if nc.lits.len() > opts.clause_size_limit {
                             stats.variables_skipped_bound += 1;
@@ -342,7 +342,8 @@ pub fn eliminate_variables_within(
     // in the input are dropped up front.
     let clauses: Vec<Option<Vec<CnfLit>>> = formula
         .clauses()
-        .filter_map(|c| NormClause::from_lits(c).map(|nc| Some(nc.lits)))
+        .iter()
+        .filter_map(|c| NormClause::from_clause(c).map(|nc| Some(nc.lits)))
         .collect();
 
     // Full literal occurrence lists.
@@ -482,7 +483,7 @@ mod tests {
         assert!(out.stats.variables_eliminated >= 1);
         // x (var 0) occurs in no remaining clause.
         for c in out.formula.clauses() {
-            assert!(c.iter().all(|l| l.var() != v(0)));
+            assert!(c.lits().iter().all(|l| l.var() != v(0)));
         }
         assert_eq!(sat(&out.formula, 2), sat(&f, 2));
         for mask in 0u32..4 {

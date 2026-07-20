@@ -86,7 +86,8 @@ fn public_api_strengthens_via_implied_literal() {
     assert!(
         out.formula
             .clauses()
-            .any(|c| lit_set(c) == lit_set(&[pos(0), pos(1)])),
+            .iter()
+            .any(|c| lit_set(c.lits()) == lit_set(&[pos(0), pos(1)])),
         "expected (a∨b)"
     );
     assert!(out.stats.literals_removed >= 1);

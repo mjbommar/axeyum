@@ -287,7 +287,7 @@ impl<'a> Dpll<'a> {
                 let mut unassigned: Option<(usize, bool)> = None;
                 let mut satisfied = false;
                 let mut unassigned_count = 0usize;
-                for lit in clause {
+                for lit in clause.lits() {
                     let var = lit.var().index();
                     if let Some(value) = self.assignment[var] {
                         // Literal is true iff value matches the (un)negated

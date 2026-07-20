@@ -376,16 +376,15 @@ mod tests {
         assert!(stats.units_added > 0);
 
         // Every newly added unit clause is satisfied by every model of the input.
-        let added = out.clauses().skip(f.clause_count()).collect::<Vec<_>>();
+        let added = &out.clauses()[f.clauses().len()..];
         assert_eq!(added.len(), stats.units_added);
         for &assign in &models(&f) {
             let values: Vec<bool> = (0..f.variable_count())
                 .map(|j| (assign >> j) & 1 == 1)
                 .collect();
-            for unit in &added {
+            for unit in added {
                 assert!(
-                    unit.iter()
-                        .any(|lit| values[lit.var().index()] ^ lit.is_negated()),
+                    unit.evaluate(&values),
                     "added unit {unit:?} not entailed by input model {assign:b}"
                 );
             }

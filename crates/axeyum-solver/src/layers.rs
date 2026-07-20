@@ -114,20 +114,6 @@ pub struct BvLayerStats {
     pub cnf_tautological_clauses_skipped: u64,
     /// Duplicate canonical clauses skipped.
     pub cnf_duplicate_clauses_skipped: u64,
-    /// Clauses retained in the flat formula arena.
-    pub cnf_formula_clauses: u64,
-    /// Literals retained in the flat formula arena.
-    pub cnf_formula_literals: u64,
-    /// Logical bytes occupied by clause-end offsets.
-    pub cnf_formula_clause_end_logical_bytes: u64,
-    /// Logical bytes occupied by retained literals.
-    pub cnf_formula_literal_logical_bytes: u64,
-    /// Total logical bytes occupied by both flat arrays.
-    pub cnf_formula_arena_logical_bytes: u64,
-    /// Allocated-capacity bytes held by both flat arrays.
-    pub cnf_formula_arena_capacity_bytes: u64,
-    /// Conservative logical lower bound for the prior fragmented layout.
-    pub cnf_formula_legacy_logical_lower_bound_bytes: u64,
     /// Whether detailed CNF construction attribution is complete.
     pub cnf_construction_profile_complete: bool,
     /// Literals declared by clause-emission attempts.
@@ -248,24 +234,6 @@ impl BvLayerStats {
                 .map_or(0, count_to_u64),
             cnf_duplicate_clauses_skipped: lookup(stats, "cnf_duplicate_clauses_skipped")
                 .map_or(0, count_to_u64),
-            cnf_formula_clauses: lookup(stats, "cnf_formula_clauses").map_or(0, count_to_u64),
-            cnf_formula_literals: lookup(stats, "cnf_formula_literals").map_or(0, count_to_u64),
-            cnf_formula_clause_end_logical_bytes: lookup(
-                stats,
-                "cnf_formula_clause_end_logical_bytes",
-            )
-            .map_or(0, count_to_u64),
-            cnf_formula_literal_logical_bytes: lookup(stats, "cnf_formula_literal_logical_bytes")
-                .map_or(0, count_to_u64),
-            cnf_formula_arena_logical_bytes: lookup(stats, "cnf_formula_arena_logical_bytes")
-                .map_or(0, count_to_u64),
-            cnf_formula_arena_capacity_bytes: lookup(stats, "cnf_formula_arena_capacity_bytes")
-                .map_or(0, count_to_u64),
-            cnf_formula_legacy_logical_lower_bound_bytes: lookup(
-                stats,
-                "cnf_formula_legacy_logical_lower_bound_bytes",
-            )
-            .map_or(0, count_to_u64),
             cnf_construction_profile_complete: lookup(stats, "cnf_construction_profile_complete")
                 .is_some_and(|value| value >= 1.0),
             cnf_declared_clause_literals: lookup(stats, "cnf_declared_clause_literals")

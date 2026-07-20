@@ -344,6 +344,7 @@ impl<'a> XorCdcl<'a> {
         let mut has_empty_clause = false;
         for clause in formula.clauses() {
             let lits: Vec<Lit> = clause
+                .lits()
                 .iter()
                 .map(|lit| make_lit(lit.var().index(), lit.is_negated()))
                 .collect();

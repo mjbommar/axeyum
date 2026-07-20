@@ -71,6 +71,7 @@ fn outcome_z3(formula: &CnfFormula) -> &'static str {
     solver.set_params(&params);
     for clause in formula.clauses() {
         let lits = clause
+            .lits()
             .iter()
             .map(|lit| {
                 let atom = vars[lit.var().index()].clone();

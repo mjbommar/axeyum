@@ -83,7 +83,7 @@ pub fn extract_xors(cnf: &CnfFormula) -> ExtractedXors {
     let mut groups: BTreeMap<Vec<usize>, Vec<u32>> = BTreeMap::new();
 
     for clause in cnf.clauses() {
-        let lits = clause;
+        let lits = clause.lits();
         let k = lits.len();
         if !(2..=MAX_XOR_VARS).contains(&k) {
             continue;

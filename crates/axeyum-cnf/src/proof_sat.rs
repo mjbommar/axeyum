@@ -312,10 +312,10 @@ impl Cdcl {
         let mut headers: Vec<ClauseHeader> = Vec::with_capacity(formula.clauses().len());
         for clause in formula.clauses() {
             let offset = arena.len();
-            arena.extend_from_slice(clause);
+            arena.extend_from_slice(clause.lits());
             headers.push(ClauseHeader {
                 offset,
-                len: clause.len(),
+                len: clause.lits().len(),
             });
         }
         let mut watches = vec![Vec::new(); 2 * n];
