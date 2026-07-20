@@ -318,9 +318,16 @@ session state.
 >    That 2,313-line family now lives in `reconstruct/datatype.rs`; tester,
 >    distinctness, injectivity, and acyclicity source snapshots are byte-identical,
 >    and all 886 tests, clippy, and rustdoc pass. The parent is 14,189 lines /
->    618,110 bytes. Continue R3 with the quantifier-family dependency and
->    source-stability census; do not manufacture an array module around one thin
->    dispatcher.
+>    618,110 bytes. The quantifier census then identifies one cohesive 853-line
+>    universal-instantiation/existential-elimination family; it now lives in
+>    `reconstruct/quantifier.rs`, while the existing 3,665-line quantified-BV
+>    instance-set module remains separate. The public forall/exists entry points
+>    are unchanged, only the existing test-only forall-axiom helper crosses the
+>    seam, and universal plus existential generated-source snapshots are
+>    byte-identical. All 887 tests, clippy, and rustdoc pass. The parent is now
+>    13,350 lines / 580,831 bytes. Continue R3 with a resolution/CNF dependency
+>    and source-stability census; do not manufacture an array module around one
+>    thin dispatcher or pre-commit to a broad combined move.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

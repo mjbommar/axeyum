@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and the equality/datatype slices of R3 complete
+Status: active; R1, R2, and the equality/datatype/quantifier slices of R3 complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -20,11 +20,12 @@ accepted terms.
 
 | Surface | Current size / shape |
 |---|---:|
-| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after equality; 14,189 lines / 618,110 bytes after datatype |
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after equality; 14,189 lines / 618,110 bytes after datatype; 13,350 lines / 580,831 bytes after quantifier |
 | `reconstruct/direct.rs` | 1,406 lines / 52,407 bytes after R2 |
 | `reconstruct/equality.rs` | 534 lines / 23,244 bytes after the first R3 family extraction |
 | `reconstruct/datatype.rs` | 2,313 lines / 103,818 bytes after the second R3 family extraction |
-| `reconstruct/tests.rs` | 4,670 lines / 190,715 bytes |
+| `reconstruct/quantifier.rs` | 853 lines / 37,900 bytes after the third R3 family extraction |
+| `reconstruct/tests.rs` | 4,732 lines / 193,264 bytes |
 | `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
 | `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 43 |
@@ -116,7 +117,8 @@ before/after byte comparisons for their affected fixtures.
    certificate type or broad private surface was exposed. `reconstruct.rs`
    drops from 18,387 to 16,999 lines. All 884 tests, byte-equivalence checks,
    and clippy pass.
-3. **R3 — one proof family per commit (active; equality complete).** The first
+3. **R3 — one proof family per commit (active; equality, datatype, and
+   quantifier complete).** The first
    slice moves the nine equality-owned entry/build/helper functions into
    `reconstruct/equality.rs`: reflexivity, clause and premise symmetry,
    binary/n-ary transitivity, and n-ary congruence. Shared `as_positive_eq`,
@@ -137,9 +139,19 @@ before/after byte comparisons for their affected fixtures.
    `15726968749404357215`, injectivity at 2,640 bytes /
    `1434913494449130936`, and acyclicity at 3,940 bytes /
    `2520869314195085188`. All 886 full-profile tests, clippy, and rustdoc pass.
-   Next census and extract quantifier, resolution/CNF, bit-blast, and arithmetic
-   regions separately, with the same per-family gates. Do not create an array
-   module solely to relocate the thin orchestration function.
+   The third census keeps the specialized quantified-BV instance-set module
+   separate and moves the cohesive general universal-instantiation and
+   existential-elimination family into `reconstruct/quantifier.rs`. Its shared
+   clause, resolution, equality-literal, and kernel-check machinery remains
+   parent-owned; the two public reconstruction entry points are re-exported
+   unchanged, and only `declare_forall_axiom` gains a test-only parent seam.
+   FNV-1a snapshots pin the universal module at 921 bytes /
+   `17229612914579886985` and the combined existential/universal module at
+   2,685 bytes / `12920678261632022537`. All 887 full-profile tests, clippy,
+   and rustdoc pass. Next census resolution and CNF introduction before deciding
+   whether they are one or two extraction commits, then continue with bit-blast
+   and arithmetic under the same gates. Do not create an array module solely to
+   relocate the thin orchestration function.
 4. **R4 — visibility audit.** After the files settle, narrow private imports and
    only then evaluate the separate root-API namespacing work.
 

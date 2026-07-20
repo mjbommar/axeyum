@@ -5442,6 +5442,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split quantifier reconstruction ownership.** The cohesive
+  853-line general universal-instantiation and existential-elimination family
+  now lives in `reconstruct/quantifier.rs`; the specialized quantified-BV
+  instance-set module remains separate. Both public entry points are unchanged,
+  shared clause/resolution/kernel machinery stays parent-owned, and the only
+  added cross-seam visibility is a test-only forall-axiom helper. Universal and
+  existential generated Lean source snapshots remain byte-identical, all 887
+  solver tests pass, and full-profile clippy plus focused rustdoc are clean under
+  the bounded one-job profile. The parent is now 13,350 lines / 580,831 bytes.
+
 - **2026-07-20 — Split datatype reconstruction ownership.** The cohesive
   2,313-line axiom-free tester/distinctness/injectivity/acyclicity family now
   lives in `reconstruct/datatype.rs`; the parent retains datatype-aware term

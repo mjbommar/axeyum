@@ -662,6 +662,68 @@ fn datatype_family_generated_source_is_byte_stable() {
     );
 }
 
+/// R3 quantifier extraction gate: universal instantiation and existential
+/// elimination must keep emitting byte-identical Lean modules.
+#[test]
+fn quantifier_family_generated_source_is_byte_stable() {
+    let mut fixtures = Vec::new();
+
+    let mut arena = TermArena::new();
+    let alpha = Sort::BitVec(8);
+    let x = arena.declare("x", alpha).unwrap();
+    let a = arena.declare("a", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let forall = arena.forall(x, fx_eq_c).unwrap();
+    let av = arena.var(a);
+    let fa = arena.apply(f, &[av]).unwrap();
+    let fa_eq_c = arena.eq(fa, cv).unwrap();
+    let not_fa_eq_c = arena.not(fa_eq_c).unwrap();
+    let proof = crate::prove_quant_unsat_alethe(&mut arena, &[forall, not_fa_eq_c]).unwrap();
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_quant_unsat_proof(&mut ctx, &proof).unwrap();
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let x = arena.declare("x", alpha).unwrap();
+    let y = arena.declare("y", alpha).unwrap();
+    let c = arena.declare("c", alpha).unwrap();
+    let d = arena.declare("d", alpha).unwrap();
+    let f = arena.declare_fun("f", &[alpha], alpha).unwrap();
+    let xv = arena.var(x);
+    let cv = arena.var(c);
+    let fx = arena.apply(f, &[xv]).unwrap();
+    let fx_eq_c = arena.eq(fx, cv).unwrap();
+    let exists = arena.exists(x, fx_eq_c).unwrap();
+    let yv = arena.var(y);
+    let dv = arena.var(d);
+    let fy = arena.apply(f, &[yv]).unwrap();
+    let fy_eq_d = arena.eq(fy, dv).unwrap();
+    let forall = arena.forall(y, fy_eq_d).unwrap();
+    let c_eq_d = arena.eq(cv, dv).unwrap();
+    let c_ne_d = arena.not(c_eq_d).unwrap();
+    let cert = crate::prove_skolem_unsat_alethe(&mut arena, &[exists, forall, c_ne_d]).unwrap();
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_skolem_unsat_proof(&mut ctx, &cert).unwrap();
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    fixtures.push((source.len(), stable_source_hash(&source)));
+
+    assert_eq!(
+        fixtures,
+        [
+            (921, 17_229_612_914_579_886_985),
+            (2_685, 12_920_678_261_632_022_537),
+        ]
+    );
+}
+
 /// **`QF_UFBV` Ackermann certificate end-to-end (ADR-0013 task #19)**: take a REAL
 /// `prove_qf_ufbv_unsat_alethe` certificate for
 /// `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — decided via the Ackermann reduction —
