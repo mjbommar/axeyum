@@ -356,3 +356,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0298](adr-0298-preregister-relational-scalar-call-results.md) | Straight-line relational scalar call results as explicit internal havoc symbols plus separate replayable constraints | accepted |
 | [0299](adr-0299-preregister-checked-mir-relational-calls.md) | Accept typed MIR relational scalar calls with separate MIR-body panic and postcondition verification | accepted |
 | [0300](adr-0300-preregister-dense-bit-lowering-memo.md) | Reject dense `TermId` memo indexing at the fixed variance gate and restore BTree despite favorable point estimates | accepted |
+| [0302](adr-0302-preregister-symbolic-cve-reproducibility.md) | Preregister exact run/cross-machine authority stability plus backend-invariant finding identity on the admitted symbolic-CVE recall corpus | proposed |

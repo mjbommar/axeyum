@@ -699,6 +699,13 @@ link to the decision note or implementation PR that closed it.
 
 Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strategy.md).
 
+- [ ] Do the two artifact-admitted symbolic-CVE findings reproduce exactly
+  within each authority across runs and machines, while preserving identical
+  finding/work identity across Axeyum and Z3 authority?
+  - [ADR-0302](../09-decisions/adr-0302-preregister-symbolic-cve-reproducibility.md)
+    freezes the two-authority/two-repetition protocol and keeps arbitrary but
+    replay-valid model witnesses separate from finding identity. One host is
+    explicitly incomplete; at least two genuine machines are required.
 - [ ] Does bounded symbolic memory + warm reuse Pareto-dominate eager any-model
   concretization on coverage AND reproducibility for driver bug-finding?
 - [ ] Is disjoint projected enumeration cheaper than per-expression optimization

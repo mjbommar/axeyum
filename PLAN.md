@@ -246,6 +246,16 @@ session state.
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical
 >    policy -> identical findings run/machine/backend on the recall corpus.
+>    ADR-0302 now preregisters the exact distinction that claim needs before a
+>    full row exists: two rotated repetitions of Axeyum and Z3 authority per
+>    machine; exact report identity within each authority/run/machine; exact
+>    backend identity for finding, work, and stop projections; and separately
+>    retained replay-valid witness/model diversity. Glaurung candidate
+>    `31f7ebe` removes the machine-local Axeyum dependency and absolute report
+>    path and emits the actual selected authority. At least two genuine
+>    machines are mandatory; one host can close only run stability and backend
+>    finding parity. Do not call containers or two labels cross-machine, or
+>    require arbitrary SMT witnesses to be identical.
 > 8. [AXEYUM] **DONE (ADR-0227).** Executable Node and Chromium runs cover
 >    75,000 measured solves each with zero mismatch/trap; small-query medians are
 >    13--71 us. The release browser runtime is 1,801,662 bytes / 541,248 bytes
@@ -7714,13 +7724,15 @@ not a feature checklist — and the next phase is depth + evidence, not more see
   bound before adding a feature that can blow up.
 - Every `sat` replay-checks; every new `unsat` route gets an independent checker
   or an explicit, ledgered trust note.
-- **Build caps:** use `CARGO_BUILD_JOBS=2` and `-j1` for solver/bench work on
-  this host; `CARGO_BUILD_JOBS=4` / `-j4` is an upper cap, not the default.
-  Default 16-way parallelism and high-`--jobs` benches OOM-kill this host.
-  **Run test/build/bench under the 64 GiB
-  memory cap** — `scripts/mem-run.sh <cmd>` (or `just test-guarded`) applies a
-  `ulimit -v` so a runaway allocation aborts *that process* instead of OOM-killing
-  the host. Override the cap with `MEM_LIMIT_GB=N`.
+- **Build caps:** use `CARGO_BUILD_JOBS=1` and `--jobs 1` for every Rust
+  build/test/bench on this host. On 2026-07-20, a nominal 4 GiB cgroup still
+  OOM-killed `rust-lld` because one invocation fanned out into many concurrent
+  compilers/linkers. Run Rust work in a user cgroup with aggregate
+  `MemoryMax=4G`, `MemorySwapMax=512M`, and `OOMScoreAdjust=200`; disable test/dev
+  debug metadata for large gates and record the service memory peak. The
+  per-process `scripts/mem-run.sh`/`ulimit` guard is supplementary, not a
+  substitute for the aggregate cgroup. Never use Cargo's host-default
+  parallelism here.
 - **Coordination (multi-agent):** a second agent works `axeyum-rewrite` /
   `axeyum-smtlib` (word-level reduction, P1.2 — the destination-2 near-term lever).
   Treat those crates as theirs; this agent covers measurement, proof/Lean
