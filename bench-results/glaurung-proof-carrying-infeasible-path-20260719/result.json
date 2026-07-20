@@ -1,0 +1,75 @@
+{
+  "schema": "glaurung-proof-carrying-infeasible-path-result-v1",
+  "date": "2026-07-19",
+  "result": "accepted",
+  "source": {
+    "axeyum_revision": "a249fbe495f44c065533915bf6d89af98e491a5d",
+    "glaurung_base_revision": "403a5c5",
+    "glaurung_implementation_revision": "f01a057a39a51096f694722368e017c2982b8aea",
+    "glaurung_branch": "codex/adr0278-infeasible-proof",
+    "example_binary_sha256": "a7998ca9c6e1b7efcea132a0ad60bd694eea09673be033950b8cf782300cc628"
+  },
+  "path": {
+    "path_id": "glaurung-expr-x-eq-5-and-x-eq-6-v1",
+    "assertion_count": 2,
+    "verdict": "infeasible",
+    "source_rechecked": true,
+    "changed_path_recheck": false
+  },
+  "bundle": {
+    "manifest": {
+      "bytes": 749,
+      "sha256": "4bdecf5b1e37b069cac8a57ce9046f706daebf521b2fabcc7eddf4dbfa90825e"
+    },
+    "problem_cnf": {
+      "bytes": 202,
+      "sha256": "9ce48e7c90a6a672938d8144c8bd96b9cec3d536c19db14054df6f929ad17cb6",
+      "variables": 32,
+      "clauses": 34
+    },
+    "proof_drat": {
+      "bytes": 2,
+      "lines": 1,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    "proof_lrat": {
+      "bytes": 13,
+      "lines": 1,
+      "sha256": "73c591f02a6528d7ce8fe53cf6d5ddd9cbcf25f289b7b9261da3b7c6dd158bd5"
+    }
+  },
+  "checker": {
+    "project": "drat-trim",
+    "revision": "2e3b2dc0ecf938addbd779d42877b6ed69d9a985",
+    "binary_sha256": "c0b9bd6a2369918f171a42d024aa2993d5eff4f597e019850c073d0aa08bd9db",
+    "positive": {
+      "command": "drat-trim problem.cnf proof.drat",
+      "exit_code": 0,
+      "accepted_marker": "s VERIFIED",
+      "classification": "complementary unit clauses: -1",
+      "stdout_bytes": 166,
+      "stdout_sha256": "9c59809d604b50521d1b2c3a415b227f87afcf4afaef8ff2e9ac80a6b7d6b99a",
+      "stdout_base64": "DWMgcGFyc2luZyBpbnB1dCBmb3JtdWxhIHdpdGggMzIgdmFyaWFibGVzIGFuZCAzNCBjbGF1c2VzCg1jIGZpbmlzaGVkIHBhcnNpbmcKDWMgZm91bmQgY29tcGxlbWVudGFyeSB1bml0IGNsYXVzZXM6IC0xCg1zIFZFUklGSUVECg1jIHZlcmlmaWNhdGlvbiB0aW1lOiAwLjAzOCBzZWNvbmRzCg==",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "satisfiable_control": {
+      "input_sha256": "946afef7ecdb9105cb716a27cc0fce5d64ad13885ba0fa0108d4873be031790c",
+      "command": "drat-trim satisfiable-control.cnf proof.drat",
+      "exit_code": 1,
+      "rejected_marker": "s NOT VERIFIED",
+      "classification": "no conflict",
+      "stdout_bytes": 150,
+      "stdout_sha256": "c1924d7b13193ccb00aa7d1946e3b7cb9966224aa190e37a6096bd41c0c6fed3",
+      "stdout_base64": "DWMgcGFyc2luZyBpbnB1dCBmb3JtdWxhIHdpdGggMSB2YXJpYWJsZXMgYW5kIDAgY2xhdXNlcwoNYyBmaW5pc2hlZCBwYXJzaW5nCg1jIEVSUk9SOiBubyBjb25mbGljdAoKcyBOT1QgVkVSSUZJRUQKDWMgdmVyaWZpY2F0aW9uIHRpbWU6IDAuMDM1IHNlY29uZHMK",
+      "stderr_bytes": 0,
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "limits": [
+    "The fixed path is a minimal Glaurung ExprPool conjunction, not a whole-CFG unreachability proof.",
+    "The DRAT is a two-byte empty-clause proof over an input-refutable CNF, not a nontrivial learned-clause trace.",
+    "The external checker certifies the CNF/DRAT pair; term-to-AIG-to-CNF remains the documented trusted reduction.",
+    "No performance claim is made from this single proof request."
+  ]
+}

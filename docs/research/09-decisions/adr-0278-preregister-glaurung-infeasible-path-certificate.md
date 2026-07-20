@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: consumer contract and external-check cell preregistered; no new
-Glaurung proof bundle observed
+Result state: accepted bounded downstream certificate attachment and external
+check; implementation isolated from the primary Glaurung worktree
 
 ## Context
 
@@ -93,6 +93,37 @@ an isolated worktree before implementation.
 No output bundle from the new Glaurung consumer example exists, and no external
 checker has observed its fixed path through that example.
 
+## Observed result
+
+Glaurung branch `codex/adr0278-infeasible-proof` implements the contract at
+`f01a057` from base `403a5c5`. Four focused verdict tests cover exact-path
+attachment/recheck plus weakened-path rejection, feasible-without-certificate,
+expired-budget inconclusive, and translation error. Two example tests verify
+manifest/file hashes and existing-output refusal. All 45 Axeyum-backend tests
+pass; the no-default
+`solver-axeyum` example builds and rustdoc completes. Strict Clippy reaches the
+affected targets but is blocked by 70 pre-existing warnings across unrelated
+Glaurung modules; no new-target diagnostic is reported.
+
+The committed release example (binary SHA-256 `a7998ca9...c628`) emits one
+source-rechecked two-assertion verdict. The retained bundle is under
+[`bench-results/glaurung-proof-carrying-infeasible-path-20260719/`](../../../bench-results/glaurung-proof-carrying-infeasible-path-20260719/):
+32 variables, 34 clauses, a 202-byte DIMACS file, two-byte/one-line DRAT, and
+13-byte/one-line LRAT. Rechecking the same certificate against only `x == 5`
+returns false.
+
+Pinned `drat-trim` (binary SHA-256 `c0b9bd6a...9db`) accepts the emitted pair
+with exit 0 and exact `s VERIFIED`. The same proof against the fixed satisfiable
+CNF exits 1, reports `no conflict`, and prints `s NOT VERIFIED`. The exact
+stream hashes and base64 bytes are retained in
+[`result.json`](../../../bench-results/glaurung-proof-carrying-infeasible-path-20260719/result.json).
+
+The proof is an empty-clause proof over a CNF already refutable from
+complementary input units. Accept this as a concrete downstream attachment,
+source-binding, and external-consumption result only—not as a nontrivial proof
+trace, whole-CFG unreachability certificate, lowering proof, or performance
+result.
+
 ## Alternatives
 
 - Add proof data to the generic `Solver` trait: rejected because only Axeyum
@@ -109,7 +140,7 @@ checker has observed its fixed path through that example.
 
 ## Consequences
 
-If accepted, the reviewer can run one Glaurung-native path query, inspect its
+The reviewer can run one Glaurung-native path query, inspect its
 attached standard proof, rebind it to the exact path constraints, and check it
 with an independent tool. The bounded result demonstrates the latent
 deployability feature without changing normal exploration or making a broader

@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-19 — ADR-0278 accepts one bounded downstream proof-carrying path
+  verdict.** Isolated Glaurung `f01a057` now returns an owned
+  `InfeasiblePathCertificate`, rebinds it to the exact `ExprPool` assertions,
+  rejects a weakened satisfiable path, and keeps feasible/inconclusive/error
+  outcomes non-infeasible. All 45 backend tests and two bundle tests pass.
+  Pinned `drat-trim` accepts the fixed 32-variable/34-clause pair and rejects
+  the same proof on a satisfiable control. The DRAT is only the two-byte empty
+  clause over complementary input units: this demonstrates attachment and
+  external consumption, not a nontrivial trace, lowering proof, whole-CFG
+  certificate, or performance result. Keep the generic solver trait and normal
+  pruning unchanged; assess broader proof cost/benefit separately.
+
 - **2026-07-19 — ADR-0278 preregisters the first downstream proof-carrying
   infeasible-path verdict.** Axeyum's source-bound `UnsatProof` and external
   DRAT interoperability already exist; Glaurung's current prototype discards

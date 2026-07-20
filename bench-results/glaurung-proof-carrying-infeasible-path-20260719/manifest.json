@@ -1,0 +1,23 @@
+{
+  "schema": "glaurung-infeasible-path-proof-v1",
+  "path_id": "glaurung-expr-x-eq-5-and-x-eq-6-v1",
+  "verdict": "infeasible",
+  "assertion_count": 2,
+  "source_rechecked": true,
+  "proof_scope": "CNF unsat; Glaurung path is deterministically rebound to CNF; term-to-AIG-to-CNF remains the documented trusted reduction",
+  "dimacs": {
+    "path": "problem.cnf",
+    "bytes": 202,
+    "sha256": "9ce48e7c90a6a672938d8144c8bd96b9cec3d536c19db14054df6f929ad17cb6"
+  },
+  "drat": {
+    "path": "proof.drat",
+    "bytes": 2,
+    "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+  },
+  "lrat": {
+    "path": "proof.lrat",
+    "bytes": 13,
+    "sha256": "73c591f02a6528d7ce8fe53cf6d5ddd9cbcf25f289b7b9261da3b7c6dd158bd5"
+  }
+}
