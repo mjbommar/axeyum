@@ -3,7 +3,8 @@
 
 use axeyum_ir::{Sort, TermArena};
 use axeyum_solver::{
-    BvLayerStats, CheckResult, SatBvBackend, SolveStats, SolverBackend, SolverConfig,
+    BitLoweringMemoRepresentation, BvLayerStats, CheckResult, SatBvBackend, SolveStats,
+    SolverBackend, SolverConfig,
 };
 
 #[test]
@@ -55,6 +56,30 @@ fn sat_bv_run_exposes_typed_layer_stats() {
     assert!(layers.term_bit_requests >= layers.term_bits_demanded);
     assert!(layers.term_bits_demanded <= layers.term_bits_available);
     assert_eq!(layers.term_bits_lowered, layers.term_bits_available);
+    assert!(layers.bit_lowering_memo_profile_complete);
+    assert_eq!(
+        layers.bit_lowering_memo_representation,
+        BitLoweringMemoRepresentation::BtreeV1
+    );
+    assert_eq!(
+        layers.bit_lowering_memo_slots,
+        layers.bit_lowering_memo_occupied
+    );
+    assert_eq!(
+        layers.bit_lowering_memo_writes,
+        layers.bit_lowering_memo_occupied
+    );
+    assert_eq!(
+        layers.bit_lowering_memo_payload_literals,
+        layers.term_bits_lowered
+    );
+    assert!(layers.bit_lowering_memo_invariants_hold);
+    assert_eq!(
+        layers.bit_lowering_memo_root_bits,
+        layers.bit_lowering_memo_expected_root_bits
+    );
+    assert_ne!(layers.bit_lowering_structure_digest, 0);
+    assert_ne!(layers.cnf_structure_digest, 0);
     assert!(layers.symbol_bit_requests >= layers.symbol_bits_demanded);
     assert!(layers.symbol_bits_demanded <= layers.symbol_bits_available);
     assert_eq!(layers.symbol_bits_lowered, layers.symbol_bits_available);
@@ -84,5 +109,11 @@ fn typed_layers_include_optional_cnf_inprocessing() {
     ];
     let layers = BvLayerStats::from_solve_stats(&stats).unwrap();
     assert_eq!(layers.cnf_inprocess, std::time::Duration::from_millis(3));
+    assert_eq!(
+        layers.bit_lowering_memo_representation,
+        BitLoweringMemoRepresentation::Unavailable
+    );
+    assert_eq!(layers.bit_lowering_structure_digest, 0);
+    assert_eq!(layers.cnf_structure_digest, 0);
     assert_eq!(layers.total(), std::time::Duration::from_millis(18));
 }

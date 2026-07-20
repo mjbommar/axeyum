@@ -16,6 +16,7 @@ use std::time::Instant;
 #[cfg(target_arch = "wasm32")]
 use web_time::Instant;
 
+use axeyum_aig::{AigLit, AigNode};
 #[cfg(feature = "full")]
 use axeyum_bv::lower_terms;
 use axeyum_bv::{
@@ -25,13 +26,13 @@ use axeyum_bv::{
 };
 use axeyum_cnf::{
     BveOptions, CnfAssignment, CnfConstructionProfile, CnfDuplicateOriginProfile, CnfEncoding,
-    CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, ProofSolveOutcome,
-    Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason, SatUnsatEvidence,
-    VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact, eliminate_variables_within,
-    extract_xors, simplify_within, solve_with_drat_proof, solve_with_drat_proof_with_limits,
-    solve_with_rustsat_batsat_limits, solve_with_xor_cdcl, tseitin_encode,
-    tseitin_encode_profiled_with_origins, vivify_within, write_drat, xor_gauss_drat_refutation,
-    xor_propagate,
+    CnfError, CnfFormula, CompactMap, DEFAULT_PROOF_SAT_CONFLICT_LIMIT, EncodedLit,
+    ProofSolveOutcome, Reconstruction, SatError, SatProofStatus, SatResult, SatUnknownReason,
+    SatUnsatEvidence, VivifyOptions, XorCdclResult, XorPropagation, check_drat, compact,
+    eliminate_variables_within, extract_xors, simplify_within, solve_with_drat_proof,
+    solve_with_drat_proof_with_limits, solve_with_rustsat_batsat_limits, solve_with_xor_cdcl,
+    tseitin_encode, tseitin_encode_profiled_with_origins, vivify_within, write_drat,
+    xor_gauss_drat_refutation, xor_propagate,
 };
 use axeyum_ir::{
     Assignment, IrError, Sort, SortId, TermArena, TermId, TermStats, Value, eval,
@@ -354,6 +355,38 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
     );
     push_count(stats, "aig_and_nodes_created", aig.and_nodes_created);
 
+    record_bit_demand_stats(stats, lowering);
+    record_bit_lowering_memo_stats(stats, lowering, encoding);
+
+    let cnf = encoding.stats();
+    push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
+    push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);
+    push_duration_ms(stats, "cnf_gate_encode_ms", cnf.gate_encoding);
+    push_duration_ms(stats, "cnf_root_encode_ms", cnf.root_encoding);
+    push_count(stats, "cnf_reachable_nodes", cnf.reachable_nodes);
+    push_count(stats, "cnf_skipped_helper_nodes", cnf.skipped_helper_nodes);
+    push_count(stats, "cnf_direct_root_nodes", cnf.direct_root_nodes);
+    push_count(stats, "cnf_xor_gates", cnf.xor_gates);
+    push_count(stats, "cnf_not_ite_gates", cnf.not_ite_gates);
+    push_count(stats, "cnf_not_and_gates", cnf.not_and_gates);
+    push_count(stats, "cnf_and_tree_gates", cnf.and_tree_gates);
+    push_count(stats, "cnf_binary_and_gates", cnf.binary_and_gates);
+    push_count(stats, "cnf_clause_attempts", cnf.clause_attempts);
+    push_count(
+        stats,
+        "cnf_tautological_clauses_skipped",
+        cnf.tautological_clauses_skipped,
+    );
+    push_count(
+        stats,
+        "cnf_duplicate_clauses_skipped",
+        cnf.duplicate_clauses_skipped,
+    );
+    push_count(stats, "cnf_clauses_emitted", cnf.clauses_emitted);
+    record_cnf_construction_profile(stats, cnf.construction_profile);
+}
+
+fn record_bit_demand_stats(stats: &mut SolveStats, lowering: &BitLowering) {
     let demand = lowering.demand_stats();
     push_count(
         stats,
@@ -393,33 +426,189 @@ fn record_encoding_stats(stats: &mut SolveStats, lowering: &BitLowering, encodin
     push_count(stats, "symbol_bits_available", demand.symbol_bits_available);
     push_count(stats, "symbol_bits_demanded", demand.symbol_bits_demanded);
     push_count(stats, "symbol_bits_lowered", demand.symbol_bits_lowered);
+}
 
-    let cnf = encoding.stats();
-    push_duration_ms(stats, "cnf_plan_ms", cnf.planning);
-    push_duration_ms(stats, "cnf_allocate_ms", cnf.variable_allocation);
-    push_duration_ms(stats, "cnf_gate_encode_ms", cnf.gate_encoding);
-    push_duration_ms(stats, "cnf_root_encode_ms", cnf.root_encoding);
-    push_count(stats, "cnf_reachable_nodes", cnf.reachable_nodes);
-    push_count(stats, "cnf_skipped_helper_nodes", cnf.skipped_helper_nodes);
-    push_count(stats, "cnf_direct_root_nodes", cnf.direct_root_nodes);
-    push_count(stats, "cnf_xor_gates", cnf.xor_gates);
-    push_count(stats, "cnf_not_ite_gates", cnf.not_ite_gates);
-    push_count(stats, "cnf_not_and_gates", cnf.not_and_gates);
-    push_count(stats, "cnf_and_tree_gates", cnf.and_tree_gates);
-    push_count(stats, "cnf_binary_and_gates", cnf.binary_and_gates);
-    push_count(stats, "cnf_clause_attempts", cnf.clause_attempts);
+fn record_bit_lowering_memo_stats(
+    stats: &mut SolveStats,
+    lowering: &BitLowering,
+    encoding: &CnfEncoding,
+) {
+    let memo = lowering.memo_stats();
     push_count(
         stats,
-        "cnf_tautological_clauses_skipped",
-        cnf.tautological_clauses_skipped,
+        "bit_lowering_memo_profile_complete",
+        u64::from(memo.profile_complete),
     );
     push_count(
         stats,
-        "cnf_duplicate_clauses_skipped",
-        cnf.duplicate_clauses_skipped,
+        "bit_lowering_memo_representation",
+        u64::from(memo.representation.code()),
     );
-    push_count(stats, "cnf_clauses_emitted", cnf.clauses_emitted);
-    record_cnf_construction_profile(stats, cnf.construction_profile);
+    push_count(stats, "bit_lowering_memo_source_terms", memo.source_terms);
+    push_count(stats, "bit_lowering_memo_slots", memo.slots);
+    push_count(stats, "bit_lowering_memo_occupied", memo.occupied);
+    push_count(stats, "bit_lowering_memo_lookups", memo.lookups);
+    push_count(stats, "bit_lowering_memo_hits", memo.hits);
+    push_count(stats, "bit_lowering_memo_writes", memo.writes);
+    push_count(
+        stats,
+        "bit_lowering_memo_payload_literals",
+        memo.payload_literals,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_payload_capacity_literals",
+        memo.payload_capacity_literals,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_logical_header_bytes",
+        memo.logical_header_bytes,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_logical_payload_bytes",
+        memo.logical_payload_bytes,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_logical_total_bytes",
+        memo.logical_total_bytes,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_payload_capacity_bytes",
+        memo.payload_capacity_bytes,
+    );
+    push_count(stats, "bit_lowering_memo_root_bits", memo.root_bits);
+    push_count(
+        stats,
+        "bit_lowering_memo_expected_root_bits",
+        memo.expected_root_bits,
+    );
+    push_count(
+        stats,
+        "bit_lowering_memo_invariants_hold",
+        u64::from(memo.invariants_hold),
+    );
+    if memo.profile_complete {
+        push_digest(
+            stats,
+            "bit_lowering_structure_digest",
+            lowering_structure_digest(lowering),
+        );
+        push_digest(
+            stats,
+            "cnf_structure_digest",
+            cnf_structure_digest(encoding),
+        );
+    }
+}
+
+const PROFILE_FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
+const PROFILE_FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
+
+fn digest_u64(digest: &mut u64, value: u64) {
+    for byte in value.to_le_bytes() {
+        *digest ^= u64::from(byte);
+        *digest = digest.wrapping_mul(PROFILE_FNV_PRIME);
+    }
+}
+
+fn digest_bytes(digest: &mut u64, bytes: &[u8]) {
+    digest_u64(digest, usize_to_u64(bytes.len()));
+    for &byte in bytes {
+        *digest ^= u64::from(byte);
+        *digest = digest.wrapping_mul(PROFILE_FNV_PRIME);
+    }
+}
+
+fn digest_aig_lit(digest: &mut u64, literal: AigLit) {
+    digest_u64(digest, usize_to_u64(literal.node().index()));
+    digest_u64(digest, u64::from(literal.is_inverted()));
+}
+
+fn lowering_structure_digest(lowering: &BitLowering) -> u64 {
+    let mut digest = PROFILE_FNV_OFFSET;
+    digest_u64(&mut digest, usize_to_u64(lowering.aig().node_count()));
+    for (_, node) in lowering.aig().nodes() {
+        match node {
+            AigNode::ConstFalse => digest_u64(&mut digest, 0),
+            AigNode::Input(input) => {
+                digest_u64(&mut digest, 1);
+                digest_u64(&mut digest, usize_to_u64(input.index()));
+            }
+            AigNode::And(left, right) => {
+                digest_u64(&mut digest, 2);
+                digest_aig_lit(&mut digest, left);
+                digest_aig_lit(&mut digest, right);
+            }
+        }
+    }
+    for input in lowering.aig().inputs() {
+        digest_u64(&mut digest, usize_to_u64(input.id.index()));
+        digest_u64(&mut digest, usize_to_u64(input.node.index()));
+        digest_bytes(&mut digest, input.label.as_bytes());
+    }
+    for root in lowering.roots() {
+        digest_u64(&mut digest, usize_to_u64(root.term().index()));
+        digest_u64(&mut digest, usize_to_u64(root.bits().len()));
+        for &literal in root.bits() {
+            digest_aig_lit(&mut digest, literal);
+        }
+    }
+    for binding in lowering.term_bits() {
+        digest_u64(&mut digest, usize_to_u64(binding.term.index()));
+        digest_u64(&mut digest, u64::from(binding.bit_index));
+        digest_aig_lit(&mut digest, binding.literal);
+    }
+    for input in lowering.symbol_inputs() {
+        digest_u64(&mut digest, usize_to_u64(input.symbol.index()));
+        digest_u64(&mut digest, u64::from(input.bit_index));
+        digest_u64(&mut digest, usize_to_u64(input.input.index()));
+        digest_aig_lit(&mut digest, input.literal);
+        digest_bytes(&mut digest, input.symbol_name.as_bytes());
+    }
+    digest
+}
+
+fn cnf_structure_digest(encoding: &CnfEncoding) -> u64 {
+    let mut digest = PROFILE_FNV_OFFSET;
+    digest_u64(
+        &mut digest,
+        usize_to_u64(encoding.formula().variable_count()),
+    );
+    for clause in encoding.formula().clauses() {
+        digest_u64(&mut digest, usize_to_u64(clause.lits().len()));
+        for &literal in clause.lits() {
+            digest_u64(&mut digest, usize_to_u64(literal.var().index()));
+            digest_u64(&mut digest, u64::from(literal.is_negated()));
+        }
+    }
+    for root in encoding.roots() {
+        digest_aig_lit(&mut digest, root.aig_literal);
+        match root.cnf_lit {
+            EncodedLit::Const(value) => {
+                digest_u64(&mut digest, 0);
+                digest_u64(&mut digest, u64::from(value));
+            }
+            EncodedLit::Lit(literal) => {
+                digest_u64(&mut digest, 1);
+                digest_u64(&mut digest, usize_to_u64(literal.var().index()));
+                digest_u64(&mut digest, u64::from(literal.is_negated()));
+            }
+        }
+    }
+    for binding in encoding.variable_bindings() {
+        digest_u64(&mut digest, usize_to_u64(binding.variable.index()));
+        digest_aig_lit(&mut digest, binding.aig_literal);
+    }
+    digest
+}
+
+fn push_digest(stats: &mut SolveStats, key: &str, digest: u64) {
+    push_count(stats, &format!("{key}_hi"), digest >> 32);
+    push_count(stats, &format!("{key}_lo"), digest & u64::from(u32::MAX));
 }
 
 fn record_cnf_construction_profile(stats: &mut SolveStats, profile: CnfConstructionProfile) {

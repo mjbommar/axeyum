@@ -677,6 +677,19 @@ records the contract and the first measured baselines.
   closed if the parity-overlap block is absent or inconsistent. All timing from
   these profiled paths is diagnostic; a production change requires a separate
   preregistration and repeated unprofiled timing gate.
+  Artifact v38 was reserved by ADR-0285's subsequently reverted flat-CNF
+  storage experiment; retained v38 artifacts remain interpretable and the
+  version is not reused. Artifact v39 extends the existing observational
+  bit-demand profile with representation-neutral full-lowering memo accounting:
+  representation identity, source terms, slots/occupancy, lookup/hit/write
+  counts, literal payload length/capacity, native logical bytes, and explicit
+  invariants appear per instance and in aggregate. Profiled rows also carry
+  deterministic FNV-1a regression digests over the ordered lowering/AIG and
+  CNF/lift-map structures; the digests detect drift but are not cryptographic
+  evidence. Unprofiled production runs report this block as unavailable.
+  ADR-0300 requires a committed v39 BTree baseline before the dense candidate
+  is built, then exact structural comparison before any separately built
+  unprofiled timing pair.
 - Timeout regressions must pin the exact pathological public or minimized query
   and exercise both admission outcomes: deterministic oversized refusal before
   allocation and cooperative expiry inside admitted superlinear work. Every

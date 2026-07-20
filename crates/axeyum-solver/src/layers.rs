@@ -8,7 +8,7 @@
 
 use std::time::Duration;
 
-use axeyum_bv::RangeDemandDecision;
+use axeyum_bv::{BitLoweringMemoRepresentation, RangeDemandDecision};
 
 use crate::backend::SolveStats;
 
@@ -18,6 +18,7 @@ use crate::backend::SolveStats;
 /// CNF inprocessing, SAT solving, and model lifting (assignment → Axeyum model).
 /// Sizes describe the AIG and CNF the encoder produced.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(clippy::struct_excessive_bools)] // Flat typed view of independent backend facts.
 pub struct BvLayerStats {
     /// Time lowering terms to the AIG.
     pub bit_blast: Duration,
@@ -72,6 +73,44 @@ pub struct BvLayerStats {
     pub term_bits_demanded: u64,
     /// Term bits materialized by the current lowerer.
     pub term_bits_lowered: u64,
+    /// Whether private full-lowering memo accounting is complete.
+    pub bit_lowering_memo_profile_complete: bool,
+    /// Active private full-lowering memo representation.
+    pub bit_lowering_memo_representation: BitLoweringMemoRepresentation,
+    /// Terms in the source arena, including unreachable terms.
+    pub bit_lowering_memo_source_terms: u64,
+    /// Addressable memo slots/nodes.
+    pub bit_lowering_memo_slots: u64,
+    /// Completed terms retained in the memo.
+    pub bit_lowering_memo_occupied: u64,
+    /// Full-lowering memo lookups.
+    pub bit_lowering_memo_lookups: u64,
+    /// Memo lookup hits.
+    pub bit_lowering_memo_hits: u64,
+    /// Completed term vectors written.
+    pub bit_lowering_memo_writes: u64,
+    /// Initialized literal payload length.
+    pub bit_lowering_memo_payload_literals: u64,
+    /// Allocated literal payload capacity.
+    pub bit_lowering_memo_payload_capacity_literals: u64,
+    /// Conservative logical representation-header bytes.
+    pub bit_lowering_memo_logical_header_bytes: u64,
+    /// Initialized literal payload bytes.
+    pub bit_lowering_memo_logical_payload_bytes: u64,
+    /// Logical header plus initialized-payload bytes.
+    pub bit_lowering_memo_logical_total_bytes: u64,
+    /// Allocated-capacity bytes for literal payloads.
+    pub bit_lowering_memo_payload_capacity_bytes: u64,
+    /// Literal bits returned across all requested roots.
+    pub bit_lowering_memo_root_bits: u64,
+    /// Root bits required by the requested root sorts.
+    pub bit_lowering_memo_expected_root_bits: u64,
+    /// Whether representation-neutral accounting identities hold.
+    pub bit_lowering_memo_invariants_hold: bool,
+    /// Deterministic FNV-1a digest of the ordered AIG and lowering lift maps.
+    pub bit_lowering_structure_digest: u64,
+    /// Deterministic FNV-1a digest of the ordered CNF and CNF lift maps.
+    pub cnf_structure_digest: u64,
     /// Symbol-bit demand requests before unioning.
     pub symbol_bit_requests: u64,
     /// Bits in reachable symbols before demand reduction.
@@ -207,6 +246,60 @@ impl BvLayerStats {
             term_bits_available: lookup(stats, "term_bits_available").map_or(0, count_to_u64),
             term_bits_demanded: lookup(stats, "term_bits_demanded").map_or(0, count_to_u64),
             term_bits_lowered: lookup(stats, "term_bits_lowered").map_or(0, count_to_u64),
+            bit_lowering_memo_profile_complete: lookup(stats, "bit_lowering_memo_profile_complete")
+                .is_some_and(|value| value >= 1.0),
+            bit_lowering_memo_representation: BitLoweringMemoRepresentation::from_code(
+                lookup(stats, "bit_lowering_memo_representation").map_or(0, count_to_u64),
+            ),
+            bit_lowering_memo_source_terms: lookup(stats, "bit_lowering_memo_source_terms")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_slots: lookup(stats, "bit_lowering_memo_slots")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_occupied: lookup(stats, "bit_lowering_memo_occupied")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_lookups: lookup(stats, "bit_lowering_memo_lookups")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_hits: lookup(stats, "bit_lowering_memo_hits").map_or(0, count_to_u64),
+            bit_lowering_memo_writes: lookup(stats, "bit_lowering_memo_writes")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_payload_literals: lookup(stats, "bit_lowering_memo_payload_literals")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_payload_capacity_literals: lookup(
+                stats,
+                "bit_lowering_memo_payload_capacity_literals",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_logical_header_bytes: lookup(
+                stats,
+                "bit_lowering_memo_logical_header_bytes",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_logical_payload_bytes: lookup(
+                stats,
+                "bit_lowering_memo_logical_payload_bytes",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_logical_total_bytes: lookup(
+                stats,
+                "bit_lowering_memo_logical_total_bytes",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_payload_capacity_bytes: lookup(
+                stats,
+                "bit_lowering_memo_payload_capacity_bytes",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_root_bits: lookup(stats, "bit_lowering_memo_root_bits")
+                .map_or(0, count_to_u64),
+            bit_lowering_memo_expected_root_bits: lookup(
+                stats,
+                "bit_lowering_memo_expected_root_bits",
+            )
+            .map_or(0, count_to_u64),
+            bit_lowering_memo_invariants_hold: lookup(stats, "bit_lowering_memo_invariants_hold")
+                .is_some_and(|value| value >= 1.0),
+            bit_lowering_structure_digest: lookup_digest(stats, "bit_lowering_structure_digest"),
+            cnf_structure_digest: lookup_digest(stats, "cnf_structure_digest"),
             symbol_bit_requests: lookup(stats, "symbol_bit_requests").map_or(0, count_to_u64),
             symbol_bits_available: lookup(stats, "symbol_bits_available").map_or(0, count_to_u64),
             symbol_bits_demanded: lookup(stats, "symbol_bits_demanded").map_or(0, count_to_u64),
@@ -298,6 +391,12 @@ fn lookup(stats: &SolveStats, key: &str) -> Option<f64> {
         .iter()
         .find(|(name, _)| name == key)
         .map(|(_, value)| *value)
+}
+
+fn lookup_digest(stats: &SolveStats, key: &str) -> u64 {
+    let high = lookup(stats, &format!("{key}_hi")).map_or(0, count_to_u64);
+    let low = lookup(stats, &format!("{key}_lo")).map_or(0, count_to_u64);
+    (high << 32) | (low & u64::from(u32::MAX))
 }
 
 fn ms_to_duration(milliseconds: f64) -> Duration {

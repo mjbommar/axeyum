@@ -68,7 +68,10 @@ experiment) records, for each admitted full-lowering instance:
 - exact logical header/payload bytes using native `size_of` values, with the
   formula and invariants stated in the artifact rather than relabeled as RSS;
 - slot/occupancy, payload, term-bit binding, and root-width invariants; and
-- the existing AIG, CNF, verdict, oracle, and replay identities.
+- deterministic 64-bit FNV-1a regression digests over the ordered AIG, roots,
+  lowering lift maps, CNF clauses, CNF roots, and CNF lift map, alongside the
+  existing verdict, oracle, and replay identities. These are change detectors,
+  not cryptographic evidence.
 
 The profile switch is diagnostic only. Unprofiled timing uses separately built
 baseline and candidate commits and does not execute profile counters or retain
@@ -123,12 +126,12 @@ over ADR-0285's accepted corrected-wide-v3 representative population:
 - 100% decided, manifest/Z3 agreement, and all SAT original-model replays.
 
 The candidate advances to timing only if every per-query outcome, original
-model replay, AIG node/input/request/hash statistic, root literal, CNF variable,
-clause/construction statistic, term-bit binding, memo occupancy, memo payload
-length, and exact family/population count matches the baseline. Dense slots must
-equal source arena terms on every full-lowering row; occupied entries must equal
-completed full-lowering terms; payload literal length must equal retained
-full-lowering term-bit bindings.
+model replay, AIG node/input/request/hash statistic, deterministic lowering and
+CNF structure digest, CNF variable/clause/construction statistic, memo
+occupancy, memo payload length, and exact family/population count matches the
+baseline. Dense slots must equal source arena terms on every full-lowering row;
+occupied entries must equal completed full-lowering terms; payload literal
+length must equal retained full-lowering term-bit bindings.
 
 Report logical bytes per instance and in aggregate. The candidate's aggregate
 logical memo bytes may not exceed 110% of the baseline's conservative logical

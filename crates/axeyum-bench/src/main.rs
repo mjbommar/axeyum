@@ -51,10 +51,11 @@ mod run {
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
-        BvLayerStats, Capabilities, CheckResult, EndToEndUnsatOutcome, IncrementalBvSolver,
-        IncrementalBvStats, LazyBvBackend, Model, RangeDemandDecision, RangeDemandPolicy,
-        SatBvBackend, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
-        certify_qf_bv_unsat_end_to_end_within, check_model_with_assignment, solve,
+        BitLoweringMemoRepresentation, BvLayerStats, Capabilities, CheckResult,
+        EndToEndUnsatOutcome, IncrementalBvSolver, IncrementalBvStats, LazyBvBackend, Model,
+        RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats, SolverBackend,
+        SolverConfig, SolverError, UnknownKind, certify_qf_bv_unsat_end_to_end_within,
+        check_model_with_assignment, solve,
     };
     #[cfg(feature = "z3")]
     use axeyum_solver::{DETERMINISTIC_Z3_RANDOM_SEED, Z3Backend};
@@ -64,7 +65,7 @@ mod run {
 
     use crate::certificate_process::{IsolatedStatus, certify_file_isolated};
 
-    const ARTIFACT_VERSION: u32 = 37;
+    const ARTIFACT_VERSION: u32 = 39;
     const CORPUS_MANIFEST_VERSION: u64 = 1;
     const CONTENT_HASH_PREFIX: &str = "sha256:";
     const DETERMINISM_PROFILE: &str = "axeyum-bench-fixed-seeds-v1";
@@ -768,6 +769,7 @@ mod run {
     }
 
     #[derive(Debug, Clone, Copy, Default)]
+    #[allow(clippy::struct_excessive_bools)] // Flat sample of independent layer facts.
     struct LayerSample {
         word_preprocess: f64,
         bit_blast: f64,
@@ -797,6 +799,25 @@ mod run {
         term_bits_available: u64,
         term_bits_demanded: u64,
         term_bits_lowered: u64,
+        bit_lowering_memo_profile_complete: bool,
+        bit_lowering_memo_representation: BitLoweringMemoRepresentation,
+        bit_lowering_memo_source_terms: u64,
+        bit_lowering_memo_slots: u64,
+        bit_lowering_memo_occupied: u64,
+        bit_lowering_memo_lookups: u64,
+        bit_lowering_memo_hits: u64,
+        bit_lowering_memo_writes: u64,
+        bit_lowering_memo_payload_literals: u64,
+        bit_lowering_memo_payload_capacity_literals: u64,
+        bit_lowering_memo_logical_header_bytes: u64,
+        bit_lowering_memo_logical_payload_bytes: u64,
+        bit_lowering_memo_logical_total_bytes: u64,
+        bit_lowering_memo_payload_capacity_bytes: u64,
+        bit_lowering_memo_root_bits: u64,
+        bit_lowering_memo_expected_root_bits: u64,
+        bit_lowering_memo_invariants_hold: bool,
+        bit_lowering_structure_digest: u64,
+        cnf_structure_digest: u64,
         symbol_bit_requests: u64,
         symbol_bits_available: u64,
         symbol_bits_demanded: u64,
@@ -1328,6 +1349,29 @@ mod run {
                 term_bits_available: layers.term_bits_available,
                 term_bits_demanded: layers.term_bits_demanded,
                 term_bits_lowered: layers.term_bits_lowered,
+                bit_lowering_memo_profile_complete: layers.bit_lowering_memo_profile_complete,
+                bit_lowering_memo_representation: layers.bit_lowering_memo_representation,
+                bit_lowering_memo_source_terms: layers.bit_lowering_memo_source_terms,
+                bit_lowering_memo_slots: layers.bit_lowering_memo_slots,
+                bit_lowering_memo_occupied: layers.bit_lowering_memo_occupied,
+                bit_lowering_memo_lookups: layers.bit_lowering_memo_lookups,
+                bit_lowering_memo_hits: layers.bit_lowering_memo_hits,
+                bit_lowering_memo_writes: layers.bit_lowering_memo_writes,
+                bit_lowering_memo_payload_literals: layers.bit_lowering_memo_payload_literals,
+                bit_lowering_memo_payload_capacity_literals: layers
+                    .bit_lowering_memo_payload_capacity_literals,
+                bit_lowering_memo_logical_header_bytes: layers
+                    .bit_lowering_memo_logical_header_bytes,
+                bit_lowering_memo_logical_payload_bytes: layers
+                    .bit_lowering_memo_logical_payload_bytes,
+                bit_lowering_memo_logical_total_bytes: layers.bit_lowering_memo_logical_total_bytes,
+                bit_lowering_memo_payload_capacity_bytes: layers
+                    .bit_lowering_memo_payload_capacity_bytes,
+                bit_lowering_memo_root_bits: layers.bit_lowering_memo_root_bits,
+                bit_lowering_memo_expected_root_bits: layers.bit_lowering_memo_expected_root_bits,
+                bit_lowering_memo_invariants_hold: layers.bit_lowering_memo_invariants_hold,
+                bit_lowering_structure_digest: layers.bit_lowering_structure_digest,
+                cnf_structure_digest: layers.cnf_structure_digest,
                 symbol_bit_requests: layers.symbol_bit_requests,
                 symbol_bits_available: layers.symbol_bits_available,
                 symbol_bits_demanded: layers.symbol_bits_demanded,
@@ -3631,6 +3675,163 @@ mod run {
         })
     }
 
+    fn instance_bit_lowering_memo_record(sample: &LayerSample) -> JsonValue {
+        if !sample.bit_lowering_memo_profile_complete {
+            return json!({
+                "profile_complete": false,
+                "representation": JsonValue::Null,
+                "source_terms": JsonValue::Null,
+                "slots": JsonValue::Null,
+                "occupied": JsonValue::Null,
+                "lookups": JsonValue::Null,
+                "hits": JsonValue::Null,
+                "writes": JsonValue::Null,
+                "payload_literals": JsonValue::Null,
+                "payload_capacity_literals": JsonValue::Null,
+                "logical_header_bytes": JsonValue::Null,
+                "logical_payload_bytes": JsonValue::Null,
+                "logical_total_bytes": JsonValue::Null,
+                "payload_capacity_bytes": JsonValue::Null,
+                "root_bits": JsonValue::Null,
+                "expected_root_bits": JsonValue::Null,
+                "header_accounting": JsonValue::Null,
+                "invariants": JsonValue::Null,
+                "digests": JsonValue::Null,
+            });
+        }
+        let representation_shape_holds = match sample.bit_lowering_memo_representation {
+            BitLoweringMemoRepresentation::BtreeV1 => {
+                sample.bit_lowering_memo_slots == sample.bit_lowering_memo_occupied
+            }
+            BitLoweringMemoRepresentation::DenseV1 => {
+                sample.bit_lowering_memo_slots == sample.bit_lowering_memo_source_terms
+                    && sample.bit_lowering_memo_occupied <= sample.bit_lowering_memo_slots
+            }
+            BitLoweringMemoRepresentation::Unavailable => false,
+        };
+        let hits_within_lookups = sample.bit_lowering_memo_hits <= sample.bit_lowering_memo_lookups;
+        let writes_equal_occupied =
+            sample.bit_lowering_memo_writes == sample.bit_lowering_memo_occupied;
+        let payload_matches_term_bits =
+            sample.bit_lowering_memo_payload_literals == sample.term_bits_lowered;
+        let capacity_covers_payload = sample.bit_lowering_memo_payload_capacity_literals
+            >= sample.bit_lowering_memo_payload_literals;
+        let total_partitions = sample.bit_lowering_memo_logical_total_bytes
+            == sample
+                .bit_lowering_memo_logical_header_bytes
+                .saturating_add(sample.bit_lowering_memo_logical_payload_bytes);
+        let root_widths_match =
+            sample.bit_lowering_memo_root_bits == sample.bit_lowering_memo_expected_root_bits;
+        json!({
+            "profile_complete": true,
+            "representation": sample.bit_lowering_memo_representation.as_str(),
+            "source_terms": sample.bit_lowering_memo_source_terms,
+            "slots": sample.bit_lowering_memo_slots,
+            "occupied": sample.bit_lowering_memo_occupied,
+            "lookups": sample.bit_lowering_memo_lookups,
+            "hits": sample.bit_lowering_memo_hits,
+            "writes": sample.bit_lowering_memo_writes,
+            "payload_literals": sample.bit_lowering_memo_payload_literals,
+            "payload_capacity_literals":
+                sample.bit_lowering_memo_payload_capacity_literals,
+            "logical_header_bytes": sample.bit_lowering_memo_logical_header_bytes,
+            "logical_payload_bytes": sample.bit_lowering_memo_logical_payload_bytes,
+            "logical_total_bytes": sample.bit_lowering_memo_logical_total_bytes,
+            "payload_capacity_bytes": sample.bit_lowering_memo_payload_capacity_bytes,
+            "root_bits": sample.bit_lowering_memo_root_bits,
+            "expected_root_bits": sample.bit_lowering_memo_expected_root_bits,
+            "header_accounting": match sample.bit_lowering_memo_representation {
+                BitLoweringMemoRepresentation::BtreeV1 =>
+                    "occupied * (size_of::<TermId>() + size_of::<Vec<AigLit>>()); excludes BTree node metadata",
+                BitLoweringMemoRepresentation::DenseV1 =>
+                    "slots * size_of::<Option<Vec<AigLit>>>()",
+                BitLoweringMemoRepresentation::Unavailable => "unavailable",
+            },
+            "digests": {
+                "lowering_fnv64": format!("{:016x}", sample.bit_lowering_structure_digest),
+                "cnf_fnv64": format!("{:016x}", sample.cnf_structure_digest),
+            },
+            "invariants": {
+                "producer": sample.bit_lowering_memo_invariants_hold,
+                "representation_shape": representation_shape_holds,
+                "hits_within_lookups": hits_within_lookups,
+                "writes_equal_occupied": writes_equal_occupied,
+                "payload_matches_term_bits": payload_matches_term_bits,
+                "capacity_covers_payload": capacity_covers_payload,
+                "logical_total_partitions": total_partitions,
+                "root_widths_match": root_widths_match,
+                "all_hold": sample.bit_lowering_memo_invariants_hold
+                    && representation_shape_holds
+                    && hits_within_lookups
+                    && writes_equal_occupied
+                    && payload_matches_term_bits
+                    && capacity_covers_payload
+                    && total_partitions
+                    && root_widths_match,
+            },
+        })
+    }
+
+    fn bit_lowering_memo_attribution_record(samples: &[LayerSample]) -> JsonValue {
+        let complete = samples
+            .iter()
+            .filter(|sample| sample.bit_lowering_memo_profile_complete)
+            .count();
+        let count_representation = |representation| {
+            samples
+                .iter()
+                .filter(|sample| sample.bit_lowering_memo_representation == representation)
+                .count()
+        };
+        let sum = |select: fn(&LayerSample) -> u64| {
+            samples.iter().map(select).fold(0_u64, u64::saturating_add)
+        };
+        json!({
+            "profile_complete": !samples.is_empty() && complete == samples.len(),
+            "profiled_samples": complete,
+            "digest_samples": complete,
+            "samples": samples.len(),
+            "representation_counts": {
+                "btree-v1": count_representation(BitLoweringMemoRepresentation::BtreeV1),
+                "dense-v1": count_representation(BitLoweringMemoRepresentation::DenseV1),
+                "unavailable": count_representation(
+                    BitLoweringMemoRepresentation::Unavailable,
+                ),
+            },
+            "source_terms": sum(|sample| sample.bit_lowering_memo_source_terms),
+            "slots": sum(|sample| sample.bit_lowering_memo_slots),
+            "occupied": sum(|sample| sample.bit_lowering_memo_occupied),
+            "lookups": sum(|sample| sample.bit_lowering_memo_lookups),
+            "hits": sum(|sample| sample.bit_lowering_memo_hits),
+            "writes": sum(|sample| sample.bit_lowering_memo_writes),
+            "payload_literals": sum(|sample| sample.bit_lowering_memo_payload_literals),
+            "payload_capacity_literals": sum(
+                |sample| sample.bit_lowering_memo_payload_capacity_literals,
+            ),
+            "logical_header_bytes": sum(
+                |sample| sample.bit_lowering_memo_logical_header_bytes,
+            ),
+            "logical_payload_bytes": sum(
+                |sample| sample.bit_lowering_memo_logical_payload_bytes,
+            ),
+            "logical_total_bytes": sum(
+                |sample| sample.bit_lowering_memo_logical_total_bytes,
+            ),
+            "payload_capacity_bytes": sum(
+                |sample| sample.bit_lowering_memo_payload_capacity_bytes,
+            ),
+            "root_bits": sum(|sample| sample.bit_lowering_memo_root_bits),
+            "expected_root_bits": sum(
+                |sample| sample.bit_lowering_memo_expected_root_bits,
+            ),
+            "all_instance_invariants_hold": samples.iter().all(|sample| {
+                instance_bit_lowering_memo_record(sample)
+                    .pointer("/invariants/all_hold")
+                    == Some(&JsonValue::Bool(true))
+            }),
+        })
+    }
+
     /// Corpus layer attribution: per-stage seconds, p50/p95 distributions, each
     /// stage's share of the pure-Rust cold pipeline, and the gate (a) verdict on
     /// whether SAT solve time dominates. `null` when no `sat-bv` instance was
@@ -3718,6 +3919,7 @@ mod run {
                 &s.cnf_duplicate_origin_samples,
             ),
             "bit_demand": bit_demand_attribution_record(&s.layer_samples),
+            "bit_lowering_memo": bit_lowering_memo_attribution_record(&s.layer_samples),
             // Gate (a): does SAT solve time dominate end-to-end? The CDCL-core
             // priority gate needs this and a CaDiCaL/Kissat gap before it jumps
             // the queue ahead of encoding work.
@@ -3889,6 +4091,7 @@ mod run {
                 },
             },
             "bit_demand": instance_bit_demand_record(&sample),
+            "bit_lowering_memo": instance_bit_lowering_memo_record(&sample),
         })
     }
 
@@ -8465,6 +8668,69 @@ mod run {
             assert_eq!(instance["profile_complete"], json!(false));
             assert!(instance["symbol"]["available"].is_null());
             assert_eq!(instance["symbol"]["lowered"], json!(64));
+        }
+
+        #[test]
+        fn bit_lowering_memo_profile_exposes_exact_btree_accounting() {
+            let sample = LayerSample {
+                term_bits_lowered: 24,
+                bit_lowering_memo_profile_complete: true,
+                bit_lowering_memo_representation: BitLoweringMemoRepresentation::BtreeV1,
+                bit_lowering_memo_source_terms: 8,
+                bit_lowering_memo_slots: 3,
+                bit_lowering_memo_occupied: 3,
+                bit_lowering_memo_lookups: 7,
+                bit_lowering_memo_hits: 1,
+                bit_lowering_memo_writes: 3,
+                bit_lowering_memo_payload_literals: 24,
+                bit_lowering_memo_payload_capacity_literals: 25,
+                bit_lowering_memo_logical_header_bytes: 84,
+                bit_lowering_memo_logical_payload_bytes: 96,
+                bit_lowering_memo_logical_total_bytes: 180,
+                bit_lowering_memo_payload_capacity_bytes: 100,
+                bit_lowering_memo_root_bits: 2,
+                bit_lowering_memo_expected_root_bits: 2,
+                bit_lowering_memo_invariants_hold: true,
+                bit_lowering_structure_digest: 0x0123_4567_89ab_cdef,
+                cnf_structure_digest: 0xfedc_ba98_7654_3210,
+                ..LayerSample::default()
+            };
+            let instance = instance_bit_lowering_memo_record(&sample);
+            assert_eq!(instance["profile_complete"], json!(true));
+            assert_eq!(instance["representation"], json!("btree-v1"));
+            assert_eq!(instance["invariants"]["all_hold"], json!(true));
+            assert_eq!(instance["payload_literals"], json!(24));
+            assert_eq!(instance["root_bits"], json!(2));
+            assert_eq!(instance["expected_root_bits"], json!(2));
+            assert_eq!(
+                instance["digests"]["lowering_fnv64"],
+                json!("0123456789abcdef")
+            );
+            assert_eq!(instance["digests"]["cnf_fnv64"], json!("fedcba9876543210"));
+
+            let aggregate = bit_lowering_memo_attribution_record(&[sample]);
+            assert_eq!(aggregate["profile_complete"], json!(true));
+            assert_eq!(aggregate["representation_counts"]["btree-v1"], json!(1));
+            assert_eq!(aggregate["logical_total_bytes"], json!(180));
+            assert_eq!(aggregate["root_bits"], json!(2));
+            assert_eq!(aggregate["digest_samples"], json!(1));
+            assert_eq!(aggregate["all_instance_invariants_hold"], json!(true));
+        }
+
+        #[test]
+        fn unprofiled_bit_lowering_memo_is_explicitly_unavailable() {
+            let sample = LayerSample::default();
+            let instance = instance_bit_lowering_memo_record(&sample);
+            assert_eq!(instance["profile_complete"], json!(false));
+            assert!(instance["representation"].is_null());
+            assert!(instance["invariants"].is_null());
+            assert!(instance["digests"].is_null());
+
+            let aggregate = bit_lowering_memo_attribution_record(&[sample]);
+            assert_eq!(aggregate["profile_complete"], json!(false));
+            assert_eq!(aggregate["representation_counts"]["unavailable"], json!(1));
+            assert_eq!(aggregate["digest_samples"], json!(0));
+            assert_eq!(aggregate["all_instance_invariants_hold"], json!(false));
         }
 
         #[test]

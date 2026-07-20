@@ -413,6 +413,23 @@ fn stats_report_phase5_layer_counts() {
         "symbol_bits_available",
         "symbol_bits_demanded",
         "symbol_bits_lowered",
+        "bit_lowering_memo_profile_complete",
+        "bit_lowering_memo_representation",
+        "bit_lowering_memo_source_terms",
+        "bit_lowering_memo_slots",
+        "bit_lowering_memo_occupied",
+        "bit_lowering_memo_lookups",
+        "bit_lowering_memo_hits",
+        "bit_lowering_memo_writes",
+        "bit_lowering_memo_payload_literals",
+        "bit_lowering_memo_payload_capacity_literals",
+        "bit_lowering_memo_logical_header_bytes",
+        "bit_lowering_memo_logical_payload_bytes",
+        "bit_lowering_memo_logical_total_bytes",
+        "bit_lowering_memo_payload_capacity_bytes",
+        "bit_lowering_memo_root_bits",
+        "bit_lowering_memo_expected_root_bits",
+        "bit_lowering_memo_invariants_hold",
         "cnf_variables",
         "cnf_clauses",
         "cnf_plan_ms",
@@ -433,6 +450,13 @@ fn stats_report_phase5_layer_counts() {
     let layers = BvLayerStats::from_solve_stats(stats).expect("typed layer stats");
     assert!(!layers.bit_demand_profile_complete);
     assert!(!layers.bit_demand_lowering_applied);
+    assert!(!layers.bit_lowering_memo_profile_complete);
+    assert_eq!(
+        layers.bit_lowering_memo_representation,
+        axeyum_solver::BitLoweringMemoRepresentation::Unavailable
+    );
+    assert_eq!(layers.bit_lowering_structure_digest, 0);
+    assert_eq!(layers.cnf_structure_digest, 0);
     assert_eq!(
         layers.range_demand_decision,
         RangeDemandDecision::NotRequested
@@ -461,6 +485,33 @@ fn structural_bit_demand_profile_is_explicitly_opt_in() {
     assert_eq!(layers.term_bits_lowered, 81);
     assert_eq!(layers.symbol_bits_demanded, 8);
     assert_eq!(layers.symbol_bits_lowered, 64);
+    assert!(layers.bit_lowering_memo_profile_complete);
+    for key in [
+        "bit_lowering_structure_digest_hi",
+        "bit_lowering_structure_digest_lo",
+        "cnf_structure_digest_hi",
+        "cnf_structure_digest_lo",
+    ] {
+        assert!(
+            stats.backend.iter().any(|(name, _)| name == key),
+            "missing profiled structure digest {key}"
+        );
+    }
+    assert_eq!(
+        layers.bit_lowering_memo_representation,
+        axeyum_solver::BitLoweringMemoRepresentation::BtreeV1
+    );
+    assert_eq!(
+        layers.bit_lowering_memo_payload_literals,
+        layers.term_bits_lowered
+    );
+    assert!(layers.bit_lowering_memo_invariants_hold);
+    assert_eq!(
+        layers.bit_lowering_memo_root_bits,
+        layers.bit_lowering_memo_expected_root_bits
+    );
+    assert_ne!(layers.bit_lowering_structure_digest, 0);
+    assert_ne!(layers.cnf_structure_digest, 0);
 }
 
 #[test]

@@ -60,7 +60,7 @@ reflection-semantics-gate:
     python3 scripts/check-reflection-semantics-gate.py --run
 
 benchmark-repetition-tests:
-    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_shards.py scripts/tests/test_summarize_glaurung_shard_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_summarize_glaurung_warm_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_shard_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py scripts/tests/test_compare_glaurung_native_replay.py scripts/tests/test_analyze_glaurung_paired_traces.py scripts/tests/test_analyze_glaurung_regime_features.py scripts/tests/test_analyze_glaurung_profiled_trace.py scripts/tests/test_analyze_qfbv_faithfulness.py scripts/tests/test_measure_glaurung_authoritative_findings.py
+    python3 -m unittest scripts/tests/test_glaurung_benchmark_recipes.py scripts/tests/test_glaurung_regular_gate.py scripts/tests/test_summarize_glaurung_repetitions.py scripts/tests/test_summarize_glaurung_shards.py scripts/tests/test_summarize_glaurung_shard_repetitions.py scripts/tests/test_summarize_glaurung_native_profile.py scripts/tests/test_summarize_glaurung_warm_profile.py scripts/tests/test_compare_glaurung_repetitions.py scripts/tests/test_compare_glaurung_shard_repetitions.py scripts/tests/test_compare_glaurung_rewrite_ablation.py scripts/tests/test_compare_glaurung_native_replay.py scripts/tests/test_analyze_glaurung_paired_traces.py scripts/tests/test_analyze_glaurung_regime_features.py scripts/tests/test_analyze_glaurung_profiled_trace.py scripts/tests/test_analyze_qfbv_faithfulness.py scripts/tests/test_analyze_bit_lowering_memo_profile.py scripts/tests/test_measure_glaurung_authoritative_findings.py
 
 # Exercise the actual Glaurung lifter distribution when its access-controlled
 # representative pack is available. The script auto-discovers the pinned NAS
@@ -156,6 +156,16 @@ bench-glaurung-qfbv-configured corpus_dir manifest tier="full" out="bench-result
 bench-glaurung-qfbv-raw-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-raw-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"
     cargo run --release -p axeyum-bench --features z3 -- "{{ corpus_dir }}" --corpus-manifest "{{ manifest }}" --corpus-tier "{{ tier }}" --backend sat-bv --rewrite off --profile-bit-demand --compare-z3 --require-in-process-z3 --require-reproducible-run --require-deterministic-resources --timeout-ms 10000 --resource-limit 2000000 --node-budget 300000 --cnf-var-budget 3000000 --cnf-clause-budget 8000000 --jobs 1 --min-decided-percent 100 --logic QF_BV --out "{{ out }}"
+
+# ADR-0300's fail-closed v39 BTree baseline validator and dense-candidate
+# structural comparison. Timing is authorized only by the second recipe.
+analyze-glaurung-bit-lowering-memo-profile artifact out="bench-results/glaurung-bit-lowering-memo-profile-analysis.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/analyze-bit-lowering-memo-profile.py --artifact "{{ artifact }}" --expected-representation btree-v1 --out "{{ out }}"
+
+compare-glaurung-bit-lowering-memo-profile baseline candidate out="bench-results/glaurung-bit-lowering-memo-comparison.json":
+    mkdir -p "$(dirname '{{ out }}')"
+    python3 scripts/analyze-bit-lowering-memo-profile.py --artifact "{{ baseline }}" --candidate "{{ candidate }}" --expected-representation btree-v1 --candidate-representation dense-v1 --out "{{ out }}"
 
 bench-glaurung-qfbv-canonical-demand-profile corpus_dir manifest tier="representative" out="bench-results/glaurung-qfbv-canonical-demand-profile.json":
     mkdir -p "$(dirname '{{ out }}')"

@@ -325,7 +325,12 @@ session state.
 > scratchpad and diary path is absent from this checkout, and it combines two
 > mechanisms. ADR-0300 therefore preregisters only `Vec<Option<Vec<AigLit>>>`,
 > retaining all literal-vector clones and lift maps. Representation-neutral
-> artifact-v39 telemetry must land on the BTree baseline first; exact 162-query
+> artifact-v39 telemetry now records the BTree baseline representation, exact
+> lookup/hit/write and payload/storage accounting, root-width invariants, and
+> deterministic ordered lowering/CNF regression digests. A separate fail-closed
+> analyzer re-sums every row and permits only the registered representation
+> deltas. The immediate next action is a clean detached 162-query BTree profile;
+> only an accepted committed baseline permits the dense implementation. Exact
 > structural/storage comparison then gates six order-balanced unprofiled pairs
 > on bit-blast time, family tails, cold total, variance, and RSS. Failure restores
 > the tree representation. Clause storage, scratch reuse, reverse traversal,

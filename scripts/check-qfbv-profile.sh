@@ -38,12 +38,12 @@ for path in (
         raise SystemExit(f"{path} must explicitly opt into the full solver surface")
 PY
 
-cargo clippy -p axeyum-solver --no-default-features --features qfbv --lib -- -D warnings
+cargo clippy -p axeyum-solver --no-default-features --features qfbv --lib --jobs 1 -- -D warnings
 # The package-default command must not attempt to compile full-only integration
 # targets after qfbv became the default.
-cargo test -p axeyum-solver --no-run --quiet
+cargo test -p axeyum-solver --no-run --quiet --jobs 1
 cargo test -p axeyum-solver --no-default-features --features qfbv \
-  --test qfbv_profile
+  --test qfbv_profile --jobs 1
 
 tree="$(cargo tree -p axeyum-solver --no-default-features --features qfbv \
   -e normal --prefix none)"

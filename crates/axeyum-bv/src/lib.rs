@@ -70,7 +70,9 @@ pub fn lower_terms_profiled(
     arena: &TermArena,
     roots: &[TermId],
 ) -> Result<BitLowering, BitLowerError> {
-    LoweringBuilder::new(arena).lower_roots(roots, true)
+    let mut builder = LoweringBuilder::new(arena);
+    builder.profiling_enabled = true;
+    builder.lower_roots(roots, true)
 }
 
 /// Lowers one or more root terms into an AIG while honoring an absolute
@@ -262,7 +264,9 @@ pub fn lower_terms_with_deadline_profiled(
     roots: &[TermId],
     deadline: Option<Instant>,
 ) -> Result<BitLowering, BitLowerError> {
-    LoweringBuilder::with_deadline(arena, deadline).lower_roots(roots, true)
+    let mut builder = LoweringBuilder::with_deadline(arena, deadline);
+    builder.profiling_enabled = true;
+    builder.lower_roots(roots, true)
 }
 
 /// Returns the first operator outside the current bit-lowering subset.
@@ -422,6 +426,90 @@ pub struct BitDemandStats {
     pub symbol_bits_lowered: u64,
 }
 
+/// Private full-lowering memo representation reported by diagnostic profiles.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum BitLoweringMemoRepresentation {
+    /// Memo diagnostics were not collected for this lowering.
+    #[default]
+    Unavailable,
+    /// Ordered-tree baseline used before ADR-0300 observation.
+    BtreeV1,
+    /// Dense `TermId`-indexed candidate preregistered by ADR-0300.
+    DenseV1,
+}
+
+impl BitLoweringMemoRepresentation {
+    /// Stable numeric code used by backend-neutral solve statistics.
+    pub const fn code(self) -> u8 {
+        match self {
+            Self::Unavailable => 0,
+            Self::BtreeV1 => 1,
+            Self::DenseV1 => 2,
+        }
+    }
+
+    /// Stable artifact spelling.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Unavailable => "unavailable",
+            Self::BtreeV1 => "btree-v1",
+            Self::DenseV1 => "dense-v1",
+        }
+    }
+
+    /// Decodes the stable numeric representation code.
+    pub const fn from_code(code: u64) -> Self {
+        match code {
+            1 => Self::BtreeV1,
+            2 => Self::DenseV1,
+            _ => Self::Unavailable,
+        }
+    }
+}
+
+/// Representation-neutral accounting for the private full-lowering term memo.
+///
+/// These diagnostics are populated only by observational profiled lowering.
+/// Logical bytes use native `size_of` values and exclude allocator/tree-node
+/// metadata; payload capacity and process RSS remain separate measurements.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct BitLoweringMemoStats {
+    /// Whether every field below was collected.
+    pub profile_complete: bool,
+    /// Active private representation.
+    pub representation: BitLoweringMemoRepresentation,
+    /// Terms in the source arena, including unreachable terms.
+    pub source_terms: u64,
+    /// Addressable memo slots/nodes in the active representation.
+    pub slots: u64,
+    /// Completed terms retained in the memo.
+    pub occupied: u64,
+    /// Exact term lookups performed by full lowering.
+    pub lookups: u64,
+    /// Lookups that found an already completed term.
+    pub hits: u64,
+    /// Completed term vectors written to the memo.
+    pub writes: u64,
+    /// Retained literal payload length across all memo values.
+    pub payload_literals: u64,
+    /// Retained literal payload capacity across all memo values.
+    pub payload_capacity_literals: u64,
+    /// Conservative logical bytes for representation headers/keys.
+    pub logical_header_bytes: u64,
+    /// Logical bytes for initialized literal payloads.
+    pub logical_payload_bytes: u64,
+    /// Header plus initialized-payload logical bytes.
+    pub logical_total_bytes: u64,
+    /// Allocated-capacity bytes for literal payloads.
+    pub payload_capacity_bytes: u64,
+    /// Literal bits returned across all requested roots, including duplicate roots.
+    pub root_bits: u64,
+    /// Root bits required by the requested root sorts.
+    pub expected_root_bits: u64,
+    /// Whether representation-independent accounting identities hold.
+    pub invariants_hold: bool,
+}
+
 /// AIG plus lift-map metadata for lowered roots.
 #[derive(Debug, Clone)]
 pub struct BitLowering {
@@ -431,6 +519,7 @@ pub struct BitLowering {
     term_bit_ranges: Vec<Option<TermBitRange>>,
     symbol_inputs: Vec<SymbolBitInput>,
     demand_stats: BitDemandStats,
+    memo_stats: BitLoweringMemoStats,
     complete_omitted_symbol_bits: bool,
 }
 
@@ -458,6 +547,14 @@ impl BitLowering {
     /// Returns structural demand and actual-lowering counts for this batch.
     pub fn demand_stats(&self) -> BitDemandStats {
         self.demand_stats
+    }
+
+    /// Returns private full-lowering memo diagnostics.
+    ///
+    /// Ordinary and demand-sliced production lowering return an unavailable
+    /// record. Observational profiled full lowering returns exact accounting.
+    pub fn memo_stats(&self) -> BitLoweringMemoStats {
+        self.memo_stats
     }
 
     /// Looks up the AIG literal for one original term bit.
@@ -1125,6 +1222,63 @@ impl<'a> LoweringBuilder<'a> {
         }
     }
 
+    fn memo_stats(&self, roots: &[TermId]) -> BitLoweringMemoStats {
+        if !self.profiling_enabled {
+            return BitLoweringMemoStats::default();
+        }
+        let occupied = usize_to_u64_saturating(self.memo.len());
+        let payload_literals = self.memo.values().fold(0_u64, |total, bits| {
+            total.saturating_add(usize_to_u64_saturating(bits.len()))
+        });
+        let payload_capacity_literals = self.memo.values().fold(0_u64, |total, bits| {
+            total.saturating_add(usize_to_u64_saturating(bits.capacity()))
+        });
+        let header_unit = usize_to_u64_saturating(
+            core::mem::size_of::<TermId>() + core::mem::size_of::<Vec<AigLit>>(),
+        );
+        let literal_bytes = usize_to_u64_saturating(core::mem::size_of::<AigLit>());
+        let logical_header_bytes = occupied.saturating_mul(header_unit);
+        let logical_payload_bytes = payload_literals.saturating_mul(literal_bytes);
+        let payload_capacity_bytes = payload_capacity_literals.saturating_mul(literal_bytes);
+        let writes = self.incremental_stats.terms_lowered;
+        let lookups = self.incremental_stats.term_memo_lookups;
+        let hits = self.incremental_stats.term_memo_hits;
+        let root_bits = roots.iter().fold(0_u64, |total, root| {
+            total.saturating_add(
+                self.memo
+                    .get(root)
+                    .map_or(0, |bits| usize_to_u64_saturating(bits.len())),
+            )
+        });
+        let expected_root_bits = roots.iter().fold(0_u64, |total, root| {
+            total.saturating_add(usize_to_u64_saturating(sort_width(
+                self.arena.sort_of(*root),
+            )))
+        });
+        BitLoweringMemoStats {
+            profile_complete: true,
+            representation: BitLoweringMemoRepresentation::BtreeV1,
+            source_terms: usize_to_u64_saturating(self.arena.len()),
+            slots: occupied,
+            occupied,
+            lookups,
+            hits,
+            writes,
+            payload_literals,
+            payload_capacity_literals,
+            logical_header_bytes,
+            logical_payload_bytes,
+            logical_total_bytes: logical_header_bytes.saturating_add(logical_payload_bytes),
+            payload_capacity_bytes,
+            root_bits,
+            expected_root_bits,
+            invariants_hold: occupied == writes
+                && hits <= lookups
+                && payload_literals == usize_to_u64_saturating(self.term_bits.len())
+                && root_bits == expected_root_bits,
+        }
+    }
+
     fn lower_roots(
         mut self,
         roots: &[TermId],
@@ -1147,6 +1301,7 @@ impl<'a> LoweringBuilder<'a> {
         };
         demand_stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
         demand_stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
+        let memo_stats = self.memo_stats(roots);
         Ok(BitLowering {
             aig: self.aig,
             roots: lowered_roots,
@@ -1154,6 +1309,7 @@ impl<'a> LoweringBuilder<'a> {
             term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats,
+            memo_stats,
             complete_omitted_symbol_bits: false,
         })
     }
@@ -1175,6 +1331,7 @@ impl<'a> LoweringBuilder<'a> {
         }
         demand_stats.term_bits_lowered = usize_to_u64_saturating(self.term_bits.len());
         demand_stats.symbol_bits_lowered = usize_to_u64_saturating(self.symbol_inputs.len());
+        let memo_stats = self.memo_stats(roots);
         Ok(BitLowering {
             aig: self.aig,
             roots: lowered_roots,
@@ -1182,6 +1339,7 @@ impl<'a> LoweringBuilder<'a> {
             term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats,
+            memo_stats,
             complete_omitted_symbol_bits: false,
         })
     }
@@ -1223,6 +1381,7 @@ impl<'a> LoweringBuilder<'a> {
             term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats: demand.stats,
+            memo_stats: BitLoweringMemoStats::default(),
             complete_omitted_symbol_bits: true,
         })
     }
@@ -1264,6 +1423,7 @@ impl<'a> LoweringBuilder<'a> {
             term_bit_ranges: self.term_bit_ranges,
             symbol_inputs: self.symbol_inputs,
             demand_stats: plan.stats,
+            memo_stats: BitLoweringMemoStats::default(),
             complete_omitted_symbol_bits: true,
         })
     }
@@ -3788,12 +3948,14 @@ mod tests {
     use std::time::{Duration, Instant};
 
     use axeyum_aig::{AigLit, AigNode};
-    use axeyum_ir::{Assignment, IrError, Sort, TermArena, Value, eval};
+    use axeyum_ir::{Assignment, IrError, Sort, TermArena, TermId, Value, eval};
 
     use super::{
-        BitLowerError, BitLowering, IncrementalLowering, RangeDemandDecision, RangeDemandPolicy,
-        eval_lowered_once, lower_terms, lower_terms_demanded, lower_terms_demanded_with_deadline,
+        BitLowerError, BitLowering, BitLoweringMemoRepresentation, BitLoweringMemoStats,
+        IncrementalLowering, RangeDemandDecision, RangeDemandPolicy, eval_lowered_once,
+        lower_terms, lower_terms_demanded, lower_terms_demanded_with_deadline,
         lower_terms_profiled, lower_terms_range_demanded, lower_terms_range_demanded_with_deadline,
+        usize_to_u64_saturating,
     };
 
     fn bv(width: u32, value: u128) -> Value {
@@ -4668,6 +4830,60 @@ mod tests {
         assert_eq!(reused.memoized_terms, 0);
         assert_eq!(reused.term_bit_bindings, 0);
         assert_eq!(reused.symbol_bit_inputs, 0);
+    }
+
+    #[test]
+    fn profiled_batch_lowering_reports_exact_btree_memo_accounting() {
+        let mut arena = TermArena::new();
+        let x = arena.bv_var("x", 8).unwrap();
+        let one = arena.bv_const(8, 1).unwrap();
+        let sum = arena.bv_add(x, one).unwrap();
+        let expected = arena.bv_const(8, 7).unwrap();
+        let root = arena.eq(sum, expected).unwrap();
+        let _unreachable = arena.bv_var("unreachable", 32).unwrap();
+
+        let profiled = lower_terms_profiled(&arena, &[root, sum]).unwrap();
+        let stats = profiled.memo_stats();
+        assert!(stats.profile_complete);
+        assert_eq!(stats.representation, BitLoweringMemoRepresentation::BtreeV1);
+        assert_eq!(stats.source_terms, usize_to_u64_saturating(arena.len()));
+        assert_eq!(stats.slots, stats.occupied);
+        assert_eq!(stats.occupied, stats.writes);
+        assert!(stats.occupied < stats.source_terms);
+        assert!(stats.lookups > stats.writes);
+        assert!(stats.hits > 0);
+        assert_eq!(
+            stats.payload_literals,
+            usize_to_u64_saturating(profiled.term_bits().len())
+        );
+        assert!(stats.payload_capacity_literals >= stats.payload_literals);
+        let header_unit = usize_to_u64_saturating(
+            core::mem::size_of::<TermId>() + core::mem::size_of::<Vec<AigLit>>(),
+        );
+        let literal_bytes = usize_to_u64_saturating(core::mem::size_of::<AigLit>());
+        assert_eq!(stats.logical_header_bytes, stats.occupied * header_unit);
+        assert_eq!(
+            stats.logical_payload_bytes,
+            stats.payload_literals * literal_bytes
+        );
+        assert_eq!(
+            stats.logical_total_bytes,
+            stats.logical_header_bytes + stats.logical_payload_bytes
+        );
+        assert_eq!(stats.root_bits, 9);
+        assert_eq!(stats.root_bits, stats.expected_root_bits);
+        assert!(stats.invariants_hold);
+
+        assert_eq!(
+            lower_terms(&arena, &[root, sum]).unwrap().memo_stats(),
+            BitLoweringMemoStats::default()
+        );
+        assert_eq!(
+            lower_terms_demanded(&arena, &[root, sum])
+                .unwrap()
+                .memo_stats(),
+            BitLoweringMemoStats::default()
+        );
     }
 
     #[test]
