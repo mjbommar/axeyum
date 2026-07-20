@@ -1,10 +1,10 @@
 # ADR-0285: Preregister a flat CNF formula arena
 
-Status: proposed
+Status: accepted
 Date: 2026-07-19
 
-Result state: implementation and fail-closed artifact validation complete;
-fixed corpus observation has not started
+Result state: rejected at the fixed per-instance storage gate; timing not run;
+production implementation removed
 
 ## Context
 
@@ -130,9 +130,8 @@ suite for `725858b1` passed all functional tests; its final EVM doctest exhauste
 the shared `/tmp` quota and passed unchanged when rerun with `TMPDIR` on
 `/var/tmp`.
 
-No corrected-wide-v3 query has been run through artifact v38. The next action
-is exactly the one clean detached profiled structural observation below, not
-timing.
+No corrected-wide-v3 query had been run through artifact v38 when this
+checkpoint was committed. The single observation below began only afterward.
 
 ## Fixed structural observation
 
@@ -156,6 +155,40 @@ must match the accepted baseline. Its formula-literal count must equal the sum
 of actual emitted clause lengths, every clause end must be monotone and in
 bounds, and its logical storage ratio must pass the frozen <=80% gate. Any
 failure rejects the candidate and forbids timing.
+
+## Observed structural result
+
+The one authorized clean detached artifact-v38 process at `02e770c2` preserves
+every semantic and construction identity: 162/162 decisions (88 SAT / 74
+UNSAT), 162 manifest agreements, 162 in-process Z3 agreements, all 88 original-
+model replays, zero unknown/unsupported/error/disagreement, the exact six
+family counts, 396,270 attempts, 5,019 tautologies, 119,260 duplicates, and
+271,991 emitted clauses. All 162 offset/accounting invariant records pass.
+
+The frozen storage gate nevertheless fails. Aggregate logical storage is
+6,407,100 bytes versus the conservative 11,846,920-byte legacy lower bound, a
+favorable 0.540824 ratio, but artifact v38 committed the <=80% check per
+instance before observation. Only 157/162 instances pass. The five failures
+are all satisfiable singleton-clause formulas: two 32-literal slice-partial
+queries use 260/280 bytes (0.928571), and three 64-literal mixed queries use
+516/536 bytes (0.962687). Their literal payload dominates both layouts, so one
+four-byte end cannot save 20% relative to one 24-byte legacy clause header.
+That explains the miss; it does not authorize weakening the frozen rule after
+seeing it.
+
+The independent analyzer therefore exits nonzero at the first failed row with
+`instance[3] storage reports a failed 80-percent gate`. The retained
+[`artifact.json`](../../../bench-results/glaurung-flat-cnf-arena-20260720/artifact.json)
+has SHA-256 `fe0c9cde...2069f`; the artifact-derived, independently rechecked
+[`rejection.json`](../../../bench-results/glaurung-flat-cnf-arena-20260720/rejection.json)
+has SHA-256 `e62800f4...08086`. The artifact records corpus hash
+`23932b876da74bd1`, config hash `1299d4d4aa35d7ab`, and environment hash
+`83bf3161...4543`.
+
+Timing was not run. Validator commit `a57d5ace` is reverted at `56936920`; the
+production arena commit `725858b1` is reverted at `f3456365`. The historical
+commits and retained artifact keep the result reproducible without leaving a
+rejected representation in production.
 
 ## Conditional unprofiled performance protocol
 
@@ -191,11 +224,17 @@ as negative evidence.
 
 ## Consequences
 
-If accepted, Axeyum removes per-clause retained allocation and repeated
-canonical-clause allocation from the one-shot CNF path while preserving the
-trusted AIG-to-CNF contract. The same representation also avoids proof-SAT's
-initial repack from a fragmented formula, but proof performance is not a claim
-without a separate measurement.
+The tested arena is not selected despite its complete correctness and favorable
+aggregate logical-storage result. The per-instance storage failure is decisive,
+so no total-CNF, cold-total, family, variance, or RSS claim exists. Production
+returns to the prior fragmented representation.
+
+This negative result also identifies why a uniform percentage gate is awkward
+for payload-dominated singleton clauses. Any successor needs a new zero-row ADR
+with an independently justified representation and storage contract; it may
+not reuse this observation to relax ADR-0285 or proceed directly to timing. A
+hybrid inline/arena layout would be a different candidate, not a repair to this
+result.
 
 This is a cold-path engineering result, not a new algorithm or publication
 headline. It does not reopen the rejected duplicate-clause population, change

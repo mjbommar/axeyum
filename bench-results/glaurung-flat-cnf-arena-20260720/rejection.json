@@ -1,0 +1,124 @@
+{
+  "schema": "axeyum.flat-cnf-arena-rejection.v1",
+  "accepted": false,
+  "artifact": {
+    "path": "artifact.json",
+    "sha256": "fe0c9cdeda6f7bdd55588ad4986c4f78e14e335c92e8361542f556d98ff2069f",
+    "version": 38,
+    "source_revision": "02e770c2b40d94c30dc584669c90dadfa70afd65",
+    "source_dirty": false,
+    "manifest_sha256": "7818686bc26c56646775eb2f557e1e4edb36e4e8254a8c410fe0333da1ba2064",
+    "corpus_hash": "23932b876da74bd1",
+    "config_hash": "1299d4d4aa35d7ab",
+    "environment_hash": "83bf3161219d530aa28d371cdea9596c0292978b883f5d67ac82540394ce4543"
+  },
+  "population": {
+    "files": 162,
+    "sat": 88,
+    "unsat": 74,
+    "manifest_agree": 162,
+    "z3_agree": 162,
+    "sat_model_replays": 88,
+    "unknown": 0,
+    "unsupported": 0,
+    "errors": 0,
+    "disagree": 0,
+    "model_replay_failures": 0
+  },
+  "construction": {
+    "clause_attempts": 396270,
+    "tautological_clauses_skipped": 5019,
+    "duplicate_clauses_skipped": 119260,
+    "clauses_emitted": 271991
+  },
+  "storage": {
+    "formula_clauses": 271991,
+    "formula_literals": 664892,
+    "clause_end_logical_bytes": 1087964,
+    "literal_logical_bytes": 5319136,
+    "arena_logical_bytes": 6407100,
+    "arena_capacity_bytes": 9437232,
+    "legacy_logical_lower_bound_bytes": 11846920,
+    "aggregate_logical_ratio": 0.5408241129339947,
+    "invariant_instances": 162,
+    "logical_ratio_at_most_80_percent_instances": 157,
+    "all_invariants_hold": true,
+    "all_logical_ratios_at_most_80_percent": false
+  },
+  "failed_gate": {
+    "name": "per_instance_logical_ratio_at_most_80_percent",
+    "analyzer_error": "instance[3] storage reports a failed 80-percent gate",
+    "failed_instances": 5,
+    "families": {
+      "mixed": 3,
+      "slice-partial": 2
+    },
+    "outcomes": {
+      "sat": 5,
+      "unsat": 0
+    },
+    "rows": [
+      {
+        "instance": 3,
+        "query_sha256": "0015e287efc536c61e38580add94104242ef643f1f3a98cd44d461477f82ff17",
+        "family": "slice-partial",
+        "outcome": "sat",
+        "formula_clauses": 1,
+        "formula_literals": 32,
+        "arena_logical_bytes": 260,
+        "legacy_logical_lower_bound_bytes": 280,
+        "logical_ratio": 0.9285714285714286
+      },
+      {
+        "instance": 34,
+        "query_sha256": "2b03b1dfea81dcfc7d0a222cac64fa68de304113ff0bbfc0063bad2e8de10042",
+        "family": "slice-partial",
+        "outcome": "sat",
+        "formula_clauses": 1,
+        "formula_literals": 32,
+        "arena_logical_bytes": 260,
+        "legacy_logical_lower_bound_bytes": 280,
+        "logical_ratio": 0.9285714285714286
+      },
+      {
+        "instance": 47,
+        "query_sha256": "38e253383c353130a9e0fba86a54f48fcd7d25600a4841675a7882c55495b4c9",
+        "family": "mixed",
+        "outcome": "sat",
+        "formula_clauses": 1,
+        "formula_literals": 64,
+        "arena_logical_bytes": 516,
+        "legacy_logical_lower_bound_bytes": 536,
+        "logical_ratio": 0.9626865671641791
+      },
+      {
+        "instance": 49,
+        "query_sha256": "3c307ea08ee181fb1643f1a53c0b1bd6173cc1a7f4cf187d3f0bba8ffb6eaed4",
+        "family": "mixed",
+        "outcome": "sat",
+        "formula_clauses": 1,
+        "formula_literals": 64,
+        "arena_logical_bytes": 516,
+        "legacy_logical_lower_bound_bytes": 536,
+        "logical_ratio": 0.9626865671641791
+      },
+      {
+        "instance": 130,
+        "query_sha256": "b7a3f22633f3cdc537651e8594078d7bd7c475be9f0b9dc3c02ddfa24917b308",
+        "family": "mixed",
+        "outcome": "sat",
+        "formula_clauses": 1,
+        "formula_literals": 64,
+        "arena_logical_bytes": 516,
+        "legacy_logical_lower_bound_bytes": 536,
+        "logical_ratio": 0.9626865671641791
+      }
+    ]
+  },
+  "decision": {
+    "result": "rejected_before_timing",
+    "timing_authorized": false,
+    "production_representation_retained": false,
+    "claim": "The flat arena preserved all fixed correctness and construction identities and reduced aggregate logical storage, but failed the preregistered per-instance storage gate. No performance claim is authorized."
+  }
+}
