@@ -274,7 +274,15 @@ session state.
 > Rigor / defense:
 > 9. [BOTH] Warm-reuse additivity vs a GREEN/GreenTrie constraint cache in front of
 >    a cold solver -- measure whether solver-internal warm state is additive or
->    subsumed by known SE-level constraint caching.
+>    subsumed by known SE-level constraint caching. The read-only ADR-0272 trace
+>    analysis now establishes a material but workload-dependent opportunity:
+>    exact reuse covers 5,868/12,902 checks per four-driver pass (45.48%), and
+>    sound cached-SAT-superset / cached-UNSAT-subset implication raises the
+>    unbounded structural ceiling to 8,563/12,902 (66.37%; 46.27% Dptf through
+>    83.82% SurfacePen). This is not timing or a cache result. Next preregister a
+>    bounded fixed-stream `{cold,warm} x {cache-off,cache-on}` factorial with
+>    replay-checked SAT hits, explicit lookup/storage/eviction counters, and no
+>    live-exploration model-choice confound.
 > 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
 >    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
 >    related-work positioning vs Veritas, attacker-control, and the MS agentic system.

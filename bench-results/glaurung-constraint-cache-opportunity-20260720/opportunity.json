@@ -1,0 +1,763 @@
+{
+  "all_processes": {
+    "checks": 64510,
+    "exact_hit_rate": 0.4548132072546892,
+    "exact_hits": 29340,
+    "exact_sat_hits": 29045,
+    "exact_unsat_hits": 295,
+    "implication_only_hits": 13475,
+    "misses": 21695,
+    "sat": 53235,
+    "sat_superset_hits": 9775,
+    "structural_hit_rate": 0.6636955510773523,
+    "structural_hits": 42815,
+    "unsat": 11275,
+    "unsat_subset_hits": 3700
+  },
+  "claim_boundary": "structurally cache-addressable verdict opportunities only; no cache implementation, model replay, timing, or warm-additivity result",
+  "drivers": [
+    {
+      "all_processes": {
+        "checks": 3015,
+        "exact_hit_rate": 0.39800995024875624,
+        "exact_hits": 1200,
+        "exact_sat_hits": 1200,
+        "exact_unsat_hits": 0,
+        "implication_only_hits": 195,
+        "misses": 1620,
+        "sat": 1935,
+        "sat_superset_hits": 75,
+        "structural_hit_rate": 0.4626865671641791,
+        "structural_hits": 1395,
+        "unsat": 1080,
+        "unsat_subset_hits": 120
+      },
+      "cache_counts_stable": true,
+      "label": "DptfDevGen",
+      "per_process": {
+        "checks": 603,
+        "exact_hit_rate": 0.39800995024875624,
+        "exact_hits": 240,
+        "exact_sat_hits": 240,
+        "exact_unsat_hits": 0,
+        "implication_only_hits": 39,
+        "misses": 324,
+        "sat": 387,
+        "sat_superset_hits": 15,
+        "structural_hit_rate": 0.4626865671641791,
+        "structural_hits": 279,
+        "unsat": 216,
+        "unsat_subset_hits": 24
+      },
+      "repetitions": [
+        {
+          "assertion_count": {
+            "max": 71,
+            "median": 18,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 603,
+            "exact_hit_rate": 0.39800995024875624,
+            "exact_hits": 240,
+            "exact_sat_hits": 240,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 39,
+            "misses": 324,
+            "sat": 387,
+            "sat_superset_hits": 15,
+            "structural_hit_rate": 0.4626865671641791,
+            "structural_hits": 279,
+            "unsat": 216,
+            "unsat_subset_hits": 24
+          },
+          "distinct_constraint_sets": 348,
+          "distinct_exact_queries": 363,
+          "event_count": 2279,
+          "manifest_sha256": "337f4117e9cf9074b8fc290b35491c776deac8ef5edab719c2d952334e6570ce",
+          "sequence_digest": "ca151669119b0383b1b761d74947ea959289c77ff5b678632ef2efa58ff2e52c",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/01-dptf-r1/traces/glaurung-ordered-trace-3166270-ddf0455214d54e4b9830fa78ba0da1e1"
+        },
+        {
+          "assertion_count": {
+            "max": 71,
+            "median": 18,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 603,
+            "exact_hit_rate": 0.39800995024875624,
+            "exact_hits": 240,
+            "exact_sat_hits": 240,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 39,
+            "misses": 324,
+            "sat": 387,
+            "sat_superset_hits": 15,
+            "structural_hit_rate": 0.4626865671641791,
+            "structural_hits": 279,
+            "unsat": 216,
+            "unsat_subset_hits": 24
+          },
+          "distinct_constraint_sets": 348,
+          "distinct_exact_queries": 363,
+          "event_count": 2279,
+          "manifest_sha256": "f0112a10240045f12227345b8dc21e0014f7f60f375303f9acf8a6b8d82260d1",
+          "sequence_digest": "ca151669119b0383b1b761d74947ea959289c77ff5b678632ef2efa58ff2e52c",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/01-dptf-r2/traces/glaurung-ordered-trace-3166821-ed438307dd5e4e239b13924276a5c875"
+        },
+        {
+          "assertion_count": {
+            "max": 71,
+            "median": 18,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 603,
+            "exact_hit_rate": 0.39800995024875624,
+            "exact_hits": 240,
+            "exact_sat_hits": 240,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 39,
+            "misses": 324,
+            "sat": 387,
+            "sat_superset_hits": 15,
+            "structural_hit_rate": 0.4626865671641791,
+            "structural_hits": 279,
+            "unsat": 216,
+            "unsat_subset_hits": 24
+          },
+          "distinct_constraint_sets": 348,
+          "distinct_exact_queries": 363,
+          "event_count": 2279,
+          "manifest_sha256": "eadb7132027937d4745c1d51b6fa57a790583eeb3359c5808f6d6e559a222698",
+          "sequence_digest": "ca151669119b0383b1b761d74947ea959289c77ff5b678632ef2efa58ff2e52c",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/01-dptf-r3/traces/glaurung-ordered-trace-3167342-8e7f72af5526462098662aa97bf54ed8"
+        },
+        {
+          "assertion_count": {
+            "max": 71,
+            "median": 18,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 603,
+            "exact_hit_rate": 0.39800995024875624,
+            "exact_hits": 240,
+            "exact_sat_hits": 240,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 39,
+            "misses": 324,
+            "sat": 387,
+            "sat_superset_hits": 15,
+            "structural_hit_rate": 0.4626865671641791,
+            "structural_hits": 279,
+            "unsat": 216,
+            "unsat_subset_hits": 24
+          },
+          "distinct_constraint_sets": 348,
+          "distinct_exact_queries": 363,
+          "event_count": 2279,
+          "manifest_sha256": "92fa08dfb57430f03ba93addaee457eb16114a5b6f38b0fe6da9a59af0febfd3",
+          "sequence_digest": "ca151669119b0383b1b761d74947ea959289c77ff5b678632ef2efa58ff2e52c",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/01-dptf-r4/traces/glaurung-ordered-trace-3167879-02879c9dde6543e29ce85e5253193fa2"
+        },
+        {
+          "assertion_count": {
+            "max": 71,
+            "median": 18,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 603,
+            "exact_hit_rate": 0.39800995024875624,
+            "exact_hits": 240,
+            "exact_sat_hits": 240,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 39,
+            "misses": 324,
+            "sat": 387,
+            "sat_superset_hits": 15,
+            "structural_hit_rate": 0.4626865671641791,
+            "structural_hits": 279,
+            "unsat": 216,
+            "unsat_subset_hits": 24
+          },
+          "distinct_constraint_sets": 348,
+          "distinct_exact_queries": 363,
+          "event_count": 2279,
+          "manifest_sha256": "3d7bc93c421eefd28a961b64250c9e957a019e8a04e8403d44bb36f11698441d",
+          "sequence_digest": "ca151669119b0383b1b761d74947ea959289c77ff5b678632ef2efa58ff2e52c",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/01-dptf-r5/traces/glaurung-ordered-trace-3168388-e8ab09e96b7c449b8d5d0ba52f424424"
+        }
+      ],
+      "sequence_stable": true,
+      "sha256": "074be1b90deb21897538a6b093af9826e62610ffd878c92289af31c5ca3f724b"
+    },
+    {
+      "all_processes": {
+        "checks": 25910,
+        "exact_hit_rate": 0.3626013122346584,
+        "exact_hits": 9395,
+        "exact_sat_hits": 9395,
+        "exact_unsat_hits": 0,
+        "implication_only_hits": 5610,
+        "misses": 10905,
+        "sat": 17945,
+        "sat_superset_hits": 2495,
+        "structural_hit_rate": 0.5791200308761096,
+        "structural_hits": 15005,
+        "unsat": 7965,
+        "unsat_subset_hits": 3115
+      },
+      "cache_counts_stable": true,
+      "label": "vwififlt",
+      "per_process": {
+        "checks": 5182,
+        "exact_hit_rate": 0.3626013122346584,
+        "exact_hits": 1879,
+        "exact_sat_hits": 1879,
+        "exact_unsat_hits": 0,
+        "implication_only_hits": 1122,
+        "misses": 2181,
+        "sat": 3589,
+        "sat_superset_hits": 499,
+        "structural_hit_rate": 0.5791200308761096,
+        "structural_hits": 3001,
+        "unsat": 1593,
+        "unsat_subset_hits": 623
+      },
+      "repetitions": [
+        {
+          "assertion_count": {
+            "max": 92,
+            "median": 39.0,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 5182,
+            "exact_hit_rate": 0.3626013122346584,
+            "exact_hits": 1879,
+            "exact_sat_hits": 1879,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 1122,
+            "misses": 2181,
+            "sat": 3589,
+            "sat_superset_hits": 499,
+            "structural_hit_rate": 0.5791200308761096,
+            "structural_hits": 3001,
+            "unsat": 1593,
+            "unsat_subset_hits": 623
+          },
+          "distinct_constraint_sets": 2573,
+          "distinct_exact_queries": 3303,
+          "event_count": 21618,
+          "manifest_sha256": "7f301e9b07cef33df4d28fc3c3d217a08839888b68f13361f4f2fa09304fe49f",
+          "sequence_digest": "a8e17bcaf408fdf821bc87546c43dde3cf83dad829f92ad894d8cc7780c863ae",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r1/traces/glaurung-ordered-trace-3168940-aee28bcf2f94480eaae60ac7f380c9c2"
+        },
+        {
+          "assertion_count": {
+            "max": 92,
+            "median": 39.0,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 5182,
+            "exact_hit_rate": 0.3626013122346584,
+            "exact_hits": 1879,
+            "exact_sat_hits": 1879,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 1122,
+            "misses": 2181,
+            "sat": 3589,
+            "sat_superset_hits": 499,
+            "structural_hit_rate": 0.5791200308761096,
+            "structural_hits": 3001,
+            "unsat": 1593,
+            "unsat_subset_hits": 623
+          },
+          "distinct_constraint_sets": 2573,
+          "distinct_exact_queries": 3303,
+          "event_count": 21618,
+          "manifest_sha256": "1ce384b40d8650e25952183ffb789d3391e0e2508a4fd383217200b28cfd2973",
+          "sequence_digest": "a8e17bcaf408fdf821bc87546c43dde3cf83dad829f92ad894d8cc7780c863ae",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r2/traces/glaurung-ordered-trace-3173209-deca044cb9314e45baf05d7c44d45b04"
+        },
+        {
+          "assertion_count": {
+            "max": 92,
+            "median": 39.0,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 5182,
+            "exact_hit_rate": 0.3626013122346584,
+            "exact_hits": 1879,
+            "exact_sat_hits": 1879,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 1122,
+            "misses": 2181,
+            "sat": 3589,
+            "sat_superset_hits": 499,
+            "structural_hit_rate": 0.5791200308761096,
+            "structural_hits": 3001,
+            "unsat": 1593,
+            "unsat_subset_hits": 623
+          },
+          "distinct_constraint_sets": 2573,
+          "distinct_exact_queries": 3303,
+          "event_count": 21618,
+          "manifest_sha256": "241bfba2f4864dcd485754dbc25a8ea688e561083365bf2eedb9926b9e4b1759",
+          "sequence_digest": "a8e17bcaf408fdf821bc87546c43dde3cf83dad829f92ad894d8cc7780c863ae",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r3/traces/glaurung-ordered-trace-3177334-d20e98b4f783434cb129b42b555ae206"
+        },
+        {
+          "assertion_count": {
+            "max": 92,
+            "median": 39.0,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 5182,
+            "exact_hit_rate": 0.3626013122346584,
+            "exact_hits": 1879,
+            "exact_sat_hits": 1879,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 1122,
+            "misses": 2181,
+            "sat": 3589,
+            "sat_superset_hits": 499,
+            "structural_hit_rate": 0.5791200308761096,
+            "structural_hits": 3001,
+            "unsat": 1593,
+            "unsat_subset_hits": 623
+          },
+          "distinct_constraint_sets": 2573,
+          "distinct_exact_queries": 3303,
+          "event_count": 21618,
+          "manifest_sha256": "b9eb0ec59b8df55fd3cda8dd391996fdc0f8bcc8e01567f302a9ce09630c1676",
+          "sequence_digest": "a8e17bcaf408fdf821bc87546c43dde3cf83dad829f92ad894d8cc7780c863ae",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r4/traces/glaurung-ordered-trace-3181558-14e163a73aba490f81faa70a7b8d6df0"
+        },
+        {
+          "assertion_count": {
+            "max": 92,
+            "median": 39.0,
+            "min": 0,
+            "p95": 63
+          },
+          "cache": {
+            "checks": 5182,
+            "exact_hit_rate": 0.3626013122346584,
+            "exact_hits": 1879,
+            "exact_sat_hits": 1879,
+            "exact_unsat_hits": 0,
+            "implication_only_hits": 1122,
+            "misses": 2181,
+            "sat": 3589,
+            "sat_superset_hits": 499,
+            "structural_hit_rate": 0.5791200308761096,
+            "structural_hits": 3001,
+            "unsat": 1593,
+            "unsat_subset_hits": 623
+          },
+          "distinct_constraint_sets": 2573,
+          "distinct_exact_queries": 3303,
+          "event_count": 21618,
+          "manifest_sha256": "6aa2356ce768bc13947ca118d4d285c7a651686a45bcc9dc4a19eba00a50a8ad",
+          "sequence_digest": "a8e17bcaf408fdf821bc87546c43dde3cf83dad829f92ad894d8cc7780c863ae",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/02-vwififlt-r5/traces/glaurung-ordered-trace-3185738-8aa0ea12cdaa4e2ca5fe0f32326c5462"
+        }
+      ],
+      "sequence_stable": true,
+      "sha256": "13c3b69a5d0179ed3cc2c999ff97edbaedd63da55ddb74427251c360706a3820"
+    },
+    {
+      "all_processes": {
+        "checks": 11545,
+        "exact_hit_rate": 0.4742312689475964,
+        "exact_hits": 5475,
+        "exact_sat_hits": 5460,
+        "exact_unsat_hits": 15,
+        "implication_only_hits": 790,
+        "misses": 5280,
+        "sat": 10140,
+        "sat_superset_hits": 585,
+        "structural_hit_rate": 0.5426591598094413,
+        "structural_hits": 6265,
+        "unsat": 1405,
+        "unsat_subset_hits": 205
+      },
+      "cache_counts_stable": true,
+      "label": "IntcSST",
+      "per_process": {
+        "checks": 2309,
+        "exact_hit_rate": 0.4742312689475964,
+        "exact_hits": 1095,
+        "exact_sat_hits": 1092,
+        "exact_unsat_hits": 3,
+        "implication_only_hits": 158,
+        "misses": 1056,
+        "sat": 2028,
+        "sat_superset_hits": 117,
+        "structural_hit_rate": 0.5426591598094413,
+        "structural_hits": 1253,
+        "unsat": 281,
+        "unsat_subset_hits": 41
+      },
+      "repetitions": [
+        {
+          "assertion_count": {
+            "max": 45,
+            "median": 17,
+            "min": 0,
+            "p95": 36
+          },
+          "cache": {
+            "checks": 2309,
+            "exact_hit_rate": 0.4742312689475964,
+            "exact_hits": 1095,
+            "exact_sat_hits": 1092,
+            "exact_unsat_hits": 3,
+            "implication_only_hits": 158,
+            "misses": 1056,
+            "sat": 2028,
+            "sat_superset_hits": 117,
+            "structural_hit_rate": 0.5426591598094413,
+            "structural_hits": 1253,
+            "unsat": 281,
+            "unsat_subset_hits": 41
+          },
+          "distinct_constraint_sets": 1113,
+          "distinct_exact_queries": 1214,
+          "event_count": 8612,
+          "manifest_sha256": "4ce851cddd166d78e48fcaa64d684c2b2a47811086df52f84b1ce1e33cd93896",
+          "sequence_digest": "e06ff7784d2e6e8bc7555c898b9e2e6176a326ff8affd51696ba2a69702ca559",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/03-intcsst-r1/traces/glaurung-ordered-trace-3189938-72f60bcccd56487fbdf6c400994fc9cc"
+        },
+        {
+          "assertion_count": {
+            "max": 45,
+            "median": 17,
+            "min": 0,
+            "p95": 36
+          },
+          "cache": {
+            "checks": 2309,
+            "exact_hit_rate": 0.4742312689475964,
+            "exact_hits": 1095,
+            "exact_sat_hits": 1092,
+            "exact_unsat_hits": 3,
+            "implication_only_hits": 158,
+            "misses": 1056,
+            "sat": 2028,
+            "sat_superset_hits": 117,
+            "structural_hit_rate": 0.5426591598094413,
+            "structural_hits": 1253,
+            "unsat": 281,
+            "unsat_subset_hits": 41
+          },
+          "distinct_constraint_sets": 1113,
+          "distinct_exact_queries": 1214,
+          "event_count": 8612,
+          "manifest_sha256": "d8f7d8c5aa1ac5d016f544cb1c10e7533cc1e69620f57e026f6799f42f436f0c",
+          "sequence_digest": "e06ff7784d2e6e8bc7555c898b9e2e6176a326ff8affd51696ba2a69702ca559",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/03-intcsst-r2/traces/glaurung-ordered-trace-3191367-e4fa8d7d20504331831d52019e5486af"
+        },
+        {
+          "assertion_count": {
+            "max": 45,
+            "median": 17,
+            "min": 0,
+            "p95": 36
+          },
+          "cache": {
+            "checks": 2309,
+            "exact_hit_rate": 0.4742312689475964,
+            "exact_hits": 1095,
+            "exact_sat_hits": 1092,
+            "exact_unsat_hits": 3,
+            "implication_only_hits": 158,
+            "misses": 1056,
+            "sat": 2028,
+            "sat_superset_hits": 117,
+            "structural_hit_rate": 0.5426591598094413,
+            "structural_hits": 1253,
+            "unsat": 281,
+            "unsat_subset_hits": 41
+          },
+          "distinct_constraint_sets": 1113,
+          "distinct_exact_queries": 1214,
+          "event_count": 8612,
+          "manifest_sha256": "0b80731664b027bfd0f74608bc728aa4e944195c35499134c8aa789f9eed4267",
+          "sequence_digest": "e06ff7784d2e6e8bc7555c898b9e2e6176a326ff8affd51696ba2a69702ca559",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/03-intcsst-r3/traces/glaurung-ordered-trace-3192800-94b1d4d2e0d140948be741f5097237b7"
+        },
+        {
+          "assertion_count": {
+            "max": 45,
+            "median": 17,
+            "min": 0,
+            "p95": 36
+          },
+          "cache": {
+            "checks": 2309,
+            "exact_hit_rate": 0.4742312689475964,
+            "exact_hits": 1095,
+            "exact_sat_hits": 1092,
+            "exact_unsat_hits": 3,
+            "implication_only_hits": 158,
+            "misses": 1056,
+            "sat": 2028,
+            "sat_superset_hits": 117,
+            "structural_hit_rate": 0.5426591598094413,
+            "structural_hits": 1253,
+            "unsat": 281,
+            "unsat_subset_hits": 41
+          },
+          "distinct_constraint_sets": 1113,
+          "distinct_exact_queries": 1214,
+          "event_count": 8612,
+          "manifest_sha256": "d783a86dbd3e9f28eefe779be5c69ade485b2a12383d85e024007ceb641a042f",
+          "sequence_digest": "e06ff7784d2e6e8bc7555c898b9e2e6176a326ff8affd51696ba2a69702ca559",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/03-intcsst-r4/traces/glaurung-ordered-trace-3194268-2638117ac6584a948fa7c3d667f909f0"
+        },
+        {
+          "assertion_count": {
+            "max": 45,
+            "median": 17,
+            "min": 0,
+            "p95": 36
+          },
+          "cache": {
+            "checks": 2309,
+            "exact_hit_rate": 0.4742312689475964,
+            "exact_hits": 1095,
+            "exact_sat_hits": 1092,
+            "exact_unsat_hits": 3,
+            "implication_only_hits": 158,
+            "misses": 1056,
+            "sat": 2028,
+            "sat_superset_hits": 117,
+            "structural_hit_rate": 0.5426591598094413,
+            "structural_hits": 1253,
+            "unsat": 281,
+            "unsat_subset_hits": 41
+          },
+          "distinct_constraint_sets": 1113,
+          "distinct_exact_queries": 1214,
+          "event_count": 8612,
+          "manifest_sha256": "1b3697aa2f4941bdc346b31b8a2a8f11e1b5b00e43f45b0a65fe721fdd7bdbd5",
+          "sequence_digest": "e06ff7784d2e6e8bc7555c898b9e2e6176a326ff8affd51696ba2a69702ca559",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/03-intcsst-r5/traces/glaurung-ordered-trace-3195724-ffb6bdb06a2c434ea7d553040d1939b5"
+        }
+      ],
+      "sequence_stable": true,
+      "sha256": "f7c8e4f106baa5b2a1a18e60731ad42a6f734aee1d049576eaf6d123d5629750"
+    },
+    {
+      "all_processes": {
+        "checks": 24040,
+        "exact_hit_rate": 0.5519966722129783,
+        "exact_hits": 13270,
+        "exact_sat_hits": 12990,
+        "exact_unsat_hits": 280,
+        "implication_only_hits": 6880,
+        "misses": 3890,
+        "sat": 23215,
+        "sat_superset_hits": 6620,
+        "structural_hit_rate": 0.8381863560732113,
+        "structural_hits": 20150,
+        "unsat": 825,
+        "unsat_subset_hits": 260
+      },
+      "cache_counts_stable": true,
+      "label": "SurfacePen",
+      "per_process": {
+        "checks": 4808,
+        "exact_hit_rate": 0.5519966722129783,
+        "exact_hits": 2654,
+        "exact_sat_hits": 2598,
+        "exact_unsat_hits": 56,
+        "implication_only_hits": 1376,
+        "misses": 778,
+        "sat": 4643,
+        "sat_superset_hits": 1324,
+        "structural_hit_rate": 0.8381863560732113,
+        "structural_hits": 4030,
+        "unsat": 165,
+        "unsat_subset_hits": 52
+      },
+      "repetitions": [
+        {
+          "assertion_count": {
+            "max": 76,
+            "median": 17.0,
+            "min": 0,
+            "p95": 58
+          },
+          "cache": {
+            "checks": 4808,
+            "exact_hit_rate": 0.5519966722129783,
+            "exact_hits": 2654,
+            "exact_sat_hits": 2598,
+            "exact_unsat_hits": 56,
+            "implication_only_hits": 1376,
+            "misses": 778,
+            "sat": 4643,
+            "sat_superset_hits": 1324,
+            "structural_hit_rate": 0.8381863560732113,
+            "structural_hits": 4030,
+            "unsat": 165,
+            "unsat_subset_hits": 52
+          },
+          "distinct_constraint_sets": 867,
+          "distinct_exact_queries": 2154,
+          "event_count": 15202,
+          "manifest_sha256": "7bf0f39d1c1008cd5589d44200873f1211bf6eaf4a11b1cfaa596b7b98f6c3d1",
+          "sequence_digest": "31a0732920b13938f83c9142118af6dc27d83045e7b4cadb93c019efa4c8d9bc",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/04-surfacepen-r1/traces/glaurung-ordered-trace-3197176-af64caafe3274bc3abb6bc4205151b4e"
+        },
+        {
+          "assertion_count": {
+            "max": 76,
+            "median": 17.0,
+            "min": 0,
+            "p95": 58
+          },
+          "cache": {
+            "checks": 4808,
+            "exact_hit_rate": 0.5519966722129783,
+            "exact_hits": 2654,
+            "exact_sat_hits": 2598,
+            "exact_unsat_hits": 56,
+            "implication_only_hits": 1376,
+            "misses": 778,
+            "sat": 4643,
+            "sat_superset_hits": 1324,
+            "structural_hit_rate": 0.8381863560732113,
+            "structural_hits": 4030,
+            "unsat": 165,
+            "unsat_subset_hits": 52
+          },
+          "distinct_constraint_sets": 867,
+          "distinct_exact_queries": 2154,
+          "event_count": 15202,
+          "manifest_sha256": "9dba4854dee1d7f77a9ae96e1aeb657bd726ca935c7451e20bd0d7d9accdd543",
+          "sequence_digest": "31a0732920b13938f83c9142118af6dc27d83045e7b4cadb93c019efa4c8d9bc",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/04-surfacepen-r2/traces/glaurung-ordered-trace-3199843-9952d0d1a092466e8c07fbbf0fac3a5d"
+        },
+        {
+          "assertion_count": {
+            "max": 76,
+            "median": 17.0,
+            "min": 0,
+            "p95": 58
+          },
+          "cache": {
+            "checks": 4808,
+            "exact_hit_rate": 0.5519966722129783,
+            "exact_hits": 2654,
+            "exact_sat_hits": 2598,
+            "exact_unsat_hits": 56,
+            "implication_only_hits": 1376,
+            "misses": 778,
+            "sat": 4643,
+            "sat_superset_hits": 1324,
+            "structural_hit_rate": 0.8381863560732113,
+            "structural_hits": 4030,
+            "unsat": 165,
+            "unsat_subset_hits": 52
+          },
+          "distinct_constraint_sets": 867,
+          "distinct_exact_queries": 2154,
+          "event_count": 15202,
+          "manifest_sha256": "16676754aac7b2080e8022ad20ef3118fbba05929f14accce04bf27eb91400a2",
+          "sequence_digest": "31a0732920b13938f83c9142118af6dc27d83045e7b4cadb93c019efa4c8d9bc",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/04-surfacepen-r3/traces/glaurung-ordered-trace-3202573-36be45e14267410ea980213342e9edfd"
+        },
+        {
+          "assertion_count": {
+            "max": 76,
+            "median": 17.0,
+            "min": 0,
+            "p95": 58
+          },
+          "cache": {
+            "checks": 4808,
+            "exact_hit_rate": 0.5519966722129783,
+            "exact_hits": 2654,
+            "exact_sat_hits": 2598,
+            "exact_unsat_hits": 56,
+            "implication_only_hits": 1376,
+            "misses": 778,
+            "sat": 4643,
+            "sat_superset_hits": 1324,
+            "structural_hit_rate": 0.8381863560732113,
+            "structural_hits": 4030,
+            "unsat": 165,
+            "unsat_subset_hits": 52
+          },
+          "distinct_constraint_sets": 867,
+          "distinct_exact_queries": 2154,
+          "event_count": 15202,
+          "manifest_sha256": "81b3ce09cd130b179985c767872531426fc423e89fee8a6f4393f313da3ad1e4",
+          "sequence_digest": "31a0732920b13938f83c9142118af6dc27d83045e7b4cadb93c019efa4c8d9bc",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/04-surfacepen-r4/traces/glaurung-ordered-trace-3205521-1118d77864c64ab2a10aea028b399078"
+        },
+        {
+          "assertion_count": {
+            "max": 76,
+            "median": 17.0,
+            "min": 0,
+            "p95": 58
+          },
+          "cache": {
+            "checks": 4808,
+            "exact_hit_rate": 0.5519966722129783,
+            "exact_hits": 2654,
+            "exact_sat_hits": 2598,
+            "exact_unsat_hits": 56,
+            "implication_only_hits": 1376,
+            "misses": 778,
+            "sat": 4643,
+            "sat_superset_hits": 1324,
+            "structural_hit_rate": 0.8381863560732113,
+            "structural_hits": 4030,
+            "unsat": 165,
+            "unsat_subset_hits": 52
+          },
+          "distinct_constraint_sets": 867,
+          "distinct_exact_queries": 2154,
+          "event_count": 15202,
+          "manifest_sha256": "d5ea992058d1607346bedc76684a8a17d6cd25a68e8ee5b2d92e5a0aec2be3ca",
+          "sequence_digest": "31a0732920b13938f83c9142118af6dc27d83045e7b4cadb93c019efa4c8d9bc",
+          "trace_path": "/nas4/data/workspace-infosec/.axeyum-six-cell-20260719.AjDth1/04-surfacepen-r5/traces/glaurung-ordered-trace-3208246-33e4cb5dab8447ce977a0fb5cf7d81ce"
+        }
+      ],
+      "sequence_stable": true,
+      "sha256": "3c062dc57832caab776bec99656798474af7ffb59ef751c9a004a95c0ae74405"
+    }
+  ],
+  "inputs": {
+    "registration_path": "bench-results/glaurung-six-cell-neutral-20260719/registration.json",
+    "registration_sha256": "61df225250db48caf1c9bb0dfe8810b55ffc009eea0901ec573423fb0d2612f9",
+    "report_sha256": {
+      "bench-results/glaurung-six-cell-neutral-20260719/dptf/report.json": "f89f28b935b4e55840c3240e6ef0db78ae5c9db861eefa1f542a3b8ffa62aacc",
+      "bench-results/glaurung-six-cell-neutral-20260719/intcsst/report.json": "ffac9498972876b26e8b376903646c563f5166829672071bd663a7f4525a00fa",
+      "bench-results/glaurung-six-cell-neutral-20260719/surfacepen/report.json": "1e89b36af22a6d42b7c659909b8e7942c87af034bcf7261ba0c064395356dc67",
+      "bench-results/glaurung-six-cell-neutral-20260719/vwififlt/report.json": "f774645080431a60d33512e14e1ee61ab88ad9ca3edeb1caadecb7296634376e"
+    }
+  },
+  "schema": "axeyum.glaurung-constraint-cache-opportunity.v1"
+}

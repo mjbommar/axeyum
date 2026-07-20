@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — Real traces show enough engine-cache opportunity to justify
+  the GREEN additivity experiment, without answering it yet.** A fail-closed
+  analyzer reconstructs all 64,510 ordered check occurrences from ADR-0272's
+  immutable four-driver/five-repetition campaign. Per four-driver pass, exact
+  reuse can answer 5,868/12,902 checks (45.48%); cached SAT supersets and UNSAT
+  subsets add 2,695, for an unbounded structural ceiling of 8,563/12,902
+  (66.37%). The range is wide: 46.27% Dptf to 83.82% SurfacePen. All five
+  logical streams and classifications are exact within every driver. This is
+  opportunity only—capacity, lookup cost, model replay/storage, and warm
+  additivity remain unmeasured and must be preregistered as a bounded factorial.
+
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
   `fd0cab4a` run completed the frozen 32-cell matrix under the 4 GiB cgroup.
@@ -5390,6 +5401,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Measured the structural ceiling for a GREEN-style cache.** The
+  accepted six-cell traces show 45.48% exact and 66.37% exact-plus-implication
+  cache-addressable checks across one four-driver pass. Five focused analyzer
+  tests reject exact-verdict conflicts, unsound implication directions, and
+  fork-scope aliasing. The artifact explicitly makes no performance or
+  additivity claim.
 
 - **2026-07-20 — Recorded the first symbolic-CVE reproducibility machine.** The
   preregistered Axeyum/Z3 rotation passes exact within-authority stability and
