@@ -1,7 +1,7 @@
-//! The shared single-block LLVM-IR reflector: parse `define … { … ret }` into an
-//! `axeyum-ir` term. Split out of `llvm_reflection.rs` so the LLVM front end, the
-//! loop/buffer reflectors, and the cross-IR equivalence suite all lower through
-//! one parser and one op vocabulary (`super::{binop, compare, width_of}`).
+//! LLVM-IR reflection into `axeyum-ir`. The checked path owns structured scalar
+//! CFG syntax, explicit poison/definedness, and ADR-0286's bounded byte-memory
+//! profile. Historical compatibility helpers remain for older single-block
+//! proofs while migrations converge on the checked API.
 
 /// Fail-closed scalar reflection with explicit LLVM definedness predicates.
 pub mod checked;

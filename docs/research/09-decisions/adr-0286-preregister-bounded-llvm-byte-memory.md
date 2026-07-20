@@ -1,7 +1,9 @@
-# ADR-0286: Preregister checked bounded LLVM byte memory
+# ADR-0286: Accept checked bounded LLVM byte memory
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
+
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -140,13 +142,46 @@ The gates may be strengthened before any new compiler fixture is generated or
 any implementation test is run. They may not be weakened after observing a
 failure.
 
+## Result
+
+The accepted implementation adds `BoundedMemoryConfig` and
+`reflect_bounded_memory_cfg_checked` without broadening the existing scalar
+entry points. The owned result exposes collision-safe initialized BV8 input
+symbols, path-joined final bytes with per-byte definedness, and the scalar
+return with whole-execution definedness. Final memory is explicitly meaningful
+only under that whole-execution predicate.
+
+The typed syntax and canonical writer now own the admitted GEP, load, and store
+forms. Checked execution keeps pointer poison separate from immediate access
+UB, admits a defined one-past pointer but not a one-past access, preserves
+poison through stores and later loads, and joins writes only from the selected
+acyclic path. Unsupported region shapes, address spaces, widths, alignments,
+flags, memory operations, pointer uses, and SSA graphs fail closed with stable
+located errors.
+
+Three committed clang 21.1.8 fixtures cover a fixed read, masked symbolic read,
+and mem2reg-resistant store/load round trip. The 11-test memory suite covers
+their typed/canonical/optional-`llvm-as` boundary, exact fixed and symbolic
+proofs, replay of the `index = 4` undefined witness, final-memory behavior,
+poison versus UB, one-past and wrapping promises, selected-arm writes, naming
+collisions, rejection classes, and deterministic noise. The 20 historical LLVM
+reflection tests now route their byte-load proofs and fuzz checks through the
+checked memory API instead of private line parsers.
+
+The dedicated memory suite (11/11), migrated LLVM reflection suite (20/20),
+complete `axeyum-verify --all-features` suite and doctests, all ordinary
+workspace tests, workspace formatting, strict workspace Clippy/rustdoc, and the
+repository link checker pass. The two EVM doctests that initially hit an
+environmental linker `SIGBUS` under `/tmp` pass unchanged with `TMPDIR` on the
+workspace filesystem.
+
 ## Consequences
 
-If accepted, Axeyum will have one small but honest compiler-memory boundary that
-matches the byte-addressed center already present in Glaurung and keeps strict
+Axeyum now has one small but honest compiler-memory boundary that matches the
+byte-addressed center already present in Glaurung and keeps strict
 sort/definedness diagnostics as the publication-strength contribution. The
-profile is enough to retire duplicate test-only memory parsers and to expose
-store effects for later MIR and LLIR differentials.
+profile retires duplicate test-only memory parsers and exposes store effects
+for later MIR and LLIR differentials.
 
 It intentionally trades breadth for a checkable object contract. A future
 general memory profile must make allocation identity, aliases, alignment,

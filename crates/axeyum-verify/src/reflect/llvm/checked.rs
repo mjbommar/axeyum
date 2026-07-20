@@ -7,12 +7,16 @@ use std::fmt;
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 
 use super::syntax::{
-    BinaryOpcode, BlockId, CastOpcode, Function, IntPredicate, Intrinsic, Operand, ParseError,
-    ScalarCfg, ScalarInstructionKind, SemanticFlag, SourceSpan, TerminatorKind, parse_function,
-    parse_scalar_cfg, parse_scalar_instruction,
+    BinaryOpcode, BlockId, CastOpcode, Function, GepFlag, IntPredicate, Intrinsic, Operand,
+    ParseError, ScalarCfg, ScalarInstructionKind, SemanticFlag, SourceSpan, TerminatorKind,
+    parse_function, parse_scalar_cfg, parse_scalar_instruction,
 };
 
 const MAX_ACYCLIC_BLOCK_EXECUTIONS: usize = 4_096;
+const MAX_BOUNDED_MEMORY_BYTES: usize = 256;
+
+type ReflectedParams = Vec<(String, SymbolId, u32)>;
+type ScalarTermBindings = HashMap<String, TermId>;
 
 /// One reflected scalar value and the condition under which it is well-defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +53,56 @@ pub struct CheckedCfgReflected {
     pub result: DefinedValue,
 }
 
+/// Configuration for one initialized bounded byte object bound to an LLVM
+/// pointer parameter.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BoundedMemoryConfig {
+    /// Pointer parameter name without `%` or surrounding quotes.
+    pub pointer_parameter: String,
+    /// Exact live allocation size in bytes (`1..=256`).
+    pub bytes: usize,
+}
+
+impl BoundedMemoryConfig {
+    /// Creates one bounded-memory binding.
+    #[must_use]
+    pub fn new(pointer_parameter: impl Into<String>, bytes: usize) -> Self {
+        Self {
+            pointer_parameter: pointer_parameter.into(),
+            bytes,
+        }
+    }
+}
+
+/// Input and final state of one checked bounded byte region.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CheckedMemoryRegion {
+    /// LLVM pointer parameter bound to this region.
+    pub parameter: String,
+    /// Fresh, defined BV8 symbols for the initialized input bytes.
+    pub input: Vec<SymbolId>,
+    /// Final path-joined byte values and their poison/definedness predicates.
+    ///
+    /// These terms describe the selected final state only when the enclosing
+    /// reflection's `result.defined` predicate also holds; immediate UB makes
+    /// the entire returned state unusable.
+    pub output: Vec<DefinedValue>,
+}
+
+/// A checked acyclic CFG reflection with one explicit bounded byte object.
+#[derive(Debug)]
+pub struct CheckedMemoryCfgReflected {
+    /// Arena owning every scalar, pointer-definedness, and byte-state term.
+    pub arena: TermArena,
+    /// `(name, symbol, width)` for non-pointer scalar parameters.
+    pub params: Vec<(String, SymbolId, u32)>,
+    /// Input and final state of the pointer-bound byte object.
+    pub region: CheckedMemoryRegion,
+    /// Joined scalar return and whole-function definedness. The final region
+    /// state is meaningful only under this value's `defined` predicate.
+    pub result: DefinedValue,
+}
+
 impl CheckedReflected {
     /// The checked SSA value for a named parameter.
     #[must_use]
@@ -74,6 +128,14 @@ pub enum ReflectErrorKind {
     ParameterCount,
     /// Caller parameter sort differs from the LLVM signature.
     ParameterSort,
+    /// Bounded region length is outside the admitted `1..=256` range.
+    RegionSize,
+    /// The function does not have exactly one pointer parameter.
+    PointerParameterCount,
+    /// The configured pointer parameter does not identify the admitted pointer.
+    PointerParameter,
+    /// A memory operation reached an entry point without a bounded-memory binding.
+    UnsupportedMemory,
     /// An SSA value was referenced before definition.
     UndefinedValue,
     /// An SSA destination was defined more than once.
@@ -225,6 +287,197 @@ pub fn reflect_cfg_into_checked(
     reflect_cfg_parsed_into(arena, params, &function, &cfg)
 }
 
+/// Reflect one validated acyclic CFG with exactly one initialized bounded byte
+/// object bound to one `ptr` parameter.
+///
+/// The object binding is an explicit precondition: the pointer denotes a live,
+/// non-null, non-aliasing allocation of exactly `config.bytes` initialized
+/// bytes. Unsupported pointer/memory forms fail closed.
+///
+/// # Errors
+///
+/// Returns a stable located/configuration error for malformed syntax, an
+/// invalid region binding, unsupported memory semantics, graph admission, or
+/// rejected IR construction.
+pub fn reflect_bounded_memory_cfg_checked(
+    ll: &str,
+    config: &BoundedMemoryConfig,
+) -> Result<CheckedMemoryCfgReflected, ReflectError> {
+    let function = parse_function(ll)?;
+    let cfg = parse_scalar_cfg(&function)?;
+    let pointer = validate_memory_binding(ll, &function, config)?;
+    let scalar_decls = scalar_parameter_declarations(&function)?;
+
+    let mut arena = TermArena::new();
+    let (params, scalar_terms) = declare_scalar_parameters(&mut arena, &scalar_decls)?;
+    let (input, memory) = declare_memory_state(&mut arena, &function, pointer, config.bytes)?;
+    let outcome =
+        reflect_memory_cfg_parsed_into(&mut arena, &scalar_terms, &function, &cfg, memory)?;
+    let Some(memory) = outcome.memory else {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(function.span),
+            detail: "bounded-memory execution did not return a memory state".to_owned(),
+        });
+    };
+    Ok(CheckedMemoryCfgReflected {
+        arena,
+        params,
+        region: CheckedMemoryRegion {
+            parameter: memory.parameter,
+            input,
+            output: memory.bytes,
+        },
+        result: outcome.result,
+    })
+}
+
+fn validate_memory_binding<'a>(
+    ll: &str,
+    function: &'a Function,
+    config: &BoundedMemoryConfig,
+) -> Result<&'a super::syntax::Parameter, ReflectError> {
+    if !(1..=MAX_BOUNDED_MEMORY_BYTES).contains(&config.bytes) {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::RegionSize,
+            span: None,
+            detail: format!(
+                "bounded LLVM region must contain 1 through {MAX_BOUNDED_MEMORY_BYTES} bytes; found {}",
+                config.bytes
+            ),
+        });
+    }
+    let pointer_parameters = function
+        .params
+        .iter()
+        .filter(|parameter| parameter.ty == "ptr")
+        .collect::<Vec<_>>();
+    if pointer_parameters.len() != 1 {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::PointerParameterCount,
+            span: Some(function.span),
+            detail: format!(
+                "bounded LLVM memory requires exactly one `ptr` parameter; found {}",
+                pointer_parameters.len()
+            ),
+        });
+    }
+    let pointer = pointer_parameters[0];
+    if pointer.name != config.pointer_parameter {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::PointerParameter,
+            span: Some(pointer.span),
+            detail: format!(
+                "configured pointer `%{}` does not match function pointer `%{}`",
+                config.pointer_parameter, pointer.name
+            ),
+        });
+    }
+    let pointer_source = &ll[pointer.span.start..pointer.span.end];
+    if pointer_source.contains("addrspace") {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::PointerParameter,
+            span: Some(pointer.span),
+            detail: "bounded LLVM memory supports only the default address space".to_owned(),
+        });
+    }
+    Ok(pointer)
+}
+
+fn scalar_parameter_declarations(
+    function: &Function,
+) -> Result<Vec<(&super::syntax::Parameter, u32)>, ReflectError> {
+    function
+        .params
+        .iter()
+        .filter(|parameter| parameter.ty != "ptr")
+        .map(|parameter| parse_width(&parameter.ty, parameter.span).map(|width| (parameter, width)))
+        .collect()
+}
+
+fn declare_scalar_parameters(
+    arena: &mut TermArena,
+    scalar_decls: &[(&super::syntax::Parameter, u32)],
+) -> Result<(ReflectedParams, ScalarTermBindings), ReflectError> {
+    let mut params = Vec::with_capacity(scalar_decls.len());
+    let mut scalar_terms = HashMap::new();
+    for (parameter, width) in scalar_decls.iter().copied() {
+        let symbol = arena
+            .declare(&parameter.name, sort_for_width(width))
+            .map_err(|error| ir_error(parameter.span, &error.to_string()))?;
+        let term = arena.var(symbol);
+        params.push((parameter.name.clone(), symbol, width));
+        scalar_terms.insert(parameter.name.clone(), term);
+    }
+    Ok((params, scalar_terms))
+}
+
+fn declare_memory_state(
+    arena: &mut TermArena,
+    function: &Function,
+    pointer: &super::syntax::Parameter,
+    byte_count: usize,
+) -> Result<(Vec<SymbolId>, MemoryState), ReflectError> {
+    let always = arena.bool_const(true);
+    let mut occupied_names = function
+        .params
+        .iter()
+        .map(|parameter| parameter.name.clone())
+        .collect::<BTreeSet<_>>();
+    let mut input = Vec::with_capacity(byte_count);
+    for index in 0..byte_count {
+        let mut name = format!("__axeyum_llvm_mem_{index}");
+        while occupied_names.contains(&name) {
+            name.push('_');
+        }
+        occupied_names.insert(name.clone());
+        input.push(
+            arena
+                .declare(&name, Sort::BitVec(8))
+                .map_err(|error| ir_error(pointer.span, &error.to_string()))?,
+        );
+    }
+    let bytes = input
+        .iter()
+        .map(|symbol| DefinedValue {
+            value: arena.var(*symbol),
+            defined: always,
+            width: 8,
+        })
+        .collect::<Vec<_>>();
+    let zero = arena
+        .bv_const(64, 0)
+        .map_err(|error| ir_error(pointer.span, &error.to_string()))?;
+    let mut pointers = HashMap::new();
+    pointers.insert(
+        pointer.name.clone(),
+        DefinedValue {
+            value: zero,
+            defined: always,
+            width: 64,
+        },
+    );
+    let memory = MemoryState {
+        parameter: pointer.name.clone(),
+        bytes,
+        pointers,
+    };
+    Ok((input, memory))
+}
+
+#[derive(Debug, Clone)]
+struct MemoryState {
+    parameter: String,
+    bytes: Vec<DefinedValue>,
+    pointers: HashMap<String, DefinedValue>,
+}
+
+#[derive(Debug)]
+struct ExecutionOutcome {
+    result: DefinedValue,
+    memory: Option<MemoryState>,
+}
+
 fn reflect_cfg_parsed_into(
     arena: &mut TermArena,
     params: &[TermId],
@@ -269,7 +522,38 @@ fn reflect_cfg_parsed_into(
             },
         );
     }
-    execute_cfg_block(arena, cfg, &cfg.entry, None, env, always)
+    execute_cfg_block(arena, cfg, &cfg.entry, None, env, always, None).map(|outcome| outcome.result)
+}
+
+fn reflect_memory_cfg_parsed_into(
+    arena: &mut TermArena,
+    scalar_terms: &HashMap<String, TermId>,
+    function: &Function,
+    cfg: &ScalarCfg,
+    memory: MemoryState,
+) -> Result<ExecutionOutcome, ReflectError> {
+    validate_cfg_for_execution(function, cfg)?;
+    let always = arena.bool_const(true);
+    let mut env = HashMap::new();
+    for parameter in &function.params {
+        if parameter.ty == "ptr" {
+            continue;
+        }
+        let width = parse_width(&parameter.ty, parameter.span)?;
+        let term = scalar_terms
+            .get(&parameter.name)
+            .copied()
+            .expect("scalar terms were validated and constructed together");
+        env.insert(
+            parameter.name.clone(),
+            DefinedValue {
+                value: term,
+                defined: always,
+                width,
+            },
+        );
+    }
+    execute_cfg_block(arena, cfg, &cfg.entry, None, env, always, Some(memory))
 }
 
 fn validate_cfg_for_execution(function: &Function, cfg: &ScalarCfg) -> Result<(), ReflectError> {
@@ -282,11 +566,9 @@ fn validate_cfg_for_execution(function: &Function, cfg: &ScalarCfg) -> Result<()
             insert_definition(&mut definitions, &phi.dest, phi.span)?;
         }
         for instruction in &block.instructions {
-            let dest = instruction
-                .kind
-                .destination()
-                .expect("CFG body instructions are assignments");
-            insert_definition(&mut definitions, dest, instruction.span)?;
+            if let Some(dest) = instruction.kind.destination() {
+                insert_definition(&mut definitions, dest, instruction.span)?;
+            }
         }
     }
 
@@ -421,7 +703,8 @@ fn execute_cfg_block(
     predecessor: Option<&BlockId>,
     mut env: HashMap<String, DefinedValue>,
     mut execution_defined: TermId,
-) -> Result<DefinedValue, ReflectError> {
+    mut memory: Option<MemoryState>,
+) -> Result<ExecutionOutcome, ReflectError> {
     let block = cfg_block(cfg, block_id);
     let before_phis = env.clone();
     let mut phi_values = Vec::with_capacity(block.phis.len());
@@ -444,15 +727,45 @@ fn execute_cfg_block(
     }
 
     for instruction in &block.instructions {
-        let (dest, value, immediate) =
-            lower_assignment(arena, &env, instruction.kind.clone(), instruction.span)?;
-        execution_defined = bool_and(arena, execution_defined, immediate, instruction.span)?;
-        env.insert(dest, value);
+        match &instruction.kind {
+            ScalarInstructionKind::GetElementPtr { .. }
+            | ScalarInstructionKind::Load { .. }
+            | ScalarInstructionKind::Store { .. } => {
+                let bound = memory.as_mut().ok_or_else(|| ReflectError {
+                    kind: ReflectErrorKind::UnsupportedMemory,
+                    span: Some(instruction.span),
+                    detail: "memory instruction requires a bounded-memory binding".to_owned(),
+                })?;
+                let (binding, immediate) = lower_memory_instruction(
+                    arena,
+                    &env,
+                    bound,
+                    &instruction.kind,
+                    instruction.span,
+                )?;
+                execution_defined =
+                    bool_and(arena, execution_defined, immediate, instruction.span)?;
+                if let Some((dest, value)) = binding {
+                    env.insert(dest, value);
+                }
+            }
+            _ => {
+                let (dest, value, immediate) =
+                    lower_assignment(arena, &env, instruction.kind.clone(), instruction.span)?;
+                execution_defined =
+                    bool_and(arena, execution_defined, immediate, instruction.span)?;
+                env.insert(dest, value);
+            }
+        }
     }
 
-    execute_terminator(arena, cfg, block_id, block, env, execution_defined)
+    execute_terminator(arena, cfg, block_id, block, env, execution_defined, memory)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "the exhaustive terminator dispatch keeps path and memory selection visibly aligned"
+)]
 fn execute_terminator(
     arena: &mut TermArena,
     cfg: &ScalarCfg,
@@ -460,7 +773,8 @@ fn execute_terminator(
     block: &super::syntax::CfgBlock,
     env: HashMap<String, DefinedValue>,
     execution_defined: TermId,
-) -> Result<DefinedValue, ReflectError> {
+    memory: Option<MemoryState>,
+) -> Result<ExecutionOutcome, ReflectError> {
     match &block.terminator.kind {
         TerminatorKind::Return { width, value } => {
             let returned = resolve(arena, &env, value, *width, block.terminator.span)?;
@@ -470,14 +784,23 @@ fn execute_terminator(
                 returned.defined,
                 block.terminator.span,
             )?;
-            Ok(DefinedValue {
-                defined,
-                ..returned
+            Ok(ExecutionOutcome {
+                result: DefinedValue {
+                    defined,
+                    ..returned
+                },
+                memory,
             })
         }
-        TerminatorKind::Branch { target } => {
-            execute_cfg_block(arena, cfg, target, Some(block_id), env, execution_defined)
-        }
+        TerminatorKind::Branch { target } => execute_cfg_block(
+            arena,
+            cfg,
+            target,
+            Some(block_id),
+            env,
+            execution_defined,
+            memory,
+        ),
         TerminatorKind::CondBranch {
             condition,
             true_target,
@@ -491,6 +814,7 @@ fn execute_terminator(
                 Some(block_id),
                 env.clone(),
                 execution_defined,
+                memory.clone(),
             )?;
             let when_false = execute_cfg_block(
                 arena,
@@ -499,8 +823,9 @@ fn execute_terminator(
                 Some(block_id),
                 env,
                 execution_defined,
+                memory,
             )?;
-            join_selected(
+            join_outcomes(
                 arena,
                 condition,
                 when_true,
@@ -522,6 +847,7 @@ fn execute_terminator(
                 Some(block_id),
                 env.clone(),
                 execution_defined,
+                memory.clone(),
             )?;
             for case in cases.iter().rev() {
                 let case_result = execute_cfg_block(
@@ -531,6 +857,7 @@ fn execute_terminator(
                     Some(block_id),
                     env.clone(),
                     execution_defined,
+                    memory.clone(),
                 )?;
                 let constant = scalar_constant(arena, *width, case.value, block.terminator.span)?;
                 let matches = arena
@@ -542,22 +869,75 @@ fn execute_terminator(
                     width: 1,
                 };
                 joined =
-                    join_selected(arena, condition, case_result, joined, block.terminator.span)?;
+                    join_outcomes(arena, condition, case_result, joined, block.terminator.span)?;
             }
-            joined.defined = bool_and(
+            joined.result.defined = bool_and(
                 arena,
                 scrutinee.defined,
-                joined.defined,
+                joined.result.defined,
                 block.terminator.span,
             )?;
             Ok(joined)
         }
-        TerminatorKind::Unreachable => Ok(DefinedValue {
-            value: scalar_constant(arena, cfg.return_width, 0, block.terminator.span)?,
-            defined: arena.bool_const(false),
-            width: cfg.return_width,
+        TerminatorKind::Unreachable => Ok(ExecutionOutcome {
+            result: DefinedValue {
+                value: scalar_constant(arena, cfg.return_width, 0, block.terminator.span)?,
+                defined: arena.bool_const(false),
+                width: cfg.return_width,
+            },
+            memory,
         }),
     }
+}
+
+fn join_outcomes(
+    arena: &mut TermArena,
+    condition: DefinedValue,
+    when_true: ExecutionOutcome,
+    when_false: ExecutionOutcome,
+    span: SourceSpan,
+) -> Result<ExecutionOutcome, ReflectError> {
+    let result = join_selected(arena, condition, when_true.result, when_false.result, span)?;
+    let memory = match (when_true.memory, when_false.memory) {
+        (None, None) => None,
+        (Some(left), Some(right)) => Some(join_memory(arena, condition, left, right, span)?),
+        _ => {
+            return Err(ReflectError {
+                kind: ReflectErrorKind::UnsupportedMemory,
+                span: Some(span),
+                detail: "control-flow arms disagree on bounded-memory state".to_owned(),
+            });
+        }
+    };
+    Ok(ExecutionOutcome { result, memory })
+}
+
+fn join_memory(
+    arena: &mut TermArena,
+    condition: DefinedValue,
+    mut when_true: MemoryState,
+    when_false: MemoryState,
+    span: SourceSpan,
+) -> Result<MemoryState, ReflectError> {
+    if when_true.parameter != when_false.parameter
+        || when_true.bytes.len() != when_false.bytes.len()
+    {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "control-flow arms have incompatible bounded-memory regions".to_owned(),
+        });
+    }
+    for (left, right) in when_true.bytes.iter_mut().zip(when_false.bytes) {
+        left.value = arena
+            .ite(condition.value, left.value, right.value)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        left.defined = arena
+            .ite(condition.value, left.defined, right.defined)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+    }
+    when_true.pointers.clear();
+    Ok(when_true)
 }
 
 fn join_selected(
@@ -695,6 +1075,207 @@ fn reflect_parsed_into(
     Ok((result, env))
 }
 
+fn lower_memory_instruction(
+    arena: &mut TermArena,
+    env: &HashMap<String, DefinedValue>,
+    memory: &mut MemoryState,
+    kind: &ScalarInstructionKind,
+    span: SourceSpan,
+) -> Result<(Option<(String, DefinedValue)>, TermId), ReflectError> {
+    match kind {
+        ScalarInstructionKind::GetElementPtr { .. } => {
+            lower_memory_gep(arena, env, memory, kind, span)
+        }
+        ScalarInstructionKind::Load { .. } => lower_memory_load(arena, memory, kind, span),
+        ScalarInstructionKind::Store { .. } => lower_memory_store(arena, env, memory, kind, span),
+        _ => Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "non-memory instruction reached memory lowering".to_owned(),
+        }),
+    }
+}
+
+fn lower_memory_gep(
+    arena: &mut TermArena,
+    env: &HashMap<String, DefinedValue>,
+    memory: &mut MemoryState,
+    kind: &ScalarInstructionKind,
+    span: SourceSpan,
+) -> Result<(Option<(String, DefinedValue)>, TermId), ReflectError> {
+    let ScalarInstructionKind::GetElementPtr {
+        dest,
+        flags,
+        element_width,
+        base,
+        index_width,
+        index,
+    } = kind
+    else {
+        unreachable!("memory dispatcher selected GEP")
+    };
+    if *element_width != 8 || *index_width != 64 {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "bounded memory requires an i8 element and i64 GEP index".to_owned(),
+        });
+    }
+    let base = resolve_pointer(memory, base, span)?;
+    let index = resolve(arena, env, index, 64, span)?;
+    let offset = arena
+        .bv_add(base.value, index.value)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let limit = arena
+        .bv_const(64, memory.bytes.len() as u128)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let in_bounds = arena
+        .bv_ule(offset, limit)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let mut defined = bool_and(arena, base.defined, index.defined, span)?;
+    defined = bool_and(arena, defined, in_bounds, span)?;
+    if flags.contains(&GepFlag::Nuw) {
+        let overflow = arena.bv_uaddo(base.value, index.value);
+        let no_wrap = negate_ir(arena, overflow, span)?;
+        defined = bool_and(arena, defined, no_wrap, span)?;
+    }
+    memory.pointers.insert(
+        dest.clone(),
+        DefinedValue {
+            value: offset,
+            defined,
+            width: 64,
+        },
+    );
+    Ok((None, arena.bool_const(true)))
+}
+
+fn lower_memory_load(
+    arena: &mut TermArena,
+    memory: &MemoryState,
+    kind: &ScalarInstructionKind,
+    span: SourceSpan,
+) -> Result<(Option<(String, DefinedValue)>, TermId), ReflectError> {
+    let ScalarInstructionKind::Load {
+        dest,
+        width,
+        pointer,
+        align,
+    } = kind
+    else {
+        unreachable!("memory dispatcher selected load")
+    };
+    if *width != 8 || *align != 1 {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "bounded memory supports only aligned-i8 loads".to_owned(),
+        });
+    }
+    let pointer = resolve_pointer(memory, pointer, span)?;
+    let immediate = access_defined(arena, pointer, memory.bytes.len(), span)?;
+    let loaded = select_memory_byte(arena, &memory.bytes, pointer.value, span)?;
+    Ok((Some((dest.clone(), loaded)), immediate))
+}
+
+fn lower_memory_store(
+    arena: &mut TermArena,
+    env: &HashMap<String, DefinedValue>,
+    memory: &mut MemoryState,
+    kind: &ScalarInstructionKind,
+    span: SourceSpan,
+) -> Result<(Option<(String, DefinedValue)>, TermId), ReflectError> {
+    let ScalarInstructionKind::Store {
+        width,
+        value,
+        pointer,
+        align,
+    } = kind
+    else {
+        unreachable!("memory dispatcher selected store")
+    };
+    if *width != 8 || *align != 1 {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "bounded memory supports only aligned-i8 stores".to_owned(),
+        });
+    }
+    let pointer = resolve_pointer(memory, pointer, span)?;
+    let stored = resolve(arena, env, value, 8, span)?;
+    let immediate = access_defined(arena, pointer, memory.bytes.len(), span)?;
+    for (index, byte) in memory.bytes.iter_mut().enumerate() {
+        let address = arena
+            .bv_const(64, index as u128)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        let selected = arena
+            .eq(pointer.value, address)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        byte.value = arena
+            .ite(selected, stored.value, byte.value)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        byte.defined = arena
+            .ite(selected, stored.defined, byte.defined)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+    }
+    Ok((None, immediate))
+}
+
+fn resolve_pointer(
+    memory: &MemoryState,
+    pointer: &str,
+    span: SourceSpan,
+) -> Result<DefinedValue, ReflectError> {
+    memory
+        .pointers
+        .get(pointer)
+        .copied()
+        .ok_or_else(|| ReflectError {
+            kind: ReflectErrorKind::UndefinedValue,
+            span: Some(span),
+            detail: format!("undefined or non-pointer SSA value `%{pointer}`"),
+        })
+}
+
+fn access_defined(
+    arena: &mut TermArena,
+    pointer: DefinedValue,
+    bytes: usize,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    let limit = arena
+        .bv_const(64, bytes as u128)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let inside = arena
+        .bv_ult(pointer.value, limit)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    bool_and(arena, pointer.defined, inside, span)
+}
+
+fn select_memory_byte(
+    arena: &mut TermArena,
+    bytes: &[DefinedValue],
+    offset: TermId,
+    span: SourceSpan,
+) -> Result<DefinedValue, ReflectError> {
+    let mut selected = bytes[0];
+    for (index, byte) in bytes.iter().copied().enumerate().skip(1) {
+        let address = arena
+            .bv_const(64, index as u128)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        let matches = arena
+            .eq(offset, address)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        selected.value = arena
+            .ite(matches, byte.value, selected.value)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        selected.defined = arena
+            .ite(matches, byte.defined, selected.defined)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+    }
+    Ok(selected)
+}
+
 fn lower_assignment(
     arena: &mut TermArena,
     env: &HashMap<String, DefinedValue>,
@@ -758,6 +1339,13 @@ fn lower_assignment(
             lhs,
             rhs,
         } => lower_intrinsic_assignment(arena, env, dest, intrinsic, width, &lhs, &rhs, span),
+        ScalarInstructionKind::GetElementPtr { .. }
+        | ScalarInstructionKind::Load { .. }
+        | ScalarInstructionKind::Store { .. } => Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedMemory,
+            span: Some(span),
+            detail: "memory instruction requires the bounded-memory CFG API".to_owned(),
+        }),
         ScalarInstructionKind::Return { .. } => unreachable!("return handled by caller"),
     }
 }

@@ -95,6 +95,15 @@ pub enum SemanticFlag {
     Nneg,
 }
 
+/// LLVM pointer-arithmetic promises admitted by the bounded byte-memory profile.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum GepFlag {
+    /// Every intermediate/result pointer remains within the allocation or one-past.
+    InBounds,
+    /// Unsigned pointer-index arithmetic does not wrap.
+    Nuw,
+}
+
 /// One scalar LLVM operand.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Operand {
@@ -185,6 +194,43 @@ pub enum ScalarInstructionKind {
         /// Right argument.
         rhs: Operand,
     },
+    /// Byte-addressed pointer derivation in the bounded memory profile.
+    GetElementPtr {
+        /// Destination pointer SSA name.
+        dest: String,
+        /// Pointer arithmetic promises in source order.
+        flags: Vec<GepFlag>,
+        /// Pointee element width; the first profile accepts only eight.
+        element_width: u32,
+        /// Base pointer SSA name.
+        base: String,
+        /// Index width; the first profile accepts only 64.
+        index_width: u32,
+        /// Signed element index.
+        index: Operand,
+    },
+    /// One non-atomic, non-volatile integer load.
+    Load {
+        /// Destination scalar SSA name.
+        dest: String,
+        /// Loaded integer width.
+        width: u32,
+        /// Source pointer SSA name.
+        pointer: String,
+        /// Promised byte alignment.
+        align: u32,
+    },
+    /// One non-atomic, non-volatile integer store.
+    Store {
+        /// Stored integer width.
+        width: u32,
+        /// Stored scalar value.
+        value: Operand,
+        /// Destination pointer SSA name.
+        pointer: String,
+        /// Promised byte alignment.
+        align: u32,
+    },
     /// Scalar return.
     Return {
         /// Returned value width.
@@ -201,8 +247,10 @@ impl ScalarInstructionKind {
             | Self::Icmp { dest, .. }
             | Self::Select { dest, .. }
             | Self::Cast { dest, .. }
-            | Self::Intrinsic { dest, .. } => Some(dest),
-            Self::Return { .. } => None,
+            | Self::Intrinsic { dest, .. }
+            | Self::GetElementPtr { dest, .. }
+            | Self::Load { dest, .. } => Some(dest),
+            Self::Store { .. } | Self::Return { .. } => None,
         }
     }
 }
@@ -232,6 +280,8 @@ pub fn parse_scalar_instruction(
         let value = cursor.operand()?;
         cursor.end()?;
         ScalarInstructionKind::Return { width, value }
+    } else if cursor.peek_word("store") {
+        parse_store(&mut cursor)?
     } else {
         let dest = cursor.local("instruction destination")?;
         cursor.punct('=')?;
@@ -260,10 +310,128 @@ fn parse_assignment(
         "zext" => parse_cast(cursor, dest, CastOpcode::Zext),
         "sext" => parse_cast(cursor, dest, CastOpcode::Sext),
         "trunc" => parse_cast(cursor, dest, CastOpcode::Trunc),
+        "getelementptr" => parse_gep(cursor, dest),
+        "load" => parse_load(cursor, dest),
         _ => Err(cursor.error(
             ParseErrorKind::UnsupportedInstruction,
             &format!("unsupported scalar instruction `{opcode}`"),
         )),
+    }
+}
+
+fn parse_gep(cursor: &mut Cursor<'_>, dest: String) -> Result<ScalarInstructionKind, ParseError> {
+    let mut flags = Vec::new();
+    while cursor.peek_word("inbounds") || cursor.peek_word("nuw") || cursor.peek_word("nusw") {
+        let word = cursor.any_word("GEP flag")?;
+        let flag = match word.as_str() {
+            "inbounds" => GepFlag::InBounds,
+            "nuw" => GepFlag::Nuw,
+            "nusw" => {
+                return Err(cursor.error(
+                    ParseErrorKind::UnsupportedSemantics,
+                    "standalone `getelementptr nusw` is outside the bounded memory profile",
+                ));
+            }
+            _ => unreachable!("peek admitted only GEP flags"),
+        };
+        if flags.contains(&flag) {
+            return Err(cursor.error(
+                ParseErrorKind::MalformedInstruction,
+                &format!("duplicate GEP flag `{word}`"),
+            ));
+        }
+        flags.push(flag);
+    }
+    if !flags.contains(&GepFlag::InBounds) {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            "bounded byte memory requires `getelementptr inbounds`",
+        ));
+    }
+    let element_width = cursor.int_type()?;
+    if element_width != 8 {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedInstruction,
+            "bounded byte memory requires `getelementptr ... i8`",
+        ));
+    }
+    cursor.punct(',')?;
+    cursor.word("ptr")?;
+    let base = cursor.local("GEP base pointer")?;
+    cursor.punct(',')?;
+    let index_width = cursor.int_type()?;
+    if index_width != 64 {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedInstruction,
+            "bounded byte memory requires an i64 GEP index",
+        ));
+    }
+    let index = cursor.operand()?;
+    cursor.end()?;
+    Ok(ScalarInstructionKind::GetElementPtr {
+        dest,
+        flags,
+        element_width,
+        base,
+        index_width,
+        index,
+    })
+}
+
+fn parse_load(cursor: &mut Cursor<'_>, dest: String) -> Result<ScalarInstructionKind, ParseError> {
+    if cursor.peek_word("atomic") || cursor.peek_word("volatile") {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            "atomic/volatile loads are outside the bounded memory profile",
+        ));
+    }
+    let width = cursor.int_type()?;
+    require_byte_access(cursor, width)?;
+    cursor.punct(',')?;
+    cursor.word("ptr")?;
+    let pointer = cursor.local("load pointer")?;
+    let align = cursor.optional_alignment()?;
+    cursor.end()?;
+    Ok(ScalarInstructionKind::Load {
+        dest,
+        width,
+        pointer,
+        align,
+    })
+}
+
+fn parse_store(cursor: &mut Cursor<'_>) -> Result<ScalarInstructionKind, ParseError> {
+    cursor.word("store")?;
+    if cursor.peek_word("atomic") || cursor.peek_word("volatile") {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            "atomic/volatile stores are outside the bounded memory profile",
+        ));
+    }
+    let width = cursor.int_type()?;
+    require_byte_access(cursor, width)?;
+    let value = cursor.operand()?;
+    cursor.punct(',')?;
+    cursor.word("ptr")?;
+    let pointer = cursor.local("store pointer")?;
+    let align = cursor.optional_alignment()?;
+    cursor.end()?;
+    Ok(ScalarInstructionKind::Store {
+        width,
+        value,
+        pointer,
+        align,
+    })
+}
+
+fn require_byte_access(cursor: &Cursor<'_>, width: u32) -> Result<(), ParseError> {
+    if width == 8 {
+        Ok(())
+    } else {
+        Err(cursor.error(
+            ParseErrorKind::UnsupportedInstruction,
+            "bounded byte memory supports only i8 loads and stores",
+        ))
     }
 }
 
@@ -567,6 +735,32 @@ impl Cursor<'_> {
                 &format!("expected `{expected}`"),
             )),
         }
+    }
+
+    fn peek_punct(&self, expected: char) -> bool {
+        matches!(self.tokens.get(self.index).map(|token| &token.kind), Some(TokenKind::Punct(actual)) if *actual == expected)
+    }
+
+    fn optional_alignment(&mut self) -> Result<u32, ParseError> {
+        if !self.peek_punct(',') {
+            return Ok(1);
+        }
+        self.punct(',')?;
+        self.word("align")?;
+        let raw = self.any_word("alignment")?;
+        let align = raw.parse::<u32>().map_err(|_| {
+            self.error(
+                ParseErrorKind::MalformedInstruction,
+                &format!("invalid memory alignment `{raw}`"),
+            )
+        })?;
+        if align != 1 {
+            return Err(self.error(
+                ParseErrorKind::UnsupportedSemantics,
+                "bounded byte memory supports only alignment 1",
+            ));
+        }
+        Ok(align)
     }
 
     fn int_type(&mut self) -> Result<u32, ParseError> {

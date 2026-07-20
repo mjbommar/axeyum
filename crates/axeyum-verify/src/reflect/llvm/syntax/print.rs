@@ -3,8 +3,8 @@
 use std::fmt::Write as _;
 
 use super::{
-    BinaryOpcode, BlockId, CastOpcode, CfgBlock, IntPredicate, Intrinsic, Operand, ScalarCfg,
-    ScalarInstructionKind, SemanticFlag, TerminatorKind,
+    BinaryOpcode, BlockId, CastOpcode, CfgBlock, GepFlag, IntPredicate, Intrinsic, Operand,
+    ScalarCfg, ScalarInstructionKind, SemanticFlag, TerminatorKind,
 };
 
 /// Render one validated scalar CFG into deterministic canonical LLVM text.
@@ -123,11 +123,76 @@ fn render_instruction(output: &mut String, instruction: &ScalarInstructionKind) 
             lhs,
             rhs,
         } => render_intrinsic(output, dest, *intrinsic, *width, lhs, rhs),
+        ScalarInstructionKind::GetElementPtr { .. }
+        | ScalarInstructionKind::Load { .. }
+        | ScalarInstructionKind::Store { .. } => render_memory_instruction(output, instruction),
         ScalarInstructionKind::Return { width, value } => {
             write!(output, "ret i{width} {}", operand(value))
                 .expect("writing to a String cannot fail");
         }
     }
+}
+
+fn render_memory_instruction(output: &mut String, instruction: &ScalarInstructionKind) {
+    match instruction {
+        ScalarInstructionKind::GetElementPtr {
+            dest,
+            flags,
+            element_width,
+            base,
+            index_width,
+            index,
+        } => write!(
+            output,
+            "%{} = getelementptr{} i{}, ptr %{}, i{} {}",
+            quoted_name(dest),
+            rendered_gep_flags(flags),
+            element_width,
+            quoted_name(base),
+            index_width,
+            operand(index)
+        ),
+        ScalarInstructionKind::Load {
+            dest,
+            width,
+            pointer,
+            align,
+        } => write!(
+            output,
+            "%{} = load i{}, ptr %{}, align {}",
+            quoted_name(dest),
+            width,
+            quoted_name(pointer),
+            align
+        ),
+        ScalarInstructionKind::Store {
+            width,
+            value,
+            pointer,
+            align,
+        } => write!(
+            output,
+            "store i{} {}, ptr %{}, align {}",
+            width,
+            operand(value),
+            quoted_name(pointer),
+            align
+        ),
+        _ => unreachable!("memory renderer selected a scalar instruction"),
+    }
+    .expect("writing to a String cannot fail");
+}
+
+fn rendered_gep_flags(flags: &[GepFlag]) -> String {
+    let mut rendered = String::new();
+    for flag in flags {
+        rendered.push(' ');
+        rendered.push_str(match flag {
+            GepFlag::InBounds => "inbounds",
+            GepFlag::Nuw => "nuw",
+        });
+    }
+    rendered
 }
 
 fn render_binary(

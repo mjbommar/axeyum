@@ -12,8 +12,9 @@
 //! `llvm.umin`/`umax` intrinsics, and `ret`. Most historical tests exercise the
 //! legacy total/wrapping compatibility reflector. The migrated BE16 proof uses
 //! the checked reflector and proves its explicit LLVM-definedness term; new
-//! scalar work must use that fail-closed API. Memory (`load`/`store`/
-//! `getelementptr`) and `br`/`switch`/`phi` CFG are deferred.
+//! scalar work must use that fail-closed API. ADR-0286 migrates the historical
+//! byte-memory proofs to the checked bounded-object API; wider/general memory
+//! and cyclic CFG semantics remain deferred.
 
 use std::collections::{HashMap, HashSet};
 
@@ -24,8 +25,12 @@ use axeyum_solver::{
 };
 
 use axeyum_verify::reflect::llvm::{
-    Reflected, checked::reflect_scalar_checked, lower_body, lower_rhs, reflect_ll,
-    reflect_unary_into, resolve,
+    Reflected,
+    checked::{
+        BoundedMemoryConfig, CheckedMemoryCfgReflected, reflect_bounded_memory_cfg_checked,
+        reflect_scalar_checked,
+    },
+    lower_body, lower_rhs, reflect_ll, reflect_unary_into,
 };
 use axeyum_verify::reflect::width_of;
 
@@ -779,85 +784,23 @@ struct BufReflected {
     /// The buffer bytes `p[0..N)` as BV8 symbols.
     bytes: Vec<SymbolId>,
     result: TermId,
+    defined: TermId,
 }
 
-/// Reflect a single-`ptr`-parameter, single-block function by partially
-/// evaluating its constant-offset `i8` loads over `buf_len` byte symbols.
+/// Adapt ADR-0286's checked bounded-memory result to the historical test shape.
 fn reflect_buf_ll(ll: &str, buf_len: usize) -> BufReflected {
-    let mut arena = TermArena::new();
-
-    // The single pointer parameter's register name. Extract the `%`-register
-    // directly from the `define` line — naive paren-splitting breaks on attribute
-    // parens like `captures(none)`.
-    let define = ll
-        .lines()
-        .map(str::trim)
-        .find(|l| l.starts_with("define"))
-        .expect("a `define` line");
-    assert!(
-        define.contains("(ptr "),
-        "reflect_buf_ll expects a leading ptr parameter"
-    );
-    let base = define
-        .split_whitespace()
-        .find_map(|t| t.strip_prefix('%').map(|r| r.trim_end_matches(')')))
-        .expect("a %register parameter")
-        .to_string();
-
-    let bytes: Vec<SymbolId> = (0..buf_len)
-        .map(|k| arena.declare(&format!("byte{k}"), Sort::BitVec(8)).unwrap())
-        .collect();
-
-    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
-    let mut ptrs: HashMap<String, u64> = HashMap::new();
-    ptrs.insert(base, 0);
-
-    let mut result = None;
-    let mut in_body = false;
-    for raw in ll.lines() {
-        let line = raw.trim();
-        if line.starts_with("define") {
-            in_body = true;
-            continue;
-        }
-        if !in_body || line.is_empty() || line.ends_with(':') || line == "}" {
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("ret ") {
-            let toks: Vec<&str> = rest.split_whitespace().collect();
-            let w = width_of(toks[0]);
-            result = Some(resolve(&mut arena, &env, toks[1], w));
-            continue;
-        }
-        let (dst_tok, rhs) = line.split_once(" = ").expect("instruction `%d = ..`");
-        let dst = dst_tok.trim_start_matches('%').to_string();
-        let rhs_c = rhs.replace(',', "");
-        let toks: Vec<&str> = rhs_c.split_whitespace().collect();
-
-        if toks[0] == "getelementptr" {
-            // getelementptr [flags..] i8, ptr %q, i64 K — byte addressing only.
-            let ptr_idx = toks.iter().position(|t| *t == "ptr").expect("ptr token");
-            assert_eq!(toks[ptr_idx - 1], "i8", "only i8 (byte) gep is in scope");
-            let q = toks[ptr_idx + 1].trim_start_matches('%');
-            let k: u64 = toks.last().unwrap().parse().expect("constant gep offset");
-            ptrs.insert(dst, ptrs[q] + k);
-        } else if toks[0] == "load" {
-            // load i8, ptr %q [, align ..] — the byte symbol at the offset.
-            assert_eq!(toks[1], "i8", "only i8 loads are in scope");
-            let q = toks[3].trim_start_matches('%');
-            let off = usize::try_from(ptrs[q]).unwrap();
-            assert!(off < bytes.len(), "load at offset {off} exceeds buffer");
-            env.insert(dst, (arena.var(bytes[off]), 8));
-        } else {
-            let (t, w) = lower_rhs(&mut arena, &env, rhs);
-            env.insert(dst, (t, w));
-        }
-    }
-
+    let CheckedMemoryCfgReflected {
+        arena,
+        region,
+        result,
+        ..
+    } = reflect_bounded_memory_cfg_checked(ll, &BoundedMemoryConfig::new("0", buf_len))
+        .expect("checked bounded-memory reflection");
     BufReflected {
         arena,
-        bytes,
-        result: result.expect("a `ret`"),
+        bytes: region.input,
+        result: result.value,
+        defined: result.defined,
     }
 }
 
@@ -875,6 +818,7 @@ fn llvm_buffer_read_be16_equals_value_be16() {
     env.insert("lo".to_string(), (b1, 8));
     let (value_form, _w) = lower_body(&mut r.arena, &mut env, BE16_LL);
     let goal = r.arena.eq(r.result, value_form).unwrap();
+    let goal = r.arena.and(r.defined, goal).unwrap();
     assert!(
         matches!(
             prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
@@ -897,6 +841,7 @@ fn llvm_ihl_compiled_trick_equals_spec() {
     let four = r.arena.bv_const(32, 4).unwrap();
     let spec = r.arena.bv_mul(wide, four).unwrap();
     let goal = r.arena.eq(r.result, spec).unwrap();
+    let goal = r.arena.and(r.defined, goal).unwrap();
     assert!(
         matches!(
             prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
@@ -919,6 +864,7 @@ fn llvm_ihl_range_properties() {
     let zero = r.arena.bv_const(32, 0).unwrap();
     let mult4 = r.arena.eq(low2, zero).unwrap();
     let goal = r.arena.and(le, mult4).unwrap();
+    let goal = r.arena.and(r.defined, goal).unwrap();
     assert!(
         matches!(
             prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
@@ -950,6 +896,7 @@ fn llvm_buffer_reflection_matches_c_under_fuzz() {
                 },
             );
         }
+        assert_eq!(eval(&r.arena, r.defined, &asg).unwrap(), Value::Bool(true));
         match eval(&r.arena, r.result, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("expected a BV value, got {other:?}"),
@@ -1015,111 +962,30 @@ struct SymBufReflected {
     bytes: Vec<SymbolId>,
     /// The non-pointer parameter (the index `i`) as a BV symbol.
     index: SymbolId,
-    /// The (single) load's byte offset, as a BV64 term.
-    load_offset: TermId,
     result: TermId,
+    defined: TermId,
 }
 
-/// Reflect a `(ptr, iN idx)` single-load function, tracking the pointer offset as
-/// a BV64 term and building an ite-table load over `buf_len` byte symbols.
+/// Adapt ADR-0286's checked symbolic-index reflection to the historical tests.
 fn reflect_buf_sym_ll(ll: &str, buf_len: usize) -> SymBufReflected {
-    let mut arena = TermArena::new();
-    let define = ll
-        .lines()
-        .map(str::trim)
-        .find(|l| l.starts_with("define"))
-        .expect("a `define` line");
-
-    // The pointer parameter register and the (single) integer index parameter.
-    let regs: Vec<&str> = define
-        .split_whitespace()
-        .filter_map(|t| t.strip_prefix('%').map(|r| r.trim_end_matches([')', ','])))
-        .collect();
-    let base = regs[0].to_string();
-    let index = arena
-        .declare(&format!("idx_{}", regs[1]), Sort::BitVec(32))
-        .unwrap();
-
-    let bytes: Vec<SymbolId> = (0..buf_len)
-        .map(|k| arena.declare(&format!("byte{k}"), Sort::BitVec(8)).unwrap())
-        .collect();
-
-    let mut env: HashMap<String, (TermId, u32)> = HashMap::new();
-    env.insert(regs[1].to_string(), (arena.var(index), 32));
-    let mut ptr_off: HashMap<String, TermId> = HashMap::new();
-    let zero64 = arena.bv_const(64, 0).unwrap();
-    ptr_off.insert(base, zero64);
-
-    let mut result = None;
-    let mut load_offset = None;
-    let mut in_body = false;
-    for raw in ll.lines() {
-        let line = raw.trim();
-        if line.starts_with("define") {
-            in_body = true;
-            continue;
-        }
-        if !in_body || line.is_empty() || line.ends_with(':') || line == "}" {
-            continue;
-        }
-        if let Some(rest) = line.strip_prefix("ret ") {
-            let toks: Vec<&str> = rest.split_whitespace().collect();
-            let w = width_of(toks[0]);
-            result = Some(resolve(&mut arena, &env, toks[1], w));
-            continue;
-        }
-        let (dst_tok, rhs) = line.split_once(" = ").expect("instruction");
-        let dst = dst_tok.trim_start_matches('%').to_string();
-        let rhs_c = rhs.replace(',', "");
-        let toks: Vec<&str> = rhs_c.split_whitespace().collect();
-
-        if toks[0] == "getelementptr" {
-            // getelementptr [flags] i8, ptr %q, i64 OP  — byte addressing only.
-            let ptr_idx = toks.iter().position(|t| *t == "ptr").expect("ptr token");
-            assert_eq!(toks[ptr_idx - 1], "i8", "only i8 (byte) gep is in scope");
-            let q = toks[ptr_idx + 1].trim_start_matches('%');
-            let op = toks.last().unwrap();
-            // delta: a register (a BV term, widened to 64) or a constant.
-            let delta = if let Some(reg) = op.strip_prefix('%') {
-                let (t, w) = env[reg];
-                if w < 64 {
-                    arena.zero_ext(64 - w, t).unwrap()
-                } else {
-                    t
-                }
-            } else {
-                arena
-                    .bv_const(64, op.parse::<u128>().expect("gep const"))
-                    .unwrap()
-            };
-            let base_off = ptr_off[q];
-            ptr_off.insert(dst, arena.bv_add(base_off, delta).unwrap());
-        } else if toks[0] == "load" {
-            assert_eq!(toks[1], "i8", "only i8 loads are in scope");
-            let q = toks[3].trim_start_matches('%');
-            let off = ptr_off[q];
-            load_offset = Some(off);
-            // ite-table select over the byte symbols.
-            let mut acc = arena.var(bytes[0]);
-            for (k, sym) in bytes.iter().enumerate() {
-                let k64 = arena.bv_const(64, k as u128).unwrap();
-                let is_k = arena.eq(off, k64).unwrap();
-                let byte = arena.var(*sym);
-                acc = arena.ite(is_k, byte, acc).unwrap();
-            }
-            env.insert(dst, (acc, 8));
-        } else {
-            let (t, w) = lower_rhs(&mut arena, &env, rhs);
-            env.insert(dst, (t, w));
-        }
-    }
-
+    let CheckedMemoryCfgReflected {
+        arena,
+        params,
+        region,
+        result,
+    } = reflect_bounded_memory_cfg_checked(ll, &BoundedMemoryConfig::new("0", buf_len))
+        .expect("checked bounded-memory reflection");
+    let index = params
+        .iter()
+        .find(|(name, _, _)| name == "1")
+        .expect("one scalar index parameter")
+        .1;
     SymBufReflected {
         arena,
-        bytes,
+        bytes: region.input,
         index,
-        load_offset: load_offset.expect("a load"),
-        result: result.expect("a `ret`"),
+        result: result.value,
+        defined: result.defined,
     }
 }
 
@@ -1129,11 +995,9 @@ fn reflect_buf_sym_ll(ll: &str, buf_len: usize) -> SymBufReflected {
 #[test]
 fn llvm_masked_index_is_in_bounds() {
     let mut r = reflect_buf_sym_ll(GET_MASKED_LL, 4);
-    let n = r.arena.bv_const(64, 4).unwrap();
-    let goal = r.arena.bv_ult(r.load_offset, n).unwrap();
     assert!(
         matches!(
-            prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
+            prove(&mut r.arena, &[], r.defined, &SolverConfig::default()).unwrap(),
             ProofOutcome::Proved(_)
         ),
         "p[i & 3] must always be in bounds of a 4-byte buffer"
@@ -1146,11 +1010,9 @@ fn llvm_masked_index_is_in_bounds() {
 #[test]
 fn llvm_unguarded_index_is_out_of_bounds() {
     let mut r = reflect_buf_sym_ll(GET_LL, 4);
-    let n = r.arena.bv_const(64, 4).unwrap();
-    let goal = r.arena.bv_ult(r.load_offset, n).unwrap();
     assert!(
         matches!(
-            prove(&mut r.arena, &[], goal, &SolverConfig::default()).unwrap(),
+            prove(&mut r.arena, &[], r.defined, &SolverConfig::default()).unwrap(),
             ProofOutcome::Disproved(_)
         ),
         "p[i] is unguarded; offset<4 must be refuted with an OOB witness"
@@ -1184,6 +1046,7 @@ fn llvm_masked_index_value_matches_c_under_fuzz() {
                 value: u128::from(i),
             },
         );
+        assert_eq!(eval(&r.arena, r.defined, &asg).unwrap(), Value::Bool(true));
         let got = match eval(&r.arena, r.result, &asg).unwrap() {
             Value::Bv { value, .. } => u8::try_from(value).unwrap(),
             other => panic!("expected BV, got {other:?}"),

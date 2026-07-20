@@ -1,10 +1,11 @@
 //! Structured syntax boundary for textual LLVM functions.
 //!
 //! This module intentionally starts narrower than the LLVM language reference:
-//! it identifies one `define`, its typed/named parameters, blocks, scalar
-//! instructions, PHIs, and terminators. ADR-0281 adds checked straight-line
-//! definedness; ADR-0282 adds graph validation; ADR-0283 adds checked acyclic
-//! CFG execution rather than inheriting compatibility semantics.
+//! it identifies one `define`, its typed/named parameters, blocks, scalar and
+//! bounded-byte-memory instructions, PHIs, and terminators. ADR-0281 adds
+//! checked straight-line definedness; ADR-0282 adds graph validation; ADR-0283
+//! adds checked acyclic CFG execution; ADR-0286 adds the explicit one-region
+//! `getelementptr`/`load`/`store` profile.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -19,7 +20,7 @@ pub use cfg::{
     parse_scalar_cfg,
 };
 pub use instruction::{
-    BinaryOpcode, CastOpcode, IntPredicate, Intrinsic, Operand, ScalarInstruction,
+    BinaryOpcode, CastOpcode, GepFlag, IntPredicate, Intrinsic, Operand, ScalarInstruction,
     ScalarInstructionKind, SemanticFlag, parse_scalar_instruction,
 };
 pub use print::render_scalar_cfg;
