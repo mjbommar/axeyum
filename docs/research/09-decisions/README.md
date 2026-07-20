@@ -353,3 +353,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0295](adr-0295-preregister-checked-llvm-direct-body-calls.md) | Accept an opt-in checked direct-body baseline for the two exact Glaurung PAC loop calls; keep ordinary/external calls rejected by default | accepted |
 | [0296](adr-0296-preregister-verified-scalar-contract-composition.md) | Accept one verified exact scalar contract for modular-versus-inlined comparison on the two Glaurung PAC loop callers | accepted |
 | [0297](adr-0297-preregister-call-requirement-obligations.md) | Accept path-conditioned scalar call requirements as explicit transition-system bad states rather than silently pruning violating callers | accepted |
+| [0298](adr-0298-preregister-relational-scalar-call-results.md) | Preregister straight-line relational scalar call results as explicit internal havoc symbols plus separate replayable constraints | proposed |

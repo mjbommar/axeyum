@@ -853,6 +853,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     violation / 33,332 source undefined with zero disagreement or dropped work;
     depth-1 PAC and path-conditioned natural-loop witnesses replay. It adds
     neither annotation syntax nor relational havoc.
+  - [ADR-0298](../09-decisions/adr-0298-preregister-relational-scalar-call-results.md)
+    preregisters the next checksum-module composition rule before code: one
+    fresh internal scalar result per straight-line call, a separately exposed
+    `ensures` relation rather than fabricated poison, exact body verification,
+    a weak-postcondition havoc countermodel, and 100,000 fully classified
+    valid/violating result choices. Loop havoc, MIR calls, annotations, and
+    effects remain outside this experiment.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

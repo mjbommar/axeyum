@@ -217,9 +217,13 @@ session state.
 >    replayable and source-attributed through `bad`. The 100,000-row result is
 >    33,334 valid / 33,334 defined violation / 33,332 source undefined, with
 >    zero disagreement or dropped work; depth-1 PAC and internal-path/later-UB
->    controls pass. The standing gate is now nine binaries / 98 tests. Next,
->    preregister a relational scalar result/havoc rule on the checksum module;
->    no annotation syntax, MIR calls, or external effects are yet authorized.
+>    controls pass. The standing gate is now nine binaries / 98 tests.
+>    ADR-0298 now preregisters the relational scalar result/havoc rule on the
+>    checksum module before code: a fresh internal result, a separate verified
+>    `ensures` constraint (never fabricated LLVM poison), exact-body checking,
+>    a weak-contract havoc countermodel, and 100,000 fully classified rows.
+>    No annotation syntax, MIR calls, loop havoc, or external effects are yet
+>    authorized.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
