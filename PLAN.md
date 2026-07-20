@@ -135,12 +135,13 @@ session state.
 >    source/output/provenance hashes, stable-CI drift detection, pinned-compiler
 >    byte replay, and adversarial tamper/regeneration gates before checked MIR
 >    writes. Capture adds no semantics;
->    ADR-0288 now preregisters that semantic continuation: named selection from
+>    ADR-0288 now accepts that semantic continuation: named selection from
 >    the authenticated multi-function module, located non-panicking typed MIR,
 >    explicit access panic independent of `assert`, stores, branch memory joins,
->    source replay, and the same bounded roundtrip specification on MIR and LLVM.
->    Do not extend the existing panic-oriented line parser or perturb the
->    accepted Linux recall route.
+>    source replay, migrated bounds proofs, and the same bounded roundtrip
+>    specification on MIR and LLVM. Whole-crate build selection and general MIR
+>    places remain open; do not extend the existing panic-oriented line parser
+>    or perturb the accepted Linux recall route.
 >
 > Convert survived strengths (cheap):
 > 7. [INTEGRATION] Reproducibility-for-free, measured -- work-bound + canonical

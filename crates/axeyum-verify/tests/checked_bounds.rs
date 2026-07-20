@@ -17,10 +17,10 @@
 //! This is the buffer half of the sel4-direction story: the same machinery that
 //! proves an overflow check unreachable proves an OOB access unreachable.
 
-use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, SymbolId, TermArena, TermId, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-use axeyum_verify::reflect::mir::{MirParam, reflect_mir_params_checked};
+use axeyum_verify::reflect::mir::checked::{MirMemoryConfig, reflect_bounded_memory_checked};
 
 // ---- the real Rust functions (replay oracles) -------------------------------------
 
@@ -32,47 +32,9 @@ fn get_clamped(buf: [u8; 4], i: usize) -> u8 {
     buf[i & 3]
 }
 
-// ---- committed debug-MIR fixtures (bounds asserts present) ------------------------
+// ---- authenticated compiler MIR fixture (bounds asserts present) -----------------
 
-const GET_MIR: &str = r#"
-fn get(_1: [u8; 4], _2: usize) -> u8 {
-    debug buf => _1;
-    debug i => _2;
-    let mut _0: u8;
-    let mut _3: bool;
-
-    bb0: {
-        _3 = Lt(copy _2, const 4_usize);
-        assert(move _3, "index out of bounds: the len is {} but the index is {}", const 4_usize, copy _2) -> [success: bb1, unwind continue];
-    }
-
-    bb1: {
-        _0 = copy _1[_2];
-        return;
-    }
-}
-"#;
-
-const GET_CLAMPED_MIR: &str = r#"
-fn get_clamped(_1: [u8; 4], _2: usize) -> u8 {
-    debug buf => _1;
-    debug i => _2;
-    let mut _0: u8;
-    let mut _3: usize;
-    let mut _4: bool;
-
-    bb0: {
-        _3 = BitAnd(copy _2, const 3_usize);
-        _4 = Lt(copy _3, const 4_usize);
-        assert(move _4, "index out of bounds: the len is {} but the index is {}", const 4_usize, copy _3) -> [success: bb1, unwind continue];
-    }
-
-    bb1: {
-        _0 = copy _1[_3];
-        return;
-    }
-}
-"#;
+const COMPILER_MIR: &str = include_str!("fixtures/mir/rustc197-debug.mir");
 
 struct Reflection {
     arena: TermArena,
@@ -82,25 +44,21 @@ struct Reflection {
     panic: TermId,
 }
 
-fn reflect(mir: &str) -> Reflection {
-    let mut arena = TermArena::new();
-    let byte_syms: Vec<SymbolId> = (0..4)
-        .map(|k| arena.declare(&format!("byte{k}"), Sort::BitVec(8)).unwrap())
-        .collect();
-    let bytes: Vec<TermId> = byte_syms.iter().map(|&s| arena.var(s)).collect();
-    let idx_sym = arena.declare("i", Sort::BitVec(64)).unwrap();
-    let idx = arena.var(idx_sym);
-    let (value, panic) = reflect_mir_params_checked(
-        &mut arena,
-        &[MirParam::Bytes(bytes), MirParam::Scalar(idx, 64, false)],
-        mir,
-    );
+fn reflect(function: &str) -> Reflection {
+    let reflected =
+        reflect_bounded_memory_checked(COMPILER_MIR, &MirMemoryConfig::new(function, 64)).unwrap();
+    let idx_sym = reflected
+        .params
+        .iter()
+        .find(|parameter| parameter.local == 2)
+        .unwrap()
+        .symbol;
     Reflection {
-        arena,
-        byte_syms,
+        arena: reflected.arena,
+        byte_syms: reflected.region.input,
         idx_sym,
-        value,
-        panic,
+        value: reflected.result.value,
+        panic: reflected.panic,
     }
 }
 
@@ -108,7 +66,7 @@ fn reflect(mir: &str) -> Reflection {
 /// content: the compiled bounds check is proved unreachable.
 #[test]
 fn clamped_read_proved_panic_free_for_all_indices() {
-    let mut r = reflect(GET_CLAMPED_MIR);
+    let mut r = reflect("clamped_read");
     let no_panic = r.arena.not(r.panic).unwrap();
     let outcome = prove(&mut r.arena, &[], no_panic, &SolverConfig::default())
         .expect("solver should not hard-error");
@@ -122,7 +80,7 @@ fn clamped_read_proved_panic_free_for_all_indices() {
 /// index, and the real compiled Rust function panics exactly there.
 #[test]
 fn unguarded_read_oob_witness_found_and_reproduced() {
-    let mut r = reflect(GET_MIR);
+    let mut r = reflect("checked_read");
     let no_panic = r.arena.not(r.panic).unwrap();
     let outcome = prove(&mut r.arena, &[], no_panic, &SolverConfig::default())
         .expect("solver should not hard-error");
@@ -151,8 +109,8 @@ fn unguarded_read_oob_witness_found_and_reproduced() {
 /// contents, the reflected read equals the real Rust read (both variants).
 #[test]
 fn read_values_match_real_rust_in_bounds() {
-    let r_get = reflect(GET_MIR);
-    let r_clamp = reflect(GET_CLAMPED_MIR);
+    let r_get = reflect("checked_read");
+    let r_clamp = reflect("clamped_read");
     let bufs = [[0u8, 0, 0, 0], [1, 2, 3, 4], [0xff, 0x80, 0x7f, 1]];
     for buf in bufs {
         for i in 0..4u64 {

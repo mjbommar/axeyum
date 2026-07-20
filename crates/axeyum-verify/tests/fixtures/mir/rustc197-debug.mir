@@ -92,3 +92,44 @@ fn store_then_load(_1: [u8; 4], _2: usize, _3: u8) -> u8 {
 }
 
 const store_then_load::{constant#0}: usize = const 4_usize;
+
+fn conditional_store(_1: [u8; 4], _2: usize, _3: u8, _4: bool) -> u8 {
+    debug buf => _1;
+    debug index => _2;
+    debug value => _3;
+    debug take => _4;
+    let mut _0: u8;
+    let mut _5: bool;
+    let mut _6: bool;
+
+    bb0: {
+        switchInt(copy _4) -> [0: bb4, otherwise: bb1];
+    }
+
+    bb1: {
+        _5 = Lt(copy _2, const 4_usize);
+        assert(move _5, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _2) -> [success: bb2, unwind continue];
+    }
+
+    bb2: {
+        _1[_2] = copy _3;
+        _6 = Lt(copy _2, const 4_usize);
+        assert(move _6, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _2) -> [success: bb3, unwind continue];
+    }
+
+    bb3: {
+        _0 = copy _1[_2];
+        goto -> bb5;
+    }
+
+    bb4: {
+        _0 = copy _3;
+        goto -> bb5;
+    }
+
+    bb5: {
+        return;
+    }
+}
+
+const conditional_store::{constant#0}: usize = const 4_usize;

@@ -1,10 +1,9 @@
 # ADR-0288: Preregister checked MIR byte-memory CFG reflection
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; no conditional source fixture, regenerated MIR, checked
-MIR syntax, memory semantics, or semantic test has been added under this ADR
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -127,6 +126,50 @@ committed. The implementation must then satisfy all of the following:
 The gates may be strengthened before the source is changed or the first red
 semantic test is run. They may not be weakened after any regenerated artifact
 or test outcome is observed.
+
+## Result
+
+The authenticated source now contains `conditional_store`, and exact
+regeneration expands the raw compiler artifact from 2,304 to 3,262 bytes and
+from four to five named functions. Two regeneration captures plus required
+replay are byte-identical under the registered rustc/LLVM identity. The source
+and MIR hashes are respectively
+`2f637e370ba1d673c6d4bbfd545e8ce151ebd989199a2bf903b9c2a382f1bd61`
+and
+`b8eccaf7ab795c0bfb01f20704cac3c67d7b4fc6e86dd5c8845aa21e81ad3d14`;
+provenance remains unchanged.
+
+`reflect::mir::syntax` selects one named function from the complete artifact
+and owns located parameters, locals, blocks, scalar/array types, operands,
+assignments, byte reads/stores, and admitted terminators. `reflect::mir::checked`
+is a separate `Result` API with explicit 64-bit target configuration, stable
+syntax/reflection error classes, initialized byte symbols, acyclic bounded
+execution, and path joins over result, panic, and every final byte. The legacy
+panic-oriented compatibility API remains unchanged.
+
+Every read and write constructs its own unsigned `index < N` predicate and
+adds its negation to `panic`; removing the compiler assertion or replacing it
+with an unrelated true assertion does not change that access obligation. The
+authenticated straight-line function proves `panic <-> index >= 4`, returns
+the stored byte under `!panic`, and updates exactly the selected byte. The
+conditional function proves `panic <-> take && index >= 4`, preserves all
+bytes when `take` is false, and joins the selected write only on the true path.
+Return and final-memory claims in the tests are guarded by `!panic` and sampled
+against the real Rust functions.
+
+Seven dedicated tests cover typed full-module selection, missing/duplicate
+names, exact straight-line and conditional memory semantics, absent/wrong
+assertions, source replay, deterministic symbols/terms, malformed/noisy input,
+region/type/local/control rejection classes, cycles, and execution expansion.
+The three existing bounds tests now consume authenticated named functions
+instead of embedded MIR strings while preserving the solver-produced OOB
+witness replay. The MIR and accepted LLVM fixtures separately prove the same
+four-byte, 64-bit-index store/load contract.
+
+The dedicated and migrated tests, exact fixture verification/replay, eight
+fixture-checker adversarial tests, complete `axeyum-verify --all-features`
+suite, formatting, strict Clippy, rustdoc, and repository links pass. No Cargo
+dependency, default feature, native, MSRV, or WASM surface changes.
 
 ## Consequences
 

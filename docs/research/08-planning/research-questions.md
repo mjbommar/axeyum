@@ -759,11 +759,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     tests. Capture alone adds no MIR semantics; checked writes and non-panicking
     reflection remain separately gated.
   - [ADR-0288](../09-decisions/adr-0288-preregister-checked-mir-byte-memory.md)
-    preregisters the semantic continuation: select a named function from the
-    authenticated module, parse a strict typed MIR subset without panics,
-    derive bounds failure from every access, execute stores, join branch-local
-    memory, replay source witnesses, and prove the same bounded roundtrip spec
-    as the accepted LLVM path.
+    accepts the semantic continuation: a named function from the authenticated
+    module parses through a strict typed non-panicking MIR subset; every access
+    derives its own bounds failure; stores and branch-local final memory join;
+    source replay and the same bounded LLVM/MIR roundtrip spec pass. Whole-crate
+    build selection and general MIR places remain open.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

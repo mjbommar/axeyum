@@ -83,6 +83,7 @@ EXPECTED_FUNCTIONS = (
     "checked_read",
     "clamped_read",
     "store_then_load",
+    "conditional_store",
 )
 
 

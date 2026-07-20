@@ -25,6 +25,11 @@ use axeyum_ir::{TermArena, TermId};
 
 use super::{binop, compare};
 
+/// Non-panicking checked reflection for the authenticated MIR subset.
+pub mod checked;
+/// Located typed syntax for the authenticated MIR subset.
+pub mod syntax;
+
 /// `(term, width, signed)` — width 1 = Bool.
 type Operand = (TermId, u32, bool);
 
