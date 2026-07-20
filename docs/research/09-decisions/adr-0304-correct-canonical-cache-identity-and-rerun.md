@@ -3,8 +3,8 @@
 Status: accepted
 Date: 2026-07-20
 
-Result state: corrected opportunity and successor registration frozen with zero
-successor timing rows; ADR-0303 timing campaign rejected
+Result state: successor accepted; mixed per-driver additivity, warm cache-on
+regresses every variance-qualified driver; ADR-0303 timing campaign rejected
 
 ## Context
 
@@ -79,10 +79,45 @@ artifact. If it rejects, the successor is closed negative and no timing ratio
 is reported. If it passes, only then may its per-driver contrasts and variance-
 qualified additivity labels be reported.
 
+## Accepted successor result
+
+The fresh successor completed 120/120 processes and 387,060 checks. Every
+producer report and the unchanged frozen analyzer passed. There were zero
+wrong verdicts, unknowns, errors, SAT replay failures, evictions, oversize
+bypasses, resource failures, or terminal owner leaks. The campaign is bound at
+SHA-256
+`3ea7216cd9cbb10623605f3fb4573eed15ec2550e1cb39df8e78a351197893b2`;
+the committed [analysis](../../../bench-results/glaurung-engine-cache-factorial-v2-20260720/analysis.json)
+is bound at
+`4e4a2b64379de8ad2875f65dffdf7400a56853337e259ea917594f06ef156fc7`.
+
+Warm solver state remains additive under exact caching on vwififlt (1.655,
+95% CI [1.624, 1.687]) and SurfacePen (1.112, [1.101, 1.124]). DptfDevGen and
+IntcSST have point estimates above one but fail the preregistered variance gate.
+Under structural caching, warm state is additive on vwififlt (1.506, [1.480,
+1.533]), IntcSST (1.213, [1.186, 1.242]), and SurfacePen (1.074, [1.064,
+1.085]); DptfDevGen again fails the variance gate. This is a mixed bounded
+answer, not universal additivity.
+
+The second interaction is negative for cache promotion: among the three
+drivers whose warm contrasts meet the variance gate, cache-off beats both
+exact and structural cache-on. Warm-off/cache-on ratios are 0.405/0.405 on
+vwififlt, 0.670/0.677 on IntcSST, and 0.262/0.261 on SurfacePen, with every
+interval wholly below one. DptfDevGen is inconclusive on variance. Cache-on
+raises mean maximum RSS by 7.6%--67.3%, depending on driver and mode.
+
+The cache improves cold execution on every variance-qualified cache contrast,
+but the existing warm solver is the measured product choice for these fixed
+streams. Structural implication contributes only 562 additional hits after
+canonical exact caching already handles 8,001 of 12,902 checks. Therefore the
+Glaurung experiment remains an experiment; it is not promoted into Axeyum core.
+
 ## Consequences
 
 The fail-closed classification gate worked: a superficially clean 120-process
 run did not become a paper number because its independent oracle implemented a
-different identity. The correction is narrower than a policy change and is
-fixed before fresh timing. ADR-0303 remains rejected evidence; ADR-0304 is the
-only route to answering PLAN item 9.
+different identity. The correction is narrower than a policy change and was
+fixed before fresh timing. ADR-0303 remains rejected evidence. ADR-0304 closes
+PLAN item 9 with a bounded mixed result: warm state is sometimes independently
+additive, while the cache is not beneficial around the already-warm path on any
+conclusive driver. No pooled performance statement follows.

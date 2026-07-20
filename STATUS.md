@@ -322,41 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — The engine-cache factorial is implemented and fully frozen,
-  but remains zero-row before execution.** A fail-closed
-  analyzer reconstructs all 64,510 ordered check occurrences from ADR-0272's
-  immutable four-driver/five-repetition campaign. Per four-driver pass, exact
-  reuse can answer 5,868/12,902 checks (45.48%); cached SAT supersets and UNSAT
-  subsets add 2,695, for an unbounded structural ceiling of 8,563/12,902
-  (66.37%). The range is wide: 46.27% Dptf to 83.82% SurfacePen. All five
-  logical streams and classifications are exact within every driver. This is
-  opportunity only—capacity, lookup cost, model replay/storage, and warm
-  additivity remain unmeasured. ADR-0303 now preregisters cache
-  off/exact/implication crossed with cold/warm Axeyum in separate fixed-stream
-  processes, with a 4,096-entry multi-resource LRU, replay-checked SAT hits,
-  monotone UNSAT reuse, complete stage/resource telemetry, and a bootstrap/CV
-  additivity gate. Isolated Glaurung `202786c` now implements strict exact and
-  monotone structural reuse, full-width SAT-model replay, deterministic bounded
-  eviction, warm catch-up accounting, and v2 per-check telemetry. All 18 focused
-  Rust tests pass under one-job 4 GiB discipline. Axeyum `14834d2f` adds a
-  fail-closed runner/analyzer with seven passing unit tests. The versioned
-  registration binds the 20 immutable traces, original finding streams, four
-  offline reports, opportunity result, clean Axeyum `da24b016`, the Axeyum-only
-  replay executable `5e230ba7...65d92e1`, resolved libraries, six modes, fixed
-  environment, 4 GiB cgroup, process order, and statistics. Read-only preflight
-  passes across every bound artifact. One cold-off pilot failed closed before
-  report publication with one warm serial owner/71 references because cold mode
-  replayed warm owner-share events while its close path was correctly inert.
-  The artifact is retained; a red/green regression now keeps cold owner state
-  inert while still counting source lifecycle events. The corrected ADR-0303
-  campaign completed 120/120 producer reports and 387,060 checks, all with zero
-  correctness, replay, eviction, bypass, or resource failure, but the frozen
-  analyzer rejects before timing: opportunity v1 used textual query SHA for
-  exact identity while the ADR/implementation use canonical assertion sets.
-  The structural total stays 8,563/12,902, but canonical exact is 8,001 (62.01%)
-  rather than 5,868 (45.48%). ADR-0304 freezes that v2 correction and a fresh
-  otherwise-identical zero-row registration. The next action is its complete
-  rerun; rejected ADR-0303 timing must never be reused or reported.
+- **2026-07-20 — ADR-0304 closes the engine-cache factorial with a bounded
+  mixed result.** The fresh successor completed 120/120 processes and 387,060
+  checks; every producer and frozen-analyzer correctness, classification,
+  telemetry, terminal-state, and resource gate passes with zero replay failure,
+  eviction, bypass, or owner leak. Warm state remains additive under exact
+  caching on vwififlt and SurfacePen, and under structural caching on vwififlt,
+  IntcSST, and SurfacePen; DptfDevGen and the IntcSST exact cell exceed the 3%
+  variance limit. The other interaction is negative for cache promotion:
+  cache-on slows every already-warm path with a conclusive contrast, while mean
+  maximum RSS rises 7.6%--67.3%. Canonical exact covers 8,001/12,902 checks and
+  implication adds only 562. Keep warm solver reuse as the product mechanism;
+  leave the Glaurung cache experimental and cold-policy-specific. The committed
+  analysis reports per-driver intervals only. ADR-0303 remains rejected and
+  contributes no timing claim. Next: resume the ranked backlog at item 10 while
+  ADR-0302 awaits a genuinely different second machine.
 
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
@@ -5426,6 +5406,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Accepted the corrected engine-cache factorial.** The fresh
+  ADR-0304 successor passes all 120 producer reports and the unchanged analyzer.
+  Warm reuse is additive in 2/4 exact and 3/4 structural driver cells, but the
+  engine cache slows every variance-qualified already-warm comparison and costs
+  7.6%--67.3% mean maximum RSS. The cache remains experimental; no pooled
+  headline or rejected ADR-0303 timing is reported.
 
 - **2026-07-20 — Rejected the first engine-cache factorial and froze the exact-
   identity correction.** All 120 producer reports pass, but the independent

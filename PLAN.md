@@ -272,36 +272,21 @@ session state.
 >    evidence, not native parity or a minimum parser footprint.
 >
 > Rigor / defense:
-> 9. [BOTH] Warm-reuse additivity vs a GREEN/GreenTrie constraint cache in front of
->    a cold solver -- measure whether solver-internal warm state is additive or
->    subsumed by known SE-level constraint caching. The read-only ADR-0272 trace
->    analysis now establishes a material but workload-dependent opportunity:
->    exact reuse covers 5,868/12,902 checks per four-driver pass (45.48%), and
->    sound cached-SAT-superset / cached-UNSAT-subset implication raises the
->    unbounded structural ceiling to 8,563/12,902 (66.37%; 46.27% Dptf through
->    83.82% SurfacePen). This is not timing or a cache result. Next preregister a
->    bounded fixed-stream `{cold,warm} x {cache-off,cache-on}` factorial with
->    replay-checked SAT hits, explicit lookup/storage/eviction counters, and no
->    live-exploration model-choice confound. ADR-0303 now freezes the stronger
->    six-mode form: cache off/exact/implication crossed with cold/warm Axeyum,
->    one isolated process per accepted trace, a 4,096-entry multi-resource LRU,
->    complete stage/work telemetry, and a bootstrap/CV additivity criterion.
->    Glaurung `202786c` now implements the cache and v2 replay telemetry against
->    tracked-clean Axeyum `da24b016`; Axeyum `14834d2f` supplies the fail-closed
->    runner/analyzer, and the dated zero-row registration binds all 20 traces,
->    finding/offline artifacts, source commits, executable/libraries, six modes,
->    cgroup, environment, and analysis gates. Its read-only preflight passes.
->    The first cold-off pilot failed closed before report publication because
->    cold replay mutated warm owner leases; the retained zero-report artifact
->    selected and tests the `202786c` lifecycle correction. The corrected
->    120-process ADR-0303 campaign then passed every producer gate but is
->    rejected before ratios: the v1 opportunity artifact keyed exact hits by
->    textual query SHA while the ADR and implementation use canonical assertion
->    sets. With zero eviction/bypass, the frozen analyzer correctly failed.
->    ADR-0304 now binds opportunity v2 (8,001/12,902 canonical exact, 8,563
->    structural) and a fresh otherwise-identical zero-row registration. Commit
->    and push that correction, then rerun all 120 fresh processes; never reuse
->    or report the rejected timing.
+> 9. [BOTH] **DONE (ADR-0303 rejected; ADR-0304 accepted).** Warm-reuse
+>    additivity vs a GREEN/GreenTrie engine cache is now measured with 120 fresh
+>    processes and 387,060 replay-checked executions over four fixed Glaurung
+>    drivers. The corrected canonical opportunity is 8,001/12,902 exact hits
+>    (62.01%) and 8,563/12,902 exact-plus-implication hits (66.37%). The frozen
+>    successor passes every correctness/work/classification/resource gate with
+>    zero replay failure, eviction, bypass, or owner leak. Warm state remains
+>    additive under exact caching on 2/4 drivers and structural caching on 3/4;
+>    the remaining cells are inconclusive under the preregistered 3% CV gate.
+>    But engine cache-on slows the already-warm solver on all three drivers with
+>    conclusive warm cache contrasts, and raises mean maximum RSS by 7.6%--67.3%.
+>    Therefore keep Axeyum warm reuse as the product mechanism and leave the
+>    Glaurung engine cache experimental/cold-policy-specific. Report only the
+>    per-driver intervals in the committed result, never a pooled headline. The
+>    first ADR-0303 campaign remains rejected and contributes no timing claim.
 > 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
 >    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
 >    related-work positioning vs Veritas, attacker-control, and the MS agentic system.

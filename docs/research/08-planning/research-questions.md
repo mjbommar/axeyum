@@ -708,7 +708,7 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     explicitly incomplete; at least two genuine machines are required.
 - [ ] Does bounded symbolic memory + warm reuse Pareto-dominate eager any-model
   concretization on coverage AND reproducibility for driver bug-finding?
-- [ ] Is solver-internal warm reuse additive over a bounded GREEN-style
+- [x] Is solver-internal warm reuse additive over a bounded GREEN-style
   engine-level constraint cache on a fixed Glaurung query stream?
   - The first
     [opportunity analysis](../../../bench-results/glaurung-constraint-cache-opportunity-20260720/README.md)
@@ -719,6 +719,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     its first campaign is rejected on textual-query versus canonical-set exact
     classification drift. [ADR-0304](../09-decisions/adr-0304-correct-canonical-cache-identity-and-rerun.md)
     freezes the corrected opportunity v2 and a fresh otherwise-identical rerun.
+    That successor passes all gates: warm reuse is additive under exact caching
+    on 2/4 drivers and structural caching on 3/4, while cache-on slows every
+    already-warm path with a variance-qualified contrast and adds 7.6%--67.3%
+    mean maximum RSS. The bounded answer is mixed but sufficient: retain warm
+    reuse, and do not promote the experimental engine cache into Axeyum core.
 - [ ] Is disjoint projected enumeration cheaper than per-expression optimization
   (least-unsigned probing cost measured at 27x solves) for deterministic diverse
   concretization?
