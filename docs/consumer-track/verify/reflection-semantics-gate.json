@@ -60,6 +60,11 @@
       "id": "mir.terminator",
       "source": "crates/axeyum-verify/src/reflect/mir/syntax.rs",
       "enum": "TerminatorKind"
+    },
+    {
+      "id": "llvm.contract_expr",
+      "source": "crates/axeyum-verify/src/reflect/llvm/loops/contracts.rs",
+      "enum": "ScalarContractExpr"
     }
   ],
   "evidence_groups": [
@@ -174,6 +179,40 @@
         "crates/axeyum-verify/tests/llvm_direct_calls.rs::every_leaf_contract_component_and_body_mutation_is_rejected",
         "crates/axeyum-verify/tests/llvm_direct_calls.rs::nontrivial_requirement_verifies_the_contract_only_inside_its_domain",
         "crates/axeyum-verify/tests/llvm_direct_calls.rs::natural_loop_requirement_uses_only_the_reaching_path_prefix"
+      ]
+    },
+    {
+      "id": "llvm-scalar-contract-expression",
+      "members": [
+        "llvm.contract_expr::Argument",
+        "llvm.contract_expr::Result",
+        "llvm.contract_expr::Bool",
+        "llvm.contract_expr::BitVec",
+        "llvm.contract_expr::Not",
+        "llvm.contract_expr::And",
+        "llvm.contract_expr::Eq",
+        "llvm.contract_expr::Ite",
+        "llvm.contract_expr::BvAdd",
+        "llvm.contract_expr::BvMul",
+        "llvm.contract_expr::BvSignedAddOverflow",
+        "llvm.contract_expr::BvUnsignedAddOverflow",
+        "llvm.contract_expr::BvSignedMulOverflow"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::every_leaf_contract_component_and_body_mutation_is_rejected",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_sum16_contract_reproves_checksum_module",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_contract_expression_and_body_mutations_fail_closed",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_contract_resolver_and_call_boundaries_fail_closed"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::modular_and_inlined_contract_routes_agree_over_100000_tuples",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_checksum_havoc_gate_classifies_100000_rows",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_result_symbols_are_deterministic_isolated_and_fresh"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/checksum_module.rs::weak_relational_contract_exposes_real_havoc_countermodel",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_contract_expression_and_body_mutations_fail_closed",
+        "crates/axeyum-verify/tests/checksum_module.rs::relational_contract_resolver_and_call_boundaries_fail_closed"
       ]
     },
     {
@@ -335,6 +374,7 @@
     "mir_checked_memory",
     "checked_bounds",
     "llvm_checked_loop",
-    "llvm_direct_calls"
+    "llvm_direct_calls",
+    "checksum_module"
   ]
 }

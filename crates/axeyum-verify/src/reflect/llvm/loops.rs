@@ -14,10 +14,14 @@ use std::fmt;
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{SolverError, TransitionSystem};
 
-mod contracts;
+/// Verified exact and relational scalar call contracts.
+pub mod contracts;
 
 use contracts::CallResolver;
-pub use contracts::{ScalarCallContract, ScalarContractExpr, VerifiedContractResolver};
+pub use contracts::{
+    CheckedRelationalScalarReflected, RelationalScalarCallSite, ScalarCallContract,
+    ScalarContractExpr, VerifiedContractResolver, reflect_scalar_into_checked_with_contracts,
+};
 
 use super::checked::{
     DefinedValue, ReflectError, ReflectErrorKind, lower_assignment, reflect_parsed_components_into,

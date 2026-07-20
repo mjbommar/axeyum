@@ -189,18 +189,21 @@ callers retain exact `@leaf` spans and reach replay-checked `leaf(1)` witnesses
 at depth 1; defined `n=2` source executions reproduce the call. Independent
 formulas pass, and the stratified 100,000 rows split 33,334 valid / 33,334
 defined violation / 33,332 source undefined with 16,666 omission controls,
-zero disagreement, and zero dropped work. This remains an exact scalar result,
-not relational havoc or annotation syntax.
+zero disagreement, and zero dropped work. This remains an exact scalar loop
+result, not loop havoc or annotation syntax. ADR-0298's relational result is
+deliberately confined to a separate checked straight-line checksum caller.
 
-The ADR-0290 runner now owns nine binaries and runs 98 tests. Exact ownership
-grows from 62 to 63 checked LLVM/MIR semantic variants; the direct-call form is
-owned once by its independent formula, fuzz/replay, and mutation evidence.
+The ADR-0290 runner now owns ten binaries and runs 108 tests. Exact ownership
+has grown to 76 checked LLVM/MIR/contract-expression semantic variants in 16
+groups; each direct-call/contract form is owned by independent formula,
+fuzz/replay, and mutation evidence.
 
 Run the focused and standing gates with:
 
 ```sh
 cargo test -p axeyum-verify --test llvm_checked_loop
 cargo test -p axeyum-verify --test llvm_direct_calls
+cargo test -p axeyum-verify --test checksum_module
 python3 scripts/check-reflection-semantics-gate.py --run
 ```
 

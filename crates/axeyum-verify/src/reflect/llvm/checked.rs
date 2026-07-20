@@ -29,6 +29,22 @@ pub struct DefinedValue {
     pub width: u32,
 }
 
+pub(super) struct LoweredCheckedCall {
+    pub(super) destination: String,
+    pub(super) value: DefinedValue,
+    pub(super) immediate_defined: TermId,
+    pub(super) assumption: TermId,
+}
+
+pub(super) trait ScalarCallLowerer {
+    fn lower_call(
+        &mut self,
+        arena: &mut TermArena,
+        env: &HashMap<String, DefinedValue>,
+        instruction: &super::syntax::ScalarInstruction,
+    ) -> Result<LoweredCheckedCall, ReflectError>;
+}
+
 /// A checked reflection in its owned arena.
 #[derive(Debug)]
 pub struct CheckedReflected {
@@ -989,6 +1005,7 @@ pub(super) struct ScalarReflectionComponents {
     pub(super) result: DefinedValue,
     pub(super) env: HashMap<String, DefinedValue>,
     pub(super) immediate_defined: TermId,
+    pub(super) assumptions: TermId,
     return_span: SourceSpan,
 }
 
@@ -1017,6 +1034,24 @@ pub(super) fn reflect_parsed_components_into(
     arena: &mut TermArena,
     params: &[TermId],
     function: &Function,
+) -> Result<ScalarReflectionComponents, ReflectError> {
+    reflect_parsed_components_into_with_optional_calls(arena, params, function, None)
+}
+
+pub(super) fn reflect_parsed_components_into_with_calls(
+    arena: &mut TermArena,
+    params: &[TermId],
+    function: &Function,
+    call_lowerer: &mut dyn ScalarCallLowerer,
+) -> Result<ScalarReflectionComponents, ReflectError> {
+    reflect_parsed_components_into_with_optional_calls(arena, params, function, Some(call_lowerer))
+}
+
+fn reflect_parsed_components_into_with_optional_calls(
+    arena: &mut TermArena,
+    params: &[TermId],
+    function: &Function,
+    mut call_lowerer: Option<&mut dyn ScalarCallLowerer>,
 ) -> Result<ScalarReflectionComponents, ReflectError> {
     if params.len() != function.params.len() {
         return Err(ReflectError {
@@ -1064,6 +1099,7 @@ pub(super) fn reflect_parsed_components_into(
     }
 
     let mut execution_defined = always;
+    let mut assumptions = always;
     let mut result = None;
     for instruction in &function.blocks[0].instructions {
         if result.is_some() {
@@ -1078,6 +1114,20 @@ pub(super) fn reflect_parsed_components_into(
             ScalarInstructionKind::Return { width, value } => {
                 let returned = resolve(arena, &env, &value, width, typed.span)?;
                 result = Some((returned, typed.span));
+            }
+            ScalarInstructionKind::DirectCall { .. } if call_lowerer.is_some() => {
+                let lowered = call_lowerer
+                    .as_deref_mut()
+                    .expect("the guarded checked-call lowerer exists")
+                    .lower_call(arena, &env, &typed)?;
+                insert_lowered_checked_call(
+                    arena,
+                    &mut env,
+                    &mut execution_defined,
+                    &mut assumptions,
+                    lowered,
+                    typed.span,
+                )?;
             }
             kind => {
                 let (dest, value, immediate) = lower_assignment(arena, &env, kind, typed.span)?;
@@ -1102,8 +1152,42 @@ pub(super) fn reflect_parsed_components_into(
         result,
         env,
         immediate_defined: execution_defined,
+        assumptions,
         return_span,
     })
+}
+
+fn insert_lowered_checked_call(
+    arena: &mut TermArena,
+    env: &mut HashMap<String, DefinedValue>,
+    execution_defined: &mut TermId,
+    assumptions: &mut TermId,
+    lowered: LoweredCheckedCall,
+    span: SourceSpan,
+) -> Result<(), ReflectError> {
+    if env.contains_key(&lowered.destination) {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::DuplicateValue,
+            span: Some(span),
+            detail: format!("duplicate SSA definition `%{}`", lowered.destination),
+        });
+    }
+    *execution_defined = bool_and(arena, *execution_defined, lowered.immediate_defined, span)?;
+    *assumptions = bool_and(arena, *assumptions, lowered.assumption, span)?;
+    env.insert(lowered.destination, lowered.value);
+    Ok(())
+}
+
+pub(super) fn located_reflect_error(
+    kind: ReflectErrorKind,
+    span: Option<SourceSpan>,
+    detail: impl Into<String>,
+) -> ReflectError {
+    ReflectError {
+        kind,
+        span,
+        detail: detail.into(),
+    }
 }
 
 fn lower_memory_instruction(

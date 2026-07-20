@@ -1,6 +1,6 @@
 # ADR-0298: Preregister relational scalar call results with explicit havoc constraints
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -169,6 +169,47 @@ firewall. The checked reflector already separates immediate undefined behavior
 from lazy result poison. The missing representation is therefore one explicit
 relational-assumption channel and its source/result metadata, not a new solver,
 operator semantics, or executor.
+
+## Observed result
+
+The frozen experiment passes. `ScalarCallContract::new_relational` retains a
+bounded, strictly sorted `ensures` expression, while
+`reflect_scalar_into_checked_with_contracts` introduces one deterministic
+internal result symbol and returns the relation in a distinct `assumptions`
+channel. The ordinary checked reflector still rejects the call, exact
+contracts are unchanged, and relational contracts fail precisely when offered
+to the loop route.
+
+The checksum gate classifies all 100,000 deterministic input rows twice:
+100,000 real `sum16` result choices satisfy the relation and reproduce Rust,
+MIR, and LLVM, while 100,000 deliberately different choices violate it. No row
+is dropped or left unclassified, and both carry/no-carry populations are
+nonempty. Under the exact relation the modular caller equals both inlined IRs
+and re-proves the receiver identity. Under verified `ensures = true`, the
+solver instead returns a replayed result countermodel, proving the caller did
+not retain or substitute the callee body.
+
+Every frozen negative passes: off-by-one relation, mutated body, forbidden
+`Result` placements, ill-sorted equality/`ite`, missing and duplicate
+contracts, signature and `noundef` drift, namespace collision, and a forced
+verification `Unknown`. The standing manifest now owns 76 variants in 16
+evidence groups across ten binaries; its 108 Rust tests plus ten checker tests
+pass at a 2.7 GiB peak. The complete `axeyum-verify` package and two doctests
+pass with one build job, one test thread, and test debug metadata disabled at a
+2.5 GiB peak. Strict package Clippy, warning-denied rustdoc, formatting, links,
+manifest mutation tests, and live Glaurung direct-call provenance also pass.
+
+The resource gate exposed two validation-only failures that do not change the
+semantic result. A full-package invocation without `CARGO_BUILD_JOBS=1`
+triggered a 4 GiB cgroup OOM through simultaneous `rust-lld` processes. A
+serialized full-debug retry was stopped cleanly at the cap before OOM. The
+accepted no-debug test-profile route preserves all code and solver features,
+completes below the same cap, and is the registered reproduction command:
+
+```sh
+CARGO_BUILD_JOBS=1 RUST_TEST_THREADS=1 CARGO_PROFILE_TEST_DEBUG=0 \
+  cargo test -p axeyum-verify --all-features --jobs 1
+```
 
 ## Rejected alternatives
 
