@@ -16,6 +16,14 @@ BASELINE_SOURCE = "d13d1f92446e86113702a7cc27d3e1a5eb67c687"
 CANDIDATE_SOURCE = "2c9209fe9c4442cf87b6c121a04997849c05930b"
 BASELINE_BINARY_SHA256 = "65d819528f10645042103275e4c79904e47f377326dc9e1159f8c36d8795c515"
 CANDIDATE_BINARY_SHA256 = "06d417ef0e0082be87c4a311b5bc92a3a669d5accde5dbd27a349f78f1c93377"
+CARGO_VERSION = "cargo 1.97.0-nightly (eb9b60f1f 2026-04-24)"
+RUSTC_VERSION = """rustc 1.97.0-nightly (f53b654a8 2026-04-30)
+binary: rustc
+commit-hash: f53b654a8882fd5fc036c4ca7a4ff41ce32497a6
+commit-date: 2026-04-30
+host: x86_64-unknown-linux-gnu
+release: 1.97.0-nightly
+LLVM version: 22.1.4"""
 CORPUS = Path(
     "/nas4/data/workspace-infosec/glaurung-captures/"
     "2026-07-16-corrected-wide-v3/representative"
@@ -46,6 +54,25 @@ def validate_source(root: Path, expected_revision: str, label: str) -> None:
         raise RuntimeError(f"{label} source revision drift")
     if git_output(root, "status", "--porcelain=v1", "--untracked-files=no"):
         raise RuntimeError(f"{label} tracked source is dirty")
+
+
+def validate_toolchain() -> None:
+    try:
+        cargo = subprocess.run(
+            ["cargo", "--version"], check=True, capture_output=True, text=True
+        ).stdout.strip()
+        rustc = subprocess.run(
+            ["rustc", "--version", "--verbose"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise RuntimeError(f"cannot identify pinned Rust toolchain: {error}") from error
+    if cargo != CARGO_VERSION:
+        raise RuntimeError("cargo version drift")
+    if rustc != RUSTC_VERSION:
+        raise RuntimeError("rustc version drift")
 
 
 def benchmark_args(artifact: Path) -> list[str]:
@@ -103,6 +130,7 @@ def main() -> None:
         raise RuntimeError(f"refusing existing output directory: {output}")
     validate_source(baseline_source, BASELINE_SOURCE, "baseline")
     validate_source(candidate_source, CANDIDATE_SOURCE, "candidate")
+    validate_toolchain()
     if sha256(baseline_binary) != BASELINE_BINARY_SHA256:
         raise RuntimeError("baseline binary hash drift")
     if sha256(candidate_binary) != CANDIDATE_BINARY_SHA256:

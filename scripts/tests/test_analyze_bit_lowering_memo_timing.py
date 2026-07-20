@@ -51,6 +51,8 @@ class BitLoweringMemoTimingTests(unittest.TestCase):
 
     def test_runner_pins_same_schedule_and_disables_profiling(self) -> None:
         self.assertEqual(RUNNER.SCHEDULE, MODULE.SCHEDULE)
+        self.assertTrue(RUNNER.CARGO_VERSION.startswith("cargo 1.97.0-nightly"))
+        self.assertIn("commit-hash:", RUNNER.RUSTC_VERSION)
         arguments = RUNNER.benchmark_args(Path("artifact.json"))
         self.assertNotIn("--profile-bit-demand", arguments)
         self.assertEqual(arguments[arguments.index("--rewrite") + 1], "off")
