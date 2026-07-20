@@ -282,7 +282,12 @@ session state.
 >    83.82% SurfacePen). This is not timing or a cache result. Next preregister a
 >    bounded fixed-stream `{cold,warm} x {cache-off,cache-on}` factorial with
 >    replay-checked SAT hits, explicit lookup/storage/eviction counters, and no
->    live-exploration model-choice confound.
+>    live-exploration model-choice confound. ADR-0303 now freezes the stronger
+>    six-mode form: cache off/exact/implication crossed with cold/warm Axeyum,
+>    one isolated process per accepted trace, a 4,096-entry multi-resource LRU,
+>    complete stage/work telemetry, and a bootstrap/CV additivity criterion.
+>    It has zero implementation timing rows; implement and pin the producer,
+>    runner, and analyzer before observation.
 > 10. [AXEYUM] Staged artifact cleanup (split `reconstruct.rs` 18.5k, namespace the
 >    ~567-item public API, dedup `collect_top_conjuncts` x17, config-as-types), plus
 >    related-work positioning vs Veritas, attacker-control, and the MS agentic system.

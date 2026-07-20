@@ -331,7 +331,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   (66.37%). The range is wide: 46.27% Dptf to 83.82% SurfacePen. All five
   logical streams and classifications are exact within every driver. This is
   opportunity only—capacity, lookup cost, model replay/storage, and warm
-  additivity remain unmeasured and must be preregistered as a bounded factorial.
+  additivity remain unmeasured. ADR-0303 now preregisters cache
+  off/exact/implication crossed with cold/warm Axeyum in separate fixed-stream
+  processes, with a 4,096-entry multi-resource LRU, replay-checked SAT hits,
+  monotone UNSAT reuse, complete stage/resource telemetry, and a bootstrap/CV
+  additivity gate. Zero cache timing rows exist.
 
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
@@ -5401,6 +5405,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Preregistered the engine-cache/warm-state factorial.** ADR-0303
+  freezes six fixed-stream modes, sound exact/SAT-superset/UNSAT-subset rules,
+  bounded deterministic eviction, separate-process memory attribution, and the
+  criterion for calling warm state additive under each cache policy. The
+  implementation and timing registration remain deliberately absent at the
+  zero-row boundary.
 
 - **2026-07-20 — Measured the structural ceiling for a GREEN-style cache.** The
   accepted six-cell traces show 45.48% exact and 66.37% exact-plus-implication
