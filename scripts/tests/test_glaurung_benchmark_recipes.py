@@ -77,7 +77,6 @@ class GlaurungBenchmarkRecipeTests(unittest.TestCase):
             "artifact.json",
         )
         self.assertIn("analyze-cnf-construction-profile.py", analysis)
-        self.assertIn("--require-flat-storage", analysis)
         self.assertIn("--expected-files 162", analysis)
         self.assertIn("--expected-sat 88", analysis)
         self.assertIn("--expected-unsat 74", analysis)

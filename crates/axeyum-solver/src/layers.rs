@@ -12,26 +12,6 @@ use axeyum_bv::RangeDemandDecision;
 
 use crate::backend::SolveStats;
 
-/// Structural invariants of the flat CNF formula offset arena.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub struct CnfStorageInvariants {
-    /// Clause ends are nondecreasing in insertion order.
-    pub clause_ends_monotone: bool,
-    /// Every clause end is within the literal arena.
-    pub clause_ends_in_bounds: bool,
-    /// The final clause end equals the literal-arena length.
-    pub terminal_end_matches_literals: bool,
-}
-
-impl CnfStorageInvariants {
-    /// Returns whether every offset invariant holds.
-    pub fn all_hold(self) -> bool {
-        self.clause_ends_monotone
-            && self.clause_ends_in_bounds
-            && self.terminal_end_matches_literals
-    }
-}
-
 /// The named stages of the `sat-bv` pipeline for one check.
 ///
 /// Durations cover bit-blasting (term → AIG), CNF encoding (AIG → CNF), optional
@@ -148,8 +128,6 @@ pub struct BvLayerStats {
     pub cnf_formula_arena_capacity_bytes: u64,
     /// Conservative logical lower bound for the prior fragmented layout.
     pub cnf_formula_legacy_logical_lower_bound_bytes: u64,
-    /// Structural invariants of the flat formula's clause-end offsets.
-    pub cnf_formula_storage_invariants: CnfStorageInvariants,
     /// Whether detailed CNF construction attribution is complete.
     pub cnf_construction_profile_complete: bool,
     /// Literals declared by clause-emission attempts.
@@ -288,17 +266,6 @@ impl BvLayerStats {
                 "cnf_formula_legacy_logical_lower_bound_bytes",
             )
             .map_or(0, count_to_u64),
-            cnf_formula_storage_invariants: CnfStorageInvariants {
-                clause_ends_monotone: lookup(stats, "cnf_formula_clause_ends_monotone")
-                    .is_some_and(|value| value >= 1.0),
-                clause_ends_in_bounds: lookup(stats, "cnf_formula_clause_ends_in_bounds")
-                    .is_some_and(|value| value >= 1.0),
-                terminal_end_matches_literals: lookup(
-                    stats,
-                    "cnf_formula_terminal_end_matches_literals",
-                )
-                .is_some_and(|value| value >= 1.0),
-            },
             cnf_construction_profile_complete: lookup(stats, "cnf_construction_profile_complete")
                 .is_some_and(|value| value >= 1.0),
             cnf_declared_clause_literals: lookup(stats, "cnf_declared_clause_literals")

@@ -11,9 +11,8 @@ from pathlib import Path
 from typing import Any
 
 
-SUPPORTED_ARTIFACT_VERSIONS = {36, 37, 38}
+SUPPORTED_ARTIFACT_VERSIONS = {36, 37}
 PARITY_OVERLAP_ARTIFACT_VERSION = 37
-FLAT_STORAGE_ARTIFACT_VERSION = 38
 REPORT_SCHEMA = "axeyum.cnf-construction-profile-analysis.v3"
 INVARIANTS = {
     "non_tautological_attempts_equal_length_buckets",
@@ -103,25 +102,6 @@ COUNTER_PATHS = {
     ),
     "collision_inserts": ("detailed_profile", "collision_inserts"),
 }
-STORAGE_FIELDS = (
-    "formula_clauses",
-    "formula_literals",
-    "clause_end_logical_bytes",
-    "literal_logical_bytes",
-    "arena_logical_bytes",
-    "arena_capacity_bytes",
-    "legacy_logical_lower_bound_bytes",
-)
-STORAGE_INVARIANTS = {
-    "formula_clauses_equal_emitted",
-    "clause_end_bytes_equal_four_per_clause",
-    "arena_bytes_partition",
-    "capacity_covers_logical",
-    "legacy_covers_literal_payload",
-    "clause_ends_monotone",
-    "clause_ends_in_bounds",
-    "terminal_end_matches_literals",
-}
 
 
 def require(condition: bool, message: str) -> None:
@@ -140,107 +120,6 @@ def nested(value: dict[str, Any], path: tuple[str, ...], *, label: str) -> Any:
 def count(value: Any, *, label: str) -> int:
     require(isinstance(value, int) and not isinstance(value, bool) and value >= 0, f"{label} is not a non-negative integer")
     return value
-
-
-def storage_counts(value: dict[str, Any], *, label: str) -> dict[str, int]:
-    return {
-        name: count(value.get(name), label=f"{label}.{name}")
-        for name in STORAGE_FIELDS
-    }
-
-
-def require_storage_accounting(
-    counts: dict[str, int],
-    *,
-    clauses_emitted: int,
-    label: str,
-) -> None:
-    require(
-        counts["formula_clauses"] == clauses_emitted,
-        f"{label} formula-clause count differs from emitted clauses",
-    )
-    require(
-        counts["clause_end_logical_bytes"] == counts["formula_clauses"] * 4,
-        f"{label} clause-end byte accounting failed",
-    )
-    require(
-        counts["arena_logical_bytes"]
-        == counts["clause_end_logical_bytes"] + counts["literal_logical_bytes"],
-        f"{label} arena logical-byte accounting failed",
-    )
-    require(
-        counts["arena_capacity_bytes"] >= counts["arena_logical_bytes"],
-        f"{label} arena capacity is smaller than logical storage",
-    )
-    require(
-        counts["legacy_logical_lower_bound_bytes"]
-        >= counts["literal_logical_bytes"],
-        f"{label} legacy lower bound is smaller than the literal payload",
-    )
-    require(
-        counts["arena_logical_bytes"] * 5
-        <= counts["legacy_logical_lower_bound_bytes"] * 4,
-        f"{label} flat storage exceeds the frozen 80-percent gate",
-    )
-
-
-def instance_storage_profile(cnf: dict[str, Any], *, label: str) -> dict[str, int]:
-    value = cnf.get("storage")
-    require(isinstance(value, dict), f"{label} lacks flat storage profile")
-    counts = storage_counts(value, label=f"{label}.storage")
-    invariants = value.get("invariants")
-    require(isinstance(invariants, dict), f"{label} storage lacks invariants")
-    require(
-        set(invariants) == STORAGE_INVARIANTS,
-        f"{label} storage invariant set mismatch",
-    )
-    require(
-        all(entry is True for entry in invariants.values()),
-        f"{label} storage has a failed invariant",
-    )
-    require(value.get("invariants_hold") is True, f"{label} storage is invalid")
-    require(
-        value.get("logical_ratio_at_most_80_percent") is True,
-        f"{label} storage reports a failed 80-percent gate",
-    )
-    require_storage_accounting(
-        counts,
-        clauses_emitted=count(cnf.get("clauses_emitted"), label=f"{label}.clauses_emitted"),
-        label=f"{label} storage",
-    )
-    return counts
-
-
-def summary_storage_profile(
-    cnf: dict[str, Any], *, instances: int, label: str
-) -> dict[str, int]:
-    value = cnf.get("storage")
-    require(isinstance(value, dict), f"{label} lacks flat storage profile")
-    counts = storage_counts(value, label=f"{label}.storage")
-    require(
-        count(value.get("invariant_instances"), label=f"{label}.invariant_instances")
-        == instances,
-        f"{label} storage invariant population is incomplete",
-    )
-    require(
-        count(
-            value.get("logical_ratio_at_most_80_percent_instances"),
-            label=f"{label}.logical_ratio_at_most_80_percent_instances",
-        )
-        == instances,
-        f"{label} storage ratio-gate population is incomplete",
-    )
-    require(value.get("all_invariants_hold") is True, f"{label} storage is invalid")
-    require(
-        value.get("all_logical_ratios_at_most_80_percent") is True,
-        f"{label} storage reports a failed 80-percent gate",
-    )
-    require_storage_accounting(
-        counts,
-        clauses_emitted=count(cnf.get("clauses_emitted"), label=f"{label}.clauses_emitted"),
-        label=f"{label} storage",
-    )
-    return counts
 
 
 def require_invariants(profile: dict[str, Any], *, label: str) -> None:
@@ -481,7 +360,6 @@ def analyze_artifact(
     expected_families: dict[str, int] | None = None,
     expected_same_owner_parity_duplicates: int | None = None,
     expected_baseline_analysis: dict[str, Any] | None = None,
-    require_flat_storage: bool = False,
 ) -> dict[str, Any]:
     artifact_version = artifact.get("version")
     require(
@@ -489,12 +367,6 @@ def analyze_artifact(
         "artifact version mismatch",
     )
     require_parity_overlap = artifact_version >= PARITY_OVERLAP_ARTIFACT_VERSION
-    if require_flat_storage:
-        require(
-            artifact_version >= FLAT_STORAGE_ARTIFACT_VERSION,
-            "flat storage requires artifact version 38 or newer",
-        )
-    storage_available = artifact_version >= FLAT_STORAGE_ARTIFACT_VERSION
     config = artifact.get("config")
     summary = artifact.get("summary")
     instances = artifact.get("instances")
@@ -538,7 +410,6 @@ def analyze_artifact(
     require_invariants(summary_profile, label="summary profile")
 
     aggregate = defaultdict(int)
-    aggregate_storage = defaultdict(int)
     families: dict[str, dict[str, Any]] = {}
     aggregate_origin_totals = empty_origin_metrics()
     aggregate_origin_rows: dict[tuple[str, str, str], dict[str, Any]] = {}
@@ -572,11 +443,6 @@ def analyze_artifact(
         require(profile.get("profile_complete") is True, f"{label} profile is incomplete")
         require_invariants(profile, label=label)
         row_counts = counters(cnf, label=label)
-        if storage_available:
-            add_counts(
-                aggregate_storage,
-                instance_storage_profile(cnf, label=label),
-            )
         origin_totals, origin_rows, parity_totals, parity_rows = origin_profile(
             profile,
             expected_duplicate_clauses=row_counts["duplicate_clauses_skipped"],
@@ -616,17 +482,6 @@ def analyze_artifact(
 
     expected_aggregate = counters(summary_cnf, label="summary")
     require(dict(aggregate) == expected_aggregate, "summary counters do not equal per-instance sums")
-    summary_storage = None
-    if storage_available:
-        summary_storage = summary_storage_profile(
-            summary_cnf,
-            instances=files,
-            label="summary",
-        )
-        require(
-            dict(aggregate_storage) == summary_storage,
-            "summary storage counters do not equal per-instance sums",
-        )
     (
         summary_origin_totals,
         summary_origin_rows,
@@ -827,19 +682,6 @@ def analyze_artifact(
         },
         "population": {"files": files, "sat": sat, "unsat": unsat},
         "aggregate": dict(aggregate),
-        "storage": {
-            "available": storage_available,
-            **({} if summary_storage is None else summary_storage),
-            "logical_ratio": (
-                None
-                if summary_storage is None
-                or summary_storage["legacy_logical_lower_bound_bytes"] == 0
-                else summary_storage["arena_logical_bytes"]
-                / summary_storage["legacy_logical_lower_bound_bytes"]
-            ),
-            "all_invariants_hold": storage_available,
-            "all_logical_ratios_at_most_80_percent": storage_available,
-        },
         "duplicate_origins": {
             **aggregate_origin_totals,
             "rows": rendered_origin_rows,
@@ -937,7 +779,6 @@ def main() -> None:
     parser.add_argument("--expected-manifest-sha256")
     parser.add_argument("--expected-same-owner-parity-duplicates", type=int)
     parser.add_argument("--expected-baseline-analysis", type=Path)
-    parser.add_argument("--require-flat-storage", action="store_true")
     parser.add_argument("--expected-family", action="append", type=family_count, default=[])
     parser.add_argument("--out", type=Path)
     args = parser.parse_args()
@@ -959,7 +800,6 @@ def main() -> None:
             if args.expected_baseline_analysis is not None
             else None
         ),
-        require_flat_storage=args.require_flat_storage,
     )
     rendered = json.dumps(report, indent=2, sort_keys=True) + "\n"
     if args.out is None:

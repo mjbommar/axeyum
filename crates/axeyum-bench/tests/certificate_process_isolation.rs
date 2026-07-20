@@ -64,7 +64,7 @@ fn complete_worker_self_rechecks_and_hard_timeout_stays_in_denominator() {
     .unwrap();
 
     let completed = run_benchmark(&root, &root.join("completed.json"), 5000);
-    assert_eq!(completed["version"], 38);
+    assert_eq!(completed["version"], 37);
     assert_eq!(completed["summary"]["end_to_end_unsat"]["attempted"], 1);
     assert_eq!(completed["summary"]["end_to_end_unsat"]["certified"], 1);
     assert_eq!(completed["summary"]["end_to_end_unsat"]["hard_timeouts"], 0);

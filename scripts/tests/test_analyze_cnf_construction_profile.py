@@ -89,20 +89,6 @@ def cnf() -> dict:
         "tautological_clauses_skipped": 0,
         "duplicate_clauses_skipped": 1,
         "clauses_emitted": 2,
-        "storage": {
-            "formula_clauses": 2,
-            "formula_literals": 4,
-            "clause_end_logical_bytes": 8,
-            "literal_logical_bytes": 32,
-            "arena_logical_bytes": 40,
-            "arena_capacity_bytes": 48,
-            "legacy_logical_lower_bound_bytes": 80,
-            "invariants": {
-                name: True for name in MODULE.STORAGE_INVARIANTS
-            },
-            "invariants_hold": True,
-            "logical_ratio_at_most_80_percent": True,
-        },
         "detailed_profile": profile(),
     }
 
@@ -121,16 +107,6 @@ def artifact() -> dict:
     aggregate["clause_attempts"] *= 2
     aggregate["duplicate_clauses_skipped"] *= 2
     aggregate["clauses_emitted"] *= 2
-    aggregate_storage = aggregate["storage"]
-    for name in MODULE.STORAGE_FIELDS:
-        aggregate_storage[name] *= 2
-    del aggregate_storage["invariants"]
-    del aggregate_storage["invariants_hold"]
-    del aggregate_storage["logical_ratio_at_most_80_percent"]
-    aggregate_storage["invariant_instances"] = 2
-    aggregate_storage["logical_ratio_at_most_80_percent_instances"] = 2
-    aggregate_storage["all_invariants_hold"] = True
-    aggregate_storage["all_logical_ratios_at_most_80_percent"] = True
     aggregate_profile = aggregate["detailed_profile"]
     for path in MODULE.COUNTER_PATHS.values():
         if path[0] != "detailed_profile":
@@ -154,7 +130,7 @@ def artifact() -> dict:
     aggregate_origins["profiled_instances"] = 2
     aggregate_origins["instances"] = 2
     return {
-        "version": 38,
+        "version": 37,
         "config": {
             "backend_kind": "sat-bv",
             "profile_cnf_construction": True,
@@ -198,18 +174,6 @@ def legacy_artifact(value: dict | None = None) -> dict:
     )
     for current in profiles:
         del current["duplicate_origins"]["parity_overlap"]
-    for instance in value["instances"]:
-        del instance["layer_attribution"]["construction"]["cnf"]["storage"]
-    del value["summary"]["layer_attribution"]["construction"]["cnf"]["storage"]
-    return value
-
-
-def v37_artifact() -> dict:
-    value = artifact()
-    value["version"] = 37
-    for instance in value["instances"]:
-        del instance["layer_attribution"]["construction"]["cnf"]["storage"]
-    del value["summary"]["layer_attribution"]["construction"]["cnf"]["storage"]
     return value
 
 
@@ -285,10 +249,6 @@ class CnfConstructionProfileAnalysisTests(unittest.TestCase):
         )
         self.assertTrue(report["accepted"])
         self.assertEqual(report["aggregate"]["clause_attempts"], 6)
-        self.assertTrue(report["storage"]["available"])
-        self.assertEqual(report["storage"]["formula_clauses"], 4)
-        self.assertEqual(report["storage"]["formula_literals"], 8)
-        self.assertEqual(report["storage"]["logical_ratio"], 0.5)
         self.assertEqual(report["families"]["arithmetic"]["sat"], 1)
         self.assertEqual(report["families"]["slice-partial"]["unsat"], 1)
         origins = report["duplicate_origins"]
@@ -307,46 +267,6 @@ class CnfConstructionProfileAnalysisTests(unittest.TestCase):
 
         self.assertEqual(report["artifact"]["version"], 36)
         self.assertFalse(report["duplicate_origins"]["parity_overlap"]["available"])
-        self.assertFalse(report["storage"]["available"])
-
-    def test_accepts_v37_without_flat_storage(self) -> None:
-        report = MODULE.analyze_artifact(v37_artifact())
-
-        self.assertEqual(report["artifact"]["version"], 37)
-        self.assertFalse(report["storage"]["available"])
-
-    def test_require_flat_storage_rejects_legacy_artifact(self) -> None:
-        with self.assertRaisesRegex(RuntimeError, "version 38"):
-            MODULE.analyze_artifact(v37_artifact(), require_flat_storage=True)
-
-    def test_rejects_flat_storage_accounting_ratio_and_invariants(self) -> None:
-        accounting = artifact()
-        accounting["instances"][0]["layer_attribution"]["construction"]["cnf"][
-            "storage"
-        ]["formula_clauses"] += 1
-        with self.assertRaisesRegex(RuntimeError, "formula-clause count"):
-            MODULE.analyze_artifact(accounting)
-
-        ratio = artifact()
-        ratio["instances"][0]["layer_attribution"]["construction"]["cnf"][
-            "storage"
-        ]["logical_ratio_at_most_80_percent"] = False
-        with self.assertRaisesRegex(RuntimeError, "80-percent"):
-            MODULE.analyze_artifact(ratio)
-
-        invariant = artifact()
-        invariant["instances"][0]["layer_attribution"]["construction"]["cnf"][
-            "storage"
-        ]["invariants"]["clause_ends_monotone"] = False
-        with self.assertRaisesRegex(RuntimeError, "failed invariant"):
-            MODULE.analyze_artifact(invariant)
-
-        summary = artifact()
-        summary["summary"]["layer_attribution"]["construction"]["cnf"]["storage"][
-            "invariant_instances"
-        ] = 1
-        with self.assertRaisesRegex(RuntimeError, "population is incomplete"):
-            MODULE.analyze_artifact(summary)
 
     def test_accepts_exact_legacy_baseline_and_rejects_drift(self) -> None:
         value = parity_artifact()
@@ -375,7 +295,7 @@ class CnfConstructionProfileAnalysisTests(unittest.TestCase):
             MODULE.analyze_artifact(value)
 
     def test_rejects_v37_without_parity_overlap(self) -> None:
-        value = v37_artifact()
+        value = artifact()
         del value["instances"][0]["layer_attribution"]["construction"]["cnf"][
             "detailed_profile"
         ]["duplicate_origins"]["parity_overlap"]
