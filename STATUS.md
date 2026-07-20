@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — Reconstruction cleanup R2 establishes a real direct-lane
+  module boundary.** All 34 direct structural adapters, their five constructive
+  encodings, the shared checked wrapper, and their explicit dispatcher now live
+  in `reconstruct/direct.rs`. The parent retains one dispatch call and one
+  narrow boolean certification seam required by fragment scanning; no private
+  certificate type or broad visibility leaked across the boundary. The main
+  file falls from 18,387 to 16,999 lines. The 29-role byte-equivalence test, all
+  884 full-profile library tests, and clippy `-D warnings` pass under the 4 GiB
+  one-job discipline. Next: census the equality core before the first R3 family
+  extraction; do not mix that move with proof behavior or public API changes.
+
 - **2026-07-20 — Reconstruction cleanup R1 parameterizes only the shared
   checked wrapper.** The new inventory measures the 18,517-line monolith and
   classifies its 34 direct structural variants into five custom constructive
@@ -5430,6 +5441,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Split direct structural reconstruction ownership.** The
+  34-variant lane moves to `reconstruct/direct.rs` behind one dispatch seam;
+  main reconstruction drops below 17,000 lines with byte output, kernel gates,
+  884 tests, and clippy unchanged.
 
 - **2026-07-20 — Parameterized 29 direct structural Lean wrappers.** A measured
   reconstruction inventory and exhaustive legacy-equivalence test precede the

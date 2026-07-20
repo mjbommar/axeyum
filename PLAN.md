@@ -301,9 +301,13 @@ session state.
 >    deterministic wrapper. R1 routes all 26 formerly inline emission tails
 >    through that helper, shrinking `reconstruct.rs` by 130 lines / 8,924 bytes.
 >    A legacy-equivalence test covers every registered stem/role pair; all 884
->    full-profile tests and clippy pass. Next R2 moves only the direct lane into
->    `reconstruct/direct.rs`, preserving validators, errors, fragment selection,
->    kernel inference, and generated Lean source byte-for-byte.
+>    full-profile tests and clippy pass. R2 then moves the entire 34-variant
+>    direct lane behind one explicit `reconstruct/direct.rs` seam, reducing the
+>    main file from 18,387 to 16,999 lines. Only a boolean finite-domain scan
+>    predicate crosses back to the parent; private certificate types stay
+>    private. All 884 tests, byte-equivalence checks, and clippy remain green.
+>    Next R3 extracts one proof family per commit, beginning with the equality
+>    core only after its private dependency and source-stability census.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

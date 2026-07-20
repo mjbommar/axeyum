@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1 complete
+Status: active; R1 and R2 complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -20,7 +20,8 @@ accepted terms.
 
 | Surface | Current size / shape |
 |---|---:|
-| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 18,387 lines / 795,323 bytes after R1 |
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2 |
+| `reconstruct/direct.rs` | 1,406 lines / 52,407 bytes after R2 |
 | `reconstruct/tests.rs` | 4,429 lines / 181,088 bytes |
 | `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
@@ -106,8 +107,13 @@ before/after byte comparisons for their affected fixtures.
    remains named and unchanged. This removes 130 lines / 8,924 bytes from
    `reconstruct.rs`. All 884 full-profile solver tests and clippy `-D warnings`
    pass.
-2. **R2 — direct-lane ownership.** Move the 34 direct adapters and their private
-   helpers into `reconstruct/direct.rs`; leave one explicit dispatcher seam.
+2. **R2 — direct-lane ownership (complete).** The 34 direct adapters, five
+   constructive encodings, shared emitter, and explicit dispatcher now live in
+   `reconstruct/direct.rs`. The parent keeps one dispatch call and one narrow
+   finite-domain certification predicate used by fragment scanning; no
+   certificate type or broad private surface was exposed. `reconstruct.rs`
+   drops from 18,387 to 16,999 lines. All 884 tests, byte-equivalence checks,
+   and clippy pass.
 3. **R3 — one proof family per commit.** Extract equality, datatype/array,
    quantifier, resolution/CNF, bit-blast, and arithmetic regions separately.
    Each commit carries its own byte-stability and kernel gates.
