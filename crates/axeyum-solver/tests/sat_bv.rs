@@ -499,7 +499,7 @@ fn structural_bit_demand_profile_is_explicitly_opt_in() {
     }
     assert_eq!(
         layers.bit_lowering_memo_representation,
-        axeyum_solver::BitLoweringMemoRepresentation::BtreeV1
+        axeyum_solver::BitLoweringMemoRepresentation::DenseV1
     );
     assert_eq!(
         layers.bit_lowering_memo_payload_literals,
