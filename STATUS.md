@@ -332,11 +332,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   malformed graphs, exact multiline diagnostics, and 4,096 noise inputs; all
   existing cross-IR CFG fixtures validate before their legacy proofs. The full
   crate suite, workspace strict Clippy, and strict rustdoc pass. The wider
-  workspace test still reaches the pre-existing
-  `certificate_process_isolation` fixture drift (`clauses` observed 37 versus
-  expected 34); this slice does not touch `axeyum-bench` and does not count that
-  gate as green. Next: preregister checked acyclic value+definedness execution.
-  Cycles, memory, and Glaurung lowering remain deferred.
+  workspace run now passes the stale `certificate_process_isolation` gate after
+  updating its report-schema expectation from version 34 to the producer's
+  current version 37; this was artifact-version drift, not a clause-count or
+  solver change. Every ordinary workspace test then passed. The final EVM
+  doctest link exhausted the shared `/tmp` tmpfs (LLVM `lld` surfaced a bus
+  error and GNU `ld` reported `No space left on device`); the exact two doctests
+  pass when `TMPDIR` is placed on the workspace disk. Next: preregister checked
+  acyclic value+definedness execution. Cycles, memory, and Glaurung lowering
+  remain deferred.
 
 - **2026-07-19 — ADR-0281 accepts typed scalar LLVM instructions and checked
   definedness.** The T5.1.2 slice parses the existing QF_BV scalar op family into
