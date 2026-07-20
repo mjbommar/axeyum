@@ -11,9 +11,9 @@ use axeyum_lean_kernel::ExprNode;
 
 use super::{
     ProofFragment, ReconstructCtx, ReconstructError, fresh_axiom, prove_unsat_to_lean_module,
-    reconstruct_checked_structural_certificate_to_lean_module, reconstruct_eq_step,
-    render_ctx_module, require_infers_false, scan_proof_fragment,
+    reconstruct_eq_step, render_ctx_module, require_infers_false, scan_proof_fragment,
 };
+use super::direct::reconstruct_checked_structural_certificate_to_lean_module;
 
 fn legacy_checked_structural_certificate_module(
     prop_stem: &str,
