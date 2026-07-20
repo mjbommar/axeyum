@@ -355,7 +355,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   1.2 GiB with zero swap. Full all-feature workspace tests and doctests,
   warning-denied workspace rustdoc, strict focused Clippy, QF_BV-only, scalar
   WASM, `+simd128` WASM, analyzer, formatting, and link gates pass. Exact
-  structural/storage identity now permits six
+  structural/storage identity now permits six order-balanced pairs. The frozen
+  timing runner/analyzer pins source revisions, prebuilt binary hashes
+  (`65d81952...5c515` BTree, `06d417ef...93377` dense), the exact schedule,
+  correctness/structure, exhaustive paired bootstrap, family/CV/cold-total
+  bounds, and every paired RSS ratio. Run that protocol next; do not substitute
+  ad hoc timing. The registered protocol uses six
   order-balanced unprofiled pairs on bit-blast time, cold total, variance,
   family tails, and RSS. Failure restores the BTree map; success is bounded
   cold-path engineering, not a solver-speed headline.

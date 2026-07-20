@@ -189,6 +189,16 @@ process peaked at 1.2 GiB with zero swap. Retained files are:
 - `bench-results/glaurung-dense-bit-memo-20260720/candidate/analysis.json`,
   SHA-256 `dbb2d65cacf61957afc68b0b6e0dae4f686ae46cf45792fbd89b66184cf56256`.
 
+Before timing, the two release executables and the fail-closed runner/analyzer
+are frozen. The BTree binary SHA-256 is
+`65d819528f10645042103275e4c79904e47f377326dc9e1159f8c36d8795c515`; the
+dense binary SHA-256 is
+`06d417ef0e0082be87c4a311b5bc92a3a669d5accde5dbd27a349f78f1c93377`.
+`scripts/run-bit-lowering-memo-timing.py` enforces the exact schedule and
+configuration, while `scripts/analyze-bit-lowering-memo-timing.py` validates
+all outcomes, replay, structure, process RSS, family gates, CVs, and exhaustive
+six-pair bootstrap bounds before returning an acceptance decision.
+
 ## Conditional unprofiled timing protocol
 
 Only after the structural gate passes, compare distinct prebuilt release

@@ -343,8 +343,12 @@ session state.
 > 5,938,264 -> 5,840,384 (-1.65%), below the preregistered 110% ceiling; the
 > fail-closed analysis sets `timing_authorized=true`. Candidate artifact/analysis
 > hashes are `e4db458f...f0eac` and `dbb2d65c...56256`. The immediate next action
-> is the registered six order-balanced unprofiled pairs
-> on bit-blast time, family tails, cold total, variance, and RSS. Failure restores
+> is the registered six order-balanced unprofiled pairs. The runner and analyzer
+> now pin both source revisions, both prebuilt binary hashes, the exact
+> `B,C,C,B,B,C,C,B,B,C,C,B` schedule, all structural/correctness gates, paired
+> exhaustive-bootstrap bounds, family tails, CV, cold total, and per-pair RSS
+> limits. Acceptance remains gated on bit-blast time, family tails, cold total,
+> variance, and RSS. Failure restores
 > the tree representation. Clause storage, scratch reuse, reverse traversal,
 > and capacity hints remain closed; interning and packed-literal ideas require
 > separate ADRs. This is bounded cold engineering, not a performance headline.
