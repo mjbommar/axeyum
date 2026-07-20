@@ -3,8 +3,8 @@
 use std::fmt::Write as _;
 
 use super::{
-    BinaryOpcode, BlockId, CastOpcode, CfgBlock, GepFlag, IntPredicate, Intrinsic, Operand,
-    ScalarCfg, ScalarInstructionKind, SemanticFlag, TerminatorKind,
+    BinaryOpcode, BlockId, CastOpcode, CfgBlock, DirectCallArgument, GepFlag, IntPredicate,
+    Intrinsic, Operand, ScalarCfg, ScalarInstructionKind, SemanticFlag, TerminatorKind,
 };
 
 /// Render one validated scalar CFG into deterministic canonical LLVM text.
@@ -123,6 +123,13 @@ fn render_instruction(output: &mut String, instruction: &ScalarInstructionKind) 
             lhs,
             rhs,
         } => render_intrinsic(output, dest, *intrinsic, *width, lhs, rhs),
+        ScalarInstructionKind::DirectCall {
+            dest,
+            tail,
+            result_width,
+            callee,
+            args,
+        } => render_direct_call(output, dest, *tail, *result_width, callee, args),
         ScalarInstructionKind::GetElementPtr { .. }
         | ScalarInstructionKind::Load { .. }
         | ScalarInstructionKind::Store { .. } => render_memory_instruction(output, instruction),
@@ -131,6 +138,39 @@ fn render_instruction(output: &mut String, instruction: &ScalarInstructionKind) 
                 .expect("writing to a String cannot fail");
         }
     }
+}
+
+fn render_direct_call(
+    output: &mut String,
+    dest: &str,
+    tail: bool,
+    result_width: u32,
+    callee: &str,
+    args: &[DirectCallArgument],
+) {
+    write!(
+        output,
+        "%{} = {}call i{} @{}(",
+        quoted_name(dest),
+        if tail { "tail " } else { "" },
+        result_width,
+        quoted_name(callee)
+    )
+    .expect("writing to a String cannot fail");
+    for (index, argument) in args.iter().enumerate() {
+        if index != 0 {
+            output.push_str(", ");
+        }
+        write!(
+            output,
+            "i{} {}{}",
+            argument.width,
+            if argument.noundef { "noundef " } else { "" },
+            operand(&argument.value)
+        )
+        .expect("writing to a String cannot fail");
+    }
+    output.push(')');
 }
 
 fn render_memory_instruction(output: &mut String, instruction: &ScalarInstructionKind) {

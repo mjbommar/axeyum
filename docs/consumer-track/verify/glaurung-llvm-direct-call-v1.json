@@ -1,0 +1,57 @@
+{
+  "schema": "axeyum.glaurung-llvm-direct-call.v1",
+  "glaurung": {
+    "revision": "403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f",
+    "source": {
+      "path": "tests/fixtures/android/pac.c",
+      "sha256": "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+    }
+  },
+  "compile": {
+    "args": [
+      "--target=x86_64-pc-linux-gnu",
+      "-O1",
+      "-fno-unroll-loops",
+      "-fno-vectorize",
+      "-fno-slp-vectorize",
+      "-fno-strict-aliasing",
+      "-S",
+      "-emit-llvm"
+    ],
+    "include_dirs": [
+      "samples/source/library"
+    ]
+  },
+  "fixture": {
+    "source": {
+      "path": "crates/axeyum-verify/tests/fixtures/llvm/clang21_glaurung_pac.c",
+      "sha256": "dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4"
+    },
+    "module": {
+      "path": "crates/axeyum-verify/tests/fixtures/llvm/clang21_glaurung_pac.ll",
+      "sha256": "a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00"
+    },
+    "functions": [
+      {
+        "name": "compute",
+        "sha256": "7199a26798d7bb1e59a17f561bbe0628bd6a97c791a885e95f1c10f8c2ce74d4"
+      },
+      {
+        "name": "leaf",
+        "sha256": "5543c27e5c872cd83ca32345a81191820885f4688d2d2e0884d91975247bf30b"
+      },
+      {
+        "name": "main",
+        "sha256": "ee8941ca2380a2b3ab64b75be5021118e0af060923d37249414a95ef645beca3"
+      }
+    ]
+  },
+  "toolchain": {
+    "clang": {
+      "command": "/usr/lib/llvm-21/bin/clang",
+      "realpath": "/usr/lib/llvm-21/bin/clang",
+      "sha256": "412bbe8c60571a1eb06f48fde89635033621caeb01a9b4ee76d46711bae8e932",
+      "version_first_line": "Ubuntu clang version 21.1.8 (6ubuntu1)"
+    }
+  }
+}

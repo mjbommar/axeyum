@@ -184,11 +184,23 @@ tuples have `DISAGREE = 0`; `acc <= 100` is inductive; bounded safety and a
 separately source-replayed reachability row pass. `bounded_model_check` supplies
 k-unrolling of this accepted relation instead of a second textual-CFG engine.
 
-**Honest scope:** the canonical self-loop and one single-latch scalar natural
-loop are admitted. Real `-O` unrolled/SCEV-closed forms, rejected-loop fallback,
-multi-latch/early-exit/switch/nested/irreducible loops, memory, and MIR remain
-deferred and require new preregistered slices. Fixtures stay committed so CI
-does not invoke clang.
+**ADR-0295 checked direct-call baseline.** The typed scalar syntax now retains
+assigned direct-call result width, callee, argument widths, `noundef`, and
+`tail`, but ordinary checked reflection still rejects calls by default. The
+opt-in loop entry point accepts only explicitly supplied, unique scalar
+straight-line bodies with no memory or nested calls. Both exact Glaurung PAC
+loops execute their registered `leaf` body with checked value/definedness:
+automatic formulas equal an independent recurrence, 100,000 tuples disagree
+zero times, and exact provenance reproduces live. This is deliberately the
+inlined side of P5.2's future modular-versus-inlined comparison. It does not
+model external effects, `puts`, recursion, or general module linking.
+
+**Honest scope:** the canonical self-loop, one single-latch scalar natural
+loop, and two one-source PAC loops with an explicitly supplied checked scalar
+callee are admitted. Real `-O` unrolled/SCEV-closed forms, rejected-loop
+fallback, multi-latch/early-exit/switch/nested/irreducible loops, general
+memory/calls, and MIR loops remain deferred and require new preregistered
+slices. Fixtures stay committed so CI does not invoke clang.
 
 ## O — memory: reflect buffer reads (the packet-parser primitive)
 

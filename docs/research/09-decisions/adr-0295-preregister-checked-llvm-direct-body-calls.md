@@ -1,6 +1,6 @@
 # ADR-0295: Preregister checked LLVM direct-body call reflection
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
 ## Context
@@ -126,6 +126,40 @@ The existing checked scalar reflector already owns the required callee
 value/definedness semantics. The new work is bounded to typed direct-call
 syntax, explicit resolution, transition composition, and independent gates;
 it must not fork arithmetic or poison semantics.
+
+## Accepted result
+
+The frozen experiment passes without widening its scope:
+
+- `DirectCallResolver` accepts only explicitly supplied, unique, non-variadic,
+  scalar, straight-line, memory-free, call-free bodies. The new
+  `reflect_single_latch_loop_with_direct_calls_checked` entry point is opt-in;
+  the pre-existing checked loop APIs still reject ordinary calls as
+  `UnsupportedCall`.
+- The exact Glaurung revision, PAC source, clang-21 command, complete LLVM
+  module, and `leaf`/`compute`/`main` function hashes are registered in
+  `glaurung-llvm-direct-call-v1.json`. Offline validation and live reproduction
+  against the registered Glaurung tree both pass.
+- Both PAC callers reflect with the supplied `leaf` body. Their automatic
+  `init`, `trans`, and `bad` terms equal independently constructed formulas.
+  The deterministic comparison covers 50,000 tuples per caller, 100,000 total,
+  with zero disagreements and explicit multiplication, caller-addition, and
+  counter-overflow coverage.
+- Immediate UB in a callee constrains the caller even when its result is
+  unused. An unused poison return remains lazy until observed, preserving the
+  checked reflector's LLVM value/definedness distinction.
+- The complete missing/duplicate/signature/type/attribute/indirect/nested/
+  memory/semantic-mutation boundary fails closed or disproves equivalence as
+  preregistered. Canonical direct-call syntax render/reparses exactly.
+- The standing gate now owns 63 checked semantic variants in 15 evidence
+  groups and runs nine binaries / 88 tests. The focused suite, checker mutation
+  tests, complete Verify tests and doctests, strict Clippy, warning-denied
+  rustdoc, formatting, provenance reproduction, and documentation links pass.
+
+This accepts one-source inlined baseline evidence. It does not revise
+ADR-0294's historical 0/12 census, admit `puts` or external effects, or close
+P5.2. The next trajectory is contract composition measured against this exact
+inlined baseline, not another syntax-only call widening.
 
 ## Alternatives
 

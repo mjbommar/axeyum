@@ -158,14 +158,26 @@ The gate additionally establishes:
   `capdiv(2, 1) == 1`; and
 - located rejection of the frozen cycle/region/path/type/dependency boundary.
 
-The ADR-0290 runner still owns eight binaries and now runs 81 tests. The new
-loop evidence does not change or duplicate exact enum-variant ownership of the
-original 62 checked LLVM/MIR semantic variants.
+ADR-0295 adds an opt-in checked direct-body resolver for the two exact Glaurung
+PAC loops. Both call one registered scalar `leaf(i32) -> i32` body; the
+unchanged default API still rejects the calls. Automatic call/loop
+value-definedness formulas equal an independent `i*i+1` recurrence over
+100,000 tuples at zero disagreement. Callee immediate UB is eager, an
+unobserved poison return remains lazy, and missing/external/indirect/nested/
+memory/signature/attribute boundaries fail closed. Exact source, module,
+function, compiler, and command provenance reproduce live from the registered
+Glaurung tree. This is the inlined baseline for a later P5.2
+modular-versus-inlined differential, not a contract model.
+
+The ADR-0290 runner now owns nine binaries and runs 88 tests. Exact ownership
+grows from 62 to 63 checked LLVM/MIR semantic variants; the direct-call form is
+owned once by its independent formula, fuzz/replay, and mutation evidence.
 
 Run the focused and standing gates with:
 
 ```sh
 cargo test -p axeyum-verify --test llvm_checked_loop
+cargo test -p axeyum-verify --test llvm_direct_calls
 python3 scripts/check-reflection-semantics-gate.py --run
 ```
 

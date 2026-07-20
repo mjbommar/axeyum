@@ -119,3 +119,27 @@ latch PHI `%16`; one `%15 -> %6` back-edge; path-sensitive `udiv`; `umin`; and
 module through `reflect_single_latch_loop_checked`; the even path skips division
 UB, the odd path requires a nonzero divisor, and 50,000 transition tuples agree
 with an independent concrete recurrence.
+
+## ADR-0295 checked direct-body calls
+
+`clang21_glaurung_pac.c` is byte-identical to
+`tests/fixtures/android/pac.c` at Glaurung revision
+`403a5c5c1f6c5152fef6cefd0d78c3eb90d3888f`; its SHA-256 is
+`dfec0b80f38724b534c5aa9d2cfb699cbbfa33c434c10997b5274ea2c53f2cf4`.
+`clang21_glaurung_pac.ll` is the unmodified 73-line module emitted by Ubuntu
+clang 21.1.8 (6ubuntu1), executable SHA-256
+`412bbe8c60571a1eb06f48fde89635033621caeb01a9b4ee76d46711bae8e932`:
+
+```sh
+clang-21 --target=x86_64-pc-linux-gnu -O1 -fno-unroll-loops \
+  -fno-vectorize -fno-slp-vectorize -fno-strict-aliasing -S -emit-llvm \
+  -Isamples/source/library tests/fixtures/android/pac.c -o pac.ll
+```
+
+The full module SHA-256 is
+`a9659be11de15eab708901a68a11479c816b900dd740d0c2ef2e37f02c618c00`.
+Tests recheck the source/module and extracted `leaf`/`compute`/`main` function
+hashes before reflecting either call. The exact `leaf` body is `mul nsw`
+followed by `add nuw nsw`; both callers retain an assigned
+`tail call i32 @leaf(i32 noundef ...)`. The ordinary loop entry point remains a
+negative control.

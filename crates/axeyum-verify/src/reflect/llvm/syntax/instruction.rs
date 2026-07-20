@@ -113,6 +113,17 @@ pub enum Operand {
     Constant(String),
 }
 
+/// One scalar argument to an explicitly resolved direct call.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DirectCallArgument {
+    /// Declared LLVM integer width.
+    pub width: u32,
+    /// Whether the call site requires a non-poison argument.
+    pub noundef: bool,
+    /// Scalar argument value.
+    pub value: Operand,
+}
+
 /// Typed syntax for one supported scalar instruction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScalarInstruction {
@@ -194,6 +205,20 @@ pub enum ScalarInstructionKind {
         /// Right argument.
         rhs: Operand,
     },
+    /// Assigned direct scalar call whose body must be supplied explicitly by a
+    /// checked resolver before it can receive executable semantics.
+    DirectCall {
+        /// Destination SSA name.
+        dest: String,
+        /// Whether the source used the semantically transparent `tail` marker.
+        tail: bool,
+        /// Declared result width.
+        result_width: u32,
+        /// Direct global callee name without `@` or surrounding quotes.
+        callee: String,
+        /// Ordered typed scalar arguments.
+        args: Vec<DirectCallArgument>,
+    },
     /// Byte-addressed pointer derivation in the bounded memory profile.
     GetElementPtr {
         /// Destination pointer SSA name.
@@ -248,6 +273,7 @@ impl ScalarInstructionKind {
             | Self::Select { dest, .. }
             | Self::Cast { dest, .. }
             | Self::Intrinsic { dest, .. }
+            | Self::DirectCall { dest, .. }
             | Self::GetElementPtr { dest, .. }
             | Self::Load { dest, .. } => Some(dest),
             Self::Store { .. } | Self::Return { .. } => None,
@@ -566,41 +592,86 @@ fn parse_call(
     dest: String,
     first: &str,
 ) -> Result<ScalarInstructionKind, ParseError> {
+    if matches!(first, "musttail" | "notail") {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            &format!("`{first}` calls are outside the checked direct-call profile"),
+        ));
+    }
+    let tail = first == "tail";
     if first != "call" {
         cursor.word("call")?;
     }
     let width = cursor.int_type()?;
-    let callee = cursor.global("intrinsic callee")?;
+    let callee = cursor.global("direct callee")?;
     let intrinsic = if callee == format!("llvm.umin.i{width}") {
-        Intrinsic::UnsignedMin
+        Some(Intrinsic::UnsignedMin)
     } else if callee == format!("llvm.umax.i{width}") {
-        Intrinsic::UnsignedMax
+        Some(Intrinsic::UnsignedMax)
     } else {
-        return Err(cursor.error(
-            ParseErrorKind::UnsupportedInstruction,
-            &format!("unsupported scalar call `@{callee}`"),
-        ));
+        None
     };
     cursor.punct('(')?;
-    let left_width = cursor.int_type()?;
-    let lhs = cursor.operand()?;
-    cursor.punct(',')?;
-    let right_width = cursor.int_type()?;
-    let rhs = cursor.operand()?;
-    cursor.punct(')')?;
-    if left_width != width || right_width != width {
-        return Err(cursor.error(
-            ParseErrorKind::MalformedInstruction,
-            "intrinsic argument and result widths differ",
-        ));
+    if let Some(intrinsic) = intrinsic {
+        let left_width = cursor.int_type()?;
+        let lhs = cursor.operand()?;
+        cursor.punct(',')?;
+        let right_width = cursor.int_type()?;
+        let rhs = cursor.operand()?;
+        cursor.punct(')')?;
+        if left_width != width || right_width != width {
+            return Err(cursor.error(
+                ParseErrorKind::MalformedInstruction,
+                "intrinsic argument and result widths differ",
+            ));
+        }
+        cursor.end()?;
+        return Ok(ScalarInstructionKind::Intrinsic {
+            dest,
+            intrinsic,
+            width,
+            lhs,
+            rhs,
+        });
     }
+
+    let mut args = Vec::new();
+    while !cursor.peek_punct(')') {
+        let arg_width = cursor.int_type()?;
+        let noundef = if cursor.peek_word("noundef") {
+            cursor.word("noundef")?;
+            true
+        } else {
+            false
+        };
+        if let Some(attribute) = cursor.peek_any_word()
+            && !matches!(attribute, "true" | "false")
+            && !is_integer(attribute)
+        {
+            return Err(cursor.error(
+                ParseErrorKind::UnsupportedSemantics,
+                &format!("unsupported direct-call argument attribute `{attribute}`"),
+            ));
+        }
+        let value = cursor.operand()?;
+        args.push(DirectCallArgument {
+            width: arg_width,
+            noundef,
+            value,
+        });
+        if cursor.peek_punct(')') {
+            break;
+        }
+        cursor.punct(',')?;
+    }
+    cursor.punct(')')?;
     cursor.end()?;
-    Ok(ScalarInstructionKind::Intrinsic {
+    Ok(ScalarInstructionKind::DirectCall {
         dest,
-        intrinsic,
-        width,
-        lhs,
-        rhs,
+        tail,
+        result_width: width,
+        callee,
+        args,
     })
 }
 
@@ -683,6 +754,13 @@ struct Cursor<'a> {
 impl Cursor<'_> {
     fn peek_word(&self, expected: &str) -> bool {
         matches!(self.tokens.get(self.index).map(|token| &token.kind), Some(TokenKind::Word(word)) if word == expected)
+    }
+
+    fn peek_any_word(&self) -> Option<&str> {
+        match self.tokens.get(self.index).map(|token| &token.kind) {
+            Some(TokenKind::Word(word)) => Some(word),
+            _ => None,
+        }
     }
 
     fn any_word(&mut self, expected: &str) -> Result<String, ParseError> {

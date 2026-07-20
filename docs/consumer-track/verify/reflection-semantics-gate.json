@@ -148,6 +148,23 @@
       ]
     },
     {
+      "id": "llvm-direct-call",
+      "members": [
+        "llvm.instruction::DirectCall"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::automatic_call_value_definedness_and_transition_equal_independent_formulas",
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::callee_immediate_ub_is_eager_but_unobserved_return_poison_remains_lazy"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::direct_call_transition_fuzz_has_zero_disagreements_over_100000_tuples",
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::safety_bmc_and_reachable_states_are_source_replayed_separately"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/llvm_direct_calls.rs::direct_call_boundary_mutations_fail_closed_or_refute_semantic_equivalence"
+      ]
+    },
+    {
       "id": "llvm-scalar-flags",
       "members": [
         "llvm.semantic_flag::Nuw",
@@ -305,6 +322,7 @@
     "llvm_checked_memory",
     "mir_checked_memory",
     "checked_bounds",
-    "llvm_checked_loop"
+    "llvm_checked_loop",
+    "llvm_direct_calls"
   ]
 }

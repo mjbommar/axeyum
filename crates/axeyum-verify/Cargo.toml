@@ -17,5 +17,8 @@ axeyum-solver = { path = "../axeyum-solver", default-features = false, features 
 axeyum-property = { path = "../axeyum-property" }
 axeyum-verify-macros = { path = "../axeyum-verify-macros" }
 
+[dev-dependencies]
+sha2 = "0.11"
+
 [lints]
 workspace = true

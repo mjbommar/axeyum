@@ -157,6 +157,7 @@ fn loop_error_kind(kind: LoopReflectErrorKind) -> &'static str {
         LoopReflectErrorKind::UnsupportedInitializer => "unsupported_initializer",
         LoopReflectErrorKind::UnsupportedBody => "unsupported_body",
         LoopReflectErrorKind::UnsupportedMemory => "unsupported_memory",
+        LoopReflectErrorKind::UnsupportedCall => "unsupported_call",
         LoopReflectErrorKind::ExternalSsaDependency => "external_ssa_dependency",
         LoopReflectErrorKind::InvalidProperty => "invalid_property",
         LoopReflectErrorKind::IrConstruction => "ir_construction",

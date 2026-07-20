@@ -136,6 +136,8 @@ pub enum ReflectErrorKind {
     PointerParameter,
     /// A memory operation reached an entry point without a bounded-memory binding.
     UnsupportedMemory,
+    /// An ordinary call reached an entry point without explicit callee semantics.
+    UnsupportedCall,
     /// An SSA value was referenced before definition.
     UndefinedValue,
     /// An SSA destination was defined more than once.
@@ -983,11 +985,39 @@ fn scalar_constant(
     }
 }
 
-fn reflect_parsed_into(
+pub(super) struct ScalarReflectionComponents {
+    pub(super) result: DefinedValue,
+    pub(super) env: HashMap<String, DefinedValue>,
+    pub(super) immediate_defined: TermId,
+    return_span: SourceSpan,
+}
+
+pub(super) fn reflect_parsed_into(
     arena: &mut TermArena,
     params: &[TermId],
     function: &Function,
 ) -> Result<(DefinedValue, HashMap<String, DefinedValue>), ReflectError> {
+    let components = reflect_parsed_components_into(arena, params, function)?;
+    let defined = bool_and(
+        arena,
+        components.immediate_defined,
+        components.result.defined,
+        components.return_span,
+    )?;
+    Ok((
+        DefinedValue {
+            defined,
+            ..components.result
+        },
+        components.env,
+    ))
+}
+
+pub(super) fn reflect_parsed_components_into(
+    arena: &mut TermArena,
+    params: &[TermId],
+    function: &Function,
+) -> Result<ScalarReflectionComponents, ReflectError> {
     if params.len() != function.params.len() {
         return Err(ReflectError {
             kind: ReflectErrorKind::ParameterCount,
@@ -1047,11 +1077,7 @@ fn reflect_parsed_into(
         match typed.kind {
             ScalarInstructionKind::Return { width, value } => {
                 let returned = resolve(arena, &env, &value, width, typed.span)?;
-                let defined = bool_and(arena, execution_defined, returned.defined, typed.span)?;
-                result = Some(DefinedValue {
-                    defined,
-                    ..returned
-                });
+                result = Some((returned, typed.span));
             }
             kind => {
                 let (dest, value, immediate) = lower_assignment(arena, &env, kind, typed.span)?;
@@ -1067,12 +1093,17 @@ fn reflect_parsed_into(
             }
         }
     }
-    let result = result.ok_or_else(|| ReflectError {
+    let (result, return_span) = result.ok_or_else(|| ReflectError {
         kind: ReflectErrorKind::InvalidReturn,
         span: Some(function.blocks[0].span),
         detail: "straight-line scalar function has no return".to_owned(),
     })?;
-    Ok((result, env))
+    Ok(ScalarReflectionComponents {
+        result,
+        env,
+        immediate_defined: execution_defined,
+        return_span,
+    })
 }
 
 fn lower_memory_instruction(
@@ -1345,6 +1376,11 @@ pub(super) fn lower_assignment(
             kind: ReflectErrorKind::UnsupportedMemory,
             span: Some(span),
             detail: "memory instruction requires the bounded-memory CFG API".to_owned(),
+        }),
+        ScalarInstructionKind::DirectCall { callee, .. } => Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedCall,
+            span: Some(span),
+            detail: format!("direct call `@{callee}` requires an explicit checked callee body"),
         }),
         ScalarInstructionKind::Return { .. } => unreachable!("return handled by caller"),
     }

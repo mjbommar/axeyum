@@ -31,8 +31,8 @@ Validation alone (without those mutation/evidence suites) is:
 python3 scripts/check-reflection-semantics-gate.py
 ```
 
-The validation report is deterministic JSON. At ADR-0290 acceptance the source
-inventory contains 12 enums and 62 variants, owned by 14 evidence groups.
+The validation report is deterministic JSON. At ADR-0295 acceptance the source
+inventory contains 12 enums and 63 variants, owned by 15 evidence groups.
 
 ## What the gate executes
 
@@ -57,6 +57,11 @@ is:
   rejection, invariant/BMC proof, and source-replayed abstract reachability.
   Its exact contract is documented in the
   [canonical loop bridge](canonical-llvm-loop-bridge.md).
+- `llvm_direct_calls`: the ADR-0295 opt-in exact-body baseline, including frozen
+  Glaurung source/module/function identities, unchanged default rejection,
+  independent callee-definedness and recurrence formulas, 100,000 transition
+  tuples, source-replayed reachability, canonical syntax, and fail-closed call
+  boundary mutations.
 
 For LLVM operations that can produce poison or immediate undefined behavior,
 the scalar matrix compares definedness separately and compares values only
@@ -92,4 +97,6 @@ accepted input. The gate admits ADR-0291's canonical scalar LLVM self-loop and
 ADR-0292's one single-latch natural-loop profile. It does not admit MIR,
 multi-latch/early-exit/switch/nested/irreducible or memory loops, general MIR
 places, wide/aliased memory, `stable_mir`, Glaurung LLIR lowering, or a shared
-frontend crate. The eight owned binaries currently contain 81 tests.
+frontend crate. ADR-0295 adds only opt-in assigned direct scalar calls with an
+exact checked body; external/indirect/void/variadic/nested calls remain outside
+the profile. The nine owned binaries currently contain 88 tests.

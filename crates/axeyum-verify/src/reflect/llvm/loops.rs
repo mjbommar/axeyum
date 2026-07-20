@@ -14,14 +14,19 @@ use std::fmt;
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 use axeyum_solver::{SolverError, TransitionSystem};
 
-use super::checked::{DefinedValue, ReflectError, ReflectErrorKind, lower_assignment, resolve};
+use super::checked::{
+    DefinedValue, ReflectError, ReflectErrorKind, lower_assignment, reflect_parsed_components_into,
+    reflect_parsed_into, resolve,
+};
 use super::syntax::{
-    BlockId, CfgBlock, Operand, ParseError, Phi, ScalarCfg, ScalarInstruction,
+    BlockId, CfgBlock, Function, Operand, ParseError, Phi, ScalarCfg, ScalarInstruction,
     ScalarInstructionKind, SourceSpan, TerminatorKind, parse_function, parse_scalar_cfg,
 };
 
 const MAX_ITERATION_PATHS: usize = 64;
 const MAX_PATH_BLOCK_EXECUTIONS: usize = 4_096;
+
+type LoopParameterInventory = (BTreeMap<String, (u32, SourceSpan)>, BTreeSet<String>);
 
 /// Stable failure classes for the canonical LLVM loop profile.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -46,6 +51,9 @@ pub enum LoopReflectErrorKind {
     UnsupportedBody,
     /// The loop reaches memory, which this scalar profile does not model.
     UnsupportedMemory,
+    /// A direct call lacks an exact eligible checked callee body or has an
+    /// incompatible call boundary.
+    UnsupportedCall,
     /// The recurrence depends on SSA state outside PHIs and function parameters.
     ExternalSsaDependency,
     /// The requested unsigned bound does not name a compatible loop PHI.
@@ -119,6 +127,176 @@ impl UnsignedPhiUpperBound {
             phi: phi.into(),
             bound,
         }
+    }
+}
+
+/// Deterministic inventory of exact straight-line scalar LLVM callee bodies.
+///
+/// Merely parsing a [`ScalarInstructionKind::DirectCall`] does not give it
+/// semantics. A caller must construct this resolver explicitly and use the
+/// opt-in direct-call reflection entry point. Nested calls, memory, control
+/// flow, and non-scalar signatures fail closed during construction.
+#[derive(Debug, Clone)]
+pub struct DirectCallResolver {
+    callees: BTreeMap<String, Function>,
+}
+
+impl DirectCallResolver {
+    /// Parses and validates exact checked callee bodies.
+    ///
+    /// # Errors
+    ///
+    /// Returns a stable located failure for malformed input, duplicate names,
+    /// non-scalar signatures, control flow, memory, nested calls, or rejected
+    /// checked value/definedness semantics.
+    pub fn from_bodies(bodies: &[&str]) -> Result<Self, LoopReflectError> {
+        let mut callees = BTreeMap::new();
+        for body in bodies {
+            let function = parse_function(body)?;
+            if callees.contains_key(&function.name) {
+                return Err(loop_error(
+                    LoopReflectErrorKind::UnsupportedCall,
+                    Some(function.name_span),
+                    &format!("duplicate direct callee body `@{}`", function.name),
+                ));
+            }
+            validate_direct_callee(&function)?;
+            callees.insert(function.name.clone(), function);
+        }
+        Ok(Self { callees })
+    }
+
+    /// Ordered callee names accepted by this resolver.
+    #[must_use]
+    pub fn callee_names(&self) -> Vec<&str> {
+        self.callees.keys().map(String::as_str).collect()
+    }
+
+    fn validate_call(&self, instruction: &ScalarInstruction) -> Result<(), LoopReflectError> {
+        let ScalarInstructionKind::DirectCall {
+            result_width,
+            callee,
+            args,
+            ..
+        } = &instruction.kind
+        else {
+            return Ok(());
+        };
+        let function = self.callees.get(callee).ok_or_else(|| {
+            loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(instruction.span),
+                &format!("direct call `@{callee}` has no supplied checked callee body"),
+            )
+        })?;
+        let callee_result = scalar_width(&function.return_ty).ok_or_else(|| {
+            loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(function.name_span),
+                &format!(
+                    "direct callee `@{callee}` has non-scalar result `{}`",
+                    function.return_ty
+                ),
+            )
+        })?;
+        if callee_result != *result_width {
+            return Err(loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(instruction.span),
+                &format!(
+                    "direct call `@{callee}` declares i{result_width}, callee returns i{callee_result}"
+                ),
+            ));
+        }
+        if args.len() != function.params.len() {
+            return Err(loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(instruction.span),
+                &format!(
+                    "direct call `@{callee}` supplies {} arguments, callee declares {}",
+                    args.len(),
+                    function.params.len()
+                ),
+            ));
+        }
+        for (index, (argument, parameter)) in args.iter().zip(&function.params).enumerate() {
+            let parameter_width = scalar_width(&parameter.ty).ok_or_else(|| {
+                loop_error(
+                    LoopReflectErrorKind::UnsupportedCall,
+                    Some(parameter.span),
+                    &format!(
+                        "direct callee `@{callee}` parameter {} has non-scalar type `{}`",
+                        index, parameter.ty
+                    ),
+                )
+            })?;
+            if argument.width != parameter_width {
+                return Err(loop_error(
+                    LoopReflectErrorKind::UnsupportedCall,
+                    Some(instruction.span),
+                    &format!(
+                        "direct call `@{callee}` argument {index} declares i{}, callee expects i{parameter_width}",
+                        argument.width
+                    ),
+                ));
+            }
+            if !argument.noundef {
+                return Err(loop_error(
+                    LoopReflectErrorKind::UnsupportedCall,
+                    Some(instruction.span),
+                    &format!(
+                        "direct call `@{callee}` argument {index} must retain the `noundef` boundary"
+                    ),
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn lower_call(
+        &self,
+        arena: &mut TermArena,
+        env: &HashMap<String, DefinedValue>,
+        instruction: &ScalarInstruction,
+    ) -> Result<(String, DefinedValue, TermId), BuildError> {
+        self.validate_call(instruction).map_err(BuildError::call)?;
+        let ScalarInstructionKind::DirectCall {
+            dest, callee, args, ..
+        } = &instruction.kind
+        else {
+            return Err(BuildError::call(loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(instruction.span),
+                "direct-call resolver received a non-call instruction",
+            )));
+        };
+        let function = &self.callees[callee];
+        let mut values = Vec::with_capacity(args.len());
+        let mut argument_defined = arena.bool_const(true);
+        for argument in args {
+            let resolved = resolve(
+                arena,
+                env,
+                &argument.value,
+                argument.width,
+                instruction.span,
+            )
+            .map_err(BuildError::reflection)?;
+            values.push(resolved.value);
+            argument_defined = arena
+                .and(argument_defined, resolved.defined)
+                .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+        }
+        let components = reflect_parsed_components_into(arena, &values, function)
+            .map_err(BuildError::reflection)?;
+        let mut result = components.result;
+        result.defined = arena
+            .and(argument_defined, result.defined)
+            .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+        let immediate = arena
+            .and(argument_defined, components.immediate_defined)
+            .map_err(|error| BuildError::ir(Some(instruction.span), error.to_string()))?;
+        Ok((dest.clone(), result, immediate))
     }
 }
 
@@ -202,6 +380,7 @@ pub struct CanonicalLoopSystem {
     phis: Vec<LoopPhi>,
     parameters: Vec<LoopParameter>,
     body: LoopBody,
+    direct_calls: Option<DirectCallResolver>,
     branch_span: SourceSpan,
     bad_component: usize,
     bad_bound: u128,
@@ -362,7 +541,13 @@ impl CanonicalLoopSystem {
         branch_condition: &Operand,
     ) -> Result<TermId, BuildError> {
         let mut conditions = Vec::new();
-        lower_instructions(arena, &mut env, instructions, &mut conditions)?;
+        lower_instructions(
+            arena,
+            &mut env,
+            instructions,
+            &mut conditions,
+            self.direct_calls.as_ref(),
+        )?;
         let branch = resolve(arena, &env, branch_condition, 1, self.branch_span)
             .map_err(BuildError::reflection)?;
         conditions.push(branch.defined);
@@ -384,7 +569,13 @@ impl CanonicalLoopSystem {
                 let predecessor = &path.blocks[index - 1].id;
                 lower_selected_phis(arena, &mut env, &block.phis, predecessor)?;
             }
-            lower_instructions(arena, &mut env, &block.instructions, &mut conditions)?;
+            lower_instructions(
+                arena,
+                &mut env,
+                &block.instructions,
+                &mut conditions,
+                self.direct_calls.as_ref(),
+            )?;
 
             if index + 1 == path.blocks.len() {
                 let branch = resolve(arena, &env, latch_condition, 1, block.terminator.span)
@@ -517,13 +708,21 @@ impl TransitionSystem for CanonicalLoopSystem {
 /// Returns a stable, located failure for malformed syntax, any cycle outside
 /// the one-block profile, invalid PHIs/properties, memory, external SSA state,
 /// or rejected checked semantics. Source input is never handled with a panic.
+pub fn reflect_canonical_loop_checked(
+    llvm: &str,
+    property: UnsignedPhiUpperBound,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    reflect_canonical_loop_with_resolver(llvm, property, None)
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "the canonical profile keeps every fail-closed structural gate visible in source order"
 )]
-pub fn reflect_canonical_loop_checked(
+fn reflect_canonical_loop_with_resolver(
     llvm: &str,
     property: UnsignedPhiUpperBound,
+    direct_calls: Option<&DirectCallResolver>,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let UnsignedPhiUpperBound {
         phi: property_phi,
@@ -558,30 +757,8 @@ pub fn reflect_canonical_loop_checked(
         }
     };
 
-    let mut parameter_widths = BTreeMap::new();
-    for parameter in &function.params {
-        let width = scalar_width(&parameter.ty).ok_or_else(|| {
-            loop_error(
-                LoopReflectErrorKind::UnsupportedBody,
-                Some(parameter.span),
-                &format!(
-                    "canonical scalar loop requires i1 through i128 parameters; `%{}` has `{}`",
-                    parameter.name, parameter.ty
-                ),
-            )
-        })?;
-        if parameter_widths
-            .insert(parameter.name.clone(), (width, parameter.span))
-            .is_some()
-        {
-            return Err(loop_error(
-                LoopReflectErrorKind::UnsupportedBody,
-                Some(parameter.span),
-                &format!("duplicate LLVM parameter `%{}`", parameter.name),
-            ));
-        }
-    }
-    validate_unique_definitions(&cfg, &parameter_widths)?;
+    let (parameter_widths, parameter_names) = loop_parameter_inventory(&function.params)?;
+    validate_unique_definitions(&cfg, &parameter_names)?;
 
     let expected_predecessors = BTreeSet::from([cfg.entry.clone(), block.id.clone()]);
     let actual_predecessors = block.predecessors.iter().cloned().collect::<BTreeSet<_>>();
@@ -657,6 +834,7 @@ pub fn reflect_canonical_loop_checked(
     }
 
     for instruction in &block.instructions {
+        validate_call_instruction(instruction, direct_calls)?;
         if matches!(
             instruction.kind,
             ScalarInstructionKind::GetElementPtr { .. }
@@ -742,6 +920,7 @@ pub fn reflect_canonical_loop_checked(
             instructions: block.instructions.clone(),
             branch_condition,
         },
+        direct_calls: direct_calls.cloned(),
         branch_span: block.terminator.span,
         bad_component,
         bad_bound: property_bound,
@@ -767,15 +946,44 @@ pub fn reflect_single_latch_loop_checked(
     llvm: &str,
     property: UnsignedPhiUpperBound,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    reflect_single_latch_loop_with_resolver(llvm, property, None)
+}
+
+/// Reflects one admitted loop while resolving assigned direct scalar calls
+/// through explicitly supplied exact checked callee bodies.
+///
+/// The ordinary [`reflect_single_latch_loop_checked`] entry point deliberately
+/// remains fail-closed for every direct call. This opt-in route is an exact
+/// inlining baseline for later modular-contract comparison, not an external or
+/// uninterpreted call model.
+///
+/// # Errors
+///
+/// Returns the ordinary stable loop failures plus [`LoopReflectErrorKind::UnsupportedCall`]
+/// for a missing/incompatible body, a non-`noundef` argument boundary, or
+/// direct-call syntax outside the admitted resolver profile.
+pub fn reflect_single_latch_loop_with_direct_calls_checked(
+    llvm: &str,
+    property: UnsignedPhiUpperBound,
+    resolver: &DirectCallResolver,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
+    reflect_single_latch_loop_with_resolver(llvm, property, Some(resolver))
+}
+
+fn reflect_single_latch_loop_with_resolver(
+    llvm: &str,
+    property: UnsignedPhiUpperBound,
+    direct_calls: Option<&DirectCallResolver>,
+) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let function = parse_function(llvm)?;
     let cfg = parse_scalar_cfg(&function)?;
     match canonical_loop_index(&cfg) {
-        Ok(_) => return reflect_canonical_loop_checked(llvm, property),
+        Ok(_) => return reflect_canonical_loop_with_resolver(llvm, property, direct_calls),
         Err(error) if error.kind() == LoopReflectErrorKind::MultipleCycles => return Err(error),
         Err(_) => {}
     }
     let profile = single_latch_profile(&cfg)?;
-    build_natural_loop_system(cfg, profile, property)
+    build_natural_loop_system(cfg, profile, property, direct_calls)
 }
 
 #[derive(Debug)]
@@ -1001,6 +1209,7 @@ fn build_natural_loop_system(
     cfg: ScalarCfg,
     profile: NaturalLoopProfile,
     property: UnsignedPhiUpperBound,
+    direct_calls: Option<&DirectCallResolver>,
 ) -> Result<CanonicalLoopSystem, LoopReflectError> {
     let UnsignedPhiUpperBound {
         phi: property_phi,
@@ -1008,30 +1217,8 @@ fn build_natural_loop_system(
     } = property;
     let header = &cfg.blocks[profile.header];
     let latch = &cfg.blocks[profile.latch];
-    let mut parameter_widths = BTreeMap::new();
-    for parameter in &cfg.params {
-        let width = scalar_width(&parameter.ty).ok_or_else(|| {
-            loop_error(
-                LoopReflectErrorKind::UnsupportedBody,
-                Some(parameter.span),
-                &format!(
-                    "canonical scalar loop requires i1 through i128 parameters; `%{}` has `{}`",
-                    parameter.name, parameter.ty
-                ),
-            )
-        })?;
-        if parameter_widths
-            .insert(parameter.name.clone(), (width, parameter.span))
-            .is_some()
-        {
-            return Err(loop_error(
-                LoopReflectErrorKind::UnsupportedBody,
-                Some(parameter.span),
-                &format!("duplicate LLVM parameter `%{}`", parameter.name),
-            ));
-        }
-    }
-    validate_unique_definitions(&cfg, &parameter_widths)?;
+    let (parameter_widths, parameter_names) = loop_parameter_inventory(&cfg.params)?;
+    validate_unique_definitions(&cfg, &parameter_names)?;
 
     if header.phis.is_empty() {
         return Err(loop_error(
@@ -1113,6 +1300,7 @@ fn build_natural_loop_system(
             }
         }
         for instruction in &block.instructions {
+            validate_call_instruction(instruction, direct_calls)?;
             if matches!(
                 instruction.kind,
                 ScalarInstructionKind::GetElementPtr { .. }
@@ -1208,6 +1396,7 @@ fn build_natural_loop_system(
             paths: compiled_paths,
             latch_condition: profile.latch_condition,
         },
+        direct_calls: direct_calls.cloned(),
         branch_span: latch.terminator.span,
         bad_component,
         bad_bound: property_bound,
@@ -1324,9 +1513,9 @@ fn reachable_from_entry(cfg: &ScalarCfg, target: &BlockId) -> bool {
 
 fn validate_unique_definitions(
     cfg: &ScalarCfg,
-    parameters: &BTreeMap<String, (u32, SourceSpan)>,
+    parameters: &BTreeSet<String>,
 ) -> Result<(), LoopReflectError> {
-    let mut definitions = parameters.keys().cloned().collect::<BTreeSet<_>>();
+    let mut definitions = parameters.clone();
     for block in &cfg.blocks {
         for phi in &block.phis {
             if !definitions.insert(phi.dest.clone()) {
@@ -1350,6 +1539,142 @@ fn validate_unique_definitions(
         }
     }
     Ok(())
+}
+
+fn loop_parameter_inventory(
+    parameters: &[super::syntax::Parameter],
+) -> Result<LoopParameterInventory, LoopReflectError> {
+    let mut widths = BTreeMap::new();
+    let mut names = BTreeSet::new();
+    for parameter in parameters {
+        if !names.insert(parameter.name.clone()) {
+            return Err(loop_error(
+                LoopReflectErrorKind::UnsupportedBody,
+                Some(parameter.span),
+                &format!("duplicate LLVM parameter `%{}`", parameter.name),
+            ));
+        }
+        if let Some(width) = scalar_width(&parameter.ty) {
+            widths.insert(parameter.name.clone(), (width, parameter.span));
+        }
+    }
+    Ok((widths, names))
+}
+
+fn validate_direct_callee(function: &Function) -> Result<(), LoopReflectError> {
+    if scalar_width(&function.return_ty).is_none() {
+        return Err(loop_error(
+            LoopReflectErrorKind::UnsupportedCall,
+            Some(function.name_span),
+            &format!(
+                "direct callee `@{}` requires an i1 through i128 result; found `{}`",
+                function.name, function.return_ty
+            ),
+        ));
+    }
+    for (index, parameter) in function.params.iter().enumerate() {
+        if scalar_width(&parameter.ty).is_none() {
+            return Err(loop_error(
+                LoopReflectErrorKind::UnsupportedCall,
+                Some(parameter.span),
+                &format!(
+                    "direct callee `@{}` parameter {index} requires i1 through i128; found `{}`",
+                    function.name, parameter.ty
+                ),
+            ));
+        }
+    }
+    if function.blocks.len() != 1 {
+        return Err(loop_error(
+            LoopReflectErrorKind::UnsupportedCall,
+            Some(function.span),
+            &format!(
+                "direct callee `@{}` must contain exactly one straight-line block",
+                function.name
+            ),
+        ));
+    }
+    let cfg = parse_scalar_cfg(function)?;
+    for block in &cfg.blocks {
+        for instruction in &block.instructions {
+            match instruction.kind {
+                ScalarInstructionKind::DirectCall { ref callee, .. } => {
+                    return Err(loop_error(
+                        LoopReflectErrorKind::UnsupportedCall,
+                        Some(instruction.span),
+                        &format!(
+                            "direct callee `@{}` contains unsupported nested call `@{callee}`",
+                            function.name
+                        ),
+                    ));
+                }
+                ScalarInstructionKind::GetElementPtr { .. }
+                | ScalarInstructionKind::Load { .. }
+                | ScalarInstructionKind::Store { .. } => {
+                    return Err(loop_error(
+                        LoopReflectErrorKind::UnsupportedCall,
+                        Some(instruction.span),
+                        &format!(
+                            "direct callee `@{}` contains memory outside the scalar call profile",
+                            function.name
+                        ),
+                    ));
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let mut arena = TermArena::new();
+    let mut params = Vec::with_capacity(function.params.len());
+    for (index, parameter) in function.params.iter().enumerate() {
+        let width = scalar_width(&parameter.ty).expect("scalar signature checked above");
+        let symbol = arena
+            .declare(
+                &format!("llvm.direct.{}.arg{index}", function.name),
+                sort_for_width(width),
+            )
+            .map_err(|error| {
+                loop_error(
+                    LoopReflectErrorKind::IrConstruction,
+                    Some(parameter.span),
+                    &error.to_string(),
+                )
+            })?;
+        params.push(arena.var(symbol));
+    }
+    reflect_parsed_into(&mut arena, &params, function).map_err(|error| {
+        loop_error(
+            match error.kind() {
+                ReflectErrorKind::UnsupportedMemory => LoopReflectErrorKind::UnsupportedMemory,
+                ReflectErrorKind::IrConstruction => LoopReflectErrorKind::IrConstruction,
+                _ => LoopReflectErrorKind::UnsupportedCall,
+            },
+            error.span(),
+            &format!(
+                "direct callee `@{}` is not executable: {error}",
+                function.name
+            ),
+        )
+    })?;
+    Ok(())
+}
+
+fn validate_call_instruction(
+    instruction: &ScalarInstruction,
+    resolver: Option<&DirectCallResolver>,
+) -> Result<(), LoopReflectError> {
+    let ScalarInstructionKind::DirectCall { callee, .. } = &instruction.kind else {
+        return Ok(());
+    };
+    let Some(resolver) = resolver else {
+        return Err(loop_error(
+            LoopReflectErrorKind::UnsupportedCall,
+            Some(instruction.span),
+            &format!("direct call `@{callee}` requires an explicit checked callee body"),
+        ));
+    };
+    resolver.validate_call(instruction)
 }
 
 fn collect_instruction_parameters(
@@ -1376,6 +1701,11 @@ fn collect_instruction_parameters(
         }
         ScalarInstructionKind::Cast { operand, .. } => {
             collect_parameter_operand(operand, parameters, referenced);
+        }
+        ScalarInstructionKind::DirectCall { args, .. } => {
+            for argument in args {
+                collect_parameter_operand(&argument.value, parameters, referenced);
+            }
         }
         ScalarInstructionKind::GetElementPtr { index, .. } => {
             collect_parameter_operand(index, parameters, referenced);
@@ -1451,11 +1781,23 @@ fn lower_instructions(
     env: &mut HashMap<String, DefinedValue>,
     instructions: &[ScalarInstruction],
     conditions: &mut Vec<TermId>,
+    direct_calls: Option<&DirectCallResolver>,
 ) -> Result<(), BuildError> {
     for instruction in instructions {
         let (dest, value, immediate) =
-            lower_assignment(arena, env, instruction.kind.clone(), instruction.span)
-                .map_err(BuildError::reflection)?;
+            if matches!(instruction.kind, ScalarInstructionKind::DirectCall { .. }) {
+                let resolver = direct_calls.ok_or_else(|| {
+                    BuildError::call(loop_error(
+                        LoopReflectErrorKind::UnsupportedCall,
+                        Some(instruction.span),
+                        "direct call reached transition lowering without a checked resolver",
+                    ))
+                })?;
+                resolver.lower_call(arena, env, instruction)?
+            } else {
+                lower_assignment(arena, env, instruction.kind.clone(), instruction.span)
+                    .map_err(BuildError::reflection)?
+            };
         conditions.push(immediate);
         env.insert(dest, value);
     }
@@ -1556,6 +1898,7 @@ fn disjoin(
 #[derive(Debug)]
 enum BuildError {
     Reflection(ReflectError),
+    Call(LoopReflectError),
     Ir {
         span: Option<SourceSpan>,
         detail: String,
@@ -1566,6 +1909,10 @@ enum BuildError {
 impl BuildError {
     fn reflection(error: ReflectError) -> Self {
         Self::Reflection(error)
+    }
+
+    fn call(error: LoopReflectError) -> Self {
+        Self::Call(error)
     }
 
     fn ir(span: Option<SourceSpan>, detail: String) -> Self {
@@ -1587,9 +1934,11 @@ enum BuildPhase {
 
 fn loop_build_error(error: BuildError, phase: BuildPhase) -> LoopReflectError {
     match error {
+        BuildError::Call(error) => error,
         BuildError::Reflection(error) => {
             let kind = match error.kind() {
                 ReflectErrorKind::UnsupportedMemory => LoopReflectErrorKind::UnsupportedMemory,
+                ReflectErrorKind::UnsupportedCall => LoopReflectErrorKind::UnsupportedCall,
                 ReflectErrorKind::UndefinedValue => LoopReflectErrorKind::ExternalSsaDependency,
                 ReflectErrorKind::IrConstruction => LoopReflectErrorKind::IrConstruction,
                 _ => match phase {
@@ -1619,6 +1968,7 @@ fn loop_build_error(error: BuildError, phase: BuildPhase) -> LoopReflectError {
 fn solver_build_error(error: BuildError) -> SolverError {
     let detail = match error {
         BuildError::Reflection(error) => error.to_string(),
+        BuildError::Call(error) => error.to_string(),
         BuildError::Ir { detail, .. } | BuildError::State(detail) => detail,
     };
     SolverError::Backend(format!("validated canonical LLVM loop: {detail}"))

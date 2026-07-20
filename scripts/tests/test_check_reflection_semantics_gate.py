@@ -19,6 +19,7 @@ BINARIES = [
     "mir_checked_memory",
     "checked_bounds",
     "llvm_checked_loop",
+    "llvm_direct_calls",
 ]
 
 

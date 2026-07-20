@@ -201,6 +201,7 @@ dependencies = [
  "axeyum-property",
  "axeyum-solver",
  "axeyum-verify-macros",
+ "sha2",
 ]
 
 [[package]]
