@@ -753,11 +753,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     general provenance, multiple/aliasing objects, MIR writes, LLIR lowering,
     or a shared crate.
   - [ADR-0287](../09-decisions/adr-0287-preregister-reproducible-mir-capture.md)
-    preregisters T5.1.3's first enabling slice: exact compiler identity and
-    argv, raw MIR bytes, committed source/output/provenance hashes, stable-CI
-    drift checks, and exact-toolchain byte replay. Capture alone adds no MIR
-    semantics; checked writes and non-panicking reflection remain separately
-    gated.
+    accepts T5.1.3's first enabling slice: exact compiler identity and argv,
+    raw MIR bytes, committed source/output/provenance hashes, stable-CI drift
+    checks, exact-toolchain byte replay, and fail-closed tamper/regeneration
+    tests. Capture alone adds no MIR semantics; checked writes and non-panicking
+    reflection remain separately gated.
 - [ ] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -1,10 +1,9 @@
-# ADR-0287: Preregister reproducible compiler-MIR capture and drift detection
+# ADR-0287: Accept reproducible compiler-MIR capture and drift detection
 
-Status: proposed
+Status: accepted
 Date: 2026-07-20
 
-Result state: zero-row; no MIR source, compiler output, checker, or test has been
-added under this ADR
+Result state: accepted; all frozen gates pass
 
 ## Context
 
@@ -112,9 +111,41 @@ The gates may be strengthened before the first source or compiler-output
 fixture is added. They may not be weakened after any capture or test result is
 observed.
 
+## Result
+
+The accepted capture package contains the ordinary Rust source, raw 2,304-byte
+compiler stdout, strict provenance JSON, and exact SHA-256 identities. Its four
+ordered functions cover scalar control flow, checked and clamped reads, and the
+real compiler write shape `_1[_2] = copy _3` followed by a second checked read.
+The manifest binds rustc 1.97.0-nightly commit
+`f53b654a8882fd5fc036c4ca7a4ff41ce32497a6`, LLVM 22.1.4, the complete ordered
+argv, and the deterministic capture environment.
+
+`scripts/check-verify-mir-fixture.py` implements the three frozen modes. It
+authenticates all registered bytes before parsing provenance, rejects duplicate
+JSON keys and noncanonical paths/arguments, executes only a code-owned argv
+template, captures under `target/axeyum-mir-capture`, and emits deterministic
+JSON status. Regeneration verifies two fresh outputs before atomically replacing
+the output and checksum files. Ordinary verification remains useful without the
+pinned compiler while reporting replay as unavailable; required replay fails
+closed.
+
+Eight adversarial checker tests cover source/output/provenance tampering,
+malformed and duplicate-key manifests, escaping paths, missing/extra files,
+wrong compilers, deterministic status, compiler failure, nondeterministic
+output, and preservation of the prior files. The Cargo integration test wires
+content validity and explicit replay status into the normal
+`axeyum-verify` suite. Two regeneration captures and the subsequent required
+replay were byte-identical.
+
+The focused checker suite, `--verify`, `--require-replay`, the complete
+`axeyum-verify --all-features` suite, workspace formatting, strict workspace
+Clippy/rustdoc, and the repository link checker pass. No dependency, default
+toolchain, native, MSRV, or WASM surface changed.
+
 ## Consequences
 
-The subsequent checked-MIR-memory ADR can start from a reproducible compiler
+The subsequent checked-MIR-memory ADR can now start from a reproducible compiler
 artifact containing the required store/load shape instead of copying another
 text sample into a test. Stable CI will detect committed fixture drift even
 when the pinned nightly is unavailable, and exact-toolchain runs will prove

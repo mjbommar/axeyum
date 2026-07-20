@@ -1,0 +1,94 @@
+// WARNING: This output format is intended for human consumers only
+// and is subject to change without notice. Knock yourself out.
+// HINT: See also -Z dump-mir for MIR at specific points during compilation.
+fn scalar_pick(_1: u8) -> u8 {
+    debug x => _1;
+    let mut _0: u8;
+    let mut _2: bool;
+
+    bb0: {
+        _2 = Eq(copy _1, const 0_u8);
+        switchInt(move _2) -> [0: bb2, otherwise: bb1];
+    }
+
+    bb1: {
+        _0 = const 7_u8;
+        goto -> bb3;
+    }
+
+    bb2: {
+        _0 = copy _1;
+        goto -> bb3;
+    }
+
+    bb3: {
+        return;
+    }
+}
+
+fn checked_read(_1: [u8; 4], _2: usize) -> u8 {
+    debug buf => _1;
+    debug index => _2;
+    let mut _0: u8;
+    let mut _3: bool;
+
+    bb0: {
+        _3 = Lt(copy _2, const 4_usize);
+        assert(move _3, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _2) -> [success: bb1, unwind continue];
+    }
+
+    bb1: {
+        _0 = copy _1[_2];
+        return;
+    }
+}
+
+const checked_read::{constant#0}: usize = const 4_usize;
+
+fn clamped_read(_1: [u8; 4], _2: usize) -> u8 {
+    debug buf => _1;
+    debug index => _2;
+    let mut _0: u8;
+    let _3: usize;
+    let mut _4: bool;
+
+    bb0: {
+        _3 = BitAnd(copy _2, const 3_usize);
+        _4 = Lt(copy _3, const 4_usize);
+        assert(move _4, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _3) -> [success: bb1, unwind continue];
+    }
+
+    bb1: {
+        _0 = copy _1[_3];
+        return;
+    }
+}
+
+const clamped_read::{constant#0}: usize = const 4_usize;
+
+fn store_then_load(_1: [u8; 4], _2: usize, _3: u8) -> u8 {
+    debug buf => _1;
+    debug index => _2;
+    debug value => _3;
+    let mut _0: u8;
+    let mut _4: bool;
+    let mut _5: bool;
+
+    bb0: {
+        _4 = Lt(copy _2, const 4_usize);
+        assert(move _4, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _2) -> [success: bb1, unwind continue];
+    }
+
+    bb1: {
+        _1[_2] = copy _3;
+        _5 = Lt(copy _2, const 4_usize);
+        assert(move _5, "index out of bounds: the length is {} but the index is {}", const 4_usize, copy _2) -> [success: bb2, unwind continue];
+    }
+
+    bb2: {
+        _0 = copy _1[_2];
+        return;
+    }
+}
+
+const store_then_load::{constant#0}: usize = const 4_usize;

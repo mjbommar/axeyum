@@ -322,17 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-20 — ADR-0287 preregisters reproducible compiler-MIR capture before
-  MIR writes.** The current MIR tests embed hand-copied `-Zunpretty=mir` text
-  and the reflector still rejects by panic, so extending its byte-array model
-  first would put new semantics on an unauthenticated artifact boundary. The
-  zero-row gate freezes exact rustc identity/argv, raw compiler stdout,
-  source/output/provenance hashes, stable-CI drift checks, exact-toolchain byte
-  replay, tamper/wrong-toolchain failure classes, and no-partial-write
-  regeneration. The source will include a store/load shape solely to enable the
-  next separately preregistered checked-MIR-memory slice; capture itself makes
-  no semantic or T5.1.3-completion claim. Next: commit the zero-row registration
-  before creating any MIR fixture or implementation test.
+- **2026-07-20 — ADR-0287 accepts reproducible compiler-MIR capture before MIR
+  writes.** One ordinary source is bound to raw 2,304-byte
+  `rustc 1.97.0-nightly` stdout, exact compiler/LLVM identity and argv, and
+  source/output/provenance SHA-256 values. The checker authenticates bytes
+  before parsing, rejects duplicate keys/unsafe paths/argv, distinguishes
+  stable-CI content validity from exact-toolchain replay, and preserves prior
+  artifacts on compiler failure or nondeterminism. Eight adversarial tests,
+  Cargo integration, two byte-identical regeneration captures, required replay,
+  the complete verify suite, formatting, strict workspace Clippy/rustdoc, and
+  links pass. The fixture contains a real checked store-then-load shape but
+  capture makes no semantic or T5.1.3-completion claim. Next: preregister the
+  smallest checked MIR syntax/memory slice; do not extend the panic-oriented
+  line parser or infer write correctness from captured text alone.
 
 - **2026-07-20 — ADR-0286 accepts checked bounded LLVM byte memory.** The first
   T5.1.5 memory slice now binds exactly one `ptr` parameter to 1--256 initialized

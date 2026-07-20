@@ -135,3 +135,32 @@ way A3 does it — cross-check the reflected IR against execution, now symbolica
 over the input domain rather than exhaustively). Until that ADR lands, finite
 reflection (A2) is the robust real-Rust path and the MIR prototype (A3) is the
 de-risking evidence that the bigger investment will pay off.
+
+## Reproducible MIR fixture update (2026-07-20, ADR-0287)
+
+The prototype's hand-copied fixture boundary now has a checked capture seam.
+The committed package in `crates/axeyum-verify/tests/fixtures/mir/` binds an
+ordinary Rust source to raw `-Zunpretty=mir` stdout, exact rustc 1.97.0-nightly
+commit/LLVM identity, ordered argv, capture environment, and
+source/output/provenance SHA-256 values. It includes checked/clamped reads and a
+real store-then-load shape for the next semantic slice.
+
+Run the stable-CI/content gate through Cargo or directly:
+
+```sh
+cargo test -p axeyum-verify --test mir_fixture_capture --all-features
+python3 scripts/check-verify-mir-fixture.py --verify
+```
+
+When the registered compiler is installed, require byte-for-byte regeneration:
+
+```sh
+python3 scripts/check-verify-mir-fixture.py --require-replay
+```
+
+`--verify` reports `compiler_replay=unavailable` rather than fabricating replay
+success on another toolchain; source/output/provenance drift still fails through
+the committed hashes. This accepts capture provenance only. The MIR reflector
+remains prototype-grade and panic-oriented; non-panicking typed parsing,
+explicit access definedness, memory joins, and store/load proofs require the
+next ADR.
