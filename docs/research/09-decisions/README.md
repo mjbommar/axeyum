@@ -338,4 +338,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0280](adr-0280-preregister-structured-llvm-function-parser-slice.md) | Preregister a span-carrying, non-panicking LLVM function syntax parser and migrate parameter declarations before instruction semantics | accepted |
 | [0281](adr-0281-preregister-typed-llvm-scalar-definedness.md) | Preregister typed scalar LLVM instructions plus explicit poison/undefinedness predicates before migrating checked reflection | accepted |
 | [0282](adr-0282-preregister-typed-llvm-cfg-validation.md) | Preregister typed LLVM PHI/terminator syntax and whole-function CFG validation before checked graph execution | accepted |
-| [0283](adr-0283-preregister-checked-acyclic-llvm-cfg-execution.md) | Preregister bounded checked acyclic LLVM CFG execution with path-conditioned value and definedness joins | proposed |
+| [0283](adr-0283-preregister-checked-acyclic-llvm-cfg-execution.md) | Accept bounded checked acyclic LLVM CFG execution with path-conditioned value and definedness joins | accepted |

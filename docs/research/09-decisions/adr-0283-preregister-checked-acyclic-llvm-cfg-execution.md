@@ -1,9 +1,9 @@
 # ADR-0283: Preregister checked acyclic LLVM CFG execution
 
-Status: proposed
+Status: accepted
 Date: 2026-07-19
 
-Result state: preregistered; implementation has not started
+Result state: accepted; all frozen semantic and repository gates pass
 
 ## Context
 
@@ -135,6 +135,32 @@ Tests begin red and then require:
 
 The gates may become stricter before implementation observes any new fixture
 or external corpus. They may not be weakened after a failure.
+
+## Result
+
+Accepted. The two checked CFG entry points now execute ADR-0282's validated
+acyclic graph with branch-local environments, simultaneous predecessor-selected
+PHIs, path-conditioned immediate UB, and joined value/definedness results.
+Return widths and function-wide SSA uniqueness are checked before lowering;
+cycles and expansions above 4,096 block executions fail with stable errors.
+Reached `unreachable` paths contribute `defined=false` and only a deterministic
+same-sort placeholder value.
+
+Eleven focused CFG tests pass. They cover both compiler division diamonds,
+branch/select and PHI poison selection, unselected immediate UB, the corrected
+poison-dividend boundary, poison control with repeated targets, unreachable
+switch defaults, malformed SSA/return widths, cycles, the execution limit,
+straight-line parity, Boolean returns, 1,024 graph-noise inputs, and stable
+repeated term construction. Migrating all total fixtures in the cross-IR proof
+helper plus the explicit LLVM O0/O2 and unreachable-default proofs gives 16/16
+passing cross-IR tests. The migration exposed and fixed one additional checked
+constant bug: a negative LLVM integer such as `i32 -1` is now normalized to its
+declared width before Axeyum construction rather than rejected as an oversized
+128-bit value.
+
+The complete `axeyum-verify --all-features` test and doctest suite passes, as do
+workspace formatting, strict Clippy, strict rustdoc, and the documentation link
+checker. No memory, loop, pointer, call, or Glaurung-import scope was admitted.
 
 ## Consequences
 

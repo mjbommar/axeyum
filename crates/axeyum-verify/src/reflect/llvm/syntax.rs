@@ -3,8 +3,8 @@
 //! This module intentionally starts narrower than the LLVM language reference:
 //! it identifies one `define`, its typed/named parameters, blocks, scalar
 //! instructions, PHIs, and terminators. ADR-0281 adds checked straight-line
-//! definedness; ADR-0282 adds graph validation. Checked CFG execution remains a
-//! later T5.1.2 slice rather than inheriting compatibility semantics.
+//! definedness; ADR-0282 adds graph validation; ADR-0283 adds checked acyclic
+//! CFG execution rather than inheriting compatibility semantics.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -73,6 +73,8 @@ pub struct Function {
     pub name: String,
     /// Exact range of the global name token.
     pub name_span: SourceSpan,
+    /// Result type spelling from the definition header.
+    pub return_ty: String,
     /// Ordered function parameters.
     pub params: Vec<Parameter>,
     /// Ordered basic blocks.
@@ -216,6 +218,7 @@ pub fn parse_function(input: &str) -> Result<Function, ParseError> {
         TokenKind::GlobalName(name) => name.clone(),
         _ => unreachable!("name_index selects a global name"),
     };
+    let return_ty = function_return_type(input, &tokens, define_index, name_index)?;
 
     let open_params = tokens
         .iter()
@@ -258,6 +261,7 @@ pub fn parse_function(input: &str) -> Result<Function, ParseError> {
     Ok(Function {
         name,
         name_span: tokens[name_index].span,
+        return_ty,
         params,
         blocks,
         span: span(
@@ -266,6 +270,57 @@ pub fn parse_function(input: &str) -> Result<Function, ParseError> {
             tokens[close_body].span.end,
         ),
     })
+}
+
+fn function_return_type(
+    input: &str,
+    tokens: &[Token],
+    define_index: usize,
+    name_index: usize,
+) -> Result<String, ParseError> {
+    let end_index = name_index.checked_sub(1).ok_or_else(|| {
+        from_span(
+            ParseErrorKind::MalformedHeader,
+            tokens[define_index].span,
+            "function header has no return type",
+        )
+    })?;
+    match &tokens[end_index].kind {
+        TokenKind::Word(word) => Ok(word.clone()),
+        TokenKind::Punct(close @ ('}' | ']' | '>')) => {
+            let open = match close {
+                '}' => '{',
+                ']' => '[',
+                '>' => '<',
+                _ => unreachable!(),
+            };
+            let mut depth = 0usize;
+            for index in (define_index + 1..=end_index).rev() {
+                match tokens[index].kind {
+                    TokenKind::Punct(found) if found == *close => depth += 1,
+                    TokenKind::Punct(found) if found == open => {
+                        depth -= 1;
+                        if depth == 0 {
+                            return Ok(input[tokens[index].span.start..tokens[end_index].span.end]
+                                .trim()
+                                .to_owned());
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            Err(from_span(
+                ParseErrorKind::MalformedHeader,
+                tokens[end_index].span,
+                "function return type is not balanced",
+            ))
+        }
+        _ => Err(from_span(
+            ParseErrorKind::MalformedHeader,
+            tokens[end_index].span,
+            "function header has no supported return type spelling",
+        )),
+    }
 }
 
 fn function_name_index(tokens: &[Token], define_index: usize) -> Option<usize> {

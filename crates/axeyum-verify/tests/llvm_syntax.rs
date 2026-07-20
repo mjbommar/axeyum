@@ -31,6 +31,7 @@ fn parses_compiler_shaped_function_with_spans_and_nested_parameter_attributes() 
     let parsed = parse_function(COMPILER_SHAPED).expect("compiler-shaped function must parse");
 
     assert_eq!(parsed.name, "quoted fn");
+    assert_eq!(parsed.return_ty, "i32");
     assert_eq!(
         parsed
             .params
@@ -93,6 +94,7 @@ fn preserves_an_unlabeled_entry_block_without_inventing_a_source_label() {
         parse_function("define { i8, i8 } @pair(i8 %x) {\n  ret { i8, i8 } zeroinitializer\n}\n")
             .unwrap();
     assert_eq!(aggregate.name, "pair");
+    assert_eq!(aggregate.return_ty, "{ i8, i8 }");
 }
 
 #[test]

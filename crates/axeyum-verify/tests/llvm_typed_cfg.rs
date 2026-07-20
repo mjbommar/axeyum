@@ -33,6 +33,7 @@ fn shape(ll: &str) -> Vec<&'static str> {
 fn unmodified_clang_and_rustc_diamonds_converge_to_one_cfg_shape() {
     for ll in [CLANG_DIAMOND, RUSTC_DIAMOND] {
         let graph = cfg(ll);
+        assert_eq!(graph.return_width, 32);
         assert_eq!(shape(ll), ["cond-br", "br", "br", "ret"]);
         assert_eq!(
             graph

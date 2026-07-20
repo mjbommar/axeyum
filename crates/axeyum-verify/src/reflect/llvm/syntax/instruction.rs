@@ -194,6 +194,19 @@ pub enum ScalarInstructionKind {
     },
 }
 
+impl ScalarInstructionKind {
+    pub(crate) fn destination(&self) -> Option<&str> {
+        match self {
+            Self::Binary { dest, .. }
+            | Self::Icmp { dest, .. }
+            | Self::Select { dest, .. }
+            | Self::Cast { dest, .. }
+            | Self::Intrinsic { dest, .. } => Some(dest),
+            Self::Return { .. } => None,
+        }
+    }
+}
+
 /// Parse one source instruction from [`super::parse_function`] into the typed
 /// straight-line scalar subset.
 ///

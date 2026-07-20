@@ -121,6 +121,8 @@ pub struct CfgBlock {
 pub struct ScalarCfg {
     /// Function name.
     pub name: String,
+    /// Scalar integer return width declared by the function header.
+    pub return_width: u32,
     /// Function parameters.
     pub params: Vec<Parameter>,
     /// Entry block identity.
@@ -137,6 +139,7 @@ pub struct ScalarCfg {
 /// instructions or terminators, undefined labels, and invalid PHI predecessor
 /// sets. The function never panics for source input.
 pub fn parse_scalar_cfg(function: &Function) -> Result<ScalarCfg, ParseError> {
+    let return_width = scalar_width(&function.return_ty, function.name_span)?;
     let entry = function.blocks.first().map(block_id).ok_or_else(|| {
         from_span(
             ParseErrorKind::MalformedControlFlow,
@@ -204,14 +207,39 @@ pub fn parse_scalar_cfg(function: &Function) -> Result<ScalarCfg, ParseError> {
     }
     for block in &blocks {
         validate_phis(block)?;
+        if let TerminatorKind::Return { width, .. } = block.terminator.kind
+            && width != return_width
+        {
+            return Err(from_span(
+                ParseErrorKind::MalformedControlFlow,
+                block.terminator.span,
+                "return width does not match the function result width",
+            ));
+        }
     }
 
     Ok(ScalarCfg {
         name: function.name.clone(),
+        return_width,
         params: function.params.clone(),
         entry,
         blocks,
     })
+}
+
+fn scalar_width(ty: &str, span: SourceSpan) -> Result<u32, ParseError> {
+    let width = ty
+        .strip_prefix('i')
+        .and_then(|digits| digits.parse::<u32>().ok())
+        .filter(|width| (1..=128).contains(width))
+        .ok_or_else(|| {
+            from_span(
+                ParseErrorKind::UnsupportedInstruction,
+                span,
+                "scalar CFG requires an i1 through i128 function result",
+            )
+        })?;
+    Ok(width)
 }
 
 fn block_id(block: &super::Block) -> BlockId {

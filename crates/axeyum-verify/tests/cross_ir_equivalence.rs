@@ -16,6 +16,7 @@ use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
 use axeyum_verify::reflect::llvm::{
+    checked::reflect_cfg_into_checked,
     reflect_into, reflect_unary_into,
     syntax::{parse_function, parse_scalar_cfg},
 };
@@ -230,10 +231,18 @@ fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
     let x = arena.var(x_sym);
 
     let from_mir = reflect_mir_unary(&mut arena, x, mir);
-    let from_llvm = reflect_unary_into(&mut arena, x, ll);
+    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], ll)
+        .expect("LLVM fixture must satisfy checked CFG reflection");
+
+    let defined = prove(&mut arena, &[], from_llvm.defined, &SolverConfig::default())
+        .expect("solver should not hard-error");
+    assert!(
+        matches!(defined, ProofOutcome::Proved(_)),
+        "LLVM fixture must be defined for every {width}-bit input, got {defined:?}"
+    );
 
     // Symbolic: ∀x. mir(x) == llvm(x).
-    let eq = arena.eq(from_mir, from_llvm).unwrap();
+    let eq = arena.eq(from_mir, from_llvm.value).unwrap();
     let outcome =
         prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
     assert!(
@@ -249,7 +258,7 @@ fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
             Value::Bv { value, .. } => value,
             other => panic!("mir eval not BV: {other:?}"),
         };
-        let l = match eval(&arena, from_llvm, &asg).unwrap() {
+        let l = match eval(&arena, from_llvm.value, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("llvm eval not BV: {other:?}"),
         };
@@ -321,11 +330,13 @@ fn sel_llvm_br_phi_equals_llvm_select() {
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(32)).unwrap();
     let x = arena.var(x_sym);
-    let o0 = reflect_unary_into(&mut arena, x, SEL_BR_LL);
-    let o2 = reflect_unary_into(&mut arena, x, SEL_LL);
-    let eq = arena.eq(o0, o2).unwrap();
-    let outcome =
-        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    let o0 = reflect_cfg_into_checked(&mut arena, &[x], SEL_BR_LL).unwrap();
+    let o2 = reflect_cfg_into_checked(&mut arena, &[x], SEL_LL).unwrap();
+    let both_defined = arena.and(o0.defined, o2.defined).unwrap();
+    let eq = arena.eq(o0.value, o2.value).unwrap();
+    let obligation = arena.and(both_defined, eq).unwrap();
+    let outcome = prove(&mut arena, &[], obligation, &SolverConfig::default())
+        .expect("solver should not hard-error");
     assert!(
         matches!(outcome, ProofOutcome::Proved(_)),
         "O0 br+phi and O2 select forms of sel must be provably equal, got {outcome:?}"
@@ -386,11 +397,13 @@ fn lut_llvm_switch_equals_llvm_selects() {
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
-    let o0 = reflect_unary_into(&mut arena, x, LUT_SWITCH_LL);
-    let o2 = reflect_unary_into(&mut arena, x, LUT_LL);
-    let eq = arena.eq(o0, o2).unwrap();
-    let outcome =
-        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    let o0 = reflect_cfg_into_checked(&mut arena, &[x], LUT_SWITCH_LL).unwrap();
+    let o2 = reflect_cfg_into_checked(&mut arena, &[x], LUT_LL).unwrap();
+    let both_defined = arena.and(o0.defined, o2.defined).unwrap();
+    let eq = arena.eq(o0.value, o2.value).unwrap();
+    let obligation = arena.and(both_defined, eq).unwrap();
+    let outcome = prove(&mut arena, &[], obligation, &SolverConfig::default())
+        .expect("solver should not hard-error");
     assert!(
         matches!(outcome, ProofOutcome::Proved(_)),
         "switch+phi and select forms of lut must be provably equal, got {outcome:?}"
@@ -459,8 +472,9 @@ join:                                             ; preds = %r9, %r7, %r5
 
 /// With the compiler's invariant supplied as a HYPOTHESIS (`x < 3`), the total
 /// MIR and the unreachable-default LLVM are provably equal; without it they are
-/// refuted (at any x ≥ 3 the MIR returns 0, the don't-care LLVM does not) —
-/// both directions showing the `unreachable` semantics is modeled, not ignored.
+/// undefined outside that range. The checked reflector keeps the modular value
+/// separate from the executable-semantics obligation, so no claim is made about
+/// its deterministic placeholder on the `unreachable` path.
 #[test]
 fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
     validate_llvm_cfg(LUT3_UNREACH_LL);
@@ -468,8 +482,8 @@ fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
     let from_mir = reflect_mir_unary(&mut arena, x, LUT3_MIR);
-    let from_llvm = reflect_unary_into(&mut arena, x, LUT3_UNREACH_LL);
-    let eq = arena.eq(from_mir, from_llvm).unwrap();
+    let from_llvm = reflect_cfg_into_checked(&mut arena, &[x], LUT3_UNREACH_LL).unwrap();
+    let eq = arena.eq(from_mir, from_llvm.value).unwrap();
 
     let three = arena.bv_const(8, 3).unwrap();
     let hyp = arena.bv_ult(x, three).unwrap();
@@ -480,11 +494,23 @@ fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
         "under x<3 the two must be equal, got {under_hyp:?}"
     );
 
-    let unconditional =
-        prove(&mut arena, &[], eq, &SolverConfig::default()).expect("solver should not hard-error");
+    let defined_under_hyp = prove(
+        &mut arena,
+        &[hyp],
+        from_llvm.defined,
+        &SolverConfig::default(),
+    )
+    .expect("solver should not hard-error");
+    assert!(
+        matches!(defined_under_hyp, ProofOutcome::Proved(_)),
+        "under x<3 the LLVM CFG must be defined, got {defined_under_hyp:?}"
+    );
+
+    let unconditional = prove(&mut arena, &[], from_llvm.defined, &SolverConfig::default())
+        .expect("solver should not hard-error");
     assert!(
         matches!(unconditional, ProofOutcome::Disproved(_)),
-        "without the range hypothesis equality must be refuted, got {unconditional:?}"
+        "without the range hypothesis LLVM definedness must be refuted, got {unconditional:?}"
     );
 }
 

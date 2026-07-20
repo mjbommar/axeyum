@@ -1,15 +1,18 @@
 //! Definedness-aware reflection for the typed straight-line LLVM scalar slice.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::error::Error;
 use std::fmt;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 
 use super::syntax::{
-    BinaryOpcode, CastOpcode, Function, IntPredicate, Intrinsic, Operand, ParseError,
-    ScalarInstructionKind, SemanticFlag, SourceSpan, parse_function, parse_scalar_instruction,
+    BinaryOpcode, BlockId, CastOpcode, Function, IntPredicate, Intrinsic, Operand, ParseError,
+    ScalarCfg, ScalarInstructionKind, SemanticFlag, SourceSpan, TerminatorKind, parse_function,
+    parse_scalar_cfg, parse_scalar_instruction,
 };
+
+const MAX_ACYCLIC_BLOCK_EXECUTIONS: usize = 4_096;
 
 /// One reflected scalar value and the condition under which it is well-defined.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -35,6 +38,17 @@ pub struct CheckedReflected {
     pub result: DefinedValue,
 }
 
+/// A checked acyclic CFG reflection in its owned arena.
+#[derive(Debug)]
+pub struct CheckedCfgReflected {
+    /// Arena owning every term in the reflection.
+    pub arena: TermArena,
+    /// `(name, symbol, width)` for source parameters.
+    pub params: Vec<(String, SymbolId, u32)>,
+    /// Joined return value and the condition under which it is defined.
+    pub result: DefinedValue,
+}
+
 impl CheckedReflected {
     /// The checked SSA value for a named parameter.
     #[must_use]
@@ -50,6 +64,10 @@ pub enum ReflectErrorKind {
     Syntax,
     /// More than one basic block requires the later typed CFG slice.
     UnsupportedControlFlow,
+    /// The checked CFG contains a cycle and belongs on the transition-system path.
+    CyclicControlFlow,
+    /// Acyclic path expansion exceeds the fixed checked-execution bound.
+    ExecutionLimit,
     /// A parameter or constant width is outside the scalar `QF_BV` slice.
     UnsupportedWidth,
     /// Caller parameter count differs from the LLVM signature.
@@ -156,6 +174,433 @@ pub fn reflect_scalar_into_checked(
 ) -> Result<DefinedValue, ReflectError> {
     let function = parse_function(ll)?;
     reflect_parsed_into(arena, params, &function).map(|(result, _)| result)
+}
+
+/// Reflect one validated acyclic scalar CFG into a fresh arena.
+///
+/// The modular value on a path where `result.defined` is false is a
+/// deterministic placeholder, not an LLVM result. Callers must prove or assume
+/// definedness before using the value as executable semantics.
+///
+/// # Errors
+///
+/// Returns a located error for malformed syntax, duplicate/non-dominating SSA,
+/// cycles, excessive path expansion, parameter mismatch, or rejected IR
+/// construction.
+pub fn reflect_cfg_checked(ll: &str) -> Result<CheckedCfgReflected, ReflectError> {
+    let function = parse_function(ll)?;
+    let cfg = parse_scalar_cfg(&function)?;
+    let mut arena = TermArena::new();
+    let mut params = Vec::with_capacity(function.params.len());
+    let mut terms = Vec::with_capacity(function.params.len());
+    for parameter in &function.params {
+        let width = parse_width(&parameter.ty, parameter.span)?;
+        let symbol = arena
+            .declare(&parameter.name, sort_for_width(width))
+            .map_err(|error| ir_error(parameter.span, &error.to_string()))?;
+        params.push((parameter.name.clone(), symbol, width));
+        terms.push(arena.var(symbol));
+    }
+    let result = reflect_cfg_parsed_into(&mut arena, &terms, &function, &cfg)?;
+    Ok(CheckedCfgReflected {
+        arena,
+        params,
+        result,
+    })
+}
+
+/// Reflect one validated acyclic scalar CFG into an existing arena.
+///
+/// # Errors
+///
+/// Returns [`ReflectError`] when parsing, graph admission, parameter binding,
+/// or lowering fails.
+pub fn reflect_cfg_into_checked(
+    arena: &mut TermArena,
+    params: &[TermId],
+    ll: &str,
+) -> Result<DefinedValue, ReflectError> {
+    let function = parse_function(ll)?;
+    let cfg = parse_scalar_cfg(&function)?;
+    reflect_cfg_parsed_into(arena, params, &function, &cfg)
+}
+
+fn reflect_cfg_parsed_into(
+    arena: &mut TermArena,
+    params: &[TermId],
+    function: &Function,
+    cfg: &ScalarCfg,
+) -> Result<DefinedValue, ReflectError> {
+    if params.len() != function.params.len() {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::ParameterCount,
+            span: Some(function.span),
+            detail: format!(
+                "parameter count mismatch: LLVM declares {}, caller supplied {}",
+                function.params.len(),
+                params.len()
+            ),
+        });
+    }
+    validate_cfg_for_execution(function, cfg)?;
+
+    let always = arena.bool_const(true);
+    let mut env = HashMap::new();
+    for (parameter, term) in function.params.iter().zip(params.iter().copied()) {
+        let width = parse_width(&parameter.ty, parameter.span)?;
+        let expected = sort_for_width(width);
+        let actual = arena.sort_of(term);
+        if actual != expected {
+            return Err(ReflectError {
+                kind: ReflectErrorKind::ParameterSort,
+                span: Some(parameter.span),
+                detail: format!(
+                    "parameter `%{}` expects {expected:?}, caller supplied {actual:?}",
+                    parameter.name
+                ),
+            });
+        }
+        env.insert(
+            parameter.name.clone(),
+            DefinedValue {
+                value: term,
+                defined: always,
+                width,
+            },
+        );
+    }
+    execute_cfg_block(arena, cfg, &cfg.entry, None, env, always)
+}
+
+fn validate_cfg_for_execution(function: &Function, cfg: &ScalarCfg) -> Result<(), ReflectError> {
+    let mut definitions = BTreeMap::<String, SourceSpan>::new();
+    for parameter in &function.params {
+        insert_definition(&mut definitions, &parameter.name, parameter.span)?;
+    }
+    for block in &cfg.blocks {
+        for phi in &block.phis {
+            insert_definition(&mut definitions, &phi.dest, phi.span)?;
+        }
+        for instruction in &block.instructions {
+            let dest = instruction
+                .kind
+                .destination()
+                .expect("CFG body instructions are assignments");
+            insert_definition(&mut definitions, dest, instruction.span)?;
+        }
+    }
+
+    let mut colors = BTreeMap::<BlockId, u8>::new();
+    for block in &cfg.blocks {
+        detect_cycle(cfg, &block.id, &mut colors)?;
+    }
+
+    let mut reachable = BTreeSet::<BlockId>::new();
+    collect_reachable(cfg, &cfg.entry, &mut reachable);
+    if reachable.len() != cfg.blocks.len() {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedControlFlow,
+            span: Some(function.span),
+            detail: "checked CFG execution requires every block to be reachable from entry"
+                .to_owned(),
+        });
+    }
+
+    let executions = count_block_executions(cfg, &cfg.entry, 0)?;
+    if executions > MAX_ACYCLIC_BLOCK_EXECUTIONS {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::ExecutionLimit,
+            span: Some(function.span),
+            detail: format!(
+                "checked CFG expands to {executions} block executions; limit is {MAX_ACYCLIC_BLOCK_EXECUTIONS}"
+            ),
+        });
+    }
+    Ok(())
+}
+
+fn insert_definition(
+    definitions: &mut BTreeMap<String, SourceSpan>,
+    name: &str,
+    span: SourceSpan,
+) -> Result<(), ReflectError> {
+    if definitions.insert(name.to_owned(), span).is_some() {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::DuplicateValue,
+            span: Some(span),
+            detail: format!("duplicate SSA definition `%{name}`"),
+        });
+    }
+    Ok(())
+}
+
+fn detect_cycle(
+    cfg: &ScalarCfg,
+    block: &BlockId,
+    colors: &mut BTreeMap<BlockId, u8>,
+) -> Result<(), ReflectError> {
+    match colors.get(block).copied() {
+        Some(2) => return Ok(()),
+        Some(1) => {
+            let source = cfg_block(cfg, block);
+            return Err(ReflectError {
+                kind: ReflectErrorKind::CyclicControlFlow,
+                span: Some(source.terminator.span),
+                detail: "cyclic LLVM CFG belongs on the TransitionSystem path".to_owned(),
+            });
+        }
+        _ => {}
+    }
+    colors.insert(block.clone(), 1);
+    for successor in &cfg_block(cfg, block).successors {
+        detect_cycle(cfg, successor, colors)?;
+    }
+    colors.insert(block.clone(), 2);
+    Ok(())
+}
+
+fn collect_reachable(cfg: &ScalarCfg, block: &BlockId, seen: &mut BTreeSet<BlockId>) {
+    if !seen.insert(block.clone()) {
+        return;
+    }
+    for successor in &cfg_block(cfg, block).successors {
+        collect_reachable(cfg, successor, seen);
+    }
+}
+
+fn count_block_executions(
+    cfg: &ScalarCfg,
+    block: &BlockId,
+    accumulated: usize,
+) -> Result<usize, ReflectError> {
+    let next = accumulated.saturating_add(1);
+    if next > MAX_ACYCLIC_BLOCK_EXECUTIONS {
+        return Ok(next);
+    }
+    let source = cfg_block(cfg, block);
+    let mut count = next;
+    for target in terminator_targets(&source.terminator.kind) {
+        count = count_block_executions(cfg, target, count)?;
+        if count > MAX_ACYCLIC_BLOCK_EXECUTIONS {
+            break;
+        }
+    }
+    Ok(count)
+}
+
+fn terminator_targets(kind: &TerminatorKind) -> Vec<&BlockId> {
+    match kind {
+        TerminatorKind::Return { .. } | TerminatorKind::Unreachable => Vec::new(),
+        TerminatorKind::Branch { target } => vec![target],
+        TerminatorKind::CondBranch {
+            true_target,
+            false_target,
+            ..
+        } => vec![true_target, false_target],
+        TerminatorKind::Switch {
+            default_target,
+            cases,
+            ..
+        } => std::iter::once(default_target)
+            .chain(cases.iter().map(|case| &case.target))
+            .collect(),
+    }
+}
+
+fn cfg_block<'a>(cfg: &'a ScalarCfg, id: &BlockId) -> &'a super::syntax::CfgBlock {
+    cfg.blocks
+        .iter()
+        .find(|block| &block.id == id)
+        .expect("validated CFG target exists")
+}
+
+fn execute_cfg_block(
+    arena: &mut TermArena,
+    cfg: &ScalarCfg,
+    block_id: &BlockId,
+    predecessor: Option<&BlockId>,
+    mut env: HashMap<String, DefinedValue>,
+    mut execution_defined: TermId,
+) -> Result<DefinedValue, ReflectError> {
+    let block = cfg_block(cfg, block_id);
+    let before_phis = env.clone();
+    let mut phi_values = Vec::with_capacity(block.phis.len());
+    for phi in &block.phis {
+        let predecessor = predecessor.ok_or_else(|| ReflectError {
+            kind: ReflectErrorKind::UndefinedValue,
+            span: Some(phi.span),
+            detail: "entry block cannot select a PHI incoming".to_owned(),
+        })?;
+        let incoming = phi
+            .incomings
+            .iter()
+            .find(|incoming| &incoming.predecessor == predecessor)
+            .expect("validated PHI has one incoming for every predecessor");
+        let value = resolve(arena, &before_phis, &incoming.value, phi.width, phi.span)?;
+        phi_values.push((phi.dest.clone(), value));
+    }
+    for (dest, value) in phi_values {
+        env.insert(dest, value);
+    }
+
+    for instruction in &block.instructions {
+        let (dest, value, immediate) =
+            lower_assignment(arena, &env, instruction.kind.clone(), instruction.span)?;
+        execution_defined = bool_and(arena, execution_defined, immediate, instruction.span)?;
+        env.insert(dest, value);
+    }
+
+    execute_terminator(arena, cfg, block_id, block, env, execution_defined)
+}
+
+fn execute_terminator(
+    arena: &mut TermArena,
+    cfg: &ScalarCfg,
+    block_id: &BlockId,
+    block: &super::syntax::CfgBlock,
+    env: HashMap<String, DefinedValue>,
+    execution_defined: TermId,
+) -> Result<DefinedValue, ReflectError> {
+    match &block.terminator.kind {
+        TerminatorKind::Return { width, value } => {
+            let returned = resolve(arena, &env, value, *width, block.terminator.span)?;
+            let defined = bool_and(
+                arena,
+                execution_defined,
+                returned.defined,
+                block.terminator.span,
+            )?;
+            Ok(DefinedValue {
+                defined,
+                ..returned
+            })
+        }
+        TerminatorKind::Branch { target } => {
+            execute_cfg_block(arena, cfg, target, Some(block_id), env, execution_defined)
+        }
+        TerminatorKind::CondBranch {
+            condition,
+            true_target,
+            false_target,
+        } => {
+            let condition = resolve(arena, &env, condition, 1, block.terminator.span)?;
+            let when_true = execute_cfg_block(
+                arena,
+                cfg,
+                true_target,
+                Some(block_id),
+                env.clone(),
+                execution_defined,
+            )?;
+            let when_false = execute_cfg_block(
+                arena,
+                cfg,
+                false_target,
+                Some(block_id),
+                env,
+                execution_defined,
+            )?;
+            join_selected(
+                arena,
+                condition,
+                when_true,
+                when_false,
+                block.terminator.span,
+            )
+        }
+        TerminatorKind::Switch {
+            width,
+            value,
+            default_target,
+            cases,
+        } => {
+            let scrutinee = resolve(arena, &env, value, *width, block.terminator.span)?;
+            let mut joined = execute_cfg_block(
+                arena,
+                cfg,
+                default_target,
+                Some(block_id),
+                env.clone(),
+                execution_defined,
+            )?;
+            for case in cases.iter().rev() {
+                let case_result = execute_cfg_block(
+                    arena,
+                    cfg,
+                    &case.target,
+                    Some(block_id),
+                    env.clone(),
+                    execution_defined,
+                )?;
+                let constant = scalar_constant(arena, *width, case.value, block.terminator.span)?;
+                let matches = arena
+                    .eq(scrutinee.value, constant)
+                    .map_err(|error| ir_error(block.terminator.span, &error.to_string()))?;
+                let condition = DefinedValue {
+                    value: matches,
+                    defined: arena.bool_const(true),
+                    width: 1,
+                };
+                joined =
+                    join_selected(arena, condition, case_result, joined, block.terminator.span)?;
+            }
+            joined.defined = bool_and(
+                arena,
+                scrutinee.defined,
+                joined.defined,
+                block.terminator.span,
+            )?;
+            Ok(joined)
+        }
+        TerminatorKind::Unreachable => Ok(DefinedValue {
+            value: scalar_constant(arena, cfg.return_width, 0, block.terminator.span)?,
+            defined: arena.bool_const(false),
+            width: cfg.return_width,
+        }),
+    }
+}
+
+fn join_selected(
+    arena: &mut TermArena,
+    condition: DefinedValue,
+    when_true: DefinedValue,
+    when_false: DefinedValue,
+    span: SourceSpan,
+) -> Result<DefinedValue, ReflectError> {
+    if when_true.width != when_false.width {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::InvalidReturn,
+            span: Some(span),
+            detail: "control-flow arms return different widths".to_owned(),
+        });
+    }
+    let value = arena
+        .ite(condition.value, when_true.value, when_false.value)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let selected_defined = arena
+        .ite(condition.value, when_true.defined, when_false.defined)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let defined = bool_and(arena, condition.defined, selected_defined, span)?;
+    Ok(DefinedValue {
+        value,
+        defined,
+        width: when_true.width,
+    })
+}
+
+fn scalar_constant(
+    arena: &mut TermArena,
+    width: u32,
+    value: u128,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    if width == 1 {
+        Ok(arena.bool_const(value != 0))
+    } else {
+        arena
+            .bv_const(width, value)
+            .map_err(|error| ir_error(span, &error.to_string()))
+    }
 }
 
 fn reflect_parsed_into(
@@ -579,7 +1024,12 @@ fn constant(
                 detail: format!("constant `{raw}` does not fit i{width}"),
             });
         }
-        signed.cast_unsigned()
+        let twos_complement = signed.cast_unsigned();
+        if width == 128 {
+            twos_complement
+        } else {
+            twos_complement & ((1_u128 << width) - 1)
+        }
     } else {
         let unsigned = raw.parse::<u128>().map_err(|_| ReflectError {
             kind: ReflectErrorKind::WidthMismatch,
@@ -790,7 +1240,7 @@ fn binary_immediate_defined(
     let divisor_nonzero = arena
         .not(divisor_zero)
         .map_err(|error| ir_error(span, &error.to_string()))?;
-    let mut conditions = vec![lhs.defined, rhs.defined, divisor_nonzero];
+    let mut conditions = vec![rhs.defined, divisor_nonzero];
     if matches!(opcode, BinaryOpcode::Sdiv | BinaryOpcode::Srem) {
         let min = arena
             .bv_const(width, 1_u128 << (width - 1))
@@ -814,9 +1264,15 @@ fn binary_immediate_defined(
         let overflow = arena
             .and(lhs_min, rhs_minus_one)
             .map_err(|error| ir_error(span, &error.to_string()))?;
+        let no_overflow = arena
+            .not(overflow)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        let dividend_poison = arena
+            .not(lhs.defined)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
         conditions.push(
             arena
-                .not(overflow)
+                .or(dividend_poison, no_overflow)
                 .map_err(|error| ir_error(span, &error.to_string()))?,
         );
     }

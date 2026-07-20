@@ -322,17 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-19 — ADR-0283 preregisters checked acyclic LLVM CFG execution.**
-  The frozen slice reuses ADR-0282's graph, adds scalar return typing and global
-  SSA uniqueness, declines cycles and more than 4,096 root-to-block
-  executions, and joins value+definedness only along selected branch, switch,
-  and PHI edges. A reached `unreachable` is `defined=false`, never a dropped
-  arm. The pre-implementation audit also found one ADR-0281 correction now in
-  the gates: poison in an unused dividend/result is not immediate UB, while a
-  poison/zero divisor and signed division overflow remain immediate UB when
-  executed. No implementation or new fixture has been observed. Next: begin
-  the red gates and implement only this preregistered acyclic scalar slice.
-  Cycles, memory, LLIR hardening, and Glaurung lowering remain deferred.
+- **2026-07-19 — ADR-0283 accepts checked acyclic LLVM CFG execution.**
+  The checked APIs now reuse ADR-0282's graph, enforce scalar return typing and
+  function-wide SSA uniqueness, decline cycles and more than 4,096
+  root-to-block executions, and join value+definedness only along selected
+  branch, switch, and PHI edges. A reached `unreachable` is `defined=false`,
+  never a dropped arm. Eleven focused tests plus all 16 cross-IR proofs pass;
+  the proof migration makes definedness explicit and also caught/fixed negative
+  LLVM integer normalization (`i32 -1`). The full crate suite and repository
+  formatting/Clippy/rustdoc/link gates pass. Next: keep loops, memory, and
+  Glaurung lowering deferred; preregister the next smallest T5.1.2 semantic
+  prerequisite rather than widening the parser implicitly.
 
 - **2026-07-19 — ADR-0282 accepts typed LLVM CFG syntax and validation.**
   `parse_scalar_cfg` now gives `phi`, `br`, `switch`, `ret`, and `unreachable`
