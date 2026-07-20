@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ADR-0287 preregisters reproducible compiler-MIR capture before
+  MIR writes.** The current MIR tests embed hand-copied `-Zunpretty=mir` text
+  and the reflector still rejects by panic, so extending its byte-array model
+  first would put new semantics on an unauthenticated artifact boundary. The
+  zero-row gate freezes exact rustc identity/argv, raw compiler stdout,
+  source/output/provenance hashes, stable-CI drift checks, exact-toolchain byte
+  replay, tamper/wrong-toolchain failure classes, and no-partial-write
+  regeneration. The source will include a store/load shape solely to enable the
+  next separately preregistered checked-MIR-memory slice; capture itself makes
+  no semantic or T5.1.3-completion claim. Next: commit the zero-row registration
+  before creating any MIR fixture or implementation test.
+
 - **2026-07-20 — ADR-0286 accepts checked bounded LLVM byte memory.** The first
   T5.1.5 memory slice now binds exactly one `ptr` parameter to 1--256 initialized
   non-aliasing bytes, types and canonically renders `inbounds` byte GEP plus

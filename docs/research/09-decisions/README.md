@@ -342,3 +342,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0284](adr-0284-preregister-canonical-llvm-cfg-rendering.md) | Accept canonical scalar LLVM CFG rendering and exact quoted-identifier byte escapes | accepted |
 | [0285](adr-0285-preregister-flat-cnf-formula-arena.md) | Reject the flat CNF formula arena at its fixed per-instance storage gate before timing and restore production | accepted |
 | [0286](adr-0286-preregister-bounded-llvm-byte-memory.md) | Accept checked bounded initialized byte memory for typed LLVM GEP/load/store reflection | accepted |
+| [0287](adr-0287-preregister-reproducible-mir-capture.md) | Preregister exact compiler-MIR provenance, byte reproduction, and stale-fixture detection before extending MIR semantics | proposed |
