@@ -332,7 +332,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   analyzer returns `accepted=false` with the sole reason
   `cross_machine_population_missing`; `server0` is one real machine, not the
   required two. Raw observation, analysis, hashes, and the 2.082 GiB aggregate
-  peak are retained in the dated benchmark directory.
+  peak are retained in the dated benchmark directory. A deterministic 3.0 MiB
+  transfer bundle now carries exactly the eight registered objects; six focused
+  tests reject manifest, payload, registration, and object-set drift before
+  extracting to an absent second-machine root.
 
 - **2026-07-20 — ADR-0302 preregisters the missing run/machine/backend
   reproducibility gate without erasing model diversity.** The accepted v3
@@ -5393,7 +5396,8 @@ plan is built and committed on the current branch:
   backend-invariant finding/work identity over 32 executions. The analyzer
   correctly refuses the cross-machine claim until a second genuine machine
   contributes; model diversity remains visible rather than being normalized
-  away.
+  away. A separately tested deterministic pack/verify/unpack tool closes the
+  artifact-transfer gap without committing binaries or changing the protocol.
 
 - **2026-07-20 — Preregistered symbolic-CVE reproducibility as three explicit
   projections.** ADR-0302 and its versioned runner require two rotated Axeyum/

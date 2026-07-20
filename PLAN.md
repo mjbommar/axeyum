@@ -260,7 +260,11 @@ session state.
 >    digests remain. Its analysis is correctly `accepted=false` solely for
 >    `cross_machine_population_missing`. A second genuine machine is the next
 >    action; do not call containers or two labels cross-machine, or require
->    arbitrary SMT witnesses to be identical.
+>    arbitrary SMT witnesses to be identical. A deterministic, fail-closed
+>    eight-object transfer bundle now removes the machine-local artifact-root
+>    obstacle; verification binds its full path/hash set to both frozen
+>    registrations before extraction. The next step is collection on a genuinely
+>    different host, not more server0 sampling.
 > 8. [AXEYUM] **DONE (ADR-0227).** Executable Node and Chromium runs cover
 >    75,000 measured solves each with zero mismatch/trap; small-query medians are
 >    13--71 us. The release browser runtime is 1,801,662 bytes / 541,248 bytes
