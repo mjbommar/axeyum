@@ -68,7 +68,9 @@ SMT — almost axeyum's stack), **SMACK** (LLVM→Boogie→Z3), **KLEE** / **Cru
 | **L2** | single-block `.ll` SSA: binops / `icmp` / `select` / `umin`/`umax` / `ret` → BV term, proved symbolically | done |
 | **L3** | **the same function from C *and* Rust `.ll`**, proved equivalent through one reflector | done |
 | **L4** | structured function parser plus typed scalar instructions and explicit definedness | done (ADR-0280/0281) |
-| deferred | typed `br`/`switch`/`phi` CFG; memory (arrays/provenance); complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
+| **L5** | typed `phi`/terminators plus exact predecessor/successor validation on clang/rustc diamonds | done (ADR-0282) |
+| next | checked acyclic CFG execution with path-conditioned value and definedness joins | preregister |
+| deferred | cyclic CFG→`TransitionSystem`; memory (arrays/provenance); complete poison/`undef`/`freeze`; the heavy `llvm-sys` path behind an ADR | documented |
 
 Fixtures are *committed* `.ll` (captured once from clang/rustc) — **not** invoked
 at test time, so the tests are toolchain-independent (CI-robust), exactly as the

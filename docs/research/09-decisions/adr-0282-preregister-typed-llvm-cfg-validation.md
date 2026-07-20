@@ -3,7 +3,28 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: interface and tests frozen before implementation
+Result state: accepted; implementation and gates complete
+
+## Observed result
+
+The implementation adds the frozen `BlockId`, `Phi`, `Terminator`, `CfgBlock`,
+and `ScalarCfg` types plus `parse_scalar_cfg`. It groups multiline switches
+without losing exact source offsets, retains supported terminator metadata,
+normalizes signed switch constants, derives deterministic graph edges, and
+checks every target, entry, terminator, switch, and PHI predecessor invariant
+before returning a graph.
+
+Unmodified clang 21.1.8 and rustc 1.97-nightly division diamonds both assemble
+with `llvm-as` and converge to the expected conditional-branch/two-arm/PHI
+shape. Seven focused tests cover all admitted terminators, quoted and numeric
+labels, negative cases, repeated destinations, metadata, exact multiline error
+locations, malformed graph classes, and 4,096 deterministic noise inputs. All
+existing LLVM CFG equivalence fixtures now pass `parse_scalar_cfg` before the
+legacy proof path runs. The complete `axeyum-verify --all-features` suite,
+strict Clippy, strict rustdoc, formatting, and the link checker pass.
+
+No checked CFG executor was added. `unreachable` is represented explicitly but
+is not yet interpreted by a new proof API; ADR-0283 must freeze that semantics.
 
 ## Context
 

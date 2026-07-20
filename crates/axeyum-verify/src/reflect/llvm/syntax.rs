@@ -1,16 +1,22 @@
 //! Structured syntax boundary for textual LLVM functions.
 //!
 //! This module intentionally starts narrower than the LLVM language reference:
-//! it identifies one `define`, its typed/named parameters, blocks, and source
-//! instruction lines. Instruction semantics remain in the compatibility
-//! reflector while later T5.1.2 slices replace raw lines with typed nodes.
+//! it identifies one `define`, its typed/named parameters, blocks, scalar
+//! instructions, PHIs, and terminators. ADR-0281 adds checked straight-line
+//! definedness; ADR-0282 adds graph validation. Checked CFG execution remains a
+//! later T5.1.2 slice rather than inheriting compatibility semantics.
 
 use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 
+mod cfg;
 mod instruction;
 
+pub use cfg::{
+    BlockId, CfgBlock, Phi, PhiIncoming, ScalarCfg, SwitchCase, Terminator, TerminatorKind,
+    parse_scalar_cfg,
+};
 pub use instruction::{
     BinaryOpcode, CastOpcode, IntPredicate, Intrinsic, Operand, ScalarInstruction,
     ScalarInstructionKind, SemanticFlag, parse_scalar_instruction,
@@ -100,6 +106,12 @@ pub enum ParseErrorKind {
     UnsupportedInstruction,
     /// Syntax was recognized but its LLVM semantics are not modeled by the slice.
     UnsupportedSemantics,
+    /// A branch, switch, terminator position, or graph invariant was malformed.
+    MalformedControlFlow,
+    /// A branch, switch, or PHI named a block outside the function.
+    UndefinedBlockLabel,
+    /// PHI placement or incoming predecessors did not match the CFG.
+    InvalidPhi,
 }
 
 /// Located syntax failure.

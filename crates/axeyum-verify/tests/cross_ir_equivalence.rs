@@ -15,7 +15,10 @@
 use axeyum_ir::{Assignment, Sort, TermArena, Value, eval};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
 
-use axeyum_verify::reflect::llvm::{reflect_into, reflect_unary_into};
+use axeyum_verify::reflect::llvm::{
+    reflect_into, reflect_unary_into,
+    syntax::{parse_function, parse_scalar_cfg},
+};
 use axeyum_verify::reflect::mir::{reflect_mir_into, reflect_mir_unary};
 use axeyum_verify::reflect::oracle::DiffFuzz;
 
@@ -221,6 +224,7 @@ join:                                             ; preds = %ret7, %ret5, %other
 /// Prove `mir(f) == llvm(f)` for all inputs, and separately exhaustively/fuzz the
 /// two reflected terms agree — belt and suspenders across proof and execution.
 fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
+    validate_llvm_cfg(ll);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(width)).unwrap();
     let x = arena.var(x_sym);
@@ -251,6 +255,11 @@ fn assert_equivalent(width: u32, mir: &str, ll: &str, samples: &[u128]) {
         };
         assert_eq!(m, l, "mir/llvm disagree at x={v}");
     }
+}
+
+fn validate_llvm_cfg(ll: &str) {
+    let function = parse_function(ll).expect("LLVM fixture must have structured function syntax");
+    parse_scalar_cfg(&function).expect("LLVM fixture must satisfy the typed scalar CFG contract");
 }
 
 /// `masked`: straight-line MIR `BitAnd`/`BitOr` == LLVM `and`/`or`, for all `u32`.
@@ -307,6 +316,8 @@ fn sel_mir_diamond_equals_llvm_br_phi() {
 /// pipeline (translation-validation *within* LLVM, à la Alive2, on our stack).
 #[test]
 fn sel_llvm_br_phi_equals_llvm_select() {
+    validate_llvm_cfg(SEL_BR_LL);
+    validate_llvm_cfg(SEL_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(32)).unwrap();
     let x = arena.var(x_sym);
@@ -370,6 +381,8 @@ fn lut_mir_switchint_equals_llvm_switch() {
 /// `select` form, for all u8 — switch elimination validated within LLVM.
 #[test]
 fn lut_llvm_switch_equals_llvm_selects() {
+    validate_llvm_cfg(LUT_SWITCH_LL);
+    validate_llvm_cfg(LUT_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
@@ -450,6 +463,7 @@ join:                                             ; preds = %r9, %r7, %r5
 /// both directions showing the `unreachable` semantics is modeled, not ignored.
 #[test]
 fn lut3_equivalence_holds_exactly_under_the_range_hypothesis() {
+    validate_llvm_cfg(LUT3_UNREACH_LL);
     let mut arena = TermArena::new();
     let x_sym = arena.declare("x", Sort::BitVec(8)).unwrap();
     let x = arena.var(x_sym);
