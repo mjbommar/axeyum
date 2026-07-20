@@ -2,6 +2,10 @@
 //! `axeyum-ir` term. Split out of `llvm_reflection.rs` so the LLVM front end, the
 //! loop/buffer reflectors, and the cross-IR equivalence suite all lower through
 //! one parser and one op vocabulary (`super::{binop, compare, width_of}`).
+
+/// Structured, span-carrying syntax for one textual LLVM function.
+pub mod syntax;
+
 use std::collections::HashMap;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
@@ -151,33 +155,11 @@ pub fn lower_rhs(
 /// # Panics
 /// Panics if the IR/token is malformed or uses an unsupported construct.
 pub fn param_decls(ll: &str) -> Vec<(String, u32)> {
-    let define = ll
-        .lines()
-        .map(str::trim)
-        .find(|l| l.starts_with("define"))
-        .expect("a `define` line");
-    // Parameter list is inside the parens *after* `@name` (not the `range(...)`).
-    let params_str = define
-        .split_once('@')
-        .expect("@name")
-        .1
-        .split_once('(')
-        .expect("param list")
-        .1
-        .split_once(')')
-        .expect("param list close")
-        .0;
-    params_str
-        .split(',')
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|arg| {
-            let toks: Vec<&str> = arg.split_whitespace().collect();
-            (
-                toks.last().unwrap().trim_start_matches('%').to_string(),
-                width_of(toks[0]),
-            )
-        })
+    syntax::parse_function(ll)
+        .unwrap_or_else(|error| panic!("invalid LLVM function: {error}"))
+        .params
+        .into_iter()
+        .map(|param| (param.name, width_of(&param.ty)))
         .collect()
 }
 

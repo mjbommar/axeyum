@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-07-19
 
-Result state: interface and tests frozen before implementation
+Result state: accepted; implementation and compatibility migration complete
 
 ## Context
 
@@ -69,6 +69,22 @@ raw instruction strings are already a full syntax tree. Subsequent slices can
 replace those strings one instruction family at a time and route checked
 reflection APIs through `Result`. Existing callers retain behavior until that
 migration is separately admitted.
+
+## Observed result
+
+The accepted implementation adds the frozen `reflect::llvm::syntax` boundary
+and migrates `param_decls` without changing its compatibility signature. The
+compiler-shaped, unlabeled-entry, malformed-input, duplicate-label,
+multiple-definition, determinism, and source-span gates pass. An additional
+fail-closed header case prevents a global call in the body from being mistaken
+for a missing function name, and 4,096 deterministic ASCII-noise inputs confirm
+that the public parser returns rather than panicking.
+
+All five parser tests and the complete `axeyum-verify --all-features` suite
+pass. Focused formatting, strict all-target/all-feature Clippy with
+`-D warnings`, and rustdoc with `-D warnings` also pass. Instruction records
+remain source text by design; typed instruction syntax and checked-reflection
+migration require a separately preregistered follow-up slice.
 
 ## Alternatives
 
