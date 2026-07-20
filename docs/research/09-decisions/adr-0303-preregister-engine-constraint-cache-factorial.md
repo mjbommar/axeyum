@@ -133,11 +133,11 @@ the six modes, inputs, capacities, soundness rules, or acceptance logic here.
 
 That freeze is now complete:
 
-- isolated Glaurung `8b53c5038b50f3b717ad59970830b0c9bf54cdb8`
+- isolated Glaurung `202786c2f78ab3f5eadcb8257d8d1fe1b24c6f2f`
   implements the cache, warm interaction, and v2 report against tracked-clean
   Axeyum `da24b016543d1843f25019eba3675228c853f892`;
 - the Axeyum-only release replay executable is
-  `fbde4ee8dfa6681a6d8068adfb8aa31a03d736c2ae998b952271b5bd760a0d84`;
+  `5e230ba779cc04578d4a09ee5162ea9bd300de0542f90c490033f5c8d65d92e1`;
 - Axeyum tooling commit `14834d2f3b7df1cd077988409a3216bfd8388041`
   supplies the fail-closed runner and analyzer; and
 - the exact 20 inputs, executable/libraries, scripts, six modes, environment,
@@ -145,8 +145,14 @@ That freeze is now complete:
   [zero-row registration](../../../bench-results/glaurung-engine-cache-factorial-20260720/registration.json).
 
 Read-only preflight accepts every registered identity without invoking the
-replay executable. Seventeen focused producer tests and seven tooling tests
-pass. These are implementation and protocol facts, not timing observations.
+replay executable. Eighteen focused producer tests and seven tooling tests
+pass. The first cold-off pilot failed before report publication: replaying
+source owner-share events had mutated the warm serial-lease tracker even though
+cold `close_warm_path` correctly did nothing, leaving one owner and 71
+references at the terminal gate. The rejected artifact is retained, and a
+red/green test now makes owner-lease mutation conditional on a warm mode while
+preserving source event counts. These are implementation and protocol facts,
+not timing observations.
 
 ### Required telemetry
 
@@ -207,11 +213,12 @@ authorize a general speed headline.
 ## Zero-row boundary
 
 The cache implementation, registration, runner, and analyzer now exist and are
-committed, so the preregistered experiment is executable. No real trace has yet
-been replayed through any cache mode: timing rows, ratios, confidence intervals,
-and driver conclusions remain empty. The only observed workload result remains
-the disclosed read-only structural opportunity artifact. Unit fixtures exercise
-semantics, counters, and fail-closed analysis without becoming benchmark rows.
+committed, so the preregistered experiment is executable. One attempted real
+trace process failed its terminal-state gate and emitted no report. Therefore
+timing rows, ratios, confidence intervals, and driver conclusions remain empty.
+The only accepted workload result remains the disclosed read-only structural
+opportunity artifact. Unit fixtures exercise semantics, counters, and
+fail-closed analysis without becoming benchmark rows.
 
 ## Alternatives
 

@@ -9,6 +9,8 @@ runner/analyzer hashes, environment, cache bounds, cgroup, CPU, process order,
 and statistical method.
 
 There are **zero result rows** here. `--preflight-only` may validate the frozen
-inputs without invoking the replay executable. The 120 fresh replay processes
-remain unauthorized until this registration and the corresponding PLAN/STATUS
-update are committed and pushed.
+inputs without invoking the replay executable. The first cold-off process under
+the initial freeze failed its terminal owner-state gate and published no report;
+the retained pilot and tested lifecycle correction are disclosed in the updated
+registration. The corrected 120 fresh replay processes remain unauthorized
+until that update is committed and pushed.

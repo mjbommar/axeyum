@@ -6,7 +6,7 @@
     "glaurung": {
       "repository": "https://github.com/mjbommar/glaurung.git",
       "branch": "codex/adr0303-engine-cache-factorial",
-      "revision": "8b53c5038b50f3b717ad59970830b0c9bf54cdb8"
+      "revision": "202786c2f78ab3f5eadcb8257d8d1fe1b24c6f2f"
     },
     "axeyum": {
       "repository": "https://github.com/mjbommar/axeyum.git",
@@ -25,7 +25,7 @@
   },
   "executable": {
     "path": "/home/mjbommar/.cache/codex/glaurung-adr0303-target/release/examples/ordered_native_replay",
-    "sha256": "fbde4ee8dfa6681a6d8068adfb8aa31a03d736c2ae998b952271b5bd760a0d84",
+    "sha256": "5e230ba779cc04578d4a09ee5162ea9bd300de0542f90c490033f5c8d65d92e1",
     "build_command": "CARGO_BUILD_JOBS=1 CARGO_PROFILE_RELEASE_DEBUG=0 CARGO_INCREMENTAL=0 CARGO_TARGET_DIR=/home/mjbommar/.cache/codex/glaurung-adr0303-target cargo build --release --example ordered_native_replay --no-default-features --features solver-axeyum --jobs 1",
     "toolchain": "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
     "features": [
@@ -128,6 +128,15 @@
   ],
   "observations": {
     "campaign_paths": [],
+    "rejected_pilots": [
+      {
+        "path": "/nas4/data/workspace-infosec/.axeyum-engine-cache-factorial-20260720.EpQaLa",
+        "successful_reports": 0,
+        "failed_run": "cold-off--DptfDevGen--r1",
+        "failure": "cold mode replayed warm owner-share events but close_warm_path was correctly inert, leaving one serial owner and 71 references at the terminal gate",
+        "correction_revision": "202786c2f78ab3f5eadcb8257d8d1fe1b24c6f2f"
+      }
+    ],
     "timing_rows": 0,
     "ratios": [],
     "confidence_intervals": [],

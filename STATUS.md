@@ -335,17 +335,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   off/exact/implication crossed with cold/warm Axeyum in separate fixed-stream
   processes, with a 4,096-entry multi-resource LRU, replay-checked SAT hits,
   monotone UNSAT reuse, complete stage/resource telemetry, and a bootstrap/CV
-  additivity gate. Isolated Glaurung `8b53c50` now implements strict exact and
+  additivity gate. Isolated Glaurung `202786c` now implements strict exact and
   monotone structural reuse, full-width SAT-model replay, deterministic bounded
-  eviction, warm catch-up accounting, and v2 per-check telemetry. All 17 focused
+  eviction, warm catch-up accounting, and v2 per-check telemetry. All 18 focused
   Rust tests pass under one-job 4 GiB discipline. Axeyum `14834d2f` adds a
   fail-closed runner/analyzer with seven passing unit tests. The versioned
   registration binds the 20 immutable traces, original finding streams, four
   offline reports, opportunity result, clean Axeyum `da24b016`, the Axeyum-only
-  replay executable `fbde4ee8...0a0d84`, resolved libraries, six modes, fixed
+  replay executable `5e230ba7...65d92e1`, resolved libraries, six modes, fixed
   environment, 4 GiB cgroup, process order, and statistics. Read-only preflight
-  passes across every bound artifact. Zero cache timing rows still exist; the
-  next action is the exact committed 120-process campaign and unchanged analyzer.
+  passes across every bound artifact. One cold-off pilot failed closed before
+  report publication with one warm serial owner/71 references because cold mode
+  replayed warm owner-share events while its close path was correctly inert.
+  The artifact is retained; a red/green regression now keeps cold owner state
+  inert while still counting source lifecycle events. Zero cache timing rows
+  still exist; the next action is the corrected committed 120-process campaign
+  and unchanged analyzer.
 
 - **2026-07-20 — The first ADR-0302 machine closes run stability and backend
   finding parity, while cross-machine evidence remains open.** A clean detached
@@ -5417,13 +5422,14 @@ plan is built and committed on the current branch:
 ## Changelog
 
 - **2026-07-20 — Froze the executable engine-cache factorial at zero rows.**
-  Glaurung `8b53c50` implements the sound bounded cache and complete v2 replay
-  telemetry; Axeyum `14834d2f` provides the six-mode runner/analyzer. Seventeen
+  Glaurung `202786c` implements the sound bounded cache and complete v2 replay
+  telemetry; Axeyum `14834d2f` provides the six-mode runner/analyzer. Eighteen
   focused Rust tests and seven tooling tests pass. A clean-source one-job build
   produced the registered pure-Rust replay executable, and read-only preflight
   validates all 20 traces plus every source, artifact, tool, executable, library,
-  environment, CPU, and cgroup binding. No trace replay or timing ratio has yet
-  been observed.
+  environment, CPU, and cgroup binding. The first cold-off pilot produced no
+  report and failed its terminal owner gate; the retained failure selected a
+  tested cold-owner-lifecycle correction before any timing row or ratio existed.
 
 - **2026-07-20 — Preregistered the engine-cache/warm-state factorial.** ADR-0303
   freezes six fixed-stream modes, sound exact/SAT-superset/UNSAT-subset rules,
