@@ -1041,6 +1041,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     and 162-node/814-edge active graph (`da6971e4`) against 169 lock entries;
     independent replay and zero OOM deltas pass. It authorizes only a fresh
     capture-v2 ADR; no build, target byte, query, or scoreboard row exists.
+  - [ADR-0333](../09-decisions/adr-0333-preregister-tock-llvm-capture-v2.md)
+    preregisters that build boundary: recompute and mount the exact dedicated
+    cache read-only, structurally replay locked-offline metadata, then run the
+    unchanged two-root raw-module/LLVM-22 extraction/admission gates. Its thin
+    producer/tests/registration remain unbuilt; no official build/query exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
