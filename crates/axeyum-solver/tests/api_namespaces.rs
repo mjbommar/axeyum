@@ -222,3 +222,24 @@ fn verification_namespaces_preserve_root_aliases() {
 
     assert_same_function!(horn::solve_horn, axeyum_solver::solve_horn);
 }
+
+#[cfg(feature = "full")]
+#[test]
+fn optimization_namespaces_preserve_root_aliases() {
+    use axeyum_solver::optimization::{maxsat, models, objectives};
+
+    assert_same_type::<models::ModelMinimizeObjective, axeyum_solver::ModelMinimizeObjective>();
+    assert_same_type::<models::ModelMinimizeOutcome, axeyum_solver::ModelMinimizeOutcome>();
+    assert_same_type::<maxsat::MaxSatOutcome, axeyum_solver::MaxSatOutcome>();
+    assert_same_type::<objectives::OptOutcome, axeyum_solver::OptOutcome>();
+    assert_same_type::<objectives::LexOutcome, axeyum_solver::LexOutcome>();
+    assert_same_type::<objectives::ParetoOutcome, axeyum_solver::ParetoOutcome>();
+
+    assert_same_function!(models::minimize_model, axeyum_solver::minimize_model);
+    assert_same_function!(maxsat::max_satisfiable, axeyum_solver::max_satisfiable);
+    assert_same_function!(objectives::maximize_bv, axeyum_solver::maximize_bv);
+    assert_same_function!(
+        objectives::optimize_lia_pareto,
+        axeyum_solver::optimize_lia_pareto
+    );
+}

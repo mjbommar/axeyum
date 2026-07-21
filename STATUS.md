@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4e gives objective optimization a bounded canonical surface.**
+  The full-only `optimization::{models,maxsat,objectives}` facade groups 40
+  existing replay-checked model-minimization, MaxSAT, and scalar/multi-objective
+  contracts. Pbls remains a SAT decision backend, SMT-LIB optimization commands
+  stay with the textual front door, and `Solver` remains a compact consumer
+  facade. The all-feature documented root falls 211→172 items; the optimization
+  subtree contains 43 entries including its three grouping modules, while
+  minimal `qfbv` remains 26 with no optimization module. Historical aliases
+  remain callable and type-identical. Dedicated compatibility gates, all 891
+  solver-library tests, strict all-target clippy, and both warning-denied
+  rustdoc profiles pass inside the one-job 4 GiB profile. Next: census the
+  SMT-LIB textual front door independently, followed by interpolation and
+  general refutation utilities.
+
 - **2026-07-20 — R4d separates verification/application APIs from the solver
   root.** The full-only `verification` facade groups 66 existing BMC/
   k-induction, Horn, IMC, PDR, symbolic-execution, and tiny-BV reference-VM
@@ -5496,6 +5510,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0309 accepts the objective-optimization namespace.** Forty
+  public model-minimization, MaxSAT, and scalar/multi-objective entries now have
+  canonical paths under three full-only `optimization` submodules. Pbls,
+  textual SMT-LIB optimization commands, and `Solver` methods remain outside
+  the boundary. Warning-denied rustdoc measures 211→172 root items and 43
+  optimization-subtree entries; minimal `qfbv` remains at 26 with only `proofs`
+  exposed. Representative compatibility tests cover all three submodules, all
+  891 solver-library tests pass, and strict all-target clippy is clean under the
+  bounded profile. Next R4 work is the independent SMT-LIB census.
 
 - **2026-07-20 — ADR-0308 accepts the verification API namespace.** Sixty-six
   public transition-system/BMC, Horn, IMC, PDR, symbolic-execution, and tiny-BV

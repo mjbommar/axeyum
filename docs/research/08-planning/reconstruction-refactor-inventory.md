@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4a/R4b/R4c/R4d namespaces complete
+Status: active; R1, R2, and R3 complete; R4a--R4e namespaces complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -42,14 +42,15 @@ The post-R3 rustdoc root was measured before selecting a namespace. Counts are
 from warning-denied rustdoc in both supported solver profiles, not from source
 text or the older approximate review number.
 
-| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d |
-|---|---:|---:|---:|---:|---:|
-| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 |
-| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 |
-| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 |
-| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 |
-| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 |
-| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 |
+| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d | After R4e |
+|---|---:|---:|---:|---:|---:|---:|
+| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 | 172 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 | 115 |
+| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 | 105 |
+| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 | 70 |
+| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 | 72 |
+| entries organized in the `optimization` subtree | 0 | 0 | 0 | 0 | 0 | 43 |
 
 ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
 export plus full-profile Alethe, end-to-end certification, evidence,
@@ -74,7 +75,10 @@ contracts under `verification`: transition systems, Horn clauses, IMC, PDR,
 symbolic execution, and the tiny-BV reference VM. That application layer is
 not a solver theory or proof format. Its historical root paths remain callable,
 and the next census keeps optimization, SMT-LIB, interpolation, and general
-refutation utilities separate.
+refutation utilities separate. ADR-0309 then groups 40 model-minimization,
+MaxSAT, and objective-optimization entries under `optimization`. It deliberately
+excludes the Pbls satisfiability backend, SMT-LIB textual commands, and the
+consumer-facing `Solver` methods.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -273,7 +277,17 @@ before/after byte comparisons for their affected fixtures.
    compatibility gates, and both warning-denied rustdoc profiles pass. ADR-0308
    owns the boundary. Continue with independently measured optimization,
    SMT-LIB, interpolation, and general-refutation domains; do not sweep every
-   remaining item into one miscellaneous namespace.
+   remaining item into one miscellaneous namespace. R4e then groups 40 existing
+   model-minimization, MaxSAT, and scalar/multi-objective contracts under three
+   full-only `optimization` submodules. The all-feature root falls from 211 to
+   172 items and the new subtree contains 43 entries including the three
+   grouping modules. Minimal `qfbv` remains 26 and has no `optimization` module.
+   Pbls remains a SAT backend; textual optimization commands remain with
+   SMT-LIB; and `Solver` remains a compact consumer facade. Historical paths
+   stay callable and type-identical. All 891 library tests, strict all-target
+   clippy, compatibility gates, and both warning-denied rustdoc profiles pass.
+   ADR-0309 owns the boundary. Next, census the SMT-LIB textual front door
+   independently, followed by interpolation and general-refutation utilities.
 
 Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any

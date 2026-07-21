@@ -571,6 +571,47 @@ pub mod verification {
     }
 }
 
+/// Objective optimization and model-minimization APIs.
+///
+/// This full-profile facade groups replay-checked objective operations while
+/// leaving SAT decision backends and SMT-LIB text commands in their respective
+/// domains. Historical crate-root paths remain source-compatible aliases hidden
+/// from root rustdoc.
+#[cfg(feature = "full")]
+pub mod optimization {
+    /// Deterministic replay-checked model minimization.
+    pub mod models {
+        pub use crate::counterexample::{
+            ModelMinimizeObjective, ModelMinimizeOutcome, minimize_model,
+            minimize_model_objectives, minimize_model_objectives_with_config,
+            minimize_model_with_config,
+        };
+    }
+
+    /// `MaxSAT` and weighted-MaxSAT optimization.
+    pub mod maxsat {
+        pub use crate::maxsat::{
+            MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
+            max_satisfiable_weighted_model,
+        };
+    }
+
+    /// Scalar, lexicographic, box, and Pareto objective optimization.
+    pub mod objectives {
+        pub use crate::optimize::{
+            BvLexObjective, LexObjective, LexOutcome, OptOutcome, ParetoOutcome, maximize_bv,
+            maximize_bv_signed, maximize_bv_signed_with_config, maximize_bv_with_config,
+            maximize_lia, maximize_lia_with_config, minimize_bv, minimize_bv_signed,
+            minimize_bv_signed_with_config, minimize_bv_with_config, minimize_lia,
+            minimize_lia_with_config, optimize_bv_box, optimize_bv_box_with_config,
+            optimize_bv_lexicographic, optimize_bv_lexicographic_with_config, optimize_bv_pareto,
+            optimize_bv_pareto_with_config, optimize_lia_box, optimize_lia_box_with_config,
+            optimize_lia_lexicographic, optimize_lia_lexicographic_with_config,
+            optimize_lia_pareto, optimize_lia_pareto_with_config,
+        };
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -707,6 +748,7 @@ macro_rules! full_exports {
             combined_incremental_lia_vs_check, combined_lia_vs_cold_conjunction,
             combined_theory_lia_propagations,
         };
+        #[doc(hidden)]
         pub use counterexample::{
             ModelMinimizeObjective, ModelMinimizeOutcome, minimize_model,
             minimize_model_objectives, minimize_model_objectives_with_config,
@@ -810,6 +852,7 @@ macro_rules! full_exports {
         pub use lra_online::{LraTheory, check_qf_lra_online};
         #[doc(hidden)]
         pub use lra_theory::check_qf_lra_online_cdclt;
+        #[doc(hidden)]
         pub use maxsat::{
             MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
             max_satisfiable_weighted_model,
@@ -819,6 +862,7 @@ macro_rules! full_exports {
         pub use nra::check_with_nra;
         pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
         pub use nra_real_root::SosCertificate;
+        #[doc(hidden)]
         pub use optimize::{
             BvLexObjective, LexObjective, LexOutcome, OptOutcome, ParetoOutcome, maximize_bv,
             maximize_bv_signed, maximize_bv_signed_with_config, maximize_bv_with_config,

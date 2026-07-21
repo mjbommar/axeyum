@@ -363,3 +363,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0306](adr-0306-certificate-catalog-namespace.md) | Group specialized array and quantified certificate catalogs while retaining core model/theory APIs at the root | accepted |
 | [0307](adr-0307-theory-api-namespace.md) | Group direct theory contracts and procedures while retaining cross-cutting APIs in their own domains | accepted |
 | [0308](adr-0308-verification-api-namespace.md) | Group transition-system verification, symbolic execution, and reference-VM APIs without changing historical root paths | accepted |
+| [0309](adr-0309-optimization-api-namespace.md) | Group model minimization, MaxSAT, and objective optimization while retaining SAT backends and SMT-LIB commands in their own domains | accepted |

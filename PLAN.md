@@ -402,7 +402,18 @@ session state.
 >    warning-denied rustdoc profiles pass under the bounded profile. ADR-0308
 >    records the boundary. Continue with separate censuses for optimization,
 >    SMT-LIB, interpolation, and general refutation utilities; do not create a
->    miscellaneous catch-all or change solver behavior.
+>    miscellaneous catch-all or change solver behavior. R4e now groups 40
+>    existing model-minimization, MaxSAT, and scalar/multi-objective contracts
+>    under three full-only `optimization` submodules. The all-feature documented
+>    root falls 211→172 and the subtree contains 43 entries including its
+>    grouping modules; minimal `qfbv` remains 26 with no optimization surface.
+>    Pbls remains a SAT decision backend, SMT-LIB optimization commands remain
+>    with the textual front door, and `Solver` remains a compact consumer facade.
+>    Historical paths remain callable and type-identical; all 891 solver-library
+>    tests, strict clippy, compatibility gates, and both warning-denied rustdoc
+>    profiles pass under the bounded profile. ADR-0309 records the boundary.
+>    Next census SMT-LIB independently, followed by interpolation and general
+>    refutation utilities; continue to keep API cleanup behavior-neutral.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
