@@ -585,8 +585,10 @@ session state.
 >    4.887/6.273 s and carry nontrivial DIMACS/DRAT/LRAT artifacts. Total query
 >    time is 12.700 s, peak RSS 1,256,496 KiB, and OOM deltas are zero. The
 >    committed summary matches the ignored full result field-for-field. T5.5.3
->    is DONE. Commit/push the accepted result; next write T5.5.4's honest target
->    comparison. Do not rerun, tune, or convert this into a speed headline.
+>    is DONE. T5.5.4's committed case study now compares exact target validation,
+>    universal coverage, trust, artifact boundaries, and measured 50.745 s /
+>    1.20 GiB cost; it records that no Tock bug was found. Bounded P5.5 v1 is
+>    DONE. Do not rerun, tune, or convert this into a speed or whole-kernel claim.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

@@ -16,6 +16,12 @@
 > with no annotation burden, positioned against Kani — see [`PLAN.md`](PLAN.md)
 > and [`STATUS.md`](STATUS.md)); Track 5 is the trajectory above it.
 
+> **Measured external result (2026-07-21):** the bounded
+> [Tock integer-log case study](tock-log2-external-case-study.md) authenticates
+> an owning LLVM 22 build and records eight checked proofs plus six replayed
+> controls over two production helpers, with UNKNOWN=0 and DISAGREE=0. It found
+> no target bug and makes no whole-kernel or performance-lead claim.
+
 ## 1. The end goal (work backwards from here)
 
 > *Could `Rust + axeyum` become a natural, low-ceremony way to build a new OS or

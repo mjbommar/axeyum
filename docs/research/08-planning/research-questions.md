@@ -989,7 +989,7 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     reaches Cargo, but upstream build logic requires an unregistered network
     font input and emits no LLVM under frozen isolation. No extraction, parser,
     proof, or capture credit exists; a v4 relaxation is forbidden.
-- [ ] Can Axeyum reproducibly capture and verify Tock's full-width integer-log
+- [x] Can Axeyum reproducibly capture and verify Tock's full-width integer-log
   helpers from the exact owning LLVM 22 kernel build?
   - [ADR-0327](../09-decisions/adr-0327-preregister-tock-log2-reflection.md)
     accepts the one bounded frontend prerequisite for the two selected
@@ -1105,7 +1105,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     after the authenticated test-harness prefix; every v3 gate remains unchanged.
     Accepted v4 then records 8 dual-DRAT proofs, 6 replayed controls, UNKNOWN=0,
     DISAGREE=0, 12.700 s total query time, 1,256,496 KiB peak RSS, and zero OOM
-    deltas. T5.5.3 closes; T5.5.4 is the honest comparison/write-up, not a rerun.
+    deltas. T5.5.3 closes. The bounded
+    [Tock case study](../../consumer-track/verify/tock-log2-external-case-study.md)
+    compares coverage, trust, effort, and measured cost, records that no target
+    bug was found, and closes T5.5.4/P5.5 without a rerun or speed claim.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
