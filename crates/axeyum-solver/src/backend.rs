@@ -97,6 +97,22 @@ impl From<axeyum_ir::IrError> for SolverError {
     }
 }
 
+/// Cold bit-vector lowering strategy.
+///
+/// The two sparse modes are separate, off-by-default experiments. Encoding the
+/// selection as one enum makes simultaneous dense-demand and range-demand
+/// lowering unrepresentable.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum BitLoweringMode {
+    /// Lower every reachable bit with the ordinary eager pipeline.
+    #[default]
+    Eager,
+    /// Force ADR-0157's dense exact demand-sliced lowering.
+    DemandSliced,
+    /// Run ADR-0158's admission-controlled range-demand lowering.
+    RangeSliced(RangeDemandPolicy),
+}
+
 /// Per-query configuration.
 ///
 /// Backends are one-shot for now, so budgets are the cancellation
@@ -196,25 +212,17 @@ pub struct SolverConfig {
     /// has no profiling storage or counter updates. It never changes the CNF or
     /// verdict and is off by default (ADR-0259).
     pub profile_cnf_construction: bool,
-    /// Enables demand-driven cold-path bit lowering for the structurally local
-    /// operator subset defined by ADR-0157.
+    /// Selects the cold bit-vector lowering strategy.
     ///
-    /// The lowerer propagates live output-bit demand backward and materializes
-    /// only demanded term and symbol bits. Non-local operators remain explicit
-    /// conservative barriers, omitted model bits receive deterministic zero
-    /// completion, and every `sat` model is replayed against the original terms.
-    /// This experimental GQ4 lever is off by default. When enabled, its complete
-    /// structural-demand telemetry supersedes [`Self::profile_bit_demand`].
-    pub demand_bit_slicing: bool,
-    /// Enables ADR-0158's admission-controlled range-demand lowerer with the
-    /// supplied deterministic thresholds and work budget.
-    ///
-    /// This is a distinct experiment from [`Self::demand_bit_slicing`]. It
-    /// cheaply rejects unsuitable queries to the ordinary full lowerer, then
-    /// propagates bounded inline ranges and rechecks exact savings before sparse
-    /// materialization. `None` keeps the path disabled. Enabling both demand
-    /// modes is a configuration error rather than an implicit precedence rule.
-    pub range_demand_slicing: Option<RangeDemandPolicy>,
+    /// [`BitLoweringMode::DemandSliced`] propagates live output-bit demand
+    /// backward and materializes only demanded term and symbol bits.
+    /// [`BitLoweringMode::RangeSliced`] first applies deterministic admission
+    /// thresholds and a work budget, falling back to eager lowering when the
+    /// sparse plan is not worthwhile. Both modes retain deterministic omitted-bit
+    /// completion and mandatory original-term model replay. The default is
+    /// [`BitLoweringMode::Eager`]. A sparse mode's complete structural-demand
+    /// telemetry supersedes [`Self::profile_bit_demand`].
+    pub bit_lowering_mode: BitLoweringMode,
     /// Enables bounded positive internal AND-tree half flattening in the warm
     /// incremental CNF encoder (ADR-0173's selected GQ5 experiment).
     ///
@@ -292,8 +300,7 @@ impl Default for SolverConfig {
             preprocess: true,
             profile_bit_demand: false,
             profile_cnf_construction: false,
-            demand_bit_slicing: false,
-            range_demand_slicing: None,
+            bit_lowering_mode: BitLoweringMode::Eager,
             incremental_positive_and_flattening: false,
             xor_cdcl_fallback: false,
             lazy_bv: false,
@@ -401,20 +408,51 @@ impl SolverConfig {
         self
     }
 
-    /// Enables demand-driven cold-path bit lowering (GQ4, ADR-0157).
-    /// See [`SolverConfig::demand_bit_slicing`].
+    /// Selects one cold bit-lowering strategy directly.
+    #[must_use]
+    pub fn with_bit_lowering_mode(mut self, mode: BitLoweringMode) -> Self {
+        self.bit_lowering_mode = mode;
+        self
+    }
+
+    /// Enables or disables demand-driven cold-path bit lowering (GQ4,
+    /// ADR-0157).
+    ///
+    /// `true` selects [`BitLoweringMode::DemandSliced`]; `false` selects eager
+    /// lowering. When chained with another mode selector, the last call wins.
     #[must_use]
     pub fn with_demand_bit_slicing(mut self, enabled: bool) -> Self {
-        self.demand_bit_slicing = enabled;
+        self.bit_lowering_mode = if enabled {
+            BitLoweringMode::DemandSliced
+        } else {
+            BitLoweringMode::Eager
+        };
         self
     }
 
     /// Enables admission-controlled range-demand lowering (GQ4-v2, ADR-0158).
-    /// See [`SolverConfig::range_demand_slicing`].
+    ///
+    /// This selects [`BitLoweringMode::RangeSliced`]. When chained with another
+    /// mode selector, the last call wins.
     #[must_use]
     pub fn with_range_demand_slicing(mut self, policy: RangeDemandPolicy) -> Self {
-        self.range_demand_slicing = Some(policy);
+        self.bit_lowering_mode = BitLoweringMode::RangeSliced(policy);
         self
+    }
+
+    /// Whether dense demand-sliced lowering is selected.
+    #[must_use]
+    pub fn demand_bit_slicing(&self) -> bool {
+        self.bit_lowering_mode == BitLoweringMode::DemandSliced
+    }
+
+    /// The selected range-demand policy, if any.
+    #[must_use]
+    pub fn range_demand_slicing(&self) -> Option<RangeDemandPolicy> {
+        match self.bit_lowering_mode {
+            BitLoweringMode::RangeSliced(policy) => Some(policy),
+            BitLoweringMode::Eager | BitLoweringMode::DemandSliced => None,
+        }
     }
 
     /// Enables bounded positive internal AND-tree half flattening in the warm

@@ -350,3 +350,21 @@ Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any
 removal or breaking rename requires its own decision. Small reviewable commits
 are the artifact-readiness objective.
+
+## Post-R4 typed-configuration census
+
+The separate configuration audit found one explicit illegal state, not a reason
+to redesign every independent solver option. `demand_bit_slicing: bool` and
+`range_demand_slicing: Option<RangeDemandPolicy>` selected one cold-lowering
+axis while permitting both modes at once; the backend rejected that combination
+only at runtime. ADR-0314 replaces them with
+`BitLoweringMode::{Eager, DemandSliced, RangeSliced(policy)}` and retains the two
+historical fluent selectors with last-call-wins semantics.
+
+The other apparent boolean dependencies are either independent limits/options
+or documented harmless no-ops, not rejected states. They therefore remain out
+of scope. Benchmark flags, JSON keys, and hash bytes retain their historical
+identity, and the real Glaurung minimal-`qfbv` consumer compiles unchanged. The
+R4 table above remains a historical namespace-series measurement: ADR-0314
+intentionally adds one documented core enum (the minimal root now measures 27)
+rather than reopening namespace cleanup.

@@ -10,8 +10,8 @@ use std::time::Duration;
 use axeyum_ir::{Sort, TermArena, TermId, Value, eval};
 use axeyum_query::Query;
 use axeyum_solver::{
-    BvLayerStats, CheckResult, RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolverBackend,
-    SolverConfig, SolverError, UnknownKind,
+    BitLoweringMode, BvLayerStats, CheckResult, RangeDemandDecision, RangeDemandPolicy,
+    SatBvBackend, SolverBackend, SolverConfig, UnknownKind,
 };
 
 fn check(arena: &TermArena, assertions: &[TermId]) -> CheckResult {
@@ -610,17 +610,33 @@ fn admission_controlled_range_demand_reports_policy_and_fallback() {
 }
 
 #[test]
-fn demand_lowering_modes_cannot_be_combined() {
-    let mut arena = TermArena::new();
-    let x = arena.bv_var("x", 8).unwrap();
-    let formula = arena.eq(x, x).unwrap();
-    let config = SolverConfig::default()
-        .with_demand_bit_slicing(true)
-        .with_range_demand_slicing(RangeDemandPolicy::default());
-    assert!(matches!(
-        SatBvBackend::new().check(&arena, &[formula], &config),
-        Err(SolverError::Backend(detail)) if detail.contains("cannot both be enabled")
-    ));
+fn demand_lowering_mode_is_one_typed_choice() {
+    let policy = RangeDemandPolicy::default();
+    let eager = SolverConfig::default();
+    assert_eq!(eager.bit_lowering_mode, BitLoweringMode::Eager);
+    assert!(!eager.demand_bit_slicing());
+    assert_eq!(eager.range_demand_slicing(), None);
+
+    let dense = eager.clone().with_demand_bit_slicing(true);
+    assert_eq!(dense.bit_lowering_mode, BitLoweringMode::DemandSliced);
+    assert!(dense.demand_bit_slicing());
+    assert_eq!(dense.range_demand_slicing(), None);
+
+    let range = dense.with_range_demand_slicing(policy);
+    assert_eq!(
+        range.bit_lowering_mode,
+        BitLoweringMode::RangeSliced(policy)
+    );
+    assert!(!range.demand_bit_slicing());
+    assert_eq!(range.range_demand_slicing(), Some(policy));
+
+    let dense_again = range.with_demand_bit_slicing(true);
+    assert_eq!(dense_again.bit_lowering_mode, BitLoweringMode::DemandSliced);
+
+    let eager_again = dense_again
+        .with_demand_bit_slicing(false)
+        .with_bit_lowering_mode(BitLoweringMode::Eager);
+    assert_eq!(eager_again.bit_lowering_mode, BitLoweringMode::Eager);
 }
 
 #[cfg(feature = "z3")]

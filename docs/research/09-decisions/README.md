@@ -368,3 +368,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0311](adr-0311-interpolation-api-namespace.md) | Group common, QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA interpolation contracts without exposing internal verifiers | accepted |
 | [0312](adr-0312-general-refutation-certificate-namespace.md) | Complete the checked-refutation catalog across arithmetic, finite-domain, structural, and uninterpreted-function families | accepted |
 | [0313](adr-0313-constraint-builder-api-namespace.md) | Group distinct, cardinality, and pseudo-Boolean constraint builders and close the R4 namespace sweep | accepted |
+| [0314](adr-0314-typed-bit-lowering-mode.md) | Replace mutually exclusive demand-lowering fields with one typed bit-lowering mode while preserving benchmark identity | accepted |

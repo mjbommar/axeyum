@@ -51,7 +51,7 @@ mod run {
     };
     use axeyum_smtlib::{Script, ScriptCommand, SmtError, parse_script};
     use axeyum_solver::{
-        BitLoweringMemoRepresentation, BvLayerStats, Capabilities, CheckResult,
+        BitLoweringMemoRepresentation, BitLoweringMode, BvLayerStats, Capabilities, CheckResult,
         EndToEndUnsatOutcome, IncrementalBvSolver, IncrementalBvStats, LazyBvBackend, Model,
         RangeDemandDecision, RangeDemandPolicy, SatBvBackend, SolveStats, SolverBackend,
         SolverConfig, SolverError, UnknownKind, certify_qf_bv_unsat_end_to_end_within,
@@ -252,53 +252,59 @@ mod run {
         manifest_jobs: usize,
     }
 
+    impl Args {
+        fn for_dir(dir: PathBuf) -> Self {
+            Self {
+                dir,
+                timeout_ms: 5000,
+                limit: usize::MAX,
+                out: None,
+                corpus_source: None,
+                corpus_manifest: None,
+                corpus_tier: None,
+                generate_corpus_manifest: None,
+                logic: None,
+                families: Vec::new(),
+                rewrite: RewriteMode::Off,
+                rewrite_disabled_rules: Vec::new(),
+                backend: default_backend_kind(),
+                query_plan: QueryPlanMode::Full,
+                refine_rounds: DEFAULT_REFINE_ROUNDS,
+                refine_batch: 1,
+                refine_adaptive_batch: false,
+                refine_select: RefineSelectMode::First,
+                resource_limit: None,
+                node_budget: None,
+                cnf_variable_budget: None,
+                cnf_clause_budget: None,
+                cnf_inprocessing: false,
+                cnf_vivify: false,
+                native_cdcl: false,
+                prove_unsat: false,
+                certify_end_to_end_unsat: false,
+                end_to_end_deadline_ms: None,
+                end_to_end_process_timeout_ms: None,
+                preprocess: false,
+                profile_bit_demand: false,
+                profile_cnf_construction: false,
+                demand_bit_slicing: false,
+                range_demand_slicing: false,
+                range_demand_policy: RangeDemandPolicy::default(),
+                compare_z3: false,
+                require_in_process_z3: false,
+                require_reproducible_run: false,
+                require_deterministic_resources: false,
+                min_decided_percent: None,
+                jobs: 1,
+                manifest_jobs: 1,
+            }
+        }
+    }
+
     fn parse_args() -> Result<Args, String> {
         let mut args = std::env::args().skip(1);
         let dir = PathBuf::from(args.next().ok_or("usage: axeyum-bench <dir> [options]")?);
-        let mut parsed = Args {
-            dir,
-            timeout_ms: 5000,
-            limit: usize::MAX,
-            out: None,
-            corpus_source: None,
-            corpus_manifest: None,
-            corpus_tier: None,
-            generate_corpus_manifest: None,
-            logic: None,
-            families: Vec::new(),
-            rewrite: RewriteMode::Off,
-            rewrite_disabled_rules: Vec::new(),
-            backend: default_backend_kind(),
-            query_plan: QueryPlanMode::Full,
-            refine_rounds: DEFAULT_REFINE_ROUNDS,
-            refine_batch: 1,
-            refine_adaptive_batch: false,
-            refine_select: RefineSelectMode::First,
-            resource_limit: None,
-            node_budget: None,
-            cnf_variable_budget: None,
-            cnf_clause_budget: None,
-            cnf_inprocessing: false,
-            cnf_vivify: false,
-            native_cdcl: false,
-            prove_unsat: false,
-            certify_end_to_end_unsat: false,
-            end_to_end_deadline_ms: None,
-            end_to_end_process_timeout_ms: None,
-            preprocess: false,
-            profile_bit_demand: false,
-            profile_cnf_construction: false,
-            demand_bit_slicing: false,
-            range_demand_slicing: false,
-            range_demand_policy: RangeDemandPolicy::default(),
-            compare_z3: false,
-            require_in_process_z3: false,
-            require_reproducible_run: false,
-            require_deterministic_resources: false,
-            min_decided_percent: None,
-            jobs: 1,
-            manifest_jobs: 1,
-        };
+        let mut parsed = Args::for_dir(dir);
         while let Some(flag) = args.next() {
             parse_option(&mut parsed, &flag, &mut args)?;
         }
@@ -4636,10 +4642,13 @@ mod run {
             prove_unsat: args.prove_unsat,
             profile_bit_demand: args.profile_bit_demand,
             profile_cnf_construction: args.profile_cnf_construction,
-            demand_bit_slicing: args.demand_bit_slicing,
-            range_demand_slicing: args
-                .range_demand_slicing
-                .then_some(args.range_demand_policy),
+            bit_lowering_mode: if args.range_demand_slicing {
+                BitLoweringMode::RangeSliced(args.range_demand_policy)
+            } else if args.demand_bit_slicing {
+                BitLoweringMode::DemandSliced
+            } else {
+                BitLoweringMode::Eager
+            },
             ..SolverConfig::default()
         }
     }
@@ -7906,6 +7915,42 @@ mod run {
                 entry.as_object_mut().unwrap().remove("content_hash");
             }
             value
+        }
+
+        #[test]
+        fn benchmark_flags_map_to_one_typed_lowering_mode() {
+            let timeout = Duration::from_millis(1);
+            let eager = Args::for_dir(PathBuf::from("corpus"));
+            assert_eq!(
+                solver_config(&eager, timeout).bit_lowering_mode,
+                BitLoweringMode::Eager
+            );
+
+            let mut dense = Args::for_dir(PathBuf::from("corpus"));
+            dense.backend = BackendKind::SatBv;
+            dense.demand_bit_slicing = true;
+            assert_eq!(
+                solver_config(&dense, timeout).bit_lowering_mode,
+                BitLoweringMode::DemandSliced
+            );
+
+            let mut range = Args::for_dir(PathBuf::from("corpus"));
+            range.backend = BackendKind::SatBv;
+            range.range_demand_slicing = true;
+            range.range_demand_policy = RangeDemandPolicy {
+                min_term_bits_available: 17,
+                ..RangeDemandPolicy::default()
+            };
+            assert_eq!(
+                solver_config(&range, timeout).bit_lowering_mode,
+                BitLoweringMode::RangeSliced(range.range_demand_policy)
+            );
+
+            range.demand_bit_slicing = true;
+            assert_eq!(
+                validate_args(&range).unwrap_err(),
+                "`--range-demand-slicing` and `--demand-bit-slicing` are distinct experiments and cannot be combined"
+            );
         }
 
         #[test]

@@ -41,8 +41,8 @@ use axeyum_ir::{
 use axeyum_query::{Query, QueryPlan, QueryReplayFailure};
 
 use crate::backend::{
-    Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig, SolverError, UnknownKind,
-    UnknownReason,
+    BitLoweringMode, Capabilities, CheckResult, SolveStats, SolverBackend, SolverConfig,
+    SolverError, UnknownKind, UnknownReason,
 };
 use crate::model::Model;
 use crate::proof::UnsatProof;
@@ -77,12 +77,6 @@ impl SatBvBackend {
         config: &SolverConfig,
     ) -> Result<CheckResult, SolverError> {
         self.stats = None;
-        if config.demand_bit_slicing && config.range_demand_slicing.is_some() {
-            return Err(SolverError::Backend(
-                "demand_bit_slicing and range_demand_slicing are distinct experiments and cannot both be enabled"
-                    .to_owned(),
-            ));
-        }
         let deadline = config
             .timeout
             .and_then(|timeout| Instant::now().checked_add(timeout));
@@ -125,14 +119,17 @@ impl SatBvBackend {
         };
 
         let bit_blast_start = Instant::now();
-        let lowering_result = if let Some(policy) = config.range_demand_slicing {
-            lower_terms_range_demanded_with_deadline(arena, assertions, policy, deadline)
-        } else if config.demand_bit_slicing {
-            lower_terms_demanded_with_deadline(arena, assertions, deadline)
-        } else if config.profile_bit_demand {
-            lower_terms_with_deadline_profiled(arena, assertions, deadline)
-        } else {
-            lower_terms_with_deadline(arena, assertions, deadline)
+        let lowering_result = match config.bit_lowering_mode {
+            BitLoweringMode::RangeSliced(policy) => {
+                lower_terms_range_demanded_with_deadline(arena, assertions, policy, deadline)
+            }
+            BitLoweringMode::DemandSliced => {
+                lower_terms_demanded_with_deadline(arena, assertions, deadline)
+            }
+            BitLoweringMode::Eager if config.profile_bit_demand => {
+                lower_terms_with_deadline_profiled(arena, assertions, deadline)
+            }
+            BitLoweringMode::Eager => lower_terms_with_deadline(arena, assertions, deadline),
         };
         let lowering = match lowering_result {
             Ok(lowering) => lowering,

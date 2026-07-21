@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ADR-0314 makes the only censused invalid `SolverConfig` state
+  unrepresentable.** `BitLoweringMode` now selects eager, dense-demand, or
+  admission-controlled range-demand cold lowering; the old fluent selectors
+  remain and replace one another with last-call-wins semantics. The backend no
+  longer needs a runtime conflicting-mode error. Benchmark flags, JSON keys,
+  policy payload, and configuration-hash bytes remain unchanged, and the exact
+  Glaurung minimal-`qfbv` consumer compiles without source changes. All 891
+  solver library tests, 34 SAT/BV integration tests, 62 benchmark tests across
+  its binaries/integrations, strict Clippy, and both strict rustdoc profiles
+  pass under the 4 GiB one-job cap. The census does not justify grouping the
+  remaining independent options or harmless no-ops. Next: re-rank the remaining
+  item-10 module/duplication work from measured reviewer cost; do not reopen R4
+  or infer a broader config project.
+
 - **2026-07-20 — R4i gives constraint builders one final bounded namespace and
   closes R4.** The full-only `constraints` facade groups 12 existing `distinct`,
   cardinality, and pseudo-Boolean term constructors under a 14-entry subtree.
@@ -5564,6 +5578,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0314 accepts a typed cold bit-lowering mode.** The public
+  `SolverConfig` can no longer represent simultaneous dense-demand and
+  range-demand lowering. Existing builders remain compatible, default eager
+  behavior and both experimental algorithms are unchanged, and benchmark
+  artifact identity is preserved. The exact Glaurung production profile plus
+  the full/minimal Axeyum gates pass under the bounded OOM-safe profile.
 
 - **2026-07-20 — ADR-0313 accepts the constraint-builder namespace and closes
   R4.** Twelve existing `distinct`, cardinality, and pseudo-Boolean builders now

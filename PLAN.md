@@ -459,7 +459,18 @@ session state.
 >    records the boundary and closes R4. Further namespace work requires new
 >    consumer evidence. Continue item 10 with the separate typed-configuration
 >    audit; do not combine behavior-bearing configuration changes with this
->    documentation-only series.
+>    documentation-only series. That audit is now complete in ADR-0314. The one
+>    real illegal state -- simultaneous dense-demand and range-demand cold
+>    lowering -- is unrepresentable as
+>    `BitLoweringMode::{Eager, DemandSliced, RangeSliced(policy)}`. Existing
+>    fluent selectors remain with explicit last-call-wins semantics; the
+>    benchmark keeps its historical CLI flags, JSON keys, and hash bytes, and
+>    the actual Glaurung minimal-`qfbv` consumer compiles unchanged. The rest of
+>    the configuration census found independent options or documented harmless
+>    no-ops, so do not broaden this into a boolean-grouping sweep. This closes
+>    the Axeyum half of reviewer item 8. Next re-rank the remaining item-10
+>    artifact work from measured duplication/module review cost rather than
+>    reopening R4 or changing solver policy without a separate ADR.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
