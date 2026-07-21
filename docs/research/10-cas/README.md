@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 397 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 402 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -35,7 +35,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Geometry | `geometry`: `Point`/`Line`/`Circle` — distance, midpoint, slope, collinear, triangle area, line ops, circumcircle | exact |
 | Vector calculus | `gradient`, `jacobian`, `divergence`, `curl`, `hessian`, `laplacian` (certified partials); `dot`, `cross`, `norm` | ✓ |
 | Special polys | `orthopoly`: `chebyshev_t`/`chebyshev_u`/`legendre`/`hermite`/`laguerre` (three-term recurrences) | ✓ (vs closed forms) |
-| Combinatorics | `combinatorics`: `bernoulli`, `euler_number`, `stirling_first`/`second`, `bell`, `partition_count`, `catalan`, `fibonacci`/`lucas`, `harmonic`/`generalized_harmonic`, `derangements`, `double_factorial`, `multinomial`; `bernoulli_polynomial`/`euler_polynomial`; `finite_product` (∏) | exact |
+| Combinatorics | `combinatorics`: `bernoulli`, `euler_number`, `stirling_first`/`second`, `bell`, `partition_count`, `catalan`, `fibonacci`/`lucas`, `harmonic`/`generalized_harmonic`, `derangements`, `double_factorial`, `multinomial`, `pell`/`jacobsthal`/`tribonacci`/`motzkin`, `eulerian`/`narayana` (triangles); `bernoulli_polynomial`/`euler_polynomial`; `finite_product` (∏) | exact |
 | Logs / abs | `expand_log`, `logcombine` (product/quotient/power rules), `Abs` head (`|·|`, `√(x²)→|x|`) | compute / exact |
 | Statistics | `stats`: mean/median/mode/variance/covariance; `standard_deviation`, `correlation` (surd-simplified) | exact |
 | Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
