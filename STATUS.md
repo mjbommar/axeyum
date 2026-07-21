@@ -322,18 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0339 preregisters deterministic replay-checked witness
-  corpora (T5.4.2).** After bounded P5.5 closes, the next unblocked Track 5 cell
-  composes existing typed counterexamples and reproduction renderers without
-  changing solver semantics. Three real classes—panic, normally returning
-  postcondition violation, and raw equivalence refutation—must replay before a
-  lexically ordered canonical JSON corpus and generated Rust tests exist. The
-  generated source must be committed, included, compiled, executed, and
-  byte-reproduced. The preimplementation audit also finds signed width-128
-  witnesses currently lose their sign; exact `i128::MIN` scalar/array replay is
-  a prerequisite. Commit/push this zero-result ADR before production code.
-  T5.4.3/4, symbolic memory, performance, and automatic filesystem/git writes
-  remain out of scope.
+- **2026-07-21 — ADR-0339 accepts deterministic replay-checked witness corpora
+  (T5.4.2 DONE).** Full-width signed interpretation and all native signed/
+  unsigned scalar/array boundary literals are regression-owned. Typed,
+  fail-closed admission replay-checks a macro overflow, normally returning
+  source-postcondition violation, and raw QF_BV equivalence refutation before
+  producing a lexical corpus. Exact committed artifacts are 1,404-byte JSON
+  (`fa44878a...6575`) and 712-byte generated Rust (`7e161d41...0bef`); reverse
+  insertion reproduces both, a witness mutation changes both, and the exact
+  generated tests compile and execute. The complete package, strict Clippy,
+  warning-denied rustdoc, and current 129-test/12-binary reflection gate pass
+  inside the 4 GiB cap. Next: preregister T5.4.3's honest `Unknown` -> directed-
+  fuzz handoff. T5.4.4 coverage accounting, symbolic memory, performance, and
+  automatic filesystem/git writes remain out of scope.
 
 - **2026-07-21 — ADR-0334 accepts authenticated Tock capture v3.** Pushed
   producer `b2ad2641` corrects v2's merged-registration replay error, then
@@ -6136,10 +6137,18 @@ plan is built and committed on the current branch:
 | ↳ P5.1 measured gate | Glaurung LLVM loop semantic census | DONE — **ADR-0294 accepted:** disclosed first-artifact rejection followed by exact corrected reproduction; 0/12 reach loop reflection, and diverse first causes select a T5.1.2 audit lane but no code |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
-| P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
+| P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable deterministic differential-fuzz harness; cross-IR and checksum suites use it with DISAGREE=0. **T5.4.2 DONE (`873c671e`, `75971d1d`, `1efa7f25`; ADR-0339):** three replay-checked countermodel classes produce exact canonical JSON and compiled generated regressions; native full-width scalar/array rendering, ordering, fail-closed errors, and mutation teeth are tested. Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-21 — Closed T5.4.2 with deterministic replay-checked witness
+  artifacts.** Accepted ADR-0339 after fixing full-width signed replay, adding a
+  typed fail-closed corpus API, and committing one three-class corpus plus its
+  exact generated Rust tests. The JSON/source identities, reverse insertion,
+  mutation teeth, full package, strict docs/lints, and 129-test semantics gate
+  pass under the cap. The next cell is separately preregistered T5.4.3, not an
+  automatic-write, coverage, performance, or symbolic-memory expansion.
 
 - **2026-07-21 — Closed bounded P5.5 with the honest Tock comparison.** The
   committed case study contrasts the pinned target's concise source/build

@@ -162,3 +162,141 @@ fn renders_signed_i128_boundaries_for_scalars_and_arrays() {
         "got: {src}"
     );
 }
+
+fn assert_signed_boundaries(
+    width: u32,
+    sign: u128,
+    all_ones: u128,
+    min_magnitude: &str,
+    maximum: &str,
+) {
+    let inputs = vec![
+        Witness::Int {
+            name: "signed_min".into(),
+            width,
+            signed: true,
+            bits: sign,
+        },
+        Witness::Int {
+            name: "signed_max".into(),
+            width,
+            signed: true,
+            bits: sign - 1,
+        },
+        Witness::Int {
+            name: "signed_zero".into(),
+            width,
+            signed: true,
+            bits: 0,
+        },
+        Witness::Int {
+            name: "signed_ones".into(),
+            width,
+            signed: true,
+            bits: all_ones,
+        },
+        Witness::Array {
+            name: "signed_edges".into(),
+            width,
+            signed: true,
+            ints: vec![sign, sign - 1, 0, all_ones],
+        },
+    ];
+    let src = render_counterexample_test(
+        "signed_edges_repro",
+        "consume",
+        "signed_min, signed_max, signed_zero, signed_ones, signed_edges",
+        "signed boundaries",
+        &inputs,
+    );
+    let ty = format!("i{width}");
+    assert!(src.contains(&format!("let signed_min: {ty} = -{min_magnitude}{ty};")));
+    assert!(src.contains(&format!("let signed_max: {ty} = {maximum}{ty};")));
+    assert!(src.contains(&format!("let signed_zero: {ty} = 0{ty};")));
+    assert!(src.contains(&format!("let signed_ones: {ty} = -1{ty};")));
+    assert!(src.contains(&format!(
+        "let signed_edges: [{ty}; 4] = [-{min_magnitude}{ty}, {maximum}{ty}, 0{ty}, -1{ty}];"
+    )));
+}
+
+fn assert_unsigned_boundaries(width: u32, all_ones: u128, maximum: &str) {
+    let inputs = vec![
+        Witness::Int {
+            name: "unsigned_min".into(),
+            width,
+            signed: false,
+            bits: 0,
+        },
+        Witness::Int {
+            name: "unsigned_max".into(),
+            width,
+            signed: false,
+            bits: all_ones,
+        },
+        Witness::Int {
+            name: "unsigned_zero".into(),
+            width,
+            signed: false,
+            bits: 0,
+        },
+        Witness::Int {
+            name: "unsigned_ones".into(),
+            width,
+            signed: false,
+            bits: all_ones,
+        },
+        Witness::Array {
+            name: "unsigned_edges".into(),
+            width,
+            signed: false,
+            ints: vec![0, all_ones, 0, all_ones],
+        },
+    ];
+    let src = render_counterexample_test(
+        "unsigned_edges_repro",
+        "consume",
+        "unsigned_min, unsigned_max, unsigned_zero, unsigned_ones, unsigned_edges",
+        "unsigned boundaries",
+        &inputs,
+    );
+    let ty = format!("u{width}");
+    assert!(src.contains(&format!("let unsigned_min: {ty} = 0{ty};")));
+    assert!(src.contains(&format!("let unsigned_max: {ty} = {maximum}{ty};")));
+    assert!(src.contains(&format!("let unsigned_zero: {ty} = 0{ty};")));
+    assert!(src.contains(&format!("let unsigned_ones: {ty} = {maximum}{ty};")));
+    assert!(src.contains(&format!(
+        "let unsigned_edges: [{ty}; 4] = [0{ty}, {maximum}{ty}, 0{ty}, {maximum}{ty}];"
+    )));
+}
+
+#[test]
+fn native_integer_boundary_literals_are_exact_for_scalars_and_arrays() {
+    let cases = [
+        (8, "128", "127", "255"),
+        (16, "32768", "32767", "65535"),
+        (32, "2147483648", "2147483647", "4294967295"),
+        (
+            64,
+            "9223372036854775808",
+            "9223372036854775807",
+            "18446744073709551615",
+        ),
+        (
+            128,
+            "170141183460469231731687303715884105728",
+            "170141183460469231731687303715884105727",
+            "340282366920938463463374607431768211455",
+        ),
+    ];
+
+    for (width, min_magnitude, signed_max, unsigned_max) in cases {
+        let sign = 1_u128 << (width - 1);
+        let all_ones = if width == 128 {
+            u128::MAX
+        } else {
+            (1_u128 << width) - 1
+        };
+        assert_signed_boundaries(width, sign, all_ones, min_magnitude, signed_max);
+        assert_unsigned_boundaries(width, all_ones, unsigned_max);
+    }
+}

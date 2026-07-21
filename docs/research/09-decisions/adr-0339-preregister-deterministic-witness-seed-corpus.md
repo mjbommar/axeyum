@@ -1,6 +1,6 @@
 # ADR-0339: Preregister deterministic replay-checked witness seed corpora
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -29,7 +29,7 @@ before a corpus can claim exact typed replay. `signed_value` treats widths above
 array, and macro-generated replays. Rust `i128` represents that value exactly.
 No corpus result is admitted on top of this known boundary.
 
-## Proposed decision
+## Decision
 
 Add one public `axeyum_verify::witness_corpus` module that accepts only
 replay-confirmed counterexamples and deterministically renders a versioned seed
@@ -157,6 +157,53 @@ bytes remains an explicit user action.
   implicit assumptions.
 - The corpus schema creates the input side of the later proved/refuted/fuzzed-
   only report without prematurely claiming that report or its coverage.
+
+## Result
+
+Accepted. The prerequisite fix at `873c671e` gives exact two's-complement
+interpretation for every width 1--128, including width-127 negative boundaries
+and `i128::MIN`. Six renderer tests now cover sampled full-width interpretation,
+exact signed/unsigned native-width scalar and array boundaries, and compiled
+`i128::MIN`/`i128::MAX` literals.
+
+Production commit `75971d1d` adds the public fail-closed
+`witness_corpus` module. `WitnessSeed` has no unchecked constructor or public
+mutable fields: a typed replay callback must succeed before a seed exists;
+`Verified`, `Unknown`, malformed fields/witnesses, false replay, duplicates,
+and empty corpora remain typed errors. The module returns deterministic bytes
+and performs no filesystem, process, or git operation.
+
+Fixture commit `1efa7f25` carries three independently obtained and replayed
+countermodels in one lexical corpus:
+
+- macro overflow: `x=255u8`, replayed as an actual `corpus_overflow` panic;
+- source postcondition: `x=0u8`, replayed as a normal return that violates the
+  original postcondition;
+- raw QF_BV equivalence: `x=0u8`, replayed in the source term arena and against
+  both real Rust functions.
+
+The canonical JSON is 1,404 bytes with SHA-256
+`fa44878a0cde494a18883f6635dab1047a210469289c1cb058a02a4624246575`.
+The exact generated Rust source is 712 bytes / 27 lines with SHA-256
+`7e161d411c54c97eaa314f2c1a0e8e68558eb1b18cda8fee2268d5dccea20bef`.
+It is committed, included, compiled, and executed. Reverse insertion reproduces
+both files byte-for-byte; a replay-valid witness mutation changes both, while a
+false replay fails before rendering.
+
+The focused corpus integration has six passing tests (two macro verdict gates,
+three exact generated regressions, one canonical/ordering/mutation gate), and
+the corpus module has four fail-closed unit tests. The complete
+`axeyum-verify --all-features` package and doctests pass; strict all-target,
+all-feature Clippy and warning-denied rustdoc pass. The current reflection
+semantics gate passes 129 tests across 12 binaries plus its ten checker tests,
+with 82 registered variants, 34 proof tests, 18 refutation tests, and 26 fuzz
+tests. Every Cargo command ran with one job inside the 4 GiB cgroup; no capped
+OOM occurred.
+
+This closes T5.4.2 only. It does not claim a bug-discovery rate, proof/fuzz
+coverage, general Rust support, or performance leadership. T5.4.3's honest
+`Unknown` handoff is the next phase cell and requires a separate zero-result
+ADR before implementation; T5.4.4 remains separate.
 
 ## References
 

@@ -858,6 +858,37 @@ mod tests {
             bad_class,
             WitnessSeedError::InvalidField { field: "class", .. }
         ));
+
+        assert!(matches!(
+            WitnessSeedCorpus::new("Bad-Suite"),
+            Err(WitnessSeedError::InvalidField { field: "suite", .. })
+        ));
+        assert!(matches!(
+            WitnessSeed::from_counterexample(
+                "bad_name",
+                "add overflow",
+                vec![int("x; panic", 8, false, 255)],
+                ReplayRecipe::panic_call("overflow", ["x; panic"]),
+                |_| true,
+            ),
+            Err(WitnessSeedError::InvalidField {
+                field: "input_name",
+                ..
+            })
+        ));
+        assert!(matches!(
+            WitnessSeed::from_counterexample(
+                "bad_path",
+                "add overflow",
+                vec![int("x", 8, false, 255)],
+                ReplayRecipe::panic_call("overflow::<u8>", ["x"]),
+                |_| true,
+            ),
+            Err(WitnessSeedError::InvalidField {
+                field: "panic_function",
+                ..
+            })
+        ));
     }
 
     #[test]

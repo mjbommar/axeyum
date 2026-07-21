@@ -152,6 +152,44 @@ fn preregistered_corpus_is_byte_stable_and_compiled() {
     assert_eq!(corpus.render_json().unwrap(), EXPECTED_JSON);
     assert_eq!(corpus.render_tests().unwrap(), EXPECTED_TESTS);
     assert_eq!(build_corpus().render_json().unwrap(), EXPECTED_JSON);
+
+    let mut reverse = WitnessSeedCorpus::new("p5_4_2_countermodels").unwrap();
+    for seed in corpus.seeds().iter().rev().cloned() {
+        reverse.add(seed).unwrap();
+    }
+    assert_eq!(reverse.render_json().unwrap(), EXPECTED_JSON);
+    assert_eq!(reverse.render_tests().unwrap(), EXPECTED_TESTS);
+
+    let mutated = WitnessSeed::from_counterexample(
+        "equivalence_refutation_repro",
+        "equivalence mismatch",
+        vec![Witness::Int {
+            name: "x".into(),
+            width: 8,
+            signed: false,
+            bits: 1,
+        }],
+        ReplayRecipe::rust_body(
+            "assert_ne!(corpus_reference(x), corpus_mutated(x), \"wrong transform must remain distinguishable\");",
+        ),
+        |inputs| {
+            let x = witness_u8(inputs, "x");
+            corpus_reference(x) != corpus_mutated(x)
+        },
+    )
+    .unwrap();
+    let mut mutated_corpus = WitnessSeedCorpus::new("p5_4_2_countermodels").unwrap();
+    for seed in corpus
+        .seeds()
+        .iter()
+        .filter(|seed| seed.id() != mutated.id())
+        .cloned()
+    {
+        mutated_corpus.add(seed).unwrap();
+    }
+    mutated_corpus.add(mutated).unwrap();
+    assert_ne!(mutated_corpus.render_json().unwrap(), EXPECTED_JSON);
+    assert_ne!(mutated_corpus.render_tests().unwrap(), EXPECTED_TESTS);
 }
 
 // Compile and execute the exact committed generated artifact. This is the

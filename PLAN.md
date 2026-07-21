@@ -589,12 +589,15 @@ session state.
 >    universal coverage, trust, artifact boundaries, and measured 50.745 s /
 >    1.20 GiB cost; it records that no Tock bug was found. Bounded P5.5 v1 is
 >    DONE. Do not rerun, tune, or convert this into a speed or whole-kernel claim.
->    The next unblocked Track 5 increment is P5.4/T5.4.2. ADR-0339 now
->    preregisters a deterministic replay-checked witness corpus: panic,
->    postcondition, and equivalence countermodels must replay before canonical
->    JSON or generated compiled tests exist. It also freezes correction of the
->    discovered signed-128 witness-rendering defect. Commit/push this zero-result
->    gate before implementation; T5.4.3/4 remain separate.
+>    P5.4/T5.4.2 is now DONE under accepted ADR-0339. Exact full-width signed
+>    witness rendering is regression-owned, and panic, source-postcondition,
+>    and raw QF_BV equivalence countermodels replay before admission to a
+>    canonical 1,404-byte JSON corpus and exact 712-byte generated Rust suite.
+>    The committed suite compiles, executes, reverse-order reproduces, and has
+>    mutation teeth. The next unblocked Track 5 cell is T5.4.3: preregister an
+>    honest `Unknown` -> directed-fuzz handoff before implementation. Do not
+>    conflate that fuzz-only route with T5.4.2's decided countermodels or
+>    T5.4.4's later proof/refutation/fuzz coverage accounting.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
