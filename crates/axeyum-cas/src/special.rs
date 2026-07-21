@@ -161,6 +161,38 @@ pub fn polygamma_at_one(m: u32) -> Option<CasExpr> {
     Some(CasExpr::Const(Rational::integer(factorial)) * zeta_value)
 }
 
+/// The **Dirichlet eta function** (alternating zeta) `η(s) = Σ (−1)^{k−1}/kˢ =
+/// (1 − 2^{1−s})·ζ(s)`, at an integer `s`, wherever [`zeta`] has a closed form.
+/// For **positive even** `s = 2k`: a rational multiple of `π^{2k}`
+/// (`η(2) = π²/12`, `η(4) = 7π⁴/720`); also `η(0) = 1/2` and negative integers via
+/// `ζ`. `None` for the positive-odd `s ≥ 3` cases where `ζ` has no closed form
+/// (note `η(1) = ln 2`, not returned here), or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, special::dirichlet_eta, equal, ZeroTest};
+/// // η(2) = π²/12.
+/// let value = dirichlet_eta(2).unwrap();
+/// let expected = CasExpr::rat(1, 12) * CasExpr::var("pi").pow(2);
+/// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn dirichlet_eta(s: i64) -> Option<CasExpr> {
+    if s == 1 {
+        return None; // η(1) = ln 2 — not a ζ-closed-form case
+    }
+    let zeta_value = zeta(s)?;
+    // factor = 1 − 2^{1−s}. For s ≥ 1, 2^{1−s} = 1/2^{s−1}; for s ≤ 0, = 2^{1−s} (integer).
+    let factor = if s >= 1 {
+        let power = u32::try_from(s - 1).ok()?;
+        Rational::integer(1)
+            .checked_sub(Rational::checked_new(1, 2i128.checked_pow(power)?)?)?
+    } else {
+        let power = u32::try_from(1 - s).ok()?;
+        Rational::integer(1).checked_sub(Rational::integer(2i128.checked_pow(power)?))?
+    };
+    Some(CasExpr::Const(factor) * zeta_value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -233,6 +265,22 @@ mod tests {
             &beta(Rational::new(1, 2), Rational::new(1, 2)).unwrap(),
             &(sqrt_pi() * sqrt_pi()),
         );
+    }
+
+    #[test]
+    fn dirichlet_eta_closed_forms() {
+        let pi = || CasExpr::var("pi");
+        // η(2)=π²/12, η(4)=7π⁴/720, η(6)=31π⁶/30240; η(0)=1/2.
+        assert_equal(&dirichlet_eta(2).unwrap(), &(CasExpr::rat(1, 12) * pi().pow(2)));
+        assert_equal(&dirichlet_eta(4).unwrap(), &(CasExpr::rat(7, 720) * pi().pow(4)));
+        assert_equal(
+            &dirichlet_eta(6).unwrap(),
+            &(CasExpr::rat(31, 30240) * pi().pow(6)),
+        );
+        assert_equal(&dirichlet_eta(0).unwrap(), &CasExpr::rat(1, 2));
+        // η(1)=ln 2 and odd s≥3 (ζ non-closed) decline.
+        assert!(dirichlet_eta(1).is_none());
+        assert!(dirichlet_eta(3).is_none());
     }
 
     #[test]
