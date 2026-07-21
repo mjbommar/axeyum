@@ -165,6 +165,43 @@ pub fn is_perfect(n: i128) -> bool {
     matches!((sigma_k(1, n), n.checked_mul(2)), (Some(s), Some(double)) if s == double)
 }
 
+/// The **aliquot sum** of `n > 0` — the sum of its **proper** divisors,
+/// `s(n) = σ(n) − n`. `s(6) = 1+2+3 = 6` (perfect), `s(12) = 16` (abundant),
+/// `s(220) = 284`. `None` for `n ≤ 0` or on overflow.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::aliquot_sum;
+/// assert_eq!(aliquot_sum(220), Some(284));
+/// assert_eq!(aliquot_sum(284), Some(220));
+/// ```
+#[must_use]
+pub fn aliquot_sum(n: i128) -> Option<i128> {
+    if n <= 0 {
+        return None;
+    }
+    sigma_k(1, n)?.checked_sub(n)
+}
+
+/// Whether `m` and `n` form an **amicable pair**: distinct positive integers each
+/// equal to the other's [`aliquot_sum`] (`s(m) = n` and `s(n) = m`). The smallest
+/// pair is `(220, 284)`. A perfect number is *not* amicable with itself (the pair
+/// must be distinct).
+///
+/// ```
+/// use axeyum_cas::ntheory_more::are_amicable;
+/// assert!(are_amicable(220, 284));
+/// assert!(!are_amicable(6, 6));      // perfect, but not a distinct pair
+/// assert!(!are_amicable(10, 20));
+/// ```
+#[must_use]
+pub fn are_amicable(m: i128, n: i128) -> bool {
+    m != n
+        && m > 0
+        && n > 0
+        && aliquot_sum(m) == Some(n)
+        && aliquot_sum(n) == Some(m)
+}
+
 /// Whether `|n|` is squarefree (no prime factor with exponent `>= 2`).
 ///
 /// `1` is squarefree (empty factorization), while `0` is **not** (it is
@@ -544,6 +581,28 @@ mod tests {
         }
         for squareful in [4i128, 8, 9, 18, 12, 50, 500] {
             assert_eq!(mobius(squareful), 0, "mu({squareful})");
+        }
+    }
+
+    #[test]
+    fn aliquot_sums_and_amicable_pairs() {
+        // Aliquot sums (proper-divisor sums).
+        assert_eq!(aliquot_sum(6), Some(6)); // perfect
+        assert_eq!(aliquot_sum(28), Some(28));
+        assert_eq!(aliquot_sum(12), Some(16)); // abundant
+        assert_eq!(aliquot_sum(10), Some(8)); // deficient
+        assert_eq!(aliquot_sum(220), Some(284));
+        assert_eq!(aliquot_sum(1), Some(0));
+        assert_eq!(aliquot_sum(0), None);
+        // Amicable pairs.
+        assert!(are_amicable(220, 284));
+        assert!(are_amicable(284, 220));
+        assert!(are_amicable(1184, 1210));
+        assert!(!are_amicable(6, 6)); // perfect, not distinct
+        assert!(!are_amicable(10, 20));
+        // Consistency with is_perfect: s(n)=n ⇔ perfect.
+        for n in 1..=30i128 {
+            assert_eq!(aliquot_sum(n) == Some(n), is_perfect(n), "n={n}");
         }
     }
 
