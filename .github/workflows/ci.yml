@@ -175,12 +175,14 @@ jobs:
       - run: cargo doc --workspace --all-features --no-deps
 
   lean-inductive-crosscheck:
-    name: real Lean inductive cross-check
+    name: real Lean kernel + solver-proof cross-check
     runs-on: ubuntu-latest
     env:
       CARGO_PROFILE_DEV_DEBUG: 0
       CARGO_PROFILE_TEST_DEBUG: 0
       AXEYUM_REQUIRE_LEAN: 1
+      AXEYUM_LEAN_BUDGET_SECS: 0
+      AXEYUM_LEAN_JOBS: 2
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
@@ -197,6 +199,17 @@ jobs:
           use-github-cache: false
       - run: lean --version
       - run: cargo test -p axeyum-lean-kernel --test real_lean_inductive_crosscheck -- --nocapture
+      # One module from every registered solver-proof family. The exhaustive
+      # every-module sweep remains an explicit release/scheduled stress gate.
+      # Resolve the installed binary explicitly so absence cannot become the
+      # harness's optional local-development skip.
+      - name: representative solver proofs in official Lean
+        run: |
+          AXEYUM_LEAN_BIN="$(command -v lean)"
+          export AXEYUM_LEAN_BIN
+          test -x "$AXEYUM_LEAN_BIN"
+          cargo test -p axeyum-solver --features full --test lean_crosscheck \
+            lean_crosscheck_representative -- --nocapture --exact
 
   deny:
     name: cargo-deny

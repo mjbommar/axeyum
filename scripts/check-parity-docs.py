@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
+CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 AXEYUM_P4DFA = (
     ROOT
     / "bench-results"
@@ -193,6 +194,18 @@ def main() -> int:
     for marker in required_gap_markers:
         if marker not in gap_text:
             failures.append(f"{GAP_DOC.relative_to(ROOT)}: missing measured marker {marker!r}")
+
+    ci_text = CI_WORKFLOW.read_text(encoding="utf-8")
+    for marker in (
+        "AXEYUM_LEAN_BUDGET_SECS: 0",
+        "AXEYUM_LEAN_JOBS: 2",
+        "--test lean_crosscheck",
+        "lean_crosscheck_representative -- --nocapture --exact",
+    ):
+        if marker not in ci_text:
+            failures.append(
+                f"{CI_WORKFLOW.relative_to(ROOT)}: missing representative Lean gate {marker!r}"
+            )
 
     line = "|".join(f"{key}={value}" for key, value in snapshot.items())
     print(f"PARITY_DOCS|{line}")

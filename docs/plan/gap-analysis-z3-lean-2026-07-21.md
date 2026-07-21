@@ -217,12 +217,18 @@ second-pass cost.
 
 The solver proof harness registers 71 proof families and can send representative
 or exhaustive modules to official Lean. The exhaustive test is intentionally
-ignored, and current CI hard-requires official Lean only for the separate
-inductive cross-check.
+ignored. Before this increment, CI hard-required official Lean only for the
+separate inductive cross-check, so the solver-proof sweep could take its optional
+local-development skip.
 
-**Prototype plan:** add a required representative solver-proof job with one
-module per family and no time-budget skips; run the exhaustive sweep on a
-scheduled/release cadence; archive checked/declined counts and `#print axioms`.
+**Prototype landed:** the official-Lean CI job now runs the inductive cross-check
+and `lean_crosscheck_representative` with one module from every registered
+solver-proof family, an explicit Lean binary, two workers, and no time-budget
+skip. The docs-consistency gate asserts that this command remains present.
+
+**Remaining research:** record the first remote duration/RSS and checked-family
+count, then add the exhaustive sweep on a scheduled/release cadence with an
+archived checked/declined manifest and `#print axioms` summary.
 
 **Exit:** representative external-Lean coverage is required on every change to
 reconstruction/kernel code; the exhaustive campaign is reproducible and has no
@@ -293,7 +299,8 @@ reported as parity before it climbs the measured and certifying rungs.
    duplicate groups.
 4. Give the 35-row scoreboard and 228-file inventory one shared provenance
    schema while preserving separate scores.
-5. Add the required representative official-Lean solver-proof CI job.
+5. Observe and archive the required representative official-Lean solver-proof
+   CI result; size the scheduled exhaustive tier from that measurement.
 6. Generate the per-reduction proof-gap matrix from dominance audits.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
