@@ -2405,11 +2405,36 @@ fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
     Some(result)
 }
 
-/// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f`, i.e. the
-/// **discrete antiderivative** `S` with `S(var+1) − S(var) = f(var)` and `S(0)=0`
-/// (so `∑_{k=0}^{n−1} f(k) = S(n)`). Solved as one exact linear system; **certified**
-/// by the telescoping zero-test `S(var+1) − S(var) − f ≡ 0`. E.g. `∑ k = (n²−n)/2`,
-/// `∑ 1 = n`. `None` if `f` is not a univariate polynomial or on overflow.
+/// The **definite sum** `Σ_{var=lower}^{upper} f(var)` of a polynomial summand `f`,
+/// as a closed-form [`CasExpr`] in the (possibly symbolic) bounds. Computed from the
+/// discrete antiderivative `S` (with `S(n) = Σ_{k=0}^{n−1} f(k)`, see
+/// [`sum_polynomial`]) as `S(upper+1) − S(lower)`. **Certified** through
+/// `sum_polynomial`'s telescoping certificate. `None` if `f` is not a univariate
+/// polynomial in `var` or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, definite_sum, equal, ZeroTest};
+/// let k = CasExpr::var("k");
+/// let n = CasExpr::var("n");
+/// // Σ_{k=1}^{n} k = n(n+1)/2.
+/// let s = definite_sum(&k, "k", &CasExpr::int(1), &n).unwrap();
+/// let expected = CasExpr::rat(1, 2) * n.clone() * (n + CasExpr::int(1));
+/// assert!(matches!(equal(&s, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) -> Option<CasExpr> {
+    let antidifference = sum_polynomial(f, var)?; // S(n) = Σ_{k=0}^{n-1} f(k)
+    let at_upper = antidifference.substitute(var, &(upper.clone() + CasExpr::int(1)));
+    let at_lower = antidifference.substitute(var, lower);
+    let result = at_upper - at_lower;
+    Some(expand(&result).unwrap_or(result))
+}
+
+/// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f` — the
+/// **discrete antiderivative** `S` with `S(var+1) − S(var) = f(var)` and `S(0)=0`.
+/// Solved as one exact linear system; **certified** by the telescoping zero-test
+/// `S(var+1) − S(var) − f ≡ 0`. E.g. `∑ k = (n²−n)/2`. `None` if `f` is not a
+/// univariate polynomial or on overflow.
 #[must_use]
 pub fn sum_polynomial(f: &CasExpr, var: &str) -> Option<CasExpr> {
     let f_coeffs = normalize(f)?.to_univariate(var)?;
@@ -5399,6 +5424,32 @@ mod tests {
             - CasExpr::int(3) * sol4.differentiate("x")
             + CasExpr::int(2) * sol4.clone();
         assert_equal(&residual4, &x());
+    }
+
+    #[test]
+    fn definite_summation() {
+        let k = || v("k");
+        let n = || v("n");
+        // Σ_{k=1}^{n} k = n(n+1)/2.
+        assert_equal(
+            &definite_sum(&k(), "k", &CasExpr::int(1), &n()).unwrap(),
+            &(CasExpr::rat(1, 2) * n() * (n() + CasExpr::int(1))),
+        );
+        // Σ_{k=1}^{n} k² = n(n+1)(2n+1)/6.
+        assert_equal(
+            &definite_sum(&k().pow(2), "k", &CasExpr::int(1), &n()).unwrap(),
+            &(CasExpr::rat(1, 6) * n() * (n() + CasExpr::int(1)) * (CasExpr::int(2) * n() + CasExpr::int(1))),
+        );
+        // Concrete bounds: Σ_{k=1}^{10} k = 55.
+        assert_equal(
+            &definite_sum(&k(), "k", &CasExpr::int(1), &CasExpr::int(10)).unwrap(),
+            &CasExpr::int(55),
+        );
+        // Σ_{k=3}^{5} k² = 9+16+25 = 50.
+        assert_equal(
+            &definite_sum(&k().pow(2), "k", &CasExpr::int(3), &CasExpr::int(5)).unwrap(),
+            &CasExpr::int(50),
+        );
     }
 
     #[test]
