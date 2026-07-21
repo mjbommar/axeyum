@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 386 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 390 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -20,7 +20,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation (definite) | `definite_sum` (Σ over bounds), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
-| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd power), `∫tan`, `∫atan`, `∫p·ln`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd + even powers), `∫f+g` (linearity), `∫ln x/x`, `∫1/(x ln x)`, `∫tan`, `∫atan`, `∫p·ln`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`), `series`/`series_at`/`laurent_series` (incl. `tan`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` + `inverse_laplace`, `z_transform` + `inverse_z_transform` (discrete; simple poles, round-trip-certified) | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `dsolve_separable`, `dsolve_exact`, `dsolve_bernoulli`, `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
@@ -28,7 +28,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Complex | `imaginary_unit` (`I²=−1`), `conjugate`, `real_part`, `imaginary_part`, `modulus`, `roots_of_unity` | ✓ |
 | Linear algebra | `Matrix`: +/−/×, determinant (+ Bareiss), RREF, solve, inverse, `adjugate`/`cofactor`, `pow`, `hadamard`/`kronecker`, `null_space`, `lu`, `rank`, `trace`, char-poly, `eigenvalues`/`eigenvectors`, `minimal_polynomial`, `diagonalize` (P·D·P⁻¹), `jordan_form` (P·J·P⁻¹, **defective** via generalized eigenvectors), `matrix_exp` (e^{At}, rational spectrum incl. defective), `linear_ode_system` (x′=Ax), Hermite/Smith, `gram_schmidt`; `solve_linear_system`, `least_squares_polynomial` | det/solve/eigvec/diag/jordan/matexp/ODE ✓; A·P=P·J ✓ |
 | Logic / sets | `boolean::BoolExpr` (truth tables, tautology/SAT, DNF/CNF, Quine–McCluskey); `sets::RealSet` (interval unions, set algebra, measure); `interval_arith::Interval` (rigorous enclosures) | truth-table / exact ✓ |
-| Special functions | `special`: `gamma`/`beta` (integer + half-integer), `zeta` (exact ζ(2k)=c·π^{2k}, ζ(0), ζ(−m) via Bernoulli); `hyperbolic`: sinh/cosh/tanh/…/asinh/acosh/atanh (identities certify via exp tower) | ✓ (identities / Bernoulli) |
+| Special functions | `special`: `gamma`/`beta` (integer + half-integer), `zeta` (exact ζ(2k)=c·π^{2k}, ζ(0), ζ(−m) via Bernoulli); `gamma` also at negative half-integers; `hyperbolic`: sinh/cosh/tanh/…/asinh/acosh/atanh (identities certify via exp tower) | ✓ (identities / Bernoulli) |
 | Finite fields | `gfp`: 𝔽ₚ[x] ring ops, gcd, `is_irreducible`, `factor_berlekamp`, `roots` | re-multiply ✓ |
 | Groups | `Permutation`: compose, inverse, cycles, order, sign (symmetric groups) | group laws ✓ |
 | Boolean algebra | `boolean::BoolExpr`: truth tables, tautology/SAT, DNF/CNF, `equivalent`, Quine–McCluskey minimization | truth-table ✓ |
@@ -39,7 +39,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Logs / abs | `expand_log`, `logcombine` (product/quotient/power rules), `Abs` head (`|·|`, `√(x²)→|x|`) | compute / exact |
 | Statistics | `stats`: mean/median/mode/variance/covariance; `standard_deviation`, `correlation` (surd-simplified) | exact |
 | Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
-| Number theory | `ntheory` (gcd, mod-pow/inverse, `is_prime`, `factorize`, φ, CRT, binomial); `ntheory_advanced` (nPr, Legendre/Jacobi, quadratic residues, order, primitive root, discrete log, continued fractions, Pell); `ntheory_more` (Möbius, Mertens, σ_k, perfect/squarefree, radical, Carmichael λ, primorial, next/prev prime, π(n), nth prime, Carmichael numbers) | re-check ✓ |
+| Number theory | `ntheory` (gcd, mod-pow/inverse, `is_prime`, `factorize`, φ, CRT, binomial); `ntheory_advanced` (nPr, Legendre/Jacobi, quadratic residues, `sqrt_mod` (Tonelli–Shanks), order, primitive root, discrete log, continued fractions, Pell); `ntheory_more` (Möbius, Mertens, σ_k, perfect/squarefree, radical, Carmichael λ, primorial, next/prev prime, π(n), nth prime, Carmichael numbers) | re-check ✓ |
 | Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
 
 Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs` (extensible `Unary`). The zero-test
