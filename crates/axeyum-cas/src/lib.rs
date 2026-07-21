@@ -6401,6 +6401,25 @@ pub fn definite_integrate(
     lower: &CasExpr,
     upper: &CasExpr,
 ) -> Option<DefiniteIntegral> {
+    // Symmetry shortcut: an odd integrand over a symmetric interval `[−a, a]`
+    // integrates to 0 — provable even when no antiderivative is found.
+    if function_parity(expr, var) == Parity::Odd
+        && matches!(
+            equal(lower, &CasExpr::Neg(Box::new(upper.clone()))),
+            ZeroTest::Certified { equal: true, .. }
+        )
+    {
+        return Some(DefiniteIntegral {
+            value: CasExpr::zero(),
+            antiderivative: CasExpr::zero(),
+            // The value is proven (odd-over-symmetric = 0), independent of any
+            // antiderivative; mark it certified.
+            certificate: ZeroTest::Certified {
+                equal: true,
+                witness: MultiPoly::zero(),
+            },
+        });
+    }
     let indefinite = integrate(expr, var)?;
     let at_upper = indefinite.antiderivative.substitute(var, upper);
     let at_lower = indefinite.antiderivative.substitute(var, lower);
@@ -9004,6 +9023,27 @@ mod tests {
         )
         .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn definite_integral_odd_over_symmetric_is_zero() {
+        let x = || v("x");
+        let sym = |lo: i128, hi: i128, f: CasExpr| {
+            let r = definite_integrate(&f, "x", &CasExpr::int(lo), &CasExpr::int(hi)).unwrap();
+            assert!(r.is_certified());
+            assert_equal(&r.value, &CasExpr::zero());
+        };
+        // Odd polynomial over [−1,1].
+        sym(-1, 1, x().pow(3) - x());
+        // KEY: odd integrands `integrate` cannot handle (nonlinear argument) still
+        // give 0 by symmetry — antiderivative-free.
+        assert!(integrate(&(x() * x().pow(2).exp()), "x").is_none());
+        sym(-1, 1, x() * x().pow(2).exp()); // x·e^{x²}
+        sym(-2, 2, x() * x().pow(2).sin()); // x·sin(x²)
+        // Even integrand over a symmetric interval is NOT shortcut to 0.
+        let even = definite_integrate(&x().pow(2), "x", &CasExpr::int(-2), &CasExpr::int(2))
+            .unwrap();
+        assert_equal(&even.value, &CasExpr::rat(16, 3));
     }
 
     #[test]
