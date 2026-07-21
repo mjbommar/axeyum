@@ -367,7 +367,11 @@ impl CasExpr {
     pub fn differentiate_n(&self, var: &str, n: usize) -> CasExpr {
         let mut result = self.clone();
         for _ in 0..n {
-            result = result.differentiate(var);
+            // Fold the trivial `0·x`/`1·x`/`x+0` noise the product/chain rules emit
+            // between iterations, so repeated differentiation cannot blow up (and
+            // `dⁿ/dxⁿ sin x` stays a clean `±sin`/`±cos`). Structure-preserving —
+            // no atomization — so radical/trig heads survive.
+            result = fold_trivial(&result.differentiate(var));
         }
         result
     }
@@ -2554,13 +2558,13 @@ fn is_certified_zero(expr: &CasExpr) -> bool {
     )
 }
 
-/// Structurally fold the trivial identities `0·x → 0`, `1·x → x`, `x + 0 → x`, and
-/// `−0 → 0`, recursing through the tree **without** normalizing — so `sqrt`/`exp`/
-/// trig structure is preserved (unlike [`simplify`], which turns radicals into
-/// opaque atoms that no longer render or `evalf`). Value-preserving.
+/// Structurally fold the trivial identities `0·x → 0`, `1·x → x`, `x + 0 → x`,
+/// `−0 → 0`, `−(−x) → x`, `x¹ → x`, `x⁰ → 1`, flattening nested products and
+/// combining constant factors — recursing through the tree **without** normalizing,
+/// so `sqrt`/`exp`/trig structure is preserved (unlike [`simplify`], which turns
+/// radicals into opaque atoms that no longer render or `evalf`). Value-preserving.
 fn fold_trivial(expr: &CasExpr) -> CasExpr {
     let is_zero = |e: &CasExpr| matches!(e, CasExpr::Const(c) if c.is_zero());
-    let is_one = |e: &CasExpr| matches!(e, CasExpr::Const(c) if *c == Rational::integer(1));
     match expr {
         CasExpr::Add(terms) => {
             let kept: Vec<CasExpr> = terms
@@ -2575,30 +2579,54 @@ fn fold_trivial(expr: &CasExpr) -> CasExpr {
             }
         }
         CasExpr::Mul(factors) => {
-            let folded: Vec<CasExpr> = factors.iter().map(fold_trivial).collect();
-            if folded.iter().any(is_zero) {
-                return CasExpr::zero();
+            // Fold factors, flattening nested products so constants across levels
+            // can combine (e.g. `3·(2·x) → 6·x`).
+            let mut constant = Rational::integer(1);
+            let mut others: Vec<CasExpr> = Vec::new();
+            let mut stack: Vec<CasExpr> = factors.iter().rev().map(fold_trivial).collect();
+            while let Some(f) = stack.pop() {
+                match f {
+                    CasExpr::Const(c) if c.is_zero() => return CasExpr::zero(),
+                    CasExpr::Const(c) => {
+                        let Some(product) = constant.checked_mul(c) else {
+                            others.push(CasExpr::Const(c));
+                            continue;
+                        };
+                        constant = product;
+                    }
+                    CasExpr::Mul(inner) => stack.extend(inner.into_iter().rev()),
+                    other => others.push(other),
+                }
             }
-            let kept: Vec<CasExpr> = folded.into_iter().filter(|f| !is_one(f)).collect();
-            match kept.len() {
-                0 => CasExpr::one(),
-                1 => kept.into_iter().next().unwrap_or_else(CasExpr::one),
-                _ => CasExpr::Mul(kept),
+            if !constant.is_zero() && constant != Rational::integer(1) {
+                others.insert(0, CasExpr::Const(constant));
+            }
+            match others.len() {
+                0 => CasExpr::Const(constant),
+                1 => others.into_iter().next().unwrap_or_else(CasExpr::one),
+                _ => CasExpr::Mul(others),
             }
         }
         CasExpr::Neg(inner) => {
             let folded = fold_trivial(inner);
-            if is_zero(&folded) {
-                CasExpr::zero()
-            } else {
-                CasExpr::Neg(Box::new(folded))
+            match folded {
+                CasExpr::Const(c) if c.is_zero() => CasExpr::zero(),
+                CasExpr::Neg(inner) => *inner, // −(−x) → x
+                other => CasExpr::Neg(Box::new(other)),
             }
         }
         CasExpr::Div(numerator, denominator) => CasExpr::Div(
             Box::new(fold_trivial(numerator)),
             Box::new(fold_trivial(denominator)),
         ),
-        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(fold_trivial(base)), *exponent),
+        CasExpr::Pow(base, exponent) => {
+            let folded = fold_trivial(base);
+            match exponent {
+                0 => CasExpr::one(),
+                1 => folded,
+                _ => CasExpr::Pow(Box::new(folded), *exponent),
+            }
+        }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_trivial(arg))),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
@@ -8504,6 +8532,23 @@ mod tests {
     fn integrate_declines_nonlinear_argument() {
         // ∫ sin(x²) dx has no elementary closed form: honest None.
         assert!(integrate(&v("x").pow(2).sin(), "x").is_none());
+    }
+
+    #[test]
+    fn repeated_differentiation_stays_clean() {
+        let x = || v("x");
+        // dⁿ/dxⁿ folds the product/chain-rule `·1`/`·0` noise each step, so it
+        // neither blows up nor leaks — and stays value-correct.
+        assert_equal(&x().sin().differentiate_n("x", 3), &(-x().cos()));
+        assert_equal(&x().sin().differentiate_n("x", 4), &x().sin());
+        // d²/dx² x³ = 6x, d³/dx³ x⁴ = 24x — folded to a single constant factor.
+        assert_eq!(
+            x().pow(3).differentiate_n("x", 2),
+            CasExpr::int(6) * x(),
+        );
+        assert_equal(&x().pow(4).differentiate_n("x", 3), &(CasExpr::int(24) * x()));
+        // exp is a fixed point.
+        assert_equal(&x().exp().differentiate_n("x", 5), &x().exp());
     }
 
     #[test]
