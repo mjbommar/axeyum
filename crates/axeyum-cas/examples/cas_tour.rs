@@ -3,6 +3,9 @@
 //!
 //! Where a result is marked `[CERTIFIED]`, axeyum has *proven* it (by an exact
 //! decidable zero-test / differentiate-and-check), not merely computed it.
+//!
+//! One long linear `main` walking the surface — length is inherent to a tour.
+#![allow(clippy::too_many_lines)]
 
 use axeyum_cas::{
     CasExpr, InequalityOp, LimitPoint, Matrix, ZeroTest, apart, cancel, definite_integrate,
@@ -36,7 +39,7 @@ fn main() {
     ] {
         match integrate(&g, "x") {
             Some(r) if r.is_certified() => {
-                println!("∫ ({g}) dx = {}   [CERTIFIED]", r.antiderivative)
+                println!("∫ ({g}) dx = {}   [CERTIFIED]", r.antiderivative);
             }
             _ => println!("∫ ({g}) dx = (declined)"),
         }
