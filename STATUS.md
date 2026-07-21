@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — Post-I3 census authorizes only I4.** The clean next seam is the
+  344-line ADR-0095/0104 Euclidean-residue reconstruction family: four cohesive
+  items, two outward paths, and six dedicated reconstruction/evidence controls.
+  Capture the committed `clock-3` Lean identity, then move it privately to
+  `int_reconstruct/euclidean_residue.rs` with explicit imports and unchanged
+  paths/matching/order/caps. Affine growth remains separate. Closed-universal
+  and nested-XOR code stays parent-owned because two distinct proof families
+  share its large kernel-helper region; no combined cosmetic move is allowed.
+
 - **2026-07-21 — I3 privately extracts equality-partition reconstruction.** The
   cohesive ADR-0101/0106 family now lives in the 1,200-line
   `int_reconstruct/equality_partition.rs` child with explicit imports and the
@@ -5725,6 +5734,10 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Preregistered the Euclidean-residue module seam.** Authorized
+  only the four-item, 344-line ADR-0095/0104 family after rejecting a combined
+  closed-universal/nested-XOR move across shared kernel helpers.
 
 - **2026-07-21 — Extracted the single-pivot equality-partition proof family.**
   Moved the 1,188-line parent block into a private 1,200-line child with explicit

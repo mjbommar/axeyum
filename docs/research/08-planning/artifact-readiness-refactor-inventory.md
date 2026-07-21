@@ -34,6 +34,7 @@ not repeat completed namespace/configuration sweeps.
 | Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
 | Quantified counterexample-cover reconstruction | 1,465 lines / 58,079 bytes | Private child; one crate router and one public re-export |
 | Single-pivot equality-partition reconstruction | 1,200 lines / 50,231 bytes | Private child; one crate router and one public re-export |
+| Euclidean-residue reconstruction | 344 parent lines / 13,041 bytes | Four cohesive items; one crate router and one public entry point |
 | `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -146,19 +147,33 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    module at FNV-1a `84fe8e457b9b6b27`. All twelve focused tests pass, including
    mutation/near-miss gates and the complete 64-seed Z3 differential sweep; all
    895 library tests, strict Clippy, and both rustdoc profiles also pass.
+8. **I4 -- extract Euclidean-residue reconstruction (next).** The ADR-0095/0104
+   family is one contiguous 344-line / 13,041-byte block with four top-level
+   items: the router, public reconstructor, decline helper, and exact canonical
+   source matcher. Move it to private `int_reconstruct/euclidean_residue.rs`
+   with explicit imports and unchanged re-exports. Preserve the exact clock
+   matcher, branch/proof order, literal cap, public visibility, and generated
+   Lean bytes. Add pre/post identity for the committed `clock-3` module. The
+   focused gate is all three reconstruction/routing controls plus all three
+   evidence/tamper/near-miss controls. Affine growth remains a distinct later
+   family; do not combine the two merely because both use the general Euclidean
+   theorem.
 
 ## Post-I3 residual posture
 
-1. I3 is complete. Remeasure reviewer navigation and dependency seams before
-   authorizing any successor; completion itself grants no further slice.
-2. Keep the 4,531-line ABV replay/repair residual in place. Sixteen private
+1. I4 is the next and only authorized slice. It has a narrow four-item semantic
+   boundary and dedicated evidence/reconstruction ownership.
+2. Keep closed-universal and nested-XOR reconstruction in the parent. Their two
+   entry points share a large kernel-helper region, and a combined move would
+   hide two distinct proof families behind one cosmetic module.
+3. Keep the 4,531-line ABV replay/repair residual in place. Sixteen private
    items are directly test-reached and the block shares ROW/extensional replay
    ownership; moving it now would widen visibility or combine a test
    reorganization with production ownership changes.
-3. Stop CAD cleanup at N1. Rational strict/non-strict mechanics are shared;
+4. Stop CAD cleanup at N1. Rational strict/non-strict mechanics are shared;
    algebraic lifting has a different value domain and needs new semantic
    evidence before any common traversal is authorized.
-4. Do not turn the repository's next-largest-file list into an automatic
+5. Do not turn the repository's next-largest-file list into an automatic
    refactor queue. Remeasure reviewer navigation and dependency seams before
    adding `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` to this inventory;
    raw line count alone is not the acceptance criterion.

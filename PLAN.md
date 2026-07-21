@@ -570,6 +570,17 @@ session state.
 >    dependency seams before authorizing any successor. No ABV replay,
 >    algebraic CAD, generic large-file, performance, or concretization work is
 >    implied by completion.
+>    The post-I3 census authorizes only I4: move the contiguous 344-line
+>    ADR-0095/0104 Euclidean-residue reconstruction family into private
+>    `int_reconstruct/euclidean_residue.rs`. Its four top-level items expose only
+>    the crate router and historical public reconstructor; three focused
+>    reconstruction/routing tests and three evidence/tamper/near-miss tests own
+>    the behavior. Capture and preserve the committed `clock-3` generated Lean
+>    bytes before moving; preserve paths, visibility, exact source matching,
+>    branch/proof order, caps, and verdicts. Keep affine growth independent.
+>    Closed-universal and nested-XOR reconstruction remain parent-owned because
+>    their distinct entry points share a large kernel-helper region; do not hide
+>    both behind one cosmetic module.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
