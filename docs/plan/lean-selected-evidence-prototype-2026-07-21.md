@@ -40,6 +40,9 @@ timeout 30s cargo run --release -q -p axeyum-bench \
 | BV alternation counterexample | `quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2` | outer timeout | source stage 299 ms; 8,524-command tail reconstructed in 566 ms; no rendered module by 30 s |
 | BV alternation counterexample | `quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2` | outer timeout | source stage 485 ms; 13,824-command tail 537 ms; reconstruction stage 7.72 s; no rendered module by 30 s |
 | conjunctive universal instance | `quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2` | outer timeout | no completed stage/result emitted before 30 s |
+| generic Alethe | `non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2` | reconstructed through existing EUF consumer | 15 commands; 8,082-byte module; 9,204 KiB peak RSS |
+| generic Alethe | `non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2` | reconstructed through existing EUF consumer | 6 commands; 2,916-byte module; 9,456 KiB peak RSS |
+| generic Alethe | `non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2` | reconstructed through existing EUF consumer | 15 commands; 8,082-byte module; 9,108 KiB peak RSS |
 
 The first combined run was stopped after the first successful row and a silent
 second-row interval; it is not an additional measurement. The per-row runs
@@ -64,22 +67,41 @@ should record phase time, peak RSS, kernel term count, rendered bytes, and
 external-Lean result while consuming the selected certificate. It should not
 add a new theorem family.
 
-The three QF_NIA rows remain a separate prototype. Their selected evidence is a
-checked Alethe proof, while query-only reconstruction chooses `la_generic` and
-rejects a non-conjunctive LRA shape. Test a proof-object-to-Lean adapter over the
-already checked Alethe commands before changing arithmetic search or adding a
-new arithmetic theorem.
+The three QF_NIA rows close in the prototype without an arithmetic theorem or
+an arithmetic reconstructor. Their selected proof objects contain only EUF and
+resolution rules:
+
+- `div.01` and `minimal_unsat_core`: 15 commands each — two
+  `eq_congruent`, two `eq_reflexive`, two `eq_transitive`, and five
+  `resolution` steps;
+- `div.08`: six commands — one `eq_congruent`, one `eq_reflexive`, and two
+  `resolution` steps.
+
+Each reconstructs in about 0.10 seconds wall time on this host with less than
+9.5 MiB peak RSS. The source formulas are QF_NIA, but their selected proof is a
+value-independent congruence contradiction over total division terms. The
+query-only facade classifies from source syntax, chooses `la_generic`, and
+rejects the non-conjunctive LRA shape; selected-evidence dispatch instead sends
+the already checked proof to the existing EUF consumer. This is a measured
+classification/plumbing defect, not missing nonlinear or linear arithmetic
+proof theory.
 
 ## Roadmap consequence
 
 Keep the reconstruction lane separate from ADR-0341's bare-evidence telemetry:
 
-1. add a diagnostic selected-evidence reconstruction facade, not a default API;
-2. measure the five quantified-BV rows with bounded phase/RSS/module telemetry;
-3. prototype checked-Alethe-object consumption on the three QF_NIA rows; and
-4. only then decide whether the production boundary belongs on `Evidence`, an
-   evidence-aware Lean facade, or a versioned export artifact.
+1. retain the diagnostic selected-evidence facade as the reproducible prototype;
+2. define a production evidence-aware dispatch contract that preserves the
+   selected certificate instead of classifying and re-searching from source
+   syntax;
+3. measure the remaining three quantified-BV cost rows with bounded phase/RSS/
+   kernel-term/module/external-Lean telemetry; and
+4. choose whether that production boundary belongs on `Evidence`, an
+   evidence-aware Lean facade, or a versioned export artifact only after those
+   measurements identify its required resource/reporting contract.
 
-The acceptance denominator remains the exact eight-row generated table. No row
-is credited until the produced module passes the existing in-tree gate and the
-required official-Lean tier.
+Five of the exact eight rows now reconstruct from their selected evidence using
+existing consumers; three remain bounded quantified-BV cost cases. The generated
+dominance denominator does not change from a diagnostic alone: no row is
+credited until production dispatch consumes the selected evidence and the
+produced module passes the required official-Lean tier.

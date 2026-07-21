@@ -536,10 +536,16 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
 - Quantified fragments: finite expansion + e-matching + MBQI **landed**;
   maturity at [P2.6](../../../docs/plan/track-2-theories/P2.6-quantifiers.md).
 - Proof production: DRAT (clausal) + Alethe + an in-tree **Lean-grade kernel**
-  with reconstruction **landed**; the trust ledger drives "modulo trusted
-  reduction" toward zero ([Track 3](../../../docs/plan/track-3-proof-lean/README.md)).
+  with reconstruction **landed**; current measured coverage is substantial but
+  uneven, so the trust ledger and generated proof-gap matrix—not capability
+  presence—drive "modulo trusted reduction" toward zero
+  ([Track 3](../../../docs/plan/track-3-proof-lean/README.md)).
 - Proof-assistant interop: Alethe→Lean reconstruction is the
   [Track 3 capstone](../../../docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md).
+  The bounded selected-evidence prototype now routes five of eight measured
+  reconstruction-only rows through existing consumers; the next boundary is
+  evidence-aware production dispatch plus bounded cost/external-Lean telemetry
+  for the three remaining quantified-BV rows, not a new theorem family.
 - **Newly scoped categorical engines** (the honest remaining gap vs Z3): CHC/Horn
   PDR ([P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md)),
   Craig interpolation ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md)),

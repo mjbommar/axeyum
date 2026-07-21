@@ -254,14 +254,18 @@ new theorem family. This is a measured plumbing/re-derivation hypothesis, not
 yet a claim that all eight will close.
 
 The bounded [selected-evidence prototype](lean-selected-evidence-prototype-2026-07-21.md)
-tests the five quantified-BV rows. Existing certificate consumers reconstruct
-two immediately (15,174-byte closed-universal and 18,551,050-byte paired-
-existential modules). Both alternation rows enter existing reconstruction and
-build 8,524/13,824-command tails but miss a 30-second outer bound before a final
-module; the conjunctive row also times out without a completed stage. This
-confirms a mixed plumbing plus proof-size/export-cost gap, not five missing Lean
-fragments. The three QF_NIA selected-Alethe cases remain untested and retain
-their separate denominator.
+tests all eight rows. Existing certificate consumers reconstruct five directly:
+15,174-byte closed-universal and 18,551,050-byte paired-existential modules, plus
+all three QF_NIA Alethe proofs as 2,916--8,082-byte modules through the existing
+EUF consumer. The QF_NIA proofs contain only congruence and resolution rules and
+finish in about 0.10 seconds each below 9.5 MiB peak RSS; source-syntax routing
+had incorrectly selected `la_generic`. Both BV alternation rows enter existing
+reconstruction and build 8,524/13,824-command tails but miss a 30-second outer
+bound before a final module; the conjunctive row also times out without a
+completed stage. The measured split is therefore five dispatch/plumbing wins
+and three quantified-BV proof-size/export-cost cases, not eight missing Lean
+fragments. The dominance denominator remains unchanged until a production
+evidence-aware path and the required official-Lean tier consume these artifacts.
 
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
 is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
@@ -386,9 +390,11 @@ reported as parity before it climbs the measured and certifying rungs.
    uncertified reduction before selecting a shared proof mechanism. Investigate
    the four stale QF_SEQ source-invalid DRAT credits as the first bounded
    `source-side-channel-not-serialized` case. Independently prototype direct
-   Lean reconstruction from the selected evidence on the five quantified-BV
-   rows, then the three QF_NIA Alethe rows; add no theorem family unless that
-   reuse path demonstrably declines.
+   Lean reconstruction from selected evidence. The prototype already routes
+   five of eight rows through existing consumers; measure the remaining three
+   quantified-BV cost cases before choosing a production evidence-aware
+   dispatch boundary. Add no theorem family unless selected-certificate reuse
+   demonstrably declines.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.
