@@ -322,14 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0320 preregisters the bounded T5.3.2 evidence retry.**
-  Rejected ADR-0318 is not reused. The new zero-result protocol freezes four
-  fresh owning-Cargo captures, one authenticated raw module and two typed
-  summaries, independent finite-walk specifications, universal reflected
-  panic/alignment/permission proofs, three replayed broken controls, and an
-  ordered eight-table/all-256-address sampler with exactly 4,096 good-function
-  rows. No production semantic widening is authorized; a newly exposed form or
-  failed gate records another negative result.
+- **2026-07-21 — ADR-0320 closes bounded T5.3.2 v1 with authenticated evidence.**
+  Four fresh owning-Cargo captures are byte-identical to one committed
+  8,218-byte raw module with root-independent provenance and two typed
+  summaries. Seven universal reflected panic/spec/alignment/permission claims
+  pass; three deliberately broken walks produce replayed source witnesses; and
+  the exact 4,096-row sampler has zero disagreement, evaluation error, panic,
+  or dropped row. Twelve semantic/authentication mutations have teeth. No
+  production semantic form changed, the 81-variant inventory is unchanged,
+  and this is a four-entry obligation shape rather than an MMU claim. P5.3
+  remains open for FSM refinement and its obligation catalog.
 
 - **2026-07-21 — ADR-0319 accepts exact compiler lexical-scope metadata.**
   Bare decimal nested `scope N {}` blocks now flatten only admitted `let`
@@ -5873,7 +5875,7 @@ plan is built and committed on the current branch:
 | ↳ P5.1 measured gate | Glaurung LLVM loop-shape demand census | DONE — **ADR-0293 accepted:** exact result reproduces 12 loops / 12 functions: 11 existing self-loop structural rows plus one under-diverse early-exit row; no new implementation selected |
 | ↳ P5.1 measured gate | Glaurung LLVM loop semantic census | DONE — **ADR-0294 accepted:** disclosed first-artifact rejection followed by exact corrected reproduction; 0/12 reach loop reflection, and diverse first causes select a T5.1.2 audit lane but no code |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
-| P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
+| P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: MIR branch-leakage self-composition proves public-predicated and branch-free controls and refutes a secret-predicated witness; memory-index and LLVM-side leakage remain. **T5.3.2 bounded v1 DONE (ADR-0320)**: an authenticated 8,218-byte compiler MIR module carries seven universal panic/spec/alignment/permission proofs, three replayed broken controls, and 4,096 reflection/spec/Rust rows at zero disagreement/error/panic/drop, without a new semantic form. This is not an MMU claim. T5.3.3 FSM refinement and T5.3.4 obligation catalog are the remaining phase items. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 

@@ -1,0 +1,16 @@
+{
+  "schema": "axeyum.verify-page-table-selection.v1",
+  "source_schema": "axeyum.verify-mir-build.v1",
+  "profile": "checked-memory",
+  "function": "walk_permissions",
+  "mir_bytes": 8218,
+  "parameter_types": ["[u8;4]", "u8"],
+  "blocks": 4,
+  "region_local": 1,
+  "region_bytes": 4,
+  "result_width": 8,
+  "result_signed": false,
+  "result_term_sha256": "ad22dde91686cabf7316214a8c029e4b9f078a1963f4c18c14b867d0fe1704b1",
+  "panic_term_sha256": "d9664f625df0a48a05861ac5e9c7a99ff15fafbc0ea7f5a758b6993ac2ad8261",
+  "final_memory_terms_sha256": "bc097b0a78b2149f0c736a2cc53e83d5752fb47cc33a69e7154359f1459ef49c"
+}

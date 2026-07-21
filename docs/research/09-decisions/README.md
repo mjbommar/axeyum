@@ -374,4 +374,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0317](adr-0317-preregister-authenticated-source-contract-mir-bridge.md) | Accept an authenticated total source-contract to checked-MIR summary bridge with exact Cargo provenance | accepted |
 | [0318](adr-0318-preregister-reflected-page-table-walk-obligations.md) | Reject the bounded page-table obligation before capture because registered MIR emits unowned nested scope metadata | accepted |
 | [0319](adr-0319-preregister-checked-mir-scope-metadata.md) | Accept exact nested rustc MIR lexical-scope metadata with flattened typed locals | accepted |
-| [0320](adr-0320-preregister-bounded-reflected-page-table-evidence.md) | Preregister authenticated bounded page-table-shaped proofs and replayed broken controls after the scope prerequisite | proposed |
+| [0320](adr-0320-preregister-bounded-reflected-page-table-evidence.md) | Accept authenticated bounded page-table-shaped proofs and replayed broken controls after the scope prerequisite | accepted |

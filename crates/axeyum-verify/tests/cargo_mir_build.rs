@@ -5,6 +5,7 @@ use std::panic::catch_unwind;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Instant;
 
 use axeyum_ir::{TermArena, Value};
 use axeyum_solver::{ProofOutcome, SolverConfig, prove};
@@ -362,39 +363,57 @@ fn scalar_profile_reproduces_the_committed_root_independent_capture() {
 }
 
 #[test]
-fn compiler_scope_metadata_reaches_the_checked_memory_profile() {
+fn compiler_page_table_selections_reproduce_the_authenticated_raw_module() {
     let Some((cargo, rustc)) = exact_tools_or_skip() else {
         return;
     };
     let scratch = Scratch::new("scope-metadata");
-    let captured = scratch.path("walk_permissions.mir");
-    let output = run(
-        &Selection {
-            package: PACKAGE,
-            target: TargetSelection::Lib,
-            function: "walk_permissions",
-        },
-        &cargo,
-        &rustc,
-        &scratch.path("cargo-target"),
-        &captured,
-    );
-    assert!(
-        output.status.success(),
-        "scope-bearing capture failed:\n{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let summary = String::from_utf8(output.stdout).unwrap();
-    assert!(summary.contains("\"function\":\"walk_permissions\""));
-    assert!(summary.contains("\"parameter_types\":[\"[u8;4]\",\"u8\"]"));
-    assert!(summary.contains("\"blocks\":4"));
-    let mir = fs::read_to_string(captured).unwrap();
-    assert!(mir.contains("scope 1 {"));
-    let reflected =
-        reflect_bounded_memory_checked(&mir, &MirMemoryConfig::new("walk_permissions", 64))
+    let started = Instant::now();
+    let committed = fs::read(
+        manifest()
+            .parent()
+            .unwrap()
+            .join("artifacts/page_table_walks.mir"),
+    )
+    .unwrap();
+    for function in ["walk_frame", "walk_permissions"] {
+        let captured = scratch.path(&format!("{function}.mir"));
+        let output = run(
+            &Selection {
+                package: PACKAGE,
+                target: TargetSelection::Lib,
+                function,
+            },
+            &cargo,
+            &rustc,
+            &scratch.path(&format!("{function}-target")),
+            &captured,
+        );
+        assert!(
+            output.status.success(),
+            "scope-bearing {function} capture failed:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let summary = String::from_utf8(output.stdout).unwrap();
+        assert!(summary.contains(&format!("\"function\":\"{function}\"")));
+        assert!(summary.contains("\"mir_bytes\":8218"));
+        assert!(summary.contains("\"parameter_types\":[\"[u8;4]\",\"u8\"]"));
+        assert!(summary.contains("\"blocks\":4"));
+        assert!(summary.contains("\"region_bytes\":4"));
+        assert!(summary.contains("\"result_width\":8"));
+        let mir = fs::read(&captured).unwrap();
+        assert_eq!(mir, committed, "{function} raw MIR drift");
+        let mir = String::from_utf8(mir).unwrap();
+        assert!(mir.contains("scope 1 {"));
+        let reflected = reflect_bounded_memory_checked(&mir, &MirMemoryConfig::new(function, 64))
             .expect("captured scope-bearing walk must remain checked");
-    assert_eq!(reflected.region.input.len(), 4);
-    assert_eq!(reflected.result.width, 8);
+        assert_eq!(reflected.region.input.len(), 4);
+        assert_eq!(reflected.result.width, 8);
+    }
+    eprintln!(
+        "ADR0320_CAPTURE selections=2 raw_mismatches=0 projection_errors=0 wall_ms={}",
+        started.elapsed().as_millis()
+    );
 }
 
 #[test]

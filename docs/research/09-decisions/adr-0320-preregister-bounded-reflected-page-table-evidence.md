@@ -1,6 +1,6 @@
 # ADR-0320: Preregister bounded reflected page-table evidence
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -19,7 +19,7 @@ walks and three deliberately broken controls over one `[u8; 4]` table and one
 checked-MIR byte-memory fragment. The next question is therefore evidence
 construction, not another syntax or semantic extension.
 
-## Proposed decision
+## Decision
 
 Run one fresh, bounded T5.3.2 v1 evidence cell without changing production
 reflection code, IR operators, solver routes, public APIs, dependencies, or
@@ -123,6 +123,40 @@ No gate may be weakened after the first capture, proof, sampler, or mutation
 result is observed. A failure records a negative result and restores/removes
 candidate production, test, and artifact changes as required by the failed
 gate.
+
+## Result
+
+Accepted without a production reflection, IR, solver, API, dependency, or
+feature change. Two fresh owning-Cargo captures per good function produce four
+byte-identical 8,218-byte raw modules with SHA-256
+`6a1e7c82ad14de2355d5e7039422933b99c410e3ca4bff89b1704ee53f5b5c43`.
+The committed artifact includes root-independent provenance, exact path/hash
+inventory, two typed projection summaries whose rendered terms are hashed,
+and the measured evidence report. The opt-in pinned two-selection reproduction
+takes 369 ms in the recorded run and exactly matches the committed raw module.
+
+Seven universal claims pass from the reflected compiler terms: panic freedom
+and equality to an independent finite specification for both good functions,
+frame alignment, and permission subset of both the selected parent and leaf.
+The proof group takes 100 ms in the recorded run. The three broken controls
+produce replay-checked source witnesses for unmasked-index panic, unaligned
+frame output, and parent-permission escalation.
+
+The frozen eight-table sampler evaluates every `u8` address for both good
+functions: exactly 4,096 rows in 234 ms, with zero reflection/spec/Rust
+disagreement, evaluation error, panic, or dropped row. Twelve semantic or
+authentication mutations have teeth. Removing the first index mask is
+correctly observed as semantically redundant for `u8 >> 6`, but the altered
+compiler artifact is still rejected by authentication; the second index mask,
+frame mask, parent intersection, and parent-for-leaf selection mutations are
+replay-refuted. Region/width/assertion and metadata tampering fail closed.
+
+Six focused evidence tests, the pinned Cargo reproduction, complete
+`axeyum-verify` and doctests, strict Clippy/rustdoc, the unchanged 81-variant /
+123-test reflection semantics gate, scoped formatting, links, and the one-job
+4 GiB OOM audit pass. This closes the bounded T5.3.2 v1 task only. It remains a
+four-entry finite obligation shape, not an MMU, real address-translation
+result, external target, or completion of P5.3.
 
 ## Rejected alternatives
 

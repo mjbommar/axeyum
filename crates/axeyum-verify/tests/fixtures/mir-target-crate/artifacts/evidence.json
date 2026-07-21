@@ -1,0 +1,49 @@
+{
+  "schema": "axeyum.verify-page-table-evidence.v1",
+  "status": "pass",
+  "raw_capture_gate": {
+    "functions": ["walk_frame", "walk_permissions"],
+    "fresh_repetitions_per_function": 2,
+    "raw_modules": 4,
+    "byte_identical": true,
+    "bytes_each": 8218,
+    "sha256": "6a1e7c82ad14de2355d5e7039422933b99c410e3ca4bff89b1704ee53f5b5c43"
+  },
+  "proofs": {
+    "universal_panic_freedom": 2,
+    "exact_independent_specifications": 2,
+    "aligned_frame": 1,
+    "parent_permission_subset": 1,
+    "leaf_permission_subset": 1,
+    "disagreements": 0,
+    "unknown": 0
+  },
+  "broken_controls": {
+    "replay_checked_witnesses": 3,
+    "unmasked_index_panic": 1,
+    "unaligned_frame": 1,
+    "parent_permission_escalation": 1
+  },
+  "sampler": {
+    "tables": 8,
+    "addresses_per_table": 256,
+    "functions": 2,
+    "rows": 4096,
+    "reflection_spec_rust_disagreements": 0,
+    "evaluation_errors": 0,
+    "panics": 0,
+    "dropped_rows": 0
+  },
+  "mutations": {
+    "semantic_or_authenticated": 12,
+    "unexpected_survivors": 0,
+    "redundant_level1_mask_semantic_delta": false,
+    "redundant_level1_mask_authentication_rejected": true
+  },
+  "wall_time_observation_ms": {
+    "two_selection_pinned_capture_reproduction": 369,
+    "universal_proofs": 100,
+    "sampler": 234
+  },
+  "claim_boundary": "four-entry finite obligation shape; not an MMU or real address-translation result"
+}

@@ -923,7 +923,7 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     intrinsic is typed and isolated from relational calls. Nontrivial
     `requires`, panic-summary authoring, broader source syntax, and source-to-
     LLVM generation remain separate.
-- [ ] Can the accepted checked-MIR byte-region surface discharge a complete
+- [x] Can the accepted checked-MIR byte-region surface discharge a complete
   page-table-shaped obligation family without adding a new memory model?
   - [ADR-0318](../09-decisions/adr-0318-preregister-reflected-page-table-walk-obligations.md)
     rejects the first two-level four-entry byte-table cell before capture or
@@ -941,10 +941,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     walk fixture now reaches the existing checked-memory profile. No raw walk
     artifact or page-table result is admitted; a retry needs a fresh ADR.
   - [ADR-0320](../09-decisions/adr-0320-preregister-bounded-reflected-page-table-evidence.md)
-    preregisters that fresh evidence-only retry: four byte-identical captures,
-    authenticated raw bytes and typed summaries, independent finite-walk
-    specifications, universal good-case proofs, replayed broken controls, and
-    an exact 4,096-row sampler. It permits no production semantic widening.
+    accepts that fresh evidence-only retry: four byte-identical captures,
+    authenticated raw bytes and typed summaries, seven universal good-case
+    claims, three replayed broken controls, and exactly 4,096 sampler rows at
+    zero disagreement/error/panic/drop. It adds no production semantic form
+    and closes only the bounded four-entry obligation shape, not an MMU claim.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

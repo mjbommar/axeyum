@@ -1,0 +1,52 @@
+{
+  "schema": "axeyum.verify-page-table-mir-provenance.v1",
+  "profile": "checked-memory",
+  "manifest": "$FIXTURE/Cargo.toml",
+  "lockfile": "$FIXTURE/Cargo.lock",
+  "source": "$FIXTURE/src/lib.rs",
+  "raw_module": "$FIXTURE/artifacts/page_table_walks.mir",
+  "selection_summaries": [
+    "$FIXTURE/artifacts/walk-frame-summary.json",
+    "$FIXTURE/artifacts/walk-permissions-summary.json"
+  ],
+  "evidence": "$FIXTURE/artifacts/evidence.json",
+  "package": "axeyum-mir-target-fixture",
+  "target_kind": "lib",
+  "selected_functions": ["walk_frame", "walk_permissions"],
+  "target_usize_width": 64,
+  "rust_toolchain": "nightly-2026-05-01-x86_64-unknown-linux-gnu",
+  "rustc_release": "1.97.0-nightly",
+  "rustc_commit": "f53b654a8882fd5fc036c4ca7a4ff41ce32497a6",
+  "cargo_release": "1.97.0-nightly",
+  "cargo_commit": "eb9b60f1f6604b5e022c56be31692c215b8ba11d",
+  "ordered_cargo_args": [
+    "rustc",
+    "--manifest-path",
+    "$MANIFEST",
+    "--package",
+    "axeyum-mir-target-fixture",
+    "--lib",
+    "--target-dir",
+    "$TARGET_DIR",
+    "--locked",
+    "--quiet",
+    "--",
+    "-C",
+    "opt-level=0",
+    "-C",
+    "overflow-checks=yes",
+    "-Zunpretty=mir"
+  ],
+  "ordered_rustc_args": [
+    "-C",
+    "opt-level=0",
+    "-C",
+    "overflow-checks=yes",
+    "-Zunpretty=mir"
+  ],
+  "fresh_capture_repetitions_per_function": 2,
+  "fresh_raw_modules": 4,
+  "all_raw_modules_byte_identical": true,
+  "raw_module_bytes": 8218,
+  "raw_module_sha256": "6a1e7c82ad14de2355d5e7039422933b99c410e3ca4bff89b1704ee53f5b5c43"
+}
