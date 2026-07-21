@@ -3598,6 +3598,69 @@ pub fn characteristic_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> 
     Some(expand(&determinant).unwrap_or(determinant))
 }
 
+/// The **companion matrix** of a univariate polynomial `p(var)` of degree `n ≥ 1`:
+/// the `n × n` rational matrix whose **eigenvalues are exactly the roots of `p`**.
+/// Uses the standard form — `1`s on the subdiagonal and the negated monic
+/// coefficients down the last column. In the `det(λI − C)` convention its
+/// characteristic polynomial is the monic form of `p`; the crate's
+/// [`characteristic_polynomial`] uses `det(C − λI) = (−1)ⁿ·det(λI − C)`, so it
+/// returns `(−1)ⁿ` times that monic polynomial (identical for even `n`).
+///
+/// **Certified**: the returned matrix's [`characteristic_polynomial`] is verified
+/// equal to `(−1)ⁿ·(monic p)` by the zero-test. `None` if `p` is not a univariate
+/// polynomial in `var`, is constant, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, companion_matrix, characteristic_polynomial, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // p = x² − 3x + 2; its companion matrix has char poly x² − 3x + 2.
+/// let p = x.clone().pow(2) - CasExpr::int(3) * x.clone() + CasExpr::int(2);
+/// let c = companion_matrix(&p, "x").unwrap();
+/// let cp = characteristic_polynomial(&c, "x").unwrap();
+/// assert!(matches!(equal(&cp, &p), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn companion_matrix(poly: &CasExpr, var: &str) -> Option<Matrix> {
+    let coeffs = poly::rat_trim(normalize(poly)?.to_univariate(var)?);
+    let degree = poly::rat_degree(&coeffs)?;
+    if degree < 1 {
+        return None;
+    }
+    // Monic coefficients c₀..c_{n−1} (divide through by the leading coefficient).
+    let leading = coeffs[degree];
+    let monic: Vec<Rational> = coeffs[..degree]
+        .iter()
+        .map(|c| c.checked_div(leading))
+        .collect::<Option<_>>()?;
+    // C[i][degree−1] = −cᵢ; C[i][i−1] = 1.
+    let mut data = vec![vec![CasExpr::zero(); degree]; degree];
+    for i in 0..degree {
+        data[i][degree - 1] = CasExpr::Const(monic[i].checked_neg()?);
+        if i >= 1 {
+            data[i][i - 1] = CasExpr::one();
+        }
+    }
+    let companion = Matrix::from_rows(data)?;
+    // Certificate: the companion's eigenvalues are the roots of the monic form of
+    // `poly`. The crate's `characteristic_polynomial` uses `det(C − λI) =
+    // (−1)ⁿ·det(λI − C)`, so it equals `(−1)ⁿ` times the monic polynomial.
+    let monic_coeffs: Vec<Rational> = monic
+        .iter()
+        .copied()
+        .chain(std::iter::once(Rational::integer(1)))
+        .collect();
+    let sign = if degree.is_multiple_of(2) {
+        Rational::integer(1)
+    } else {
+        Rational::integer(-1)
+    };
+    let expected = CasExpr::Const(sign) * MultiPoly::from_univariate(var, &monic_coeffs).to_expr();
+    match equal(&characteristic_polynomial(&companion, var)?, &expected) {
+        ZeroTest::Certified { equal: true, .. } => Some(companion),
+        _ => None,
+    }
+}
+
 /// The eigenvalues of a square matrix: the roots of its characteristic
 /// polynomial (rational + real-quadratic + complex), via [`solve`].
 #[must_use]
@@ -8422,6 +8485,41 @@ mod tests {
             &(v("L").pow(2) + CasExpr::int(1)),
         );
         assert_eq!(eigenvalues(&rot, "L").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn companion_matrix_reproduces_the_polynomial() {
+        let x = || v("x");
+        // For each monic p, the companion matrix's char poly is (−1)ⁿ·p, so p's
+        // roots are its eigenvalues; verify by substituting each root into p.
+        for (p, degree) in [
+            (x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(2), 2usize),
+            (
+                x().pow(3) - CasExpr::int(6) * x().pow(2) + CasExpr::int(11) * x()
+                    - CasExpr::int(6),
+                3,
+            ),
+            (x().pow(2) + CasExpr::int(1), 2), // complex roots
+        ] {
+            let companion = companion_matrix(&p, "x").expect("companion");
+            assert_eq!(companion.rows(), degree);
+            assert_eq!(companion.cols(), degree);
+            // char_poly(C) = (−1)^degree · p.
+            let cp = characteristic_polynomial(&companion, "x").unwrap();
+            let sign = if degree % 2 == 0 {
+                CasExpr::int(1)
+            } else {
+                CasExpr::int(-1)
+            };
+            assert_equal(&cp, &(sign * p.clone()));
+            // Every eigenvalue is a root of p.
+            for lambda in eigenvalues(&companion, "x").unwrap() {
+                assert_equal(&p.substitute("x", &lambda), &CasExpr::zero());
+            }
+        }
+        // A non-monic polynomial is accepted (normalized); a constant is declined.
+        assert!(companion_matrix(&(CasExpr::int(2) * x().pow(2) - CasExpr::int(4)), "x").is_some());
+        assert!(companion_matrix(&CasExpr::int(5), "x").is_none());
     }
 
     #[test]
