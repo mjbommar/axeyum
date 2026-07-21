@@ -116,7 +116,7 @@ fn is_prime_u128(candidate: u128) -> bool {
         if candidate == witness {
             return true;
         }
-        if candidate % witness == 0 {
+        if candidate.is_multiple_of(witness) {
             return false;
         }
     }
@@ -142,8 +142,8 @@ fn is_prime_u128(candidate: u128) -> bool {
 /// retries with the next parameter). The iteration is fully deterministic — no
 /// randomness — which the surrounding runtime forbids.
 fn brent(n: u128, increment: u128) -> Option<u128> {
-    let step = |value: u128| (mul_mod(value, value, n) + increment) % n;
     const BATCH: u128 = 128;
+    let step = |value: u128| (mul_mod(value, value, n) + increment) % n;
 
     let mut anchor = 2u128;
     let mut hare = 2u128;
@@ -163,7 +163,7 @@ fn brent(n: u128, increment: u128) -> Option<u128> {
             let limit = BATCH.min(range - done);
             for _ in 0..limit {
                 hare = step(hare);
-                let diff = if anchor > hare { anchor - hare } else { hare - anchor };
+                let diff = anchor.abs_diff(hare);
                 product = mul_mod(product, diff, n);
             }
             divisor = gcd_u128(product, n);
@@ -176,11 +176,7 @@ fn brent(n: u128, increment: u128) -> Option<u128> {
         // The batched gcd overshot to `n`; recover by stepping one at a time.
         loop {
             hare_snapshot = step(hare_snapshot);
-            let diff = if anchor > hare_snapshot {
-                anchor - hare_snapshot
-            } else {
-                hare_snapshot - anchor
-            };
+            let diff = anchor.abs_diff(hare_snapshot);
             divisor = gcd_u128(diff, n);
             if divisor > 1 {
                 break;
@@ -197,7 +193,7 @@ fn brent(n: u128, increment: u128) -> Option<u128> {
 
 /// Return a non-trivial factor of the composite `n` (`n > 1`, not prime).
 fn pollard_factor(n: u128) -> u128 {
-    if n % 2 == 0 {
+    if n.is_multiple_of(2) {
         return 2;
     }
     let mut increment = 1u128;
@@ -236,13 +232,13 @@ fn factor_u128(n: u128) -> Vec<(u128, u32)> {
     let mut magnitude = n;
     let mut primes: Vec<u128> = Vec::new();
 
-    while magnitude % 2 == 0 {
+    while magnitude.is_multiple_of(2) {
         primes.push(2);
         magnitude /= 2;
     }
     let mut candidate = 3u128;
     while candidate <= 1000 && candidate * candidate <= magnitude {
-        while magnitude % candidate == 0 {
+        while magnitude.is_multiple_of(candidate) {
             primes.push(candidate);
             magnitude /= candidate;
         }
@@ -255,11 +251,11 @@ fn factor_u128(n: u128) -> Vec<(u128, u32)> {
     primes.sort_unstable();
     let mut result: Vec<(u128, u32)> = Vec::new();
     for prime in primes {
-        if let Some(last) = result.last_mut() {
-            if last.0 == prime {
-                last.1 += 1;
-                continue;
-            }
+        if let Some(last) = result.last_mut()
+            && last.0 == prime
+        {
+            last.1 += 1;
+            continue;
         }
         result.push((prime, 1));
     }
@@ -350,14 +346,14 @@ pub fn extended_gcd(a: i128, b: i128) -> (i128, i128, i128) {
         old_y = coeff_y;
         coeff_y = next_y;
     }
-    if old_remainder < 0 {
-        if let (Some(g), Some(x), Some(y)) = (
+    if old_remainder < 0
+        && let (Some(g), Some(x), Some(y)) = (
             old_remainder.checked_neg(),
             old_x.checked_neg(),
             old_y.checked_neg(),
-        ) {
-            return (g, x, y);
-        }
+        )
+    {
+        return (g, x, y);
     }
     (old_remainder, old_x, old_y)
 }

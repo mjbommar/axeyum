@@ -51,9 +51,12 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::{Rational, poly};
 
 mod matrix;
+pub mod ntheory;
 mod ratint;
+mod series;
 
 pub use matrix::Matrix;
+pub use series::series;
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
 ///
@@ -1375,6 +1378,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_rational(expr, var),
         integrate_elementary(expr, var),
         integrate_poly_times_exp(expr, var),
+        integrate_poly_times_sinusoid(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -1434,6 +1438,71 @@ fn integrate_poly_times_exp(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let q_expr = MultiPoly::from_univariate(var, &q_coeffs).to_expr();
     let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
     Some(CasExpr::Mul(vec![q_expr, arg_expr.exp()]))
+}
+
+/// Integrate `p(x)·sin(a·x+b)` or `p(x)·cos(a·x+b)` for a polynomial `p` and
+/// linear argument: the antiderivative has the form `A(x)·cos + B(x)·sin`, whose
+/// polynomial coefficients solve a coupled linear system (`A′+aB` and `B′−aA`
+/// match the sin/cos parts). Covers `∫ x·sin x = sin x − x·cos x`,
+/// `∫ x²·cos x = x²·sin x + 2x·cos x − 2·sin x`, etc. `None` outside this shape;
+/// certified downstream.
+fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    let mut trig: Option<(UnaryFunc, CasExpr)> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        match factor {
+            CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos), arg) if trig.is_none() => {
+                trig = Some((*f, (**arg).clone()));
+            }
+            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _) => return None, // two trig factors
+            other => rest.push(other.clone()),
+        }
+    }
+    let (which, arg) = trig?;
+    let arg_poly = normalize(&arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let a = arg_poly[1];
+    let p = normalize(&CasExpr::Mul(rest))?.to_univariate(var)?;
+    let degree = poly::rat_degree(&p)?;
+    let block = degree + 1; // coefficients per polynomial A, B
+    let size = 2 * block;
+    // Unknowns [A₀..A_d, B₀..B_d]; equations [(A′+aB) x⁰..x^d ; (B′−aA) x⁰..x^d].
+    let mut cols: Vec<Vec<Rational>> = vec![vec![Rational::zero(); size]; size];
+    for j in 0..block {
+        let jr = Rational::integer(i128::try_from(j).ok()?);
+        // A_j column (index j)
+        if j >= 1 {
+            cols[j][j - 1] = jr; // A′ in (A′+aB)
+        }
+        cols[j][block + j] = a.checked_neg()?; // −aA in (B′−aA)
+        // B_j column (index block+j)
+        cols[block + j][j] = a; // aB in (A′+aB)
+        if j >= 1 {
+            cols[block + j][block + j - 1] = jr; // B′ in (B′−aA)
+        }
+    }
+    // rhs: sin(u) ⇒ (A′+aB)=0, (B′−aA)=p ; cos(u) ⇒ (A′+aB)=p, (B′−aA)=0.
+    let mut rhs = vec![Rational::zero(); size];
+    let target = match which {
+        UnaryFunc::Sin => block, // p goes in the second block
+        _ => 0,                  // Cos: p goes in the first block
+    };
+    for (i, coeff) in p.iter().enumerate() {
+        rhs[target + i] = *coeff;
+    }
+    let solution = ratint::solve_linear(&cols, &rhs)?;
+    let a_expr = MultiPoly::from_univariate(var, &solution[0..block]).to_expr();
+    let b_expr = MultiPoly::from_univariate(var, &solution[block..size]).to_expr();
+    let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    Some(CasExpr::Add(vec![
+        CasExpr::Mul(vec![a_expr, arg_expr.clone().cos()]),
+        CasExpr::Mul(vec![b_expr, arg_expr.sin()]),
+    ]))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -2277,6 +2346,21 @@ mod tests {
             (CasExpr::int(3) * x() + CasExpr::int(1)) * (CasExpr::int(2) * x()).exp(),
         ] {
             let result = integrate(&integrand, "x").expect("poly·exp integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_polynomial_times_trig() {
+        let x = || v("x");
+        // ∫ x·sin x, ∫ x²·cos x, ∫ (2x+1)·sin(3x) — certified by differentiation.
+        for integrand in [
+            x() * x().sin(),
+            x().pow(2) * x().cos(),
+            (CasExpr::int(2) * x() + CasExpr::int(1)) * (CasExpr::int(3) * x()).sin(),
+        ] {
+            let result = integrate(&integrand, "x").expect("poly·trig integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
