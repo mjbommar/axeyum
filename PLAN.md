@@ -382,6 +382,13 @@ session state.
 >    partial output occurs. Do not add a v4 font cache, network exception, or
 >    output normalization after observation. T5.5.2 now returns to replacement
 >    external-target/build-route selection under a fresh zero-row decision.
+>    ADR-0327 now makes that replacement decision without running an external
+>    result: Tock revision `ac5d597d` and its source-used 32/64-bit integer-log
+>    helpers win the bounded comparison. Their owning LLVM 22 build is small and
+>    build-script-free, but the strict frontend correctly declines call-result
+>    `range` poison and `llvm.ctlz` zero-poison semantics. Implement only that
+>    typed/canonical/proved/fuzzed prerequisite over existing BV terms next;
+>    it adds no IR operator and external capture remains separately gated.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

@@ -963,7 +963,7 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     goal, admitted fragment, evidence route, worked example, reproduction,
     control, and residuals. The catalog explicitly retains T5.3.1's weaker
     MIR-text provenance and the bounded teaching-model scope of T5.3.2/3.
-- [ ] Can Axeyum reproducibly capture and admit the complete full-width Maestro
+- [x] Can Axeyum reproducibly capture and admit the complete full-width Maestro
   device-number bijection from the exact external project's owning LLVM build?
   - [ADR-0323](../09-decisions/adr-0323-preregister-maestro-device-id-llvm-capture.md)
     freezes exact upstream/source/toolchain identities and rejects the first
@@ -985,9 +985,18 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     identity variable. Extraction never runs. Next preregister two independent
     trees at one identical virtual source/target path; do not normalize output.
   - [ADR-0326](../09-decisions/adr-0326-preregister-stable-virtual-root-maestro-capture.md)
-    freezes that v3 route with exact Bubblewrap identity/argv, distinct physical
-    sources/targets bound at identical virtual paths, no remap flags, zero host-
-    path tokens, and raw module equality before extraction. Proofs stay blocked.
+    closes that final route negative. The corrected stable-root namespace
+    reaches Cargo, but upstream build logic requires an unregistered network
+    font input and emits no LLVM under frozen isolation. No extraction, parser,
+    proof, or capture credit exists; a v4 relaxation is forbidden.
+- [ ] Can Axeyum reproducibly capture and verify Tock's full-width integer-log
+  helpers from the exact owning LLVM 22 kernel build?
+  - [ADR-0327](../09-decisions/adr-0327-preregister-tock-log2-reflection.md)
+    selects the two source-used `u32`/`u64` helpers and preregisters the one
+    bounded frontend prerequisite: typed non-wrapping call-result `range`
+    poison plus scalar `llvm.ctlz` zero-poison semantics, canonical syntax,
+    independent proofs, and exhaustive/deterministic fuzz. It adds no IR
+    operator and authorizes no external capture until that gate is accepted.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

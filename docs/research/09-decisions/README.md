@@ -381,3 +381,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0324](adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md) | Diagnose Maestro's broad two-root LLVM drift as a dependency-wide source-path remapping gap; grant no capture credit | accepted |
 | [0325](adr-0325-preregister-dependency-wide-maestro-path-remap.md) | Reject dependency-wide path remapping after zero root-token leakage but continued raw full-module drift | accepted |
 | [0326](adr-0326-preregister-stable-virtual-root-maestro-capture.md) | Reject isolated Maestro capture when its owning build requires an unregistered network font input | accepted |
+| [0327](adr-0327-preregister-tock-log2-reflection.md) | Preregister typed LLVM call-result ranges and `ctlz` poison semantics for the selected Tock integer-log replacement target | proposed |
