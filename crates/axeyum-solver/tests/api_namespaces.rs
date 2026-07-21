@@ -47,6 +47,10 @@ fn full_proof_namespaces_preserve_root_aliases() {
         axeyum_solver::prove_qf_bv_unsat_alethe
     );
     assert_same_function!(
+        axeyum_solver::proofs::alethe::prove_qf_uf_unsat_alethe,
+        axeyum_solver::prove_qf_uf_unsat_alethe
+    );
+    assert_same_function!(
         axeyum_solver::proofs::alethe::prove_finite_int_quant_unsat_alethe,
         axeyum_solver::prove_finite_int_quant_unsat_alethe
     );
@@ -117,7 +121,6 @@ fn certificate_namespaces_preserve_root_aliases() {
         quantifiers::VacuousExistsUniversalCounterexampleCertificate,
         axeyum_solver::VacuousExistsUniversalCounterexampleCertificate,
     >();
-
     assert_same_function!(
         arrays::certify_array_elim_unsat,
         axeyum_solver::certify_array_elim_unsat
@@ -145,6 +148,84 @@ fn certificate_namespaces_preserve_root_aliases() {
     assert_same_function!(
         quantifiers::check_quantified_skolem_sat,
         axeyum_solver::check_quantified_skolem_sat
+    );
+}
+
+#[cfg(feature = "full")]
+#[test]
+fn general_refutation_namespaces_preserve_root_aliases() {
+    use axeyum_solver::certificates::{
+        arithmetic, finite_domains, structural, uninterpreted_functions,
+    };
+
+    assert_same_type::<
+        arithmetic::BoundedIntBlastCertificate,
+        axeyum_solver::BoundedIntBlastCertificate,
+    >();
+    assert_same_type::<arithmetic::ArithDpllRefutation, axeyum_solver::ArithDpllRefutation>();
+    assert_same_type::<arithmetic::FarkasCertificate, axeyum_solver::FarkasCertificate>();
+    assert_same_type::<arithmetic::SosCertificate, axeyum_solver::SosCertificate>();
+    assert_same_type::<
+        finite_domains::BvForallNonconstantRefutationCertificate,
+        axeyum_solver::BvForallNonconstantRefutationCertificate,
+    >();
+    assert_same_type::<finite_domains::CertifyOutcome, axeyum_solver::CertifyOutcome>();
+    assert_same_type::<
+        finite_domains::FiniteDomainPigeonholeCertificate,
+        axeyum_solver::FiniteDomainPigeonholeCertificate,
+    >();
+    assert_same_type::<
+        structural::BoolSimplificationRefutationCertificate,
+        axeyum_solver::BoolSimplificationRefutationCertificate,
+    >();
+    assert_same_type::<
+        structural::TermIdentityRefutationCertificate,
+        axeyum_solver::TermIdentityRefutationCertificate,
+    >();
+    assert_same_type::<
+        uninterpreted_functions::AckermannUnsatCertificate,
+        axeyum_solver::AckermannUnsatCertificate,
+    >();
+    assert_same_type::<
+        uninterpreted_functions::BvUfLocalRefutationCertificate,
+        axeyum_solver::BvUfLocalRefutationCertificate,
+    >();
+    assert_same_type::<
+        uninterpreted_functions::UfArithCongruenceCertificate,
+        axeyum_solver::UfArithCongruenceCertificate,
+    >();
+
+    assert_same_function!(
+        arithmetic::certify_bounded_int_blast,
+        axeyum_solver::certify_bounded_int_blast
+    );
+    assert_same_function!(
+        arithmetic::certify_arith_dpll_unsat,
+        axeyum_solver::certify_arith_dpll_unsat
+    );
+    assert_same_function!(
+        arithmetic::prove_lia_unsat_by_diophantine_certified,
+        axeyum_solver::prove_lia_unsat_by_diophantine_certified
+    );
+    assert_same_function!(
+        finite_domains::certify_qf_bv_by_enumeration,
+        axeyum_solver::certify_qf_bv_by_enumeration
+    );
+    assert_same_function!(
+        finite_domains::finite_domain_pigeonhole_refutation,
+        axeyum_solver::finite_domain_pigeonhole_refutation
+    );
+    assert_same_function!(
+        structural::term_identity_refutation,
+        axeyum_solver::term_identity_refutation
+    );
+    assert_same_function!(
+        uninterpreted_functions::certify_ackermann_unsat,
+        axeyum_solver::certify_ackermann_unsat
+    );
+    assert_same_function!(
+        uninterpreted_functions::uf_arith_congruence_refutation,
+        axeyum_solver::uf_arith_congruence_refutation
     );
 }
 

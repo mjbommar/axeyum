@@ -434,7 +434,20 @@ session state.
 >    warning-denied rustdoc profiles pass under the bounded profile. ADR-0311
 >    records the boundary. Next census the remaining general
 >    refutation/certificate utilities and core solver helpers without inventing
->    a miscellaneous namespace.
+>    a miscellaneous namespace. R4h now extends `certificates` with four
+>    semantic catalogs for 51 existing checked arithmetic, finite-domain,
+>    structural, and UF refutation contracts. The previously root-only QF_UF
+>    Alethe emitter also joins `proofs::alethe`. The all-feature documented root
+>    falls 128→77, the certificate subtree grows 105→160, and the proof
+>    subtree grows 115→116; minimal `qfbv` remains 26 with no certificate
+>    module. General decision procedures, `check_model`, SAT backends, and solver
+>    front doors remain outside the catalogs. Historical paths remain callable
+>    and type-identical; all 891 solver-library tests, strict clippy,
+>    compatibility gates, and both warning-denied rustdoc profiles pass under
+>    the bounded profile. ADR-0312 records the boundary. Perform one final
+>    residual query-construction/core-helper census, preserving the compact
+>    solver front door and stopping R4 if no independent non-catch-all boundary
+>    is justified.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

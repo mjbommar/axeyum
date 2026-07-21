@@ -213,6 +213,7 @@ pub mod proofs {
             prove_uflia_opaque_unsat_alethe, prove_uflra_unsat_alethe,
         };
         pub use crate::bitblast_alethe::bitblast_step;
+        pub use crate::euf_alethe::prove_qf_uf_unsat_alethe;
         pub use crate::qfabv_alethe::{
             prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
             prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe,
@@ -349,6 +350,42 @@ pub mod certificates {
         };
     }
 
+    /// Integer, real, and mixed-arithmetic refutation certificates.
+    pub mod arithmetic {
+        pub use crate::auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
+        pub use crate::dpll_lia::{
+            ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,
+        };
+        pub use crate::dpll_t::{
+            LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat,
+        };
+        pub use crate::lia_gcd::{
+            DiophantineCertificate, Equality, check_diophantine_certificate,
+            prove_lia_unsat_by_diophantine, prove_lia_unsat_by_diophantine_certified,
+            prove_lia_unsat_by_gcd,
+        };
+        pub use crate::lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
+        pub use crate::nra_even_power::{
+            NraEvenPowerRefutationCertificate, nra_even_power_refutation,
+        };
+        pub use crate::nra_real_root::SosCertificate;
+    }
+
+    /// Exhaustive finite-domain and finite-bit-vector certification.
+    pub mod finite_domains {
+        pub use crate::bv_forall_nonconstant::{
+            BvForallNonconstantKind, BvForallNonconstantRefutationCertificate,
+            bv_forall_nonconstant_refutation,
+        };
+        pub use crate::certify::{
+            CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
+        };
+        pub use crate::ufbv_finite::{
+            BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate,
+            bool_uf_exhaustive_refutation, finite_domain_pigeonhole_refutation,
+        };
+    }
+
     /// Quantifier certificate families and their independent checkers.
     pub mod quantifiers {
         pub use crate::qinst_egraph::{
@@ -425,6 +462,33 @@ pub mod certificates {
             VacuousExistsUniversalCounterexampleCertificate,
             check_vacuous_exists_universal_counterexample,
         };
+    }
+
+    /// Small structural refutations over original terms.
+    pub mod structural {
+        pub use crate::bool_simplify::{
+            BoolSimplificationRefutationCertificate, bool_simplification_refutation,
+        };
+        pub use crate::set_cardinality::{
+            SetCardinalityRefutationCertificate, set_cardinality_refutation,
+        };
+        pub use crate::term_identity::{
+            TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,
+        };
+    }
+
+    /// Checked uninterpreted-function and mixed UF refutations.
+    pub mod uninterpreted_functions {
+        pub use crate::bool_euf::{
+            BoolEufExhaustiveCertificate, BoolEufOnlineCertificate, bool_euf_exhaustive_refutation,
+            bool_euf_online_refutation,
+        };
+        pub use crate::bv_uf_local::{
+            BvUfLocalDerivedEquality, BvUfLocalRefutationCertificate, BvUfLocalRefutationKind,
+            bv_uf_local_refutation,
+        };
+        pub use crate::euf::{AckermannUnsatCertificate, certify_ackermann_unsat};
+        pub use crate::uf_arith::{UfArithCongruenceCertificate, uf_arith_congruence_refutation};
     }
 }
 
@@ -744,10 +808,9 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use aufbv::check_with_arrays_and_functions;
-        pub use auto::{
-            BoundedIntBlastCertificate, certify_bounded_int_blast, check_auto,
-            check_auto_explained, solve, unsat_core,
-        };
+        #[doc(hidden)]
+        pub use auto::{BoundedIntBlastCertificate, certify_bounded_int_blast};
+        pub use auto::{check_auto, check_auto_explained, solve, unsat_core};
         #[doc(hidden)]
         pub use auto::{
             check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
@@ -767,13 +830,16 @@ macro_rules! full_exports {
             bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
             prove_safety_k_induction, prove_safety_k_induction_with_memory,
         };
+        #[doc(hidden)]
         pub use bool_euf::{
             BoolEufExhaustiveCertificate, BoolEufOnlineCertificate, bool_euf_exhaustive_refutation,
             bool_euf_online_refutation,
         };
+        #[doc(hidden)]
         pub use bool_simplify::{
             BoolSimplificationRefutationCertificate, bool_simplification_refutation,
         };
+        #[doc(hidden)]
         pub use bv_forall_nonconstant::{
             BvForallNonconstantKind, BvForallNonconstantRefutationCertificate,
             bv_forall_nonconstant_refutation,
@@ -782,11 +848,13 @@ macro_rules! full_exports {
         pub use bv_interpolant::{
             QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
         };
+        #[doc(hidden)]
         pub use bv_uf_local::{
             BvUfLocalDerivedEquality, BvUfLocalRefutationCertificate, BvUfLocalRefutationKind,
             bv_uf_local_refutation,
         };
         pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_one};
+        #[doc(hidden)]
         pub use certify::{
             CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
         };
@@ -817,6 +885,7 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use datatype_native::check_with_datatype_native;
         pub use distinct::distinct;
+        #[doc(hidden)]
         pub use dpll_lia::{
             ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,
         };
@@ -824,15 +893,18 @@ macro_rules! full_exports {
         pub use dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
         #[doc(hidden)]
         pub use dpll_t::check_with_lra_dpll;
+        #[doc(hidden)]
         pub use dpll_t::{LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
         #[doc(hidden)]
         pub use enums::{EnumError, EnumSort, EnumVar};
+        #[doc(hidden)]
         pub use euf::{AckermannUnsatCertificate, certify_ackermann_unsat};
         #[doc(hidden)]
         pub use euf::{
             check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf_arithmetic,
             check_with_uf_arithmetic_lazy,
         };
+        #[doc(hidden)]
         pub use euf_alethe::prove_qf_uf_unsat_alethe;
         #[doc(hidden)]
         pub use euf_egraph::{
@@ -887,6 +959,7 @@ macro_rules! full_exports {
         pub use lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         #[doc(hidden)]
         pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
+        #[doc(hidden)]
         pub use lia_gcd::{
             DiophantineCertificate, Equality, check_diophantine_certificate,
             prove_lia_unsat_by_diophantine, prove_lia_unsat_by_diophantine_certified,
@@ -902,6 +975,7 @@ macro_rules! full_exports {
         pub use lia_online::{LiaTheory, check_qf_lia_online};
         #[doc(hidden)]
         pub use lia_theory::check_qf_lia_online_cdclt;
+        #[doc(hidden)]
         pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
         #[doc(hidden)]
         pub use lra::{
@@ -921,7 +995,9 @@ macro_rules! full_exports {
         pub use mbp::{mbp_lia, mbp_lra};
         #[doc(hidden)]
         pub use nra::check_with_nra;
+        #[doc(hidden)]
         pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
+        #[doc(hidden)]
         pub use nra_real_root::SosCertificate;
         #[doc(hidden)]
         pub use optimize::{
@@ -1086,6 +1162,7 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
         pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
+        #[doc(hidden)]
         pub use set_cardinality::{
             SetCardinalityRefutationCertificate, set_cardinality_refutation,
         };
@@ -1118,6 +1195,7 @@ macro_rules! full_exports {
             CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,
             SymbolicMemoryWrite,
         };
+        #[doc(hidden)]
         pub use term_identity::{
             TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,
         };
@@ -1137,7 +1215,9 @@ macro_rules! full_exports {
             TinyBvTraceReport, TinyBvTraceSourceStep, TinyBvWitness,
         };
         pub use trust::{ALL_TRUST_IDS, TrustId, TrustStep, trust_ledger_markdown};
+        #[doc(hidden)]
         pub use uf_arith::{UfArithCongruenceCertificate, uf_arith_congruence_refutation};
+        #[doc(hidden)]
         pub use ufbv_finite::{
             BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate,
             bool_uf_exhaustive_refutation, finite_domain_pigeonhole_refutation,

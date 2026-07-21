@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4h completes the checked-refutation certificate catalog.**
+  Four new full-only `certificates` submodules organize 51 existing arithmetic,
+  finite-domain, structural, and UF refutation contracts. General decision
+  procedures, `check_model`, SAT backends, and solver front doors remain outside
+  the catalogs. The missed QF_UF Alethe emitter now has its canonical
+  `proofs::alethe` path. The all-feature documented root falls 128→77 items;
+  the certificate subtree grows 105→160 and the proof subtree 115→116, while
+  minimal `qfbv` stays at 26 with no certificate module. Historical aliases
+  remain callable and type-identical. Dedicated compatibility gates, all 891
+  solver-library tests, strict all-target clippy, and both warning-denied
+  rustdoc profiles pass inside the one-job 4 GiB profile. Next: one final
+  residual query-construction/core-helper census, then stop R4 unless a distinct
+  non-catch-all ownership boundary is measured.
+
 - **2026-07-20 — R4g gives interpolation a bounded canonical surface.** The
   full-only `interpolation` facade groups 21 existing common, QF_BV, QF_UF,
   LIA, LRA, UFLIA, and UFLRA contracts under six logic-specific submodules.
@@ -5536,6 +5550,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0312 accepts the general refutation certificate
+  namespaces.** Fifty-one existing checked refutation entries now have canonical
+  paths under arithmetic, finite-domain, structural, and UF certificate
+  submodules; the QF_UF Alethe emitter joins its existing proof-format owner.
+  General solvers and model replay are explicitly excluded. Warning-denied
+  rustdoc measures 128→77 root items, 160 certificate-subtree entries, and 116
+  proof-subtree entries; minimal `qfbv` remains at 26 with only `proofs`
+  exposed. Representative compatibility tests cover every new submodule, all
+  891 solver-library tests pass, and strict all-target clippy is clean under the
+  bounded profile. Next R4 work is one final residual helper census with an
+  explicit stop condition.
 
 - **2026-07-20 — ADR-0311 accepts the interpolation API namespace.** Twenty-one
   existing interpolation entries now have canonical paths under a full-only
