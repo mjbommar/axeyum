@@ -17,7 +17,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Rational | `cancel` (uni+multivariate), `apart`, `factor`, `poly_gcd`, `poly_div`, `degree`/`coeff`/`leading_coeff` | factor/apart ✓ |
 | Equations | `solve` (rational, real-quadratic, **complex** roots) | rational ✓ |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos` | ✓ (differentiate-and-check) |
-| Analysis | `limit`, `series` (Maclaurin/Taylor), `sum_polynomial` | limit/sum ✓ |
+| Analysis | `limit`, `series` (Maclaurin, about `x=0`; arbitrary-center Taylor in progress), `sum_polynomial` | limit/sum ✓ |
 | ODEs | `dsolve_homogeneous` (constant-coeff linear) | ✓ (ODE operator) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
 | Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse | det/solve ✓ |
@@ -25,8 +25,19 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
 
 Heads: `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`). Progress log:
-[diary.md](diary.md). Remaining long tail: Gröbner, assumptions, trig/log identity
-simplification, special functions, more ODE/integration classes.
+[diary.md](diary.md).
+
+**Coverage target.** At least SymPy's compute surface, aiming at Mathematica's —
+the yardstick is the 23-node [curriculum](../../curriculum/) plus its K-12 layer.
+The prioritized continuation lives in [next-wave-roadmap.md](next-wave-roadmap.md)
+(capability survey) and [curriculum-gaps.md](curriculum-gaps.md) (the union of the
+seven per-branch curriculum reviews, Tier A–D). Active build wave (Tier A):
+eigenvectors, definite integration, arbitrary-center Taylor, radical
+simplification, the number-theory bundle (Legendre/Jacobi, primitive roots,
+discrete log, continued fractions, Pell, `nPr`), statistics, vector
+calculus/Jacobian, integer factorization. Longer tail: Gosper/Zeilberger,
+assumptions, trig/log identity simplification, special functions, Risch, more
+ODE/integration classes.
 
 ---
 
@@ -131,9 +142,11 @@ compute-side realization of destinations the research tree already names:
 | [decidability-map.md](decidability-map.md) | Per-capability decidable? / complete? / certificate route | done |
 | [curriculum-coverage.md](curriculum-coverage.md) | Node-by-node map of the CAS onto the full 23-node curriculum (+ complex, ODEs, geometry) | done |
 | [oracle-as-test-harness.md](oracle-as-test-harness.md) | Why the existing corpus is a non-circular CAS test harness | done |
-| [gap-analysis.md](gap-analysis.md) | Substrate vs. target; 16 build units | done |
+| [gap-analysis.md](gap-analysis.md) | Substrate vs. target; 16 build units (G0–G18, all shipped) | done |
 | [build-plan.md](build-plan.md) | Phased (C0–C7), decidable-first, TDD sequence with exit gates | done |
 | [rational-integration.md](rational-integration.md) | `∫ P/Q dx` algorithm (Horowitz) + certification + log-part roadmap | done |
+| [next-wave-roadmap.md](next-wave-roadmap.md) | Post-G18 SymPy/Mathematica capability survey; prioritized top-15 | live |
+| [curriculum-gaps.md](curriculum-gaps.md) | Union of the 7 per-branch curriculum reviews; Tier A–D ranked gaps | live |
 
 **Decisions:** [ADR-0301](../09-decisions/adr-0301-cas-layer-reduce-to-decide.md)
 (the `axeyum-cas` layer + reduce-to-decide certifier).

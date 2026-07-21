@@ -27,13 +27,25 @@ linear ODEs, certified by the ODE operator).
 
 **Heads:** `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`).
 
-**Modules:** `matrix.rs` (symbolic linear algebra — det, RREF, solve, inverse),
-`ntheory.rs` (gcd, mod-pow/inverse, deterministic `is_prime`, `factorize`, CRT,
-Euler φ, …), `series.rs`, `ratint.rs` (integration internals).
+**Modules:** `matrix.rs` (symbolic linear algebra — det, RREF, solve, inverse,
+rank, eigenvalues, characteristic polynomial), `mvpoly.rs` (multivariate ring ops,
+GCD, square-free), `groebner.rs` (Buchberger, ideal membership), `ntheory.rs`
+(gcd, mod-pow/inverse, deterministic `is_prime`, `factorize`, CRT, Euler φ, …),
+`series.rs`, `ratint.rs` (integration internals). Complex numbers (`I` with
+`I²=−1` in the zero-test, `conjugate`, `real_part`, `imaginary_part`) and
+`dsolve_homogeneous` are shipped. So **G0–G18 are all implemented** — this
+snapshot's earlier "Next" list (G4/G6/complex/ODEs) is superseded.
 
-**Next:** complex numbers (`I`, ℚ(i), complex roots — G17), multivariate GCD /
-Gröbner (G4/G6), trig/log identity simplification, first-order & inhomogeneous
-ODEs, integration by parts/substitution beyond the current table, assumptions.
+**Next wave (post-G18).** The prioritized continuation is now maintained in two
+companion notes rather than this snapshot:
+[next-wave-roadmap.md](next-wave-roadmap.md) (SymPy/Mathematica capability survey,
+prioritized top-15) and [curriculum-gaps.md](curriculum-gaps.md) (the union of the
+seven per-branch curriculum reviews, ranked Tier A–D by
+value × certifiability × buildability). **Coverage target: at least SymPy's
+compute surface, aiming at Mathematica's — which is exactly what the 23-node
+curriculum + K-12 layer enumerate.** Tier A (eigenvectors, definite integration,
+Taylor-about-a-point, radical simplification, the number-theory bundle, statistics,
+vector calculus/Jacobian, integer factorization) is in active TDD build.
 
 ---
 

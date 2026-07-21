@@ -11,9 +11,13 @@ Last updated: 2026-07-20
 > and the Pythagorean identity in the zero-test). See the
 > [README capability table](README.md#implemented) and [diary.md](diary.md) for
 > the current surface (130+ tests). This document is retained as the original
-> gap map; the *next wave* beyond G18 is being appended from a roadmap-research
-> pass (Risch integration, factorization over ℚ, assumptions, Smith/Hermite,
-> Gosper/Zeilberger, special functions, more ODE classes).
+> gap map; the *next wave* beyond G18 is tracked in
+> [next-wave-roadmap.md](next-wave-roadmap.md) (SymPy/Mathematica capability
+> survey — Risch integration, factorization over ℚ, assumptions, Smith/Hermite,
+> Gosper/Zeilberger, special functions, more ODE classes) and
+> [curriculum-gaps.md](curriculum-gaps.md) (the union of the seven per-branch
+> curriculum reviews, Tier A–D). **Coverage target: ≥ SymPy, → Mathematica**, as
+> enumerated by the 23-node curriculum + K-12 layer.
 
 What must be built, given [substrate-map.md](substrate-map.md) (what exists) and
 [cas-architecture-survey.md](cas-architecture-survey.md) /
