@@ -24,23 +24,33 @@
     {
       "id": "G1",
       "title": "Replace aggregate decide-rate with a coverage-weighted parity matrix",
-      "state": "prototype-landed",
+      "state": "partially-landed",
       "question": "What source-balanced and deduplicated population does each solver score actually describe?",
       "owner_paths": [
+        "scripts/gen-measurement-provenance.py",
+        "docs/plan/measurement-provenance-v1.json",
+        "scripts/smtcomp_repro/select_library.py",
+        "scripts/smtcomp_repro/compete.py",
         "scripts/smtcomp_repro/provenance.py",
         "scripts/smtcomp_repro/scoring.py",
         "scripts/gen-scoreboard.py"
       ],
       "evidence_paths": [
+        "docs/plan/generated/measurement-provenance-matrix.json",
+        "docs/plan/measurement-provenance-design-2026-07-21.md",
+        "docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md",
         "bench-results/smtcomp-repro-20260721/inventory.json",
         "bench-results/smtcomp-repro-20260721/provenance.json",
         "bench-results/SCOREBOARD.md"
       ],
       "gate_commands": [
-        "python3 -m unittest discover -s scripts/smtcomp_repro/tests"
+        "python3 scripts/gen-measurement-provenance.py --check",
+        "for t in test_scoring test_pipeline test_selection test_provenance; do python3 scripts/smtcomp_repro/tests/$t.py || exit 1; done"
       ],
-      "decision_paths": [],
-      "next_action": "Define one shared provenance schema across the 35-row regression scoreboard and 228-file public inventory without merging their scores."
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md"
+      ],
+      "next_action": "Review ADR-0343 and the frozen failed-run handoff; preregister a resumable shard protocol before rerun, then add missing selection and syntax-normalized identities before any deduplicated score."
     },
     {
       "id": "G2",

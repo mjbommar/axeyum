@@ -43,15 +43,22 @@ labels:
   changed timing-derived flags without changing verdicts.
 
 Those figures describe the committed slices, not the SMT-LIB universe. The
-file-backed rows contain 927 occurrences but only 837 unique normalized paths,
-and two synthetic rows expose only aggregate counts. Zero observed disagreement
-is strong regression evidence; it is not a proof of universal soundness.
+file-backed rows contain 927 occurrences, 837 unique normalized paths, and only
+778 unique byte contents; 58 exact-alias groups remove 59 additional path
+identities. Two synthetic rows expose 65 aggregate-only cases with no file
+identity. Zero observed disagreement is strong regression evidence; it is not a
+proof of universal soundness.
 
 A separate, harder 228-file public convenience inventory gives the less
 flattering and equally important view: **82 / 228** decided-correct,
 **144 explicit declines**, **2 no-answer outcomes**, and **0 wrong verdicts** against
 the recorded statuses. It is not an official or population-weighted SMT-COMP
 selection.
+
+The two regimes are also not independent: **99 exact contents** appear in both,
+covering 43.4% of the public inventory and 12.7% of the scoreboard's unique
+file-backed contents. Their decide rates describe different weightings of an
+overlapping convenience population and must not be averaged.
 
 For UNSAT assurance, the 327 baseline UNSAT decisions partition as follows:
 
@@ -64,6 +71,7 @@ For UNSAT assurance, the 327 baseline UNSAT decisions partition as follows:
 
 The authoritative sources are the generated
 [scoreboard](../bench-results/SCOREBOARD.md),
+[measurement-provenance matrix](plan/generated/measurement-provenance-matrix.md),
 [proof-gap matrix](plan/generated/proof-gap-matrix.md), and
 [scoped parity analysis](plan/gap-analysis-z3-lean-2026-07-21.md).
 

@@ -629,6 +629,20 @@ Out of scope:
 - [ ] Is portfolio dispatch in scope for the first public release?
 - [ ] What must be `Send`/`Sync` to make portfolio solving natural?
 
+### Measurement And Benchmarking
+
+- [ ] How should heterogeneous benchmark regimes share provenance without
+      producing a false global parity score?
+  - Proposed answer:
+    [ADR-0343](../09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
+    gives raw occurrences, normalized paths, exact contents, selection policy,
+    row-local scoring, and oracle evidence separate identities. The first
+    prototype finds 778 unique byte contents behind the scoreboard's 927
+    file-backed occurrences and 99 exact-content overlaps with the 228-file
+    public inventory. Acceptance remains open; semantic near-duplicate policy,
+    official selection, and matched neutral-oracle populations are not yet
+    resolved.
+
 ### Horizon: General Reasoning And Proving
 
 - [x] What binder representation (de Bruijn, locally nameless, named with

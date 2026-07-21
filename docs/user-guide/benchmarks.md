@@ -14,14 +14,18 @@ faster than a backend that actually solves them.
 ## Current measured map
 
 No single corpus establishes "Z3 parity." The committed evidence intentionally
-keeps three regimes separate.
+keeps distinct populations, limits, and consumer regimes separate.
 
 ### Regression scoreboard
 
 The generated [scoreboard](../../bench-results/SCOREBOARD.md) contains 35 rows
 across 24 logic labels: **753 / 992** files decided, **680 oracle-compared**, and
 zero recorded disagreements. The rows are curated regression slices and include
-overlapping file populations, so 75.9% is not a global completeness estimate.
+overlapping file populations: 927 file occurrences contract to
+**837 normalized paths** and 778 exact byte contents. The generated
+[measurement-provenance matrix](../plan/generated/measurement-provenance-matrix.md)
+records the row-local PAR-2 and identity layers, so 75.9% is not a global
+completeness estimate.
 
 ### Harder public inventory
 
@@ -31,6 +35,10 @@ runs a separate 228-file public convenience inventory at a 120-second ceiling:
 zero wrong verdicts against recorded statuses. This is not the official
 SMT-COMP selection and is dominated numerically by one hard 113-file p4dfa
 family.
+
+This view is not independent of the scoreboard. Exactly 99 contents occur in
+both regimes—43.4% of the public inventory and 12.7% of the scoreboard's unique
+file-backed contents. Keep the two results side by side; do not average them.
 
 A separate 24-file QF_BV comparison has Axeyum, cvc5, and Bitwuzla each deciding
 19/24; PAR-2 ranks Bitwuzla, cvc5, then Axeyum. That cell contains no Z3 result
@@ -76,7 +84,8 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):
 
-- Build with capped jobs: `CARGO_BUILD_JOBS=4` / `-j4`.
+- Build with one Cargo job on this host: `CARGO_BUILD_JOBS=1` / `--jobs 1`, and
+  retain the aggregate cgroup memory cap described in [PLAN](../../PLAN.md).
 - Do **not** sweep the full ~41 GB public corpus to "make progress." Measure once
   on a committed slice, then stop.
 

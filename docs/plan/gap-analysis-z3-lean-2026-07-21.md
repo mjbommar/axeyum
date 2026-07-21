@@ -167,12 +167,35 @@ The 992-file aggregate mixes synthetic, curated, duplicated, small, and public
 regression slices. It is useful for regression tracking but not a population
 claim.
 
-**Prototype already present:** `scripts/smtcomp_repro/` implements the 2026
-scoring rules; the committed 228-file inventory establishes a harder public
-view; and `provenance.py` now commits normalized IDs, exact hashes, seven source
-families, and exact-duplicate groups. The live docs gate separately counts the
-scoreboard's 90 repeated file occurrences. Semantic/near-duplicate grouping and
-a shared schema across both measurement regimes remain open.
+**Shared-schema prototype landed:** `scripts/smtcomp_repro/` implements the 2026
+scoring rules, and the committed 228-file inventory establishes a harder public
+view. The new machine-readable
+[measurement contract](measurement-provenance-v1.json) and generated
+[53-row matrix](generated/measurement-provenance-matrix.md) put both regimes on
+one raw/path/content/selection/scoring/oracle vocabulary without merging their
+scores. Exact inspection contracts the scoreboard's 927 file-backed
+occurrences to 837 normalized paths and **778 unique byte contents**, with
+**58 exact-alias groups** and 65 aggregate-only synthetic cases. The public
+inventory remains 228/228 unique by exact bytes, but **99 contents overlap the
+scoreboard**: 43.4% of the public view. It is a harder weighting, not independent
+replication. All 53 rows record row-local PAR-2 and **0 neutral-oracle rows
+on the exact populations**. Proposed ADR-0343 freezes that interpretation.
+
+**Full-library follow-on in progress:** commit `d9e71e21` adds explicit-file
+execution, a full-tree cap/family sampler, and a 52-shard s4-s7 distributor. Its
+external 2024 manifest records 438,631 pool files, 64,345 selected candidates,
+and 84 logics. The first 52-shard 300-second inventory terminated after 2,041
+logged progress rows, with zero raw shard JSON, no live workers, no traceback,
+and no traceback. Remote `dmesg` is permission-denied, so OOM is unverified. It
+is frozen incomplete with zero result credit. End-of-shard-only raw
+serialization makes it non-resumable; an atomic
+checkpoint/resume protocol and terminal shard manifest are prerequisites to a
+rerun. This is not yet a third measured regime or an official selection. No result is committed,
+and the selector does not yet bind the complete eligibility/status/difficulty
+filters, official release and seed, corpus-tree digest, or per-selected-file
+hashes. Preserve the run, but grant no matrix or representativeness credit until
+those facts are archived and validated. See the
+[failed-run handoff](smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
 
 **Research:** classify every row/file by source hash, source family, provenance,
 difficulty, theory/operators, SAT/UNSAT direction, exact/near duplication,
@@ -181,9 +204,17 @@ partitions without hiding unsupported or timeout outcomes. Keep raw,
 deduplicated, source-balanced, and official-selection scores separate; do not
 invent a subjective weighted aggregate.
 
-**Exit:** one generated matrix reports both raw and deduplicated denominators,
-per-division PAR-2, coverage class, and neutral-oracle status. No global parity
-percentage is published without those partitions.
+**Remaining research:** v1 closes exact-byte denominators but not semantic or
+near-duplicate grouping, operator profiles, a complete official-selection
+manifest, matched neutral solvers on the exact populations, or a
+representative-selection rule for deduplicated PAR-2. Source-balanced strata
+remain reporting categories, not invented statistical weights.
+
+**Exit:** the generated matrix reports raw and deduplicated denominators,
+per-division PAR-2, coverage class, and neutral-oracle status. Full G1 exit also
+requires an official-style selected population, matched non-Z3 results on that
+exact population, and a preregistered deduplicated/source-stratified view. No
+global parity percentage is published without those partitions.
 
 ### G2 — Measure production depth, not isolated wins
 
@@ -444,12 +475,19 @@ reported as parity before it climbs the measured and certifying rungs.
 
 ## Immediate next actions
 
-1. Add the parity-doc consistency gate to `just check`.
-2. Correct p4dfa and dominance statements in PLAN, STATUS, and SCOREBOARD.
-3. Extend the existing SMT-COMP inventory with source hashes/families and exact
-   duplicate groups.
-4. Give the 35-row scoreboard and 228-file inventory one shared provenance
-   schema while preserving separate scores.
+1. Review proposed ADR-0343 and retain the landed shared provenance generator;
+   never merge the two current scores or describe the 228-file view as an
+   independent sample.
+2. Preserve the failed first attempt, then preregister atomic per-result
+   checkpoints, strict resume identity, terminal shard manifests, merge
+   completeness, interruption equivalence, and aggregate memory controls before
+   rerunning the 64,345-file candidate.
+3. Extend the selector registration with the complete eligibility/status/
+   difficulty exclusions, official release and seed, corpus-tree digest, and
+   per-selected-file hashes before publishing an official-style view.
+4. Prototype syntax-normalized identity as an additional, mutation-tested layer
+   over exact bytes; then run cvc5 and Bitwuzla on the exact admitted population
+   before changing any neutral-oracle row.
 5. Observe and archive the required representative official-Lean solver-proof
    CI result; size the scheduled exhaustive tier from that measurement.
 6. Instrument the now-refreshed 51-content bare-UNSAT population with stable

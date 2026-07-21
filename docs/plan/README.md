@@ -25,6 +25,16 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
   routing from each research question to owning code, committed evidence,
   executable gates, ADRs, and the next safe action.
+- [`measurement-provenance-design-2026-07-21.md`](measurement-provenance-design-2026-07-21.md),
+  the [shared schema](measurement-provenance-v1.json), and generated
+  [53-row matrix](generated/measurement-provenance-matrix.md) — G1's common
+  raw/path/content/selection/scoring/oracle vocabulary across the separately
+  scored regression and partial-public regimes, including their exact overlap
+  and explicit non-official/non-neutral boundaries.
+- [`smtcomp-full-library-candidate-run-handoff-2026-07-21.md`](smtcomp-full-library-candidate-run-handoff-2026-07-21.md) —
+  frozen first full-tree selection/run attempt: exact external manifest/list
+  hashes, 438,631-to-64,345 candidate selection, incomplete 52-shard execution,
+  zero raw-result credit, and the checkpoint/resume prerequisite to any rerun.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

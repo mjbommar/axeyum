@@ -102,6 +102,7 @@ rules-as-code:
 # the measurements it checks.
 parity-docs:
     python3 scripts/gen-gap-ownership.py --check
+    python3 scripts/gen-measurement-provenance.py --check
     python3 scripts/gen-proof-gap-matrix.py --check
     python3 scripts/gen-proof-gap-shape-census.py --check
     python3 scripts/gen-smtlib-api-conformance.py --check

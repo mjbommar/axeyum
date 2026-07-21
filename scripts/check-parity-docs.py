@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
+BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -49,6 +50,9 @@ SMTCOMP_QFBV = (
 )
 SMTCOMP_PROVENANCE = (
     ROOT / "bench-results" / "smtcomp-repro-20260721" / "provenance.json"
+)
+MEASUREMENT_PROVENANCE = (
+    ROOT / "docs" / "plan" / "generated" / "measurement-provenance-matrix.json"
 )
 
 LIVE_DOCS = (
@@ -135,6 +139,10 @@ def measured_snapshot() -> dict[str, int]:
     inventory = load_json(SMTCOMP_INVENTORY)
     qfbv = load_json(SMTCOMP_QFBV)
     provenance = load_json(SMTCOMP_PROVENANCE)
+    measurement = load_json(MEASUREMENT_PROVENANCE)
+    measurement_score = measurement["summary"]["regression_scoreboard"]
+    measurement_public = measurement["summary"]["public_inventory"]
+    measurement_overlap = measurement["summary"]["cross_regime"]
     for artifact in (axeyum, z3):
         config = artifact["config"]
         summary = artifact["summary"]
@@ -263,6 +271,12 @@ def measured_snapshot() -> dict[str, int]:
         "public_source_families": provenance["summary"]["source_families"],
         "public_unique_sha256": provenance["summary"]["unique_content_sha256"],
         "public_exact_duplicate_groups": provenance["summary"]["exact_duplicate_groups"],
+        "scoreboard_unique_sha256": measurement_score["unique_content_sha256"],
+        "scoreboard_exact_duplicate_groups": measurement_score["exact_duplicate_groups"],
+        "scoreboard_exact_duplicate_excess": measurement_score["exact_duplicate_excess"],
+        "cross_regime_unique_overlap": measurement_overlap["unique_content_overlap"],
+        "neutral_measurement_rows": measurement_score["neutral_oracle_rows"]
+        + measurement_public["neutral_oracle_rows"],
     }
 
 
@@ -309,6 +323,10 @@ def main() -> int:
         f"{snapshot['scoreboard_aggregate_only']} aggregate-only synthetic cases",
         f"{snapshot['public_source_families']} source families",
         f"{snapshot['public_exact_duplicate_groups']} exact byte-duplicate groups",
+        f"{snapshot['scoreboard_unique_sha256']} unique byte contents",
+        f"{snapshot['scoreboard_exact_duplicate_groups']} exact-alias groups",
+        f"{snapshot['cross_regime_unique_overlap']} contents overlap",
+        f"{snapshot['neutral_measurement_rows']} neutral-oracle rows",
     )
     gap_text = GAP_DOC.read_text(encoding="utf-8")
     for marker in required_gap_markers:
@@ -323,6 +341,10 @@ def main() -> int:
         f"{snapshot['fully_dominant_rows']} / {snapshot['complete_audits']}",
         f"{snapshot['scoreboard_file_occurrences']} occurrences",
         f"{snapshot['scoreboard_unique_ids']} unique normalized paths",
+        f"{snapshot['scoreboard_unique_sha256']} unique byte contents",
+        f"{snapshot['scoreboard_exact_duplicate_groups']} exact-alias groups",
+        f"{snapshot['scoreboard_exact_duplicate_excess']} additional path",
+        f"{snapshot['cross_regime_unique_overlap']} exact contents",
         f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
         f"{snapshot['public_inventory_declined']} explicit declines",
         f"{snapshot['public_inventory_no_answer']} no-answer outcomes",
@@ -340,6 +362,21 @@ def main() -> int:
         if marker not in project_state_text:
             failures.append(
                 f"{PROJECT_STATE.relative_to(ROOT)}: missing measured marker {marker!r}"
+            )
+
+    benchmark_text = BENCHMARK_GUIDE.read_text(encoding="utf-8")
+    for marker in (
+        f"{snapshot['scoreboard_file_occurrences']} file occurrences",
+        f"{snapshot['scoreboard_unique_ids']} normalized paths",
+        f"{snapshot['scoreboard_unique_sha256']} exact byte contents",
+        f"{snapshot['cross_regime_unique_overlap']} contents occur",
+        "43.4% of the public inventory",
+        "do not average them",
+        "`CARGO_BUILD_JOBS=1`",
+    ):
+        if marker not in benchmark_text:
+            failures.append(
+                f"{BENCHMARK_GUIDE.relative_to(ROOT)}: missing measured marker {marker!r}"
             )
 
     categorical_text = CATEGORICAL_AUDIT.read_text(encoding="utf-8")

@@ -9,7 +9,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 | Gap | Research question | State | First owner |
 |---|---|---|---|
 | [G0](#g0) | Do live public claims still match the committed solver, proof, and protocol artifacts? | `prototype-landed` | [`scripts/check-parity-docs.py`](../../scripts/check-parity-docs.py) |
-| [G1](#g1) | What source-balanced and deduplicated population does each solver score actually describe? | `prototype-landed` | [`scripts/smtcomp_repro/provenance.py`](../../scripts/smtcomp_repro/provenance.py) |
+| [G1](#g1) | What source-balanced and deduplicated population does each solver score actually describe? | `partially-landed` | [`scripts/gen-measurement-provenance.py`](../../scripts/gen-measurement-provenance.py) |
 | [G2](#g2) | Where do Axeyum, Z3, and Bitwuzla win across hard cold queries and retained embedded workloads? | `partially-landed` | [`crates/axeyum-bench/src/main.rs`](../../crates/axeyum-bench/src/main.rs) |
 | [G3](#g3) | Do at least two independent external oracles agree with Axeyum in both verdict directions on every paper-claimed fragment? | `partially-landed` | [`crates/axeyum-solver/tests/bv_differential_fuzz.rs`](../../crates/axeyum-solver/tests/bv_differential_fuzz.rs) |
 | [G4](#g4) | Which repeated unsupported or unknown shape names the next decision mechanism with measurable public-corpus leverage? | `open` | [`crates/axeyum-solver/tests/progress_frontier.rs`](../../crates/axeyum-solver/tests/progress_frontier.rs) |
@@ -54,31 +54,39 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 
 ### G1 — Replace aggregate decide-rate with a coverage-weighted parity matrix
 
-**State:** `prototype-landed`
+**State:** `partially-landed`
 
 **Question:** What source-balanced and deduplicated population does each solver score actually describe?
 
 **Owner paths:**
 
+- [`scripts/gen-measurement-provenance.py`](../../scripts/gen-measurement-provenance.py)
+- [`docs/plan/measurement-provenance-v1.json`](../../docs/plan/measurement-provenance-v1.json)
+- [`scripts/smtcomp_repro/select_library.py`](../../scripts/smtcomp_repro/select_library.py)
+- [`scripts/smtcomp_repro/compete.py`](../../scripts/smtcomp_repro/compete.py)
 - [`scripts/smtcomp_repro/provenance.py`](../../scripts/smtcomp_repro/provenance.py)
 - [`scripts/smtcomp_repro/scoring.py`](../../scripts/smtcomp_repro/scoring.py)
 - [`scripts/gen-scoreboard.py`](../../scripts/gen-scoreboard.py)
 
 **Evidence:**
 
+- [`docs/plan/generated/measurement-provenance-matrix.json`](../../docs/plan/generated/measurement-provenance-matrix.json)
+- [`docs/plan/measurement-provenance-design-2026-07-21.md`](../../docs/plan/measurement-provenance-design-2026-07-21.md)
+- [`docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
 - [`bench-results/smtcomp-repro-20260721/inventory.json`](../../bench-results/smtcomp-repro-20260721/inventory.json)
 - [`bench-results/smtcomp-repro-20260721/provenance.json`](../../bench-results/smtcomp-repro-20260721/provenance.json)
 - [`bench-results/SCOREBOARD.md`](../../bench-results/SCOREBOARD.md)
 
 **Executable gates:**
 
-- `python3 -m unittest discover -s scripts/smtcomp_repro/tests`
+- `python3 scripts/gen-measurement-provenance.py --check`
+- `for t in test_scoring test_pipeline test_selection test_provenance; do python3 scripts/smtcomp_repro/tests/$t.py || exit 1; done`
 
 **Decision anchors:**
 
-- No gap-specific ADR yet; use the source gap section and open an ADR before changing public behavior.
+- [`docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md`](../../docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
 
-**Next safe action:** Define one shared provenance schema across the 35-row regression scoreboard and 228-file public inventory without merging their scores.
+**Next safe action:** Review ADR-0343 and the frozen failed-run handoff; preregister a resumable shard protocol before rerun, then add missing selection and syntax-normalized identities before any deduplicated score.
 
 <a id="g2"></a>
 

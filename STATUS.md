@@ -356,6 +356,37 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — G1 now has a shared measurement schema, and the two headline
+  populations overlap materially.** The generated 53-row provenance matrix
+  gives the 35-row scoreboard and 18 public-inventory logic strata one
+  raw/path/content/selection/scoring/oracle vocabulary without merging scores.
+  Exact inspection contracts 927 scoreboard file occurrences to 837 normalized
+  paths and 778 unique contents; 58 exact-alias groups remove 59 further path
+  identities, while 65 synthetic cases remain aggregate-only. The 228-file
+  public inventory is exact-byte unique but shares 99 contents with the
+  scoreboard (43.4% of the public view), so it is not independent replication.
+  Row-local PAR-2 is present for all 53 rows; both current regimes are
+  non-official and have zero neutral-oracle rows on their exact populations.
+  Proposed ADR-0343 forbids a global aggregate. Next: review that policy, then
+  archive and validate the newly produced full-library candidate selection/run,
+  then prototype mutation-tested syntax normalization before any deduplicated
+  score. Concurrent commit `d9e71e21` adds explicit-file execution, a 2024
+  full-tree cap/family selector, and the s4-s7 distributor. Its external
+  manifest records 438,631 pool / 64,345 selected across 84 logics. The first
+  52-shard 300-second run is now frozen incomplete: all workers stopped after
+  2,041 total progress rows (36-44 per shard), no raw shard JSON exists, and no
+  traceback explains the termination; remote `dmesg` is permission-denied, so
+  OOM is unverified rather than ruled out. End-of-shard-only raw output made the
+  partial work non-mergeable. Do not rerun unchanged; first
+  preregister atomic checkpoint/resume records, terminal shard status, strict
+  merge completeness, interruption equivalence, and aggregate memory controls.
+  This is not yet committed measurement evidence or an official selection: the current selector does not bind the full
+  eligibility/status/difficulty filters, official release/seed, corpus-tree
+  digest, or per-file hashes. Do not add its numbers to the public matrix until
+  a versioned complete result and those omissions are explicit. The exact
+  selection hashes, failure snapshot, and safe resume checks are in the
+  [candidate-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+
 - **2026-07-21 — the public project state no longer requires reading the battle
   logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
   measurements, selected-fragment parity, production Z3 distance, solver-proof

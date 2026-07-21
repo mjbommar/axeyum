@@ -26,6 +26,35 @@ state.
 > rejects the stale p4dfa and proof-denominator claims that had survived in live
 > prose after their correcting measurements landed.
 
+> **Measurement-provenance reset (2026-07-21).** G1's shared schema and
+> generated 53-row matrix now separate raw occurrence, normalized path, exact
+> content, selection, scoring, and oracle identity across the regression and
+> partial-public regimes. The 927 file-backed scoreboard occurrences contract
+> to 837 paths and 778 byte contents; 58 exact-alias groups remove 59 additional
+> path identities, while 65 synthetic cases remain aggregate-only. The 228-file
+> public inventory shares 99 exact contents with the scoreboard (43.4% of that
+> inventory), so it is a harder weighting, not independent replication. Both
+> regimes remain non-official and have zero neutral-oracle rows on their exact
+> populations. Resume by reviewing proposed ADR-0343, then prototype a
+> mutation-tested syntax-normalized identity and freeze a complete official-
+> style eligible/selected manifest before any deduplicated or source-balanced
+> score. Never average the two current decide rates.
+> Follow-on commit `d9e71e21` adds explicit-file execution plus a candidate
+> full-library cap/family selector. Its external 2024 manifest maps 438,631
+> files to 64,345 candidates. Its first 52-shard 300-second run terminated
+> unexplained after only 2,041 progress rows (36-44 per shard), with zero raw
+> shard artifacts, no live workers, and no traceback. Remote kernel OOM state
+> is unavailable because `dmesg` is permission-denied on s4-s7. The attempt is
+> frozen incomplete and receives zero result credit.
+> Because raw output was end-of-shard only, it also exposes a resumability gap;
+> preregister atomic per-result checkpoints, terminal shard manifests, and an
+> interruption/restart equivalence gate before rerunning. The candidate is not
+> official selection evidence:
+> it still lacks the complete eligibility/status/difficulty policy, official
+> release/seed, corpus-tree identity, and per-selected-file hashes. Archive and
+> validate those boundaries before adding a third regime to the matrix. See the
+> [failed-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+
 > **Proof-gap refresh and resume point (2026-07-21).** The eight audit rows
 > containing every historical bare UNSAT have been rerun sequentially under
 > release-profile dominance schema v2. Verdict identity holds with zero
