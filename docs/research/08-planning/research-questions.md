@@ -932,6 +932,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     failed strictly at `scope 1 {`. No artifact was retained and the fixture
     was restored. A separate metadata-grammar decision is required before the
     bounded obligation may be retried.
+  - [ADR-0319](../09-decisions/adr-0319-preregister-checked-mir-scope-metadata.md)
+    preregisters that exact prerequisite: bare decimal `scope N {}` nesting may
+    contain only admitted typed locals, debug declarations, and nested scopes;
+    locals flatten into the existing inventory while scope/debug metadata has
+    no execution semantics. A 64-level cap and strict brace/header/content/
+    duplicate/type mutations precede any retry of the walk.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

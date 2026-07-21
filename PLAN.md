@@ -283,6 +283,13 @@ session state.
 >    change survives. Do not rewrite the source to dodge this result or widen
 >    the parser retroactively; audit and preregister the exact semantically
 >    inert scope grammar separately before retrying the bounded obligation.
+>    ADR-0319 now preregisters that exact prerequisite before parser code. Only
+>    bare decimal nested `scope N {}` metadata containing admitted `let`
+>    declarations, debug declarations, and child scopes may flatten into the
+>    existing local inventory. Scope/debug metadata contributes no checked
+>    execution term. A 64-level cap plus strict brace/header/content/duplicate/
+>    type mutations must pass; this does not itself reopen ADR-0318 or admit a
+>    page-table proof.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
