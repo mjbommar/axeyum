@@ -780,3 +780,29 @@ Laplace, and the **exp tower** substrate that unlocked much of it. **283 unit + 
 doctests, clippy-pedantic clean, WASM-green.** All on the `cas/parity-push` → `main`
 worktree. Next: Laurent/Puiseux series, definite integrals via residues, Jordan form,
 special functions with derivative rules, Zeilberger, Risch.
+
+## 2026-07-21 — Entry 23: deep parity — the CAS at 355 tests
+
+Sustained the parity push with core work + a third/fourth sub-agent wave (each module
+verified in an isolated throwaway crate, clippy-clean). Since entry 22 (283 → 355):
+
+**Core (in-lib):** RootOf `AlgebraicReal`; full `apart`; `residue`; `laurent_series`;
+`series_reversion`; transcendental `limit` via series (`sin x/x=1`); `laplace_transform`
++ `inverse_laplace`; `definite_sum`; `diagonalize` (P·D·P⁻¹); `wronskian`,
+`gram_schmidt`, `hessian`/`laplacian`; Matrix `adjugate`/`cofactor`/`pow`/`bareiss_
+determinant`/`hadamard`/`kronecker` + predicates; `solve_linear_system`;
+`least_squares_polynomial`; `rewrite_exp` (Euler → all polynomial trig identities);
+`logcombine`; `modulus`/`roots_of_unity`; `content`/`primitive_part`, `poly_lcm`,
+`is_irreducible`; `∫atan`, `∫p·ln`; finite calculus; `rationalize`; covariance/correlation.
+
+**Sub-agent modules (10 total this session):** `orthopoly`, `combinatorics`, `approx`
+(Padé/interpolation), `ntheory_more`, `boolean` (Quine–McCluskey), `geometry`,
+`hyperbolic`, `gfp` (𝔽ₚ[x] + Berlekamp), `sets` (RealSet algebra), `interval_arith`
+(rigorous enclosures), plus `special` (Gamma/Beta).
+
+The **exp tower** substrate remains the load-bearing unlock (first-order ODEs,
+recurrences incl. Fibonacci/Binet, hyperbolic + trig identities all certify through
+it). **355 unit + 98 doctests, clippy-pedantic clean, WASM-green.** All on the
+`cas/parity-push` → `main` worktree, kept clear of the concurrent solver-side branch.
+Remaining frontier: assumptions engine, full Risch, Zeilberger, Jordan form for
+defective matrices, Gruntz limits, multivariate factorization, PDEs.
