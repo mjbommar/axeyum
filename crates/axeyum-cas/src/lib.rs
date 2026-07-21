@@ -2816,6 +2816,65 @@ pub fn dsolve_separable(f: &CasExpr, g: &CasExpr, xvar: &str, yvar: &str) -> Opt
     Some(big_g.antiderivative - big_f.antiderivative - CasExpr::var("C0"))
 }
 
+/// Solve an **exact first-order ODE** `M(x,y)·dx + N(x,y)·dy = 0` — i.e. one with
+/// `∂M/∂y = ∂N/∂x` — returning the implicit general solution `F(x,y) − C0 = 0`,
+/// where `∂F/∂x = M` and `∂F/∂y = N`. `F = ∫M dx + g(y)` with `g′(y) =
+/// N − ∂/∂y(∫M dx)`.
+///
+/// **Fully certified**: exactness is decided by the zero-test, and the returned
+/// `F` is verified to satisfy `∂F/∂x = M` **and** `∂F/∂y = N` (both by the
+/// zero-test). E.g. `(2xy+1)dx + (x²+1)dy = 0` gives `x²y + x + y − C0`. `None` if
+/// the equation is **not exact**, either potential integral is not found/certified,
+/// or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_exact};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // (2xy + 1) dx + (x² + 1) dy = 0.
+/// let m = CasExpr::int(2) * x.clone() * y.clone() + CasExpr::int(1);
+/// let n = x.clone().pow(2) + CasExpr::int(1);
+/// let sol = dsolve_exact(&m, &n, "x", "y").unwrap();
+/// assert!(sol.to_string().contains("C0"));
+/// ```
+#[must_use]
+pub fn dsolve_exact(m: &CasExpr, n: &CasExpr, xvar: &str, yvar: &str) -> Option<CasExpr> {
+    // Exactness test: ∂M/∂y ≡ ∂N/∂x.
+    if !matches!(
+        equal(&m.differentiate(yvar), &n.differentiate(xvar)),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    // Partial potential from M: ∫ M dx (y held constant).
+    let m_integral = integrate(m, xvar)?;
+    if !m_integral.is_certified() {
+        return None;
+    }
+    let partial = m_integral.antiderivative;
+    // g′(y) = N − ∂/∂y(∫M dx); g(y) = ∫ g′ dy.
+    let g_prime = simplify(&(n.clone() - partial.differentiate(yvar)));
+    let g_integral = integrate(&g_prime, yvar)?;
+    if !g_integral.is_certified() {
+        return None;
+    }
+    let potential = fold_trivial(&(partial + g_integral.antiderivative));
+    // Certificate: ∂F/∂x = M and ∂F/∂y = N.
+    let matches_m = matches!(
+        equal(&potential.differentiate(xvar), m),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let matches_n = matches!(
+        equal(&potential.differentiate(yvar), n),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    if matches_m && matches_n {
+        Some(potential - CasExpr::var("C0"))
+    } else {
+        None
+    }
+}
+
 /// Solve a **constant-coefficient linear recurrence** `aₙ = c₁·aₙ₋₁ + … + c_d·aₙ₋d`
 /// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
 /// returning a closed form `a(var)` for the general term.
@@ -7578,6 +7637,31 @@ mod tests {
         check(x(), y()); // y′ = xy
         check(x(), CasExpr::int(1) / y()); // y′ = x/y → y²/2 − x²/2 − C0
         check(CasExpr::int(1), y().pow(2)); // y′ = y²
+    }
+
+    #[test]
+    fn dsolve_exact_first_order() {
+        let x = || v("x");
+        let y = || v("y");
+        // The implicit potential F(x,y)−C0 must satisfy ∂F/∂x = M and ∂F/∂y = N.
+        let check = |m: CasExpr, n: CasExpr| {
+            let s = dsolve_exact(&m, &n, "x", "y").expect("exact");
+            assert_equal(&s.differentiate("x"), &m);
+            assert_equal(&s.differentiate("y"), &n);
+        };
+        // (2xy+1)dx + (x²+1)dy = 0 ⇒ F = x²y + x + y.
+        check(
+            CasExpr::int(2) * x() * y() + CasExpr::int(1),
+            x().pow(2) + CasExpr::int(1),
+        );
+        // (3x²+2y)dx + (2x+3y²)dy = 0 ⇒ F = x³ + 2xy + y³.
+        check(
+            CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * y(),
+            CasExpr::int(2) * x() + CasExpr::int(3) * y().pow(2),
+        );
+        check(y(), x()); // y dx + x dy = 0 ⇒ F = xy
+        // y dx − x dy = 0 is NOT exact (∂M/∂y = 1, ∂N/∂x = −1) — declined.
+        assert!(dsolve_exact(&y(), &(CasExpr::int(-1) * x()), "x", "y").is_none());
     }
 
     #[test]
