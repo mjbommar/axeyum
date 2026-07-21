@@ -1307,6 +1307,13 @@ impl IncrementalBvSolver {
     /// With preprocessing disabled, it asserts the original roots in order.
     /// The returned terms are the roots actually lowered.
     ///
+    /// Like [`Self::assert_configured`], this configured entry point is for a
+    /// retained warm solver that can amortize preprocessing and lowering. The
+    /// measured Glaurung cold one-shot path lost with configured preprocessing,
+    /// including its fresh-incremental batch control. Cold callers should keep
+    /// [`Self::assert`] as the control and select this method only after an
+    /// end-to-end workload gate demonstrates a win.
+    ///
     /// # Errors
     ///
     /// Returns the same errors as [`Self::assert_preprocessed_batch`]. As with

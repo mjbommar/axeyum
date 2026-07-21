@@ -505,7 +505,10 @@ session state.
 > supersede it: preserve strict sort checking and precise `IrError`s, structural
 > `Unknown`, lean scalar-model construction, shared replay memoization, and
 > self-rechecked DRAT. Its historical 2.8--4x warm claim is integration evidence,
-> not a paper headline after the fair six-cell Bitwuzla/Z3 result.
+> not a paper headline after the fair six-cell Bitwuzla/Z3 result. The durable
+> item-by-item disposition, including the difference between closed safeguards,
+> superseded claims, and genuinely open work, is recorded in
+> [`glaurung-feedback-reconciliation-2026-07-20.md`](docs/research/08-planning/glaurung-feedback-reconciliation-2026-07-20.md).
 
 > **WASM-safe speed: do not invest in SIMD (reviewed 2026-07-20).** A reported
 > scratch prototype explored portable SIMD against the WASM constraint, but its
@@ -1732,6 +1735,11 @@ stage rankings where the accepted evidence has changed.
 standing product/measurement requirements, not a transient benchmark wish list.
 Where a reported headline conflicts with the captured counters, the stricter
 artifact evidence below governs.
+
+The [2026-07-20 reconciliation](docs/research/08-planning/glaurung-feedback-reconciliation-2026-07-20.md)
+maps the original snapshot to the later fair-baseline, oracle, proof,
+deployability, and artifact-readiness results. Consult it before quoting the
+historical performance or robustness numbers.
 
 | # | Feedback integrated into the roadmap | Required action / invariant |
 |---:|---|---|

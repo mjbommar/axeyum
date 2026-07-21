@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — the July 16 Glaurung feedback is reconciled against the later
+  evidence rather than copied forward as ten timeless claims.** The new durable
+  reconciliation preserves strict sorts/errors, structural `Unknown`, lean
+  model lift, bounded shared replay, self-rechecked DRAT, and fail-closed
+  measurement. It explicitly retires the old 2.8--4x warm headline under
+  ADR-0272's fair six-cell Bitwuzla/Z3 result, bounds robustness to named
+  populations, and separates demonstrated proof attachment from still-open
+  prevalence/nontriviality. `assert_configured_batch` now carries the same
+  warm-only warning as the scalar configured entry point. Next remains A3's
+  exact lazy-ext dependency/seam census; no solver behavior changed here.
+
 - **2026-07-20 — ABV A2 gives eager array-elimination evidence its own private
   trust-boundary module.** The 333-line certificate/rechecker body plus a
   seven-line prelude now live in `abv/array_elim_certificate.rs`.
@@ -5601,6 +5612,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — reconciled the ten-item Glaurung consumer snapshot with current
+  publication evidence.** A new planning note classifies each item as retained,
+  superseded, closed, or open and links its controlling ADR. The configured
+  batch assertion API now explicitly warns that the measured cold path lost;
+  PLAN points to the reconciliation before historical numbers are reused.
 
 - **2026-07-20 — artifact-readiness A2 isolates eager array-elimination UNSAT
   evidence.** A private named module now owns certificate emission and
