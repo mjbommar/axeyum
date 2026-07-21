@@ -984,6 +984,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     differ in size and hash. Root-specific remap-rule inputs remain a build-
     identity variable. Extraction never runs. Next preregister two independent
     trees at one identical virtual source/target path; do not normalize output.
+  - [ADR-0326](../09-decisions/adr-0326-preregister-stable-virtual-root-maestro-capture.md)
+    freezes that v3 route with exact Bubblewrap identity/argv, distinct physical
+    sources/targets bound at identical virtual paths, no remap flags, zero host-
+    path tokens, and raw module equality before extraction. Proofs stay blocked.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

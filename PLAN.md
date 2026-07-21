@@ -369,6 +369,11 @@ session state.
 >    Next preregister separate physical roots/targets mounted sequentially at
 >    identical in-namespace paths (working unprivileged `bwrap` is available),
 >    with raw equality still required and no output normalization.
+>    ADR-0326 preregisters v3: exact Bubblewrap identity/argv, distinct physical
+>    source and target roots at identical `/axeyum-vroot/{source,target}` paths,
+>    no remap flags, zero host-path tokens, and raw full-module equality before
+>    extraction. Implement/run this final bounded build-route correction next;
+>    no proof query is authorized.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
