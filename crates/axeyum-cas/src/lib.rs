@@ -6627,6 +6627,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
+        integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7879,6 +7880,61 @@ fn integrate_poly_log_power(p: &[Rational], m: u32, var: &str) -> Option<CasExpr
     let q_over_x: Vec<Rational> = q.into_iter().skip(1).collect();
     let rec = integrate_poly_log_power(&q_over_x, m - 1, var)?;
     Some(first - scaled_term(Rational::integer(i128::from(m)), rec))
+}
+
+/// ∫ P(x)·f(x) dx where `f` is an inverse function with an algebraic derivative
+/// (`atan, asin, acos, asinh, acosh`), by parts (`u = f`, `dv = P dx`):
+/// `Q·f − ∫ Q·f′`, `Q = ∫P`. The residual `∫Q·f′` is algebraic/rational and
+/// delegated to `integrate` — so `∫x·atan x = ½(x²+1)atan x − x/2` falls out, while
+/// cases whose residual is non-elementary decline honestly. Certified downstream.
+fn integrate_poly_times_inverse(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    const HEADS: [UnaryFunc; 5] = [
+        UnaryFunc::Atan,
+        UnaryFunc::Asin,
+        UnaryFunc::Acos,
+        UnaryFunc::Asinh,
+        UnaryFunc::Acosh,
+    ];
+    let factors = flatten_mul(expr);
+    let mut inverse: Option<CasExpr> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for fac in factors {
+        if let CasExpr::Unary(head, arg) = &fac
+            && HEADS.contains(head)
+            && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+        {
+            if inverse.is_some() {
+                return None;
+            }
+            inverse = Some(fac);
+            continue;
+        }
+        rest.push(fac);
+    }
+    let inverse = inverse?;
+    let rest_expr = match rest.len() {
+        0 => CasExpr::int(1),
+        1 => rest.into_iter().next()?,
+        _ => CasExpr::Mul(rest),
+    };
+    let p = normalize(&rest_expr)?.to_univariate(var)?;
+    // Q = ∫P (zero constant term).
+    let mut q = vec![Rational::zero()];
+    for (i, pc) in p.iter().enumerate() {
+        let idx = u32::try_from(i + 1).ok()?;
+        q.push(pc.checked_div(Rational::integer(i128::from(idx)))?);
+    }
+    let q_expr = MultiPoly::from_univariate(var, &q).to_expr();
+    // ∫P·f = Q·f − ∫Q·f′. Canonicalize the residual product into a single
+    // fraction first (f′ is a nested `Mul`/`Div` — e.g. asin′ = (1/√(1−x²))·1),
+    // so the structural finders (radical u-sub, rational) recognize it.
+    let raw_residual = CasExpr::Mul(vec![q_expr.clone(), inverse.differentiate(var)]);
+    let residual_expr = cancel(&raw_residual).unwrap_or(raw_residual);
+    let residual = integrate(&residual_expr, var)?;
+    if !residual.is_certified() {
+        return None;
+    }
+    Some(CasExpr::Mul(vec![q_expr, inverse]) - residual.antiderivative)
 }
 
 /// ∫ P(x)·(ln x)ᵐ dx for `m ≥ 2` — the power-of-log companion to
@@ -11468,6 +11524,25 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
         }
+    }
+
+    #[test]
+    fn poly_times_inverse_integrals() {
+        let x = || v("x");
+        let inv = |h, a| CasExpr::Unary(h, Box::new(a));
+        // By-parts against inverse functions with algebraic derivatives.
+        for integrand in [
+            x() * x().atan(),                          // ∫x·atan x = ½(x²+1)atan x − x/2
+            x().pow(2) * x().atan(),                   // ∫x²·atan x
+            inv(UnaryFunc::Asin, x()),                 // ∫asin x = x asin x + √(1−x²)
+            inv(UnaryFunc::Acos, x()),                 // ∫acos x = x acos x − √(1−x²)
+        ] {
+            let r = integrate(&integrand, "x").expect("poly·inverse integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫x·asin needs a trig substitution (∫x²/√(1−x²)); decline honestly.
+        assert!(integrate(&(x() * inv(UnaryFunc::Asin, x())), "x").is_none_or(|c| !c.is_certified()));
     }
 
     #[test]
