@@ -91,11 +91,15 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    UFLIA interpolant tests, 10 namespace controls, all 891 library tests, strict
    Clippy, and both rustdoc profiles pass. The parent is now 7,683 lines, down
    13.4% from 8,876.
-5. **N1 -- census, then parameterize CAD only under a semantic gate (next).** Strict/non-strict/
-   algebraic repetition remains a valid duplication target, but any shared
-   engine must preserve boundary sampling, algebraic decline, exact replay, and
-   timeout behavior under focused oracle/differential tests. It is not the next
-   behavior-neutral artifact cleanup.
+5. **N1 -- parameterize CAD only under the frozen semantic gate (active).** The
+   [census and preregistered gate](cad-parameterization-gate.md) rejects a single
+   strict/non-strict/algebraic engine: the algebraic traversal has a different
+   value domain, boundary derivation, and preparation path. N1a is authorized
+   narrowly: share the duplicated rational substitution/univariate cell
+   decision behind the existing strict and non-strict wrappers. Projection,
+   sampling, budgets, timeout polls, algebraic fallback, and public paths remain
+   unchanged. N1b/N1c require later checkpoints; algebraic genericization is
+   deferred.
 
 ## Standing gate
 

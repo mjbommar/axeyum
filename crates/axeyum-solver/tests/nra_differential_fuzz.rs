@@ -45,13 +45,14 @@ const INSTANCES: u64 = 2000;
 /// only bounds the rare pathological shape so the test never hangs.
 const Z3_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// Per-instance hard wall-clock cap on the axeyum `solve`. The NRA abstraction
-/// path honors `SolverConfig::timeout`, but the recursive strict-CAD path in
-/// `nra_real_root.rs` does not propagate a deadline and can run for hundreds of
-/// seconds on a few shapes. We therefore run each solve on a worker thread and
-/// join with this cap; a solve that overruns is recorded as `AxeyumTimeout`
-/// (adjudication-neutral, exactly like `Unknown`) and the sweep moves on. This is
-/// sound — a timeout is never a sat/unsat verdict — and bounds total runtime.
+/// Per-instance hard wall-clock cap on the axeyum `solve`. The NRA path scopes
+/// `SolverConfig::timeout` through the root-isolation/CAD deadline guard, but a
+/// cooperative poll is not a hard preemption boundary: a single exact-arithmetic
+/// operation can still overrun it. We therefore run each solve on a worker thread
+/// and join with this outer cap; a solve that overruns is recorded as
+/// `AxeyumTimeout` (adjudication-neutral, exactly like `Unknown`) and the sweep
+/// moves on. This is sound — a timeout is never a sat/unsat verdict — and bounds
+/// total runtime.
 const AXEYUM_TIMEOUT: Duration = Duration::from_secs(4);
 
 /// A deterministic linear-congruential PRNG (the MMIX multiplier/increment).

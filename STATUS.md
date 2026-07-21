@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — N1 freezes the semantic gate before CAD
+  parameterization.** The 7,544-line `nra_real_root.rs` does contain duplicated
+  rational cell and projection mechanics, but strict open-cell coverage,
+  non-strict zero-cell coverage, and algebraic `Value`-domain lifting are not
+  three instances of one algorithm. The accepted census authorizes only N1a:
+  share rational substitution/univariate cell decision behind the existing
+  strict and non-strict wrappers. The 2,000-seed Z3 differential/replay gate,
+  exact-model fixtures, mutation controls, full solver suite, and bounded OOM
+  audit are preregistered. Next: implement and push N1a without touching
+  projection, sampling, budgets, deadlines, algebraic fallback, or public APIs.
+
 - **2026-07-20 — I1 gives integer-inequality reconstruction a private semantic
   module with byte-stable Lean output.** The 1,196-line body now lives in the
   1,201-line `int_reconstruct/inequality.rs` child. Its three public entry
@@ -5637,6 +5648,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — N1 preregisters the CAD parameterization gate.** The measured
+  census separates duplicated rational mechanics from strict/non-strict cell
+  policy and algebraic value-domain lifting. Only the shared rational-cell
+  helper is authorized next; later projection/visitor work remains gated.
 
 - **2026-07-20 — artifact-readiness I1 isolates integer-inequality proof
   reconstruction.** Three public paths and representative generated Lean bytes

@@ -507,9 +507,16 @@ session state.
 >    byte-identical before/after (SHA-256 `27edf9b0...205de`), all 14 focused
 >    interval tests including three real-Lean checks pass, and the UFLIA,
 >    namespace, 891-library-test, Clippy, and rustdoc gates remain green.
->    `int_reconstruct.rs` is 7,683 lines, down 13.4%. Next census N1's CAD
->    repetition and preregister its semantic differential gate before changing
->    solver code. Revisit the 4,531-line ABV replay/repair residual only
+>    `int_reconstruct.rs` is 7,683 lines, down 13.4%. N1's CAD census is now
+>    frozen in
+>    [`cad-parameterization-gate.md`](docs/research/08-planning/cad-parameterization-gate.md):
+>    the repetition is not one triplicated algorithm, and algebraic lifting
+>    remains separate. N1a is authorized narrowly to share the duplicated
+>    rational substitution/univariate cell decision behind the existing strict
+>    and non-strict wrappers. Projection, cell selection, budget charges,
+>    deadline polls, algebraic fallback, witness order, and public paths do not
+>    change in that checkpoint. N1b/N1c remain gated candidates, not implied
+>    follow-ons. Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
 >
