@@ -999,6 +999,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     rows, and replayed mutations. It adds no IR operator. The next step is a
     separately preregistered authenticated external capture; no target bytes,
     proof, or scoreboard row exist yet.
+  - [ADR-0328](../09-decisions/adr-0328-preregister-tock-log2-llvm-capture.md)
+    preregisters the next zero-result boundary: two independently archived
+    complete trees at identical virtual roots, validated locked offline cache,
+    raw full-module identity, hash-pinned LLVM 22 extraction/assembly, exact
+    two-symbol checked admission, atomic local output, and no property query.
+    The earlier feasibility module supplies no expected result.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

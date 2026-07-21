@@ -398,6 +398,13 @@ session state.
 >    capture with stable virtual roots, validated locked cache, offline raw-
 >    module equality, LLVM-22 extraction, exact admission, and atomic output;
 >    do not retain target bytes or construct proof obligations before it.
+>    ADR-0328 now preregisters that zero-row capture. It requires two complete
+>    exact Git archives at identical Bubblewrap paths, a validated read-only
+>    locked cache, no network, raw full LLVM-module identity, compiler-matched
+>    hash-pinned LLVM 22 extraction, exact two-function checked admission, and
+>    atomic local-only output under the 4 GiB cap. Implement producer/tests/
+>    registration and commit them before the first official build; LLVM 21,
+>    text slicing, feasibility-hash seeding, and early proof queries are barred.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
