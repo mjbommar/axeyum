@@ -51,6 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::{Rational, poly};
 
 pub mod groebner;
+mod factor_int;
 mod matrix;
 pub mod mvpoly;
 pub mod ntheory;
@@ -59,6 +60,7 @@ mod ratint;
 mod series;
 pub mod stats;
 
+pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
@@ -1864,6 +1866,90 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
     ])
 }
 
+/// The LSB-first rational coefficient vector of a univariate polynomial `expr` in
+/// `var`, or `None` if `expr` is not a univariate polynomial in `var`.
+fn univariate_coeffs(expr: &CasExpr, var: &str) -> Option<Vec<Rational>> {
+    normalize(expr)?.to_univariate(var)
+}
+
+/// The resultant `Resᵥₐᵣ(a, b)` of two univariate polynomials, as a rational
+/// constant. It vanishes **exactly** when `a` and `b` share a root (over an
+/// algebraic closure) or a common factor — the classic common-root / elimination
+/// test — and is computed as the determinant of the Sylvester matrix.
+///
+/// Returns `None` if either argument is not a univariate polynomial in `var`, if
+/// either has degree 0 (a bare constant), or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, resultant};
+/// let x = CasExpr::var("x");
+/// // x²−1 and x−1 share the root 1 → resultant 0.
+/// let r = resultant(&(x.clone().pow(2) - CasExpr::int(1)), &(x - CasExpr::int(1)), "x").unwrap();
+/// assert_eq!(r, CasExpr::int(0));
+/// ```
+#[must_use]
+pub fn resultant(a: &CasExpr, b: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs_a = univariate_coeffs(a, var)?;
+    let coeffs_b = univariate_coeffs(b, var)?;
+    resultant_of_coeffs(&coeffs_a, &coeffs_b).map(CasExpr::Const)
+}
+
+/// The Sylvester resultant of two LSB-first rational coefficient vectors, or `None`
+/// if either is constant / zero or on overflow.
+fn resultant_of_coeffs(a: &[Rational], b: &[Rational]) -> Option<Rational> {
+    let deg_a = poly::rat_degree(a)?;
+    let deg_b = poly::rat_degree(b)?;
+    if deg_a == 0 || deg_b == 0 {
+        return None;
+    }
+    // Each scalar coefficient becomes a constant "polynomial in the surviving
+    // variable" so the shared bivariate Sylvester routine applies.
+    let p_coeffs: Vec<Vec<Rational>> = a[..=deg_a].iter().map(|c| vec![*c]).collect();
+    let q_coeffs: Vec<Vec<Rational>> = b[..=deg_b].iter().map(|c| vec![*c]).collect();
+    let matrix = poly::sylvester_matrix(&p_coeffs, &q_coeffs)?;
+    // The determinant is a constant polynomial; an empty (trimmed) result is the
+    // zero polynomial — i.e. a vanishing resultant (common root/factor).
+    let determinant = poly::sylvester_determinant(&matrix)?;
+    Some(determinant.first().copied().unwrap_or_else(Rational::zero))
+}
+
+/// The discriminant `discᵥₐᵣ(p)` of a univariate polynomial — a rational constant
+/// that vanishes **exactly** when `p` has a repeated root. Computed from the
+/// resultant of `p` and its derivative:
+/// `disc(p) = (−1)^{n(n−1)/2} · Res(p, p′) / lc(p)` with `n = deg p`. A degree-`< 2`
+/// polynomial has no repeated root, so its discriminant is `1` by convention.
+///
+/// For example `disc(x² + b·x + c) = b² − 4c`. Returns `None` if `p` is not a
+/// univariate polynomial in `var`, is constant, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, discriminant};
+/// let x = CasExpr::var("x");
+/// // disc(x² − 5x + 6) = 25 − 24 = 1 (distinct roots 2, 3).
+/// let d = discriminant(&(x.clone().pow(2) - CasExpr::int(5) * x + CasExpr::int(6)), "x").unwrap();
+/// assert_eq!(d, CasExpr::int(1));
+/// ```
+#[must_use]
+pub fn discriminant(p: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs = univariate_coeffs(p, var)?;
+    let degree = poly::rat_degree(&coeffs)?;
+    if degree == 0 {
+        return None;
+    }
+    if degree == 1 {
+        return Some(CasExpr::one());
+    }
+    let derivative = univariate_coeffs(&p.differentiate(var), var)?;
+    let resultant = resultant_of_coeffs(&coeffs, &derivative)?;
+    let leading = coeffs[degree];
+    let signed = if (degree * (degree - 1) / 2) % 2 == 0 {
+        resultant
+    } else {
+        resultant.checked_neg()?
+    };
+    signed.checked_div(leading).map(CasExpr::Const)
+}
+
 /// Factor a non-negative integer `n` as `s²·m` with `m` square-free, returning
 /// `(s, m)` — the data needed to pull the largest perfect square out of a radical.
 /// `None` on overflow.
@@ -3458,6 +3544,37 @@ mod tests {
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
         assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn resultant_and_discriminant() {
+        let x = || v("x");
+        // Common root ⇒ resultant 0; coprime ⇒ nonzero.
+        assert_equal(
+            &resultant(&(x().pow(2) - CasExpr::int(1)), &(x() - CasExpr::int(1)), "x").unwrap(),
+            &CasExpr::zero(),
+        );
+        assert!(matches!(
+            resultant(&(x().pow(2) - CasExpr::int(1)), &(x() - CasExpr::int(3)), "x").unwrap(),
+            CasExpr::Const(c) if !c.is_zero()
+        ));
+        // disc(x²−5x+6) = 1 (roots 2,3 distinct); disc(x²+1) = −4; disc(x²−4x+4) = 0
+        // (double root 2).
+        assert_equal(
+            &discriminant(&(x().pow(2) - CasExpr::int(5) * x() + CasExpr::int(6)), "x").unwrap(),
+            &CasExpr::int(1),
+        );
+        assert_equal(
+            &discriminant(&(x().pow(2) + CasExpr::int(1)), "x").unwrap(),
+            &CasExpr::int(-4),
+        );
+        assert_equal(
+            &discriminant(&(x().pow(2) - CasExpr::int(4) * x() + CasExpr::int(4)), "x").unwrap(),
+            &CasExpr::zero(),
+        );
+        // Cubic with a double root has zero discriminant: (x−1)²(x−2) = x³−4x²+5x−2.
+        let cubic = x().pow(3) - CasExpr::int(4) * x().pow(2) + CasExpr::int(5) * x() - CasExpr::int(2);
+        assert_equal(&discriminant(&cubic, "x").unwrap(), &CasExpr::zero());
     }
 
     #[test]
