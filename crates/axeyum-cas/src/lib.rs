@@ -2155,6 +2155,55 @@ pub fn sample_standard_deviation(data: &[Rational]) -> Option<CasExpr> {
     Some(simplify_radicals(&CasExpr::Const(variance).sqrt()))
 }
 
+/// Numerically approximate an expression as an `f64`, given `bindings` for its free
+/// variables (each `(name, value)`). Rational constants are exact-to-`f64`; the
+/// transcendental heads map to the corresponding `f64` functions.
+///
+/// This is a **compute** operation — the returned float is an approximation, not a
+/// certified value — so it is the bridge from an exact symbolic result to a decimal
+/// (e.g. `evalf(√2) ≈ 1.4142…`). Returns `None` for an unbound free variable (the
+/// reserved imaginary unit `I` included — the result would be complex) or a domain
+/// error is not checked (e.g. `ln` of a negative yields a `NaN`/`f64` per the std
+/// library). Closed expressions need no bindings.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, evalf};
+/// let two = evalf(&CasExpr::int(2).sqrt(), &[]).unwrap();
+/// assert!((two - std::f64::consts::SQRT_2).abs() < 1e-12);
+/// ```
+#[must_use]
+#[allow(clippy::cast_precision_loss)] // evalf is an approximation by definition
+pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
+    match expr {
+        CasExpr::Const(value) => Some(value.numerator() as f64 / value.denominator() as f64),
+        CasExpr::Var(name) => bindings
+            .iter()
+            .find(|(bound, _)| bound == name)
+            .map(|&(_, value)| value),
+        CasExpr::Add(terms) => terms.iter().try_fold(0.0, |acc, term| Some(acc + evalf(term, bindings)?)),
+        CasExpr::Mul(factors) => factors
+            .iter()
+            .try_fold(1.0, |acc, factor| Some(acc * evalf(factor, bindings)?)),
+        CasExpr::Neg(inner) => Some(-evalf(inner, bindings)?),
+        CasExpr::Div(numerator, denominator) => {
+            Some(evalf(numerator, bindings)? / evalf(denominator, bindings)?)
+        }
+        CasExpr::Pow(base, exponent) => Some(evalf(base, bindings)?.powi(i32::try_from(*exponent).ok()?)),
+        CasExpr::Unary(func, arg) => {
+            let value = evalf(arg, bindings)?;
+            Some(match func {
+                UnaryFunc::Exp => value.exp(),
+                UnaryFunc::Ln => value.ln(),
+                UnaryFunc::Sin => value.sin(),
+                UnaryFunc::Cos => value.cos(),
+                UnaryFunc::Tan => value.tan(),
+                UnaryFunc::Atan => value.atan(),
+                UnaryFunc::Sqrt => value.sqrt(),
+            })
+        }
+    }
+}
+
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
 /// `−I`. Purely structural.
 #[must_use]
@@ -3653,6 +3702,23 @@ mod tests {
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
         assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn evalf_approximates() {
+        let x = || v("x");
+        // √2 ≈ 1.4142…
+        assert!((evalf(&CasExpr::int(2).sqrt(), &[]).unwrap() - std::f64::consts::SQRT_2).abs() < 1e-12);
+        // exp(0) = 1, sin(0) = 0.
+        assert!((evalf(&CasExpr::int(0).exp(), &[]).unwrap() - 1.0).abs() < 1e-12);
+        // A bound variable: 2x² + 1 at x = 3 → 19.
+        assert!((evalf(&(CasExpr::int(2) * x().pow(2) + CasExpr::int(1)), &[("x", 3.0)]).unwrap() - 19.0).abs() < 1e-12);
+        // stddev {1,2,3} = (1/3)√6 ≈ 0.8165.
+        let data: Vec<Rational> = [1, 2, 3].into_iter().map(Rational::integer).collect();
+        let sd = standard_deviation(&data).unwrap();
+        assert!((evalf(&sd, &[]).unwrap() - (6.0_f64).sqrt() / 3.0).abs() < 1e-12);
+        // Unbound free variable → None.
+        assert!(evalf(&x(), &[]).is_none());
     }
 
     #[test]
