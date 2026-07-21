@@ -50,12 +50,14 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Rational, poly};
 
+pub mod groebner;
 mod matrix;
 pub mod mvpoly;
 pub mod ntheory;
 mod ratint;
 mod series;
 
+pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
 pub use series::series;
@@ -1746,6 +1748,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_elementary(expr, var),
         integrate_poly_times_exp(expr, var),
         integrate_poly_times_sinusoid(expr, var),
+        integrate_trig_square(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -1759,6 +1762,48 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         }
     }
     None
+}
+
+/// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
+/// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
+/// Pythagorean identity in the zero-test. `None` outside this shape.
+fn integrate_trig_square(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (coeff, inner) = match expr {
+        CasExpr::Pow(_, _) => (Rational::integer(1), expr),
+        CasExpr::Neg(a) => (Rational::integer(-1), a.as_ref()),
+        CasExpr::Mul(factors) if factors.len() == 2 => match (&factors[0], &factors[1]) {
+            (CasExpr::Const(k), p @ CasExpr::Pow(_, _))
+            | (p @ CasExpr::Pow(_, _), CasExpr::Const(k)) => (*k, p),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let CasExpr::Pow(base, 2) = inner else {
+        return None;
+    };
+    let CasExpr::Unary(func, arg) = base.as_ref() else {
+        return None;
+    };
+    if !matches!(func, UnaryFunc::Sin | UnaryFunc::Cos) {
+        return None;
+    }
+    let arg_poly = normalize(arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let a = arg_poly[1];
+    let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    let inv_2a = Rational::integer(1).checked_div(Rational::integer(2).checked_mul(a)?)?;
+    let product = CasExpr::Mul(vec![arg_expr.clone().sin(), arg_expr.cos()]);
+    // sin²: −(1/2a)·sin·cos ; cos²: +(1/2a)·sin·cos.
+    let cross_coeff = if *func == UnaryFunc::Sin {
+        inv_2a.checked_neg()?
+    } else {
+        inv_2a
+    };
+    let antiderivative = scaled_term(Rational::new(1, 2), CasExpr::var(var))
+        + scaled_term(cross_coeff, product);
+    Some(scaled_term(coeff, antiderivative))
 }
 
 /// Integrate `p(x)·e^(a·x+b)` for a polynomial `p` and a linear exponent:
@@ -2849,6 +2894,21 @@ mod tests {
             (CasExpr::int(2) * x() + CasExpr::int(1)) * (CasExpr::int(3) * x()).sin(),
         ] {
             let result = integrate(&integrand, "x").expect("poly·trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_trig_squares() {
+        let x = || v("x");
+        // ∫ sin²x, ∫ cos²x, ∫ sin²(2x) — certified via the Pythagorean identity.
+        for integrand in [
+            x().sin().pow(2),
+            x().cos().pow(2),
+            (CasExpr::int(2) * x()).sin().pow(2),
+        ] {
+            let result = integrate(&integrand, "x").expect("trig-square integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
