@@ -390,6 +390,45 @@ pub fn motzkin(n: u32) -> Option<i128> {
     Some(prev1)
 }
 
+/// The **Eulerian number** `A(n, k)` — the number of permutations of `{1,…,n}`
+/// with exactly `k` ascents — via `A(n,k) = (k+1)·A(n−1,k) + (n−k)·A(n−1,k−1)`,
+/// with `A(0,0) = 1`. Each row sums to `n!`, and the row is symmetric
+/// (`A(n,k) = A(n,n−1−k)`). `A(n, k) = 0` for `k ≥ n` (n ≥ 1). `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::eulerian;
+/// assert_eq!(eulerian(4, 1), Some(11)); // row 4: 1, 11, 11, 1
+/// assert_eq!(eulerian(4, 2), Some(11));
+/// assert_eq!(eulerian(0, 0), Some(1));
+/// ```
+#[must_use]
+pub fn eulerian(n: u32, k: u32) -> Option<i128> {
+    if n == 0 {
+        return Some(i128::from(k == 0));
+    }
+    if k >= n {
+        return Some(0); // at most n−1 ascents for n ≥ 1
+    }
+    // Build row `n` of the Eulerian triangle from row 0.
+    let width = usize::try_from(n).ok()?;
+    let mut row = vec![0i128; width]; // A(m, 0..m−1)
+    row[0] = 1; // A(1, 0) = 1
+    for m in 2..=i128::from(n) {
+        let mut next = vec![0i128; width];
+        for j in 0..usize::try_from(m).ok()? {
+            let ascend = i128::try_from(j + 1).ok()?.checked_mul(row[j])?;
+            let descend = if j == 0 {
+                0
+            } else {
+                (m - i128::try_from(j).ok()?).checked_mul(row[j - 1])?
+            };
+            next[j] = ascend.checked_add(descend)?;
+        }
+        row = next;
+    }
+    row.get(usize::try_from(k).ok()?).copied()
+}
+
 /// The **Pell number** `Pₙ` (with `P₀ = 0`, `P₁ = 1`, `Pₙ = 2Pₙ₋₁ + Pₙ₋₂`):
 /// `0, 1, 2, 5, 12, 29, 70, …` — the numerators/denominators of the continued-
 /// fraction convergents to `√2`. `None` on `i128` overflow.
@@ -536,6 +575,29 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn eulerian_triangle() {
+        // Known rows.
+        assert_eq!(
+            (0..4).map(|k| eulerian(4, k).unwrap()).collect::<Vec<_>>(),
+            vec![1, 11, 11, 1]
+        );
+        assert_eq!(
+            (0..5).map(|k| eulerian(5, k).unwrap()).collect::<Vec<_>>(),
+            vec![1, 26, 66, 26, 1]
+        );
+        // Each row sums to n! and is symmetric A(n,k)=A(n,n−1−k).
+        for n in 1..=8u32 {
+            let row: Vec<i128> = (0..n).map(|k| eulerian(n, k).unwrap()).collect();
+            let sum: i128 = row.iter().sum();
+            assert_eq!(sum, crate::ntheory::factorial(i128::from(n)).unwrap());
+            for k in 0..n {
+                assert_eq!(row[k as usize], row[(n - 1 - k) as usize], "symmetry n={n}");
+            }
+        }
+        assert_eq!(eulerian(5, 5), Some(0)); // k ≥ n
+    }
 
     #[test]
     fn tribonacci_sequence() {
