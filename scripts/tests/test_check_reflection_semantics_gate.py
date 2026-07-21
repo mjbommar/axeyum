@@ -21,6 +21,7 @@ BINARIES = [
     "llvm_checked_loop",
     "llvm_direct_calls",
     "checksum_module",
+    "source_contract_bridge",
 ]
 
 

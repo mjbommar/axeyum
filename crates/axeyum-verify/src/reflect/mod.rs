@@ -16,6 +16,8 @@
 //! `unsat` should ride the certificate ladder — the same discipline the rest of
 //! axeyum follows.
 
+/// Typed bridges from accepted source contracts into checked-IR summaries.
+pub mod contracts;
 /// Hyperproperties over reflected code — 2-safety by self-composition
 /// (constant-time / secret-independence).
 pub mod hyper;

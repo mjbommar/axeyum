@@ -21,6 +21,7 @@ const MAX_MEMORY_BYTES: usize = 256;
 const MAX_BLOCK_EXECUTIONS: usize = 4_096;
 const REGISTERED_USIZE_WIDTH: u32 = 64;
 const DEFAULT_CONTRACT_VERIFICATION_TIMEOUT: Duration = Duration::from_secs(2);
+const U8_WRAPPING_ADD_INTRINSIC: &str = "core::num::<impl u8>::wrapping_add";
 
 /// Named-function and target configuration for checked MIR reflection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -652,8 +653,11 @@ fn validate_call_inventory(function: &Function, calls: &CallMode<'_>) -> Result<
         .blocks
         .iter()
         .filter_map(|block| {
-            matches!(&block.terminator.kind, TerminatorKind::Call { .. })
-                .then_some(block.terminator.span)
+            matches!(
+                &block.terminator.kind,
+                TerminatorKind::Call { callee, .. } if callee != U8_WRAPPING_ADD_INTRINSIC
+            )
+            .then_some(block.terminator.span)
         })
         .collect::<Vec<_>>();
     match calls {
@@ -1168,6 +1172,32 @@ fn lower_call(
     span: SourceSpan,
     calls: &mut CallMode<'_>,
 ) -> Result<(), ReflectError> {
+    if callee == U8_WRAPPING_ADD_INTRINSIC {
+        return lower_u8_wrapping_add_call(arena, context, state, destination, args, span);
+    }
+    lower_verified_relational_call(
+        arena,
+        context,
+        state,
+        destination,
+        callee,
+        args,
+        span,
+        calls,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn lower_verified_relational_call(
+    arena: &mut TermArena,
+    context: &Context<'_>,
+    state: &mut State,
+    destination: u32,
+    callee: &str,
+    args: &[Operand],
+    span: SourceSpan,
+    calls: &mut CallMode<'_>,
+) -> Result<(), ReflectError> {
     let CallMode::Relational {
         resolver,
         function,
@@ -1265,6 +1295,52 @@ fn lower_call(
         callee_panic,
         relation,
     });
+    Ok(())
+}
+
+fn lower_u8_wrapping_add_call(
+    arena: &mut TermArena,
+    context: &Context<'_>,
+    state: &mut State,
+    destination: u32,
+    args: &[Operand],
+    span: SourceSpan,
+) -> Result<(), ReflectError> {
+    let [left, right] = args else {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            format!(
+                "registered u8 wrapping-add requires two arguments; found {}",
+                args.len()
+            ),
+        ));
+    };
+    let byte = ScalarTy {
+        width: 8,
+        signed: false,
+        boolean: false,
+    };
+    let left = lower_operand(arena, context, state, left, span)?;
+    let right = lower_operand(arena, context, state, right, span)?;
+    let destination_type = local_scalar_type(context, destination, span)?;
+    if left.ty != byte || right.ty != byte || destination_type != byte {
+        return Err(reflect_error(
+            ReflectErrorKind::UnsupportedCall,
+            span,
+            "registered wrapping-add intrinsic requires two u8 arguments and a u8 destination",
+        ));
+    }
+    let value = arena
+        .bv_add(left.term, right.term)
+        .map_err(|error| ir_error(span, error.to_string()))?;
+    state.scalars.insert(
+        destination,
+        ScalarValue {
+            term: value,
+            ty: byte,
+        },
+    );
     Ok(())
 }
 

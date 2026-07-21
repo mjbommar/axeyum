@@ -1,0 +1,14 @@
+{
+  "schema": "axeyum.verify-source-contract-mir-provenance.v1",
+  "profile": "scalar-contract",
+  "fixture_package": "axeyum-mir-contract-fixture",
+  "fixture_target": "lib",
+  "selected_function": "wrapping_inc",
+  "target_usize_width": 64,
+  "rust_toolchain": "nightly-2026-05-01-x86_64-unknown-linux-gnu",
+  "rustc_commit": "f53b654a8882fd5fc036c4ca7a4ff41ce32497a6",
+  "cargo_commit": "eb9b60f1f6604b5e022c56be31692c215b8ba11d",
+  "rustc_args": ["-C", "opt-level=0", "-C", "overflow-checks=yes", "-Zunpretty=mir"],
+  "fresh_capture_repetitions": 2,
+  "fresh_capture_byte_identical": true
+}

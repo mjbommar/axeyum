@@ -322,16 +322,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0317 preregisters the authenticated annotation-to-MIR
-  seam.** The source and modular halves are now individually accepted, but a
-  hand-built contract plus embedded MIR does not bind them. The zero-row next
-  cell uses one total annotated `u8::wrapping_add` function: translate its typed
-  `ContractProgram` into the existing relational `ScalarCallContract`, require
-  exact equality with a hand-built declaration, and independently verify both
-  against checked MIR captured from the same registered source through its
-  explicit Cargo build. A typed `axeyum-mir-build` scalar profile preserves the
-  existing memory default and owns capture provenance. The full 256-input caller
-  differential is frozen before code. Nontrivial `requires`, source panic
+- **2026-07-21 — ADR-0317 accepts the authenticated annotation-to-MIR seam.**
+  The typed source bridge proves one total annotated `u8::wrapping_add`
+  `ContractProgram`, emits the existing relational `ScalarCallContract`, and
+  matches the frozen hand-built declaration exactly. Each declaration
+  independently verifies against the same 10,124-byte compiler MIR body from
+  the fixture's owning Cargo build before body discard. Two fresh pinned-nightly
+  captures and the committed third copy are byte-identical; the distinct scalar
+  summary replaces all machine-local roots with typed placeholders while
+  preserving complete Cargo/rustc identities and ordered arguments. The exact
+  compiler spelling `core::num::<impl u8>::wrapping_add` lowers only at its
+  two-`u8`/`u8` boundary and remains outside relational-call inventory. Both
+  resolvers match the separately reflected inlined control over all 256 inputs
+  at 256 normal/zero panic with zero evaluation error/drop; removing the
+  relation is disproved, and source/body/intrinsic/resource mutations fail
+  closed. The complete package/doctests, strict Clippy, pinned capture replay,
+  and expanded 81-variant / 17-group / eleven-binary / 123-test semantics gate
+  pass under the one-job 4 GiB policy. Nontrivial `requires`, source panic
   summaries, broader syntax, effects, LLVM generation, performance, and the
   still-missing second machine remain out of scope.
 

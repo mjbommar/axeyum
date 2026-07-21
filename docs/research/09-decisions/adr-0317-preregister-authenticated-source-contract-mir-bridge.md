@@ -1,6 +1,6 @@
 # ADR-0317: Preregister an authenticated source-contract to checked-MIR bridge
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -78,6 +78,10 @@ The implementation may land only with the following boundaries.
    manifest/target/output/executable roots with code-owned typed placeholders
    while retaining the complete ordered logical argument projection and exact
    Cargo/rustc identities. Raw compiler stdout is never normalized.
+   The registered compiler spells `u8::wrapping_add` as the exact direct MIR
+   intrinsic `core::num::<impl u8>::wrapping_add`. The scalar checker may lower
+   only that two-`u8`/`u8` spelling to existing BV addition; it remains outside
+   relational call inventory, and every other qualified call stays rejected.
 5. Add one excluded, locked fixture Cargo package whose `src/lib.rs` contains
    the exact annotated function above and depends on the local
    `axeyum-verify`. The evidence test includes those same registered source
@@ -155,6 +159,36 @@ Implementation is admitted only if one committed bundle passes every gate.
 No performance, general-Rust, general-contract, cross-compiler, source-to-LLVM,
 or finding/coverage claim follows from this cell. No gate may be weakened after
 observing implementation or capture results.
+
+## Accepted result
+
+The frozen cell passes in full. The typed source bridge proves the annotated
+`ContractProgram` first and emits the existing relational contract with no new
+contract or IR operator. The generated declaration is structurally identical
+to the hand-built control, and two separately constructed MIR resolvers verify
+it against the same compiler body before discarding that body.
+
+Two clean registered-toolchain captures are byte-identical at 10,124 raw MIR
+bytes and emit the same root-independent scalar summary. A committed third copy
+binds the fixture manifest/lock/source, raw MIR, summary, Cargo/rustc identities,
+ordered arguments, and provenance hashes. A pinned-nightly integration test
+reproduces both committed files through the owning Cargo build. The pre-existing
+checked-memory default and summary schema remain unchanged.
+
+The real direct caller and independently inlined control agree under both
+resolvers for all 256 `u8` inputs: 256 normal, zero panic, zero evaluation
+failure, and zero dropped row. Removing the relation yields a replay-checked
+countermodel. Source postcondition/body/partiality mutations, compiler-body and
+qualified-call mutations, and zero solver resources all fail closed. The exact
+compiler intrinsic noted above is admitted only at its two-`u8`/`u8` type and
+spelling boundary.
+
+The complete `axeyum-verify` package and doctests, strict all-target/all-feature
+Clippy, the expanded 81-variant / 17-group / eleven-binary / 123-test reflection
+semantics gate, exact capture replay, and provenance checks pass inside the
+one-job 4 GiB execution policy. This remains a single total scalar identity
+bridge, not nontrivial requirements, panic-summary authoring, effects, or a
+general Rust/MIR contract front end.
 
 ## Rejected alternatives
 

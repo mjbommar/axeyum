@@ -8,13 +8,16 @@ Usage:
   axeyum-mir-build \\
     --manifest-path /absolute/canonical/Cargo.toml \\
     --package PACKAGE (--lib | --bin NAME) --function FUNCTION \\
+    [--profile checked-memory|scalar-contract] \\
     --target-usize-width 64 \\
     --cargo /absolute/path/to/cargo --rustc /absolute/path/to/rustc \\
     --target-dir /absolute/new/target-dir --output /absolute/new/output.mir
 
 Builds exactly one locked Cargo package target with the registered rustc,
-checks one named function through Axeyum's strict MIR parser and bounded-memory
-reflector, then atomically retains raw compiler stdout. The selected Cargo
+checks one named function through Axeyum's strict MIR parser and the selected
+checked reflector, then atomically retains raw compiler stdout. The default is
+checked-memory; scalar-contract selects ADR-0317's call-free scalar profile.
+The selected Cargo
 build may execute that target's build scripts; this command is not a sandbox
 for hostile crates. Existing outputs and target directories are never reused.
 ";
@@ -25,12 +28,19 @@ pub enum Target {
     Bin(String),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Profile {
+    CheckedMemory,
+    ScalarContract,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Config {
     pub manifest_path: PathBuf,
     pub package: String,
     pub target: Target,
     pub function: String,
+    pub profile: Profile,
     pub target_usize_width: u32,
     pub cargo: PathBuf,
     pub rustc: PathBuf,
@@ -50,6 +60,7 @@ struct PartialConfig {
     package: Option<String>,
     target: Option<Target>,
     function: Option<String>,
+    profile: Option<Profile>,
     target_usize_width: Option<u32>,
     cargo: Option<PathBuf>,
     rustc: Option<PathBuf>,
@@ -101,6 +112,22 @@ where
                 flag,
                 next_value(&mut arguments, flag)?,
             )?,
+            "--profile" => {
+                if partial.profile.is_some() {
+                    return Err(duplicate(flag));
+                }
+                let raw = required_utf8(next_value(&mut arguments, flag)?, flag)?;
+                partial.profile = Some(match raw.as_str() {
+                    "checked-memory" => Profile::CheckedMemory,
+                    "scalar-contract" => Profile::ScalarContract,
+                    _ => {
+                        return Err(ToolError::new(
+                            "profile",
+                            format!("unsupported MIR build profile `{raw}`"),
+                        ));
+                    }
+                });
+            }
             "--target-usize-width" => {
                 if partial.target_usize_width.is_some() {
                     return Err(duplicate(flag));
@@ -139,6 +166,7 @@ where
         package: required(partial.package, "--package")?,
         target: required(partial.target, "--lib or --bin")?,
         function: required(partial.function, "--function")?,
+        profile: partial.profile.unwrap_or(Profile::CheckedMemory),
         target_usize_width: required(partial.target_usize_width, "--target-usize-width")?,
         cargo: required(partial.cargo, "--cargo")?,
         rustc: required(partial.rustc, "--rustc")?,
@@ -152,6 +180,7 @@ fn is_empty(config: &PartialConfig) -> bool {
         && config.package.is_none()
         && config.target.is_none()
         && config.function.is_none()
+        && config.profile.is_none()
         && config.target_usize_width.is_none()
         && config.cargo.is_none()
         && config.rustc.is_none()
@@ -227,7 +256,7 @@ fn duplicate(flag: &str) -> ToolError {
 
 #[cfg(test)]
 mod tests {
-    use super::{Action, Target, parse};
+    use super::{Action, Profile, Target, parse};
     use std::ffi::OsString;
 
     fn args(values: &[&str]) -> Vec<OsString> {
@@ -264,6 +293,33 @@ mod tests {
         assert_eq!(config.target, Target::Lib);
         assert_eq!(config.package, "fixture");
         assert_eq!(config.function, "f");
+        assert_eq!(config.profile, Profile::CheckedMemory);
+
+        let Action::Run(scalar) = parse(args(&[
+            "--manifest-path",
+            "/tmp/Cargo.toml",
+            "--package",
+            "fixture",
+            "--lib",
+            "--function",
+            "f",
+            "--profile",
+            "scalar-contract",
+            "--target-usize-width",
+            "64",
+            "--cargo",
+            "/bin/cargo",
+            "--rustc",
+            "/bin/rustc",
+            "--target-dir",
+            "/tmp/target",
+            "--output",
+            "/tmp/out.mir",
+        ]))
+        .unwrap() else {
+            panic!("expected scalar run action");
+        };
+        assert_eq!(scalar.profile, Profile::ScalarContract);
     }
 
     #[test]
@@ -284,6 +340,10 @@ mod tests {
                 .unwrap_err()
                 .class,
             "target_width"
+        );
+        assert_eq!(
+            parse(args(&["--profile", "unknown"])).unwrap_err().class,
+            "profile"
         );
         assert_eq!(
             parse(args(&["--unknown"])).unwrap_err().class,

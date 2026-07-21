@@ -55,6 +55,13 @@ fn manifest() -> PathBuf {
     .unwrap()
 }
 
+fn contract_manifest() -> PathBuf {
+    fs::canonicalize(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mir-contract-target/Cargo.toml"),
+    )
+    .unwrap()
+}
+
 fn registered_tools() -> Option<(PathBuf, PathBuf)> {
     let lookup = |name: &str, override_name: &str| -> Option<PathBuf> {
         if let Some(path) = std::env::var_os(override_name) {
@@ -135,6 +142,41 @@ fn run_with_manifest(
         .arg("--target-usize-width")
         .arg("64")
         .arg("--cargo")
+        .arg(cargo)
+        .arg("--rustc")
+        .arg(rustc)
+        .arg("--target-dir")
+        .arg(target_dir)
+        .arg("--output")
+        .arg(output)
+        .current_dir("/")
+        .env("RUSTC_WRAPPER", "/bin/false")
+        .env("RUSTC_WORKSPACE_WRAPPER", "/bin/false")
+        .output()
+        .unwrap()
+}
+
+fn run_scalar_contract_capture(
+    cargo: &Path,
+    rustc: &Path,
+    target_dir: &Path,
+    output: &Path,
+) -> Output {
+    Command::new(BIN)
+        .arg("--manifest-path")
+        .arg(contract_manifest())
+        .args([
+            "--package",
+            "axeyum-mir-contract-fixture",
+            "--lib",
+            "--function",
+            "wrapping_inc",
+            "--profile",
+            "scalar-contract",
+            "--target-usize-width",
+            "64",
+            "--cargo",
+        ])
         .arg(cargo)
         .arg("--rustc")
         .arg(rustc)
@@ -292,6 +334,31 @@ fn one_command_capture_is_reproducible_checked_and_source_replayed() {
     assert_eq!(first_summary.as_bytes(), second.stdout);
 
     assert_cargo_store_semantics(&String::from_utf8(first_bytes).unwrap());
+}
+
+#[test]
+fn scalar_profile_reproduces_the_committed_root_independent_capture() {
+    let Some((cargo, rustc)) = exact_tools_or_skip() else {
+        return;
+    };
+    let scratch = Scratch::new("scalar-contract");
+    let captured = scratch.path("wrapping_inc.mir");
+    let output =
+        run_scalar_contract_capture(&cargo, &rustc, &scratch.path("cargo-target"), &captured);
+    assert!(
+        output.status.success(),
+        "scalar capture failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let fixture = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mir-contract-target");
+    assert_eq!(
+        fs::read(captured).unwrap(),
+        fs::read(fixture.join("artifacts/wrapping_inc.mir")).unwrap()
+    );
+    assert_eq!(
+        output.stdout,
+        fs::read(fixture.join("artifacts/capture-summary.json")).unwrap()
+    );
 }
 
 #[test]

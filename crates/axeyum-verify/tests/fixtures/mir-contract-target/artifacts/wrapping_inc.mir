@@ -1,0 +1,324 @@
+// WARNING: This output format is intended for human consumers only
+// and is subject to change without notice. Knock yourself out.
+// HINT: See also -Z dump-mir for MIR at specific points during compilation.
+fn wrapping_inc(_1: u8) -> u8 {
+    debug x => _1;
+    let mut _0: u8;
+
+    bb0: {
+        _0 = core::num::<impl u8>::wrapping_add(copy _1, const 1_u8) -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        return;
+    }
+}
+
+fn wrapping_inc__axeyum_program() -> ContractProgram {
+    let mut _0: axeyum_verify::ContractProgram;
+    let mut _1: axeyum_verify::Program;
+    let mut _2: std::string::String;
+    let mut _3: &str;
+    let mut _4: std::vec::Vec<axeyum_verify::Param>;
+    let mut _5: std::boxed::Box<std::mem::MaybeUninit<[axeyum_verify::Param; 1]>>;
+    let mut _6: std::boxed::Box<std::mem::MaybeUninit<[axeyum_verify::Param; 1]>>;
+    let mut _7: axeyum_verify::Param;
+    let mut _8: std::string::String;
+    let mut _9: &str;
+    let mut _10: axeyum_verify::Ty;
+    let mut _11: std::vec::Vec<axeyum_verify::ArrayParam>;
+    let mut _12: std::vec::Vec<axeyum_verify::Stmt>;
+    let mut _13: axeyum_verify::Expr;
+    let mut _14: axeyum_verify::Expr;
+    let mut _15: axeyum_verify::BinOp;
+    let mut _16: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _17: axeyum_verify::Expr;
+    let mut _18: std::string::String;
+    let mut _19: &str;
+    let mut _20: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _21: axeyum_verify::Expr;
+    let mut _22: axeyum_verify::Ty;
+    let mut _23: std::string::String;
+    let mut _24: &str;
+    let mut _25: axeyum_verify::Expr;
+    let mut _26: axeyum_verify::BinOp;
+    let mut _27: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _28: axeyum_verify::Expr;
+    let mut _29: std::string::String;
+    let mut _30: &str;
+    let mut _31: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _32: axeyum_verify::Expr;
+    let mut _33: axeyum_verify::BinOp;
+    let mut _34: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _35: axeyum_verify::Expr;
+    let mut _36: std::string::String;
+    let mut _37: &str;
+    let mut _38: std::boxed::Box<axeyum_verify::Expr>;
+    let mut _39: axeyum_verify::Expr;
+    let mut _40: axeyum_verify::Ty;
+    let mut _41: *const std::mem::MaybeUninit<[axeyum_verify::Param; 1]>;
+    let mut _42: *const ();
+    let mut _43: usize;
+    let mut _44: usize;
+    let mut _45: usize;
+    let mut _46: bool;
+    let mut _47: *const ();
+    let mut _48: usize;
+    let mut _49: bool;
+    let mut _50: bool;
+    let mut _51: bool;
+    let mut _52: bool;
+
+    bb0: {
+        _3 = const "wrapping_inc";
+        _2 = <&str as Into<String>>::into(move _3) -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        _6 = Box::<[Param; 1]>::new_uninit() -> [return: bb2, unwind: bb27];
+    }
+
+    bb2: {
+        _9 = const "x";
+        _8 = <&str as Into<String>>::into(move _9) -> [return: bb3, unwind: bb26];
+    }
+
+    bb3: {
+        _10 = axeyum_verify::Ty::Int { width: const 8_u32, signed: const false };
+        _7 = Param { name: move _8, ty: move _10 };
+        _41 = copy ((_6.0: std::ptr::Unique<std::mem::MaybeUninit<[axeyum_verify::Param; 1]>>).0: std::ptr::NonNull<std::mem::MaybeUninit<[axeyum_verify::Param; 1]>>) as *const std::mem::MaybeUninit<[axeyum_verify::Param; 1]> (Transmute);
+        _42 = copy _41 as *const () (PtrToPtr);
+        _43 = copy _42 as usize (Transmute);
+        _44 = Sub(const <std::mem::MaybeUninit<[axeyum_verify::Param; 1]> as std::mem::SizedTypeProperties>::ALIGN, const 1_usize);
+        _45 = BitAnd(copy _43, copy _44);
+        _46 = Eq(copy _45, const 0_usize);
+        assert(copy _46, "misaligned pointer dereference: address must be a multiple of {} but is {}", const <std::mem::MaybeUninit<[axeyum_verify::Param; 1]> as std::mem::SizedTypeProperties>::ALIGN, copy _43) -> [success: bb29, unwind unreachable];
+    }
+
+    bb4: {
+        _11 = Vec::<ArrayParam>::new() -> [return: bb5, unwind: bb25];
+    }
+
+    bb5: {
+        _12 = Vec::<Stmt>::new() -> [return: bb6, unwind: bb24];
+    }
+
+    bb6: {
+        _1 = Program { name: move _2, params: move _4, arrays: move _11, body: move _12 };
+        _13 = BoolLit(const true);
+        _15 = WrappingAdd;
+        _19 = const "x";
+        _18 = <&str as Into<String>>::into(move _19) -> [return: bb7, unwind: bb22];
+    }
+
+    bb7: {
+        _17 = Var(move _18);
+        _16 = Box::<Expr>::new(move _17) -> [return: bb8, unwind: bb22];
+    }
+
+    bb8: {
+        _22 = axeyum_verify::Ty::Int { width: const 8_u32, signed: const false };
+        _21 = IntLit { value: const 1_u128, ty: move _22 };
+        _20 = Box::<Expr>::new(move _21) -> [return: bb9, unwind: bb21];
+    }
+
+    bb9: {
+        _14 = axeyum_verify::Expr::Binary { op: move _15, lhs: move _16, rhs: move _20 };
+        _24 = const "result";
+        _23 = <&str as Into<String>>::into(move _24) -> [return: bb10, unwind: bb20];
+    }
+
+    bb10: {
+        _26 = axeyum_verify::BinOp::Eq;
+        _30 = const "result";
+        _29 = <&str as Into<String>>::into(move _30) -> [return: bb11, unwind: bb19];
+    }
+
+    bb11: {
+        _28 = Var(move _29);
+        _27 = Box::<Expr>::new(move _28) -> [return: bb12, unwind: bb19];
+    }
+
+    bb12: {
+        _33 = WrappingAdd;
+        _37 = const "x";
+        _36 = <&str as Into<String>>::into(move _37) -> [return: bb13, unwind: bb18];
+    }
+
+    bb13: {
+        _35 = Var(move _36);
+        _34 = Box::<Expr>::new(move _35) -> [return: bb14, unwind: bb18];
+    }
+
+    bb14: {
+        _40 = axeyum_verify::Ty::Int { width: const 8_u32, signed: const false };
+        _39 = IntLit { value: const 1_u128, ty: move _40 };
+        _38 = Box::<Expr>::new(move _39) -> [return: bb15, unwind: bb17];
+    }
+
+    bb15: {
+        _32 = axeyum_verify::Expr::Binary { op: move _33, lhs: move _34, rhs: move _38 };
+        _31 = Box::<Expr>::new(move _32) -> [return: bb16, unwind: bb18];
+    }
+
+    bb16: {
+        _25 = axeyum_verify::Expr::Binary { op: move _26, lhs: move _27, rhs: move _31 };
+        _0 = ContractProgram { program: move _1, requires: move _13, result: move _14, result_name: move _23, ensures: move _25 };
+        return;
+    }
+
+    bb17 (cleanup): {
+        drop(_34) -> [return: bb18, unwind terminate(cleanup)];
+    }
+
+    bb18 (cleanup): {
+        drop(_27) -> [return: bb19, unwind terminate(cleanup)];
+    }
+
+    bb19 (cleanup): {
+        drop(_23) -> [return: bb20, unwind terminate(cleanup)];
+    }
+
+    bb20 (cleanup): {
+        drop(_14) -> [return: bb22, unwind terminate(cleanup)];
+    }
+
+    bb21 (cleanup): {
+        drop(_16) -> [return: bb22, unwind terminate(cleanup)];
+    }
+
+    bb22 (cleanup): {
+        drop(_13) -> [return: bb23, unwind terminate(cleanup)];
+    }
+
+    bb23 (cleanup): {
+        drop(_1) -> [return: bb28, unwind terminate(cleanup)];
+    }
+
+    bb24 (cleanup): {
+        drop(_11) -> [return: bb25, unwind terminate(cleanup)];
+    }
+
+    bb25 (cleanup): {
+        drop(_4) -> [return: bb27, unwind terminate(cleanup)];
+    }
+
+    bb26 (cleanup): {
+        drop(_6) -> [return: bb27, unwind terminate(cleanup)];
+    }
+
+    bb27 (cleanup): {
+        drop(_2) -> [return: bb28, unwind terminate(cleanup)];
+    }
+
+    bb28 (cleanup): {
+        resume;
+    }
+
+    bb29: {
+        _47 = copy _41 as *const () (PtrToPtr);
+        _48 = copy _47 as usize (Transmute);
+        _49 = Ne(const <std::mem::MaybeUninit<[axeyum_verify::Param; 1]> as std::mem::SizedTypeProperties>::SIZE, const 0_usize);
+        _50 = Eq(copy _48, const 0_usize);
+        _51 = BitAnd(copy _50, copy _49);
+        _52 = Not(copy _51);
+        assert(copy _52, "null pointer dereference occurred") -> [success: bb30, unwind unreachable];
+    }
+
+    bb30: {
+        ((((*_41).1: std::mem::ManuallyDrop<[axeyum_verify::Param; 1]>).0: std::mem::MaybeDangling<[axeyum_verify::Param; 1]>).0: [axeyum_verify::Param; 1]) = [move _7];
+        _5 = move _6;
+        _4 = std::boxed::box_assume_init_into_vec_unsafe::<Param, 1>(move _5) -> [return: bb4, unwind: bb27];
+    }
+}
+
+alloc3 (size: 6, align: 1) {
+    72 65 73 75 6c 74                               │ result
+}
+
+alloc2 (size: 1, align: 1) {
+    78                                              │ x
+}
+
+alloc1 (size: 12, align: 1) {
+    77 72 61 70 70 69 6e 67 5f 69 6e 63             │ wrapping_inc
+}
+
+fn wrapping_inc__axeyum_verdict() -> Verdict {
+    let mut _0: axeyum_verify::Verdict;
+    let _1: axeyum_verify::ContractProgram;
+    let mut _2: std::result::Result<axeyum_verify::Verdict, axeyum_solver::backend::SolverError>;
+    let _3: &axeyum_verify::ContractProgram;
+    let _4: &axeyum_solver::backend::SolverConfig;
+    let _5: axeyum_solver::backend::SolverConfig;
+    let mut _6: &str;
+    scope 1 {
+        debug program => _1;
+    }
+
+    bb0: {
+        _1 = wrapping_inc__axeyum_program() -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        _3 = &_1;
+        _5 = default_config() -> [return: bb2, unwind: bb6];
+    }
+
+    bb2: {
+        _4 = &_5;
+        _2 = verify_contract_program(copy _3, copy _4) -> [return: bb3, unwind: bb6];
+    }
+
+    bb3: {
+        _6 = const "axeyum-verify: solver hard error";
+        _0 = std::result::Result::<Verdict, axeyum_solver::backend::SolverError>::expect(move _2, move _6) -> [return: bb4, unwind: bb6];
+    }
+
+    bb4: {
+        drop(_1) -> [return: bb5, unwind continue];
+    }
+
+    bb5: {
+        return;
+    }
+
+    bb6 (cleanup): {
+        drop(_1) -> [return: bb7, unwind terminate(cleanup)];
+    }
+
+    bb7 (cleanup): {
+        resume;
+    }
+}
+
+alloc7 (size: 32, align: 1) {
+    0x00 │ 61 78 65 79 75 6d 2d 76 65 72 69 66 79 3a 20 73 │ axeyum-verify: s
+    0x10 │ 6f 6c 76 65 72 20 68 61 72 64 20 65 72 72 6f 72 │ olver hard error
+}
+
+fn call_wrapping_inc(_1: u8) -> u8 {
+    debug x => _1;
+    let mut _0: u8;
+
+    bb0: {
+        _0 = wrapping_inc(copy _1) -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        return;
+    }
+}
+
+fn inlined_wrapping_inc(_1: u8) -> u8 {
+    debug x => _1;
+    let mut _0: u8;
+
+    bb0: {
+        _0 = core::num::<impl u8>::wrapping_add(copy _1, const 1_u8) -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        return;
+    }
+}

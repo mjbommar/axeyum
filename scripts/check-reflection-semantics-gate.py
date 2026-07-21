@@ -26,6 +26,7 @@ EXPECTED_TEST_BINARIES = [
     "llvm_checked_loop",
     "llvm_direct_calls",
     "checksum_module",
+    "source_contract_bridge",
 ]
 CHECKER_TEST_MODULE = "scripts/tests/test_check_reflection_semantics_gate.py"
 IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")

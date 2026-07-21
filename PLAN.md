@@ -257,14 +257,21 @@ session state.
 >    mutated violations with zero evaluation errors or drops; the complete
 >    package, doctests, strict gates, and unchanged 117-test reflection gate
 >    pass. It emits no modular summary and makes no source-to-MIR identity claim.
->    ADR-0317 now preregisters the smallest authenticated source-contract-to-
->    checked-MIR bridge before code. One total annotated `u8::wrapping_add`
->    function must translate into the existing relational contract AST, equal a
->    hand-built declaration, and independently verify against checked MIR
->    captured from the exact same registered source through its owning Cargo
->    build. This deliberately avoids the current MIR route's unsupported
->    nontrivial-`requires` boundary and adds no panic-summary authoring. Do not
->    widen branches, calls, effects, or unwind cleanup to make the bridge useful.
+>    ADR-0317 now accepts the smallest authenticated source-contract-to-
+>    checked-MIR bridge. One total annotated `u8::wrapping_add` function
+>    translates into the existing relational contract AST, equals a hand-built
+>    declaration, and both independently verify against 10,124 byte-identical
+>    checked-MIR bytes captured from the exact registered source through its
+>    owning Cargo build. The exact compiler-qualified wrapping-add intrinsic is
+>    admitted only as typed two-`u8`/`u8` BV addition and does not consume the
+>    one relational-call slot. Both resolvers match the inlined control over all
+>    256 inputs at 256 normal/zero panic; removing the relation and source/body/
+>    intrinsic/resource mutations fail closed. The root-independent scalar
+>    summary reproduces under the pinned nightly, and the 123-test standing
+>    semantics gate passes. This deliberately avoids the current MIR route's
+>    unsupported nontrivial-`requires` boundary and adds no panic-summary
+>    authoring. Do not widen branches, calls, effects, or unwind cleanup to make
+>    the bridge useful.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

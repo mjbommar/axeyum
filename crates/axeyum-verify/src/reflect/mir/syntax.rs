@@ -221,7 +221,7 @@ pub enum TerminatorKind {
     Call {
         /// Destination local written on normal return.
         destination: u32,
-        /// Bare direct callee name.
+        /// Registered direct callee spelling.
         callee: String,
         /// Ordered scalar call operands.
         args: Vec<Operand>,
@@ -727,15 +727,16 @@ fn parse_call_terminator(text: &str, span: SourceSpan) -> Result<TerminatorKind,
             "direct call lacks closing `)`",
         )
     })?;
-    if callee.is_empty()
-        || !callee
+    let bare_identifier = !callee.is_empty()
+        && callee
             .chars()
-            .all(|character| character == '_' || character.is_ascii_alphanumeric())
-    {
+            .all(|character| character == '_' || character.is_ascii_alphanumeric());
+    let registered_intrinsic = callee == "core::num::<impl u8>::wrapping_add";
+    if !bare_identifier && !registered_intrinsic {
         return Err(error(
             ParseErrorKind::UnsupportedTerminator,
             span,
-            "only bare direct call identifiers are admitted",
+            "only bare direct calls and the registered u8 wrapping-add intrinsic are admitted",
         ));
     }
     let args = if args.is_empty() {

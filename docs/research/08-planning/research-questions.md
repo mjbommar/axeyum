@@ -913,11 +913,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     evaluation errors or dropped rows. Branches, loops, calls, modular summary
     emission, and source-to-MIR identity remain separate questions.
   - [ADR-0317](../09-decisions/adr-0317-preregister-authenticated-source-contract-mir-bridge.md)
-    preregisters the smallest identity bridge for the next question: one total
-    annotated `u8::wrapping_add` function must lower into the existing
-    `ScalarCallContract`, match a hand-built declaration exactly, and verify
-    independently against checked MIR captured from the same registered source
-    through its owning Cargo build. This is a zero-row proposal; nontrivial
+    accepts the smallest identity bridge: one total annotated
+    `u8::wrapping_add` function lowers into the existing
+    `ScalarCallContract`, matches a hand-built declaration exactly, and both
+    independently verify against 10,124 byte-identical checked-MIR bytes from
+    the same registered source and owning Cargo build. Both modular routes
+    equal the inlined control over all 256 inputs; mutations and zero resources
+    fail closed. The registered compiler's exact qualified wrapping-add
+    intrinsic is typed and isolated from relational calls. Nontrivial
     `requires`, panic-summary authoring, broader source syntax, and source-to-
     LLVM generation remain separate.
 - [x] Can one flat append-only CNF formula representation reduce the retained

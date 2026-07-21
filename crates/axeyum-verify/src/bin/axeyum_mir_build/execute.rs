@@ -4,17 +4,19 @@ use std::io::Write as _;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 
-use axeyum_ir::render;
+use axeyum_ir::{Sort, TermArena, TermId, render};
 use axeyum_verify::reflect::mir::checked::{
-    CheckedMirMemory, MirMemoryConfig, reflect_bounded_memory_checked,
+    CheckedMirMemory, CheckedMirScalar, MirMemoryConfig, MirScalarConfig,
+    reflect_bounded_memory_checked, reflect_scalar_into_checked,
 };
 use axeyum_verify::reflect::mir::syntax::{Function, MirType, ParseErrorKind, parse_function};
 
 use crate::ToolError;
-use crate::args::{Config, Target};
+use crate::args::{Config, Profile, Target};
 use crate::json::{quote, string_array};
 
 const SUMMARY_SCHEMA: &str = "axeyum.verify-mir-build.v1";
+const SCALAR_SUMMARY_SCHEMA: &str = "axeyum.verify-mir-build-scalar-contract.v1";
 const REGISTERED_RUSTC_VERBOSE: &[&str] = &[
     "rustc 1.97.0-nightly (f53b654a8 2026-04-30)",
     "binary: rustc",
@@ -41,6 +43,17 @@ struct SummaryInputs<'a> {
     capture: &'a std::process::Output,
     function: &'a Function,
     reflected: &'a CheckedMirMemory,
+}
+
+struct ScalarSummaryInputs<'a> {
+    config: &'a Config,
+    prepared: &'a Prepared,
+    cargo_args: &'a [OsString],
+    rustc_args: &'a [OsString],
+    capture: &'a std::process::Output,
+    function: &'a Function,
+    arena: &'a TermArena,
+    reflected: &'a CheckedMirScalar,
 }
 
 fn prepare(config: &Config) -> Result<Prepared, ToolError> {
@@ -152,21 +165,49 @@ pub fn run(config: &Config) -> Result<String, ToolError> {
         };
         ToolError::new(class, format!("{:?}: {error}", error.kind()))
     })?;
-    let reflected = reflect_bounded_memory_checked(
-        mir,
-        &MirMemoryConfig::new(&config.function, config.target_usize_width),
-    )
-    .map_err(|error| ToolError::new("mir_reflection", format!("{:?}: {error}", error.kind())))?;
-
-    let summary = build_summary(&SummaryInputs {
-        config,
-        prepared: &prepared,
-        cargo_args: &cargo_args,
-        rustc_args: &rustc_args,
-        capture: &capture,
-        function: &function,
-        reflected: &reflected,
-    })?;
+    let summary = match config.profile {
+        Profile::CheckedMemory => {
+            let reflected = reflect_bounded_memory_checked(
+                mir,
+                &MirMemoryConfig::new(&config.function, config.target_usize_width),
+            )
+            .map_err(|error| {
+                ToolError::new("mir_reflection", format!("{:?}: {error}", error.kind()))
+            })?;
+            build_summary(&SummaryInputs {
+                config,
+                prepared: &prepared,
+                cargo_args: &cargo_args,
+                rustc_args: &rustc_args,
+                capture: &capture,
+                function: &function,
+                reflected: &reflected,
+            })?
+        }
+        Profile::ScalarContract => {
+            let mut arena = TermArena::new();
+            let parameters = scalar_parameters(&mut arena, &function, config.target_usize_width)?;
+            let reflected = reflect_scalar_into_checked(
+                &mut arena,
+                &parameters,
+                mir,
+                &MirScalarConfig::new(&config.function, config.target_usize_width),
+            )
+            .map_err(|error| {
+                ToolError::new("mir_reflection", format!("{:?}: {error}", error.kind()))
+            })?;
+            build_scalar_summary(&ScalarSummaryInputs {
+                config,
+                prepared: &prepared,
+                cargo_args: &cargo_args,
+                rustc_args: &rustc_args,
+                capture: &capture,
+                function: &function,
+                arena: &arena,
+                reflected: &reflected,
+            })?
+        }
+    };
     atomic_create(&config.output, &capture.stdout)?;
     target_guard.keep();
     Ok(summary)
@@ -233,6 +274,136 @@ fn build_summary(inputs: &SummaryInputs<'_>) -> Result<String, ToolError> {
         quote(&render(&inputs.reflected.arena, inputs.reflected.panic,)),
         string_array(final_memory.iter().map(String::as_str)),
     ))
+}
+
+fn build_scalar_summary(inputs: &ScalarSummaryInputs<'_>) -> Result<String, ToolError> {
+    let cargo_args = project_scalar_cargo_arguments(
+        inputs.cargo_args,
+        &inputs.prepared.manifest,
+        &inputs.config.target_dir,
+    )?;
+    let rustc_args = os_strings(inputs.rustc_args, "rustc_argument_encoding")?;
+    if rustc_args
+        .iter()
+        .any(|argument| Path::new(argument).is_absolute())
+    {
+        return Err(ToolError::new(
+            "scalar_summary_path",
+            "scalar-profile rustc argument projection contains an absolute path",
+        ));
+    }
+    let parameter_types = inputs
+        .function
+        .params
+        .iter()
+        .map(|parameter| render_type(parameter.ty))
+        .collect::<Vec<_>>();
+    let target_name = match &inputs.config.target {
+        Target::Lib => None,
+        Target::Bin(name) => Some(name.as_str()),
+    };
+    Ok(format!(
+        concat!(
+            "{{\"schema\":{},\"profile\":{},\"cargo_identity\":{},",
+            "\"rustc_identity\":{},\"cargo_executable\":{},",
+            "\"rustc_executable\":{},\"cargo_args\":{},\"rustc_args\":{},",
+            "\"manifest\":{},\"target_dir\":{},\"output\":{},",
+            "\"package\":{},\"target_kind\":{},\"target_name\":{},",
+            "\"function\":{},\"target_usize_width\":{},\"mir_bytes\":{},",
+            "\"parameter_types\":{},\"blocks\":{},\"result_width\":{},",
+            "\"result_signed\":{},\"result_term\":{},\"panic_term\":{}}}"
+        ),
+        quote(SCALAR_SUMMARY_SCHEMA),
+        quote("scalar-contract"),
+        string_array(inputs.prepared.cargo_version.lines()),
+        string_array(inputs.prepared.rustc_version.lines()),
+        quote("$CARGO"),
+        quote("$RUSTC"),
+        string_array(cargo_args.iter().map(String::as_str)),
+        string_array(rustc_args.iter().map(String::as_str)),
+        quote("$MANIFEST"),
+        quote("$TARGET_DIR"),
+        quote("$OUTPUT"),
+        quote(&inputs.config.package),
+        quote(match inputs.config.target {
+            Target::Lib => "lib",
+            Target::Bin(_) => "bin",
+        }),
+        target_name.map_or_else(|| "null".to_owned(), quote),
+        quote(&inputs.config.function),
+        inputs.config.target_usize_width,
+        inputs.capture.stdout.len(),
+        string_array(parameter_types.iter().map(String::as_str)),
+        inputs.function.blocks.len(),
+        inputs.reflected.result.width,
+        inputs.reflected.result.signed,
+        quote(&render(inputs.arena, inputs.reflected.result.value,)),
+        quote(&render(inputs.arena, inputs.reflected.panic)),
+    ))
+}
+
+fn project_scalar_cargo_arguments(
+    arguments: &[OsString],
+    manifest: &Path,
+    target_dir: &Path,
+) -> Result<Vec<String>, ToolError> {
+    arguments
+        .iter()
+        .map(|argument| {
+            if argument == manifest.as_os_str() {
+                return Ok("$MANIFEST".to_owned());
+            }
+            if argument == target_dir.as_os_str() {
+                return Ok("$TARGET_DIR".to_owned());
+            }
+            let value = argument.to_str().ok_or_else(|| {
+                ToolError::new("cargo_argument_encoding", "command argument is not UTF-8")
+            })?;
+            if Path::new(value).is_absolute() {
+                return Err(ToolError::new(
+                    "scalar_summary_path",
+                    format!("unregistered absolute Cargo argument `{value}`"),
+                ));
+            }
+            Ok(value.to_owned())
+        })
+        .collect()
+}
+
+fn scalar_parameters(
+    arena: &mut TermArena,
+    function: &Function,
+    target_width: u32,
+) -> Result<Vec<TermId>, ToolError> {
+    function
+        .params
+        .iter()
+        .enumerate()
+        .map(|(index, parameter)| {
+            let sort = scalar_sort(parameter.ty, target_width)?;
+            let symbol = arena
+                .declare_internal(&format!("mir.build.{}.arg{index}", function.name), sort)
+                .map_err(|error| {
+                    ToolError::new(
+                        "mir_reflection",
+                        format!("cannot declare parameter: {error}"),
+                    )
+                })?;
+            Ok(arena.var(symbol))
+        })
+        .collect()
+}
+
+fn scalar_sort(ty: MirType, target_width: u32) -> Result<Sort, ToolError> {
+    match ty {
+        MirType::Bool => Ok(Sort::Bool),
+        MirType::Integer { width, .. } => Ok(Sort::BitVec(width)),
+        MirType::Usize | MirType::Isize => Ok(Sort::BitVec(target_width)),
+        MirType::ByteArray { .. } => Err(ToolError::new(
+            "mir_reflection",
+            "scalar-contract profile rejects array parameters",
+        )),
+    }
 }
 
 fn canonical_file(path: &Path, class: &'static str) -> Result<PathBuf, ToolError> {
@@ -479,8 +650,10 @@ impl Drop for CreatedTargetDir {
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_cargo_failure, render_type};
+    use super::{classify_cargo_failure, project_scalar_cargo_arguments, render_type};
     use axeyum_verify::reflect::mir::syntax::MirType;
+    use std::ffi::OsString;
+    use std::path::Path;
 
     #[test]
     fn cargo_diagnostics_map_to_stable_selection_classes() {
@@ -506,5 +679,45 @@ mod tests {
             "i128"
         );
         assert_eq!(render_type(MirType::ByteArray { bytes: 4 }), "[u8;4]");
+    }
+
+    #[test]
+    fn scalar_argument_projection_is_root_independent_and_strict() {
+        let project = |root: &str| {
+            let manifest = format!("{root}/fixture/Cargo.toml");
+            let target = format!("{root}/scratch/target");
+            let arguments = vec![
+                OsString::from("rustc"),
+                OsString::from("--manifest-path"),
+                OsString::from(&manifest),
+                OsString::from("--target-dir"),
+                OsString::from(&target),
+                OsString::from("--locked"),
+            ];
+            project_scalar_cargo_arguments(&arguments, Path::new(&manifest), Path::new(&target))
+                .unwrap()
+        };
+        let first = project("/workspace/one");
+        let second = project("/different/root");
+        assert_eq!(first, second);
+        assert_eq!(
+            first,
+            vec![
+                "rustc",
+                "--manifest-path",
+                "$MANIFEST",
+                "--target-dir",
+                "$TARGET_DIR",
+                "--locked",
+            ]
+        );
+
+        let error = project_scalar_cargo_arguments(
+            &[OsString::from("/unregistered/path")],
+            Path::new("/manifest"),
+            Path::new("/target"),
+        )
+        .unwrap_err();
+        assert_eq!(error.class, "scalar_summary_path");
     }
 }
