@@ -342,6 +342,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Zero property queries/proofs/controls/rows run, cleanup leaves no output, and
   no OOM-delta failure is reported. Never rerun v1. Next: commit/push the exact
   negative, then preregister v2 with only a corrected committed lock snapshot.
+  Negative commit `4a640e2b` is pushed. Clean archived-HEAD offline resolution
+  adds only the missing `axeyum-cas` lock row and exactly matches the existing
+  workspace lock bytes (`e9da054b...181f`); commit/push that isolated sync next.
+  Full metadata subsequently lacks cached `wasip2`, so the successor retains a
+  separate exact targeted locked-offline preflight before any query.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),

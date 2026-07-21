@@ -69,6 +69,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-cas"
+version = "0.1.0"
+dependencies = [
+ "axeyum-ir",
+]
+
+[[package]]
 name = "axeyum-cnf"
 version = "0.1.0"
 dependencies = [

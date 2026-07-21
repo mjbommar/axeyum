@@ -509,6 +509,13 @@ session state.
 >    leaves no output, and no OOM-delta failure is reported. Never rerun v1.
 >    Next commit/push the exact negative, then preregister v2 changing only to a
 >    committed lockfile matching the already frozen manifests and a new output.
+>    The negative is pushed as `4a640e2b`. A clean archived-HEAD diagnostic
+>    without `--locked` deterministically adds only the missing seven-line
+>    `axeyum-cas` package row; those bytes exactly equal the pre-existing
+>    workspace lock edit (`e9da054b...181f`). Commit/push only that confirmed
+>    lock synchronization before freezing v2; leave every other dirty file
+>    untouched. Full metadata then reaches an unrelated uncached `wasip2`
+>    archive, so v2 still requires its exact targeted locked-offline preflight.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
