@@ -1173,23 +1173,30 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     if arg_poly.is_zero() {
         return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))); // exp(0) = 1
     }
-    let mut result = RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
+    let one = || RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
+    let mut result = one();
     for (monomial, coeff) in &arg_poly.terms {
         let negative = coeff.numerator() < 0;
-        let magnitude = if negative { coeff.checked_neg()? } else { *coeff };
-        // The primitive single-term argument `magnitude · monomial`, canonicalized.
+        // The primitive atom and the power to raise it to. When the coefficient is a
+        // (nonzero) **integer** `c`, key on `exp(monomial)` and use `exp(c·m) =
+        // exp(m)^c` — so `exp(2x) = exp(x)²` and `exp(x)·exp(2x) = exp(3x)` decide.
+        // Otherwise key on the whole `|coeff|·monomial` term (power 1).
+        let (primitive_coeff, power) = if coeff.denominator() == 1 {
+            (Rational::integer(1), u32::try_from(coeff.numerator().unsigned_abs()).ok()?)
+        } else {
+            let magnitude = if negative { coeff.checked_neg()? } else { *coeff };
+            (magnitude, 1)
+        };
         let mut single = BTreeMap::new();
-        single.insert(monomial.clone(), magnitude);
-        let term_poly = MultiPoly { terms: single };
-        let atom = MultiPoly::single_var(&atom_name("exp", &term_poly.to_expr()));
-        let factor = if negative {
-            // exp(term) = exp(−|term|) = 1 / exp(|term|).
-            RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))
-                .div(&RatFunc::from_poly(atom))?
+        single.insert(monomial.clone(), primitive_coeff);
+        let atom = MultiPoly::single_var(&atom_name("exp", &MultiPoly { terms: single }.to_expr()));
+        let base = if negative {
+            // exp(negative term) = 1 / exp(positive term).
+            one().div(&RatFunc::from_poly(atom))?
         } else {
             RatFunc::from_poly(atom)
         };
-        result = result.mul(&factor)?;
+        result = result.mul(&base.pow(power)?)?;
     }
     Some(result)
 }
@@ -4719,6 +4726,11 @@ mod tests {
         // A polynomial exponent splits into per-monomial factors and recombines:
         // exp(x² + x) = exp(x²)·exp(x).
         assert_equal(&(x().pow(2) + x()).exp(), &(x().pow(2).exp() * x().exp()));
+        // Integer scaling: exp(2x) = exp(x)², and exp(x)·exp(2x) = exp(3x).
+        assert_equal(&(CasExpr::int(2) * x()).exp(), &x().exp().pow(2));
+        assert_equal(&(x().exp() * (CasExpr::int(2) * x()).exp()), &(CasExpr::int(3) * x()).exp());
+        // exp(2) = exp(1)² (constant argument, integer scaling).
+        assert_equal(&CasExpr::int(2).exp(), &CasExpr::int(1).exp().pow(2));
         // Sanity: the general non-cancelling product stays honest — exp(x)·exp(y) is
         // not equal to exp(x) alone.
         assert_not_equal(&(x().exp() * y().exp()), &x().exp());
