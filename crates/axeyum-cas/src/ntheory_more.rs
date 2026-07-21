@@ -212,6 +212,91 @@ pub fn radical(n: i128) -> Option<i128> {
     Some(result)
 }
 
+/// The **integer floor `k`-th root** of a non-negative `n`: the largest `r ≥ 0`
+/// with `rᵏ ≤ n`. `None` for `k == 0`. `integer_nth_root(27, 3) = 3`,
+/// `integer_nth_root(28, 3) = 3`, `integer_nth_root(0, k) = 0`.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::integer_nth_root;
+/// assert_eq!(integer_nth_root(1000, 3), Some(10));
+/// assert_eq!(integer_nth_root(1001, 3), Some(10));
+/// ```
+#[must_use]
+pub fn integer_nth_root(n: i128, k: u32) -> Option<i128> {
+    if k == 0 {
+        return None;
+    }
+    if n < 0 {
+        return None; // even/odd roots of negatives are out of scope
+    }
+    if n <= 1 || k == 1 {
+        return Some(n);
+    }
+    // Binary search for the largest r with rᵏ ≤ n (checked power avoids overflow).
+    let pow_le = |base: i128| -> bool {
+        let mut acc: i128 = 1;
+        for _ in 0..k {
+            match acc.checked_mul(base) {
+                Some(next) if next <= n => acc = next,
+                _ => return false, // overflow or exceeded n ⇒ base^k > n
+            }
+        }
+        true
+    };
+    let (mut low, mut high) = (1i128, n);
+    while low < high {
+        let mid = low + (high - low + 1) / 2;
+        if pow_le(mid) {
+            low = mid;
+        } else {
+            high = mid - 1;
+        }
+    }
+    Some(low)
+}
+
+/// Detect a **perfect power**: if `n = mᵏ` for some integer base `m` and exponent
+/// `k ≥ 2`, return `(m, k)` with `k` **maximal** (so `m` is not itself a perfect
+/// power) and `m` minimal in magnitude; otherwise `None`. Handles negative `n`
+/// (only odd exponents, e.g. `−8 = (−2)³`). `0` and `±1` are not perfect powers here.
+///
+/// The base re-checks directly: `mᵏ == n`.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::perfect_power;
+/// assert_eq!(perfect_power(64), Some((2, 6)));   // 2⁶ (not 8² or 4³)
+/// assert_eq!(perfect_power(72), None);
+/// assert_eq!(perfect_power(-27), Some((-3, 3))); // (−3)³
+/// ```
+#[must_use]
+pub fn perfect_power(n: i128) -> Option<(i128, u32)> {
+    let magnitude = n.checked_abs()?;
+    if magnitude <= 1 {
+        return None;
+    }
+    // Try exponents from large to small; the first (largest) prime exponent that
+    // works gives the maximal factorization when iterated. Simplest correct route:
+    // find the maximal k by testing every k from ⌊log₂ n⌋ down to 2.
+    let mut best: Option<(i128, u32)> = None;
+    let mut k = 2u32;
+    while (1i128 << k.min(126)) <= magnitude {
+        if let Some(root) = integer_nth_root(magnitude, k)
+            && root.checked_pow(k) == Some(magnitude)
+        {
+            // Respect the sign: a negative n needs an odd exponent.
+            if n < 0 {
+                if k % 2 == 1 {
+                    best = Some((-root, k)); // largest odd k wins as k grows
+                }
+            } else {
+                best = Some((root, k)); // largest k wins
+            }
+        }
+        k += 1;
+    }
+    best
+}
+
 /// The Carmichael function `lambda(|n|)`, or `None` on overflow.
 ///
 /// The exponent of the unit group `(Z/nZ)^x`: the least `m > 0` with `a^m ≡ 1
@@ -420,6 +505,36 @@ mod tests {
         }
         for squareful in [4i128, 8, 9, 18, 12, 50, 500] {
             assert_eq!(mobius(squareful), 0, "mu({squareful})");
+        }
+    }
+
+    #[test]
+    fn perfect_powers_and_integer_roots() {
+        // Floor k-th roots.
+        assert_eq!(integer_nth_root(1000, 3), Some(10));
+        assert_eq!(integer_nth_root(1001, 3), Some(10));
+        assert_eq!(integer_nth_root(999, 3), Some(9));
+        assert_eq!(integer_nth_root(1024, 10), Some(2));
+        assert_eq!(integer_nth_root(0, 5), Some(0));
+        assert_eq!(integer_nth_root(50, 1), Some(50));
+        assert_eq!(integer_nth_root(50, 0), None);
+        // Perfect powers with the maximal exponent; the base re-checks (mᵏ = n).
+        for (n, base, exp) in [
+            (64i128, 2i128, 6u32),
+            (27, 3, 3),
+            (1024, 2, 10),
+            (100, 10, 2),
+            (81, 3, 4),
+            (256, 2, 8),
+            (-27, -3, 3),
+            (-8, -2, 3),
+        ] {
+            assert_eq!(perfect_power(n), Some((base, exp)), "perfect_power({n})");
+            assert_eq!(base.checked_pow(exp), Some(n));
+        }
+        // Non-powers.
+        for n in [2i128, 7, 72, 1, 0, -1, -4] {
+            assert_eq!(perfect_power(n), None, "perfect_power({n})");
         }
     }
 
