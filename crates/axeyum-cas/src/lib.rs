@@ -3566,6 +3566,21 @@ pub enum LimitPoint {
 /// expression, or on overflow. Exact by construction over the rational fragment.
 #[must_use]
 pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    if let Some(value) = limit_rational(expr, var, point) {
+        return Some(value);
+    }
+    // Series fallback for transcendental `0/0` forms at a finite point
+    // (`sin x/x → 1`, `(1−cos x)/x² → 1/2`, `(eˣ−1)/x → 1`).
+    if let LimitPoint::Finite(a) = point {
+        return limit_via_series(expr, var, a);
+    }
+    None
+}
+
+/// The limit over the **rational-function** fragment: continuous evaluation, `0/0`
+/// by cancelling `(x−a)` factors, and `±∞` by degree comparison. `None` outside the
+/// fragment or for an infinite limit.
+fn limit_rational(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     let rf = normalize_rational(expr)?;
     let mut num = rf.num.to_univariate(var)?;
     let mut den = rf.den.to_univariate(var)?;
@@ -3576,7 +3591,6 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
                 let num_at = poly::eval_rat_poly(&num, a)?;
                 return Some(CasExpr::Const(num_at.checked_div(den_at)?));
             }
-            // den(a) = 0: an indeterminate 0/0 (cancel) or a pole.
             if poly::eval_rat_poly(&num, a)?.is_zero() {
                 let factor = [a.checked_neg()?, Rational::integer(1)]; // x − a
                 num = poly::rat_exact_div(&num, &factor)?;
@@ -3593,10 +3607,56 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
                 core::cmp::Ordering::Equal => {
                     Some(CasExpr::Const(num[deg_num].checked_div(den[deg_den])?))
                 }
-                core::cmp::Ordering::Greater => None, // ±∞
+                core::cmp::Ordering::Greater => None,
             }
         }
     }
+}
+
+/// The Maclaurin coefficients of `f` about `0` to `order`, or `None` outside the
+/// series-expandable fragment.
+fn series_coefficients(f: &CasExpr, var: &str, order: usize) -> Option<Vec<Rational>> {
+    normalize(&series(f, var, order)?)?.to_univariate(var)
+}
+
+/// The (valuation, leading coefficient) of a coefficient vector — the lowest degree
+/// with a nonzero coefficient. `None` if all coefficients (to the computed order)
+/// are zero.
+fn leading_term(coeffs: &[Rational]) -> Option<(usize, Rational)> {
+    coeffs
+        .iter()
+        .enumerate()
+        .find(|(_, c)| !c.is_zero())
+        .map(|(i, c)| (i, *c))
+}
+
+/// The limit of `expr` as `var → a` via Maclaurin series (after shifting to the
+/// origin). For an analytic point the value is the series' constant term; for a
+/// `0/0` quotient it is the ratio of leading terms of the numerator and denominator
+/// expansions. `None` for an infinite limit or outside the series fragment.
+fn limit_via_series(expr: &CasExpr, var: &str, a: Rational) -> Option<CasExpr> {
+    const ORDER: usize = 12;
+    let shifted = expr.substitute(var, &(CasExpr::var(var) + CasExpr::Const(a)));
+
+    if let CasExpr::Div(numerator, denominator) = &shifted {
+        let num_coeffs = series_coefficients(numerator, var, ORDER)?;
+        let den_coeffs = series_coefficients(denominator, var, ORDER)?;
+        let Some((den_val, den_lead)) = leading_term(&den_coeffs) else {
+            return None; // denominator ≡ 0 to this order — undefined
+        };
+        let Some((num_val, num_lead)) = leading_term(&num_coeffs) else {
+            return Some(CasExpr::zero()); // numerator ≡ 0 (and denominator ≢ 0)
+        };
+        return match num_val.cmp(&den_val) {
+            core::cmp::Ordering::Greater => Some(CasExpr::zero()),
+            core::cmp::Ordering::Equal => Some(CasExpr::Const(num_lead.checked_div(den_lead)?)),
+            core::cmp::Ordering::Less => None, // pole — infinite limit
+        };
+    }
+
+    // Analytic (non-quotient): the constant term of the series is the value.
+    let expansion = series(&shifted, var, ORDER)?;
+    Some(simplify(&expansion.substitute(var, &CasExpr::zero())))
 }
 
 /// Expand an expression to canonical form and return it as a [`CasExpr`].
@@ -4834,6 +4894,44 @@ mod tests {
         let s = simplify(&f);
         assert_equal(&s, &(x() + CasExpr::int(1)));
         assert_equal(&s, &f);
+    }
+
+    #[test]
+    fn transcendental_limits_via_series() {
+        let x = || v("x");
+        let at0 = LimitPoint::Finite(Rational::zero());
+        // lim_{x→0} sin(x)/x = 1.
+        assert_equal(&limit(&(x().sin() / x()), "x", at0).unwrap(), &CasExpr::int(1));
+        // lim_{x→0} (1 − cos x)/x² = 1/2.
+        assert_equal(
+            &limit(&((CasExpr::int(1) - x().cos()) / x().pow(2)), "x", at0).unwrap(),
+            &CasExpr::rat(1, 2),
+        );
+        // lim_{x→0} (eˣ − 1)/x = 1.
+        assert_equal(
+            &limit(&((x().exp() - CasExpr::int(1)) / x()), "x", at0).unwrap(),
+            &CasExpr::int(1),
+        );
+        // lim_{x→0} sin(3x)/x = 3.
+        assert_equal(
+            &limit(&((CasExpr::int(3) * x()).sin() / x()), "x", at0).unwrap(),
+            &CasExpr::int(3),
+        );
+        // Analytic point: lim_{x→0} cos(x) = 1; lim_{x→0} (sin x + 2) = 2.
+        assert_equal(&limit(&x().cos(), "x", at0).unwrap(), &CasExpr::int(1));
+        assert_equal(&limit(&(x().sin() + CasExpr::int(2)), "x", at0).unwrap(), &CasExpr::int(2));
+        // Shifted point: lim_{x→1} sin(x−1)/(x−1) = 1.
+        assert_equal(
+            &limit(
+                &((x() - CasExpr::int(1)).sin() / (x() - CasExpr::int(1))),
+                "x",
+                LimitPoint::Finite(Rational::integer(1)),
+            )
+            .unwrap(),
+            &CasExpr::int(1),
+        );
+        // A genuine pole (no cancellation): lim_{x→0} cos(x)/x is infinite → None.
+        assert!(limit(&(x().cos() / x()), "x", at0).is_none());
     }
 
     #[test]
