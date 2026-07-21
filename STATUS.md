@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4b removes the specialized certificate catalogs from the
+  documented solver root without hiding core APIs.** The full-only
+  `certificates::{arrays, quantifiers}` facade owns 31 array and 72 quantified
+  entries; two finite-quantifier Alethe emitters now live canonically under
+  `proofs::alethe`. General `check_model` replay and array decision procedures
+  remain root-visible for the separate theory census. The all-feature root
+  falls 442→338 items, the certificate subtree contains 105 entries, the proof
+  subtree grows 113→115, and minimal `qfbv` stays at 26. Historical aliases are
+  callable and type-identical. Dedicated full/minimal compatibility gates, all
+  891 solver-library tests, strict all-target clippy, and warning-denied
+  rustdoc pass inside the one-job 4 GiB profile. Next: R4c measures theory
+  contracts and decision procedures independently; do not group by source-file
+  accident or change solver behavior.
+
 - **2026-07-20 — R4a gives proof APIs a canonical namespace without breaking
   downstream paths.** `axeyum_solver::proofs` now groups the minimal proof
   exports and the full-profile Alethe, end-to-end, evidence, faithfulness, and
@@ -5453,6 +5467,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0306 accepts the array/quantified certificate namespace.**
+  The exact catalog leakage named by the architecture review now lives under
+  `certificates::{arrays, quantifiers}` with every historical root path retained
+  as a hidden compatibility alias. Two finite-quantifier Alethe emitters join
+  `proofs::alethe`; `check_model`, `check_model_with_assignment`, and array
+  theory entry points remain at the root. Warning-denied rustdoc measures
+  442→338 all-feature root items, 105 entries in the certificate subtree, and
+  an unchanged 26-item minimal profile. Compatibility tests cover representative
+  types and functions across both catalogs. All 891 library tests and strict
+  all-target clippy pass under the bounded profile. Next: a separate measured
+  theory API census.
 
 - **2026-07-20 — ADR-0305 accepts the first measured root-API namespace.** The
   new `proofs` facade is the canonical documentation home for minimal UNSAT

@@ -229,6 +229,9 @@ pub mod proofs {
         pub use crate::qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
         pub use crate::qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         pub use crate::quant_alethe::prove_quant_unsat_alethe;
+        pub use crate::quant_finite_cert::{
+            prove_finite_int_quant_unsat_alethe, prove_finite_int_quant_unsat_uf_alethe,
+        };
         pub use crate::skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
         pub use crate::word_alethe::{
             WORD_CLASH_RULE, WordAletheError, WordClashCertificate, word_conflict_alethe,
@@ -298,6 +301,133 @@ pub mod proofs {
     }
 }
 
+/// Checked domain-certificate catalogs.
+///
+/// These are the canonical paths for specialized certificate structures,
+/// validators, and deterministic certificate constructors. Historical
+/// crate-root exports remain source-compatible aliases, but are hidden from
+/// root documentation. General solver entry points stay at the crate root and
+/// are not folded into this catalog.
+#[cfg(feature = "full")]
+pub mod certificates {
+    /// Array and memory certificate families.
+    pub mod arrays {
+        pub use crate::abv::{
+            ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,
+            certify_array_elim_unsat, cross_store_array_disequality_refutation,
+        };
+        pub use crate::array_axiom::{
+            ArrayAxiomKind, ArrayAxiomRefutationCertificate, array_axiom_refutation,
+        };
+        pub use crate::array_binary_search::{
+            BinarySearch16Certificate, binary_search16_refutation,
+        };
+        pub use crate::array_bv_abs::{
+            BvAbstractionRefutationCertificate, bv_abstraction_refutation,
+        };
+        pub use crate::array_fifo::{
+            FifoBc04Certificate, fifo_bc04_refutation, fifo_ia04_sat_model,
+        };
+        pub use crate::array_finite::{
+            BoolArrayReadCollapseCertificate, FiniteArrayExtensionalityCertificate,
+            FiniteArrayReadEquality, bool_array_read_collapse_refutation,
+            finite_array_extensionality_refutation,
+        };
+        pub use crate::array_memcpy::{
+            TwoByteMemcpyRefutationCertificate, two_byte_memcpy_refutation,
+        };
+        pub use crate::array_sort2::{
+            TwoElementBubbleSortCertificate, TwoElementSelectionSortCertificate,
+            two_element_bubble_sort_refutation, two_element_selection_sort_refutation,
+        };
+        pub use crate::array_write_chain::{
+            AlignedWriteChainCommutationCertificate, aligned_write_chain_commutation_refutation,
+        };
+        pub use crate::array_xor_swap::{
+            TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate,
+            two_byte_xor_swap_roundtrip_refutation, two_cell_xor_swap_refutation,
+        };
+    }
+
+    /// Quantifier certificate families and their independent checkers.
+    pub mod quantifiers {
+        pub use crate::qinst_egraph::{
+            QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
+            QuantifierGroundDerivation, QuantifierInstanceCertificate,
+            check_quantifier_clause_propagation, check_quantifier_clause_propagations,
+            check_quantifier_ground_derivation, instantiate_forall_via_egraph,
+            prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
+        };
+        pub use crate::quant_affine_growth_cert::{
+            IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
+        };
+        pub use crate::quant_bool_model_sat::{
+            QUANT_BOOL_BV_MODEL_BINDER_CAP, QUANT_BOOL_BV_MODEL_DEPTH_CAP,
+            QUANT_BOOL_BV_MODEL_NODE_CAP, QuantifiedBoolModelSatCertificate,
+            QuantifiedBoolModelSatProof, check_quantified_bool_model_sat,
+        };
+        pub use crate::quant_bv_alternation_cert::{
+            BV_ALTERNATION_BINDER_CAP, BV_ALTERNATION_NODE_CAP,
+            BvAlternationCounterexampleCertificate, check_bv_alternation_counterexample,
+        };
+        pub use crate::quant_bv_conjunctive_cert::{
+            BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
+            BvConjunctiveUniversalInstanceCertificate, check_bv_conjunctive_universal_instance,
+        };
+        pub use crate::quant_bv_instance_set_cert::{
+            BV_POSITIVE_INSTANCE_SET_CAP, BvPositiveUniversalInstanceSetCertificate,
+            BvPositiveUniversalSourceInstance, check_bv_positive_universal_instance_set,
+        };
+        pub use crate::quant_bv_model_sat_cert::{
+            QUANT_BV_MODEL_BINDER_CAP, QUANT_BV_MODEL_DEPTH_CAP, QUANT_BV_MODEL_NODE_CAP,
+            QuantifiedBvModelSatCertificate, QuantifiedBvModelSatProof,
+            check_quantified_bv_model_sat,
+        };
+        pub use crate::quant_bv_paired_exists_cert::{
+            BV_PAIRED_EXISTS_BINDER_CAP, BV_PAIRED_EXISTS_NODE_CAP,
+            BvPairedExistentialTransferCertificate, BvPairedExistentialTransferJustification,
+            BvPairedExistentialTransferObligation, check_bv_paired_existential_transfer,
+        };
+        pub use crate::quant_closed_counterexample_cert::{
+            ClosedUniversalCounterexampleCertificate, check_closed_universal_counterexample,
+        };
+        pub use crate::quant_counterexample_cover::{
+            QUANT_COUNTEREXAMPLE_COVER_CASE_CAP, QuantifiedCounterexampleCoverCase,
+            QuantifiedCounterexampleCoverCertificate, check_quantified_counterexample_cover,
+            quantified_counterexample_cover_refutation,
+        };
+        pub use crate::quant_eq_partition_cert::{
+            EQ_PARTITION_CASE_CAP, EqualityPartitionRefutationCertificate,
+            check_equality_partition_refutation,
+        };
+        pub use crate::quant_finite_cert::{
+            GuardedUniversalForm, check_alethe_lra_guarded_inst,
+            check_alethe_lra_guarded_inst_against, guarded_universal_form_for_test,
+        };
+        pub use crate::quant_guard_vacuity_cert::{
+            QuantifiedGuardSatCertificate, check_quantified_guard_sat,
+        };
+        pub use crate::quant_negated_exists_cert::{
+            NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
+            NegatedExistentialWitnessCertificate, check_negated_existential_witness,
+        };
+        pub use crate::quant_nested_xor_cert::{
+            IntNestedXorRefutationCertificate, int_nested_xor_refutation,
+        };
+        pub use crate::quant_residue_cert::{
+            IntEuclideanResidueRefutationCertificate, int_euclidean_residue_refutation,
+        };
+        pub use crate::quant_sat_cert::{
+            AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat,
+        };
+        pub use crate::quant_vacuous_exists_counterexample_cert::{
+            VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP, VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP,
+            VacuousExistsUniversalCounterexampleCertificate,
+            check_vacuous_exists_universal_counterexample,
+        };
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -326,36 +456,48 @@ pub use sat_bv_backend::SatBvBackend;
 macro_rules! full_exports {
     () => {
         pub use abduct::{MAX_CANDIDATES, abduct};
+        #[doc(hidden)]
         pub use abv::{
             ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,
-            certify_array_elim_unsat, check_qf_abv_lazy, check_qf_abv_lazy_row,
-            check_qf_ax_declared_sort_lazy_row, check_with_array_elimination,
-            cross_store_array_disequality_refutation,
+            certify_array_elim_unsat, cross_store_array_disequality_refutation,
+        };
+        pub use abv::{
+            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_ax_declared_sort_lazy_row,
+            check_with_array_elimination,
         };
         #[doc(hidden)]
         pub use alethe_lra::{
             check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,
             prove_uflia_opaque_unsat_alethe, prove_uflra_unsat_alethe,
         };
+        #[doc(hidden)]
         pub use array_axiom::{
             ArrayAxiomKind, ArrayAxiomRefutationCertificate, array_axiom_refutation,
         };
+        #[doc(hidden)]
         pub use array_binary_search::{BinarySearch16Certificate, binary_search16_refutation};
+        #[doc(hidden)]
         pub use array_bv_abs::{BvAbstractionRefutationCertificate, bv_abstraction_refutation};
+        #[doc(hidden)]
         pub use array_fifo::{FifoBc04Certificate, fifo_bc04_refutation, fifo_ia04_sat_model};
+        #[doc(hidden)]
         pub use array_finite::{
             BoolArrayReadCollapseCertificate, FiniteArrayExtensionalityCertificate,
             FiniteArrayReadEquality, bool_array_read_collapse_refutation,
             finite_array_extensionality_refutation,
         };
+        #[doc(hidden)]
         pub use array_memcpy::{TwoByteMemcpyRefutationCertificate, two_byte_memcpy_refutation};
+        #[doc(hidden)]
         pub use array_sort2::{
             TwoElementBubbleSortCertificate, TwoElementSelectionSortCertificate,
             two_element_bubble_sort_refutation, two_element_selection_sort_refutation,
         };
+        #[doc(hidden)]
         pub use array_write_chain::{
             AlignedWriteChainCommutationCertificate, aligned_write_chain_commutation_refutation,
         };
+        #[doc(hidden)]
         pub use array_xor_swap::{
             TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate,
             two_byte_xor_swap_roundtrip_refutation, two_cell_xor_swap_refutation,
@@ -550,6 +692,7 @@ macro_rules! full_exports {
         pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
         #[doc(hidden)]
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
+        #[doc(hidden)]
         pub use qinst_egraph::{
             QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
             QuantifierGroundDerivation, QuantifierInstanceCertificate,
@@ -557,72 +700,89 @@ macro_rules! full_exports {
             check_quantifier_ground_derivation, instantiate_forall_via_egraph,
             prove_quantified_unsat_via_egraph, witness_tuples_via_egraph,
         };
+        #[doc(hidden)]
         pub use quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
         };
         #[doc(hidden)]
         pub use quant_alethe::prove_quant_unsat_alethe;
+        #[doc(hidden)]
         pub use quant_bool_model_sat::{
             QUANT_BOOL_BV_MODEL_BINDER_CAP, QUANT_BOOL_BV_MODEL_DEPTH_CAP,
             QUANT_BOOL_BV_MODEL_NODE_CAP, QuantifiedBoolModelSatCertificate,
             QuantifiedBoolModelSatProof, check_quantified_bool_model_sat,
         };
+        #[doc(hidden)]
         pub use quant_bv_alternation_cert::{
             BV_ALTERNATION_BINDER_CAP, BV_ALTERNATION_NODE_CAP,
             BvAlternationCounterexampleCertificate, check_bv_alternation_counterexample,
         };
+        #[doc(hidden)]
         pub use quant_bv_conjunctive_cert::{
             BV_CONJUNCTIVE_UNIVERSAL_BINDER_CAP, BV_CONJUNCTIVE_UNIVERSAL_NODE_CAP,
             BvConjunctiveUniversalInstanceCertificate, check_bv_conjunctive_universal_instance,
         };
+        #[doc(hidden)]
         pub use quant_bv_instance_set_cert::{
             BV_POSITIVE_INSTANCE_SET_CAP, BvPositiveUniversalInstanceSetCertificate,
             BvPositiveUniversalSourceInstance, check_bv_positive_universal_instance_set,
         };
+        #[doc(hidden)]
         pub use quant_bv_model_sat_cert::{
             QUANT_BV_MODEL_BINDER_CAP, QUANT_BV_MODEL_DEPTH_CAP, QUANT_BV_MODEL_NODE_CAP,
             QuantifiedBvModelSatCertificate, QuantifiedBvModelSatProof,
             check_quantified_bv_model_sat,
         };
+        #[doc(hidden)]
         pub use quant_bv_paired_exists_cert::{
             BV_PAIRED_EXISTS_BINDER_CAP, BV_PAIRED_EXISTS_NODE_CAP,
             BvPairedExistentialTransferCertificate, BvPairedExistentialTransferJustification,
             BvPairedExistentialTransferObligation, check_bv_paired_existential_transfer,
         };
+        #[doc(hidden)]
         pub use quant_closed_counterexample_cert::{
             ClosedUniversalCounterexampleCertificate, check_closed_universal_counterexample,
         };
+        #[doc(hidden)]
         pub use quant_counterexample_cover::{
             QUANT_COUNTEREXAMPLE_COVER_CASE_CAP, QuantifiedCounterexampleCoverCase,
             QuantifiedCounterexampleCoverCertificate, check_quantified_counterexample_cover,
             quantified_counterexample_cover_refutation,
         };
+        #[doc(hidden)]
         pub use quant_eq_partition_cert::{
             EQ_PARTITION_CASE_CAP, EqualityPartitionRefutationCertificate,
             check_equality_partition_refutation,
         };
+        #[doc(hidden)]
         pub use quant_finite_cert::{
             GuardedUniversalForm, check_alethe_lra_guarded_inst,
             check_alethe_lra_guarded_inst_against, guarded_universal_form_for_test,
             prove_finite_int_quant_unsat_alethe, prove_finite_int_quant_unsat_uf_alethe,
         };
+        #[doc(hidden)]
         pub use quant_guard_vacuity_cert::{
             QuantifiedGuardSatCertificate, check_quantified_guard_sat,
         };
+        #[doc(hidden)]
         pub use quant_negated_exists_cert::{
             NEGATED_EXISTENTIAL_BINDER_CAP, NEGATED_EXISTENTIAL_NODE_CAP,
             NegatedExistentialWitnessCertificate, check_negated_existential_witness,
         };
+        #[doc(hidden)]
         pub use quant_nested_xor_cert::{
             IntNestedXorRefutationCertificate, int_nested_xor_refutation,
         };
+        #[doc(hidden)]
         pub use quant_residue_cert::{
             IntEuclideanResidueRefutationCertificate, int_euclidean_residue_refutation,
         };
+        #[doc(hidden)]
         pub use quant_sat_cert::{
-            AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_model,
-            check_model_with_assignment, check_quantified_skolem_sat,
+            AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat,
         };
+        pub use quant_sat_cert::{check_model, check_model_with_assignment};
+        #[doc(hidden)]
         pub use quant_vacuous_exists_counterexample_cert::{
             VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP, VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP,
             VacuousExistsUniversalCounterexampleCertificate,

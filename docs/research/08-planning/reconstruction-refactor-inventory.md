@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4a proof namespace complete
+Status: active; R1, R2, and R3 complete; R4a/R4b namespaces complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -42,11 +42,12 @@ The post-R3 rustdoc root was measured before selecting a namespace. Counts are
 from warning-denied rustdoc in both supported solver profiles, not from source
 text or the older approximate review number.
 
-| Profile / surface | Before R4a | After R4a |
-|---|---:|---:|
-| all-feature documented crate-root items | 549 | 442 |
-| minimal-`qfbv` documented crate-root items | 36 | 26 |
-| entries organized in the `proofs` subtree | 0 | 113 |
+| Profile / surface | Before R4a | After R4a | After R4b |
+|---|---:|---:|---:|
+| all-feature documented crate-root items | 549 | 442 | 338 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 | 115 |
+| entries organized in the `certificates` subtree | 0 | 0 | 105 |
 
 ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
 export plus full-profile Alethe, end-to-end certification, evidence,
@@ -55,7 +56,12 @@ and type-identical but are `#[doc(hidden)]`; this is a source-compatible
 documentation and ownership change. Glaurung already selects the minimal
 `qfbv` profile, and its existing root imports continue to compile. Theory and
 certificate surfaces require separate consumer/collision censuses before they
-receive equivalent facades.
+receive equivalent facades. ADR-0306 completes the certificate-catalog census
+for the two exact leak families identified by the review: 31 array entries and
+72 quantified entries now live under `certificates::{arrays, quantifiers}`.
+The two finite-quantifier Alethe emitters join `proofs::alethe`; general
+`check_model` replay and array decision procedures intentionally remain visible
+at the root for the separate theory/API census.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -221,7 +227,17 @@ before/after byte comparisons for their affected fixtures.
    891 solver-library tests, strict all-target clippy, and warning-denied
    rustdoc pass. ADR-0305 owns the compatibility policy. Next, census
    `theories` and `certificates` independently; do not turn R4 into a broad
-   breaking rename or mix it with solver behavior.
+   breaking rename or mix it with solver behavior. R4b then groups the measured
+   array and quantified certificate catalogs under
+   `certificates::{arrays, quantifiers}` while keeping every historical root
+   alias and leaving general model/theory entry points documented at the root.
+   The all-feature root falls again from 442 to 338 items; the certificate
+   subtree owns 105 entries, and the proof subtree grows to 115 after accepting
+   the two finite-quantifier Alethe emitters. Minimal `qfbv` remains 26 items and
+   does not compile the full-only catalog. The compatibility tests now cover
+   both catalogs; all 891 library tests, clippy, and both strict rustdoc profiles
+   pass. ADR-0306 owns this boundary. Next, perform the separate theory API
+   census rather than grouping APIs by source-file accident.
 
 Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any

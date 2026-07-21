@@ -368,7 +368,18 @@ session state.
 >    pass under the bounded one-job profile. ADR-0305 records the compatibility
 >    policy. Continue R4 with separate measured `theories` and `certificates`
 >    censuses; do not perform a broad rename or combine API organization with
->    solver behavior.
+>    solver behavior. R4b now completes the certificate-catalog census: 31
+>    array and 72 quantified entries live under the full-only
+>    `certificates::{arrays, quantifiers}` facade, while the two finite-
+>    quantifier Alethe emitters join `proofs::alethe`. General `check_model`
+>    replay and array decision procedures stay documented at the root for the
+>    separate theory census. The all-feature root falls from 442 to 338 items;
+>    the certificate subtree owns 105 entries, the proof subtree now owns 115,
+>    and minimal `qfbv` remains unchanged at 26. Historical paths remain
+>    callable and type-identical. All 891 solver-library tests, strict clippy,
+>    compatibility gates, and warning-denied rustdoc pass under the bounded
+>    profile. ADR-0306 records the boundary. Continue R4 with the theory API
+>    census, not a source-file-based sweep or behavior change.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
