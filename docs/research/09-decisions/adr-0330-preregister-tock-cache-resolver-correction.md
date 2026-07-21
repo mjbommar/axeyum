@@ -1,6 +1,6 @@
 # ADR-0330: Preregister Tock cache resolver correction
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -80,14 +80,29 @@ weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. The separate v3 producer reuses the frozen v2 source/fetch/offline/
-inventory/resource support and adds only resolver validation, the network-root
-suffix, strict IPv4 parsing, and a new atomic output version. Five focused v3
-tests plus all nine v2 tests pass; the compact overlay registration pins five
-producer files, six tools, the resolver identity, DNS command, and mount suffix.
-A live no-op namespace check confirms the exact resolver path is mounted, but no
-DNS command has run. Commit and push this checkpoint before the first lookup.
-No DNS result, fetch, cache byte, inventory, build, capture, or query exists.
+Accepted as a negative preparation-v3 result. Producer commit `384e2045` was
+pushed before invocation. The real DNS probe and exact locked fetch both
+complete, proving the one-file resolver correction. The first inventory then
+stops on ADR-0329's frozen hard-link rejection:
+
+```text
+stage=inventory
+kind=hardlink
+detail=git/checkouts/firmware-.../.git/objects/pack/...idx=
+       git/db/firmware-.../objects/pack/...idx
+```
+
+Cargo/libgit represents the same firmware pack index inode in its Git database
+and checkout. V3 does not inspect further cache contents or complete an
+inventory. It runs no offline probe, build, capture, or query; atomic cleanup
+leaves no cache or partial directory, and no OOM-delta failure is reported.
+Exact negative metadata is committed in `cache-v3-preparation-negative.json`.
+
+Changing the inventory after observing this inode alias and rerunning v3 would
+weaken a frozen gate. V3 ends here. A successor must preregister canonical
+hard-link rows that bind the alias path to a lexicographically selected in-cache
+file plus the shared mode/size/content hash, while keeping every DNS/fetch/
+offline/resource/no-compilation gate unchanged.
 
 ## Rejected alternatives
 
@@ -105,10 +120,9 @@ No DNS result, fetch, cache byte, inventory, build, capture, or query exists.
 ## Consequences
 
 - The only new host input is one exact public resolver configuration file.
-- DNS liveness becomes an explicit preflight rather than an assumption inferred
-  from `--share-net`.
-- Dynamic resolver-file drift fails visibly and requires another decision; it
-  is never silently accepted.
+- The resolver correction is validated: DNS and locked fetching succeed.
+- The remaining failure is cache-representation fidelity, not network access or
+  package availability.
 
 ## References
 

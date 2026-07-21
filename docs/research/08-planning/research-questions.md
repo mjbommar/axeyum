@@ -1022,9 +1022,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     freezes that narrow preparation-v3 correction: bind only the exact
     hash/mode/size-pinned systemd-resolved stub at the selected path, require a
     pinned real `getent` IPv4 lookup, then retain every ADR-0329 non-network
-    gate. The separate producer, 14 combined preparation tests, compact exact
-    registration, and resolver-mount no-op check pass pre-DNS. Push that
-    checkpoint before the first lookup; no DNS result, fetch, or cache exists.
+    gate. Its pushed producer proves DNS and completes the locked fetch, then
+    closes v3 negatively because the frozen inventory rejects Cargo/libgit's
+    legitimate firmware pack-index hard link. No cache survives. A successor
+    must preregister canonical hard-link owner/alias rows before another fetch.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -1,0 +1,36 @@
+{
+  "attempt": {
+    "dns_probes_completed": 1,
+    "locked_fetches_completed": 1,
+    "observed_at_utc": "2026-07-21T10:32:31Z",
+    "preparation_invocations": 1,
+    "producer_commit": "384e20456f8f31816e42e7ed675ec43f68acf8fa",
+    "producer_was_pushed_before_invocation": true
+  },
+  "error": {
+    "detail": "git/checkouts/firmware-8f2e2b07c6268ec7/86ad8b0/.git/objects/pack/pack-4258c373d28eefc0436229cf63bc136b3c6ff54f.idx=git/db/firmware-8f2e2b07c6268ec7/objects/pack/pack-4258c373d28eefc0436229cf63bc136b3c6ff54f.idx",
+    "kind": "hardlink",
+    "stage": "inventory"
+  },
+  "outputs": {
+    "cache_envelope_exists": false,
+    "inventories_completed": 0,
+    "offline_probes": 0,
+    "partial_directories": 0,
+    "property_queries": 0,
+    "target_builds": 0
+  },
+  "registration_sha256": "ff19ef30f865d1ee34fb252d665a79a74c5e697cd560cd23552d571002fa59fb",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-cache-v3-preparation-negative.v1",
+  "status": "rejected",
+  "upstream": {
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  }
+}

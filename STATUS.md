@@ -322,14 +322,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0330 preregisters the minimal resolver correction.**
-  Preparation v3 may add only the exact 939-byte systemd-resolved stub file at
-  the path selected by the failed symlink plus a hash-pinned real `getent`
-  IPv4 probe. Every locked-fetch/offline-read-only/inventory/no-compilation
-  gate remains unchanged. The separate producer, five v3 plus nine inherited
-  tests, compact exact registration, and resolver-mount no-op check pass with
-  zero DNS lookups. Next: commit/push this checkpoint, then invoke v3 once under
-  the registered cgroup.
+- **2026-07-21 — ADR-0330 accepts the exact cache hard-link negative.**
+  Pushed producer `384e2045` passes real DNS and completes the locked fetch.
+  Inventory then rejects Cargo/libgit's legitimate firmware pack-index hard
+  link between `git/db` and `git/checkouts`. No inventory/offline probe/cache/
+  build/capture/query or partial output exists, with no OOM-delta failure. V3
+  is closed. Next: preregister canonical hard-link alias rows for v4 while
+  preserving every other preparation gate.
 
 - **2026-07-21 — ADR-0329 accepts the exact cache-preparation DNS negative.**
   Pushed producer `de343f63` starts the locked Flux fetch, but its constructed
@@ -6027,9 +6026,15 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured | WIP — **Maestro, Tock capture v1, and cache preparation v2 close negative; resolver-corrected v3 producer frozen pre-DNS (ADR-0323--0330):** ADR-0327 accepts typed `range`/`ctlz`; ADR-0328 v1 stops on ambient cache; ADR-0329 prep v2 stops on missing resolver target. ADR-0330's separate producer, 14 tests, and compact registration now add only the exact 939-byte bind plus real DNS probe before unchanged preparation gates. Commit/push before invocation. No cache/target/partial bytes, capture credit, proof, or scoreboard row exists. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
+| P5.5 | External target, measured | WIP — **Maestro, Tock capture v1, cache prep v2, and prep v3 close negative (ADR-0323--0330):** ADR-0327 accepts typed `range`/`ctlz`; ADR-0328 stops on ambient cache; ADR-0329 stops on DNS; ADR-0330 proves the resolver correction and locked fetch, then stops because inventory rejects Cargo/libgit's legitimate firmware pack-index hard link. No cache/target/partial bytes, capture credit, proof, or scoreboard row exists. Next preregister canonical hard-link rows for v4, preserving all other gates. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Accepted ADR-0330 as an inventory hard-link negative.** Pushed
+  preparation v3 passes real DNS and its locked fetch, then rejects a shared
+  firmware pack-index inode between Cargo's Git database and checkout. Atomic
+  cleanup leaves no cache/partial output; no offline probe, build, or OOM-delta
+  failure exists. V3 is closed; hard-link semantics need a fresh decision.
 
 - **2026-07-21 — Froze resolver-corrected preparation v3 pre-DNS.** The thin
   successor reuses v2 inventory/offline/resource support and adds only exact

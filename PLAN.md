@@ -427,9 +427,13 @@ session state.
 >    its precise network-only mount path/order, hash-pinned `getent`, and a real
 >    IPv4 lookup before the otherwise unchanged locked fetch. The separate v3
 >    producer, five focused v3 plus nine inherited v2 tests, compact exact
->    registration, and resolver-mount no-op check are now frozen with zero DNS
->    lookups. Commit/push this checkpoint, then invoke preparation v3 once under
->    its cgroup; never bind all of `/run` or inject an address into Cargo.
+>    registration, and resolver mount were pushed before invocation. ADR-0330
+>    accepts the next exact negative: DNS and the locked fetch succeed, but the
+>    inventory rejects a legitimate Cargo/libgit hard link between firmware Git
+>    database and checkout pack-index paths. No inventory/offline probe/cache/
+>    partial/OOM result exists. Never relax and rerun v3. Next preregister a
+>    canonical hard-link row (lexicographic owner + shared mode/size/hash) as
+>    preparation v4, keeping every other gate unchanged.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
