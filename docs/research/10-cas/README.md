@@ -1,7 +1,34 @@
 # Computer Algebra System (CAS) — proof-carrying symbolic mathematics
 
-Status: **active research + design** (kickoff 2026-07-20)
+Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
+
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 120+ tests, clippy-clean)
+
+A working proof-carrying CAS. Results are exact; those marked below as *certified*
+carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
+which also acts as a correctness backstop (out-of-fragment cases decline, never
+return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
+`examples/cas_tour.rs`.
+
+| Area | Functions | Certified |
+|---|---|---|
+| Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `simplify`, `normalize`, `equal` (zero-test w/ witness) | equal ✓ |
+| Rational | `cancel` (uni+multivariate), `apart`, `factor`, `poly_gcd`, `poly_div`, `degree`/`coeff`/`leading_coeff` | factor/apart ✓ |
+| Equations | `solve` (rational, real-quadratic, **complex** roots) | rational ✓ |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos` | ✓ (differentiate-and-check) |
+| Analysis | `limit`, `series` (Maclaurin/Taylor), `sum_polynomial` | limit/sum ✓ |
+| ODEs | `dsolve_homogeneous` (constant-coeff linear) | ✓ (ODE operator) |
+| Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
+| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse | det/solve ✓ |
+| Number theory | `ntheory`: gcd, mod-pow/inverse, `is_prime`, `factorize`, divisors, φ, CRT, binomial | — |
+| Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
+
+Heads: `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`). Progress log:
+[diary.md](diary.md). Remaining long tail: Gröbner, assumptions, trig/log identity
+simplification, special functions, more ODE/integration classes.
+
+---
 
 > This section plans a new major capability: **a computer algebra system in
 > axeyum with the compute-side functionality of SymPy / Mathematica** —
