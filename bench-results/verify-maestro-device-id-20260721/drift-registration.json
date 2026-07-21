@@ -1,0 +1,33 @@
+{
+  "adr": "ADR-0324",
+  "capture_registration": {
+    "path": "bench-results/verify-maestro-device-id-20260721/capture-registration.json",
+    "sha256": "5217ed365e9244c0043011e67f3c409758662526a7580fa367340933ce52ee21"
+  },
+  "capture_result": {
+    "path": "bench-results/verify-maestro-device-id-20260721/capture-result.json",
+    "sha256": "51ac0e9cf66aa8a6b947a563f777780703aea9c2d7a76c161b9b07daa143770c"
+  },
+  "diff": {
+    "path": "/usr/bin/diff",
+    "sha256": "0abb2ec6b0a64efc7fa84747a8534f1d10a2d823599de932a8df4cabf31ca98e",
+    "version": "diff (GNU diffutils) 3.12"
+  },
+  "local_output": "target/maestro-device-id-20260721/drift-diagnostic",
+  "producer_files": [
+    {
+      "path": "docs/research/09-decisions/adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md",
+      "sha256": "4e59518636521f72f13df5b328eff4d2c389f9248697b7cf04a2f944eabf9489"
+    },
+    {
+      "path": "scripts/diagnose-maestro-llvm-root-drift.py",
+      "sha256": "c5de270cb0bd73f5106b651be73be7dfdf2df4c77e97acd6e92f2a8da7b38534"
+    },
+    {
+      "path": "scripts/tests/test_diagnose_maestro_llvm_root_drift.py",
+      "sha256": "f00d0edf7ba70c05d6d6dbeb46650f5fac2e171c25dfb00273f5c01f24362da9"
+    }
+  ],
+  "result_path": "bench-results/verify-maestro-device-id-20260721/drift-result.json",
+  "schema": "axeyum.maestro-llvm-root-drift-registration.v1"
+}

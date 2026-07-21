@@ -14,6 +14,11 @@ full LLVM modules differed in size and hash. The gate stopped before extraction
 or parser admission and atomic cleanup retained no target byte. See
 `capture-result.json`; this is not a verification or scoreboard result.
 
+ADR-0324's separately registered follow-up is diagnostic only. It reproduces
+the two modules under local ignored storage, retains a complete diff, classifies
+every changed line, and compares the selected function projections. Its result
+cannot revise ADR-0323 or grant capture credit.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 
