@@ -206,6 +206,7 @@ version = "0.1.0"
 dependencies = [
  "axeyum-ir",
  "axeyum-property",
+ "axeyum-smtlib",
  "axeyum-solver",
  "axeyum-verify-macros",
  "sha2",

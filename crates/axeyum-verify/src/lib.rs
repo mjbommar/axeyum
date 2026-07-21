@@ -89,6 +89,7 @@
 
 pub mod ast;
 pub mod bmc;
+pub mod directed_fuzz;
 pub mod loop_system;
 pub mod lower;
 pub mod reflect;
