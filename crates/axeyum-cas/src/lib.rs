@@ -166,6 +166,14 @@ pub enum UnaryFunc {
     BesselJ0,
     /// The **Bessel function** `J₁(x)` of the first kind, order 1 (`J₁′ = J₀ − J₁/x`).
     BesselJ1,
+    /// **Arcsine** `asin(x)` (with `asin′(x) = 1/√(1−x²)`).
+    Asin,
+    /// **Arccosine** `acos(x)` (with `acos′(x) = −1/√(1−x²)`).
+    Acos,
+    /// **Inverse hyperbolic sine** `asinh(x)` (with `asinh′(x) = 1/√(x²+1)`).
+    Asinh,
+    /// **Inverse hyperbolic cosine** `acosh(x)` (with `acosh′(x) = 1/√(x²−1)`).
+    Acosh,
 }
 
 impl UnaryFunc {
@@ -192,6 +200,10 @@ impl UnaryFunc {
             UnaryFunc::FresnelC => "FresnelC",
             UnaryFunc::BesselJ0 => "BesselJ0",
             UnaryFunc::BesselJ1 => "BesselJ1",
+            UnaryFunc::Asin => "asin",
+            UnaryFunc::Acos => "acos",
+            UnaryFunc::Asinh => "asinh",
+            UnaryFunc::Acosh => "acosh",
         }
     }
 
@@ -256,6 +268,11 @@ impl UnaryFunc {
                 CasExpr::Unary(UnaryFunc::BesselJ0, Box::new(u()))
                     - CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(u())) / u()
             }
+            // Inverse trig/hyperbolic derivatives.
+            UnaryFunc::Asin => CasExpr::int(1) / (CasExpr::int(1) - u().pow(2)).sqrt(),
+            UnaryFunc::Acos => -(CasExpr::int(1) / (CasExpr::int(1) - u().pow(2)).sqrt()),
+            UnaryFunc::Asinh => CasExpr::int(1) / (u().pow(2) + CasExpr::int(1)).sqrt(),
+            UnaryFunc::Acosh => CasExpr::int(1) / (u().pow(2) - CasExpr::int(1)).sqrt(),
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -1416,10 +1433,14 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
 }
 
 /// A collision-resistant variable name standing for a transcendental atom
-/// `head(arg)`, keyed by `arg`'s canonical rendering. The `\0` prefix cannot occur
-/// in a user variable name.
+/// `head(arg)`, keyed by `arg`'s **canonical** rendering — a polynomial argument
+/// is normalized first, so equivalent spellings (`√(1+x²)` and `√(x²+1)`,
+/// `exp(x+y)` and `exp(y+x)`) share one atom and the zero-test relates them.
+/// (`normalize` rejects any transcendental head, so this never recurses through
+/// atom creation.) The `\0` prefix cannot occur in a user variable name.
 fn atom_name(head: &str, arg: &CasExpr) -> String {
-    format!("\0{head}:{}", arg.render(0))
+    let canonical = normalize(arg).map_or_else(|| arg.clone(), |poly| poly.to_expr());
+    format!("\0{head}:{}", canonical.render(0))
 }
 
 /// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
@@ -5633,6 +5654,10 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::FresnelC => fresnel_f64(value, false),
                 UnaryFunc::BesselJ0 => bessel_j_f64(value, 0),
                 UnaryFunc::BesselJ1 => bessel_j_f64(value, 1),
+                UnaryFunc::Asin => value.asin(),
+                UnaryFunc::Acos => value.acos(),
+                UnaryFunc::Asinh => value.asinh(),
+                UnaryFunc::Acosh => value.acosh(),
             })
         }
     }
@@ -6574,6 +6599,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
         integrate_fresnel(expr, var),
+        integrate_inverse_radical(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7504,6 +7530,37 @@ fn integrate_fresnel(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         }
         _ => None,
     }
+}
+
+/// Integrate the **inverse-function radical forms**: `∫ 1/√(1−x²) dx = asin(x)`,
+/// `∫ 1/√(x²+1) dx = asinh(x)`, `∫ 1/√(x²−1) dx = acosh(x)`. The radicand is
+/// matched by the zero-test (so any equivalent spelling works); the argument must
+/// be `x` (unit coefficient). Certified downstream. `None` otherwise.
+fn integrate_inverse_radical(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(one, denominator) = expr else {
+        return None;
+    };
+    if !matches!(one.as_ref(), CasExpr::Const(c) if *c == Rational::integer(1)) {
+        return None;
+    }
+    let CasExpr::Unary(UnaryFunc::Sqrt, radicand) = denominator.as_ref() else {
+        return None;
+    };
+    let x = CasExpr::var(var);
+    let candidates = [
+        (CasExpr::int(1) - x.clone().pow(2), UnaryFunc::Asin),
+        (x.clone().pow(2) + CasExpr::int(1), UnaryFunc::Asinh),
+        (x.clone().pow(2) - CasExpr::int(1), UnaryFunc::Acosh),
+    ];
+    for (expected, head) in candidates {
+        if matches!(
+            equal(radicand, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return Some(CasExpr::Unary(head, Box::new(x)));
+        }
+    }
+    None
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -10936,6 +10993,34 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn inverse_radical_integrals() {
+        let x = || v("x");
+        // ∫1/√(1−x²)=asin, ∫1/√(x²+1)=asinh, ∫1/√(x²−1)=acosh — certified.
+        for (integrand, head) in [
+            (CasExpr::int(1) / (CasExpr::int(1) - x().pow(2)).sqrt(), UnaryFunc::Asin),
+            (CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).sqrt(), UnaryFunc::Asinh),
+            (CasExpr::int(1) / (x().pow(2) - CasExpr::int(1)).sqrt(), UnaryFunc::Acosh),
+            // Reordered radicand still matches (canonical atom keys).
+            (CasExpr::int(1) / (CasExpr::int(1) + x().pow(2)).sqrt(), UnaryFunc::Asinh),
+        ] {
+            let r = integrate(&integrand, "x").expect("inverse-radical integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative, &CasExpr::Unary(head, Box::new(x())));
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // The atom-canonicalization that makes reordering work: √(1+x²) ≡ √(x²+1).
+        assert!(matches!(
+            equal(
+                &(CasExpr::int(1) + x().pow(2)).sqrt(),
+                &(x().pow(2) + CasExpr::int(1)).sqrt()
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Numeric: asin(1/2)=π/6≈0.5236, acosh(2)≈1.3170.
+        assert!((evalf(&CasExpr::Unary(UnaryFunc::Asin, Box::new(CasExpr::rat(1, 2))), &[]).unwrap() - 0.523_599).abs() < 1e-5);
     }
 
     #[test]
