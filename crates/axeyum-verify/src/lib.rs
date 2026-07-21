@@ -94,6 +94,7 @@ pub mod lower;
 pub mod reflect;
 pub mod reproduce;
 pub mod verify;
+pub mod witness_corpus;
 
 /// Re-export of the `#[verify]` attribute macro.
 pub use axeyum_verify_macros::{ensures, requires, verify};

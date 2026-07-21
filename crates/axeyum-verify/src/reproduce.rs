@@ -36,7 +36,7 @@ pub fn panics_on<F: FnOnce()>(f: F) -> bool {
 /// be written out as a committed regression `#[test]` — the same format the
 /// `axeyum-property` SDK (App B) and EVM app (App A) use.
 #[must_use]
-fn witness_binding(w: &Witness) -> WitnessBinding {
+pub(crate) fn witness_binding(w: &Witness) -> WitnessBinding {
     match w {
         Witness::Bool { name, value } => {
             WitnessBinding::new(name.clone(), "bool", value.to_string())
