@@ -1530,6 +1530,124 @@ pub fn dsolve_homogeneous(char_coeffs: &[Rational], var: &str) -> Option<CasExpr
     }
 }
 
+/// Apply the constant-coefficient linear operator `L = Σₖ cₖ·Dᵏ` to the monomial
+/// `xᵖ`, returning the resulting polynomial as an LSB-first coefficient vector.
+/// `L[xᵖ] = Σₖ cₖ · p·(p−1)···(p−k+1) · x^{p−k}`. `None` on overflow.
+fn operator_on_monomial(char_coeffs: &[Rational], power: usize) -> Option<Vec<Rational>> {
+    let mut result = vec![Rational::zero(); power + 1];
+    for (order, &coeff) in char_coeffs.iter().enumerate() {
+        if order > power {
+            break; // the k-th derivative of xᵖ vanishes once k > p
+        }
+        if coeff.is_zero() {
+            continue;
+        }
+        // Falling factorial p·(p−1)···(p−order+1).
+        let mut falling = Rational::integer(1);
+        for step in 0..order {
+            falling = falling.checked_mul(Rational::integer(i128::try_from(power - step).ok()?))?;
+        }
+        let term = coeff.checked_mul(falling)?;
+        result[power - order] = result[power - order].checked_add(term)?;
+    }
+    Some(result)
+}
+
+/// Solve a **constant-coefficient linear ODE with polynomial forcing**
+/// `Σₖ cₖ·y⁽ᵏ⁾ = f(x)`, where `char_coeffs = [c₀, …, cₙ]` and `forcing` is a
+/// polynomial in `var`. Returns the general solution — a particular polynomial
+/// solution (found by **undetermined coefficients**, including the `xˢ` factor for
+/// resonance with the root `0`) plus the homogeneous solution (symbolic constants
+/// `C0, C1, …`).
+///
+/// **Certified** by applying the ODE operator to the returned solution and
+/// zero-testing the residual against `forcing` (the same differentiate-and-check
+/// that certifies [`dsolve_homogeneous`]) — the polynomial particular part and the
+/// single-exponential homogeneous atoms both lie in the decidable fragment.
+///
+/// Returns `None` if `forcing` is not a polynomial in `var`, if the homogeneous
+/// part is outside [`dsolve_homogeneous`]'s domain (irrational characteristic
+/// roots), or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_inhomogeneous};
+/// use axeyum_ir::Rational;
+/// // y' + y = x  ⇒  particular x − 1, general x − 1 + C0·e^(−x).
+/// let sol = dsolve_inhomogeneous(
+///     &[Rational::integer(1), Rational::integer(1)],
+///     &CasExpr::var("x"),
+///     "x",
+/// )
+/// .unwrap();
+/// // Substituting back, y' + y reduces to x — certified inside the call.
+/// let _ = sol;
+/// ```
+#[must_use]
+pub fn dsolve_inhomogeneous(
+    char_coeffs: &[Rational],
+    forcing: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    let trimmed = poly::rat_trim(char_coeffs.to_vec());
+    poly::rat_degree(&trimmed)?; // reject the zero operator
+    let forcing_coeffs = poly::rat_trim(univariate_coeffs(forcing, var)?);
+
+    // Zero forcing → the pure homogeneous problem.
+    let Some(forcing_degree) = poly::rat_degree(&forcing_coeffs) else {
+        return dsolve_homogeneous(char_coeffs, var);
+    };
+
+    // Multiplicity `s` of the root 0 = number of leading zero coefficients.
+    let resonance = char_coeffs.iter().take_while(|c| c.is_zero()).count();
+
+    // Undetermined coefficients: y_p = Σⱼ bⱼ·x^{j+s}, j = 0..=forcing_degree.
+    let unknowns = forcing_degree + 1;
+    let equation_len = forcing_degree + resonance + 1;
+    let pad = |mut v: Vec<Rational>| -> Vec<Rational> {
+        v.resize(equation_len, Rational::zero());
+        v
+    };
+    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(unknowns);
+    for j in 0..unknowns {
+        columns.push(pad(operator_on_monomial(char_coeffs, j + resonance)?));
+    }
+    let target = pad(forcing_coeffs);
+    let Dependency::Combination(coefficients) = linear_dependency(&columns, &target)? else {
+        return None; // no polynomial particular solution of this shape
+    };
+
+    // Build the particular solution y_p = Σⱼ bⱼ·x^{j+s}.
+    let x = CasExpr::var(var);
+    let mut particular = CasExpr::zero();
+    for (j, &b) in coefficients.iter().enumerate() {
+        if b.is_zero() {
+            continue;
+        }
+        let power = u32::try_from(j + resonance).ok()?;
+        let monomial = if power == 0 {
+            CasExpr::Const(b)
+        } else {
+            CasExpr::Const(b) * x.clone().pow(power)
+        };
+        particular = particular + monomial;
+    }
+    let particular = expand(&particular).unwrap_or(particular);
+    let homogeneous = dsolve_homogeneous(char_coeffs, var)?;
+    let solution = particular + homogeneous;
+
+    // Certify: L[solution] ≡ forcing.
+    let mut operator = CasExpr::zero();
+    let mut derivative = solution.clone();
+    for coeff in char_coeffs {
+        operator = operator + CasExpr::Const(*coeff) * derivative.clone();
+        derivative = derivative.differentiate(var);
+    }
+    match equal(&operator, forcing) {
+        ZeroTest::Certified { equal: true, .. } => Some(solution),
+        _ => None,
+    }
+}
+
 /// The binomial coefficient `C(n, k)` as an exact rational, or `None` on overflow.
 fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
     if k > n {
@@ -3354,6 +3472,34 @@ mod tests {
         let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
         let hpp = h.differentiate("x").differentiate("x");
         assert_equal(&(hpp + h.clone()), &CasExpr::zero());
+    }
+
+    #[test]
+    fn dsolve_inhomogeneous_polynomial_forcing() {
+        let ig = Rational::integer;
+        let x = || v("x");
+        // Each solution is certified inside the call; here we re-verify the ODE
+        // residual against the forcing independently.
+        // y′ + y = x  ⇒  y = (x − 1) + C0·e^(−x).
+        let sol = dsolve_inhomogeneous(&[ig(1), ig(1)], &x(), "x").expect("solvable");
+        let residual = sol.differentiate("x") + sol.clone();
+        assert_equal(&residual, &x());
+
+        // y″ − y = x²  ⇒  particular −x² − 2.
+        let sol2 = dsolve_inhomogeneous(&[ig(-1), ig(0), ig(1)], &x().pow(2), "x").expect("solvable");
+        let residual2 = sol2.differentiate("x").differentiate("x") - sol2.clone();
+        assert_equal(&residual2, &x().pow(2));
+
+        // Resonance: y′ = x (root 0), needs the xˢ factor ⇒ particular x²/2.
+        let sol3 = dsolve_inhomogeneous(&[ig(0), ig(1)], &x(), "x").expect("solvable");
+        assert_equal(&sol3.differentiate("x"), &x());
+
+        // y″ − 3y′ + 2y = x (roots 1,2): particular (1/2)x + 3/4.
+        let sol4 = dsolve_inhomogeneous(&[ig(2), ig(-3), ig(1)], &x(), "x").expect("solvable");
+        let residual4 = sol4.differentiate("x").differentiate("x")
+            - CasExpr::int(3) * sol4.differentiate("x")
+            + CasExpr::int(2) * sol4.clone();
+        assert_equal(&residual4, &x());
     }
 
     #[test]
