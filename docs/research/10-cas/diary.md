@@ -754,3 +754,29 @@ breadth. Since entry 20 (209 → 258 tests):
 `main` worktree (`cas/parity-push`) to keep clear of the concurrent solver-side
 branch sharing the repo. Next: definite integrals via residues, Laurent/Puiseux
 series, Jordan form, Gruntz limits, special functions with derivative rules, Risch.
+
+## 2026-07-21 — Entry 22: broad SymPy-parity wave (283 tests)
+
+Continued the parity push with core work + a second sub-agent wave (each module
+verified in a throwaway crate with its own target dir, clippy-clean). Since entry 21
+(258 → 283 tests):
+
+- **Transcendental limits via series** — `limit` now does `0/0` transcendental forms
+  by comparing leading series terms (`sin x/x=1`, `(1−cos x)/x²=1/2`, `(eˣ−1)/x=1`);
+  poles → `None`.
+- **Laplace transform** (`laplace_transform`) over the elementary fragment via the
+  `L{tᵏg} = (−1)ᵏ dᵏ/dsᵏ L{g}` rule + the standard table.
+- **Matrix** `adjugate`/`cofactor`/`pow`/`is_symmetric`; **finite calculus**
+  (`falling`/`rising_factorial`, `forward`/`backward_difference`); `poly_lcm`,
+  `is_irreducible`.
+- **Sub-agent modules**: `boolean` (BoolExpr, truth tables, tautology/SAT, DNF/CNF,
+  Quine–McCluskey), `geometry` (Point/Line/Circle over exact rationals).
+
+Total this session's parity push added ~50 capabilities across recurrences (incl.
+Fibonacci/Binet), RootOf, residues, Gram–Schmidt, Wronskian, Hessian/Laplacian, full
+partial fractions, trig-identities-via-Euler, orthogonal polynomials, combinatorial
+numbers, Padé/interpolation, extended number theory, Boolean algebra, geometry,
+Laplace, and the **exp tower** substrate that unlocked much of it. **283 unit + 71
+doctests, clippy-pedantic clean, WASM-green.** All on the `cas/parity-push` → `main`
+worktree. Next: Laurent/Puiseux series, definite integrals via residues, Jordan form,
+special functions with derivative rules, Zeilberger, Risch.

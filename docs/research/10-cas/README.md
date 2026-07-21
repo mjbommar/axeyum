@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 258 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 283 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -20,12 +20,15 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Complex analysis | `residue` (rational-function residues at a pole) | exact |
 | Approximation | `approx`: `pade`/`pade_fraction` ([m/n] Padé), `lagrange_interpolation`, `newton_divided_differences` | exact |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
-| Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial`, `evalf` (numeric approx) | limit/sum ✓ |
+| Analysis | `limit` (rational **and** transcendental `0/0` via series — `sin x/x=1`), `series`/`series_at` (Taylor), `sum_polynomial`, `evalf`; `falling`/`rising_factorial`, `forward`/`backward_difference` | limit/sum ✓ |
+| Transforms | `laplace_transform` (elementary fragment via the `L{tᵏg}` rule) | ✓ (vs table) |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
 | Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable** | values compute; identities ✓ |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
 | Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial`; `hermite_normal_form`/`smith_normal_form`; `gram_schmidt` | det/solve/null/eigvec/orthog ✓; U·A(·V)=D ✓ |
 | Groups | `Permutation`: compose, inverse, cycles, order, sign (symmetric groups) | group laws ✓ |
+| Boolean algebra | `boolean::BoolExpr`: truth tables, tautology/SAT, DNF/CNF, `equivalent`, Quine–McCluskey minimization | truth-table ✓ |
+| Geometry | `geometry`: `Point`/`Line`/`Circle` — distance, midpoint, slope, collinear, triangle area, line ops, circumcircle | exact |
 | Vector calculus | `gradient`, `jacobian`, `divergence`, `curl`, `hessian`, `laplacian` (certified partials); `dot`, `cross`, `norm` | ✓ |
 | Special polys | `orthopoly`: `chebyshev_t`/`chebyshev_u`/`legendre`/`hermite`/`laguerre` (three-term recurrences) | ✓ (vs closed forms) |
 | Combinatorics | `combinatorics`: `bernoulli`, `euler_number`, `stirling_first`/`second`, `bell`, `partition_count`, `catalan`, `fibonacci`/`lucas` | exact |
