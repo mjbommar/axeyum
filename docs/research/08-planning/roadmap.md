@@ -25,6 +25,16 @@ Last updated: 2026-07-21
 > does not reopen concretization or symbolic memory, and it does not replace the
 > separate multi-oracle publication campaign.
 
+> **Current compatibility checkpoint.** P4.4 now has a machine-readable,
+> source/test-checked 29-row
+> [SMT-LIB/API conformance matrix](../../../docs/plan/generated/smtlib-api-conformance.md).
+> It records five absent command families, seven accepted parser no-ops, and
+> zero ordered interactive-text outputs alongside the bounded Rust helpers that
+> already exist. The next frontend increment is a command-point session event/
+> result contract and transcript runner with option/lifecycle semantics. Do not
+> add another isolated output helper or report a direct interpolation/Horn/
+> abduction API as textual conformance.
+
 ## Purpose
 
 Turn the research notes into an implementation sequence with explicit exit

@@ -39,6 +39,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   source/API/decline/test audit correcting interpolation, CHC/Horn, and abduction
   from “absent” to measured seed/selected-fragment status while keeping general
   SyGuS, textual conformance, production depth, corpora, and certification open.
+- [`smtlib-api-conformance-v1.json`](smtlib-api-conformance-v1.json) and the
+  generated [`SMT-LIB/API matrix`](generated/smtlib-api-conformance.md) —
+  checked 29-row command/protocol inventory separating parser state, execution,
+  output representation, assurance, exact tests, and residuals. It prevents
+  parser no-ops and direct Rust helpers from being reported as an ordered
+  interactive SMT-LIB implementation.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map

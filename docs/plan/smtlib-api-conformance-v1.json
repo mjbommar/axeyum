@@ -1,0 +1,806 @@
+{
+  "version": 1,
+  "title": "Axeyum SMT-LIB and Rust API conformance",
+  "as_of": "2026-07-21",
+  "rows": [
+    {
+      "id": "set-logic",
+      "surface": "Logic declaration",
+      "syntax": ["(set-logic L)"],
+      "parse": "recorded-global",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "The logic name is retained in SmtLibOutcome; solver dispatch is inferred from terms rather than gated or selected by the declared logic.",
+      "api_symbols": ["solve_smtlib"],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "parses_core_benchmark_shape"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"set-logic\" => {", "script.logic ="]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib(", "logic: script.logic"]
+        }
+      ],
+      "residual": "No declared-logic capability gate, strategy selection, or mismatch diagnostic; set-logic is metadata today."
+    },
+    {
+      "id": "set-info",
+      "surface": "Script metadata",
+      "syntax": ["(set-info :key value)"],
+      "parse": "recorded-global",
+      "execution": "parse-time-semantics",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "All key/value pairs are retained in a map; :status is separately exposed as benchmark ground truth and never consulted while solving.",
+      "api_symbols": ["solve_smtlib"],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "records_info_options_and_get_info_queries"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"set-info\" => {", "script.infos.insert(key, value)"]
+        }
+      ],
+      "residual": "Global map storage does not preserve repeated updates at their command points."
+    },
+    {
+      "id": "set-option",
+      "surface": "Option updates",
+      "syntax": ["(set-option :key value)"],
+      "parse": "recorded-global",
+      "execution": "parse-time-semantics",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Values are retained and observable through get-option; most standard options do not alter solver behavior.",
+      "api_symbols": ["solve_smtlib_get_option"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_option_returns_recorded_values_and_defaults"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"set-option\" => {", ".options", ".insert(key"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_option(", "not every standard option has full"]
+        }
+      ],
+      "residual": "No command-point option history and no full semantic enforcement for produce-* flags, channels, print-success, seeds, or resource limits."
+    },
+    {
+      "id": "check-sat",
+      "surface": "Satisfiability query",
+      "syntax": ["(check-sat)"],
+      "parse": "recorded-at-command-point",
+      "execution": "incremental-query",
+      "output": "rust-value",
+      "assurance": ["model-replay", "internal-proof-check"],
+      "scope": "One result per recorded query through solve_smtlib_incremental; the single-result facade rejects multiple effective queries.",
+      "api_symbols": ["solve_smtlib", "solve_smtlib_incremental"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "incremental_push_pop_multiple_check_sats"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "flat_front_door_rejects_multiple_check_sats"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"check-sat\" => {", "ScriptCommand::CheckSat"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_incremental("]
+        }
+      ],
+      "residual": "No interactive stdout response stream, success tokens, or command-local diagnostics."
+    },
+    {
+      "id": "check-sat-assuming",
+      "surface": "Assumption query",
+      "syntax": ["(check-sat-assuming (l ...))"],
+      "parse": "recorded-at-command-point",
+      "execution": "incremental-query",
+      "output": "rust-value",
+      "assurance": ["model-replay", "internal-proof-check"],
+      "scope": "Assumptions are applied to one query and discarded; arbitrary parsed Boolean terms are accepted rather than a separately validated literal grammar.",
+      "api_symbols": ["solve_smtlib_incremental"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "check_sat_assuming_does_not_retain_assumptions"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"check-sat-assuming\" => {", "ScriptCommand::CheckSatAssuming"]
+        }
+      ],
+      "residual": "No get-unsat-assumptions response and no interactive ordering with subsequent output commands."
+    },
+    {
+      "id": "push-pop",
+      "surface": "Assertion scopes",
+      "syntax": ["(push n)", "(pop n)"],
+      "parse": "recorded-at-command-point",
+      "execution": "incremental-query",
+      "output": "none",
+      "assurance": ["model-replay", "internal-proof-check"],
+      "scope": "Assertion scopes are semantically honored; declarations remain global and queries are re-solved from scratch rather than requiring retained backend state.",
+      "api_symbols": ["solve_smtlib_incremental"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "incremental_nested_scopes_restore_on_pop"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "flat_front_door_honors_single_push_pop_scope"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"push\" | \"pop\" => {", "ScriptCommand::Push", "ScriptCommand::Pop"]
+        }
+      ],
+      "residual": "Protocol compatibility is semantic but not necessarily warm-state performance compatibility; pop-underflow/error behavior needs a conformance fixture."
+    },
+    {
+      "id": "reset-assertions",
+      "surface": "Assertion reset",
+      "syntax": ["(reset-assertions)"],
+      "parse": "recorded-at-command-point",
+      "execution": "incremental-query",
+      "output": "none",
+      "assurance": ["model-replay", "internal-proof-check"],
+      "scope": "Clears assertions and open scopes while retaining declarations in both single-query and incremental facades.",
+      "api_symbols": ["solve_smtlib", "solve_smtlib_incremental"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "reset_assertions_clears_assertions_not_a_no_op"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "flat_front_door_honors_single_reset_assertions"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"reset-assertions\" => {", "ScriptCommand::ResetAssertions"]
+        }
+      ],
+      "residual": "No interactive success response or option-controlled print-success behavior."
+    },
+    {
+      "id": "reset",
+      "surface": "Full solver reset",
+      "syntax": ["(reset)"],
+      "parse": "rejected",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Explicitly unsupported because the parse-then-execute model interns declarations into one shared arena.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "full_reset_is_rejected_not_silently_ignored"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"reset\" => {", "reset (full reset of declarations + assertions)"]
+        }
+      ],
+      "residual": "A conformant session runner needs a fresh declaration/option environment boundary without stale arena state."
+    },
+    {
+      "id": "get-model",
+      "surface": "Model query",
+      "syntax": ["(get-model)"],
+      "parse": "recorded-global",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["model-replay"],
+      "scope": "Returns declared constants and finite function interpretations for one SAT query; definitions and parser-internal symbols are omitted.",
+      "api_symbols": ["solve_smtlib_get_model", "solve_smtlib_model"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_model_returns_declared_constant_values"
+        },
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "records_model_symbols_and_functions"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"get-model\" => {", "script.get_model = true"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_model(", "pub fn solve_smtlib_model("]
+        }
+      ],
+      "residual": "No canonical SMT-LIB model rendering and no command-point association after multiple checks."
+    },
+    {
+      "id": "get-value",
+      "surface": "Term-value query",
+      "syntax": ["(get-value (t ...))"],
+      "parse": "recorded-global",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["model-replay", "evaluator"],
+      "scope": "Requested terms are accumulated globally and evaluated against the replay-checked model of one SAT query.",
+      "api_symbols": ["solve_smtlib_get_value"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_value_reads_the_model"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"get-value\" => {", "script.get_value_terms.push(term)"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_value("]
+        }
+      ],
+      "residual": "Multiple get-value commands lose command grouping and model chronology; values are not rendered as SMT-LIB responses."
+    },
+    {
+      "id": "get-assignment",
+      "surface": "Named-assignment query",
+      "syntax": ["(get-assignment)"],
+      "parse": "accepted-noop",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["model-replay", "evaluator"],
+      "scope": "The helper evaluates active top-level :named assertions for one SAT query; the command itself is not recorded.",
+      "api_symbols": ["solve_smtlib_get_assignment"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_assignment_uses_scoped_active_names"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"get-assignment\"", "ScriptCommand::GetAssertions"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_assignment("]
+        }
+      ],
+      "residual": "The helper cannot tell whether or where get-assignment was requested, and nested named subterms are outside its reported subset."
+    },
+    {
+      "id": "get-assertions",
+      "surface": "Assertion-stack query",
+      "syntax": ["(get-assertions)"],
+      "parse": "recorded-at-command-point",
+      "execution": "incremental-query",
+      "output": "rust-value",
+      "assurance": ["none"],
+      "scope": "Returns one vector of rendered active assertions per request after push, pop, and reset-assertions; assumptions are intentionally excluded.",
+      "api_symbols": ["solve_smtlib_get_assertions"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_assertions_returns_scoped_snapshots"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_assertions_ignores_check_sat_assuming_literals"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"get-assertions\" => {", "ScriptCommand::GetAssertions"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_assertions("]
+        }
+      ],
+      "residual": "Snapshots are returned as a Rust aggregate, not interleaved with check responses in a textual transcript."
+    },
+    {
+      "id": "get-info",
+      "surface": "Information query",
+      "syntax": ["(get-info :key)"],
+      "parse": "recorded-global",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["none"],
+      "scope": "Recorded metadata, name/version defaults, and computed :reason-unknown are supported; unknown keys return an unsupported marker.",
+      "api_symbols": ["solve_smtlib_get_info"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_info_has_defaults_and_unsupported_marker"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"get-info\" => {", "script.get_info_keys.push"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_info("]
+        }
+      ],
+      "residual": "Requests are globally accumulated; command-point state and standard textual response/error conventions are missing."
+    },
+    {
+      "id": "get-option",
+      "surface": "Option query",
+      "syntax": ["(get-option :key)"],
+      "parse": "recorded-global",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["none"],
+      "scope": "Returns the final recorded value, a conservative default, or unsupported for each accumulated key.",
+      "api_symbols": ["solve_smtlib_get_option"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_option_returns_recorded_values_and_defaults"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"get-option\" => {", "script.get_option_keys.push"]
+        }
+      ],
+      "residual": "A request observes final map state rather than necessarily the option value at its command point."
+    },
+    {
+      "id": "get-unsat-core",
+      "surface": "Unsatisfiable-core query",
+      "syntax": ["(get-unsat-core)"],
+      "parse": "accepted-noop",
+      "execution": "single-query-helper",
+      "output": "rust-value",
+      "assurance": ["solver-recheck"],
+      "scope": "Deletion-minimized active assertion subset, using :named labels when present; the helper does not require or locate the command.",
+      "api_symbols": ["solve_smtlib_unsat_core"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "unsat_core_uses_scoped_active_assertion_names"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"get-unsat-core\""]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_unsat_core("]
+        }
+      ],
+      "residual": "No produce-unsat-cores precondition, command-point response, or SMT-LIB textual list."
+    },
+    {
+      "id": "get-unsat-assumptions",
+      "surface": "Unsatisfiable-assumption query",
+      "syntax": ["(get-unsat-assumptions)"],
+      "parse": "accepted-noop",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Syntax and arity only.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "accepts_standard_output_commands"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"get-unsat-assumptions\""]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "excludes": ["pub fn solve_smtlib_get_unsat_assumptions("]
+        }
+      ],
+      "residual": "No result surface exists despite parser acceptance."
+    },
+    {
+      "id": "get-proof",
+      "surface": "Proof query",
+      "syntax": ["(get-proof)"],
+      "parse": "accepted-noop",
+      "execution": "single-query-helper",
+      "output": "canonical-text-artifact",
+      "assurance": ["internal-proof-check", "external-proof-check"],
+      "scope": "Alethe for selected QF_BV, QF_UF/QF_ABV, QF_LRA, and QF_LIA shapes; every returned proof is rechecked internally, while external Carcara coverage excludes internal-only rules and LIA.",
+      "api_symbols": ["solve_smtlib_get_proof"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_proof_returns_a_checkable_alethe_proof"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "get_proof_serves_the_array_row_same_fragment"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"get-proof\""]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn solve_smtlib_get_proof(", "re-validated by the in-tree"]
+        }
+      ],
+      "residual": "The parser does not retain the request, option preconditions are not enforced, and no session runner emits the proof at its command point."
+    },
+    {
+      "id": "echo",
+      "surface": "Echo output",
+      "syntax": ["(echo \"text\")"],
+      "parse": "accepted-noop",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Syntax and arity only; the string is discarded.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "accepts_standard_output_commands"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"echo\" => exact_len(items, 2, head)?"]
+        }
+      ],
+      "residual": "A drop-in command session must emit the provided string in order."
+    },
+    {
+      "id": "exit",
+      "surface": "Session termination",
+      "syntax": ["(exit)"],
+      "parse": "accepted-noop",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Syntax and arity only; later parsed commands are not suppressed.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "accepts_standard_output_commands"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"exit\"", "| \"get-unsat-core\""]
+        }
+      ],
+      "residual": "No session lifecycle exists, so exit does not terminate command processing."
+    },
+    {
+      "id": "declare-sort",
+      "surface": "Uninterpreted sort declaration",
+      "syntax": ["(declare-sort U arity)"],
+      "parse": "semantic",
+      "execution": "parse-time-semantics",
+      "output": "none",
+      "assurance": ["model-replay"],
+      "scope": "Arity-zero uninterpreted sorts are first-class and many-sorted; arity one and higher are explicitly rejected.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "uninterpreted_sort_is_first_class"
+        },
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "uninterpreted_sort_collisions_and_arity_are_errors"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"declare-sort\" => parse_declare_sort", "if arity != 0"]
+        }
+      ],
+      "residual": "Parametric sort constructors remain unsupported."
+    },
+    {
+      "id": "define-sort",
+      "surface": "Sort alias definition",
+      "syntax": ["(define-sort S (P ...) body)"],
+      "parse": "semantic",
+      "execution": "parse-time-semantics",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Arity-zero aliases and alias chains resolve through compound sorts; nonempty parameter lists are explicitly rejected.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "define_sort_alias_inside_array"
+        },
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "define_sort_rejects_parametric"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"define-sort\" => parse_define_sort", "parametric define-sort"]
+        }
+      ],
+      "residual": "Parameterized aliases and sort-family substitution are absent."
+    },
+    {
+      "id": "define-fun",
+      "surface": "Nonrecursive definitions",
+      "syntax": ["(define-fun f ((x S) ...) R body)", "(define-const c S body)"],
+      "parse": "semantic",
+      "execution": "parse-time-semantics",
+      "output": "none",
+      "assurance": ["evaluator", "model-replay"],
+      "scope": "Nullary aliases and parameterized hygienic macros expand with arity and sort checks; define-const reuses the nullary path.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "parameterized_define_fun_macros_expand_hygienically"
+        },
+        {
+          "path": "crates/axeyum-smtlib/tests/smtlib.rs",
+          "name": "define_const_is_nullary_define_fun"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"define-fun\" => {", "\"define-const\" => {"]
+        }
+      ],
+      "residual": "Definitions are macro-expanded rather than represented as ordered environment declarations; recursive definitions are separate and absent."
+    },
+    {
+      "id": "recursive-definitions",
+      "surface": "Recursive definitions",
+      "syntax": ["(define-fun-rec ...)", "(define-funs-rec ...)"],
+      "parse": "absent",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Command scanners recognize the keywords for preprocessing boundaries, but parse_command has no implementation arm.",
+      "api_symbols": [],
+      "tests": [],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"define-fun-rec\" | \"define-funs-rec\""],
+          "excludes": ["\"define-fun-rec\" =>", "\"define-funs-rec\" =>"]
+        }
+      ],
+      "residual": "No exact negative fixture, recursive-definition IR, termination/recursion semantics, or solver route."
+    },
+    {
+      "id": "optimization",
+      "surface": "Optimization objectives",
+      "syntax": ["(maximize t)", "(minimize t)"],
+      "parse": "recorded-global",
+      "execution": "optimization-helper",
+      "output": "rust-value",
+      "assurance": ["solver-recheck"],
+      "scope": "Int and unsigned BitVec objectives; boxed and lexicographic helpers exist, while Pareto behavior lives outside a textual command session.",
+      "api_symbols": ["optimize_smtlib", "optimize_smtlib_lexicographic"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "optimize_integer_objective"
+        },
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "lexicographic_optimization_differs_from_boxed"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["\"maximize\" | \"minimize\" => {", "script.objectives.push"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "contains": ["pub fn optimize_smtlib(", "pub fn optimize_smtlib_lexicographic("]
+        }
+      ],
+      "residual": "No option-driven priority protocol, incremental objective lifecycle, textual optimum/model response, or portable optimality certificate."
+    },
+    {
+      "id": "get-objectives",
+      "surface": "Objective query",
+      "syntax": ["(get-objectives)"],
+      "parse": "accepted-noop",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "Syntax and arity only; objective values are returned only by separate optimization helpers.",
+      "api_symbols": [],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/smtlib.rs",
+          "name": "optimize_integer_objective"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "contains": ["| \"get-objectives\""]
+        },
+        {
+          "path": "crates/axeyum-solver/src/smtlib.rs",
+          "excludes": ["pub fn solve_smtlib_get_objectives("]
+        }
+      ],
+      "residual": "No command-faithful objective rendering or response ordering."
+    },
+    {
+      "id": "get-interpolant",
+      "surface": "Interpolation command",
+      "syntax": ["(get-interpolant ...)"],
+      "parse": "absent",
+      "execution": "direct-api-only",
+      "output": "rust-value",
+      "assurance": ["verify-before-return", "external-proof-check"],
+      "scope": "Direct APIs cover selected QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA families; there is no textual command contract.",
+      "api_symbols": ["qf_bv_interpolant", "qf_uf_interpolant", "lia_interpolant", "lra_interpolant"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/bv_interpolant.rs",
+          "name": "certified_single_predicate_interpolant_matches_and_refutes"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "excludes": ["\"get-interpolant\" =>"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/bv_interpolant.rs",
+          "contains": ["pub fn qf_bv_interpolant("]
+        },
+        {
+          "path": "crates/axeyum-solver/src/euf_interpolant.rs",
+          "contains": ["pub fn qf_uf_interpolant("]
+        }
+      ],
+      "residual": "Add exact command syntax/partition semantics and response ordering without misclassifying the already-implemented engines as absent."
+    },
+    {
+      "id": "horn-commands",
+      "surface": "CHC/Horn command family",
+      "syntax": ["(declare-rel ...)", "(rule ...)", "(query ...)"],
+      "parse": "absent",
+      "execution": "direct-api-only",
+      "output": "rust-value",
+      "assurance": ["verify-before-return"],
+      "scope": "HornSystem direct API supports selected Real and Bool/BV systems, stratification, and compatible mutual SCCs; no fixedpoint session syntax exists.",
+      "api_symbols": ["solve_horn"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/horn.rs",
+          "name": "safe_lra_horn_is_sat_and_rechecks"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "excludes": ["\"declare-rel\" =>", "\"rule\" =>", "\"query\" =>"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/horn.rs",
+          "contains": ["pub fn solve_horn("]
+        }
+      ],
+      "residual": "No declare-var/relation/rule/query parser, fixedpoint option model, certificate serialization, or Spacer-compatible transcript."
+    },
+    {
+      "id": "get-abduct",
+      "surface": "Abduction command",
+      "syntax": ["(get-abduct ...)"],
+      "parse": "absent",
+      "execution": "direct-api-only",
+      "output": "rust-value",
+      "assurance": ["verify-before-return"],
+      "scope": "The direct abduct API searches bounded one- and two-literal shared-vocabulary hypotheses and rechecks consistency and sufficiency.",
+      "api_symbols": ["abduct"],
+      "tests": [
+        {
+          "path": "crates/axeyum-solver/tests/abduct.rs",
+          "name": "lra_non_entailed_finds_verified_abduct"
+        }
+      ],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "excludes": ["\"get-abduct\" =>"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/abduct.rs",
+          "contains": ["pub fn abduct("]
+        }
+      ],
+      "residual": "No textual grammar/name contract, command response, minimality guarantee, or broader candidate language."
+    },
+    {
+      "id": "synth-fun",
+      "surface": "General SyGuS synthesis",
+      "syntax": ["(synth-fun ...)", "(constraint ...)", "(check-synth)"],
+      "parse": "absent",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "No general SyGuS grammar IR or function-synthesis result surface exists.",
+      "api_symbols": [],
+      "tests": [],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "excludes": ["\"synth-fun\" =>", "\"check-synth\" =>"]
+        },
+        {
+          "path": "crates/axeyum-solver/src/lib.rs",
+          "excludes": ["pub fn synth_fun(", "pub fn check_synth("]
+        }
+      ],
+      "residual": "This is the genuinely absent synthesis engine and remains demand-gated rather than inheriting credit from bounded abduction."
+    }
+  ]
+}

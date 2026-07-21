@@ -224,4 +224,5 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: ./scripts/check-foundational-resources.sh
+      - run: python3 scripts/gen-smtlib-api-conformance.py --check
       - run: ./scripts/check-links.sh

@@ -1,4 +1,15 @@
-# axeyum current-state audit (refreshed 2026-07-10)
+# axeyum current-state audit (baseline captured 2026-07-10)
+
+> **Superseded as a live parity summary (2026-07-21).** This remains a useful
+> point-in-time inventory, but rapid work after July 10 invalidated several of
+> its gap conclusions. Use the
+> [current scoped parity analysis](../gap-analysis-z3-lean-2026-07-21.md), the
+> [generated SMT-LIB/API conformance matrix](../generated/smtlib-api-conformance.md),
+> and the
+> [categorical-engine audit](../categorical-engine-depth-audit-2026-07-21.md)
+> for planning decisions. In particular, Lean proof export/checking, warm array
+> handling, theory combination, nonlinear CAD, and much of the command surface
+> are no longer accurately described by the original snapshot below.
 
 The baseline this plan starts from. Source of truth: `PLAN.md` history,
 `crates/axeyum-solver/src/capabilities.rs` (golden-tested ledger), committed
@@ -123,32 +134,25 @@ lazy-SMT · 0022 datatype sort · 0023 FP as BV · 0024 NRA via linear abstracti
 (`rustc_apfloat`) · 0029 SMT-LIB strings (equality slice) · 0030 incremental lazy
 arrays (eager slice; warm lazy deferred).
 
-## Honest gap summary — top 10 toward Z3 + Lean parity
-1. **Performance parity (binding gate). Multi-month.** No measured parity; ~3×
-   slower on the one shared hard instance; budget-gated. Needs preprocessing +
-   SAT inprocessing + a clean Z3 head-to-head.
-2. **Reduction certificates (highest Lean lever). Multi-month.** Only bit-blast is
-   certified; arrays/UF/datatype/int/FP remain trusted.
-3. **Warm lazy arrays. Weeks–month.** Incremental engine refuses arrays; memory
-   re-eliminates eagerly. Blocks fast symexec/BMC over memory.
-4. **Theory-combination / CDCL(T) Nelson–Oppen. Multi-month.** Composition is
-   reduction-stacked + eager; no interface-equality propagation (the BV+LIA
-   `str.len` gap stays open until this lands).
-5. **Lean export + unified proof + kernel. Multi-month, research.** Entire ladder
-   greenfield.
-6. **Full string theory. Month+.** Bounded, BV-lowered, ≤16 bytes; no variable
-   concat/substr/replace/symbolic-index/regex from text.
-7. **Quantifier instantiation maturity. Month+.** Finite-domain only; no
-   production trigger selection; no quantified LIA/LRA.
-8. **SMT-LIB command-surface completeness. Weeks.** Missing declare-sort/
-   define-sort, reset, echo, get-assignments, get-proof, full set-option.
-9. **Nonlinear maturity. Multi-month.** Sound-incomplete; no CAD for decidable
-   sub-fragments.
-10. **FP/string `unsat` assurance & broader oracle cross-checking. Ongoing.** FP/
-    string `unsat` is replay-blind; the strongest public bench ran oracle-disabled.
+## Current gap routing (replaced 2026-07-21)
 
-**Bottom line:** Destination (1) — a broad, evidence-backed decidable+arithmetic
-foundation — is genuinely built and the ledger is honest and golden-tested.
-Destinations (2) Z3-class performance and (3) Lean-checkable proofs are both early;
-the two load-bearing fronts are **A1 (measured performance)** and **B2 (reduction
-certificates)**.
+Do not use the original July 10 top-ten list to estimate present distance from
+Z3 or Lean. The checked replacement separates three different targets:
+
+1. **Scoped solver parity:** substantial across the 24-logics/992-file tracked
+   corpus, with zero recorded oracle disagreements, but not a claim of Z3-wide
+   coverage or production depth.
+2. **Proof compatibility:** a real Lean-checkable SMT proof lane now exists; the
+   remaining work is certificate coverage, trusted-reduction shrinkage, kernel
+   profile hardening, and integration—not a green-field Lean exporter.
+3. **Product compatibility:** the 29-row command/API inventory shows broad
+   parsing and direct helper coverage, but no ordered interactive textual
+   session result stream. That session contract is the next P4.4 architecture
+   task.
+
+The highest current gaps are production-scale performance and robustness,
+missing or trusted reduction certificates, the ordered SMT-LIB session runner,
+Lean ecosystem/kernel-profile integration, and measured deployment properties.
+Full parity with either Z3 or Lean remains an intentionally rejected monolithic
+milestone: those systems expose different categories of functionality, so each
+claim needs a named surface, corpus, checker, and exit criterion.

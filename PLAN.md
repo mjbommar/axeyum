@@ -68,6 +68,20 @@ session state.
 > [categorical-engine depth audit](docs/plan/categorical-engine-depth-audit-2026-07-21.md);
 > do not schedule another interpolation/Horn/abduction seed.
 
+> **SMT-LIB/API conformance reset (2026-07-21).** The checked
+> [29-row matrix](docs/plan/generated/smtlib-api-conformance.md) separates parser
+> state, execution semantics, output representation, assurance, exact tests, and
+> residual work. It finds five absent command families, seven syntactically
+> accepted no-ops, eight globally recorded surfaces, five command-point
+> surfaces, three semantic definitions, and one explicit rejection. Existing
+> Rust helpers already answer models, values, assignments, scoped assertions,
+> info/options, unsat cores, proofs, optimization, interpolation, Horn, and
+> abduction at bounded scopes, but **zero rows implement an ordered interactive
+> textual session**. P4.4 therefore advances an ordered session runner and
+> option/lifecycle semantics before adding another engine. The manifest's
+> negative source assertions force updates when recursive definitions,
+> interpolation, Horn, abduction, or SyGuS parser commands appear.
+
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
 > validated policy difference, no residual coverage gap, symbolic memory not

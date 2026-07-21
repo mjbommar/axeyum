@@ -360,9 +360,23 @@ capabilities merely because their direct Rust engines exist. Conversely, their
 missing textual commands must not be reported as missing engines. Full SyGuS is
 the separate absent surface.
 
+**Prototype landed:** the machine-readable
+[conformance manifest](smtlib-api-conformance-v1.json) and generated
+[29-row matrix](generated/smtlib-api-conformance.md) classify parse state,
+execution mode, output representation, assurance, scope, exact tests, and
+residual work independently. Source-marker validation covers both positive and
+negative claims, so a newly added command makes the checked artifact stale. The
+snapshot finds five absent command families, seven accepted no-ops, eight
+globally recorded surfaces, five command-point surfaces, three semantic
+definitions, one explicit rejection, and zero interactive textual-session
+outputs. This changes the implementation priority: build one ordered session
+runner over the existing helpers before adding more isolated command helpers.
+
 **Exit:** a generated SMT-LIB/API matrix distinguishes parsed, semantically
 implemented, round-tripped, incrementally correct, and deliberately unsupported
-features. Unsupported commands fail visibly rather than being ignored.
+features. One textual runner emits every response at the exact command point,
+honors option/lifecycle state, and makes unsupported commands fail visibly
+rather than being ignored.
 
 ### G9 — Prove deployability claims with real consumer profiles
 
@@ -419,6 +433,7 @@ reported as parity before it climbs the measured and certifying rungs.
    evidence-aware dispatch boundary. Add no theorem family unless selected-
    certificate reuse demonstrably declines.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
-8. Define the SMT-LIB/API conformance schema before adding commands.
+8. Design the ordered SMT-LIB session event/result IR and transcript invariants
+   from the landed conformance matrix before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.
 10. Publish a one-page contributor map backed by these generated artifacts.
