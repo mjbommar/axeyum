@@ -388,4 +388,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0331](adr-0331-preregister-tock-cache-hardlink-inventory.md) | Preregister canonical in-cache hard-link owner and alias rows for Tock cache preparation v4 | accepted |
 | [0332](adr-0332-preregister-tock-cache-structural-metadata.md) | Preregister structural active-metadata graph and lock authentication for Tock cache preparation v5 | accepted |
 | [0333](adr-0333-preregister-tock-llvm-capture-v2.md) | Preregister two-root Tock LLVM capture v2 over the authenticated read-only dedicated cache | accepted |
-| [0334](adr-0334-preregister-tock-llvm-capture-v3.md) | Preregister the narrow Tock LLVM capture-v3 structural replay correction | proposed |
+| [0334](adr-0334-preregister-tock-llvm-capture-v3.md) | Preregister the narrow Tock LLVM capture-v3 structural replay correction | accepted |

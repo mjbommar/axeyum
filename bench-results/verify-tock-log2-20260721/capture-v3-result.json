@@ -1,0 +1,102 @@
+{
+  "artifacts": {
+    "canonical_files_retained_locally": 2,
+    "external_bytes_committed": 0,
+    "full_module_retained_locally": true,
+    "local_output": "target/tock-log2-20260721/capture-v3",
+    "local_partial_retained": false
+  },
+  "attempt": {
+    "observed_at_utc": "2026-07-21T11:11:42Z",
+    "official_invocations": 1,
+    "producer_commit": "b2ad264150e8add653bd8b97073cc00790d3b6c2",
+    "producer_was_pushed_before_invocation": true
+  },
+  "builds": [
+    {
+      "module_bytes": 2651673,
+      "module_sha256": "f9a1e1558d154b8238deae2f38f06ff251f6438ead8e109e4407b0e3998c76fd",
+      "peak_rss_kib": 289104,
+      "root": "a",
+      "wall_ms": 1105
+    },
+    {
+      "module_bytes": 2651673,
+      "module_sha256": "f9a1e1558d154b8238deae2f38f06ff251f6438ead8e109e4407b0e3998c76fd",
+      "peak_rss_kib": 288312,
+      "root": "b",
+      "wall_ms": 1033
+    }
+  ],
+  "capture_identity_sha256": "9ec0a0c3d0c4779b09b4b26ec56ea75153b0fab05a61b9b9b68a8bb709084b9d",
+  "local_result_sha256": "96a987b1cbb8d84fa200001f56b3d2be068359ef8bbc7ec6c261814a4cba3aa9",
+  "module": {
+    "bytes": 2651673,
+    "raw_two_root_equal": true,
+    "sha256": "f9a1e1558d154b8238deae2f38f06ff251f6438ead8e109e4407b0e3998c76fd",
+    "virtual_cache_occurrences": 0,
+    "virtual_source_occurrences": 0,
+    "virtual_target_occurrences": 0
+  },
+  "registration_sha256": "c8d03f04c3b79d5e57b29182ee63fe8b55261966f56c7e76c167cbe47cbfffd1",
+  "resource_scope": {
+    "jobs": 1,
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "memory_swap_max_bytes": 536870912,
+    "oom_deltas": {
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0
+    }
+  },
+  "schema": "axeyum.tock-log2-capture-v3-committed-result.v1",
+  "status": "accepted",
+  "summary": {
+    "accepted": 2,
+    "builds_completed": 2,
+    "builds_started": 2,
+    "dropped": 0,
+    "property_queries": 0,
+    "targets": 2
+  },
+  "targets": [
+    {
+      "canonical_bytes": 331,
+      "canonical_sha256": "5063d99b01d07bf04ab25567ba1be2fe563983d3d4344e2265b66b6a70e4d51c",
+      "extracted_bytes": 1359,
+      "extracted_sha256": "990fbf72fee6ab457928f01bc974903c20f9d0e8750a9c0a40211752e63dcf2d",
+      "instructions": 4,
+      "name": "log_base_two",
+      "parameter_widths": [
+        32
+      ],
+      "return_width": 32
+    },
+    {
+      "canonical_bytes": 374,
+      "canonical_sha256": "f8e23452acf6d8112d653e9d0d8cd56b7f9972129646d0bc5bb373311206a4e3",
+      "extracted_bytes": 1398,
+      "extracted_sha256": "fbe93d04c2e8a7b750009d77581734dc463f58452e01a0fd239e48e61ca8e6fa",
+      "instructions": 5,
+      "name": "log_base_two_u64",
+      "parameter_widths": [
+        64
+      ],
+      "return_width": 32
+    }
+  ],
+  "upstream": {
+    "active_resolution_sha256": "da6971e417c906a9c0fa81768cfd511136d0946f651a1ec891ce1f7891dbf305",
+    "cache_inventory_sha256": "fd6ee33dd536c75d654bb750a8919911dd6065f382ea59d8ac0e26464097d379",
+    "capture_v2_negative_sha256": "2d640758eb00a003ab456953b867830fd6a88bfee702c325774803815822c91d",
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  },
+  "verification": {
+    "independent_identity_recomputed": true,
+    "llvm22_assembly": "kernel_and_two_canonical_pass",
+    "physical_path_leaks": 0,
+    "post_capture_inventory_replayed": true
+  }
+}

@@ -1,6 +1,6 @@
 # ADR-0334: Preregister Tock LLVM capture v3 replay correction
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -72,15 +72,28 @@ weakened after the first official invocation begins.
 
 ## Result
 
-Proposed. The thin v3 wrapper changes only structural replay's policy object,
-adds exact v2 registration/negative lineage to stable identity, and restores
-all patched v2 policy globals after delegation. Five focused plus 41 inherited
-protocol tests pass. Compact registration validates six direct capture
-producer files, nine tools, the full 169-lock-package cache registration, local
-result, and independently recomputed 3,077-row inventory. Commit and push this
-checkpoint before the single official invocation. No v3 invocation, build,
-module, symbol, extraction, admission, property query, proof, or scoreboard row
-exists.
+Accepted. Producer commit `b2ad2641` was pushed before the single official
+invocation. The corrected structural replay matches active digest
+`da6971e4...f305`, and the post-replay/post-capture cache inventory remains
+`fd6ee33d...d379`. Both independent owning-kernel builds complete and emit the
+same raw 2,651,673-byte LLVM module, SHA-256
+`f9a1e1558d154b8238deae2f38f06ff251f6438ead8e109e4407b0e3998c76fd`.
+Build A/B take 1,105/1,033 ms with 289,104/288,312 KiB peak RSS.
+
+LLVM 22 assembles the full module and both admitted canonical targets.
+`log_base_two` admits four instructions at `(i32) -> i32`; `log_base_two_u64`
+admits five at `(i64) -> i32`. Their canonical hashes are `5063d99b...d51c`
+and `f8e23452...a4e3`. No physical repository, cache, or ambient-Cargo path is
+present; recorded virtual source/target/cache occurrences are all zero. Stable
+capture identity `9ec0a0c3...84b9` independently recomputes, all OOM deltas are
+zero, and outer atomicity leaves no partial directory.
+
+The exact committed metadata is
+`bench-results/verify-tock-log2-20260721/capture-v3-result.json`; the 2.65 MB
+Tock module and two canonical generated files remain ignored local bytes. This
+closes authenticated local T5.5.2 capture/parser admission only. Zero property
+queries, proofs, replays, performance claims, or scoreboard rows exist. Any
+measured T5.5.3 result requires a fresh zero-row ADR.
 
 ## Rejected alternatives
 

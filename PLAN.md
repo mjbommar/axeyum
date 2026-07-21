@@ -477,9 +477,13 @@ session state.
 >    the zero-result ADR precedes implementation. The thin wrapper, compact
 >    registration, five focused plus 41 inherited tests, six-producer/nine-tool
 >    validation, full 169-lock registration, local result, and independent
->    3,077-row inventory now pass with no invocation/build. Commit/push this
->    producer checkpoint, then invoke v3 once under the registered cgroup; do
->    not query early.
+>    3,077-row inventory pass pre-invocation. Pushed producer `b2ad2641` now
+>    accepts v3: two raw-identical 2,651,673-byte LLVM modules (`f9a1e155...`),
+>    both selected helpers admitted, 1.105/1.033 s build times, 289,104/288,312
+>    KiB peak RSS, zero path leaks/partial output/OOM deltas, and stable identity
+>    `9ec0a0c3...84b9`. Generated Tock bytes remain ignored; only metadata is
+>    committed. T5.5.2 capture/parser admission is closed. Next preregister a
+>    zero-row T5.5.3 proof/replay/scoreboard protocol before any property query.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
