@@ -312,11 +312,15 @@ session state.
 >    No production semantics or public refinement API changed. Continue with
 >    T5.3.4's obligation catalog, not an unpreregistered general protocol,
 >    liveness, or real-network claim.
->    ADR-0322 now preregisters that documentation-only closeout: one separate
->    page for control-flow constant-time, bounded memory/page-table math, and
->    FSM refinement, plus a comparison index linked from Track 5 and the Verify
->    scoreboard. The catalog must expose the unequal evidence levels and every
->    accepted claim boundary; it authorizes no new semantics or research cell.
+>    ADR-0322 now accepts that documentation-only closeout. Separate pages for
+>    control-flow constant-time, bounded memory/page-table math, and FSM
+>    refinement expose exact goals, evidence/authenticity routes, controls,
+>    reproductions, and residuals; a comparison index is linked from Track 5
+>    and the Verify scoreboard. T5.3.4 and bounded P5.3 v1 are complete without
+>    upgrading the MIR-text T5.3.1 cell to compiler-authenticated evidence or
+>    expanding the other two cells into real-system claims. Return to the
+>    ranked Track 5 trajectory; the next phase-level milestone is P5.5 external-
+>    target measurement, not an unpreregistered P5.3 residual.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

@@ -1,6 +1,6 @@
 # ADR-0322: Preregister the P5.3 obligation catalog
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -24,7 +24,7 @@ not authenticated source capture or hardware timing; T5.3.2 is a four-byte
 teaching model, not an MMU; and T5.3.3 is one finite identity relation, not a
 general protocol-refinement framework.
 
-## Proposed decision
+## Decision
 
 Create `docs/plan/track-5-verified-systems/obligations/` with an index and
 exactly three family pages:
@@ -96,6 +96,33 @@ but its historical measurements are not rewritten as current results.
 No required section, qualifier, residual, or link may be removed after the
 first catalog page or focused timing observation. A failed gate leaves ADR-0322
 proposed and records the missing documentation explicitly.
+
+## Result
+
+Accepted. The catalog contains exactly one comparison index and three separate
+family pages at the frozen paths. Every family page has all seven required
+sections and identifies its quantified goal, admitted fragment, positive
+verdict, counterexample route, reproduction command, evidence provenance, and
+unsupported dimensions. The index compares source form, authenticity, proof
+scope, positive result, negative control, and principal residual without
+collapsing the rows into an unqualified systems-verification claim.
+
+The control-flow page truthfully records committed MIR fixture text rather than
+owning-build authentication and distinguishes branch-decision noninterference
+from output noninterference and hardware timing. Its fresh memory-capped
+reproduction passes four of four tests in 0.10 seconds wall time with 53,604
+KiB peak RSS on a cached build. The bounded-memory and FSM pages retain the
+accepted ADR-0320/0321 artifact identities, universal proof counts, negative
+controls, exact sampler populations, and recorded timings rather than replacing
+them with new host measurements. Their focused reproduction suites pass six of
+six tests each under the 4 GiB cap.
+
+The Track 5 README and primary Verify scoreboard link to the catalog index.
+All relative links, required-section checks, `git diff --check`, and the kernel-
+journal OOM audit pass. No Rust code, artifact byte, semantics, API, dependency,
+feature, benchmark row, or historical scoreboard datum changed. T5.3.4 and the
+bounded P5.3 v1 phase are complete; every family page's named residuals remain
+open and require their own future evidence decisions.
 
 ## Rejected alternatives
 

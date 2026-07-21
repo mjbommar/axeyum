@@ -66,6 +66,10 @@ strategic asset: these run as ordinary per-commit tests.
 
 ## Phases
 
+The accepted P5.3 families have a bounded reviewer-facing
+[obligation catalog](obligations/README.md) that separates their exact goals,
+source authenticity, evidence routes, worked examples, and residuals.
+
 | Phase | Title | Size | Depends on |
 |---|---|---|---|
 | [P5.1](P5.1-reflection-frontend.md) | The reflection front end (crate-ify MIR+LLVM reflection) | L | prototype scaffolds (done); crate split needs its own ADR |

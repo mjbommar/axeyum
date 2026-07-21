@@ -955,6 +955,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     blind-injection control, and exactly 2,048 exhaustive reflection/spec/Rust
     rows at zero disagreement/error/panic/drop. It adds no public refinement
     API and makes no liveness or real-protocol claim.
+- [x] Can the accepted P5.3 evidence be documented as a reviewer-facing
+  capability catalog without collapsing unequal authenticity or claim scopes?
+  - [ADR-0322](../09-decisions/adr-0322-preregister-p5.3-obligation-catalog.md)
+    accepts one comparison index and separate control-flow constant-time,
+    bounded-memory/page-table, and FSM-refinement pages. Each records the exact
+    goal, admitted fragment, evidence route, worked example, reproduction,
+    control, and residuals. The catalog explicitly retains T5.3.1's weaker
+    MIR-text provenance and the bounded teaching-model scope of T5.3.2/3.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

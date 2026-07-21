@@ -376,4 +376,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0319](adr-0319-preregister-checked-mir-scope-metadata.md) | Accept exact nested rustc MIR lexical-scope metadata with flattened typed locals | accepted |
 | [0320](adr-0320-preregister-bounded-reflected-page-table-evidence.md) | Accept authenticated bounded page-table-shaped proofs and replayed broken controls after the scope prerequisite | accepted |
 | [0321](adr-0321-preregister-reflected-handshake-fsm-refinement.md) | Accept bounded identity refinement from a compiler-reflected Rust handshake step to the shipped declarative FSM | accepted |
-| [0322](adr-0322-preregister-p5.3-obligation-catalog.md) | Preregister the reviewer-facing P5.3 obligation catalog with one bounded page per accepted family | proposed |
+| [0322](adr-0322-preregister-p5.3-obligation-catalog.md) | Accept the reviewer-facing P5.3 obligation catalog with one bounded page per accepted family | accepted |
