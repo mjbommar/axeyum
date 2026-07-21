@@ -21,7 +21,7 @@
   "producer_files": [
     {
       "path": "docs/research/09-decisions/adr-0325-preregister-dependency-wide-maestro-path-remap.md",
-      "sha256": "d752016c6d47329f594f9bce81db0f2960294e5ed7d51a6fac04b3c2190f87fa"
+      "sha256": "ea23c7fb8c38fef9794a9286e3d5b497ae8328684f9e6b894bd9019d9f596975"
     },
     {
       "path": "scripts/capture-maestro-device-id-v2.py",

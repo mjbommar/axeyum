@@ -980,10 +980,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     negative branch and grants no capture credit. Next preregister a fresh
     dependency-wide remapped build; do not normalize these modules.
   - [ADR-0325](../09-decisions/adr-0325-preregister-dependency-wide-maestro-path-remap.md)
-    freezes that fresh v2 capture: Cargo-encoded remapping reaches every target
-    dependency while preserving the upstream export flag, both modules must
-    contain zero real-root tokens and match as raw bytes, and only then may the
-    three symbols be rediscovered and parser-admitted. No proof is authorized.
+    rejects v2 after both modules eliminate every real-root token but still
+    differ in size and hash. Root-specific remap-rule inputs remain a build-
+    identity variable. Extraction never runs. Next preregister two independent
+    trees at one identical virtual source/target path; do not normalize output.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

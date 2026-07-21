@@ -362,6 +362,13 @@ session state.
 >    modules must contain zero real-root tokens and match as raw bytes before
 >    symbol rediscovery or parser admission. Implement/run this capture next;
 >    inverse-property construction remains unauthorized.
+>    ADR-0325 v2 is negative. Dependency-wide remapping removes all real-root
+>    tokens and emits the shared prefix seven times in each module, but raw
+>    outputs still differ at 36,037,894 vs 36,038,325 bytes. Extraction never
+>    runs. The remaining variable is the distinct remap-rule input itself.
+>    Next preregister separate physical roots/targets mounted sequentially at
+>    identical in-namespace paths (working unprivileged `bwrap` is available),
+>    with raw equality still required and no output normalization.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

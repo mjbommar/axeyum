@@ -1,6 +1,6 @@
 # ADR-0325: Preregister dependency-wide Maestro path remapping
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -106,8 +106,31 @@ decision rather than another post-hoc canonicalization.
 
 ## Result
 
-Proposed. No dependency-wide-remapped build, module identity, discovered
-symbol, parser result, capture credit, proof, or scoreboard row exists.
+Accepted as a negative v2 result. Both dependency-wide-remapped builds
+completed below 1 GiB peak RSS, and the new zero-root-token gate passes: neither
+module contains its real source root or temporary parent, while each contains
+the shared `/axeyum-external/maestro` prefix seven times. The diagnosed
+dependency path-text leak is removed.
+
+The raw full modules nevertheless remain unequal:
+
+| Root | LLVM bytes | Lines | SHA-256 | Wall | Peak RSS |
+|---|---:|---:|---|---:|---:|
+| A | 36,037,894 | 446,429 | `5c6fe3b463ed66423342f4a0298e89ac22d97a2c906a57c9904b81f1c9b2e064` | 43,787 ms | 999,196 KiB |
+| B | 36,038,325 | 446,429 | `7bd660e6a18363b55a28608d9a556de6e8f267e3a7d79b171b90043ae86d27dd` | 44,319 ms | 999,272 KiB |
+
+Per gate 6, the runner stops before symbol discovery, extraction, parser
+admission, or any solver query and atomically removes partial v2 output. No
+external byte is retained or committed, no capture credit exists, and T5.5.2
+remains open.
+
+The bounded inference is that distinct root-specific remap rule inputs still
+perturb build/crate identity even though emitted path text is canonical. The
+next decision must give both builds identical visible source and target paths,
+not add output normalization. This host's working unprivileged `bwrap` can bind
+the two independent trees sequentially at one fixed in-namespace path while
+retaining separate physical roots and target directories; that route requires
+a new preregistration.
 
 ## Rejected alternatives
 

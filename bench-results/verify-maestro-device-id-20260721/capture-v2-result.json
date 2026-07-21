@@ -1,0 +1,58 @@
+{
+  "artifacts": {
+    "external_bytes_committed": 0,
+    "local_partial_retained": false
+  },
+  "builds": [
+    {
+      "canonical_prefix_occurrences": 7,
+      "module_bytes": 36037894,
+      "module_lines": 446429,
+      "module_sha256": "5c6fe3b463ed66423342f4a0298e89ac22d97a2c906a57c9904b81f1c9b2e064",
+      "peak_rss_kib": 999196,
+      "root": "a",
+      "root_tokens": {
+        "source_root": 0,
+        "temporary_parent": 0
+      },
+      "wall_ms": 43787
+    },
+    {
+      "canonical_prefix_occurrences": 7,
+      "module_bytes": 36038325,
+      "module_lines": 446429,
+      "module_sha256": "7bd660e6a18363b55a28608d9a556de6e8f267e3a7d79b171b90043ae86d27dd",
+      "peak_rss_kib": 999272,
+      "root": "b",
+      "root_tokens": {
+        "source_root": 0,
+        "temporary_parent": 0
+      },
+      "wall_ms": 44319
+    }
+  ],
+  "capture_credit": false,
+  "failure": {
+    "kind": "module_size_drift",
+    "stage": "build"
+  },
+  "identity_sha256": "61ee8f0447617a4ba7e0f4c3cfb701ce8257d10e55f6c829527368793ce5c765",
+  "registration_sha256": "83c7fdaeee5856d3fe5c3103949692575e2560c328d9b2b3991b60b23dd73b12",
+  "runner_commit": "f4c711509ae9121c2c58c39e25b7affa87c52c3e",
+  "schema": "axeyum.maestro-device-id-capture-v2-result.v1",
+  "status": "rejected",
+  "summary": {
+    "accepted": 0,
+    "builds": 2,
+    "dropped": 3,
+    "extraction_started": false,
+    "parser_admission_started": false,
+    "solver_queries": 0,
+    "targets": 3
+  },
+  "upstream": {
+    "commit": "650a3f62c386d113b4cbbc11645d945d57620cbb",
+    "repository": "https://github.com/maestro-os/maestro.git",
+    "tree": "6a51753d1f7b80117979db4f35146f55f5e248b4"
+  }
+}

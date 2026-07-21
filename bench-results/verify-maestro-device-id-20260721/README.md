@@ -31,6 +31,10 @@ same remap through Cargo-encoded target flags to every dependency, requires
 zero real-root tokens and raw full-module equality, and only then allows
 dynamic symbol discovery and scalar parser admission. It still runs no proof.
 
+The v2 result is negative: real-root tokens fall to zero, but the modules still
+differ in size and hash, so the root-specific remap rule itself remains an
+identity input. No extraction ran and no v2 artifact survived atomic cleanup.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 
