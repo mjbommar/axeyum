@@ -1096,6 +1096,128 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     Some(roots)
 }
 
+/// Partial-fraction decomposition of a univariate rational function whose
+/// denominator splits into **distinct** rational linear factors: `p/q =
+/// (polynomial part) + Σ Aᵢ/(x − rᵢ)` with residues `Aᵢ = rem(rᵢ)/q′(rᵢ)`. Returns
+/// the decomposition, **certified** equal to the input (re-combination zero-test),
+/// or `None` if the denominator has a repeated or non-rational root, or `expr` is
+/// not a univariate rational function.
+#[must_use]
+pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let rf = normalize_rational(expr)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    let deg_den = poly::rat_degree(&den)?;
+    if deg_den == 0 {
+        return expand(expr); // no denominator — just the polynomial
+    }
+    let (quotient, remainder) = ratint::divrem(&num, &den)?;
+    let roots = ratint::rational_roots(&den)?;
+    if roots.len() != deg_den {
+        return None; // repeated or non-rational roots — not distinct linear
+    }
+    let den_deriv = poly::rat_derivative(&den)?;
+    let mut parts: Vec<CasExpr> = Vec::new();
+    if !ratint::is_zero(&quotient) {
+        parts.push(MultiPoly::from_univariate(var, &quotient).to_expr());
+    }
+    for root in roots {
+        let residue = poly::eval_rat_poly(&remainder, root)?
+            .checked_div(poly::eval_rat_poly(&den_deriv, root)?)?;
+        // Aᵢ / (x − rᵢ)
+        let denom = CasExpr::var(var) - CasExpr::Const(root);
+        parts.push(scaled_term(residue, CasExpr::int(1)) / denom);
+    }
+    let result = match parts.len() {
+        0 => CasExpr::zero(),
+        1 => parts.into_iter().next()?,
+        _ => CasExpr::Add(parts),
+    };
+    match equal(&result, expr) {
+        ZeroTest::Certified { equal: true, .. } => Some(result),
+        _ => None,
+    }
+}
+
+/// The number of nodes in an expression tree (a size metric for [`simplify`]).
+fn node_count(expr: &CasExpr) -> usize {
+    1 + match expr {
+        CasExpr::Const(_) | CasExpr::Var(_) => 0,
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().map(node_count).sum(),
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => node_count(a),
+        CasExpr::Div(a, b) => node_count(a) + node_count(b),
+    }
+}
+
+/// Heuristically simplify by choosing the structurally smallest form among the
+/// input, its [`expand`]ed, and its [`cancel`]led (lowest-terms) versions — all of
+/// which are value-equal by construction. Always returns a value-equal expression
+/// (the input itself in the worst case).
+#[must_use]
+pub fn simplify(expr: &CasExpr) -> CasExpr {
+    let mut best = expr.clone();
+    let mut best_size = node_count(&best);
+    for candidate in [cancel(expr), expand(expr)].into_iter().flatten() {
+        let size = node_count(&candidate);
+        if size < best_size {
+            best = candidate;
+            best_size = size;
+        }
+    }
+    best
+}
+
+/// A point at which to take a [`limit`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LimitPoint {
+    /// A finite rational point `x → a`.
+    Finite(Rational),
+    /// `x → +∞`.
+    PosInfinity,
+    /// `x → −∞`.
+    NegInfinity,
+}
+
+/// The limit of a univariate rational-function `expr` as `var` approaches
+/// `point`. Handles continuous evaluation, `0/0` indeterminate forms (by
+/// cancelling common `(x−a)` factors), and limits at ±∞ (by comparing degrees).
+/// Returns `None` for a pole (infinite limit), a non-rational/multivariate
+/// expression, or on overflow. Exact by construction over the rational fragment.
+#[must_use]
+pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    let rf = normalize_rational(expr)?;
+    let mut num = rf.num.to_univariate(var)?;
+    let mut den = rf.den.to_univariate(var)?;
+    match point {
+        LimitPoint::Finite(a) => loop {
+            let den_at = poly::eval_rat_poly(&den, a)?;
+            if !den_at.is_zero() {
+                let num_at = poly::eval_rat_poly(&num, a)?;
+                return Some(CasExpr::Const(num_at.checked_div(den_at)?));
+            }
+            // den(a) = 0: an indeterminate 0/0 (cancel) or a pole.
+            if poly::eval_rat_poly(&num, a)?.is_zero() {
+                let factor = [a.checked_neg()?, Rational::integer(1)]; // x − a
+                num = poly::rat_exact_div(&num, &factor)?;
+                den = poly::rat_exact_div(&den, &factor)?;
+            } else {
+                return None; // pole — no finite limit
+            }
+        },
+        LimitPoint::PosInfinity | LimitPoint::NegInfinity => {
+            let deg_num = poly::rat_degree(&num)?;
+            let deg_den = poly::rat_degree(&den)?;
+            match deg_num.cmp(&deg_den) {
+                core::cmp::Ordering::Less => Some(CasExpr::zero()),
+                core::cmp::Ordering::Equal => {
+                    Some(CasExpr::Const(num[deg_num].checked_div(den[deg_den])?))
+                }
+                core::cmp::Ordering::Greater => None, // ±∞
+            }
+        }
+    }
+}
+
 /// Expand an expression to canonical form and return it as a [`CasExpr`].
 ///
 /// For the polynomial fragment this is the expanded sum-of-monomials form; for a
@@ -1906,6 +2028,69 @@ mod tests {
             format!("{}", CasExpr::rat(1, 5) * v("x").pow(5)),
             "(1/5)*x^5"
         );
+    }
+
+    #[test]
+    fn apart_partial_fractions() {
+        let x = || v("x");
+        // 1/(x²−1) = ½/(x−1) − ½/(x+1)
+        let f = CasExpr::int(1) / (x().pow(2) - CasExpr::int(1));
+        assert_equal(&apart(&f, "x").expect("distinct linear factors"), &f);
+        // x/((x−1)(x−2)) = −1/(x−1) + 2/(x−2)
+        let g = x() / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)));
+        assert_equal(&apart(&g, "x").expect("distinct linear factors"), &g);
+    }
+
+    #[test]
+    fn simplify_picks_smaller_equal_form() {
+        let x = || v("x");
+        // (x²−1)/(x−1) simplifies to x+1, and stays value-equal.
+        let f = (x().pow(2) - CasExpr::int(1)) / (x() - CasExpr::int(1));
+        let s = simplify(&f);
+        assert_equal(&s, &(x() + CasExpr::int(1)));
+        assert_equal(&s, &f);
+    }
+
+    #[test]
+    fn limits_of_rational_functions() {
+        let x = || v("x");
+        let at = |n: i128| LimitPoint::Finite(Rational::integer(n));
+        // continuous: lim_{x→1} (x+1)/(x−2) = −2
+        assert_equal(
+            &limit(&((x() + CasExpr::int(1)) / (x() - CasExpr::int(2))), "x", at(1)).unwrap(),
+            &CasExpr::int(-2),
+        );
+        // 0/0 via cancellation: lim_{x→2} (x²−4)/(x−2) = 4
+        assert_equal(
+            &limit(&((x().pow(2) - CasExpr::int(4)) / (x() - CasExpr::int(2))), "x", at(2)).unwrap(),
+            &CasExpr::int(4),
+        );
+        // lim_{x→0} (x²+3x)/x = 3
+        assert_equal(
+            &limit(&((x().pow(2) + CasExpr::int(3) * x()) / x()), "x", at(0)).unwrap(),
+            &CasExpr::int(3),
+        );
+        // at infinity: lim (2x²+1)/(x²+x) = 2 ; lim (x+1)/(x²+1) = 0
+        assert_equal(
+            &limit(
+                &((CasExpr::int(2) * x().pow(2) + CasExpr::int(1)) / (x().pow(2) + x())),
+                "x",
+                LimitPoint::PosInfinity,
+            )
+            .unwrap(),
+            &CasExpr::int(2),
+        );
+        assert_equal(
+            &limit(
+                &((x() + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(1))),
+                "x",
+                LimitPoint::PosInfinity,
+            )
+            .unwrap(),
+            &CasExpr::zero(),
+        );
+        // pole: lim_{x→2} 1/(x−2) has no finite limit
+        assert!(limit(&(CasExpr::int(1) / (x() - CasExpr::int(2))), "x", at(2)).is_none());
     }
 
     #[test]
