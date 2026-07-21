@@ -3,6 +3,18 @@
 Status: design note (2026-07-20)
 Last updated: 2026-07-20
 
+> **Implementation status (2026-07-20):** the build units below are essentially
+> all implemented — **G0–G18 shipped** in `crates/axeyum-cas` (differentiation,
+> integration, expand/cancel/factor/solve/apart/simplify, limit, series,
+> summation, ODEs, linear algebra incl. eigenvalues, number theory, multivariate
+> polynomials + GCD, **Gröbner bases**, complex numbers with certified `I²=−1`,
+> and the Pythagorean identity in the zero-test). See the
+> [README capability table](README.md#implemented) and [diary.md](diary.md) for
+> the current surface (130+ tests). This document is retained as the original
+> gap map; the *next wave* beyond G18 is being appended from a roadmap-research
+> pass (Risch integration, factorization over ℚ, assumptions, Smith/Hermite,
+> Gosper/Zeilberger, special functions, more ODE classes).
+
 What must be built, given [substrate-map.md](substrate-map.md) (what exists) and
 [cas-architecture-survey.md](cas-architecture-survey.md) /
 [decidability-map.md](decidability-map.md) (the target). Ordered into build units
