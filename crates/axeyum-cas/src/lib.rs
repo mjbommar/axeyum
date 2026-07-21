@@ -3527,15 +3527,20 @@ pub fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
     Some((p, d))
 }
 
-/// The **matrix exponential** `exp(A·t)` of a square rational matrix `A` that is
-/// **diagonalizable over ℚ**, as a matrix of [`CasExpr`] in the symbol `t`.
+/// The **matrix exponential** `exp(A·t)` of a square rational matrix `A` with a
+/// **rational spectrum** (all eigenvalues rational, defective or not), as a matrix
+/// of [`CasExpr`] in the symbol `t`.
 ///
-/// With `A = P·D·P⁻¹` (from [`diagonalize`]), `exp(A·t) = P·diag(e^{dᵢ·t})·P⁻¹`.
-/// The result is **certified** by the defining initial-value problem: every entry
-/// of `d/dt M(t) − A·M(t)` is proven zero by [`equal`] (the exp-tower differentiates
-/// `e^{dᵢt}`) and `M(0) = I`, which uniquely characterizes `exp(A·t)`. Returns
-/// `None` if `A` is not square, is not diagonalizable over ℚ (e.g. a defective or
-/// irrational-eigenvalue matrix — Jordan-form territory), or on overflow.
+/// With the Jordan decomposition `A = P·J·P⁻¹` (see [`jordan_form`]),
+/// `exp(A·t) = P·exp(J·t)·P⁻¹`, where each Jordan block `λI + N` (size `s`)
+/// contributes `exp(J·t) = e^{λt}·Σ (N t)^k/k!` — an upper-triangular block whose
+/// `j`-th super-diagonal is `e^{λt}·t^j/j!`. This covers **defective** matrices
+/// (a plain diagonalizable `A` is the all-size-1-blocks case, giving `diag(e^{dᵢt})`).
+///
+/// **Certified** by the defining initial-value problem: every entry of
+/// `d/dt M(t) − A·M(t)` is proven zero by [`equal`] and `M(0) = I`, which uniquely
+/// characterizes `exp(A·t)`. Returns `None` if `A` is not square, has an
+/// irrational/complex eigenvalue, or on overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, Matrix, matrix_exp, equal, ZeroTest};
@@ -3555,18 +3560,36 @@ pub fn matrix_exp(matrix: &Matrix, t: &str) -> Option<Matrix> {
     if n == 0 || n != matrix.cols() {
         return None;
     }
-    // A = P·D·P⁻¹ with D diagonal (rational eigenvalues). Use a reserved spectral
-    // variable so it cannot collide with `t` or any entry symbol.
-    let (p, d) = diagonalize(matrix, "\0mexp:lambda")?;
+    // A = P·J·P⁻¹ (Jordan). Reserved spectral variable can't collide with `t`.
+    let (p, _j, blocks) = jordan_decomposition(matrix, "\0mexp:lambda")?;
     let p_inv = p.solve(&Matrix::identity(n))?;
-    // exp(D·t) = diag(e^{dᵢ·t}).
+    // exp(J·t): per block (λ, size s) at `offset`, entry [offset+i][offset+i+d]
+    // is e^{λt}·t^d/d! for the d-th super-diagonal (0 ≤ i+d < s).
     let t_expr = CasExpr::var(t);
-    let mut exp_d_rows = vec![vec![CasExpr::zero(); n]; n];
-    for (i, row) in exp_d_rows.iter_mut().enumerate() {
-        let d_ii = d.get(i, i)?.clone();
-        row[i] = (d_ii * t_expr.clone()).exp();
+    let mut exp_j = vec![vec![CasExpr::zero(); n]; n];
+    let mut offset = 0;
+    for &(lambda, size) in &blocks {
+        let e_lambda_t = (CasExpr::Const(lambda) * t_expr.clone()).exp();
+        let mut factorial = Rational::integer(1);
+        for d in 0..size {
+            if d > 0 {
+                factorial = factorial.checked_mul(Rational::integer(i128::try_from(d).ok()?))?;
+            }
+            // t^d / d! · e^{λt} placed on the d-th super-diagonal of this block.
+            let power = match u32::try_from(d).ok()? {
+                0 => CasExpr::int(1),
+                p => t_expr.clone().pow(p),
+            };
+            let entry = CasExpr::Const(Rational::integer(1).checked_div(factorial)?)
+                * power
+                * e_lambda_t.clone();
+            for i in 0..(size - d) {
+                exp_j[offset + i][offset + i + d] = entry.clone();
+            }
+        }
+        offset += size;
     }
-    let exp_d = Matrix::from_rows(exp_d_rows)?;
+    let exp_d = Matrix::from_rows(exp_j)?;
     let product = p.mul(&exp_d)?.mul(&p_inv)?;
     // Simplify entries for a clean, readable result.
     let mut simplified_rows = Vec::with_capacity(n);
@@ -3606,13 +3629,13 @@ pub fn matrix_exp(matrix: &Matrix, t: &str) -> Option<Matrix> {
 }
 
 /// Solve the **linear ODE system** `x′(t) = A·x(t)` with initial condition
-/// `x(0) = x0`, for a diagonalizable rational matrix `A`. The unique solution is
-/// `x(t) = e^{A·t}·x0` (see [`matrix_exp`]); returned as the solution vector (an
-/// `n × 1` [`Matrix`] of [`CasExpr`] in the symbol `t`), simplified entrywise.
+/// `x(0) = x0`, for a rational matrix `A` with a rational spectrum (defective or
+/// not). The unique solution is `x(t) = e^{A·t}·x0` (see [`matrix_exp`]); returned
+/// as the solution vector (an `n × 1` [`Matrix`] of [`CasExpr`] in `t`), simplified.
 ///
 /// **Certified**: `matrix_exp` proves `d/dt e^{At} = A·e^{At}` and `e^{A·0}=I`, so
 /// `x′ = A·x` and `x(0) = x0` hold by construction. Returns `None` if `A` is not
-/// square/diagonalizable over ℚ, `x0` is not an `n × 1` matrix, or on overflow.
+/// square / has an irrational eigenvalue, `x0` is not an `n × 1` matrix, or on overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, Matrix, linear_ode_system, equal, ZeroTest};
@@ -3665,6 +3688,18 @@ pub fn linear_ode_system(matrix: &Matrix, initial: &Matrix, t: &str) -> Option<M
 /// ```
 #[must_use]
 pub fn jordan_form(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
+    let (p, j, _blocks) = jordan_decomposition(matrix, var)?;
+    Some((p, j))
+}
+
+/// The transform `P`, the Jordan matrix `J`, and the ordered `(eigenvalue, block
+/// size)` list of a certified Jordan decomposition (see [`jordan_decomposition`]).
+type JordanDecomposition = (Matrix, Matrix, Vec<(Rational, usize)>);
+
+/// The certified Jordan decomposition `(P, J, blocks)` — like [`jordan_form`] but
+/// also returning the ordered `(eigenvalue, block size)` list (the block structure
+/// [`matrix_exp`] needs to build `exp(J·t)`).
+fn jordan_decomposition(matrix: &Matrix, var: &str) -> Option<JordanDecomposition> {
     let n = matrix.rows();
     if n == 0 || n != matrix.cols() {
         return None;
@@ -3745,7 +3780,7 @@ pub fn jordan_form(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
             }
         }
     }
-    Some((p, j))
+    Some((p, j, blocks))
 }
 
 /// The rational eigenvalues of a square rational matrix, each with its algebraic
@@ -7894,13 +7929,26 @@ mod tests {
         // M(0,0) = 2e^{-t} − e^{-2t}.
         let expected00 = CasExpr::int(2) * (-t()).exp() - (CasExpr::int(-2) * t()).exp();
         assert_equal(m.get(0, 0).unwrap(), &expected00);
-        // A defective matrix is declined (Jordan-form territory).
+        // A DEFECTIVE matrix is now handled via Jordan form: exp([[2,1],[0,2]]·t)
+        // = e^{2t}·[[1, t],[0, 1]].
         let shear = Matrix::from_rows(vec![
-            vec![CasExpr::int(3), CasExpr::int(1)],
-            vec![CasExpr::zero(), CasExpr::int(3)],
+            vec![CasExpr::int(2), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(2)],
         ])
         .unwrap();
-        assert!(matrix_exp(&shear, "t").is_none());
+        let se = matrix_exp(&shear, "t").expect("defective handled via Jordan");
+        let e2t = (CasExpr::int(2) * t()).exp();
+        assert_equal(se.get(0, 0).unwrap(), &e2t);
+        assert_equal(se.get(0, 1).unwrap(), &(t() * e2t.clone()));
+        assert_equal(se.get(1, 0).unwrap(), &CasExpr::zero());
+        assert_equal(se.get(1, 1).unwrap(), &e2t);
+        // A complex-eigenvalue matrix ([[0,1],[-1,0]], eigenvalues ±i) is declined.
+        let rotation = Matrix::from_rows(vec![
+            vec![CasExpr::int(0), CasExpr::int(1)],
+            vec![CasExpr::int(-1), CasExpr::int(0)],
+        ])
+        .unwrap();
+        assert!(matrix_exp(&rotation, "t").is_none());
     }
 
     #[test]
