@@ -236,6 +236,16 @@ session state.
 >    panic contracts, annotations, unwind handling, memory/effectful calls, and
 >    loops remain later boundaries; an LLVM definedness proof cannot replace
 >    the MIR panic proof.
+>    ADR-0315 now preregisters the smallest remaining P5.2 runtime boundary:
+>    one explicit input-dependent checked-MIR `panic_when` summary must be
+>    proved against the exact callee, propagated into the caller panic term, and
+>    used to guard the normal-return relation. Exact modular/inlined panic
+>    equality, exhaustive small-domain replay, a concrete callee-panic witness,
+>    mutation teeth, and the standing semantics gate are frozen before code.
+>    Existing constructors remain total (`panic_when = false`), and annotations,
+>    unwind cleanup, memory/effects, loops, and LLVM panic inference stay out of
+>    scope. This independent local lane advances while PLAN item 7 still awaits
+>    a genuinely different second machine; it does not substitute for that row.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

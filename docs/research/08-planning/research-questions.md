@@ -896,6 +896,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     weak-contract countermodel. The standing gate is 81 variants / 17 groups /
     ten binaries / 114 tests. General panic contracts, annotations, unwind
     paths, memory, loops, recursion, and effects remain outside this result.
+  - [ADR-0315](../09-decisions/adr-0315-preregister-modular-mir-panic-contracts.md)
+    preregisters the next smallest P5.2 boundary: verify one explicit
+    input-dependent MIR `panic_when` summary against the checked callee body,
+    propagate it into the caller panic term, and guard the fresh-result
+    relation by normal return. The fixed two-function experiment requires exact
+    modular/inlined panic equality, exhaustive small-domain replay, a concrete
+    callee-panic witness, mutation teeth, and the standing semantics gate before
+    annotations or unwind cleanup are admitted.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

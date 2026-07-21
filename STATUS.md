@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0315 preregisters modular MIR panic propagation before
+  annotations.** The remaining cross-machine evidence row still requires a
+  genuinely different host, so independent local work advances P5.2's smallest
+  missing runtime rule. Existing scalar contracts remain total by default; the
+  proposed opt-in `panic_when(args)` is separately verified against the checked
+  MIR callee, joins the caller panic predicate, and guards the fresh-result
+  relation by normal return. The frozen two-function gate requires exact
+  modular/inlined panic equality, exhaustive <=8-bit replay, a concrete panic
+  witness and neighbors, mutation teeth, the standing semantics manifest, and
+  all bounded package/doc gates. No source annotations, unwind cleanup,
+  memory/effects, loops, LLVM panic inference, or performance claim is admitted.
+
 - **2026-07-21 — PLAN item 10's Axeyum artifact/code blocker is closed.** The
   closure audit confirms the minimal profile, semantic API facades, typed
   lowering configuration, direct-reconstruction/term-walker de-duplication,
