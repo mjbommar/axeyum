@@ -6433,6 +6433,41 @@ pub fn definite_integrate(
     })
 }
 
+/// The **average (mean) value** of `f` over `[lower, upper]`,
+/// `(1/(upper − lower))·∫_lower^upper f dx`, via [`definite_integrate`]. Carries
+/// the same certificate as the underlying definite integral. `None` if the
+/// integral is unavailable or the bounds are equal (`upper = lower`, a zero-width
+/// interval).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, average_value};
+/// // Average of x² on [0, 3] = (1/3)·9 = 3.
+/// let avg = average_value(&CasExpr::var("x").pow(2), "x", &CasExpr::int(0), &CasExpr::int(3)).unwrap();
+/// assert_eq!(avg.value, CasExpr::int(3));
+/// ```
+#[must_use]
+pub fn average_value(
+    f: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let width = simplify(&(upper.clone() - lower.clone()));
+    if matches!(
+        equal(&width, &CasExpr::zero()),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None; // zero-width interval — average undefined
+    }
+    let integral = definite_integrate(f, var, lower, upper)?;
+    let value = simplify(&(integral.value / width));
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: integral.antiderivative,
+        certificate: integral.certificate,
+    })
+}
+
 /// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
 /// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
 /// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
@@ -9023,6 +9058,33 @@ mod tests {
         )
         .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn average_value_of_functions() {
+        let x = || v("x");
+        // avg x² on [0,3] = 3; avg x on [0,4] = 2; avg 5 on [0,10] = 5.
+        assert_equal(
+            &average_value(&x().pow(2), "x", &CasExpr::int(0), &CasExpr::int(3))
+                .unwrap()
+                .value,
+            &CasExpr::int(3),
+        );
+        assert_equal(
+            &average_value(&x(), "x", &CasExpr::int(0), &CasExpr::int(4))
+                .unwrap()
+                .value,
+            &CasExpr::int(2),
+        );
+        // avg sin x on [0,π] = 2/π.
+        assert_equal(
+            &average_value(&x().sin(), "x", &CasExpr::int(0), &v("pi"))
+                .unwrap()
+                .value,
+            &(CasExpr::int(2) / v("pi")),
+        );
+        // Zero-width interval declines.
+        assert!(average_value(&x(), "x", &CasExpr::int(2), &CasExpr::int(2)).is_none());
     }
 
     #[test]
