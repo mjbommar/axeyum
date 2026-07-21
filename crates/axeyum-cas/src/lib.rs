@@ -2875,6 +2875,38 @@ pub fn dsolve_exact(m: &CasExpr, n: &CasExpr, xvar: &str, yvar: &str) -> Option<
     }
 }
 
+/// Solve a **Bernoulli ODE** with quadratic nonlinearity, `y′ + p(x)·y = q(x)·y²`,
+/// by the substitution `v = 1/y`, which linearizes it to `v′ − p·v = −q` (solved
+/// by [`dsolve_first_order_linear`]); the solution is `y = 1/v`.
+///
+/// **Certified** by substituting the result back: `y′ + p·y − q·y²` is proven zero
+/// by the zero-test (the exp-tower reduces the integrating-factor exponentials).
+/// Returns `None` if the reduced linear ODE is unsolvable in the fragment, the
+/// back-substitution fails to certify, or on overflow. (The general Bernoulli
+/// exponent `n` needs the fractional power `y^{1/(1−n)}`, outside this fragment;
+/// `n = 2` is the representable case.)
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_bernoulli};
+/// // y′ + y = y²  ⇒  a closed form y(x) = 1/v(x).
+/// let sol = dsolve_bernoulli(&CasExpr::int(1), &CasExpr::int(1), "x");
+/// assert!(sol.is_some());
+/// ```
+#[must_use]
+pub fn dsolve_bernoulli(p: &CasExpr, q: &CasExpr, var: &str) -> Option<CasExpr> {
+    // v = 1/y linearizes to v′ − p·v = −q, i.e. v′ + (−p)·v = (−q).
+    let neg_p = simplify(&(-p.clone()));
+    let neg_q = simplify(&(-q.clone()));
+    let v = dsolve_first_order_linear(&neg_p, &neg_q, var)?;
+    let y = CasExpr::int(1) / v;
+    // Certificate: y′ + p·y − q·y² ≡ 0.
+    let residual = y.differentiate(var) + p.clone() * y.clone() - q.clone() * y.clone().pow(2);
+    match equal(&residual, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(y),
+        _ => None,
+    }
+}
+
 /// Solve a **constant-coefficient linear recurrence** `aₙ = c₁·aₙ₋₁ + … + c_d·aₙ₋d`
 /// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
 /// returning a closed form `a(var)` for the general term.
@@ -7637,6 +7669,22 @@ mod tests {
         check(x(), y()); // y′ = xy
         check(x(), CasExpr::int(1) / y()); // y′ = x/y → y²/2 − x²/2 − C0
         check(CasExpr::int(1), y().pow(2)); // y′ = y²
+    }
+
+    #[test]
+    fn dsolve_bernoulli_quadratic() {
+        let x = || v("x");
+        // y′ + p·y = q·y²: verify the returned y satisfies the ODE.
+        let check = |p: CasExpr, q: CasExpr| {
+            let y = dsolve_bernoulli(&p, &q, "x").expect("bernoulli");
+            let residual =
+                y.differentiate("x") + p.clone() * y.clone() - q.clone() * y.clone().pow(2);
+            assert_equal(&residual, &CasExpr::zero());
+        };
+        check(CasExpr::int(1), CasExpr::int(1)); // y′ + y = y²
+        check(CasExpr::int(2), CasExpr::int(1)); // y′ + 2y = y²
+        check(CasExpr::int(-1), CasExpr::int(1)); // y′ − y = y²
+        let _ = x;
     }
 
     #[test]
