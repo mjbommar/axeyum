@@ -470,6 +470,12 @@ session state.
 >    registration only to structural replay while preserving the merged capture
 >    registration for all source/build/module gates. Queries remain separately
 >    gated.
+>    ADR-0334 now freezes exactly that v3 seam: pin v2 registration/negative,
+>    validate and pass the complete already-pinned ADR-0332 cache registration
+>    only to unchanged structural replay, compare the same accepted summary,
+>    and inherit every v2 build/identity/atomicity/no-query gate. Commit/push
+>    this zero-result ADR before implementing the thin wrapper/tests/registration;
+>    do not build early.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

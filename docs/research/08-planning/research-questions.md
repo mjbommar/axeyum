@@ -1052,6 +1052,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     only `expected_lock_packages` and raises `KeyError`. Cleanup leaves no output
     or OOM delta. A v3 ADR must freeze the one-argument correction before another
     invocation; no official build/query exists.
+  - [ADR-0334](../09-decisions/adr-0334-preregister-tock-llvm-capture-v3.md)
+    freezes that correction: validate and pass the exact pinned full ADR-0332
+    cache registration only to unchanged structural replay, while inheriting
+    every v2 source/build/module/identity/atomicity/no-query gate. No v3
+    producer, invocation, build, or query exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
