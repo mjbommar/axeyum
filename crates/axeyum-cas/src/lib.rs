@@ -58,6 +58,7 @@ pub mod geometry;
 pub mod gfp;
 pub mod groebner;
 pub mod hyperbolic;
+pub mod interval_arith;
 mod factor_int;
 mod gosper;
 mod matrix;
@@ -4534,6 +4535,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_rational(expr, var),
         integrate_elementary(expr, var),
         integrate_poly_times_exp(expr, var),
+        integrate_poly_times_log(expr, var),
         integrate_poly_times_sinusoid(expr, var),
         integrate_trig_square(expr, var),
     ]
@@ -4664,6 +4666,45 @@ fn integrate_trig_square(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 /// `∫ p·e^(ax+b) = Q·e^(ax+b)` where `Q` solves `Q′ + a·Q = p` (one exact linear
 /// system). Covers `∫ x·eˣ = (x−1)eˣ`, `∫ x²·eˣ = (x²−2x+2)eˣ`, etc. `None`
 /// outside this shape; certified downstream by differentiate-and-check.
+/// `∫ p(x)·ln(x) dx` for a polynomial `p` — `Σ cₖ·[x^{k+1}/(k+1)·ln x −
+/// x^{k+1}/(k+1)²]` by parts. Returns `None` unless `expr` is `p(var)·ln(var)`.
+fn integrate_poly_times_log(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    let mut log_found = false;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        if let CasExpr::Unary(UnaryFunc::Ln, arg) = factor
+            && !log_found
+            && matches!(&**arg, CasExpr::Var(v) if v == var)
+        {
+            log_found = true;
+            continue;
+        }
+        rest.push(factor.clone());
+    }
+    if !log_found {
+        return None;
+    }
+    let p = normalize(&CasExpr::Mul(rest))?.to_univariate(var)?;
+    let ln_x = CasExpr::var(var).ln();
+    let mut result = CasExpr::zero();
+    for (k, &c) in p.iter().enumerate() {
+        if c.is_zero() {
+            continue;
+        }
+        let kp1 = Rational::integer(i128::try_from(k + 1).ok()?);
+        let base_coeff = c.checked_div(kp1)?; // cₖ/(k+1)
+        let power = u32::try_from(k + 1).ok()?;
+        let x_power = CasExpr::var(var).pow(power);
+        let with_log = CasExpr::Const(base_coeff) * x_power.clone() * ln_x.clone();
+        let correction = CasExpr::Const(base_coeff.checked_div(kp1)?) * x_power;
+        result = result + with_log - correction;
+    }
+    Some(result)
+}
+
 fn integrate_poly_times_exp(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Mul(factors) = expr else {
         return None;
@@ -4814,7 +4855,14 @@ fn integrate_elementary(expr: &CasExpr, var: &str) -> Option<CasExpr> {
             let body = CasExpr::Mul(vec![arg_expr.clone(), arg_expr.ln() - CasExpr::int(1)]);
             Some(scaled_term(k, body))
         }
-        // atan / tan / sqrt closed forms are later slices.
+        // ∫ atan(u) = (1/a)[u·atan(u) − ½·ln(1 + u²)]  [by parts]
+        UnaryFunc::Atan => {
+            let k = coeff.checked_div(a)?;
+            let body = arg_expr.clone() * arg_expr.clone().atan()
+                - CasExpr::rat(1, 2) * (CasExpr::int(1) + arg_expr.pow(2)).ln();
+            Some(scaled_term(k, body))
+        }
+        // tan / sqrt closed forms are later slices.
         _ => None,
     }
 }
@@ -7020,6 +7068,23 @@ mod tests {
         assert_eq!(mixed_roots.len(), 3);
         for r in &mixed_roots {
             assert_equal(&mixed.substitute("x", r), &CasExpr::zero());
+        }
+    }
+
+    #[test]
+    fn integrate_log_atan_and_poly_log() {
+        let x = || v("x");
+        // Each certified by d/dx(answer) = integrand.
+        for integrand in [
+            x().ln(),                    // ∫ ln x = x ln x − x
+            x().atan(),                  // ∫ atan x = x·atan x − ½ln(1+x²)
+            x() * x().ln(),              // ∫ x ln x = ½x² ln x − ¼x²
+            x().pow(2) * x().ln(),       // ∫ x² ln x
+            (CasExpr::int(3) * x() + CasExpr::int(1)) * x().ln(), // ∫ (3x+1) ln x
+        ] {
+            let result = integrate(&integrand, "x").expect("integrable");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
     }
 
