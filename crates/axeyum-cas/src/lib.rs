@@ -1158,7 +1158,12 @@ pub fn dsolve_homogeneous(char_coeffs: &[Rational], var: &str) -> Option<CasExpr
             let sin_c = CasExpr::var(&format!("C{}", c_index + 1));
             let bx = scaled_term(beta, x());
             let inner = cos_c * bx.clone().cos() + sin_c * bx.sin();
-            terms.push(CasExpr::Mul(vec![scaled_term(alpha, x()).exp(), inner]));
+            // e^(αx)·(…); drop the exponential when α = 0 (e.g. a harmonic oscillator).
+            terms.push(if alpha.is_zero() {
+                inner
+            } else {
+                CasExpr::Mul(vec![scaled_term(alpha, x()).exp(), inner])
+            });
         }
         _ => return None, // higher-degree irreducible / irrational — not handled
     }
@@ -1268,7 +1273,7 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
             .checked_div(poly::eval_rat_poly(&den_deriv, root)?)?;
         // Aᵢ / (x − rᵢ)
         let denom = CasExpr::var(var) - CasExpr::Const(root);
-        parts.push(scaled_term(residue, CasExpr::int(1)) / denom);
+        parts.push(CasExpr::Const(residue) / denom);
     }
     let result = match parts.len() {
         0 => CasExpr::zero(),
