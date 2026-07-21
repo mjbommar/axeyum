@@ -56,6 +56,7 @@ pub mod boolean;
 pub mod combinatorics;
 pub mod geometry;
 pub mod groebner;
+pub mod hyperbolic;
 mod factor_int;
 mod gosper;
 mod matrix;
@@ -4141,6 +4142,69 @@ fn series_coefficients(f: &CasExpr, var: &str, order: usize) -> Option<Vec<Ratio
     normalize(&series(f, var, order)?)?.to_univariate(var)
 }
 
+/// The product of two coefficient vectors, truncated at degree `order`.
+fn truncated_series_mul(a: &[Rational], b: &[Rational], order: usize) -> Option<Vec<Rational>> {
+    let mut result = vec![Rational::zero(); order + 1];
+    for (i, &ai) in a.iter().enumerate() {
+        if i > order || ai.is_zero() {
+            continue;
+        }
+        for (j, &bj) in b.iter().enumerate() {
+            if i + j > order {
+                break;
+            }
+            result[i + j] = result[i + j].checked_add(ai.checked_mul(bj)?)?;
+        }
+    }
+    Some(result)
+}
+
+/// Compose a polynomial `poly` (coefficient vector) with a series `g`, truncated at
+/// degree `order` — the series of `poly(g(x))` — by Horner's method.
+fn compose_poly_with_series(poly: &[Rational], g: &[Rational], order: usize) -> Option<Vec<Rational>> {
+    let mut acc = vec![Rational::zero(); order + 1];
+    for &coeff in poly.iter().rev() {
+        acc = truncated_series_mul(&acc, g, order)?;
+        acc[0] = acc[0].checked_add(coeff)?;
+    }
+    Some(acc)
+}
+
+/// **Series reversion** — the compositional inverse of a power series. Given `f` with
+/// `f(0) = 0` and `f'(0) ≠ 0`, return the series `g` (to degree `order`) with
+/// `f(g(x)) = x`. For example the reversion of the `sin` series is the `arcsin`
+/// series, and of `eˣ − 1` is `ln(1+x)`. `None` if `f(0) ≠ 0`, `f'(0) = 0`, `f` is
+/// outside the series fragment, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, series_reversion, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // reversion(2x) = x/2 (since 2·(x/2) = x).
+/// let g = series_reversion(&(CasExpr::int(2) * x.clone()), "x", 3).unwrap();
+/// assert!(matches!(equal(&g, &(x / CasExpr::int(2))), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn series_reversion(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
+    let a = series_coefficients(f, var, order)?;
+    if a.first().is_some_and(|c| !c.is_zero()) {
+        return None; // f(0) ≠ 0
+    }
+    let a1 = *a.get(1)?;
+    if a1.is_zero() {
+        return None; // f'(0) = 0 — not invertible
+    }
+    let mut g = vec![Rational::zero(); order + 1];
+    if order >= 1 {
+        g[1] = Rational::integer(1).checked_div(a1)?;
+    }
+    // Solve b_n order by order: [xⁿ] f(g) with b_n = 0 gives E, then b_n = −E/a₁.
+    for n in 2..=order {
+        let fg = compose_poly_with_series(&a, &g, n)?;
+        g[n] = fg[n].checked_neg()?.checked_div(a1)?;
+    }
+    Some(MultiPoly::from_univariate(var, &g).to_expr())
+}
+
 /// The (valuation, leading coefficient) of a coefficient vector — the lowest degree
 /// with a nonzero coefficient. `None` if all coefficients (to the computed order)
 /// are zero.
@@ -5457,6 +5521,29 @@ mod tests {
             .unwrap(),
             &(-t().exp() + (CasExpr::int(2) * t()).exp()),
         );
+    }
+
+    #[test]
+    fn series_reversion_inverts() {
+        let x = || v("x");
+        // reversion(sin x) = arcsin series = x + x³/6 + 3x⁵/40 + …
+        let arcsin = series_reversion(&x().sin(), "x", 5).unwrap();
+        assert_equal(
+            &arcsin,
+            &(x() + CasExpr::rat(1, 6) * x().pow(3) + CasExpr::rat(3, 40) * x().pow(5)),
+        );
+        // reversion(eˣ − 1) = ln(1+x) series = x − x²/2 + x³/3 − x⁴/4.
+        let log1p = series_reversion(&(x().exp() - CasExpr::int(1)), "x", 4).unwrap();
+        assert_equal(
+            &log1p,
+            &(x() - CasExpr::rat(1, 2) * x().pow(2) + CasExpr::rat(1, 3) * x().pow(3) - CasExpr::rat(1, 4) * x().pow(4)),
+        );
+        // Reversion is a genuine inverse: composing f(g(x)) recovers x to the order.
+        // Verify for f = x + x²: f(reversion(f)) ≡ x mod x⁵.
+        let f = x() + x().pow(2);
+        let g = series_reversion(&f, "x", 4).unwrap();
+        let composed = series(&f.substitute("x", &g), "x", 4).unwrap();
+        assert_equal(&composed, &x());
     }
 
     #[test]
