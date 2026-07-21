@@ -1805,13 +1805,136 @@ pub fn solve_linear_system(equations: &[CasExpr], vars: &[&str]) -> Option<Vec<(
     Some(result)
 }
 
-/// Solve `expr = 0` for `var` over a univariate polynomial: returns the distinct
-/// real roots. Rational roots are exact; a leftover real quadratic is solved by
-/// the quadratic formula (rational when the discriminant is a perfect square,
-/// else a symbolic `sqrt`). Complex roots and degree-≥3 irreducible factors are
-/// omitted. `None` if `expr` is not a univariate polynomial.
+/// Match a term `A·f(a·var + b)` where `f ∈ {exp, ln}`, `A` is a rational-constant
+/// coefficient and the argument is linear in `var` (`a ≠ 0`). Returns
+/// `(f, A, a, b)`. `None` for any other shape (no such head, non-linear argument,
+/// non-constant coefficient).
+fn match_scaled_unary(term: &CasExpr, var: &str) -> Option<(UnaryFunc, Rational, Rational, Rational)> {
+    let mut coeff = Rational::integer(1);
+    let mut head: Option<(UnaryFunc, Rational, Rational)> = None;
+    for factor in flatten_mul(term) {
+        match factor {
+            CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+            CasExpr::Unary(func @ (UnaryFunc::Exp | UnaryFunc::Ln), arg) if head.is_none() => {
+                let arg_poly = normalize(&arg)?.to_univariate(var)?;
+                if poly::rat_degree(&arg_poly)? != 1 {
+                    return None;
+                }
+                let a = arg_poly[1];
+                let b = arg_poly.first().copied().unwrap_or_else(Rational::zero);
+                head = Some((func, a, b));
+            }
+            _ => return None, // a second head, or a non-constant/non-linear factor
+        }
+    }
+    let (func, a, b) = head?;
+    Some((func, coeff, a, b))
+}
+
+/// The exact rational value of a **variable-free constant** expression (`5`,
+/// `−8`, `3/2`, `2·3`), or `None` if it contains any variable or is outside the
+/// rational fragment.
+fn constant_term(expr: &CasExpr) -> Option<Rational> {
+    let poly = normalize(expr)?;
+    if poly.terms.keys().any(|m| !m.powers.is_empty()) {
+        return None; // contains a variable
+    }
+    Some(
+        poly.terms
+            .iter()
+            .find(|(m, _)| m.powers.is_empty())
+            .map_or_else(Rational::zero, |(_, c)| *c),
+    )
+}
+
+/// Solve an elementary transcendental equation `A·f(a·var+b) + C = 0` for a single
+/// `exp`/`ln` head (`f`), rational constants `A, C`, and a linear inner argument.
+/// `exp`: `var = (ln(−C/A) − b)/a` (real when `−C/A > 0`); `ln`: `var =
+/// (e^{−C/A} − b)/a`. Certified by substituting the root back (`equal`, using the
+/// exp-tower `e^{ln v}=v`). `None` if `expr` is not of this shape (e.g. a
+/// polynomial, so the caller proceeds to the polynomial solver) or has no real root.
+fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let terms = match expr {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    let mut head: Option<(UnaryFunc, Rational, Rational, Rational)> = None;
+    let mut constant = Rational::zero();
+    for term in &terms {
+        if let Some(matched) = match_scaled_unary(term, var) {
+            if head.is_some() {
+                return None; // more than one transcendental term — unsupported
+            }
+            head = Some(matched);
+        } else if let Some(c) = constant_term(term) {
+            // A var-free constant term (`5`, `−8`, `3/2`, …).
+            constant = constant.checked_add(c)?;
+        } else {
+            return None; // a var-dependent, non-transcendental term — unsupported
+        }
+    }
+    let (func, big_a, a, b) = head?;
+    // f(u) = −C/A.
+    let target = constant.checked_neg()?.checked_div(big_a)?;
+    let inner = match func {
+        UnaryFunc::Exp => {
+            if target.numerator() <= 0 {
+                return None; // exp is strictly positive — no real solution
+            }
+            CasExpr::Const(target).ln() // u = ln(target)
+        }
+        UnaryFunc::Ln => CasExpr::Const(target).exp(), // u = exp(target)
+        _ => return None,
+    };
+    // a·var + b = inner  ⇒  var = (inner − b)/a.
+    let shifted = if b.is_zero() {
+        inner.clone()
+    } else {
+        inner.clone() - CasExpr::Const(b)
+    };
+    let root = if a == Rational::integer(1) {
+        shifted
+    } else {
+        fold_trivial(&(shifted / CasExpr::Const(a)))
+    };
+    // Two-part certificate (avoids the rational-argument `exp(3·(ln4/3))` that the
+    // exp-tower would not reduce after a naïve substitute-back):
+    //   (1) the head reduces exactly — `f(inner) = target` — and
+    //   (2) the root links back — `a·root + b = inner` (an exact rational identity).
+    // Together with `target = −C/A` these give `A·f(a·root+b)+C = A·target+C = 0`.
+    // The exp-tower reduces `exp(ln target)=target`; the inverse `ln(exp target)`
+    // is not reduced, so `ln` roots honestly fail here and are declined.
+    let head_reduces = matches!(
+        equal(
+            &CasExpr::Unary(func, Box::new(inner.clone())),
+            &CasExpr::Const(target)
+        ),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let recovered = fold_trivial(&(CasExpr::Const(a) * root.clone() + CasExpr::Const(b)));
+    let links_back = matches!(
+        equal(&recovered, &inner),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    if head_reduces && links_back {
+        Some(vec![fold_trivial(&fold_elementary_constants(&root))])
+    } else {
+        None
+    }
+}
+
+/// Solve `expr = 0` for `var`. Over a univariate polynomial: returns the distinct
+/// real roots (rational roots exact; a leftover real quadratic via the quadratic
+/// formula, rational or symbolic `sqrt`; complex roots and irreducible cubics+
+/// omitted). Also solves elementary transcendental equations `A·exp(ax+b)+C=0`
+/// and `A·ln(ax+b)+C=0` (e.g. `eˣ−5 ⇒ ln 5`). `None` if `expr` is outside both.
 #[must_use]
 pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    // Elementary transcendental equations `A·exp(ax+b)+C=0`, `A·ln(ax+b)+C=0`
+    // fall outside the polynomial fragment; try them first.
+    if let Some(roots) = solve_transcendental(expr, var) {
+        return Some(roots);
+    }
     let mut remaining = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
     poly::rat_degree(&remaining)?; // reject the zero polynomial (every x is a root)
     let mut roots: Vec<CasExpr> = Vec::new();
@@ -2611,7 +2734,10 @@ fn fold_trivial(expr: &CasExpr) -> CasExpr {
         CasExpr::Neg(inner) => {
             let folded = fold_trivial(inner);
             match folded {
-                CasExpr::Const(c) if c.is_zero() => CasExpr::zero(),
+                CasExpr::Const(c) => c.checked_neg().map_or_else(
+                    || CasExpr::Neg(Box::new(CasExpr::Const(c))),
+                    CasExpr::Const,
+                ), // −c → (−c), incl. −0 → 0
                 CasExpr::Neg(inner) => *inner, // −(−x) → x
                 other => CasExpr::Neg(Box::new(other)),
             }
