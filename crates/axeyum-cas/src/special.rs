@@ -135,6 +135,32 @@ pub fn zeta(s: i64) -> Option<CasExpr> {
     Some(CasExpr::Const(coeff) * CasExpr::var("pi").pow(n))
 }
 
+/// The **polygamma function** `ψ⁽ᵐ⁾(1)` at `1`, when it has an elementary closed
+/// form. `ψ⁽ᵐ⁾(1) = (−1)^{m+1}·m!·ζ(m+1)`; since `ζ(m+1)` is a rational multiple of
+/// `π^{m+1}` exactly when `m+1` is even (i.e. **`m` odd**), a closed form is
+/// returned for odd `m ≥ 1` (`ψ′(1) = π²/6`, `ψ‴(1) = π⁴/15`), else `None`.
+///
+/// (The order-0 polygamma `ψ(1) = −γ` involves the Euler–Mascheroni constant,
+/// which has no closed form here, so `m = 0` returns `None`.)
+///
+/// ```
+/// use axeyum_cas::{CasExpr, special::polygamma_at_one, equal, ZeroTest};
+/// // ψ′(1) = ζ(2) = π²/6.
+/// let value = polygamma_at_one(1).unwrap();
+/// let expected = CasExpr::rat(1, 6) * CasExpr::var("pi").pow(2);
+/// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn polygamma_at_one(m: u32) -> Option<CasExpr> {
+    if m == 0 || m.is_multiple_of(2) {
+        return None; // m=0 (−γ) or even m (ζ(odd), no closed form)
+    }
+    // ψ⁽ᵐ⁾(1) = (−1)^{m+1}·m!·ζ(m+1); for odd m, (−1)^{m+1} = +1.
+    let zeta_value = zeta(i64::from(m) + 1)?;
+    let factorial = ntheory::factorial(i128::from(m))?;
+    Some(CasExpr::Const(Rational::integer(factorial)) * zeta_value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +233,19 @@ mod tests {
             &beta(Rational::new(1, 2), Rational::new(1, 2)).unwrap(),
             &(sqrt_pi() * sqrt_pi()),
         );
+    }
+
+    #[test]
+    fn polygamma_at_one_closed_forms() {
+        let pi = || CasExpr::var("pi");
+        // ψ′(1) = ζ(2) = π²/6; ψ‴(1) = 6ζ(4) = π⁴/15; ψ⁽⁵⁾(1) = 120ζ(6) = 8π⁶/63.
+        assert_equal(&polygamma_at_one(1).unwrap(), &(CasExpr::rat(1, 6) * pi().pow(2)));
+        assert_equal(&polygamma_at_one(3).unwrap(), &(CasExpr::rat(1, 15) * pi().pow(4)));
+        assert_equal(&polygamma_at_one(5).unwrap(), &(CasExpr::rat(8, 63) * pi().pow(6)));
+        // Order 0 (−γ) and even orders (ζ of an odd argument) have no closed form.
+        assert!(polygamma_at_one(0).is_none());
+        assert!(polygamma_at_one(2).is_none());
+        assert!(polygamma_at_one(4).is_none());
     }
 
     #[test]
