@@ -372,17 +372,20 @@ ignored. Before this increment, CI hard-required official Lean only for the
 separate inductive cross-check, so the solver-proof sweep could take its optional
 local-development skip.
 
-**Prototype wired, acceptance not yet observed:** the official-Lean CI job is
-configured to run the inductive cross-check and `lean_crosscheck_representative`
-with one module from every one of the **71 registered solver-proof families**,
-an explicit Lean binary, two workers, and no time-budget skip. The docs-
-consistency gate asserts that this command remains present. The latest inspected
-remote job installed Lean 4.30 but failed in `leanprover/lean-action` setup for
-want of `lake-manifest.json`, before either repository cross-check ran. Wiring is
-not execution credit.
+**Local acceptance measured; remote acceptance open:** primary-source audit
+confirmed that `leanprover/lean-action` unconditionally required a Lake manifest
+and was unsuitable as an installer for this Rust repository. The repaired job
+uses checksum-pinned elan, and the solver harness now makes
+`AXEYUM_REQUIRE_LEAN=1` reject both a missing binary and an incomplete sweep.
+The first real representative run exposed four quantified-BV export failures
+(67/71); preserving the exact Bool/BV iota rules and recording one measured
+elaborator-depth bound raises the same local cell to **71/71 accepted, zero
+skipped, zero failed**. The docs-consistency gate binds the family denominator,
+installer checksum, workflow command, and exact attestation. See the
+[official-Lean gate audit](official-lean-ci-gate-audit-2026-07-21.md).
 
-**Remaining research:** repair the action setup, then record the first successful
-remote duration/RSS, Lean version, and checked-family count. Only then add the
+**Remaining research:** record the first successful remote duration/RSS, Lean
+version, and 71/71 attestation. Only then add the
 exhaustive sweep on a scheduled/release cadence with an
 archived checked/declined manifest and `#print axioms` summary.
 

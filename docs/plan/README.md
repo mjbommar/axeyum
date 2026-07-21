@@ -25,7 +25,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   executable-evidence correction to the word “parity”: 78 adjudicated public
   agreements plus four unadjudicated decisions, exact 6/2/2 p4dfa solved-set
   overlap, unmeasured general Z3 solving-power distance, directly measured
-  production-compatibility gaps, and the not-yet-green official-Lean gate.
+  production-compatibility gaps, and the then-unexecuted official-Lean gate.
+- [`official-lean-ci-gate-audit-2026-07-21.md`](official-lean-ci-gate-audit-2026-07-21.md) —
+  primary-source diagnosis of the Lake-action setup failure, checksum-pinned
+  non-Lake installer, missing-binary fail-closed repair, initial 67/71 external
+  rejection result, narrow export corrections, and bounded local 71/71 rerun.
 - [`gap-ownership-v1.json`](gap-ownership-v1.json) and the generated
   [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
   routing from each research question to owning code, committed evidence,

@@ -187,16 +187,16 @@ jobs:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # `lean-toolchain` pins the official release. This action installs it but
-      # runs no Lake project steps; the Rust test below invokes Lean directly.
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          test: false
-          lint: false
-          use-mathlib-cache: false
-          use-github-cache: false
+      # Axeyum emits standalone Lean modules and is not a Lake project.
+      # lean-action requires lake-manifest.json even with every Lake step off,
+      # so use the checksum-pinned elan installer and repository toolchain pin.
+      - name: install pinned official Lean toolchain
+        run: |
+          lean_root="$RUNNER_TEMP/axeyum-lean"
+          ./scripts/install-pinned-lean.sh "$lean_root"
+          echo "ELAN_HOME=$lean_root/elan-home" >> "$GITHUB_ENV"
+          echo "AXEYUM_LEAN_BIN=$lean_root/elan-home/bin/lean" >> "$GITHUB_ENV"
+          echo "$lean_root/elan-home/bin" >> "$GITHUB_PATH"
       - run: lean --version
       - run: cargo test -p axeyum-lean-kernel --test real_lean_inductive_crosscheck -- --nocapture
       # One module from every registered solver-proof family. The exhaustive
@@ -205,11 +205,14 @@ jobs:
       # harness's optional local-development skip.
       - name: representative solver proofs in official Lean
         run: |
-          AXEYUM_LEAN_BIN="$(command -v lean)"
-          export AXEYUM_LEAN_BIN
           test -x "$AXEYUM_LEAN_BIN"
+          set -o pipefail
           cargo test -p axeyum-solver --features full --test lean_crosscheck \
-            lean_crosscheck_representative -- --nocapture --exact
+            lean_crosscheck_representative -- --nocapture --exact 2>&1 \
+            | tee "$RUNNER_TEMP/lean-representative.log"
+          grep -Fx \
+            'LEAN_CROSSCHECK|label=representative|families=71|modules=71|checked=71|budget_skipped=0|failed=0' \
+            "$RUNNER_TEMP/lean-representative.log"
 
   deny:
     name: cargo-deny

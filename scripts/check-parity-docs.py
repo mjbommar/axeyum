@@ -27,12 +27,15 @@ ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
 PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21.md"
+LEAN_GATE_AUDIT = ROOT / "docs" / "plan" / "official-lean-ci-gate-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+LEAN_INSTALLER = ROOT / "scripts" / "install-pinned-lean.sh"
+LEAN_CROSSCHECK_SOURCE = ROOT / "crates" / "axeyum-solver" / "tests" / "lean_crosscheck.rs"
 AXEYUM_P4DFA = (
     ROOT
     / "bench-results"
@@ -74,6 +77,7 @@ LIVE_DOCS = (
     ROOT / "docs" / "user-guide" / "limitations.md",
     GAP_DOC,
     PARITY_AUDIT,
+    LEAN_GATE_AUDIT,
     SMTCOMP_README,
     CATEGORICAL_AUDIT,
     ROOT / "docs" / "plan" / "01-dependency-dag.md",
@@ -385,11 +389,38 @@ def main() -> int:
         f"{snapshot['p4dfa_axeyum_only_20s']} Axeyum-only",
         f"{snapshot['p4dfa_z3_only_20s']} Z3-only",
         "general solving-power distance to Z3 is not measured",
-        "not yet backed by",
+        "71/71 accepted",
     ):
         if marker not in parity_audit_text:
             failures.append(
                 f"{PARITY_AUDIT.relative_to(ROOT)}: missing evidence-audit marker {marker!r}"
+            )
+
+    lean_source = LEAN_CROSSCHECK_SOURCE.read_text(encoding="utf-8")
+    family_block = re.search(
+        r"const FAMILY_BUILDERS: &\[FamilyBuilder\] = &\[(.*?)\n\];",
+        lean_source,
+        re.DOTALL,
+    )
+    if family_block is None:
+        failures.append("cannot locate Lean FAMILY_BUILDERS registry")
+        lean_family_count = 0
+    else:
+        lean_family_count = len(
+            re.findall(r"^\s+[a-z][a-z0-9_]+,\s*$", family_block.group(1), re.MULTILINE)
+        )
+
+    lean_gate_text = LEAN_GATE_AUDIT.read_text(encoding="utf-8")
+    for marker in (
+        f"modules={lean_family_count}|checked=67|budget_skipped=0|failed=4",
+        f"71/{lean_family_count}",
+        "budget_skipped=0|failed=0",
+        "MISSING_LEAN_FAIL_CLOSED",
+        "remote CI acceptance pending",
+    ):
+        if marker not in lean_gate_text:
+            failures.append(
+                f"{LEAN_GATE_AUDIT.relative_to(ROOT)}: missing Lean-gate marker {marker!r}"
             )
 
     project_state_markers = (
@@ -419,6 +450,7 @@ def main() -> int:
         "zero interactive textual-session rows",
         "cannot be retroactively classified",
         "fully competition-faithful",
+        "71/71 accepted",
     )
     project_state_text = PROJECT_STATE.read_text(encoding="utf-8")
     for marker in project_state_markers:
@@ -463,15 +495,38 @@ def main() -> int:
             )
 
     ci_text = CI_WORKFLOW.read_text(encoding="utf-8")
+    lean_attestation = (
+        "LEAN_CROSSCHECK|label=representative|"
+        f"families={lean_family_count}|modules={lean_family_count}|"
+        f"checked={lean_family_count}|budget_skipped=0|failed=0"
+    )
     for marker in (
         "AXEYUM_LEAN_BUDGET_SECS: 0",
         "AXEYUM_LEAN_JOBS: 2",
         "--test lean_crosscheck",
         "lean_crosscheck_representative -- --nocapture --exact",
+        "./scripts/install-pinned-lean.sh",
+        lean_attestation,
     ):
         if marker not in ci_text:
             failures.append(
                 f"{CI_WORKFLOW.relative_to(ROOT)}: missing representative Lean gate {marker!r}"
+            )
+    if "leanprover/lean-action" in ci_text:
+        failures.append(
+            f"{CI_WORKFLOW.relative_to(ROOT)}: non-Lake Axeyum job must not use lean-action"
+        )
+
+    installer_text = LEAN_INSTALLER.read_text(encoding="utf-8")
+    for marker in (
+        "elan_version=v4.2.3",
+        "df0b2b3a439961ffcbb3985214365ffe40f49bc871df04dff268c7d8e21ca8b2",
+        "sha256sum --check --status",
+        'toolchain=$(tr -d \'[:space:]\' < "$repo_root/lean-toolchain")',
+    ):
+        if marker not in installer_text:
+            failures.append(
+                f"{LEAN_INSTALLER.relative_to(ROOT)}: missing pinned installer marker {marker!r}"
             )
 
     line = "|".join(f"{key}={value}" for key, value in snapshot.items())

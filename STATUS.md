@@ -72,11 +72,17 @@ QF_BV three-solver control (19/24 each). The public inventory's legacy
 contradictions of known statuses; the exact p4dfa overlap is 6 jointly decided,
 2 Axeyum-only, and 2 Z3-only. General Z3 solving-power distance is therefore
 unmeasured, while production compatibility remains demonstrably far. The
-required 71-family official-Lean solver-proof CI tier is wired beside the
-inductive cross-check, but the latest inspected job failed in Lean action setup
-before either cross-check ran. Repair it and record the first remote
-duration/RSS, Lean version, and checked-family count before sizing the scheduled
-exhaustive tier. See the
+required 71-family official-Lean solver-proof tier now bypasses the
+Lake-only action, installs checksum-pinned elan, and fails closed on a missing
+binary or incomplete sweep. Its first real local run rejected four modules
+(67/71): three lost Bool/BV iota rules under opaque-inductive export and one hit
+Lean's default elaborator recursion depth. Narrow export corrections rerun at
+**71/71 accepted with two workers, zero skipped, zero failed**. The first
+corrected run's Lean-worker phase took 6.8 s; a same-shape confirmation under
+different local load took 53.3 s, so neither is promoted as a performance
+claim. The standalone inductive test and missing-Lean negative control also
+pass. A remote green job and archived duration/RSS remain open before sizing
+the scheduled exhaustive tier. See the
 [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
@@ -362,6 +368,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-21 — the representative official-Lean gate is now locally real and
+  fail-closed.** Primary-source inspection showed that `leanprover/lean-action`
+  required a Lake manifest even though Axeyum only needs standalone Lean; a
+  checksum-pinned elan installer now follows `lean-toolchain` without inventing
+  a Lake project. Executing the previously blocked gate exposed four real
+  quantified-BV exporter failures (67/71), fixed narrowly by retaining the
+  required Bool/BV inductive computation and a self-contained measured
+  `maxRecDepth` option. Two corrected official-Lean 4.30 runs accept 71/71 with
+  zero skips/failures, and the missing-binary negative control now fails. Local
+  duration varied materially (6.8 s and 53.3 s in the Lean-worker phase), so no
+  speed claim is attached. **Next:** push the repaired workflow, require one
+  remote 71/71 attestation with version/duration/RSS, then inventory expected
+  axioms before sizing the exhaustive sweep. See the
+  [gate audit](docs/plan/official-lean-ci-gate-audit-2026-07-21.md).
 
 - **2026-07-21 — G1 now has a shared measurement schema, and the two headline
   populations overlap materially.** The generated 53-row provenance matrix

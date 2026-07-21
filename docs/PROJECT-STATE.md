@@ -125,10 +125,10 @@ Again, there are distinct targets:
 - **Solver proof export:** substantial and useful today. Supported refutations
   become kernel-checked terms and self-contained Lean modules. The harness
   registers 71 proof-family builders and CI is configured to send one module
-  per family to official Lean. That gate is not yet demonstrated green: the
-  latest inspected job failed during Lean action setup before the repository
-  cross-checks ran. The exhaustive every-module sweep is not a required
-  per-change gate.
+  per family to official Lean. A repaired checksum-pinned local run now records
+  **71/71 accepted, zero skipped, zero failed** after exposing and correcting
+  four hidden quantified-BV export failures. Remote CI acceptance is still
+  pending. The exhaustive every-module sweep is not a required per-change gate.
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, and iota reduction. Major residuals

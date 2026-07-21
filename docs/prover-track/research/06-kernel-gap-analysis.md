@@ -309,8 +309,9 @@ as Lean source.
 
 ### Does the cross-check actually run, or skip-and-pass?
 
-**It runs in CI, genuinely.** This is the rare case where the gate is real, and
-the code is careful about exactly the failure mode worth worrying about:
+**Correction after executing the solver-proof gate (2026-07-21):** the
+standalone inductive test was fail-closed, but the CI job did not reach it and
+the 71-family solver harness could still skip. The repaired state is:
 
 - The test `restricted_prop_recursor_checks_in_real_lean`
   (`tests/real_lean_inductive_crosscheck.rs:83-126`) locates Lean via
@@ -318,13 +319,18 @@ the code is careful about exactly the failure mode worth worrying about:
 - On a missing binary it **does** early-return (`:92-100`) — *but* guarded by
   `assert_ne!(env::var("AXEYUM_REQUIRE_LEAN"), Ok("1"))` (`:93-97`). So a skip
   is a **hard failure** when the flag is set.
-- CI sets `AXEYUM_REQUIRE_LEAN: 1` (`.github/workflows/ci.yml:136`), installs
-  the pinned toolchain via `leanprover/lean-action@v1` (`ci.yml:143`), asserts
-  `lean --version` (`ci.yml:151`), and runs the test (`ci.yml:152`).
+- CI sets `AXEYUM_REQUIRE_LEAN: 1`, installs checksum-pinned elan without
+  requiring a Lake manifest, asserts `lean --version`, and runs the test.
+- The solver harness now independently rejects a missing Lean binary or any
+  incomplete required sweep and emits an exact checked-family attestation.
+- A bounded local official-Lean run initially accepted 67/71 representative
+  modules and exposed four export failures; after preserving the required
+  Bool/BV iota rules and one measured elaborator-depth bound, the same cell
+  accepts 71/71 with zero skips or failures. Remote CI acceptance remains open.
 
-So: **skipping locally, mandatory in CI, and the skip path is itself asserted
-against.** A missing-Lean CI runner fails loudly rather than passing silently.
-That is the correct construction and it should be the template for future gates.
+So: **skipping remains optional locally, while required runs now fail closed.**
+The complete diagnosis, negative control, and non-claims are in the
+[official-Lean gate audit](../../plan/official-lean-ci-gate-audit-2026-07-21.md).
 
 **What it actually checks** (`:27-81`): it builds `Two : Prop | a | b` — the
 exact P0 shape — through `add_inductive`, confirms Axeyum's restricted `Two.rec`

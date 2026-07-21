@@ -31,10 +31,15 @@ state.
 > scorer field partitions into **78 known-status agreements** plus **4
 > unadjudicated decisions**, not 82 independently correct answers. General Z3
 > solving-power distance remains unmeasured until a representative matched run;
-> production/API replacement remains demonstrably far. The 71-family
-> official-Lean gate is wired but has not earned remote acceptance credit: the
-> latest inspected job failed in Lean action setup before either external-Lean
-> test. Repair and archive that gate before claiming it is mandatory and green.
+> production/API replacement remains demonstrably far. The repaired
+> [official-Lean gate](docs/plan/official-lean-ci-gate-audit-2026-07-21.md)
+> now installs checksum-pinned elan without a fake Lake project and makes
+> `AXEYUM_REQUIRE_LEAN=1` fail closed. Its first real run exposed four hidden
+> quantified-BV export failures (67/71); real-inductive rendering for the exact
+> computing Bool/BV families plus one measured elaborator-depth option raises
+> the same bounded local run to **71/71 accepted, zero skipped, zero failed**.
+> Remote CI acceptance and the 64-axiom discharge remain open; do not convert
+> representative source acceptance into full proof-family or Lean parity.
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact

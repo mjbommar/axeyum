@@ -17,8 +17,9 @@ Last updated: 2026-07-21
 > prevents one “distance” label from crossing targets: selected fragment cells
 > can be competitive; general Z3 solving-power distance is unmeasured;
 > production Z3 compatibility is demonstrably far; solver-proof export to Lean
-> is substantial but its official-Lean CI gate is not yet recorded green; full
-> Lean language/toolchain parity is out of scope.
+> now has a bounded local 71/71 official-Lean acceptance result after four
+> hidden export failures were exposed and fixed, while remote CI and exhaustive
+> acceptance remain open; full Lean language/toolchain parity is out of scope.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

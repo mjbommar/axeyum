@@ -7,9 +7,11 @@
 //! `#print axioms` must report no `sorryAx` (no cheating). This independently
 //! corroborates the in-tree [`axeyum_lean_kernel::Kernel`] check.
 //!
-//! The `lean` binary is optional: each test **skips** (prints a note, passes)
-//! when it is absent. Install it with `elan` (a `leanprover/lean4` toolchain on
-//! `PATH`), or point `AXEYUM_LEAN_BIN` at a `lean` executable.
+//! The `lean` binary is optional for local development: each test **skips**
+//! (prints a note, passes) when it is absent. `AXEYUM_REQUIRE_LEAN=1` turns that
+//! skip into a failure for CI/publication gates. Install Lean with `elan` (a
+//! `leanprover/lean4` toolchain on `PATH`), or point `AXEYUM_LEAN_BIN` at a
+//! `lean` executable.
 #![cfg(feature = "full")]
 #![allow(clippy::many_single_char_names)]
 #![allow(clippy::similar_names)]
@@ -72,6 +74,7 @@ fn lean_bin() -> Option<PathBuf> {
 //
 // Knobs (env):
 //   AXEYUM_LEAN_BIN         path to a `lean` executable (else first on PATH)
+//   AXEYUM_REQUIRE_LEAN     1 makes a missing binary or incomplete sweep fail
 //   AXEYUM_LEAN_JOBS        pool size (default: available parallelism)
 //   AXEYUM_LEAN_BUDGET_SECS wall-clock budget; remaining modules are skipped
 //                           (loudly, NOT failed) once exceeded. Unset/0 = no cap.
@@ -293,6 +296,10 @@ fn lean_budget() -> Option<Duration> {
     }
 }
 
+fn lean_required() -> bool {
+    std::env::var("AXEYUM_REQUIRE_LEAN").as_deref() == Ok("1")
+}
+
 /// Pool size from `AXEYUM_LEAN_JOBS`, else available parallelism, clamped to the
 /// number of pending modules.
 fn lean_jobs(total: usize) -> usize {
@@ -311,16 +318,20 @@ fn lean_jobs(total: usize) -> usize {
 
 /// Drive `cases` through the real `lean` kernel across a bounded thread pool,
 /// honoring the wall-clock budget. Prints an honest summary and FAILS the test
-/// iff any *checked* module was rejected. Budget / no-lean skips are loud but
-/// not failures. Skips gracefully (prints a note, passes) when no `lean` binary
-/// is available — the CI-runner behavior.
-fn run_lean_checks(label: &str, cases: &[(String, String)]) {
+/// iff any *checked* module was rejected. Budget / no-lean skips are loud for
+/// optional local runs; `AXEYUM_REQUIRE_LEAN=1` makes either an incomplete sweep
+/// or a missing binary fail closed.
+fn run_lean_checks(label: &str, family_count: usize, cases: &[(String, String)]) {
     let total = cases.len();
     if total == 0 {
         eprintln!("[lean crosscheck:{label}] no modules to check");
         return;
     }
     if lean_bin().is_none() {
+        assert!(
+            !lean_required(),
+            "AXEYUM_REQUIRE_LEAN=1 but no Lean binary was found ({total} modules NOT checked)"
+        );
         eprintln!(
             "[skip] lean crosscheck:{label}: lean binary not found; install via elan or set \
              AXEYUM_LEAN_BIN ({total} modules NOT checked)"
@@ -373,12 +384,27 @@ fn run_lean_checks(label: &str, cases: &[(String, String)]) {
         start.elapsed().as_secs_f64(),
         failures.len()
     );
+    eprintln!(
+        "LEAN_CROSSCHECK|label={label}|families={family_count}|modules={total}|checked={checked}|\
+         budget_skipped={skipped}|failed={}",
+        failures.len()
+    );
     assert!(
         failures.is_empty(),
         "{} Lean module(s) FAILED the kernel crosscheck:\n{}",
         failures.len(),
         failures.join("\n===\n")
     );
+    if lean_required() {
+        assert_eq!(
+            checked, total,
+            "required Lean cross-check did not check every module"
+        );
+        assert_eq!(
+            skipped, 0,
+            "required Lean cross-check skipped modules due to budget"
+        );
+    }
 }
 
 /// **Representative Lean cross-check (default).** One reconstructed module per
@@ -388,7 +414,13 @@ fn run_lean_checks(label: &str, cases: &[(String, String)]) {
 /// builder still run for all rows regardless.
 #[test]
 fn lean_crosscheck_representative() {
-    run_lean_checks("representative", &collect_cases(Some(1)));
+    let cases = collect_cases(Some(1));
+    assert_eq!(
+        cases.len(),
+        FAMILY_BUILDERS.len(),
+        "representative Lean gate requires exactly one module per proof family"
+    );
+    run_lean_checks("representative", FAMILY_BUILDERS.len(), &cases);
 }
 
 /// **Exhaustive Lean cross-check.** Every reconstructed module across every
@@ -398,7 +430,7 @@ fn lean_crosscheck_representative() {
 #[test]
 #[ignore = "corpus-scale; run explicitly: cargo test --test lean_crosscheck -- --ignored"]
 fn lean_crosscheck_full() {
-    run_lean_checks("full", &collect_cases(None));
+    run_lean_checks("full", FAMILY_BUILDERS.len(), &collect_cases(None));
 }
 
 /// `QF_UFBV`: `f(a) = #b00 ∧ a = b ∧ ¬(f(b) = #b00)` — `Apply` + `BitVec`, refuted
@@ -658,6 +690,8 @@ fn quantified_bv_source_instance_set_checks_in_real_lean() {
     let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
         .expect("quantified source instances reconstruct");
     assert_eq!(fragment, ProofFragment::BvPositiveUniversalInstanceSet);
+    assert!(source.contains("set_option maxRecDepth 100000"));
+    assert!(source.contains("inductive axeyum.reconstruct.bv32"));
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_source_instance_set", &source);
 }
@@ -676,6 +710,8 @@ fn quantified_bv_negated_existential_witness_checks_in_real_lean() {
     let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
         .expect("negated-existential witness reconstructs");
     assert_eq!(fragment, ProofFragment::NegatedExistentialWitness);
+    assert!(source.contains("inductive Bool"));
+    assert!(source.contains("inductive axeyum.reconstruct.bv21"));
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_negated_existential_witness", &source);
 }
@@ -691,6 +727,7 @@ fn quantified_bv_closed_universal_counterexample_checks_in_real_lean() {
     let (fragment, source) = prove_unsat_to_lean_module(&mut script.arena, &assertions)
         .expect("closed Bool/BV universal reconstructs");
     assert_eq!(fragment, ProofFragment::BvClosedUniversalCounterexample);
+    assert!(source.contains("inductive axeyum.reconstruct.bv8"));
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_closed_universal_counterexample", &source);
 }
@@ -711,6 +748,7 @@ fn quantified_bv_vacuous_exists_counterexample_checks_in_real_lean() {
         fragment,
         ProofFragment::BvVacuousExistsUniversalCounterexample
     );
+    assert!(source.contains("inductive Bool"));
     assert!(source.contains("Exists.rec"));
     assert!(!source.contains("sorryAx"));
     lean_accepts("quant_bv_vacuous_exists_counterexample", &source);

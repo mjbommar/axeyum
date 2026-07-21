@@ -14,8 +14,8 @@ and Lean.” It supports three different readings:
    measured universal decision-rate deficit.
 3. Axeyum has a substantial solver-to-Lean proof bridge, but only partial
    Lean-core compatibility. Replacing the whole Lean language/toolchain is a
-   non-goal. The current mandatory external-Lean CI claim is also not yet backed by
-   a successful recorded run.
+   non-goal. A follow-up now records bounded local 71/71 official-Lean source
+   acceptance; remote and exhaustive acceptance remain open.
 
 The operational mistake would be to turn either “8 versus 8” or “not Z3/Lean
 parity” into a project-wide percentage. The roadmap must name the target and its
@@ -88,10 +88,14 @@ But the validation boundary is narrower than “Lean accepts it all”:
 
 - the local real-Lean inductive integration test skips when no Lean binary is
   installed;
-- the latest inspected CI job installed Lean 4.30, then failed inside
+- the previously inspected CI job installed Lean 4.30, then failed inside
   `leanprover/lean-action` because no `lake-manifest.json` existed, before either
   repository external-Lean test ran ([job
   log](https://github.com/mjbommar/axeyum/actions/runs/29871224467/job/88771536340));
+- after replacing that Lake-only setup path, the first real local sweep accepted
+  67/71 modules and rejected four quantified-BV exports; narrow real-inductive
+  and elaborator-depth corrections then produced **71/71 accepted, zero skipped,
+  zero failed** under official Lean 4.30;
 - the kernel audit lists projections, literal/bignum handling, quotient
   computation, generalized recursive/indexed/mutual inductives, positivity,
   and an export/import reader as residual work; and
@@ -114,7 +118,7 @@ profile, and a fail-closed Lean tactic/import path.
 | Selected p4dfa decision count | Tied 8/113, but only 6 jointly decided and two unique decisions each | Study complementary solved sets; do not claim solver parity |
 | General Z3 solving power | **Not measured** on a representative matched population | Finish durable official-style selection and run matched Z3/cvc5/Bitwuzla/Axeyum cells before assigning distance |
 | Z3-compatible product surface | Far: command/session/API and portfolio gaps are directly inventoried | Prioritize the ordered session contract and conformance, not another isolated theory seed |
-| Solver-proof export to Lean | Substantial implementation; external gate intended but not currently demonstrated green | Repair and record the non-skippable official-Lean gate before publication credit |
+| Solver-proof export to Lean | Substantial implementation; local representative official-Lean acceptance is 71/71, remote and exhaustive acceptance are open | Archive a green remote attestation, then measure the exhaustive sweep without inflating representative coverage |
 | Declared Lean-core profile | Partial, with explicit kernel and axiom gaps | Build a differential profile and discharge the 64 arithmetic axioms |
 | Full Lean system | Far and out of scope | Remove it from parity language and roadmap exit criteria |
 
@@ -128,8 +132,8 @@ profile, and a fail-closed Lean tactic/import path.
    until a representative matched run exists.
 5. Keep production Z3 replacement **far** and attach that label to the measured
    command/session, robustness, and portfolio gaps.
-6. Restore a demonstrably non-skippable external-Lean job and archive its Lean
-   version, checked-family count, duration, RSS, and axiom inventory.
+6. Archive the repaired non-skippable external-Lean job's first remote Lean
+   version, 71/71 attestation, duration, RSS, and axiom inventory.
 7. Separate official-Lean source acceptance from validation of asserted prelude
    mathematics; discharge the 64 arithmetic axioms independently.
 8. Make a versioned Lean-core compatibility profile the kernel target.
