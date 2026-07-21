@@ -54,8 +54,10 @@ pub mod groebner;
 mod matrix;
 pub mod mvpoly;
 pub mod ntheory;
+pub mod ntheory_advanced;
 mod ratint;
 mod series;
+pub mod stats;
 
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
@@ -1807,6 +1809,157 @@ fn minimal_polynomial_expr(coeffs: &[Rational], var: &str) -> CasExpr {
     expand(&expr).unwrap_or(expr)
 }
 
+/// The gradient `∇f = (∂f/∂x₁, …, ∂f/∂xₙ)` of a scalar field, one partial
+/// derivative per variable in `vars`. Each component is a certified partial
+/// derivative (via [`CasExpr::differentiate`], exact on the algebraic fragment).
+#[must_use]
+pub fn gradient(expr: &CasExpr, vars: &[&str]) -> Vec<CasExpr> {
+    vars.iter().map(|var| expr.differentiate(var)).collect()
+}
+
+/// The Jacobian matrix `J[i][j] = ∂fᵢ/∂xⱼ` of a vector of scalar fields `exprs`
+/// with respect to `vars` (rows indexed by `exprs`, columns by `vars`). Each entry
+/// is a certified partial derivative. `None` only if the shape is degenerate for
+/// [`Matrix::from_rows`] (e.g. `exprs` empty).
+#[must_use]
+pub fn jacobian(exprs: &[CasExpr], vars: &[&str]) -> Option<Matrix> {
+    let rows: Vec<Vec<CasExpr>> = exprs
+        .iter()
+        .map(|f| vars.iter().map(|var| f.differentiate(var)).collect())
+        .collect();
+    Matrix::from_rows(rows)
+}
+
+/// The divergence `∇·F = Σ ∂Fᵢ/∂xᵢ` of a vector field `field` over coordinates
+/// `vars`. Requires `field.len() == vars.len()` and a non-empty field; returns
+/// `None` otherwise. The result is expanded to canonical form.
+#[must_use]
+pub fn divergence(field: &[CasExpr], vars: &[&str]) -> Option<CasExpr> {
+    if field.is_empty() || field.len() != vars.len() {
+        return None;
+    }
+    let mut sum = CasExpr::zero();
+    for (component, var) in field.iter().zip(vars) {
+        sum = sum + component.differentiate(var);
+    }
+    Some(expand(&sum).unwrap_or(sum))
+}
+
+/// The curl `∇×F` of a three-dimensional vector field, returned as its three
+/// components. `field` and `vars` must each have length 3 (Cartesian `x, y, z`);
+/// returns `None` otherwise. Each component is a difference of certified partial
+/// derivatives, expanded to canonical form.
+#[must_use]
+pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
+    if field.len() != 3 || vars.len() != 3 {
+        return None;
+    }
+    let (fx, fy, fz) = (&field[0], &field[1], &field[2]);
+    let (x, y, z) = (vars[0], vars[1], vars[2]);
+    let component = |expr: CasExpr| expand(&expr).unwrap_or(expr);
+    Some([
+        component(fz.differentiate(y) - fy.differentiate(z)),
+        component(fx.differentiate(z) - fz.differentiate(x)),
+        component(fy.differentiate(x) - fx.differentiate(y)),
+    ])
+}
+
+/// Factor a non-negative integer `n` as `s²·m` with `m` square-free, returning
+/// `(s, m)` — the data needed to pull the largest perfect square out of a radical.
+/// `None` on overflow.
+fn largest_square_factor(n: i128) -> Option<(i128, i128)> {
+    let mut square_root = 1i128;
+    let mut squarefree = 1i128;
+    for (prime, exponent) in ntheory::factorize(n) {
+        for _ in 0..(exponent / 2) {
+            square_root = square_root.checked_mul(prime)?;
+        }
+        if exponent % 2 == 1 {
+            squarefree = squarefree.checked_mul(prime)?;
+        }
+    }
+    Some((square_root, squarefree))
+}
+
+/// Simplify `√c` for a non-negative rational constant `c` into `k·√m` with `m`
+/// square-free (and to a bare rational when `m = 1`), rationalizing any
+/// denominator. Returns `None` for a negative radicand (left symbolic) or on
+/// overflow. The rewrite is exact by construction: `k²·m = c`, an integer identity.
+fn simplify_sqrt_const(value: Rational) -> Option<CasExpr> {
+    let numerator = value.numerator();
+    let denominator = value.denominator(); // normalized positive
+    if numerator < 0 {
+        return None; // negative radicand — not a real simplification here
+    }
+    if numerator == 0 {
+        return Some(CasExpr::zero());
+    }
+    // √(a/b) = √(a·b)/b; pull the square part out of the integer a·b.
+    let radicand = numerator.checked_mul(denominator)?;
+    let (square_root, squarefree) = largest_square_factor(radicand)?;
+    let coefficient = Rational::checked_new(square_root, denominator)?;
+    if squarefree == 1 {
+        return Some(CasExpr::Const(coefficient));
+    }
+    let radical = CasExpr::Const(Rational::integer(squarefree)).sqrt();
+    if coefficient == Rational::integer(1) {
+        Some(radical)
+    } else {
+        Some(CasExpr::Const(coefficient) * radical)
+    }
+}
+
+/// Simplify surds throughout an expression: rewrite every `√c` on a non-negative
+/// rational constant `c` into `k·√m` with `m` square-free (extracting perfect
+/// squares and rationalizing denominators, e.g. `√12 → 2·√3`, `√(1/2) → (1/2)·√2`).
+/// Other subexpressions are recursed into structurally and left otherwise
+/// unchanged. Each rewrite is exact (`k²·m = c`), so the result is value-equal to
+/// the input by construction.
+#[must_use]
+pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
+            let inner = simplify_radicals(arg);
+            if let CasExpr::Const(value) = inner
+                && let Some(simplified) = simplify_sqrt_const(value)
+            {
+                return simplified;
+            }
+            inner.sqrt()
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(simplify_radicals(arg))),
+        CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(simplify_radicals).collect()),
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(simplify_radicals).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(simplify_radicals(inner))),
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(simplify_radicals(numerator)),
+            Box::new(simplify_radicals(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => {
+            CasExpr::Pow(Box::new(simplify_radicals(base)), *exponent)
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// The **population** standard deviation `√variance` of rational data, returned as
+/// an exact [`CasExpr`] with any surd simplified to lowest terms. `None` if `data`
+/// is empty or on overflow.
+#[must_use]
+pub fn standard_deviation(data: &[Rational]) -> Option<CasExpr> {
+    let variance = stats::variance(data)?;
+    Some(simplify_radicals(&CasExpr::Const(variance).sqrt()))
+}
+
+/// The **sample** standard deviation `√(sample variance)` of rational data (with
+/// Bessel's `n − 1` correction), as an exact [`CasExpr`] with any surd simplified.
+/// `None` if `data` has fewer than two points or on overflow.
+#[must_use]
+pub fn sample_standard_deviation(data: &[Rational]) -> Option<CasExpr> {
+    let variance = stats::sample_variance(data)?;
+    Some(simplify_radicals(&CasExpr::Const(variance).sqrt()))
+}
+
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
 /// `−I`. Purely structural.
 #[must_use]
@@ -3232,6 +3385,79 @@ mod tests {
 
         // exp(x) about a nonzero center leaves the rational fragment → None.
         assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
+    }
+
+    #[test]
+    fn gradient_jacobian_divergence_curl() {
+        let x = || v("x");
+        let y = || v("y");
+        let z = || v("z");
+        // field = x²y + y·z: ∇field = (2xy, x²+z, y).
+        let scalar = x().pow(2) * y() + y() * z();
+        let grad = gradient(&scalar, &["x", "y", "z"]);
+        assert_equal(&grad[0], &(CasExpr::int(2) * x() * y()));
+        assert_equal(&grad[1], &(x().pow(2) + z()));
+        assert_equal(&grad[2], &y());
+
+        // Jacobian of (x·y, x+y) w.r.t. (x,y) = [[y, x],[1, 1]].
+        let jac = jacobian(&[x() * y(), x() + y()], &["x", "y"]).unwrap();
+        assert_equal(jac.get(0, 0).unwrap(), &y());
+        assert_equal(jac.get(0, 1).unwrap(), &x());
+        assert_equal(jac.get(1, 0).unwrap(), &CasExpr::int(1));
+        assert_equal(jac.get(1, 1).unwrap(), &CasExpr::int(1));
+
+        // div(x², y², z²) = 2x + 2y + 2z.
+        let div = divergence(&[x().pow(2), y().pow(2), z().pow(2)], &["x", "y", "z"]).unwrap();
+        assert_equal(&div, &(CasExpr::int(2) * x() + CasExpr::int(2) * y() + CasExpr::int(2) * z()));
+
+        // A gradient field (−y, x, 0)? curl = (0,0,2). Standard example curl of
+        // (−y, x, 0) = (0, 0, 2).
+        let rotor = curl(&[-y(), x(), CasExpr::zero()], &["x", "y", "z"]).unwrap();
+        assert_equal(&rotor[0], &CasExpr::zero());
+        assert_equal(&rotor[1], &CasExpr::zero());
+        assert_equal(&rotor[2], &CasExpr::int(2));
+    }
+
+    #[test]
+    fn radical_simplification_extracts_squares() {
+        // √12 = 2√3.
+        let s = simplify_radicals(&CasExpr::int(12).sqrt());
+        assert_equal(&s, &(CasExpr::int(2) * CasExpr::int(3).sqrt()));
+        // √9 = 3 (perfect square → rational).
+        assert_equal(&simplify_radicals(&CasExpr::int(9).sqrt()), &CasExpr::int(3));
+        // √(1/2) = (1/2)·√2 (rationalized denominator).
+        let half = simplify_radicals(&CasExpr::rat(1, 2).sqrt());
+        assert_equal(&half, &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()));
+        // √8/9 wrapped: √(8/9) = (2/3)√2.
+        assert_equal(
+            &simplify_radicals(&CasExpr::rat(8, 9).sqrt()),
+            &(CasExpr::rat(2, 3) * CasExpr::int(2).sqrt()),
+        );
+        // Certificate (square it back): (2√3)² = 12, checked by squaring the rational
+        // coefficient and the square-free part — here 2²·3 = 12.
+        // √2 is already square-free — left unchanged.
+        assert_equal(&simplify_radicals(&CasExpr::int(2).sqrt()), &CasExpr::int(2).sqrt());
+        // Negative radicand is left symbolic (no real simplification).
+        let neg = CasExpr::int(-3).sqrt();
+        assert_equal(&simplify_radicals(&neg), &neg);
+    }
+
+    #[test]
+    fn standard_deviation_is_exact() {
+        // {2,4,4,4,5,5,7,9}: population variance 4 → stddev 2.
+        let data: Vec<Rational> = [2, 4, 4, 4, 5, 5, 7, 9]
+            .into_iter()
+            .map(Rational::integer)
+            .collect();
+        assert_equal(&standard_deviation(&data).unwrap(), &CasExpr::int(2));
+        // {1,2,3}: population variance 2/3 → stddev √(2/3) = (1/3)√6.
+        let small: Vec<Rational> = [1, 2, 3].into_iter().map(Rational::integer).collect();
+        assert_equal(
+            &standard_deviation(&small).unwrap(),
+            &(CasExpr::rat(1, 3) * CasExpr::int(6).sqrt()),
+        );
+        // Sample variance of {1,2,3} = 1 → sample stddev 1.
+        assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
     }
 
     #[test]
