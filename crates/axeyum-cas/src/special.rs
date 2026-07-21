@@ -8,7 +8,7 @@
 
 use axeyum_ir::Rational;
 
-use crate::{CasExpr, ntheory};
+use crate::{CasExpr, combinatorics, ntheory};
 
 /// `√π` as a `CasExpr` (the reserved constant `pi` under a square root).
 fn sqrt_pi() -> CasExpr {
@@ -67,6 +67,70 @@ pub fn beta(x: Rational, y: Rational) -> Option<CasExpr> {
     Some(gx * gy / gxy)
 }
 
+/// The **Riemann zeta function** `ζ(s)` at an integer `s`, wherever it has an
+/// elementary closed form:
+///
+/// - **positive even** `s = 2k`: `ζ(2k) = (−1)^{k+1}·B_{2k}·(2π)^{2k}/(2·(2k)!)`,
+///   a rational multiple of `π^{2k}` (`ζ(2) = π²/6`, `ζ(4) = π⁴/90`, …), returned
+///   as `CasExpr::Const(c)·pi^{2k}`;
+/// - `s = 0`: `ζ(0) = −1/2`;
+/// - **negative integers** `s = −m` (`m ≥ 1`): `ζ(−m) = −B_{m+1}/(m+1)`
+///   (`ζ(−1) = −1/12`; `ζ(−2k) = 0` at the trivial zeros).
+///
+/// Returns `None` for the pole at `s = 1`, for **positive odd** `s ≥ 3` (`ζ(3)`,
+/// … have no known elementary closed form — honestly declined, not approximated),
+/// and on `i128` overflow (large `s`, where the factorial or `2^{2k}` exceeds the
+/// exact range).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, special::zeta, equal, ZeroTest};
+/// // ζ(2) = π²/6.
+/// let z2 = zeta(2).unwrap();
+/// let expected = CasExpr::rat(1, 6) * CasExpr::var("pi").pow(2);
+/// assert!(matches!(equal(&z2, &expected), ZeroTest::Certified { equal: true, .. }));
+/// // ζ(−1) = −1/12.
+/// assert_eq!(zeta(-1), Some(CasExpr::rat(-1, 12)));
+/// ```
+#[must_use]
+pub fn zeta(s: i64) -> Option<CasExpr> {
+    if s == 1 {
+        return None; // simple pole
+    }
+    if s == 0 {
+        return Some(CasExpr::rat(-1, 2));
+    }
+    if s < 0 {
+        // ζ(−m) = −B_{m+1}/(m+1).
+        let m = u32::try_from(-s).ok()?;
+        let order = m.checked_add(1)?;
+        let bernoulli = combinatorics::bernoulli(order)?;
+        let value = bernoulli
+            .checked_div(Rational::integer(i128::from(order)))?
+            .checked_neg()?;
+        return Some(CasExpr::Const(value));
+    }
+    // s ≥ 2.
+    let n = u32::try_from(s).ok()?;
+    if n % 2 == 1 {
+        return None; // positive odd ≥ 3: no elementary closed form
+    }
+    let k = n / 2;
+    // ζ(2k) = (−1)^{k+1}·B_{2k}·(2π)^{2k}/(2·(2k)!) = c·π^{2k} with
+    // c = (−1)^{k+1}·B_{2k}·2^{2k}/(2·(2k)!).
+    let bernoulli = combinatorics::bernoulli(n)?; // B_{2k}
+    let factorial = ntheory::factorial(i128::from(n))?; // (2k)!
+    let two_pow = 2i128.checked_pow(n)?; // 2^{2k}
+    let denom = Rational::integer(2i128.checked_mul(factorial)?);
+    let mut coeff = bernoulli
+        .checked_mul(Rational::integer(two_pow))?
+        .checked_div(denom)?;
+    if k % 2 == 0 {
+        // (−1)^{k+1} = −1 when k is even.
+        coeff = coeff.checked_neg()?;
+    }
+    Some(CasExpr::Const(coeff) * CasExpr::var("pi").pow(n))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -122,5 +186,24 @@ mod tests {
             &beta(Rational::new(1, 2), Rational::new(1, 2)).unwrap(),
             &(sqrt_pi() * sqrt_pi()),
         );
+    }
+
+    #[test]
+    fn zeta_closed_forms() {
+        let pi = || CasExpr::var("pi");
+        // Positive even: ζ(2)=π²/6, ζ(4)=π⁴/90, ζ(6)=π⁶/945.
+        assert_equal(&zeta(2).unwrap(), &(CasExpr::rat(1, 6) * pi().pow(2)));
+        assert_equal(&zeta(4).unwrap(), &(CasExpr::rat(1, 90) * pi().pow(4)));
+        assert_equal(&zeta(6).unwrap(), &(CasExpr::rat(1, 945) * pi().pow(6)));
+        // Zero, and negative integers (with trivial zeros at negative evens).
+        assert_eq!(zeta(0), Some(CasExpr::rat(-1, 2)));
+        assert_eq!(zeta(-1), Some(CasExpr::rat(-1, 12)));
+        assert_eq!(zeta(-3), Some(CasExpr::rat(1, 120)));
+        assert_eq!(zeta(-2), Some(CasExpr::int(0)));
+        assert_eq!(zeta(-4), Some(CasExpr::int(0)));
+        // Pole at 1, and no elementary closed form at positive odd ≥ 3.
+        assert!(zeta(1).is_none());
+        assert!(zeta(3).is_none());
+        assert!(zeta(5).is_none());
     }
 }
