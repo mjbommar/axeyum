@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0318 preregisters the first remaining P5.3 memory
+  obligation before code.** An exact registered-rustc probe of two good and
+  three broken two-level four-byte table walks uses only the already accepted
+  checked-MIR shift, mask, cast, assertion, and byte-read forms. The next cell
+  therefore adds no IR operator, parser form, memory model, or public API. It
+  must capture raw MIR through the owning locked Cargo build, prove universal
+  panic freedom, aligned frame masking, and parent/leaf permission monotonicity,
+  replay witnesses for unmasked index, unaligned frame, and permission
+  escalation, and retain separate proof/sample wall times. The encoding is a
+  bounded page-table-shaped obligation, not an MMU or external-target claim.
+
 - **2026-07-21 — ADR-0317 accepts the authenticated annotation-to-MIR seam.**
   The typed source bridge proves one total annotated `u8::wrapping_add`
   `ContractProgram`, emits the existing relational `ScalarCallContract`, and
