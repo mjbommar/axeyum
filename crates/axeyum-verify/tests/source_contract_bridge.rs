@@ -188,7 +188,7 @@ fn committed_capture_is_authenticated_and_root_independent() {
         ),
         (
             "Cargo.lock",
-            "418ad9e04448906102b74e73dd239073ca87ae75e0f3ed7d0415826108d9eb79",
+            "bf716ce1543e7f56d0590b9155216c16fc2924f848a13af8ffacfc02aed1a9c0",
         ),
         (
             "src/lib.rs",

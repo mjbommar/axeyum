@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution has moved to the
 multi-track Z3 + Lean parity plan.
-Last updated: 2026-06-22
+Last updated: 2026-07-21
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -15,6 +15,14 @@ Last updated: 2026-06-22
 > "the gap to Z3/cvc5, itemized" section. Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
+
+> **Current downstream checkpoint.** Track 5's T5.4.3 implementation is pushed
+> at `3d75d407` under proposed ADR-0340: proof, replayed refutation, and sampled
+> `Unknown` follow-up are distinct public outcomes. Acceptance remains gated on
+> exact fixtures, the full fail-closed rejection/mutation matrix, and the capped
+> package/documentation/profile/resource checks recorded in PLAN/STATUS. This
+> does not reopen concretization or symbolic memory, and it does not replace the
+> separate multi-oracle publication campaign.
 
 ## Purpose
 

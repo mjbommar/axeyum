@@ -757,7 +757,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     freezes a QF_BV-only hybrid outcome: checked proofs and replayed solver
     refutations remain decided branches; only `ProofOutcome::Unknown` emits an
     exact reason-preserving target plus a source-oracle-checked `fuzzed-only`
-    report. T5.4.4 still owns coverage accounting, and Glaurung must first stop
+    report. The implementation checkpoint is pushed at `3d75d407`; branch and
+    callback separation, replay/disagreement failures, deterministic reruns,
+    full-width sampling, JSON escaping, and independently parsed violation
+    semantics pass. The question stays open until exact fixtures, the complete
+    rejection-family/mutation matrix, and all frozen acceptance gates pass.
+    T5.4.4 still owns coverage accounting, and Glaurung must first stop
     flattening `UnknownReason` before consuming this route.
 - [ ] Can one structured LLVM syntax/semantics front end feed both Axeyum term
   reflection and a hardened Glaurung LLIR lowerer without coupling either

@@ -322,19 +322,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0340 preregisters the reason-preserving `Unknown` ->
-  directed-fuzz handoff (T5.4.3).** The next Track 5 cell composes the checked
-  `prove` trichotomy, exact input domains/guards, sharing-preserving SMT-LIB,
-  deterministic T5.4.1 sampling, and caller-owned source callbacks. Proved and
-  replay-confirmed solver refutations remain decided outcomes; only a genuine
-  structured `UnknownReason` emits a canonical QF_BV target and sampled
-  `fuzzed-only` report. Errors, replay failures, guard rejections, violations,
-  oracle disagreements, and zero admitted samples remain separate. Glaurung's
-  current adapter flattens the reason into unit `SolveResult::Unknown`, so no
-  integration is authorized until that consumer seam is reason-preserving.
-  Commit/push the zero-result ADR before code or fixture bytes. T5.4.4 coverage,
-  multi-oracle publication evidence, concretization, symbolic memory, and
-  performance remain separate.
+- **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
+  pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
+  `axeyum_verify::directed_fuzz` boundary composes the checked `prove`
+  trichotomy, exact input domains/guards, sharing-preserving SMT-LIB,
+  deterministic corner/LCG sampling, and caller-owned source callbacks.
+  Proved and replay-confirmed solver refutations remain decided outcomes; only
+  a genuine structured `UnknownReason` emits a canonical QF_BV target and
+  sampled `fuzzed-only` report. Four unit and three integration tests cover the
+  three branches, callback isolation, failed replay, oracle disagreement,
+  repeatability, width-128 sampling, JSON controls, and independent exhaustive
+  semantics of the embedded two-input violation query. Strict targeted Clippy,
+  the complete `axeyum-verify` package, warning-denied rustdoc, and docs links
+  pass inside the 4 GiB cap. Adding the direct SMT-LIB edge exposed a stale
+  authenticated fixture lock and hash; the minimal one-edge/hash repair now
+  passes both the capture and authentication regressions.
+  Next: finish ADR-0340's rejection-family matrix, exact target/report fixtures
+  and mutation identities, then run every frozen capped gate before acceptance.
+  Glaurung integration, T5.4.4 coverage, multi-oracle publication evidence,
+  concretization, symbolic memory, and performance remain separate.
 
 - **2026-07-21 — ADR-0339 accepts deterministic replay-checked witness corpora
   (T5.4.2 DONE).** Full-width signed interpretation and all native signed/
@@ -6151,10 +6157,20 @@ plan is built and committed on the current branch:
 | ↳ P5.1 measured gate | Glaurung LLVM loop semantic census | DONE — **ADR-0294 accepted:** disclosed first-artifact rejection followed by exact corrected reproduction; 0/12 reach loop reflection, and diverse first causes select a T5.1.2 audit lane but no code |
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
-| P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable deterministic differential-fuzz harness; cross-IR and checksum suites use it with DISAGREE=0. **T5.4.2 DONE (`873c671e`, `75971d1d`, `1efa7f25`; ADR-0339):** three replay-checked countermodel classes produce exact canonical JSON and compiled generated regressions; native full-width scalar/array rendering, ordering, fail-closed errors, and mutation teeth are tested. **T5.4.3 WIP (ADR-0340):** preregistered reason-preserving hybrid outcome and guarded QF_BV `fuzzed-only` artifact; zero production bytes yet. Remaining: implement/accept T5.4.3; convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); coverage accounting (T5.4.4) |
+| P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable deterministic differential-fuzz harness; cross-IR and checksum suites use it with DISAGREE=0. **T5.4.2 DONE (`873c671e`, `75971d1d`, `1efa7f25`; ADR-0339):** three replay-checked countermodel classes produce exact canonical JSON and compiled generated regressions; native full-width scalar/array rendering, ordering, fail-closed errors, and mutation teeth are tested. **T5.4.3 WIP (`3d75d407`, proposed ADR-0340):** the public reason-preserving hybrid API and guarded deterministic QF_BV `fuzzed-only` runner are implemented; 4 unit + 3 integration tests cover branch/callback separation, replay/disagreement failures, repeatability, width-128 safety, JSON escaping, and independent embedded-query semantics. Remaining before acceptance: frozen rejection-family matrix, exact fixtures/mutation hashes, and all capped gates; then convert the `llvm_reflection` residual and separately define T5.4.4 coverage accounting |
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-21 — Landed the T5.4.3 directed-fuzz implementation checkpoint.**
+  Pushed `3d75d407` after targeted tests and strict Clippy. The API retains
+  exact `UnknownReason`, rejects operational/replay failures, samples only
+  guard-admitted QF_BV tuples, and emits separately named `fuzzed-only`
+  target/report JSON. The authenticated fixture lock/hash now records the new
+  direct SMT-LIB edge. The full package, strict targeted Clippy,
+  warning-denied rustdoc, and docs links pass under the cap. ADR-0340 stays
+  proposed until fixtures, the full rejection matrix, mutation identities, and
+  the remaining frozen capped gates pass.
 
 - **2026-07-21 — Closed T5.4.2 with deterministic replay-checked witness
   artifacts.** Accepted ADR-0339 after fixing full-width signed replay, adding a

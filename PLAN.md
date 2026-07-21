@@ -594,15 +594,19 @@ session state.
 >    and raw QF_BV equivalence countermodels replay before admission to a
 >    canonical 1,404-byte JSON corpus and exact 712-byte generated Rust suite.
 >    The committed suite compiles, executes, reverse-order reproduces, and has
->    mutation teeth. The next unblocked Track 5 cell is T5.4.3. ADR-0340 now
->    preregisters a reason-preserving `Unknown` -> directed-fuzz handoff:
->    checked proof and replayed-refutation outcomes remain distinct, while only
->    a genuine `ProofOutcome::Unknown` may emit a bounded guarded QF_BV target
->    and sampled `fuzzed-only` report. Commit/push this zero-result gate before
->    production code or fixture observation. Do not flatten errors/replay
->    failures/dropped samples, treat no sampled violation as proof, wire
->    Glaurung's current unit-Unknown seam, or conflate this with T5.4.4 coverage
->    accounting.
+>    mutation teeth. T5.4.3 is now an implementation checkpoint at pushed
+>    `3d75d407` under proposed ADR-0340: `axeyum_verify::directed_fuzz` keeps
+>    checked proof, caller-replayed refutation, and reason-preserving
+>    `fuzzed-only` outcomes disjoint; only `ProofOutcome::Unknown` runs guarded,
+>    typed, deterministic QF_BV samples. Three integration tests exercise all
+>    outcome branches, callback isolation, replay failure, disagreement,
+>    byte-identical reruns, and independent semantics of the embedded violation
+>    query. This is not accepted yet: finish the frozen rejection-family matrix,
+>    exact target/report fixtures and mutation hashes, then rerun the complete
+>    capped package/docs/reflection/profile/resource/link gate and accept
+>    ADR-0340 only if every item passes. Do not flatten errors/replay failures/
+>    dropped samples, treat no sampled violation as proof, wire Glaurung's
+>    current unit-Unknown seam, or conflate this with T5.4.4 coverage accounting.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

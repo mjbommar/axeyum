@@ -3,6 +3,15 @@
 Status: proposed
 Date: 2026-07-21
 
+Implementation checkpoint: pushed `3d75d407` on 2026-07-21. The public module,
+three outcome branches, guarded deterministic sampler, canonical in-memory
+JSON, four unit tests, and three integration tests are present. The full
+`axeyum-verify` package, targeted strict Clippy, warning-denied rustdoc, and docs
+links pass under the 4 GiB cap. The direct SMT-LIB dependency's authenticated
+fixture lock/hash is repaired and both exact regressions pass. Status remains
+proposed until the complete rejection-family matrix, exact fixtures/mutation
+identities, and every remaining frozen capped gate below pass.
+
 ## Context
 
 P5.4/T5.4.1 supplies deterministic reflection-versus-reflection and
