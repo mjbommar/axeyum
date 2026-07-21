@@ -4300,6 +4300,39 @@ pub fn bernoulli_polynomial(n: u32, var: &str) -> Option<CasExpr> {
     })
 }
 
+/// The **Euler polynomial** `Eₙ(x)`, as an exact [`CasExpr`] polynomial in `var`,
+/// via the Bernoulli relation `Eₙ(x) = (2^{n+1}/(n+1))·(B_{n+1}((x+1)/2) −
+/// B_{n+1}(x/2))`. `E₀=1`, `E₁(x)=x−1/2`, `E₂(x)=x²−x`, `E₃(x)=x³−(3/2)x²+1/4`.
+/// Satisfies `Eₙ′(x)=n·Eₙ₋₁(x)` and `Eₙ(x+1)+Eₙ(x)=2xⁿ`. `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, euler_polynomial, equal, ZeroTest};
+/// // E₂(x) = x² − x.
+/// let e2 = euler_polynomial(2, "x").unwrap();
+/// let expected = CasExpr::var("x").pow(2) - CasExpr::var("x");
+/// assert!(matches!(equal(&e2, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn euler_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let bernoulli = bernoulli_polynomial(n.checked_add(1)?, var)?;
+    let x = CasExpr::var(var);
+    let upper = bernoulli.substitute(var, &((x.clone() + CasExpr::int(1)) / CasExpr::int(2)));
+    let lower = bernoulli.substitute(var, &(x / CasExpr::int(2)));
+    // scale = 2^{n+1} / (n+1).
+    let two_pow = 2i128.checked_pow(n.checked_add(1)?)?;
+    let scale = Rational::checked_new(two_pow, i128::from(n) + 1)?;
+    let raw = CasExpr::Const(scale) * (upper - lower);
+    // `raw` normalizes to `num / c` with a constant `c` (Eₙ is a polynomial);
+    // distribute `1/c` across the numerator so the rational coefficients collapse
+    // (`(64x − 32)/64 → x − 1/2`) rather than leaving an uncancelled unit denominator.
+    let rf = normalize_rational(&raw)?;
+    let CasExpr::Const(c) = rf.den.to_expr() else {
+        return expand(&raw);
+    };
+    let inv = Rational::integer(1).checked_div(c)?;
+    expand(&(CasExpr::Const(inv) * rf.num.to_expr()))
+}
+
 /// Fold every elementary head at an argument where it has an exact closed value:
 /// the trigonometric special values of [`evaluate_trig`] (`sin`/`cos`/`tan` at
 /// rational multiples of `π`) **plus** `exp(0)=1`, `ln(1)=0`, `sqrt(0)=0`,
@@ -6692,6 +6725,28 @@ mod tests {
                 x().pow(n - 1)
             };
             assert_equal(&(shifted - bn), &(CasExpr::int(i128::from(n)) * power));
+        }
+    }
+
+    #[test]
+    fn euler_polynomials_and_their_defining_identity() {
+        let x = || v("x");
+        assert_equal(&euler_polynomial(0, "x").unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &euler_polynomial(2, "x").unwrap(),
+            &(x().pow(2) - x()),
+        );
+        assert_equal(
+            &euler_polynomial(3, "x").unwrap(),
+            &(x().pow(3) - CasExpr::rat(3, 2) * x().pow(2) + CasExpr::rat(1, 4)),
+        );
+        // Eₙ′(x) = n·Eₙ₋₁(x) and Eₙ(x+1) + Eₙ(x) = 2xⁿ.
+        for n in 1..=6u32 {
+            let en = euler_polynomial(n, "x").unwrap();
+            let en_prev = euler_polynomial(n - 1, "x").unwrap();
+            assert_equal(&en.differentiate("x"), &(CasExpr::int(i128::from(n)) * en_prev));
+            let shifted = en.substitute("x", &(x() + CasExpr::int(1)));
+            assert_equal(&(shifted + en), &(CasExpr::int(2) * x().pow(n)));
         }
     }
 
