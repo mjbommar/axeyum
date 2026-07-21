@@ -31,9 +31,11 @@ exit-criteria'd tracks we advance one increment at a time.
   decide 8/113 at 20s on different sets (Z3 CLI 9/113). This is bounded corpus
   parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
   remain open.
-- **Lean:** all 35 rows have complete audits; 261/327 measured UNSAT decisions
-  are Lean-checked. Coverage is substantial but uneven, the trusted-reduction
-  ledger is not zero, and tactic backend P3.7 is unbuilt.
+- **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
+  decisions become 325 evidence-audit UNSAT outcomes and 261 Lean-checked
+  outcomes. Two QF_NIA `IntPow2` rows fail during proof production; coverage is
+  otherwise substantial but uneven, the trusted-reduction ledger is not zero,
+  and tactic backend P3.7 is unbuilt.
 - **Dominance:** **23 / 35 audited rows** are fully dominant and 616/753 measured
   decisions are dominant candidates — the real, defensible selected-fragment
   claim.

@@ -44,10 +44,13 @@ The division scoreboard contains 35 rows across 24 logic labels:
 - All 35 dominance audits are complete. **23 / 35 audited rows** are fully
   dominant under the registered row definition; **616 / 753 decisions** are
   dominant candidates.
-- Lean reconstruction checks **261 / 327 measured `unsat`** decisions. This is
-  substantial coverage, but it is uneven: selected QF_ABV/AUFBV/LIA/LRA/UF
-  rows are complete while general nonlinear, strings/sequences, AUFLIA, and
-  some UFLIA rows retain large proof gaps.
+- The rows contain **327 baseline `unsat` decisions**. The evidence audit
+  reproduces **325 evidence-audit `unsat` outcomes** and Lean reconstruction
+  checks **261 Lean-checked outcomes**. The two-case difference is explicit:
+  QF_NIA proof production rejects `IntPow2` before producing evidence. This is
+  substantial but uneven coverage, not 261 fully audited outcomes out of 327:
+  selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
+  strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
   come from overlapping row variants. The two synthetic rows contribute
@@ -200,9 +203,11 @@ an adversarial differential gate; rejected mechanisms remain documented.
 
 ### G5 — Make proof coverage a first-class denominator
 
-The dominance audits now provide the correct base: 261/327 measured UNSATs are
-Lean-checked, not “approximately 15 rows have a route.” Remaining holes cluster
-by reduction and theory.
+The dominance audits provide three necessary denominators: 327 baseline UNSAT
+decisions, 325 evidence-audit UNSAT outcomes, and 261 Lean-checked outcomes.
+The two QF_NIA proof-production errors must remain visible rather than being
+folded into a nominal audit denominator. Remaining holes cluster by reduction
+and theory.
 
 **Research:** generate an operator/reduction trust matrix per unsat; separate
 missing evidence, evidence-check failure, Lean reconstruction absence, external-

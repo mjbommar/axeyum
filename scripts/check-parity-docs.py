@@ -90,7 +90,7 @@ def measured_snapshot() -> dict[str, int]:
     for path in sorted(glob.glob(str(ROOT / "bench-results" / "dominance" / "*.json"))):
         audit = load_json(Path(path))
         if audit.get("complete_audit"):
-            audits.append(audit["summary"])
+            audits.append(audit)
 
     axeyum = load_json(AXEYUM_P4DFA)
     z3 = load_json(Z3_P4DFA)
@@ -133,12 +133,29 @@ def measured_snapshot() -> dict[str, int]:
         "decide_strong_rows": sum(row["decide_pct"] >= 80.0 for row in rows),
         "complete_audits": len(audits),
         "fully_dominant_rows": sum(
-            summary.get("dominant_pct_audited") == 100.0 for summary in audits
+            audit["summary"].get("dominant_pct_audited") == 100.0
+            for audit in audits
         ),
-        "dominant_decisions": sum(summary["dominant_candidates"] for summary in audits),
-        "audited_decisions": sum(summary["audited_decided"] for summary in audits),
-        "lean_checked_unsat": sum(summary["lean_checked_unsat"] for summary in audits),
-        "audited_unsat": sum(summary["audited_unsat"] for summary in audits),
+        "dominant_decisions": sum(
+            audit["summary"]["dominant_candidates"] for audit in audits
+        ),
+        "audited_decisions": sum(
+            audit["summary"]["audited_decided"] for audit in audits
+        ),
+        "lean_checked_unsat": sum(
+            audit["summary"]["lean_checked_unsat"] for audit in audits
+        ),
+        # The historical summary field counts baseline UNSAT decisions, including
+        # proof-production failures. Keep both denominators explicit so a failed
+        # evidence audit cannot be described as an audited UNSAT result.
+        "baseline_unsat": sum(
+            audit["summary"]["audited_unsat"] for audit in audits
+        ),
+        "audit_reproduced_unsat": sum(
+            instance.get("audit_outcome") == "unsat"
+            for audit in audits
+            for instance in audit["instances"]
+        ),
         "p4dfa_axeyum_20s": decided(axeyum["summary"]),
         "p4dfa_z3_20s": decided(z3["summary"]),
         "public_inventory_files": inventory["aggregate"]["total"],
@@ -177,7 +194,9 @@ def main() -> int:
         f"{snapshot['decide_strong_rows']} / {snapshot['rows']} rows",
         f"{snapshot['fully_dominant_rows']} / {snapshot['complete_audits']} audited rows",
         f"{snapshot['dominant_decisions']} / {snapshot['audited_decisions']} decisions",
-        f"{snapshot['lean_checked_unsat']} / {snapshot['audited_unsat']} measured `unsat`",
+        f"{snapshot['baseline_unsat']} baseline `unsat` decisions",
+        f"{snapshot['audit_reproduced_unsat']} evidence-audit `unsat` outcomes",
+        f"{snapshot['lean_checked_unsat']} Lean-checked outcomes",
         f"{snapshot['p4dfa_axeyum_20s']} / 113",
         f"{snapshot['p4dfa_z3_20s']} / 113",
         f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
