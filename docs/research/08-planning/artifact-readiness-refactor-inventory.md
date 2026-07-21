@@ -50,12 +50,18 @@ differential evidence than a module-only move.
    14,953 to 11,443 lines (23.5%), and all 891 library tests retain their
    `abv::tests::*` identities. Strict Clippy and both strict rustdoc profiles
    pass under the bounded profile.
-2. **A2 -- extract the eager array-elimination certificate (next).** Move the 334-line
-   certificate/rechecker into `abv/array_elim_certificate.rs` and re-export its
-   two public items from `abv`. Keep `select_congruence_lemma` and elimination
-   error mapping as the only measured parent seams. This is a trust-boundary
-   module, not a generic `utils` bucket.
-3. **A3 -- census then extract lazy-ext replay/repair.** The 4,968-line lane is
+2. **A2 -- extract the eager array-elimination certificate (done).** The exact
+   333-line certificate/rechecker body now lives behind a seven-line module
+   prelude in the 340-line `abv/array_elim_certificate.rs`. Its module remains
+   private; `ArrayElimUnsatCertificate` and `certify_array_elim_unsat` are
+   re-exported at their unchanged `abv` and crate-root paths. Child privacy uses
+   `select_congruence_lemma` and elimination error mapping as the only parent
+   helpers without widening either visibility. All seven dedicated certificate
+   mutation/recheck tests, seven Ackermann controls, end-to-end Lean
+   reconstruction, namespace compatibility, all 891 library tests, strict
+   Clippy, and both strict rustdoc profiles pass. `abv.rs` is now 11,112 lines,
+   down 25.7% across A1--A2.
+3. **A3 -- census then extract lazy-ext replay/repair (next).** The 4,968-line lane is
    the largest cohesive production family, but it shares ROW context and model
    projection helpers. Record the exact seam before moving it; do not respond to
    size by making dozens of helpers broadly visible.

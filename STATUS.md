@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ABV A2 gives eager array-elimination evidence its own private
+  trust-boundary module.** The 333-line certificate/rechecker body plus a
+  seven-line prelude now live in `abv/array_elim_certificate.rs`.
+  `ArrayElimUnsatCertificate` and `certify_array_elim_unsat` retain their exact
+  `abv` and crate-root paths; the child uses only two existing private parent
+  helpers. All seven certificate mutation/recheck tests, seven Ackermann
+  controls, end-to-end Lean reconstruction, namespace compatibility, all 891
+  library tests, strict Clippy, and both strict rustdoc profiles pass under the
+  bounded cap. `abv.rs` is 11,112 lines, down 25.7% across A1--A2. Next: census
+  the exact 4,968-line lazy-ext lane dependencies before selecting its module
+  seam; do not broaden visibility for a cosmetic split.
+
 - **2026-07-20 — ABV A1 removes the inline test wall without touching
   production code.** The unchanged test bodies now live in the 3,510-line
   `abv/tests.rs` child; the parent keeps a four-line private test-module seam and
@@ -5589,6 +5601,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — artifact-readiness A2 isolates eager array-elimination UNSAT
+  evidence.** A private named module now owns certificate emission and
+  independent rechecking while its two public paths and private helper boundary
+  remain unchanged. Focused mutation/Lean/namespace gates and the complete
+  solver suite pass.
 
 - **2026-07-20 — artifact-readiness A1 moves the ABV test module out of the
   production wall.** `abv.rs` is 3,510 lines shorter at 11,443 lines; test names,

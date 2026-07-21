@@ -488,7 +488,14 @@ session state.
 >    strict Clippy and both strict rustdoc profiles pass. Continue with A2's
 >    334-line eager array-elimination certificate as a distinct trust-boundary
 >    module, preserving its two public paths and limiting the parent seam to the
->    two measured helpers.
+>    two measured helpers. A2 is now complete: the 333-line certificate body
+>    lives in the private 340-line `abv/array_elim_certificate.rs`; both public
+>    paths are unchanged, the two parent helpers remain private, and dedicated
+>    mutation/recheck, Ackermann-control, Lean, namespace, 891-library-test,
+>    Clippy, and rustdoc gates pass. `abv.rs` is now 11,112 lines, down 25.7%
+>    across A1--A2. Next perform A3's exact lazy-ext dependency/seam census
+>    before moving its 4,968 lines; do not widen helpers merely to hit a file-size
+>    target.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
