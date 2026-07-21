@@ -2198,6 +2198,45 @@ pub fn discriminant(p: &CasExpr, var: &str) -> Option<CasExpr> {
     signed.checked_div(leading).map(CasExpr::Const)
 }
 
+/// The dot product `a · b = Σ aᵢ·bᵢ` of two equal-length vectors, expanded to
+/// canonical form. `None` if the lengths differ or on overflow.
+#[must_use]
+pub fn dot(a: &[CasExpr], b: &[CasExpr]) -> Option<CasExpr> {
+    if a.len() != b.len() {
+        return None;
+    }
+    let mut sum = CasExpr::zero();
+    for (left, right) in a.iter().zip(b) {
+        sum = sum + left.clone() * right.clone();
+    }
+    Some(expand(&sum).unwrap_or(sum))
+}
+
+/// The cross product `a × b` of two three-dimensional vectors, each component
+/// expanded to canonical form. `None` unless both have length 3.
+#[must_use]
+pub fn cross(a: &[CasExpr], b: &[CasExpr]) -> Option<[CasExpr; 3]> {
+    if a.len() != 3 || b.len() != 3 {
+        return None;
+    }
+    let component = |expr: CasExpr| expand(&expr).unwrap_or(expr);
+    Some([
+        component(a[1].clone() * b[2].clone() - a[2].clone() * b[1].clone()),
+        component(a[2].clone() * b[0].clone() - a[0].clone() * b[2].clone()),
+        component(a[0].clone() * b[1].clone() - a[1].clone() * b[0].clone()),
+    ])
+}
+
+/// The Euclidean norm `‖v‖ = √(v · v)` of a vector, as an exact [`CasExpr`] with any
+/// surd simplified to lowest terms (`‖(3,4)‖ = 5`, `‖(1,1)‖ = √2`). `None` on
+/// overflow. For a constant vector the value is exact and certifiable via the
+/// `sqrt(c)²→c` fold.
+#[must_use]
+pub fn norm(v: &[CasExpr]) -> Option<CasExpr> {
+    let square = dot(v, v)?;
+    Some(simplify_radicals(&square.sqrt()))
+}
+
 /// The LSB-first rational coefficient vector of the `n`-th cyclotomic polynomial
 /// `Φₙ`, computed from the defining product `∏_{d∣n} Φ_d(x) = xⁿ − 1` by dividing
 /// `xⁿ − 1` by every `Φ_d` with `d ∣ n`, `d < n` (recursively). `None` for `n = 0`
@@ -4227,6 +4266,37 @@ mod tests {
         assert!((evalf(&sd, &[]).unwrap() - (6.0_f64).sqrt() / 3.0).abs() < 1e-12);
         // Unbound free variable → None.
         assert!(evalf(&x(), &[]).is_none());
+    }
+
+    #[test]
+    fn vector_dot_cross_norm() {
+        let x = || v("x");
+        let y = || v("y");
+        let z = || v("z");
+        // Dot product: (1,2,3)·(4,5,6) = 32.
+        let lhs = [CasExpr::int(1), CasExpr::int(2), CasExpr::int(3)];
+        let rhs = [CasExpr::int(4), CasExpr::int(5), CasExpr::int(6)];
+        assert_equal(&dot(&lhs, &rhs).unwrap(), &CasExpr::int(32));
+        // Symbolic dot: (x,y)·(y,x) = 2xy.
+        assert_equal(
+            &dot(&[x(), y()], &[y(), x()]).unwrap(),
+            &(CasExpr::int(2) * x() * y()),
+        );
+        // Cross product of the standard basis: e₁ × e₂ = e₃.
+        let basis_x = [CasExpr::int(1), CasExpr::zero(), CasExpr::zero()];
+        let basis_y = [CasExpr::zero(), CasExpr::int(1), CasExpr::zero()];
+        let basis_cross = cross(&basis_x, &basis_y).unwrap();
+        assert_equal(&basis_cross[0], &CasExpr::zero());
+        assert_equal(&basis_cross[1], &CasExpr::zero());
+        assert_equal(&basis_cross[2], &CasExpr::int(1));
+        // (u × w) ⟂ u (dot is zero) — for a generic symbolic pair.
+        let vec_u = [x(), y(), z()];
+        let vec_w = [y(), z(), x()];
+        let perpendicular = cross(&vec_u, &vec_w).unwrap();
+        assert_equal(&dot(&perpendicular, &vec_u).unwrap(), &CasExpr::zero());
+        // Norm: ‖(3,4)‖ = 5; ‖(1,1)‖ = √2.
+        assert_equal(&norm(&[CasExpr::int(3), CasExpr::int(4)]).unwrap(), &CasExpr::int(5));
+        assert_equal(&norm(&[CasExpr::int(1), CasExpr::int(1)]).unwrap(), &CasExpr::int(2).sqrt());
     }
 
     #[test]
