@@ -3557,6 +3557,47 @@ fn end_to_end_comp_reconstructs() {
 // LRA `la_generic` (Farkas) reconstruction tests (P3.7 arithmetic, slice 1).
 // ===========================================================================
 
+/// R3 arithmetic extraction gate: one linear Farkas proof and one nonlinear
+/// SOS proof must keep emitting byte-identical Lean modules when the shared
+/// arithmetic context, exact-linear forms, and ring normalizer move behind one
+/// cohesive submodule.
+#[test]
+fn arithmetic_family_generated_source_is_byte_stable() {
+    use axeyum_ir::{Rational, TermArena};
+
+    let mut snapshots = Vec::new();
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let one = arena.real_const(Rational::integer(1));
+    let upper = arena.real_le(x, zero).unwrap();
+    let lower = arena.real_le(one, x).unwrap();
+    let mut ctx = super::LraReconstructCtx::new();
+    let proof = super::reconstruct_lra_proof(&mut ctx, &arena, &[upper, lower])
+        .expect("linear fixture reconstructs");
+    let source = super::gate_and_render_lra_module(&mut ctx, proof, "LRA")
+        .expect("linear fixture renders");
+    snapshots.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let x = arena.real_var("x").unwrap();
+    let zero = arena.real_const(Rational::integer(0));
+    let square = arena.real_mul(x, x).unwrap();
+    let negative_square = arena.real_lt(square, zero).unwrap();
+    let source = super::reconstruct_sos_to_lean_module(&arena, &[negative_square])
+        .expect("SOS fixture reconstructs and renders");
+    snapshots.push((source.len(), stable_source_hash(&source)));
+
+    assert_eq!(
+        snapshots,
+        [
+            (7_747, 232_852_107_906_522_853),
+            (1_088, 9_042_568_084_332_375_518),
+        ]
+    );
+}
+
 /// **The bar**: a real `x ≤ 0 ∧ 1 ≤ x` LRA `unsat` instance reconstructs, via its
 /// REAL self-checked Farkas certificate, to a kernel-checked Lean term of type
 /// `False` over the arithmetic prelude (the baby-Farkas order chain).

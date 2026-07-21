@@ -5442,6 +5442,21 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split cohesive arithmetic reconstruction ownership and close
+  R3.** The complete 4,970-line LRA/SOS family now lives in
+  `reconstruct/arithmetic.rs`: exact-linear forms, the arithmetic kernel
+  context, Farkas folds, SOS ring normalization, and disjunctive-LRA scanning
+  remain together. The three public entry points are unchanged. Four
+  production-only functions plus the private exact-linear form serve parent
+  classification/dispatch; two additional Farkas helpers are visible only to
+  existing tests. Representative LRA and single-square SOS Lean modules remain
+  byte-identical at 7,747 bytes / FNV-1a `232852107906522853` and 1,088 bytes /
+  `9042568084332375518`. All 891 solver tests pass; all-target/all-feature
+  clippy and strict rustdoc are clean under the bounded one-job profile. The
+  parent is now 2,793 lines / 122,834 bytes, with the thin ABV orchestrator
+  intentionally retained. Next: R4 visibility/root-API audit, without mixing
+  public renaming or solver behavior into the structural review.
+
 - **2026-07-20 — Split bit-blast/QF_BV reconstruction ownership.** The complete
   1,956-line family now lives in `reconstruct/bitblast.rs`; all five public entry
   points are unchanged. Five production-only parent seams serve CNF or

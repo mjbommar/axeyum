@@ -347,10 +347,18 @@ session state.
 >    three additional parent-visible items preserve an existing datatype-
 >    projection audit test. Pointwise BVAND and ripple-carry-add generated-source
 >    snapshots remain byte-identical; all 890 tests, clippy, and rustdoc pass.
->    The parent is now 7,748 lines / 346,174 bytes. Continue R3 with an
->    arithmetic-family dependency/source census before deciding its boundaries;
->    do not manufacture an array module around one thin dispatcher or combine
->    proof families merely to minimize seam count.
+>    The final R3 census confirms one cohesive arithmetic family: LRA, SOS,
+>    Farkas, the shared arithmetic kernel context/ring normalizer, and
+>    disjunctive-LRA scanning are coupled by exact-linear invariants rather than
+>    being separate projects. Its 4,970 lines now live in
+>    `reconstruct/arithmetic.rs`; all three public LRA/SOS entry points are
+>    unchanged, while only four production functions plus the private
+>    exact-linear form and two test-only Farkas helpers cross the parent seam.
+>    Representative LRA and SOS Lean modules remain byte-identical; all 891
+>    tests, clippy, and rustdoc pass. The parent is now 2,793 lines / 122,834
+>    bytes. R3 is complete. Continue with R4's measured visibility/root-API
+>    audit; keep the thin ABV orchestration parent-owned and do not mix public
+>    renaming with solver behavior.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

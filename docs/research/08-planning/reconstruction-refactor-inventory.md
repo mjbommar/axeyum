@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and the equality/datatype/quantifier/resolution/CNF/bit-blast slices of R3 complete
+Status: active; R1, R2, and R3 complete; R4 visibility audit next
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -20,7 +20,7 @@ accepted terms.
 
 | Surface | Current size / shape |
 |---|---:|
-| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after equality; 14,189 lines / 618,110 bytes after datatype; 13,350 lines / 580,831 bytes after quantifier; 11,225 lines / 498,127 bytes after resolution; 9,680 lines / 433,992 bytes after CNF; 7,748 lines / 346,174 bytes after bit-blast |
+| `reconstruct.rs` | 18,517 lines / 804,247 bytes before R1; 16,999 lines / 743,551 bytes after R2; 16,476 lines / 720,714 bytes after equality; 14,189 lines / 618,110 bytes after datatype; 13,350 lines / 580,831 bytes after quantifier; 11,225 lines / 498,127 bytes after resolution; 9,680 lines / 433,992 bytes after CNF; 7,748 lines / 346,174 bytes after bit-blast; 2,793 lines / 122,834 bytes after arithmetic |
 | `reconstruct/direct.rs` | 1,406 lines / 52,407 bytes after R2 |
 | `reconstruct/equality.rs` | 534 lines / 23,244 bytes after the first R3 family extraction |
 | `reconstruct/datatype.rs` | 2,313 lines / 103,818 bytes after the second R3 family extraction |
@@ -28,10 +28,11 @@ accepted terms.
 | `reconstruct/resolution.rs` | 2,150 lines / 83,697 bytes after the fourth R3 family extraction |
 | `reconstruct/cnf.rs` | 1,578 lines / 64,950 bytes after the fifth R3 family extraction |
 | `reconstruct/bitblast.rs` | 1,956 lines / 88,950 bytes after the sixth R3 family extraction |
-| `reconstruct/tests.rs` | 4,844 lines / 197,388 bytes |
+| `reconstruct/arithmetic.rs` | 4,970 lines / 224,046 bytes after the seventh R3 family extraction |
+| `reconstruct/tests.rs` | 4,885 lines / 199,052 bytes |
 | `reconstruct/quant_bv_instance_set_lean.rs` | 3,665 lines / 135,043 bytes |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes |
-| `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 43 |
+| `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 4 after R3 |
 | `ProofFragment` variants in the general dispatcher | 61 |
 | direct structural variants in the pre-dispatch seam | 34 |
 
@@ -120,8 +121,7 @@ before/after byte comparisons for their affected fixtures.
    certificate type or broad private surface was exposed. `reconstruct.rs`
    drops from 18,387 to 16,999 lines. All 884 tests, byte-equivalence checks,
    and clippy pass.
-3. **R3 — one proof family per commit (active; equality, datatype, quantifier,
-   resolution, CNF, and bit-blast complete).** The first
+3. **R3 — one proof family per commit (complete).** The first
    slice moves the nine equality-owned entry/build/helper functions into
    `reconstruct/equality.rs`: reflexivity, clause and premise symmetry,
    binary/n-ary transitivity, and n-ary congruence. Shared `as_positive_eq`,
@@ -177,10 +177,19 @@ before/after byte comparisons for their affected fixtures.
    arithmetic dependency. FNV-1a snapshots pin the pointwise BVAND module at
    6,171 bytes / `6475695101939760022` and the width-2 ripple-carry-add module at
    19,619 bytes / `1281267001421498970`. All 890 full-profile tests, clippy, and
-   rustdoc pass. Next census the remaining arithmetic region before choosing
-   boundaries; do not create an array module solely to relocate the thin
-   orchestration function or combine distinct proof families merely to reduce
-   seam count.
+   rustdoc pass. The seventh census finds one cohesive arithmetic family rather
+   than separate LRA/SOS projects: exact-linear forms, the arithmetic kernel
+   context, Farkas folds, SOS ring normalization, and disjunctive-LRA scanning
+   share the same invariants. The complete family now lives in
+   `reconstruct/arithmetic.rs`; the three public LRA/SOS entry points are
+   re-exported unchanged. Four production-only functions plus the private
+   exact-linear form serve parent classification/dispatch, and two Farkas
+   helpers remain parent-visible only to existing tests. FNV-1a snapshots pin
+   the linear module at 7,747 bytes / `232852107906522853` and the single-square
+   SOS module at 1,088 bytes / `9042568084332375518`. All 891 full-profile
+   tests, clippy, and rustdoc pass. The parent is now 2,793 lines / 122,834
+   bytes; the thin ABV orchestration remains parent-owned rather than becoming
+   an artificial array module.
 4. **R4 — visibility audit.** After the files settle, narrow private imports and
    only then evaluate the separate root-API namespacing work.
 
