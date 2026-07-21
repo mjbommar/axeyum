@@ -889,13 +889,16 @@ impl MultiPoly {
         Some(out)
     }
 
-    /// Reduce `sqrt(c)² → c` for every square-root atom whose radicand is a
-    /// non-negative rational constant, so the zero-test knows exact radical
-    /// arithmetic (`√2·√2 = 2`, `(√8/2)² = 2`). Sound: for `c ≥ 0`, `sqrt(c)` is a
-    /// real number whose square is exactly `c`. Atoms whose radicand is not a
-    /// parseable non-negative rational (e.g. `sqrt(x)`, `sqrt(−3)`) are left
+    /// Reduce `sqrt(u)² → u` for every square-root atom, so the zero-test knows
+    /// exact radical arithmetic (`√2·√2 = 2`, `(√8/2)² = 2`, and — via `radicands`
+    /// — symbolic identities like `(√x)² = x`, `x/√x = √x`). A radicand is resolved
+    /// two ways: a non-negative rational constant parsed straight from the atom key,
+    /// or a symbolic radicand supplied in `radicands` (`atom key → normalized
+    /// radicand`, built by the caller from the compared expressions). Sound: where
+    /// `sqrt(u)` is a real number (`u ≥ 0`) its square is exactly `u`. Atoms with
+    /// neither resolution (e.g. `sqrt(−3)`, an unknown symbolic radicand) are left
     /// untouched — conservative, never a false reduction. `None` on overflow.
-    fn fold_radical(&self) -> Option<MultiPoly> {
+    fn fold_radical(&self, radicands: &BTreeMap<String, MultiPoly>) -> Option<MultiPoly> {
         const SQRT: &str = "\0sqrt:";
         let has_sqrt_sq = self.terms.keys().any(|m| {
             m.powers
@@ -909,17 +912,21 @@ impl MultiPoly {
         for (mono, coeff) in &self.terms {
             let mut term = MultiPoly::constant(*coeff);
             for (var, &exp) in &mono.powers {
-                let radicand = var
+                let const_radicand = var
                     .strip_prefix(SQRT)
                     .and_then(parse_rational_render)
                     .filter(|value| value.numerator() >= 0);
-                let factor = if let Some(radicand) = radicand {
+                let factor = if let Some(radicand) = const_radicand {
                     // sqrt(c)^exp = c^(exp/2) · sqrt(c)^(exp mod 2).
                     let mut power = Rational::integer(1);
                     for _ in 0..(exp / 2) {
                         power = power.checked_mul(radicand)?;
                     }
                     MultiPoly::constant(power).mul(&MultiPoly::single_var_pow(var, exp % 2))?
+                } else if exp >= 2 && var.starts_with(SQRT) && radicands.contains_key(var) {
+                    // sqrt(u)^exp = u^(exp/2) · sqrt(u)^(exp mod 2) for a symbolic u.
+                    let half = radicands[var].pow(exp / 2)?;
+                    half.mul(&MultiPoly::single_var_pow(var, exp % 2))?
                 } else {
                     MultiPoly::single_var_pow(var, exp)
                 };
@@ -1665,11 +1672,25 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let Some(neg_cb) = cb.neg() else {
         return ZeroTest::Unknown;
     };
+    // Resolve each `sqrt` atom's symbolic radicand so `fold_radical` can apply
+    // `(√u)² = u` (not just the constant `(√c)² = c`). Keys match the atom names
+    // `normalize_rational` emits.
+    let mut atoms = BTreeMap::new();
+    collect_atom_dictionary(a, &mut atoms);
+    collect_atom_dictionary(b, &mut atoms);
+    let mut radicands: BTreeMap<String, MultiPoly> = BTreeMap::new();
+    for (key, atom) in &atoms {
+        if let CasExpr::Unary(UnaryFunc::Sqrt, arg) = atom
+            && let Some(poly) = normalize(arg)
+        {
+            radicands.insert(key.clone(), poly);
+        }
+    }
     match ad
         .add(&neg_cb)
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
-        .and_then(|w| w.fold_radical())
+        .and_then(|w| w.fold_radical(&radicands))
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
@@ -6601,6 +6622,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_fresnel(expr, var),
         integrate_inverse_radical(expr, var),
         integrate_radical_usub(expr, var),
+        integrate_sqrt_power(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7600,6 +7622,84 @@ fn poly_proportion(a: &[Rational], b: &[Rational]) -> Option<Rational> {
         }
     }
     Some(k)
+}
+
+/// If `poly` is a single monomial `c·xᵈ`, return `(d, c)`; `None` otherwise.
+/// The zero polynomial is treated as `(0, 0)`.
+fn monomial_of(poly: &[Rational]) -> Option<(u32, Rational)> {
+    let mut found: Option<(usize, Rational)> = None;
+    for (i, c) in poly.iter().enumerate() {
+        if !c.is_zero() {
+            if found.is_some() {
+                return None;
+            }
+            found = Some((i, *c));
+        }
+    }
+    let (deg, coeff) = found.unwrap_or((0, Rational::zero()));
+    Some((u32::try_from(deg).ok()?, coeff))
+}
+
+/// Half-integer power rule — the cases the `Pow(_, u32)` representation cannot
+/// hold directly (√· is a `Unary::Sqrt`, not a power):
+///   ∫ k·√(a·x+b) dx = (2k/3a)·(a·x+b)·√(a·x+b)
+///   ∫ k·xᵐ·√x   dx = (2k/(2m+3))·xᵐ⁺¹·√x    (m ≥ 1)
+/// Certified downstream by differentiate-and-check (which folds u/√u = √u).
+fn integrate_sqrt_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Split the product into its single √ factor and the remaining factors.
+    let factors: Vec<CasExpr> = match expr {
+        CasExpr::Mul(fs) => fs.clone(),
+        other => vec![other.clone()],
+    };
+    let mut sqrt_arg: Option<CasExpr> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for f in factors {
+        if let CasExpr::Unary(UnaryFunc::Sqrt, a) = &f {
+            if sqrt_arg.is_some() {
+                return None; // more than one radical — out of fragment
+            }
+            sqrt_arg = Some(a.as_ref().clone());
+        } else {
+            rest.push(f);
+        }
+    }
+    let sqrt_arg = sqrt_arg?;
+    // Radicand must be linear a·x + b.
+    let arg_poly = normalize(&sqrt_arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let slope = arg_poly[1];
+    let intercept = arg_poly.first().copied().unwrap_or_else(Rational::zero);
+    // The non-radical part must be a monomial coeff·xᵈᵉᵍ.
+    let rest_expr = if rest.is_empty() {
+        CasExpr::int(1)
+    } else {
+        CasExpr::Mul(rest)
+    };
+    let (degree, lead) = monomial_of(&normalize(&rest_expr)?.to_univariate(var)?)?;
+    if lead.is_zero() {
+        return None;
+    }
+    if degree == 0 {
+        // ∫ k·√(a·x+b) = (2k/3a)·(a·x+b)·√(a·x+b)
+        let coeff = lead
+            .checked_mul(Rational::integer(2))?
+            .checked_div(slope.checked_mul(Rational::integer(3))?)?;
+        let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+        let body = CasExpr::Mul(vec![arg_expr.clone(), arg_expr.sqrt()]);
+        return Some(scaled_term(coeff, body));
+    }
+    // degree ≥ 1 requires the radicand to be exactly x (a = 1, b = 0).
+    if slope != Rational::integer(1) || !intercept.is_zero() {
+        return None;
+    }
+    // ∫ k·xᵈ·√x = (2k/(2d+3))·xᵈ⁺¹·√x
+    let denom = Rational::integer(i128::from(2 * degree + 3));
+    let coeff = lead.checked_mul(Rational::integer(2))?.checked_div(denom)?;
+    let x = CasExpr::var(var);
+    let body = CasExpr::Mul(vec![x.clone().pow(degree + 1), x.sqrt()]);
+    Some(scaled_term(coeff, body))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -11060,6 +11160,37 @@ mod tests {
         ));
         // Numeric: asin(1/2)=π/6≈0.5236, acosh(2)≈1.3170.
         assert!((evalf(&CasExpr::Unary(UnaryFunc::Asin, Box::new(CasExpr::rat(1, 2))), &[]).unwrap() - std::f64::consts::FRAC_PI_6).abs() < 1e-5);
+    }
+
+    #[test]
+    fn symbolic_radical_fold_and_power_rule() {
+        let x = || v("x");
+        // Soundness: (√u)² = u for symbolic u must certify TRUE, not a spurious ≠.
+        for (lhs, rhs) in [
+            (x().sqrt().pow(2), x()),                    // (√x)² = x
+            (x() / x().sqrt(), x().sqrt()),              // x/√x = √x
+            ((CasExpr::int(1) - x().pow(2)).sqrt().pow(2), CasExpr::int(1) - x().pow(2)),
+        ] {
+            assert!(
+                matches!(equal(&lhs, &rhs), ZeroTest::Certified { equal: true, .. }),
+                "expected {lhs} ≡ {rhs}"
+            );
+        }
+        // Half-integer power rule (√· is a Unary, not a Pow) — all certified.
+        for (integrand, anti) in [
+            // ∫√x = (2/3)x√x
+            (x().sqrt(), CasExpr::rat(2, 3) * (x() * x().sqrt())),
+            // ∫x·√x = (2/5)x²√x
+            (x() * x().sqrt(), CasExpr::rat(2, 5) * (x().pow(2) * x().sqrt())),
+            // ∫√(2x+1) = (1/3)(2x+1)√(2x+1)
+            ((CasExpr::int(2) * x() + CasExpr::int(1)).sqrt(),
+             CasExpr::rat(1, 3) * ((CasExpr::int(2) * x() + CasExpr::int(1)) * (CasExpr::int(2) * x() + CasExpr::int(1)).sqrt())),
+        ] {
+            let r = integrate(&integrand, "x").expect("sqrt power-rule integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+            assert_equal(&r.antiderivative, &anti);
+        }
     }
 
     #[test]
