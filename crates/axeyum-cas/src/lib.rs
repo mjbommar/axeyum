@@ -4262,6 +4262,44 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// The **Bernoulli polynomial** `Bₙ(x) = Σ_{k=0}^n C(n,k)·B_k·x^{n−k}` (with `B_k`
+/// the Bernoulli numbers, `B₁ = −1/2`), as an exact [`CasExpr`] polynomial in `var`.
+/// `B₀=1`, `B₁(x)=x−1/2`, `B₂(x)=x²−x+1/6`, `B₃(x)=x³−(3/2)x²+(1/2)x`. Satisfies
+/// `Bₙ′(x)=n·Bₙ₋₁(x)` and `Bₙ(x+1)−Bₙ(x)=n·x^{n−1}`. `None` on `i128` overflow of a
+/// Bernoulli numerator/denominator or a binomial coefficient (large `n`).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, bernoulli_polynomial, equal, ZeroTest};
+/// // B₂(x) = x² − x + 1/6.
+/// let b2 = bernoulli_polynomial(2, "x").unwrap();
+/// let expected = CasExpr::var("x").pow(2) - CasExpr::var("x") + CasExpr::rat(1, 6);
+/// assert!(matches!(equal(&b2, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn bernoulli_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for k in 0..=n {
+        let bernoulli = combinatorics::bernoulli(k)?;
+        if bernoulli.is_zero() {
+            continue;
+        }
+        let binomial = ntheory::binomial(i128::from(n), i128::from(k))?;
+        let coeff = bernoulli.checked_mul(Rational::integer(binomial))?;
+        let power = n - k;
+        let monomial = match power {
+            0 => CasExpr::Const(coeff),
+            1 => scaled_term(coeff, CasExpr::var(var)),
+            _ => scaled_term(coeff, CasExpr::var(var).pow(power)),
+        };
+        terms.push(monomial);
+    }
+    Some(match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.into_iter().next().unwrap_or_else(CasExpr::zero),
+        _ => CasExpr::Add(terms),
+    })
+}
+
 /// Fold every elementary head at an argument where it has an exact closed value:
 /// the trigonometric special values of [`evaluate_trig`] (`sin`/`cos`/`tan` at
 /// rational multiples of `π`) **plus** `exp(0)=1`, `ln(1)=0`, `sqrt(0)=0`,
@@ -6627,6 +6665,34 @@ mod tests {
             &definite_sum(&k().pow(2), "k", &CasExpr::int(3), &CasExpr::int(5)).unwrap(),
             &CasExpr::int(50),
         );
+    }
+
+    #[test]
+    fn bernoulli_polynomials_and_their_defining_identity() {
+        let x = || v("x");
+        // Known low-order values.
+        assert_equal(&bernoulli_polynomial(0, "x").unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &bernoulli_polynomial(1, "x").unwrap(),
+            &(x() - CasExpr::rat(1, 2)),
+        );
+        assert_equal(
+            &bernoulli_polynomial(2, "x").unwrap(),
+            &(x().pow(2) - x() + CasExpr::rat(1, 6)),
+        );
+        // Defining identities: Bₙ′(x) = n·Bₙ₋₁(x), and Bₙ(x+1) − Bₙ(x) = n·x^{n−1}.
+        for n in 1..=6u32 {
+            let bn = bernoulli_polynomial(n, "x").unwrap();
+            let bn_prev = bernoulli_polynomial(n - 1, "x").unwrap();
+            assert_equal(&bn.differentiate("x"), &(CasExpr::int(i128::from(n)) * bn_prev));
+            let shifted = bn.substitute("x", &(x() + CasExpr::int(1)));
+            let power = if n == 1 {
+                CasExpr::int(1)
+            } else {
+                x().pow(n - 1)
+            };
+            assert_equal(&(shifted - bn), &(CasExpr::int(i128::from(n)) * power));
+        }
     }
 
     #[test]
