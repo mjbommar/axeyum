@@ -1556,6 +1556,22 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     best
 }
 
+/// The rank of a rational-constant matrix (number of nonzero rows of its reduced
+/// row echelon form). `None` if the matrix has non-constant entries or on overflow.
+#[must_use]
+pub fn matrix_rank(matrix: &Matrix) -> Option<usize> {
+    let echelon = matrix.rref()?;
+    let mut rank = 0;
+    for i in 0..echelon.rows() {
+        let nonzero_row = (0..echelon.cols())
+            .any(|j| matches!(echelon.get(i, j), Some(CasExpr::Const(c)) if !c.is_zero()));
+        if nonzero_row {
+            rank += 1;
+        }
+    }
+    Some(rank)
+}
+
 /// The trace of a square matrix (sum of the diagonal entries), expanded to
 /// canonical form. `None` if the matrix is not square.
 #[must_use]
@@ -2781,6 +2797,14 @@ mod tests {
             &(v("L").pow(2) - CasExpr::int(5) * v("L") + CasExpr::int(6)),
         );
         assert_equal(&trace(&m).unwrap(), &CasExpr::int(5)); // 2 + 3
+        assert_eq!(matrix_rank(&m), Some(2));
+        // rank-deficient [[1,2],[2,4]] has rank 1
+        let dep = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(2), CasExpr::int(4)],
+        ])
+        .unwrap();
+        assert_eq!(matrix_rank(&dep), Some(1));
         let eig = eigenvalues(&m, "L").unwrap();
         assert_eq!(eig.len(), 2);
         for e in &eig {
