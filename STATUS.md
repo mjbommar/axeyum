@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — ABV A3 extracts the actual lazy-ext orchestration seam and
+  rejects a cosmetic whole-lane move.** The census found 13 historical-lane
+  items used by earlier ROW/projection code and 16 residual private items
+  reached directly by `abv::tests`. The clean 434-line CEGAR/refinement body is
+  now a 446-line private `abv/lazy_ext.rs` child with ten items and exactly one
+  `pub(super)` dispatcher entry. Shared replay/index helpers, test imports, and
+  every public path remain parent-owned and unchanged. The 42 focused private
+  tests, 10 extensionality integrations, five lazy-ROW controls, differential
+  fuzz, and all 891 library tests pass under the bounded cap. `abv.rs` is now
+  10,675 lines, down 28.6% across A1--A3. Next: I1's exact 1,196-line
+  integer-inequality reconstruction seam; do not force the remaining 4,531 ABV
+  replay/repair lines across an artificial visibility boundary.
+
 - **2026-07-20 — the July 16 Glaurung feedback is reconciled against the later
   evidence rather than copied forward as ten timeless claims.** The new durable
   reconciliation preserves strict sorts/errors, structural `Unknown`, lean
@@ -5612,6 +5625,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — artifact-readiness A3 isolates lazy-ext CEGAR orchestration.**
+  The new 446-line child has one parent-visible entry point and leaves the
+  shared ROW/replay repair block in place after the dependency census disproved
+  the original whole-lane seam. Focused extensionality/ROW/differential gates
+  and the complete 891-test solver library pass.
 
 - **2026-07-20 — reconciled the ten-item Glaurung consumer snapshot with current
   publication evidence.** A new planning note classifies each item as retained,

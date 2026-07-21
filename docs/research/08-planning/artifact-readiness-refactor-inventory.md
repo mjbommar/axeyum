@@ -26,9 +26,10 @@ not repeat completed namespace/configuration sweeps.
 
 | Surface | Current measurement | Relevant structure |
 |---|---:|---|
-| `abv.rs` | 14,953 lines / 547,072 bytes | 11,439 lines before the test module; 3,514-line inline test module |
-| ABV lazy-ext replay/repair lane | 4,968 lines (6,138--11,105) | Cohesive but coupled to the preceding ROW/projection state |
-| ABV eager array-elimination certificate | 334 lines (11,106--11,439) | Independent trust/evidence unit; two narrow parent helper dependencies |
+| `abv.rs` | 10,675 lines / 373,923 bytes | A1--A3 removed the test wall, eager certificate, and lazy-ext orchestrator |
+| ABV lazy-ext CEGAR orchestrator | 446 lines / 17,014 bytes | Named child module; ten items; one parent entry point |
+| ABV replay/repair residual | 4,531 parent lines (6,137--10,667) | Shared by ROW and extensional replay; 16 private items directly test-reached |
+| ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
 | `int_reconstruct.rs` | 8,876 lines / 371,286 bytes | Shared integer kernel context plus several proof families |
 | Integer-inequality tail | 1,196 lines (7,681--8,876) | Cohesive reconstruction family after the shared context |
 | `nra_real_root.rs` | 7,544 lines / 333,529 bytes | 7,077 production lines; strict, non-strict, and algebraic CAD share correctness-sensitive machinery |
@@ -40,6 +41,15 @@ and the online UFBV solver. Integer reconstruction has 17 public or
 crate-visible declarations and several dispatcher/interpolation consumers. CAD
 deduplication changes code that decides SAT/UNSAT and therefore needs stronger
 differential evidence than a module-only move.
+
+The A3 census also corrects the initial “cohesive 4,968-line lane” shorthand.
+Thirteen items defined in that historical range were already referenced by
+earlier parent code, and 16 residual private items are imported directly by the
+existing `abv::tests` child. Moving the entire range as a proper module would
+therefore require a wide artificial `pub(super)` surface or a simultaneous
+multi-thousand-line test reorganization. The actual CEGAR orchestration has a
+much cleaner boundary: ten top-level items, no direct test imports, and only
+`check_qf_abv_lazy_ext` called by the parent dispatcher.
 
 ## Ranked next slices
 
@@ -61,13 +71,19 @@ differential evidence than a module-only move.
    reconstruction, namespace compatibility, all 891 library tests, strict
    Clippy, and both strict rustdoc profiles pass. `abv.rs` is now 11,112 lines,
    down 25.7% across A1--A2.
-3. **A3 -- census then extract lazy-ext replay/repair (next).** The 4,968-line lane is
-   the largest cohesive production family, but it shares ROW context and model
-   projection helpers. Record the exact seam before moving it; do not respond to
-   size by making dozens of helpers broadly visible.
-4. **I1 -- extract integer-inequality reconstruction.** The 1,196-line tail is
+3. **A3 -- census and extract lazy-ext orchestration (done).** The census
+   rejects a monolithic replay/repair move at the current privacy boundary. The
+   clean 434-line body now forms the 446-line private `abv/lazy_ext.rs` child.
+   Its ten items remain private except for the single parent entry point; public
+   APIs, test imports, shared ROW helpers, and replay ownership are unchanged.
+   The 42 focused private lazy-ext tests, 10 end-to-end extensionality tests,
+   five lazy-ROW controls, differential fuzz, all 891 library tests, strict
+   Clippy, and both rustdoc profiles pass under the bounded profile. `abv.rs`
+   is now 10,675 lines, down 28.6% from the initial 14,953.
+4. **I1 -- extract integer-inequality reconstruction (next).** The 1,196-line tail is
    the clearest `int_reconstruct.rs` family, but it depends on the shared kernel
-   context. Take it after the ABV opening slices establish the module-move gate.
+   context. Record its exact entry/helper seam, then apply the established
+   module-move gate without changing generated Lean bytes.
 5. **N1 -- parameterize CAD only under a semantic gate.** Strict/non-strict/
    algebraic repetition remains a valid duplication target, but any shared
    engine must preserve boundary sampling, algebraic decline, exact replay, and

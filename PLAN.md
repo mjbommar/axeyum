@@ -493,9 +493,16 @@ session state.
 >    paths are unchanged, the two parent helpers remain private, and dedicated
 >    mutation/recheck, Ackermann-control, Lean, namespace, 891-library-test,
 >    Clippy, and rustdoc gates pass. `abv.rs` is now 11,112 lines, down 25.7%
->    across A1--A2. Next perform A3's exact lazy-ext dependency/seam census
->    before moving its 4,968 lines; do not widen helpers merely to hit a file-size
->    target.
+>    across A1--A2. A3's census rejects a monolithic 4,968-line move: the replay
+>    and repair diagnostics are shared with preceding ROW projection code and 16
+>    of their private items are reached directly by the existing test child. The
+>    clean 446-line lazy-ext CEGAR orchestration/refinement unit now lives in
+>    `abv/lazy_ext.rs` with ten private items and exactly one `pub(super)` parent
+>    entry point; no test seam or public path changed. `abv.rs` is 10,675 lines,
+>    down 28.6% across A1--A3. Next take I1's 1,196-line integer-inequality
+>    reconstruction tail. Revisit the 4,531-line ABV replay/repair residual only
+>    with a seam that preserves its shared ROW ownership and test privacy rather
+>    than widening dozens of helpers for a cosmetic file move.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
