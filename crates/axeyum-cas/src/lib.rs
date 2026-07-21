@@ -51,6 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::{Rational, poly};
 
 pub mod algebraic;
+pub mod combinatorics;
 pub mod groebner;
 mod factor_int;
 mod gosper;
@@ -2447,6 +2448,58 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     }
 }
 
+/// The **residue** of a rational function `expr` at the rational point `point` — the
+/// coefficient of `(var − point)⁻¹` in its Laurent expansion there. For a pole of
+/// order `m`, `Res = (1/(m−1)!)·[d^{m−1}/dvar^{m−1}((var−point)ᵐ·expr)]|_{var=point}`;
+/// a non-pole gives `0`. Exact over the rational-function fragment.
+///
+/// Returns `None` if `expr` is not a univariate rational function in `var` or on
+/// overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, residue};
+/// use axeyum_ir::Rational;
+/// let x = CasExpr::var("x");
+/// // Res_{x=1} 1/((x−1)(x−2)) = 1/(1−2) = −1.
+/// let f = CasExpr::int(1) / ((x.clone() - CasExpr::int(1)) * (x - CasExpr::int(2)));
+/// assert_eq!(residue(&f, "x", Rational::integer(1)).unwrap(), CasExpr::int(-1));
+/// ```
+#[must_use]
+pub fn residue(expr: &CasExpr, var: &str, point: Rational) -> Option<CasExpr> {
+    // Reduce to lowest terms so cancellable factors do not inflate the pole order.
+    let reduced = cancel(expr)?;
+    let ratio = normalize_rational(&reduced)?;
+    let numerator = ratio.num.to_univariate(var)?;
+    let mut denominator = ratio.den.to_univariate(var)?;
+
+    // Peel the (var − point) factor to find the pole order `m` and the residual
+    // denominator `r` with `denominator = (var − point)ᵐ · r`.
+    let factor = [point.checked_neg()?, Rational::integer(1)];
+    let mut order = 0u32;
+    while poly::rat_degree(&denominator).unwrap_or(0) >= 1
+        && poly::eval_rat_poly(&denominator, point)?.is_zero()
+    {
+        denominator = poly::rat_exact_div(&denominator, &factor)?;
+        order += 1;
+    }
+    if order == 0 {
+        return Some(CasExpr::zero()); // not a pole
+    }
+
+    // g(var) = (var − point)ᵐ · expr = numerator / r, finite at `point`.
+    let g = MultiPoly::from_univariate(var, &numerator).to_expr()
+        / MultiPoly::from_univariate(var, &denominator).to_expr();
+    let derivative = g.differentiate_n(var, (order - 1) as usize);
+    let value = limit(&derivative, var, LimitPoint::Finite(point))?;
+
+    // Divide by (m − 1)!.
+    let mut factorial = Rational::integer(1);
+    for k in 1..order {
+        factorial = factorial.checked_mul(Rational::integer(i128::from(k)))?;
+    }
+    Some(simplify(&(value / CasExpr::Const(factorial))))
+}
+
 /// The number of nodes in an expression tree (a size metric for [`simplify`]).
 fn node_count(expr: &CasExpr) -> usize {
     1 + match expr {
@@ -4590,6 +4643,29 @@ mod tests {
         // Repeated irreducible quadratic: 1/(x²+1)².
         let rep_q = CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(2);
         assert_equal(&apart(&rep_q, "x").expect("repeated quadratic"), &rep_q);
+    }
+
+    #[test]
+    fn residues_of_rational_functions() {
+        let x = || v("x");
+        let ig = Rational::integer;
+        // 1/((x−1)(x−2)): Res₁ = −1, Res₂ = +1, Res₃ = 0 (not a pole).
+        let f = CasExpr::int(1) / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)));
+        assert_equal(&residue(&f, "x", ig(1)).unwrap(), &CasExpr::int(-1));
+        assert_equal(&residue(&f, "x", ig(2)).unwrap(), &CasExpr::int(1));
+        assert_equal(&residue(&f, "x", ig(3)).unwrap(), &CasExpr::zero());
+        // x/(x−1)² (double pole): Res₁ = 1 (the 1/(x−1) coefficient).
+        let g = x() / (x() - CasExpr::int(1)).pow(2);
+        assert_equal(&residue(&g, "x", ig(1)).unwrap(), &CasExpr::int(1));
+        // 1/(x−1)² has residue 0 at 1 (purely a double-pole term).
+        assert_equal(
+            &residue(&(CasExpr::int(1) / (x() - CasExpr::int(1)).pow(2)), "x", ig(1)).unwrap(),
+            &CasExpr::zero(),
+        );
+        // (x²+1)/((x−2)(x−3)): Res₂ = (4+1)/(2−3) = −5, Res₃ = (9+1)/(3−2) = 10.
+        let h = (x().pow(2) + CasExpr::int(1)) / ((x() - CasExpr::int(2)) * (x() - CasExpr::int(3)));
+        assert_equal(&residue(&h, "x", ig(2)).unwrap(), &CasExpr::int(-5));
+        assert_equal(&residue(&h, "x", ig(3)).unwrap(), &CasExpr::int(10));
     }
 
     #[test]
