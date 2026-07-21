@@ -722,3 +722,35 @@ undetermined coefficients), **Hermite/Smith normal forms**, **permutations**,
 **polynomial inequalities**. **209 unit + 43 doctests, clippy-clean, WASM-green.**
 Remaining exp-tower tail (rational-coefficient scaling, non-constant `exp/ln`) is
 documented in [exp-tower.md](exp-tower.md); it needs the RootOf/RealAlgebraic layer.
+
+## 2026-07-21 — Entry 21: exp-tower payoffs + broad parity wave (258 tests)
+
+The exp tower (entry 20) unlocked a cascade, and a parallel sub-agent wave added
+breadth. Since entry 20 (209 → 258 tests):
+
+- **Fibonacci / Binet** — `solve_recurrence` extended to quadratic-irrational roots
+  including **negative** ones (`rⁿ = cos(πn)·exp(n·ln|r|)`), certified over ℚ(√D) by
+  a roots-and-initials argument. `F(n) = (φⁿ − ψⁿ)/√5` reproduces 0,1,1,2,3,5,8,13;
+  Lucas too.
+- **RootOf** — `algebraic::AlgebraicReal` + `real_roots`: every real root of a
+  univariate polynomial as (irreducible minimal polynomial + Sturm-certified
+  isolating interval), any degree (∛2, the non-solvable quintic x⁵−x−1), with f64
+  refinement.
+- **Trig identities via Euler** — `rewrite_exp` + exp tower + `I²=−1` make **all
+  polynomial trig identities decidable** (double-angle, sum, product-to-sum,
+  power-reduction), non-identities correctly rejected.
+- **Full partial fractions** — `apart` now handles irreducible factors of any degree
+  (linear, quadratic, repeated) via undetermined coefficients.
+- **Residues** (`residue`) of rational functions at a pole (order-m formula).
+- **Linear algebra / calculus** — `wronskian`, `gram_schmidt`, `hessian`,
+  `laplacian`.
+- **Sub-agent modules** (each verified, throwaway-crate tested, clippy-clean):
+  `orthopoly` (Chebyshev/Legendre/Hermite/Laguerre), `combinatorics` (Bernoulli/
+  Euler/Stirling/Bell/partitions/Catalan/Fibonacci/Lucas), `approx` (Padé +
+  Lagrange/Newton interpolation), `ntheory_more` (Möbius/Mertens/σ_k/Carmichael/
+  primorial/π(n)/nth_prime/…).
+
+**258 unit + 70 doctests, clippy-pedantic clean, WASM-green.** Work is on a dedicated
+`main` worktree (`cas/parity-push`) to keep clear of the concurrent solver-side
+branch sharing the repo. Next: definite integrals via residues, Laurent/Puiseux
+series, Jordan form, Gruntz limits, special functions with derivative rules, Risch.
