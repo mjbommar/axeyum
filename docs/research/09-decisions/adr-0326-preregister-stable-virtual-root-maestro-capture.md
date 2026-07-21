@@ -36,6 +36,13 @@ The upstream `.cargo/config.toml` supplies its original
 `-Zexport-executable-symbols`; the final rustc tail remains only one codegen
 unit, linked-dead-code retention, and textual LLVM emission.
 
+The build namespace uses a fresh temporary root, read-only binds only the
+registered `/usr`, `/etc`, Cargo-home, and Rustup-home inputs, reconstructs the
+standard `/bin`, `/sbin`, `/lib`, and `/lib64` links, and creates
+`/axeyum-vroot` before mounting the two run-specific roots. The separate
+no-write identity probe retains the simpler read-only whole-host-root argv
+specified below.
+
 ## Frozen v3 gates
 
 1. Commit this zero-result ADR before adding/running v3. Prior module hashes do
@@ -81,8 +88,14 @@ Maestro build-route correction rather than licensing v4 normalization.
 
 ## Result
 
-Proposed. No virtual-root build, module, extraction, parser result, capture
-credit, proof, or scoreboard row exists.
+Proposed. The first producer preflight invocation failed before Cargo execution
+because its initial build argv tried to create `/axeyum-vroot` after mounting a
+read-only whole-host root. It emitted no module and atomic cleanup retained no
+partial output, so no v3 build had started and no frozen evidence gate was
+observed. The registered producer now constructs its temporary namespace root
+first; a no-write test executes the exact pinned Cargo toolchain inside it.
+No virtual-root build, module, extraction, parser result, capture credit, proof,
+or scoreboard row exists.
 
 ## Rejected alternatives
 

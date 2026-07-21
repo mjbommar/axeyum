@@ -18,6 +18,60 @@
       "--proc",
       "/proc"
     ],
+    "build_root_argv": [
+      "--die-with-parent",
+      "--new-session",
+      "--unshare-all",
+      "--tmpfs",
+      "/",
+      "--dir",
+      "/usr",
+      "--ro-bind",
+      "/usr",
+      "/usr",
+      "--symlink",
+      "usr/bin",
+      "/bin",
+      "--symlink",
+      "usr/sbin",
+      "/sbin",
+      "--symlink",
+      "usr/lib",
+      "/lib",
+      "--symlink",
+      "usr/lib64",
+      "/lib64",
+      "--dir",
+      "/etc",
+      "--ro-bind",
+      "/etc",
+      "/etc",
+      "--dir",
+      "/home",
+      "--dir",
+      "/home/mjbommar",
+      "--ro-bind",
+      "/home/mjbommar/.cargo",
+      "/home/mjbommar/.cargo",
+      "--ro-bind",
+      "/home/mjbommar/.rustup",
+      "/home/mjbommar/.rustup",
+      "--dir",
+      "/dev",
+      "--dev-bind",
+      "/dev",
+      "/dev",
+      "--dir",
+      "/proc",
+      "--proc",
+      "/proc",
+      "--dir",
+      "/tmp",
+      "--tmpfs",
+      "/tmp",
+      "--dir",
+      "/axeyum-vroot"
+    ],
     "path": "/usr/bin/bwrap",
     "sha256": "0abea81db798ebf6b4742ac0664802d97521547a353c2a0dbdc21d76cbbfd2c0",
     "version": "bubblewrap 0.11.1"
@@ -87,15 +141,15 @@
   "producer_files": [
     {
       "path": "docs/research/09-decisions/adr-0326-preregister-stable-virtual-root-maestro-capture.md",
-      "sha256": "3b60d2074cba1ff3802e8ec8c4e45854e29c5cdd3e78911104db5e565233b748"
+      "sha256": "c263612f1d97ba2dda86e3b635ab48e43f271f018e5dc15dafca5ab9b8d1df4e"
     },
     {
       "path": "scripts/capture-maestro-device-id-v3.py",
-      "sha256": "61c2918e51c8bf024f576cac6e496531cc1d549658d088cd91768e436f9913d0"
+      "sha256": "fac027f903b14144a5fc652a80bc58e7ea0cd8c89e42b8d6c66dce0cc2ca698f"
     },
     {
       "path": "scripts/tests/test_capture_maestro_device_id_v3.py",
-      "sha256": "4bda7a27fa4bd9ce04bcb70ed3af5078e6a1daed2d16f584b00c0756b3627f3e"
+      "sha256": "baed186b73e6b0ac3f851176a1990e7d22a816d1388304fc55c18ec23d123a67"
     }
   ],
   "result_path": "bench-results/verify-maestro-device-id-20260721/capture-v3-result.json",

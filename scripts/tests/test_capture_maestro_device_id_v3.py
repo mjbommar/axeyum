@@ -37,6 +37,7 @@ def test_committed_registration_and_registered_bwrap_probe_validate() -> None:
         ("version", "bubblewrap 0.11.0"),
         ("path", "/bin/false"),
         ("base_argv", list(reversed(MODULE.EXPECTED_BWRAP_BASE))),
+        ("build_root_argv", list(reversed(MODULE.EXPECTED_BUILD_ROOT))),
     ],
 )
 def test_registration_rejects_bwrap_identity_or_argv_drift(
@@ -87,6 +88,33 @@ def test_namespace_commands_differ_only_at_two_host_bind_sources(tmp_path: Path)
     assert first.index(str(paths[0])) < first.index(str(paths[1]))
     assert "--remap-path-prefix" not in " ".join(first)
     assert "CARGO_ENCODED_RUSTFLAGS" not in first
+
+
+def test_constructed_root_can_execute_registered_toolchain() -> None:
+    value = registration()
+    argv = [
+        value["bwrap"]["path"],
+        *value["bwrap"]["build_root_argv"],
+        "--clearenv",
+        "--setenv",
+        "HOME",
+        "/home/mjbommar",
+        "--setenv",
+        "CARGO_HOME",
+        "/home/mjbommar/.cargo",
+        "--setenv",
+        "RUSTUP_HOME",
+        "/home/mjbommar/.rustup",
+        "--setenv",
+        "PATH",
+        "/home/mjbommar/.cargo/bin:/usr/local/bin:/usr/bin:/bin",
+        "--",
+        "cargo",
+        "+nightly-2025-05-10",
+        "-V",
+    ]
+    completed = MODULE.CAPTURE.command(argv, stage="tool", kind="constructed_root")
+    assert completed.stdout.strip() == "cargo 1.89.0-nightly (7918c7eb5 2025-04-27)"
 
 
 def test_physical_roots_and_ambient_flags_fail_closed(tmp_path: Path) -> None:
