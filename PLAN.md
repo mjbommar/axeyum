@@ -434,6 +434,11 @@ session state.
 >    partial/OOM result exists. Never relax and rerun v3. Next preregister a
 >    canonical hard-link row (lexicographic owner + shared mode/size/hash) as
 >    preparation v4, keeping every other gate unchanged.
+>    ADR-0331 now freezes that inventory correction: inode numbers stay local;
+>    canonical rows bind one lexicographic owner plus every alias path and the
+>    shared mode/size/hash/link count; any link outside the cache is rejected.
+>    Implement/push a thin v4 producer and focused topology tests before DNS or
+>    fetch. Do not copy links, ignore topology, or patch/rerun v3.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

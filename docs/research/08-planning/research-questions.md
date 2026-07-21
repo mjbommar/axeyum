@@ -1026,6 +1026,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     closes v3 negatively because the frozen inventory rejects Cargo/libgit's
     legitimate firmware pack-index hard link. No cache survives. A successor
     must preregister canonical hard-link owner/alias rows before another fetch.
+  - [ADR-0331](../09-decisions/adr-0331-preregister-tock-cache-hardlink-inventory.md)
+    freezes that preparation-v4 rule: one lexicographic owner plus explicit
+    alias rows bind every in-cache path and shared mode/size/hash/link count;
+    outside-root aliases fail and inode numbers are excluded. No v4 producer,
+    fetch, expected link count, or cache exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
