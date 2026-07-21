@@ -5712,6 +5712,132 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
     }
 }
 
+/// The **(unilateral) Z-transform** `X(z) = Σ_{k≥0} x[k]·z^{−k}` of a discrete
+/// signal `x[n]`, over the geometric fragment: linear combinations of the unit
+/// step (`x[n]=1 → z/(z−1)`) and geometric sequences (`x[n]=aⁿ → z/(z−a)`, with
+/// `aⁿ` written as `exp(n·ln a)` for rational `a > 0`, cf. [`geometric_power`]).
+/// Returned as a rational function of `z`. `None` outside that fragment.
+///
+/// Discrete counterpart of [`laplace_transform`]; pairs with [`inverse_z_transform`],
+/// which is round-trip-certified against this function.
+#[must_use]
+pub fn z_transform(signal: &CasExpr, n: &str, z: &str) -> Option<CasExpr> {
+    let terms = match signal {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    let z_var = CasExpr::var(z);
+    let mut total = CasExpr::zero();
+    for term in &terms {
+        let (coeff, base) = match_geometric_signal(term, n)?; // c·aⁿ (a = 1 for a step)
+        // Z{c·aⁿ} = c·z/(z − a).
+        let contribution =
+            CasExpr::Const(coeff) * z_var.clone() / (z_var.clone() - CasExpr::Const(base));
+        total = total + contribution;
+    }
+    cancel(&total)
+}
+
+/// Match a discrete term `c·aⁿ` (with `aⁿ` written as `exp(n·ln a)`, `a > 0`) or a
+/// bare constant `c` (`a = 1`, the unit step), returning `(c, a)`. `None` otherwise.
+fn match_geometric_signal(term: &CasExpr, n: &str) -> Option<(Rational, Rational)> {
+    let mut coeff = Rational::integer(1);
+    let mut base: Option<Rational> = None;
+    for factor in flatten_mul(term) {
+        match factor {
+            CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+            CasExpr::Unary(UnaryFunc::Exp, arg) if base.is_none() => {
+                base = Some(geometric_base(&arg, n)?);
+            }
+            _ => return None, // n-dependent non-geometric factor, or a second exp
+        }
+    }
+    Some((coeff, base.unwrap_or_else(|| Rational::integer(1))))
+}
+
+/// The base `a` if `arg` is `n·ln(a)` for a **positive rational** `a` (so
+/// `exp(arg) = aⁿ`); `None` otherwise.
+fn geometric_base(arg: &CasExpr, n: &str) -> Option<Rational> {
+    let mut has_n = false;
+    let mut base: Option<Rational> = None;
+    for factor in flatten_mul(arg) {
+        match factor {
+            CasExpr::Var(v) if v == n => has_n = true,
+            CasExpr::Unary(UnaryFunc::Ln, inner) if base.is_none() => {
+                let CasExpr::Const(a) = *inner else {
+                    return None;
+                };
+                if a.numerator() <= 0 {
+                    return None; // ln real only for a > 0
+                }
+                base = Some(a);
+            }
+            CasExpr::Const(c) if c == Rational::integer(1) => {}
+            _ => return None,
+        }
+    }
+    if has_n { base } else { None }
+}
+
+/// The **inverse Z-transform** `x[n] = Z⁻¹{X}` of a proper rational `X(z)` with
+/// **simple rational poles**: from the partial fraction `X(z)/z = Σ Rⱼ/(z − aⱼ)`,
+/// `x[n] = Σ Rⱼ·aⱼⁿ` (with `aⁿ = exp(n·ln a)`). **Certified** by the round trip
+/// `Z{x[n]} = X(z)` (via [`z_transform`] and the zero-test). Returns `None` for an
+/// improper `X`, repeated/irrational/non-positive poles, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, inverse_z_transform, z_transform, equal, ZeroTest};
+/// let z = CasExpr::var("z");
+/// // Z⁻¹{z/(z−2)} = 2ⁿ; the round trip recovers z/(z−2).
+/// let x = inverse_z_transform(&(z.clone() / (z.clone() - CasExpr::int(2))), "z", "n").unwrap();
+/// let back = z_transform(&x, "n", "z").unwrap();
+/// assert!(matches!(equal(&back, &(z.clone() / (z - CasExpr::int(2)))), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn inverse_z_transform(transformed: &CasExpr, z: &str, n: &str) -> Option<CasExpr> {
+    // Work with X(z)/z so simple poles a give residues R with x[n] = Σ R·aⁿ.
+    let z_var = CasExpr::var(z);
+    let over_z = CasExpr::Div(Box::new(transformed.clone()), Box::new(z_var));
+    // Reduce to lowest terms so the extra `z` in the denominator cancels rather
+    // than leaving a spurious pole at `z = 0` (e.g. `z/(z²−2z)` → `1/(z−2)`).
+    let rf = normalize_rational(&over_z)?.reduced()?;
+    let num = rf.num.to_univariate(z)?;
+    let den = rf.den.to_univariate(z)?;
+    let deg_num = poly::rat_degree(&num).unwrap_or(0);
+    let deg_den = poly::rat_degree(&den)?;
+    if deg_num >= deg_den {
+        return None; // X(z)/z must be strictly proper (X proper)
+    }
+    let mut poles: Vec<Rational> = Vec::new();
+    for root in ratint::rational_roots(&den)? {
+        if !poles.contains(&root) {
+            poles.push(root);
+        }
+    }
+    if poles.len() != deg_den {
+        return None; // need `deg_den` distinct rational poles (⇒ all simple)
+    }
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for pole in poles {
+        if pole.numerator() <= 0 {
+            return None; // aⁿ = exp(n·ln a) needs a > 0
+        }
+        let res = residue(&over_z, z, pole)?;
+        terms.push(res * geometric_power(pole, n));
+    }
+    // Build a *flat* sum (a nested `zero()+a+b` would defeat z_transform's Add match).
+    let result = fold_trivial(&match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    });
+    // Round-trip certificate: Z{result} = X(z).
+    match equal(&z_transform(&result, n, z)?, transformed) {
+        ZeroTest::Certified { equal: true, .. } => Some(result),
+        _ => None,
+    }
+}
+
 /// The Maclaurin coefficients of `f` about `0` to `order`, or `None` outside the
 /// series-expandable fragment.
 fn series_coefficients(f: &CasExpr, var: &str, order: usize) -> Option<Vec<Rational>> {
@@ -7681,6 +7807,32 @@ mod tests {
             .unwrap(),
             &(-t().exp() + (CasExpr::int(2) * t()).exp()),
         );
+    }
+
+    #[test]
+    fn z_transforms_round_trip() {
+        let n = || v("n");
+        let z = || v("z");
+        // Forward: Z{aⁿ} = z/(z−a); Z{1} = z/(z−1); linearity.
+        assert_equal(
+            &z_transform(&geometric_power(Rational::integer(2), "n"), "n", "z").unwrap(),
+            &(z() / (z() - CasExpr::int(2))),
+        );
+        assert_equal(
+            &z_transform(&CasExpr::int(1), "n", "z").unwrap(),
+            &(z() / (z() - CasExpr::int(1))),
+        );
+        // Inverse (simple rational poles > 0), certified by the Z round-trip.
+        let x = z() / (z() - CasExpr::int(2));
+        let signal = inverse_z_transform(&x, "z", "n").unwrap();
+        assert_equal(&signal, &geometric_power(Rational::integer(2), "n")); // 2ⁿ
+        // Two poles: Z⁻¹{z/((z−2)(z−3))} = −2ⁿ + 3ⁿ, round-trip recovers X(z).
+        let two_pole = z() / ((z() - CasExpr::int(2)) * (z() - CasExpr::int(3)));
+        let sig2 = inverse_z_transform(&two_pole, "z", "n").unwrap();
+        assert_equal(&z_transform(&sig2, "n", "z").unwrap(), &two_pole);
+        // A non-positive pole (z/(z+1)) is declined (aⁿ needs a > 0).
+        assert!(inverse_z_transform(&(z() / (z() + CasExpr::int(1))), "z", "n").is_none());
+        let _ = n;
     }
 
     #[test]
