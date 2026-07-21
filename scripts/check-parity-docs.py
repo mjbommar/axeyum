@@ -33,6 +33,12 @@ Z3_P4DFA = (
     / "baselines"
     / "qf-bv-p4dfa-z3-standalone-20s.json"
 )
+SMTCOMP_INVENTORY = (
+    ROOT / "bench-results" / "smtcomp-repro-20260721" / "inventory.json"
+)
+SMTCOMP_QFBV = (
+    ROOT / "bench-results" / "smtcomp-repro-20260721" / "head_to_head_qfbv.json"
+)
 
 LIVE_DOCS = (
     ROOT / "PLAN.md",
@@ -84,6 +90,8 @@ def measured_snapshot() -> dict[str, int]:
 
     axeyum = load_json(AXEYUM_P4DFA)
     z3 = load_json(Z3_P4DFA)
+    inventory = load_json(SMTCOMP_INVENTORY)
+    qfbv = load_json(SMTCOMP_QFBV)
     for artifact in (axeyum, z3):
         config = artifact["config"]
         summary = artifact["summary"]
@@ -91,6 +99,8 @@ def measured_snapshot() -> dict[str, int]:
             raise RuntimeError("p4dfa control is no longer the registered 113-file/20-second cell")
     if axeyum["config"]["corpus_hash"] != z3["config"]["corpus_hash"]:
         raise RuntimeError("p4dfa Axeyum/Z3 controls do not bind the same corpus hash")
+    qfbv_division = qfbv["divisions"]["QF_BV"]
+    qfbv_solvers = qfbv_division["solvers"]
 
     return {
         "rows": len(rows),
@@ -110,6 +120,14 @@ def measured_snapshot() -> dict[str, int]:
         "audited_unsat": sum(summary["audited_unsat"] for summary in audits),
         "p4dfa_axeyum_20s": decided(axeyum["summary"]),
         "p4dfa_z3_20s": decided(z3["summary"]),
+        "public_inventory_files": inventory["aggregate"]["total"],
+        "public_inventory_decided": inventory["aggregate"]["decided_correct"],
+        "public_inventory_wrong": inventory["aggregate"]["WRONG"],
+        "public_inventory_no_answer": inventory["aggregate"]["no_answer"],
+        "qfbv_head_to_head_files": qfbv_division["n_benchmarks"],
+        "qfbv_head_to_head_axeyum": qfbv_solvers["axeyum"]["par2"]["n"],
+        "qfbv_head_to_head_cvc5": qfbv_solvers["cvc5"]["par2"]["n"],
+        "qfbv_head_to_head_bitwuzla": qfbv_solvers["bitwuzla"]["par2"]["n"],
     }
 
 
@@ -133,6 +151,9 @@ def main() -> int:
         f"{snapshot['lean_checked_unsat']} / {snapshot['audited_unsat']} measured `unsat`",
         f"{snapshot['p4dfa_axeyum_20s']} / 113",
         f"{snapshot['p4dfa_z3_20s']} / 113",
+        f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
+        f"{snapshot['public_inventory_wrong']} wrong verdicts",
+        f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
     )
     gap_text = GAP_DOC.read_text(encoding="utf-8")
     for marker in required_gap_markers:

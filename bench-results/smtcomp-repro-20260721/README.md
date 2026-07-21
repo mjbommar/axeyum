@@ -121,8 +121,17 @@ python3 bench-results/smtcomp-repro-20260721/chart.py
 
 ## Where this sits (prior art it backfills / extends)
 
+Interpretation boundary: this is a complete run over the 228 files currently
+present on the NAS, not a complete or officially selected SMT-COMP benchmark
+population. The set is source-skewed (113/228 are p4dfa), and exact/near-
+duplicate source-family groups are not yet classified. Keep its 82/228 result
+separate from the curated/regression scoreboard's denominator. The current
+cross-artifact research plan is
+[`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+
 - **[`bench-results/SCOREBOARD.md`](../SCOREBOARD.md)** — axeyum vs z3 4.13.3,
-  35 division baselines, ~73 % decide, **DISAGREE = 0 everywhere**. This record's
+  35 division baselines, with totals generated from committed JSON and
+  **DISAGREE = 0 everywhere**. This record's
   soundness result (0 wrong) is consistent with that floor; its 36 % decide is on
   a *different, harder* slice (the NAS 228, half the hard QF_BV family), not the
   curated regression baselines — the numbers measure different corpora and should

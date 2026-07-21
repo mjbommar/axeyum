@@ -52,6 +52,27 @@ The division scoreboard contains 35 rows across 24 logic labels:
 These denominators are measurements of the committed slices, not estimates of
 the entire SMT-LIB population and not proof of universal soundness.
 
+### Harder partial public inventory
+
+The branch's in-tree SMT-COMP scoring reproduction supplies a second,
+non-combinable view. At a 120-second ceiling over all 228 public SMT-LIB files
+currently present on the NAS, Axeyum records:
+
+- **82 / 228** decided-correct, 144 explicit declines, two no-answer outcomes,
+  and **0 wrong verdicts** against known `:status` values;
+- 22/23 QF_UF, 14/17 QF_UFLIA, 10/12 QF_LRA, but only 6/113 on the hard p4dfa
+  QF_BV family; and
+- a separate 24-file QF_BV head-to-head where Axeyum, cvc5, and Bitwuzla each
+  decide **19 / 24**, with Axeyum a close third on PAR-2.
+
+This public inventory is stronger evidence of difficulty than the regression
+scoreboard, but it is still a **partial convenience set**, not the official
+SMT-COMP selection: p4dfa contributes 113/228 files, source families are not
+population-weighted, duplicate/near-duplicate classes are not yet identified,
+and the three-solver head-to-head contains no Z3 cell. Report the 36% inventory
+rate and 75.9% regression-row rate side by side with their provenance; never
+average them or use either as a global solver-completeness percentage.
+
 ### Corrected public QF_BV control
 
 The old universal-sweep claim for p4dfa was an unmeasured premise and is false
@@ -112,9 +133,17 @@ The 992-file aggregate mixes synthetic, curated, duplicated, small, and public
 regression slices. It is useful for regression tracking but not a population
 claim.
 
-**Research:** classify every row by provenance, difficulty, theory/operators,
-SAT/UNSAT direction, duplication, and oracle source. Add SMT-COMP-style scoring
-and coverage weights without hiding unsupported or timeout outcomes.
+**Prototype already present:** `scripts/smtcomp_repro/` implements the 2026
+scoring rules and the committed 228-file inventory establishes a harder public
+view. It does not yet classify source-family duplication or make the 35-row
+scoreboard and 228-file inventory share one provenance schema.
+
+**Research:** classify every row/file by source hash, source family, provenance,
+difficulty, theory/operators, SAT/UNSAT direction, exact/near duplication,
+selection policy, and oracle source. Add SMT-COMP-style scoring and coverage
+partitions without hiding unsupported or timeout outcomes. Keep raw,
+deduplicated, source-balanced, and official-selection scores separate; do not
+invent a subjective weighted aggregate.
 
 **Exit:** one generated matrix reports both raw and deduplicated denominators,
 per-division PAR-2, coverage class, and neutral-oracle status. No global parity
@@ -250,8 +279,10 @@ reported as parity before it climbs the measured and certifying rungs.
 
 1. Add the parity-doc consistency gate to `just check`.
 2. Correct p4dfa and dominance statements in PLAN, STATUS, and SCOREBOARD.
-3. Generate the first provenance/deduplication inventory for all 35 rows.
-4. Reconcile the current SMT-COMP scoring prototype with G1's matrix.
+3. Extend the existing SMT-COMP inventory with source hashes/families and exact
+   duplicate groups.
+4. Give the 35-row scoreboard and 228-file inventory one shared provenance
+   schema while preserving separate scores.
 5. Add the required representative official-Lean solver-proof CI job.
 6. Generate the per-reduction proof-gap matrix from dominance audits.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.

@@ -50,9 +50,12 @@ certified-result coverage, Lean-kernel compatibility, and Lean workflow
 integration. The first prototype, `scripts/check-parity-docs.py`, derives the
 live scoreboard/dominance/p4dfa denominators from committed artifacts and is in
 `just check`; it caught and corrected the stale universal-sweep Z3 premise plus
-stale decide/proof denominators in PLAN, STATUS, and SCOREBOARD. Next research
-is the provenance/deduplication-weighted 35-row parity matrix, then the required
-representative official-Lean solver-proof CI tier.
+stale decide/proof denominators in PLAN, STATUS, and SCOREBOARD. The same gate
+now binds the branch's harder 228-file SMT-COMP-style inventory (82 decided,
+zero wrong) and 24-file QF_BV three-solver control (19/24 each). Next research
+is one shared source-family/deduplication schema for that inventory and the
+35-row scoreboard, then the required representative official-Lean solver-proof
+CI tier.
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
   `Sort::Seq` + seq ops), and **A.2 landed (ADR-0052)**: the `bv2nat`-linear→BV
