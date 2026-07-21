@@ -377,4 +377,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0320](adr-0320-preregister-bounded-reflected-page-table-evidence.md) | Accept authenticated bounded page-table-shaped proofs and replayed broken controls after the scope prerequisite | accepted |
 | [0321](adr-0321-preregister-reflected-handshake-fsm-refinement.md) | Accept bounded identity refinement from a compiler-reflected Rust handshake step to the shipped declarative FSM | accepted |
 | [0322](adr-0322-preregister-p5.3-obligation-catalog.md) | Accept the reviewer-facing P5.3 obligation catalog with one bounded page per accepted family | accepted |
-| [0323](adr-0323-preregister-maestro-device-id-llvm-capture.md) | Preregister root-independent owning-kernel LLVM capture and exact three-function extraction for the selected Maestro device-ID target | proposed |
+| [0323](adr-0323-preregister-maestro-device-id-llvm-capture.md) | Reject the first Maestro owning-kernel LLVM capture at the frozen two-root full-module byte-identity gate | accepted |

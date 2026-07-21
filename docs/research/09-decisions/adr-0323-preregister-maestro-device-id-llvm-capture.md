@@ -1,6 +1,6 @@
 # ADR-0323: Preregister Maestro device-ID LLVM capture
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -182,10 +182,8 @@ reclassified away.
 
 ## Result
 
-Proposed. No official capture, extraction, parser-admission result, retained
-external byte, proof, or scoreboard row exists under this ADR.
-
-The first runner invocation was rejected before either credited build. It
+Accepted as a negative T5.5.2 result. The first runner invocation was rejected
+before either credited build. It
 placed the two disposable source roots below Axeyum's ignored `target/`
 directory, so Cargo walked to Axeyum's ancestor workspace and rejected the
 foreign Maestro manifest as an undeclared member. No module or parser result
@@ -194,6 +192,26 @@ roots from the system temporary directory; retained local outputs remain below
 Axeyum's ignored `target/`. Source/tree validation, commands, toolchain,
 two-root byte-identity, extraction, parser, local-only, and all other frozen
 gates are unchanged.
+
+The corrected official run completed both isolated offline owning-kernel
+builds under the 4 GiB cap, then failed the frozen full-module identity gate:
+
+| Root | LLVM bytes | SHA-256 | Wall | Peak RSS |
+|---|---:|---|---:|---:|
+| A | 36,037,712 | `89b26e831789f210fe768982d8ae7c69a085ac1c4d7fa38faccd9e61911c5084` | 43,945 ms | 998,932 KiB |
+| B | 36,038,199 | `56bc0a408d905c4b0aa15723683ed75d4f8f39fb47189ef69ffd720c42627b94` | 44,921 ms | 1,000,360 KiB |
+
+The unequal sizes prove this is not only a hash mismatch. Per gate 3, the run
+stopped before symbol extraction, assembly, parser admission, or any solver
+query. Atomic failure handling removed the partial local output, so no external
+byte was retained or committed. All three targets are dropped from this run;
+there is no T5.5 result or scoreboard row.
+
+This result does not authorize full-module normalization or a weaker
+selected-function-only identity. The next step is a separately preregistered,
+non-crediting root-drift diagnostic that reproduces both modules, classifies
+every differing byte/line, and determines whether a semantic-free canonical
+owning-build identity can be specified independently. T5.5.2 remains open.
 
 ## Rejected alternatives
 

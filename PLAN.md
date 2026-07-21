@@ -335,6 +335,13 @@ session state.
 >    parser; only `llvm-extract`'s known input-path `ModuleID` line is excluded
 >    from extracted identity. Third-party bytes stay local. Implement and run
 >    this T5.5.2 gate next; no inverse-property query is authorized yet.
+>    The corrected official ADR-0323 run is negative at the earlier full-module
+>    gate: both isolated builds finish below 1 GiB peak RSS, but root A emits
+>    36,037,712 bytes and root B 36,038,199 bytes with distinct hashes. The run
+>    stops before extraction/parser admission and atomically retains no target
+>    bytes. Next preregister a non-crediting byte/line root-drift diagnostic;
+>    do not retroactively normalize, extract only the selected functions, or
+>    run an inverse-property query.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

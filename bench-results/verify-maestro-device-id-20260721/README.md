@@ -9,6 +9,11 @@ No Maestro source, LLVM, bitcode, generated replay harness, or Cargo build
 product belongs in this directory. Those bytes remain under ignored `target/`
 storage. The committed JSON identifies them by hashes and sizes only.
 
+The first official result is negative: both isolated builds completed, but the
+full LLVM modules differed in size and hash. The gate stopped before extraction
+or parser admission and atomic cleanup retained no target byte. See
+`capture-result.json`; this is not a verification or scoreboard result.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 

@@ -41,7 +41,7 @@
     },
     {
       "path": "docs/research/09-decisions/adr-0323-preregister-maestro-device-id-llvm-capture.md",
-      "sha256": "3be0838002f5eaa82a929900954dc2ecb80ac55ba8ac2250b0d02b4c8a61701c"
+      "sha256": "acc791505b80a41d334e2d638272ab5bfa1f1a2fcd463675c2086e16c4a6ae4f"
     },
     {
       "path": "scripts/capture-maestro-device-id.py",

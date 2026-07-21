@@ -1,0 +1,57 @@
+{
+  "artifacts": {
+    "external_bytes_committed": 0,
+    "local_partial_retained": false
+  },
+  "failure": {
+    "full_module_identity_required": true,
+    "kind": "module_size_drift",
+    "stage": "build"
+  },
+  "identity_sha256": "1c2864ea566225baac51eb57bc42941fc28b83857d00acf07038c45ce8f8ed3d",
+  "observations": {
+    "builds": [
+      {
+        "module_bytes": 36037712,
+        "module_sha256": "89b26e831789f210fe768982d8ae7c69a085ac1c4d7fa38faccd9e61911c5084",
+        "peak_rss_kib": 998932,
+        "root": "a",
+        "wall_ms": 43945
+      },
+      {
+        "module_bytes": 36038199,
+        "module_sha256": "56bc0a408d905c4b0aa15723683ed75d4f8f39fb47189ef69ffd720c42627b94",
+        "peak_rss_kib": 1000360,
+        "root": "b",
+        "wall_ms": 44921
+      }
+    ]
+  },
+  "registration_sha256": "5217ed365e9244c0043011e67f3c409758662526a7580fa367340933ce52ee21",
+  "runner_commit": "d42f18cecadafb89626227b016404fdd65d63f0f",
+  "schema": "axeyum.maestro-device-id-capture-result.v1",
+  "status": "rejected",
+  "summary": {
+    "accepted": 0,
+    "builds": 2,
+    "dropped": 3,
+    "extraction_started": false,
+    "parser_admission_started": false,
+    "solver_queries": 0,
+    "targets": 3
+  },
+  "tools": {
+    "admitter_sha256": "7207e8ef2464db4149ddc2353f94b76e6cb4702825f2b4210178b08c3448fdc4",
+    "cargo": "cargo 1.89.0-nightly (7918c7eb5 2025-04-27)",
+    "llvm_as_sha256": "50526d303ae33ed44002023d8d9611186e916f4b8eaf70a608bdbf1d81122784",
+    "llvm_extract_sha256": "7c02041b5306536670c74f16c463f5026776f819f66a63effe11d88d352c069a",
+    "llvm_tools_version": "Ubuntu LLVM version 21.1.8",
+    "rustc_commit": "dcecb99176edf2eec51613730937d21cdd5c8f6e",
+    "rustc_llvm": "20.1.4"
+  },
+  "upstream": {
+    "commit": "650a3f62c386d113b4cbbc11645d945d57620cbb",
+    "repository": "https://github.com/maestro-os/maestro.git",
+    "tree": "6a51753d1f7b80117979db4f35146f55f5e248b4"
+  }
+}
