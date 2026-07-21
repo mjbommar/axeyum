@@ -1922,6 +1922,139 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     }
 }
 
+/// The coefficient of `yⁱ` in a polynomial `f`, as a [`CasExpr`] in the remaining
+/// variables: `[∂ⁱ_y f / i!]|_{y=0}`. (Uses the differentiate/substitute kernels,
+/// so it is exact for polynomial `f`.)
+fn coefficient_in(f: &CasExpr, y: &str, i: u32) -> Option<CasExpr> {
+    let derivative = f.differentiate_n(y, usize::try_from(i).ok()?);
+    let at_zero = derivative.substitute(y, &CasExpr::zero());
+    let factorial = ntheory::factorial(i128::from(i))?;
+    Some(simplify(&(at_zero / CasExpr::Const(Rational::integer(factorial)))))
+}
+
+/// Solve a **system of two polynomial equations** `f(x,y)=0`, `g(x,y)=0` for the
+/// variables `xvar, yvar`, by **resultant elimination**: the Sylvester resultant
+/// `R(x) = Res_y(f, g)` (a determinant of `CasExpr` coefficient entries, so it
+/// carries the `x`-polynomial coefficients exactly) vanishes at every common root's
+/// `x`-coordinate. Each rational/quadratic `x`-root is back-substituted and the
+/// resulting univariate equation solved for `y`; only pairs that satisfy **both**
+/// equations — certified by the zero-test — are returned (distinct, sorted by the
+/// order found). `None` if either input is not a polynomial in these two variables,
+/// if elimination degenerates (a shared factor makes `R ≡ 0`), or on overflow.
+///
+/// Solutions with **irrational coordinates** are dropped (honest under-
+/// approximation): once an irrational `x` is back-substituted, the univariate
+/// equation in `y` has surd coefficients that fall outside the rational [`solve`].
+/// Systems whose solutions are rational (or whose `x`-coordinates are rational)
+/// are returned in full and certified.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, solve_polynomial_system, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // Circle ∩ hyperbola: x²+y²=25, x²−y²=7  ⇒  (±4, ±3).
+/// let sols = solve_polynomial_system(
+///     &(x.clone().pow(2) + y.clone().pow(2) - CasExpr::int(25)),
+///     &(x.clone().pow(2) - y.clone().pow(2) - CasExpr::int(7)),
+///     "x",
+///     "y",
+/// ).unwrap();
+/// assert_eq!(sols.len(), 4);
+/// ```
+#[must_use]
+pub fn solve_polynomial_system(
+    f: &CasExpr,
+    g: &CasExpr,
+    xvar: &str,
+    yvar: &str,
+) -> Option<Vec<(CasExpr, CasExpr)>> {
+    // Both must be bivariate polynomials in {xvar, yvar}.
+    let f_mv = mvpoly::MvPoly::from_cas_expr(f)?;
+    let g_mv = mvpoly::MvPoly::from_cas_expr(g)?;
+    let allowed = [xvar.to_owned(), yvar.to_owned()].into_iter().collect();
+    if !f_mv.variables().is_subset(&allowed) || !g_mv.variables().is_subset(&allowed) {
+        return None;
+    }
+    let deg_f = f_mv.degree_in(yvar);
+    let deg_g = g_mv.degree_in(yvar);
+    if deg_f == 0 || deg_g == 0 {
+        return None; // need genuine y-dependence in both to eliminate y
+    }
+    // Sylvester matrix of f, g as polynomials in y (coefficients are CasExpr in x).
+    let f_coeffs = collect_y_coefficients(f, yvar, deg_f)?; // LSB-first
+    let g_coeffs = collect_y_coefficients(g, yvar, deg_g)?;
+    let resultant = sylvester_determinant_expr(&f_coeffs, &g_coeffs)?;
+    // R(x) = 0 at every common root's x-coordinate.
+    let x_roots = solve(&simplify(&resultant), xvar)?;
+    let mut solutions: Vec<(CasExpr, CasExpr)> = Vec::new();
+    for x_root in x_roots {
+        // Only x-roots we can substitute exactly (rational or exact surd) are useful;
+        // substitute and solve the (now univariate) equation in y.
+        let f_at = simplify(&f.substitute(xvar, &x_root));
+        let Some(y_candidates) = solve(&f_at, yvar) else {
+            continue;
+        };
+        for y_root in y_candidates {
+            // Certify the pair against BOTH equations.
+            let f_val = f.substitute(xvar, &x_root).substitute(yvar, &y_root);
+            let g_val = g.substitute(xvar, &x_root).substitute(yvar, &y_root);
+            let both_zero = matches!(
+                equal(&f_val, &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            ) && matches!(
+                equal(&g_val, &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            );
+            if both_zero {
+                let pair = (x_root.clone(), y_root);
+                if !solutions.contains(&pair) {
+                    solutions.push(pair);
+                }
+            }
+        }
+    }
+    Some(solutions)
+}
+
+/// The `y`-coefficient vector (LSB-first, length `degree+1`) of a bivariate
+/// polynomial `f`, each entry a [`CasExpr`] in the other variable.
+fn collect_y_coefficients(f: &CasExpr, yvar: &str, degree: u32) -> Option<Vec<CasExpr>> {
+    (0..=degree).map(|i| coefficient_in(f, yvar, i)).collect()
+}
+
+/// The Sylvester resultant of two polynomials given by their (LSB-first)
+/// [`CasExpr`] coefficient vectors, as the determinant of the `(m+n)×(m+n)`
+/// Sylvester matrix — computed symbolically so polynomial coefficients are
+/// retained. `None` if either polynomial is constant or on a determinant failure.
+fn sylvester_determinant_expr(a: &[CasExpr], b: &[CasExpr]) -> Option<CasExpr> {
+    let m = a.len().checked_sub(1)?; // deg a
+    let n = b.len().checked_sub(1)?; // deg b
+    if m == 0 || n == 0 {
+        return None;
+    }
+    let size = m + n;
+    // Rows: n shifted copies of a (MSB-first), then m shifted copies of b.
+    let mut rows: Vec<Vec<CasExpr>> = Vec::with_capacity(size);
+    let msb = |coeffs: &[CasExpr]| -> Vec<CasExpr> { coeffs.iter().rev().cloned().collect() };
+    let a_msb = msb(a);
+    let b_msb = msb(b);
+    for shift in 0..n {
+        let mut row = vec![CasExpr::zero(); size];
+        for (j, coeff) in a_msb.iter().enumerate() {
+            row[shift + j] = coeff.clone();
+        }
+        rows.push(row);
+    }
+    for shift in 0..m {
+        let mut row = vec![CasExpr::zero(); size];
+        for (j, coeff) in b_msb.iter().enumerate() {
+            row[shift + j] = coeff.clone();
+        }
+        rows.push(row);
+    }
+    Matrix::from_rows(rows)?.determinant()
+}
+
 /// Solve `expr = 0` for `var`. Over a univariate polynomial: returns the distinct
 /// real roots (rational roots exact; a leftover real quadratic via the quadratic
 /// formula, rational or symbolic `sqrt`; complex roots and irreducible cubics+
@@ -8950,6 +9083,43 @@ mod tests {
         assert_eq!(
             solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
             2
+        );
+    }
+
+    #[test]
+    fn solve_bivariate_polynomial_systems() {
+        let x = || v("x");
+        let y = || v("y");
+        // Circle ∩ hyperbola: x²+y²=25, x²−y²=7 ⇒ (±4, ±3).
+        let sols = solve_polynomial_system(
+            &(x().pow(2) + y().pow(2) - CasExpr::int(25)),
+            &(x().pow(2) - y().pow(2) - CasExpr::int(7)),
+            "x",
+            "y",
+        )
+        .expect("solvable");
+        assert_eq!(sols.len(), 4);
+        for (xr, yr) in &sols {
+            // Each pair satisfies both equations.
+            let on_circle = (xr.clone().pow(2) + yr.clone().pow(2)) - CasExpr::int(25);
+            let on_hyper = (xr.clone().pow(2) - yr.clone().pow(2)) - CasExpr::int(7);
+            assert_equal(&on_circle, &CasExpr::zero());
+            assert_equal(&on_hyper, &CasExpr::zero());
+        }
+        // Parabola ∩ line: y=x², y=x ⇒ (0,0), (1,1).
+        let pl = solve_polynomial_system(
+            &(y() - x().pow(2)),
+            &(y() - x()),
+            "x",
+            "y",
+        )
+        .expect("solvable");
+        assert_eq!(pl.len(), 2);
+        assert!(pl.contains(&(CasExpr::int(0), CasExpr::int(0))));
+        assert!(pl.contains(&(CasExpr::int(1), CasExpr::int(1))));
+        // A three-variable input is declined.
+        assert!(
+            solve_polynomial_system(&(x() + y() + v("z")), &(x() - y()), "x", "y").is_none()
         );
     }
 
