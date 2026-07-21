@@ -546,16 +546,18 @@ session state.
 >    That post-N1 ranking is now complete. The ABV replay/repair residual remains
 >    deferred because 16 private items are test-reached and ROW/extensional
 >    replay ownership is shared; further CAD consolidation remains barred at the
->    rational/algebraic boundary. I2 is the next authorized slice: move the
->    contiguous 1,449-line ADR-0108 quantified-counterexample-cover proof family
->    into private `int_reconstruct/counterexample_cover.rs`. Its 28 top-level
->    items have only two outward seams (the crate-visible router and historical
->    public reconstructor), and the existing 247-line integration suite owns the
->    certificate, mutation, evidence-routing, and real-corpus behavior. Preserve
->    exact public paths, visibility, source/case/witness order, caps, verdicts,
->    and generated Lean bytes; import parent kernel helpers explicitly. Do not
->    promote `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` merely because
->    they are large—remeasure reviewer navigation and dependency seams after I2.
+>    rational/algebraic boundary. I2 is now complete: the contiguous ADR-0108
+>    quantified-counterexample-cover proof family lives in the private
+>    1,465-line `int_reconstruct/counterexample_cover.rs` child with explicit
+>    imports and the same crate-visible router/public reconstructor paths. A new
+>    byte-identity control reproduces the pre-move 7,197-byte Lean module at
+>    FNV-1a `e592f1787653a4bf`; all seven ordinary cover controls, the explicitly
+>    exercised real-corpus Lean reconstruction, all 895 library tests, strict
+>    Clippy, and both rustdoc profiles pass. `int_reconstruct.rs` falls
+>    7,683→6,233 lines (18.9% in I2; 29.8% from its original 8,876). Remeasure
+>    reviewer navigation and dependency seams before authorizing a successor.
+>    Do not promote `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` merely
+>    because they are large.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.

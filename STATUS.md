@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — I2 privately extracts counterexample-cover reconstruction.**
+  The cohesive ADR-0108 family now lives in the 1,465-line
+  `int_reconstruct/counterexample_cover.rs` child with explicit imports and the
+  same two outward paths. The pre-move 7,197-byte generated Lean module remains
+  exact at FNV-1a `e592f1787653a4bf`. Seven ordinary focused controls, the
+  explicitly run real-corpus reconstruction, all 895 library tests, strict
+  Clippy, and both rustdoc profiles pass under the bounded cap.
+  `int_reconstruct.rs` falls 7,683→6,233 lines, 29.8% below its original size.
+  Next: remeasure reviewer navigation/dependency seams; completion does not
+  authorize another raw-size-driven split.
+
 - **2026-07-20 — Post-N1 residual ranking authorizes I2, not broader cleanup.**
   The next behavior-neutral reviewer cut is the contiguous 1,449-line ADR-0108
   quantified-counterexample-cover family: 28 cohesive items, only two outward
@@ -5693,6 +5704,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Extracted the ADR-0108 reconstruction family.** Moved the
+  1,449-line counterexample-cover block into a private 1,465-line child with
+  explicit dependencies and unchanged re-exports. Exact generated Lean bytes,
+  all eight focused/real-corpus controls, 895 library tests, strict lint, and
+  both docs profiles pass; the parent drops to 6,233 lines.
 
 - **2026-07-20 — Re-ranked artifact residuals after N1.** Authorized only the
   private I2 extraction of the 1,449-line ADR-0108 counterexample-cover proof

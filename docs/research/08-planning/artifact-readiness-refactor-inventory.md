@@ -30,8 +30,9 @@ not repeat completed namespace/configuration sweeps.
 | ABV lazy-ext CEGAR orchestrator | 446 lines / 17,014 bytes | Named child module; ten items; one parent entry point |
 | ABV replay/repair residual | 4,531 parent lines (6,137--10,667) | Shared by ROW and extensional replay; 16 private items directly test-reached |
 | ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
-| `int_reconstruct.rs` | 7,683 lines / 316,411 bytes | Shared integer kernel context plus the remaining proof families |
+| `int_reconstruct.rs` | 6,233 lines / 258,948 bytes | Shared integer kernel context plus the remaining proof families |
 | Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
+| Quantified counterexample-cover reconstruction | 1,465 lines / 58,079 bytes | Private child; one crate router and one public re-export |
 | `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -109,7 +110,7 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    across N1. The whole file is 7,503 lines because the new semantic controls
    add test code, still 41 lines below baseline. N1 is closed; algebraic
    traversal remains separate.
-6. **I2 -- extract quantified counterexample-cover reconstruction (next).** The
+6. **I2 -- extract quantified counterexample-cover reconstruction (done).** The
    ADR-0108 family is one contiguous 1,449-line / 57,436-byte block with 28
    top-level items. Twenty-six are private implementation details; the only
    outward seams are the crate-visible router predicate and the existing public
@@ -121,14 +122,17 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    re-export the two historical paths, and import the parent integer-kernel
    context/helpers explicitly. Do not change proof search, source flattening,
    witness/case order, caps, generated Lean bytes, or public visibility. This
-   should reduce the 7,683-line parent to about 6,239 lines without creating a
-   new API.
+   reduces the 7,683-line parent to 6,233 lines without creating a new API. The
+   child is 1,465 lines / 58,079 bytes with explicit imports. A committed
+   7,197-byte/FNV-1a `e592f1787653a4bf` generated-module control proves exact
+   Lean-byte preservation. All seven ordinary integration controls plus the
+   explicitly exercised real-corpus Lean reconstruction, all 895 library tests,
+   strict Clippy, and both rustdoc profiles pass under the bounded profile.
 
-## Post-N1 residual ranking
+## Post-I2 residual posture
 
-1. Execute I2 as the next behavior-neutral reviewer-facing slice. Its cohesive
-   proof-family boundary gives a larger visible reduction than I1 with a
-   narrower outward surface.
+1. I2 is complete. Remeasure reviewer navigation and dependency seams before
+   authorizing another slice; no successor is implied by completion.
 2. Keep the 4,531-line ABV replay/repair residual in place. Sixteen private
    items are directly test-reached and the block shares ROW/extensional replay
    ownership; moving it now would widen visibility or combine a test
@@ -137,9 +141,9 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    algebraic lifting has a different value domain and needs new semantic
    evidence before any common traversal is authorized.
 4. Do not turn the repository's next-largest-file list into an automatic
-   refactor queue. After I2, remeasure reviewer navigation and dependency seams
-   before adding `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` to this
-   inventory; raw line count alone is not the acceptance criterion.
+   refactor queue. Remeasure reviewer navigation and dependency seams before
+   adding `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` to this inventory;
+   raw line count alone is not the acceptance criterion.
 
 ## Standing gate
 

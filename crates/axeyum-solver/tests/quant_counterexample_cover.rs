@@ -88,6 +88,28 @@ fn small_cover_reconstructs_through_the_lean_kernel() {
 }
 
 #[test]
+fn small_cover_generated_module_is_byte_stable() {
+    let (mut arena, assertions) = small_cover_query();
+    let certificate =
+        quantified_counterexample_cover_refutation(&mut arena, &assertions, &config(5))
+            .unwrap()
+            .expect("one counterexample cube");
+    let module = reconstruct_quantified_counterexample_cover_to_lean_module(
+        &arena,
+        &assertions,
+        &certificate,
+    )
+    .expect("checked small cover should reconstruct");
+    let fnv1a = module
+        .bytes()
+        .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+            (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    assert_eq!(module.len(), 7_197);
+    assert_eq!(fnv1a, 0xe592_f178_7653_a4bf);
+}
+
+#[test]
 fn oversized_cover_witness_declines_before_proof_building() {
     let (mut arena, assertions) = small_cover_query();
     let mut certificate =
