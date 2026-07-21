@@ -1018,6 +1018,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     symlink, so Flux DNS resolution fails. No cache byte or inventory exists.
     A successor must separately preregister the minimal resolver-file input and
     an actual DNS probe; the no-op namespace probe was insufficient.
+  - [ADR-0330](../09-decisions/adr-0330-preregister-tock-cache-resolver-correction.md)
+    freezes that narrow preparation-v3 correction: bind only the exact
+    hash/mode/size-pinned systemd-resolved stub at the selected path, require a
+    pinned real `getent` IPv4 lookup, then retain every ADR-0329 non-network
+    gate. No v3 producer, DNS probe, fetch, or cache exists yet.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
