@@ -60,7 +60,7 @@ mod series;
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
-pub use series::series;
+pub use series::{series, series_at};
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
 ///
@@ -1617,6 +1617,196 @@ pub fn eigenvalues(matrix: &Matrix, var: &str) -> Option<Vec<CasExpr>> {
     solve(&characteristic_polynomial(matrix, var)?, var)
 }
 
+/// A basis for the (right) null space `{x : A·x = 0}` of a rational-constant
+/// matrix, each vector an `n × 1` column [`Matrix`]. An empty result means the
+/// null space is trivial. Every returned `v` satisfies `A·v = 0` exactly (the
+/// certificate is the matrix product). `None` on a non-constant entry or overflow.
+#[must_use]
+pub fn null_space(matrix: &Matrix) -> Option<Vec<Matrix>> {
+    matrix.null_space()
+}
+
+/// The eigenvectors of a square rational-constant matrix, grouped by eigenvalue.
+///
+/// For each **rational** eigenvalue `λ` (the fragment in which `A − λI` stays a
+/// rational-constant matrix), returns `(λ, basis)` where `basis` spans the
+/// eigenspace `ker(A − λI)` — i.e. every returned vector `v` satisfies `A·v = λ·v`
+/// exactly, which is the eigenvector certificate. Eigenvalues that are irrational
+/// or complex (so `A − λI` leaves the rational-constant fragment) are skipped
+/// rather than mislabelled; the returned list covers exactly the rational spectrum.
+///
+/// `None` if the matrix is not square, is non-constant, or on overflow.
+#[must_use]
+pub fn eigenvectors(matrix: &Matrix, var: &str) -> Option<Vec<(CasExpr, Vec<Matrix>)>> {
+    let n = matrix.rows();
+    if n != matrix.cols() {
+        return None;
+    }
+    let mut result: Vec<(CasExpr, Vec<Matrix>)> = Vec::new();
+    let mut seen: Vec<Rational> = Vec::new();
+    for eigenvalue in eigenvalues(matrix, var)? {
+        // Only rational eigenvalues keep `A − λI` inside the rational-constant
+        // fragment that `null_space` can decide; skip the rest honestly.
+        let CasExpr::Const(lambda) = eigenvalue else {
+            continue;
+        };
+        if seen.contains(&lambda) {
+            continue;
+        }
+        seen.push(lambda);
+        // Build `A − λI` directly over rationals so entries stay bare constants.
+        let mut rows: Vec<Vec<CasExpr>> = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut row = Vec::with_capacity(n);
+            for j in 0..n {
+                let CasExpr::Const(entry) = matrix.get(i, j)? else {
+                    return None;
+                };
+                let value = if i == j {
+                    entry.checked_sub(lambda)?
+                } else {
+                    *entry
+                };
+                row.push(CasExpr::Const(value));
+            }
+            rows.push(row);
+        }
+        let basis = Matrix::from_rows(rows)?.null_space()?;
+        result.push((CasExpr::Const(lambda), basis));
+    }
+    Some(result)
+}
+
+/// A square rational-constant matrix as an exact rational grid, or `None` if any
+/// entry is not a bare [`CasExpr::Const`].
+fn matrix_to_rationals(matrix: &Matrix) -> Option<Vec<Vec<Rational>>> {
+    let mut grid = Vec::with_capacity(matrix.rows());
+    for i in 0..matrix.rows() {
+        let mut row = Vec::with_capacity(matrix.cols());
+        for j in 0..matrix.cols() {
+            match matrix.get(i, j)? {
+                CasExpr::Const(value) => row.push(*value),
+                _ => return None,
+            }
+        }
+        grid.push(row);
+    }
+    Some(grid)
+}
+
+/// The outcome of testing whether a `target` vector lies in the span of a `basis`.
+enum Dependency {
+    /// `target` is not in the span of the basis vectors.
+    Independent,
+    /// `target = Σ coeffs[j] · basis[j]` exactly.
+    Combination(Vec<Rational>),
+}
+
+/// Decide whether `target` is an exact rational linear combination of the columns
+/// in `basis` (all vectors of equal length), returning the coefficients if so.
+/// `None` only on exact-arithmetic overflow. Solved by Gauss–Jordan on the
+/// augmented system `[basis | target]`.
+fn linear_dependency(basis: &[Vec<Rational>], target: &[Rational]) -> Option<Dependency> {
+    let width = basis.len();
+    if width == 0 {
+        return Some(if target.iter().all(|value| value.is_zero()) {
+            Dependency::Combination(Vec::new())
+        } else {
+            Dependency::Independent
+        });
+    }
+    // Augmented matrix rows: [basis[0][r], …, basis[w-1][r] | target[r]].
+    let rows: Vec<Vec<CasExpr>> = (0..target.len())
+        .map(|r| {
+            let mut row: Vec<CasExpr> = basis.iter().map(|col| CasExpr::Const(col[r])).collect();
+            row.push(CasExpr::Const(target[r]));
+            row
+        })
+        .collect();
+    let reduced = matrix_to_rationals(&Matrix::from_rows(rows)?.rref()?)?;
+
+    let mut coeffs = vec![Rational::zero(); width];
+    let mut determined = vec![false; width];
+    for row in &reduced {
+        match (0..width).find(|&c| !row[c].is_zero()) {
+            Some(pivot) => {
+                coeffs[pivot] = row[width];
+                determined[pivot] = true;
+            }
+            None => {
+                // No pivot among the unknowns: an all-zero-lhs row with a nonzero
+                // rhs is inconsistent, so `target` is not in the span.
+                if !row[width].is_zero() {
+                    return Some(Dependency::Independent);
+                }
+            }
+        }
+    }
+    if determined.iter().all(|&d| d) {
+        Some(Dependency::Combination(coeffs))
+    } else {
+        // A free basis column means no unique reading; treat as independent for
+        // the minimal-polynomial search (which only feeds independent bases here).
+        Some(Dependency::Independent)
+    }
+}
+
+/// The minimal polynomial of a square rational-constant matrix `A`: the unique
+/// monic polynomial `m` of least degree with `m(A) = 0` (the zero matrix).
+///
+/// Found by the standard power-dependence search — the least `k` for which `Aᵏ`
+/// is a rational linear combination of `I, A, …, A^{k−1}` gives
+/// `m(x) = xᵏ − Σ cⱼ xʲ`, with the `cⱼ` from that exact combination. Because the
+/// combination is found by exact rational elimination, `m(A) = 0` holds exactly:
+/// the answer is certified by construction (it is the very identity the solve
+/// established). By Cayley–Hamilton the search terminates by `k = n`.
+///
+/// Returns `None` if the matrix is not square, is non-constant, or on overflow.
+#[must_use]
+pub fn minimal_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> {
+    let n = matrix.rows();
+    if n == 0 || n != matrix.cols() {
+        return None;
+    }
+    // Guard the constant-entry precondition up front.
+    matrix_to_rationals(matrix)?;
+
+    let mut powers: Vec<Vec<Rational>> = Vec::new();
+    let mut current = Matrix::identity(n); // A⁰ = I
+    for _ in 0..=n {
+        let flat: Vec<Rational> = matrix_to_rationals(&current)?.into_iter().flatten().collect();
+        match linear_dependency(&powers, &flat)? {
+            Dependency::Combination(coeffs) => {
+                return Some(minimal_polynomial_expr(&coeffs, var));
+            }
+            Dependency::Independent => {
+                powers.push(flat);
+                current = current.mul(matrix)?;
+            }
+        }
+    }
+    None
+}
+
+/// Build `xᵏ − Σ coeffs[j] · xʲ` (with `k = coeffs.len()`) as a canonical
+/// [`CasExpr`] — the minimal polynomial from its lower-degree coefficients.
+fn minimal_polynomial_expr(coeffs: &[Rational], var: &str) -> CasExpr {
+    let degree = u32::try_from(coeffs.len()).unwrap_or(u32::MAX);
+    let mut expr = CasExpr::var(var).pow(degree);
+    for (power, coeff) in coeffs.iter().enumerate() {
+        if coeff.is_zero() {
+            continue;
+        }
+        let monomial = if power == 0 {
+            CasExpr::Const(*coeff)
+        } else {
+            CasExpr::Const(*coeff) * CasExpr::var(var).pow(u32::try_from(power).unwrap_or(u32::MAX))
+        };
+        expr = expr - monomial;
+    }
+    expand(&expr).unwrap_or(expr)
+}
+
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
 /// `−I`. Purely structural.
 #[must_use]
@@ -1823,6 +2013,73 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         }
     }
     None
+}
+
+/// A definite integral `∫ₐᵇ f dx` evaluated by the fundamental theorem of
+/// calculus from a **certified** antiderivative.
+#[derive(Debug, Clone)]
+pub struct DefiniteIntegral {
+    /// The evaluated value `F(b) − F(a)`, simplified.
+    pub value: CasExpr,
+    /// The antiderivative `F` used (with `dF/dvar = integrand`).
+    pub antiderivative: CasExpr,
+    /// The certificate carried over from the indefinite integral. When this is
+    /// [`ZeroTest::Certified`] with `equal == true`, the antiderivative is proven,
+    /// so by the fundamental theorem of calculus the value is proven too.
+    pub certificate: ZeroTest,
+}
+
+impl DefiniteIntegral {
+    /// Whether the underlying antiderivative was certified (and hence, by the
+    /// fundamental theorem of calculus, this definite value).
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        matches!(self.certificate, ZeroTest::Certified { equal: true, .. })
+    }
+}
+
+/// The definite integral of `expr` in `var` from `lower` to `upper`, via the
+/// fundamental theorem of calculus: find a certified antiderivative `F` with
+/// [`integrate`], then return `F(upper) − F(lower)`.
+///
+/// The bounds are arbitrary [`CasExpr`] values (numeric or symbolic). The result
+/// inherits the antiderivative's certificate: over the polynomial / rational
+/// fragment the value is exact and proven; when `F` contains transcendental terms
+/// (`ln`, `atan`) the value is returned symbolically with the same backing. Any
+/// bound landing on a singularity of `F` (e.g. a pole) is *not* detected here — the
+/// caller is responsible for continuity of `f` on `[lower, upper]`, exactly as the
+/// theorem requires. Returns `None` when no antiderivative is found or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, definite_integrate};
+/// let x = CasExpr::var("x");
+/// // ∫₀¹ 3x² dx = 1.
+/// let result = definite_integrate(
+///     &(CasExpr::int(3) * x.pow(2)),
+///     "x",
+///     &CasExpr::int(0),
+///     &CasExpr::int(1),
+/// )
+/// .unwrap();
+/// assert!(result.is_certified());
+/// assert_eq!(result.value, CasExpr::int(1));
+/// ```
+#[must_use]
+pub fn definite_integrate(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let indefinite = integrate(expr, var)?;
+    let at_upper = indefinite.antiderivative.substitute(var, upper);
+    let at_lower = indefinite.antiderivative.substitute(var, lower);
+    let value = simplify(&(at_upper - at_lower));
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: indefinite.antiderivative,
+        certificate: indefinite.certificate,
+    })
 }
 
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
@@ -2821,6 +3078,160 @@ mod tests {
             &(v("L").pow(2) + CasExpr::int(1)),
         );
         assert_eq!(eigenvalues(&rot, "L").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn eigenvectors_certify_a_v_equals_lambda_v() {
+        // [[2,0],[0,3]]: eigenvalue 2 → e₁, eigenvalue 3 → e₂.
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        let pairs = eigenvectors(&m, "L").unwrap();
+        assert_eq!(pairs.len(), 2);
+        for (lambda, basis) in &pairs {
+            assert_eq!(basis.len(), 1); // each eigenspace is 1-dimensional
+            for v in basis {
+                // Certificate: A·v = λ·v.
+                let av = m.mul(v).unwrap();
+                let scaled = Matrix::from_rows(
+                    (0..v.rows())
+                        .map(|i| vec![lambda.clone() * v.get(i, 0).unwrap().clone()])
+                        .collect(),
+                )
+                .unwrap();
+                for i in 0..v.rows() {
+                    assert_equal(av.get(i, 0).unwrap(), scaled.get(i, 0).unwrap());
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn eigenvectors_of_a_shear_and_a_repeated_eigenvalue() {
+        // [[3,1],[0,3]]: eigenvalue 3 (double), but only a 1-D eigenspace (defective).
+        let shear = Matrix::from_rows(vec![
+            vec![CasExpr::int(3), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        let pairs = eigenvectors(&shear, "L").unwrap();
+        assert_eq!(pairs.len(), 1); // 3 appears once after dedup
+        let (lambda, basis) = &pairs[0];
+        assert_equal(lambda, &CasExpr::int(3));
+        assert_eq!(basis.len(), 1); // geometric multiplicity 1 (defective)
+        // The eigenvector is (1,0): A·v = 3·v.
+        let v = &basis[0];
+        let av = shear.mul(v).unwrap();
+        for i in 0..v.rows() {
+            assert_equal(
+                av.get(i, 0).unwrap(),
+                &(CasExpr::int(3) * v.get(i, 0).unwrap().clone()),
+            );
+        }
+    }
+
+    #[test]
+    fn null_space_basis_is_certified() {
+        // [[1,2],[2,4]] has null space spanned by (−2,1): A·(−2,1)ᵀ = 0.
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(2), CasExpr::int(4)],
+        ])
+        .unwrap();
+        let basis = null_space(&m).unwrap();
+        assert_eq!(basis.len(), 1); // nullity = 2 − rank(1)
+        for v in &basis {
+            let product = m.mul(v).unwrap();
+            for i in 0..product.rows() {
+                assert_equal(product.get(i, 0).unwrap(), &CasExpr::zero());
+            }
+        }
+        // Full-rank matrix → trivial null space.
+        let full = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(1)],
+        ])
+        .unwrap();
+        assert!(null_space(&full).unwrap().is_empty());
+    }
+
+    #[test]
+    fn minimal_polynomial_annihilates_the_matrix() {
+        // diag(2,3): minimal poly = (x−2)(x−3) = x²−5x+6 (distinct eigenvalues).
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        let mp = minimal_polynomial(&m, "x").unwrap();
+        assert_equal(
+            &mp,
+            &(v("x").pow(2) - CasExpr::int(5) * v("x") + CasExpr::int(6)),
+        );
+
+        // 2·I: minimal poly = x−2 (degree 1, below the char-poly degree 2).
+        let scalar = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(2)],
+        ])
+        .unwrap();
+        assert_equal(
+            &minimal_polynomial(&scalar, "x").unwrap(),
+            &(v("x") - CasExpr::int(2)),
+        );
+
+        // Defective shear [[3,1],[0,3]]: minimal poly = (x−3)² = char poly.
+        let shear = Matrix::from_rows(vec![
+            vec![CasExpr::int(3), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        assert_equal(
+            &minimal_polynomial(&shear, "x").unwrap(),
+            &(v("x").pow(2) - CasExpr::int(6) * v("x") + CasExpr::int(9)),
+        );
+    }
+
+    #[test]
+    fn definite_integral_certifies_by_ftc() {
+        let x = || v("x");
+        // ∫₀¹ 3x² dx = 1.
+        let d = definite_integrate(&(CasExpr::int(3) * x().pow(2)), "x", &CasExpr::int(0), &CasExpr::int(1))
+            .unwrap();
+        assert!(d.is_certified());
+        assert_equal(&d.value, &CasExpr::int(1));
+
+        // ∫₁³ (2x) dx = 9 − 1 = 8.
+        let d2 = definite_integrate(&(CasExpr::int(2) * x()), "x", &CasExpr::int(1), &CasExpr::int(3))
+            .unwrap();
+        assert!(d2.is_certified());
+        assert_equal(&d2.value, &CasExpr::int(8));
+
+        // Reversed bounds negate: ∫₃¹ 2x dx = −8.
+        let d3 = definite_integrate(&(CasExpr::int(2) * x()), "x", &CasExpr::int(3), &CasExpr::int(1))
+            .unwrap();
+        assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn taylor_about_nonzero_center() {
+        let x = || v("x");
+        // 1/x about x=1 to order 3: 1 − (x−1) + (x−1)² − (x−1)³, i.e. agrees with
+        // 1/x through the cubic term. Check values match at several points via the
+        // (x−1) form expanded.
+        let approx = series_at(&(CasExpr::int(1) / x()), "x", &CasExpr::int(1), 3).unwrap();
+        let shift = x() - CasExpr::int(1);
+        let expected = CasExpr::int(1) - shift.clone() + shift.clone().pow(2) - shift.pow(3);
+        assert_equal(&approx, &expected);
+
+        // A polynomial's Taylor series about any center is itself: x² about x=2.
+        let poly = series_at(&x().pow(2), "x", &CasExpr::int(2), 2).unwrap();
+        assert_equal(&poly, &x().pow(2));
+
+        // exp(x) about a nonzero center leaves the rational fragment → None.
+        assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
     }
 
     #[test]

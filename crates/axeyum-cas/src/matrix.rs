@@ -425,6 +425,54 @@ impl Matrix {
             data,
         })
     }
+
+    /// A basis for the (right) null space `{x : self·x = 0}` of a
+    /// **rational-constant** matrix, each basis vector returned as an `n × 1`
+    /// column [`Matrix`] (where `n = self.cols()`).
+    ///
+    /// An empty result means the null space is trivial (only the zero vector).
+    /// The construction is the standard free-variable reading of the reduced row
+    /// echelon form: each non-pivot ("free") column yields one basis vector with a
+    /// `1` in that free coordinate and `−rref[row][free]` in each pivot coordinate.
+    /// Every returned vector `v` satisfies `self·v = 0` exactly, which the caller
+    /// can re-check with the certified matrix product.
+    ///
+    /// Returns `None` if any entry is non-constant (a [`CasExpr`] other than
+    /// [`CasExpr::Const`]) or if exact `i128` rational arithmetic overflows.
+    #[must_use]
+    pub fn null_space(&self) -> Option<Vec<Matrix>> {
+        let mut grid = self.to_rational_grid()?;
+        reduce_to_rref(&mut grid)?;
+        let width = self.cols;
+
+        // The pivot column of each pivot row, in row order. Gauss–Jordan places
+        // the pivot rows first (rows `0..pivot_count`), so `pivot_cols[r]` is the
+        // pivot column of `grid[r]`. Zero rows have no pivot and are skipped.
+        let mut pivot_cols: Vec<usize> = Vec::new();
+        let mut is_pivot = vec![false; width];
+        for row in &grid {
+            if let Some(col) = (0..width).find(|&c| !row[c].is_zero()) {
+                pivot_cols.push(col);
+                is_pivot[col] = true;
+            }
+        }
+
+        let mut basis = Vec::new();
+        for free in (0..width).filter(|&c| !is_pivot[c]) {
+            let mut coords = vec![Rational::zero(); width];
+            coords[free] = Rational::integer(1);
+            for (row_index, &pivot_col) in pivot_cols.iter().enumerate() {
+                coords[pivot_col] = grid[row_index][free].checked_neg()?;
+            }
+            let data = coords.into_iter().map(CasExpr::Const).collect();
+            basis.push(Matrix {
+                rows: width,
+                cols: 1,
+                data,
+            });
+        }
+        Some(basis)
+    }
 }
 
 impl std::fmt::Display for Matrix {

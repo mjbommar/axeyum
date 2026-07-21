@@ -191,6 +191,41 @@ pub fn series(expr: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
     Some(expansion.to_expr(var))
 }
 
+/// The `Taylor` polynomial of `expr` about an **arbitrary** center `var = center`,
+/// up to and including degree `order`, returned in powers of `(var − center)`.
+///
+/// Computed by the shift identity `T_a f = (T_0 g)(var − a)` where `g(var) =
+/// f(var + a)`: expand `f(var + center)` as a `Maclaurin` series (about the
+/// origin), then substitute `var ↦ var − center`. The Maclaurin center (`center =
+/// 0`) reduces to [`series`].
+///
+/// Returns `None` on the same conditions as [`series`] applied to the shifted
+/// expression — in particular, a head whose shifted argument leaves the supported
+/// fragment (e.g. `exp(x)` about a nonzero center needs the irrational value
+/// `exp(center)` and so declines), or overflow. Polynomials, rational functions
+/// with no pole at `center`, and heads like `ln`/`sqrt` whose shifted argument
+/// meets the expansion condition (e.g. `ln(x)` about `1`) are supported.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, equal, series_at, ZeroTest};
+///
+/// let x = CasExpr::var("x");
+/// // ln(x) about x = 1 to order 3: (x−1) − (x−1)²/2 + (x−1)³/3.
+/// let approx = series_at(&x.clone().ln(), "x", &CasExpr::int(1), 3).unwrap();
+/// let shift = x - CasExpr::int(1);
+/// let expected = shift.clone() - CasExpr::rat(1, 2) * shift.clone().pow(2)
+///     + CasExpr::rat(1, 3) * shift.pow(3);
+/// assert!(matches!(equal(&approx, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn series_at(expr: &CasExpr, var: &str, center: &CasExpr, order: usize) -> Option<CasExpr> {
+    // g(var) = f(var + center); expand about the origin.
+    let shifted = expr.substitute(var, &(CasExpr::var(var) + center.clone()));
+    let maclaurin = series(&shifted, var, order)?;
+    // Re-express in powers of (var − center).
+    Some(maclaurin.substitute(var, &(CasExpr::var(var) - center.clone())))
+}
+
 /// Compute the internal [`Series`] for `expr`. Tries the exact polynomial normal
 /// form first (case 1), then falls back to the structural recurrence that also
 /// covers rational and elementary heads.
