@@ -1374,6 +1374,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
     for antiderivative in [
         integrate_rational(expr, var),
         integrate_elementary(expr, var),
+        integrate_poly_times_exp(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -1387,6 +1388,52 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         }
     }
     None
+}
+
+/// Integrate `p(x)·e^(a·x+b)` for a polynomial `p` and a linear exponent:
+/// `∫ p·e^(ax+b) = Q·e^(ax+b)` where `Q` solves `Q′ + a·Q = p` (one exact linear
+/// system). Covers `∫ x·eˣ = (x−1)eˣ`, `∫ x²·eˣ = (x²−2x+2)eˣ`, etc. `None`
+/// outside this shape; certified downstream by differentiate-and-check.
+fn integrate_poly_times_exp(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    let mut exp_arg: Option<CasExpr> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        if let CasExpr::Unary(UnaryFunc::Exp, arg) = factor {
+            if exp_arg.is_some() {
+                return None; // more than one exponential factor
+            }
+            exp_arg = Some((**arg).clone());
+        } else {
+            rest.push(factor.clone());
+        }
+    }
+    let arg_poly = normalize(&exp_arg?)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let a = arg_poly[1];
+    let p = normalize(&CasExpr::Mul(rest))?.to_univariate(var)?;
+    let degree = poly::rat_degree(&p)?;
+    let size = degree + 1;
+    // Column j: contribution of qⱼ to (Q′ + a·Q) = a at xʲ and j at xʲ⁻¹.
+    let mut cols: Vec<Vec<Rational>> = Vec::with_capacity(size);
+    for j in 0..size {
+        let mut col = vec![Rational::zero(); size];
+        col[j] = a;
+        if j >= 1 {
+            col[j - 1] = Rational::integer(i128::try_from(j).ok()?);
+        }
+        cols.push(col);
+    }
+    let mut rhs = p;
+    rhs.resize(size, Rational::zero());
+    let q_coeffs = ratint::solve_linear(&cols, &rhs)?;
+    let q_expr = MultiPoly::from_univariate(var, &q_coeffs).to_expr();
+    let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    Some(CasExpr::Mul(vec![q_expr, arg_expr.exp()]))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -2215,6 +2262,21 @@ mod tests {
             x().ln(),                               // ∫ ln(x) = x·ln(x) - x
         ] {
             let result = integrate(&integrand, "x").expect("elementary integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_polynomial_times_exponential() {
+        let x = || v("x");
+        // ∫ x·eˣ dx = (x−1)eˣ ; ∫ x²·eˣ = (x²−2x+2)eˣ — certified by differentiation.
+        for integrand in [
+            x() * x().exp(),
+            x().pow(2) * x().exp(),
+            (CasExpr::int(3) * x() + CasExpr::int(1)) * (CasExpr::int(2) * x()).exp(),
+        ] {
+            let result = integrate(&integrand, "x").expect("poly·exp integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
