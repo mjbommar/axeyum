@@ -502,7 +502,13 @@ session state.
 >    `main` match, and the repeated refs/capture/registration/archive preflight
 >    now passes with the exact link omitted and every required regular input
 >    hash-matched. Commit/push this successful zero-query gate, then invoke the
->    official proof producer exactly once under the registered cap. No query yet.
+>    official proof producer exactly once under the registered cap. That sole
+>    v1 invocation is now frozen negative: archived-HEAD validation passes, but
+>    Cargo rejects the committed stale `Cargo.lock` under `--locked --offline`
+>    before compilation. Zero property queries/proofs/controls/rows run, cleanup
+>    leaves no output, and no OOM-delta failure is reported. Never rerun v1.
+>    Next commit/push the exact negative, then preregister v2 changing only to a
+>    committed lockfile matching the already frozen manifests and a new output.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

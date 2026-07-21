@@ -1071,7 +1071,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     sole absolute corpus symlink before Cargo. Pushed correction `8d059285`
     skips exactly that link while hash-checking all required regular inputs;
     local HEAD/tracking/remote and the repeated capture/registration/archive
-    preflight now pass. No query or row exists before the one official run.
+    preflight pass. The sole v1 invocation is frozen negative because archived
+    HEAD's stale committed `Cargo.lock` fails `--locked --offline` before
+    compilation. Zero queries or rows run and no output survives. V2 may change
+    only to a committed matching lock snapshot and a new output path.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

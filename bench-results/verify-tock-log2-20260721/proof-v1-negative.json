@@ -1,0 +1,36 @@
+{
+  "attempt": {
+    "archive_preflight_completed": true,
+    "cargo_invocations": 1,
+    "compilations_completed": 0,
+    "compilations_started": 0,
+    "official_invocations": 1,
+    "recorded_at_utc": "2026-07-21T11:41:20Z",
+    "runner_commit": "1060531300bde06f695f0264df01359c689edc16",
+    "runner_tree": "4d66e60a2eb0ccac1bbc3fd51fdda2f16e9c2894",
+    "runner_was_pushed_before_invocation": true
+  },
+  "error": {
+    "detail": "error: cannot update the lock file /tmp/tock-log2-proof-o0j446nh/source/Cargo.lock because --locked was passed to prevent this\nhelp: to generate the lock file without accessing the network, remove the --locked flag and use --offline instead.",
+    "exit_code": 1,
+    "kind": "cargo_test",
+    "stage": "runner"
+  },
+  "outputs": {
+    "controls": 0,
+    "output_directory_exists": false,
+    "partial_directories": 0,
+    "proofs": 0,
+    "property_queries": 0,
+    "scoreboard_rows": 0
+  },
+  "registration_sha256": "183728343ff8e764b659bf40e61a9eeaba176f9795006fd85d8584cc7a5ca741",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-proof-v1-negative.v1",
+  "status": "rejected"
+}

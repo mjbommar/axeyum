@@ -389,4 +389,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0332](adr-0332-preregister-tock-cache-structural-metadata.md) | Preregister structural active-metadata graph and lock authentication for Tock cache preparation v5 | accepted |
 | [0333](adr-0333-preregister-tock-llvm-capture-v2.md) | Preregister two-root Tock LLVM capture v2 over the authenticated read-only dedicated cache | accepted |
 | [0334](adr-0334-preregister-tock-llvm-capture-v3.md) | Preregister the narrow Tock LLVM capture-v3 structural replay correction | accepted |
-| [0335](adr-0335-preregister-tock-log2-proof-scoreboard.md) | Preregister authenticated Tock log2 proofs, replayed controls, and measured scoreboard | proposed |
+| [0335](adr-0335-preregister-tock-log2-proof-scoreboard.md) | Preregister authenticated Tock log2 proofs, replayed controls, and measured scoreboard; accept v1 as a pre-query stale-lock negative | accepted |

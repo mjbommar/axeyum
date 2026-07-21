@@ -1,6 +1,6 @@
 # ADR-0335: Preregister Tock log2 proof and scoreboard
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -147,6 +147,32 @@ and registration, authenticates the pushed commit/tree, and safely materializes
 the archive with exactly `corpus/public` omitted. Every registered regular input
 is present and hash-matched. This successful gate ran no Cargo command or target
 query; proof v1 remains unobserved and is authorized for one official invocation.
+
+## Result
+
+Accepted as a negative v1 result. Runner commit `10605313` was pushed and
+matched local HEAD, its tracking ref, and remote `main` before the single
+official invocation. Registration, capture, canonical functions, tools, source
+hashes, and archived-HEAD materialization all validate. Cargo then exits before
+compilation because the committed archived `Cargo.lock` cannot represent the
+selected package graph under the frozen `--locked --offline` command:
+
+```text
+stage=runner
+kind=cargo_test
+detail=error: cannot update the lock file .../source/Cargo.lock because --locked was passed to prevent this
+```
+
+Zero compilations, property queries, proofs, controls, or scoreboard rows run.
+Atomic cleanup leaves no output or partial directory, and the resource guard
+reports no OOM-delta failure. Exact negative metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v1-negative.json`.
+
+Proof v1 ends here and must not be rerun. A successor may correct only the
+locked source snapshot: resolve and commit a workspace lockfile that matches the
+already frozen manifests, then preregister its exact hash and a new output path.
+It must preserve the authenticated canonical bytes, eight proofs, six controls,
+solver/resource policy, pushed-HEAD isolation, and every replay/trust gate.
 
 ## Rejected alternatives
 
