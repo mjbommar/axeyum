@@ -2044,6 +2044,97 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     }
 }
 
+/// Solve a **constant-coefficient linear recurrence** `aₙ = c₁·aₙ₋₁ + … + c_d·aₙ₋d`
+/// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
+/// returning a closed form `a(var)` for the general term.
+///
+/// The characteristic polynomial `xᵈ − c₁xᵈ⁻¹ − … − c_d` is factored; for
+/// **distinct positive rational** roots `rᵢ` the closed form is `Σ Aᵢ·rᵢ^var`
+/// (each `rᵢ^var` represented as `exp(var·ln rᵢ)`), with the `Aᵢ` fixed by the
+/// initial conditions (a Vandermonde solve). **Certified** by substituting the
+/// closed form back into the recurrence and zero-testing the residual — which now
+/// decides thanks to the exp tower (`exp(k·ln r) = rᵏ`).
+///
+/// Returns `None` unless the characteristic roots are distinct, rational, and
+/// positive (the fragment the exp/ln-inverse certifies), if the input shapes
+/// disagree, or on overflow.
+///
+/// ```
+/// use axeyum_cas::solve_recurrence;
+/// use axeyum_ir::Rational;
+/// // aₙ = 5aₙ₋₁ − 6aₙ₋₂, a₀ = 0, a₁ = 1  ⇒  aₙ = 3ⁿ − 2ⁿ.
+/// let closed = solve_recurrence(
+///     &[Rational::integer(5), Rational::integer(-6)],
+///     &[Rational::integer(0), Rational::integer(1)],
+///     "n",
+/// );
+/// assert!(closed.is_some()); // certified inside the call
+/// ```
+#[must_use]
+pub fn solve_recurrence(
+    coefficients: &[Rational],
+    initial: &[Rational],
+    var: &str,
+) -> Option<CasExpr> {
+    let order = coefficients.len();
+    if order == 0 || initial.len() != order {
+        return None;
+    }
+    // Characteristic polynomial (LSB-first): xᵈ − Σ cₖ xᵈ⁻ᵏ.
+    let mut char_poly = vec![Rational::zero(); order + 1];
+    char_poly[order] = Rational::integer(1);
+    for (k, coeff) in coefficients.iter().enumerate() {
+        char_poly[order - (k + 1)] = coeff.checked_neg()?;
+    }
+
+    // Distinct positive rational roots, exactly `order` of them.
+    let mut roots: Vec<Rational> = Vec::new();
+    for root in ratint::rational_roots(&char_poly)? {
+        if root.numerator() > 0 && !roots.contains(&root) {
+            roots.push(root);
+        }
+    }
+    if roots.len() != order {
+        return None; // repeated, irrational, or non-positive roots — outside the fragment
+    }
+
+    // Vandermonde solve: Σᵢ Aᵢ·rᵢʲ = aⱼ for j = 0..order−1.
+    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(order);
+    for &root in &roots {
+        let mut column = Vec::with_capacity(order);
+        let mut power = Rational::integer(1);
+        for _ in 0..order {
+            column.push(power);
+            power = power.checked_mul(root)?;
+        }
+        columns.push(column);
+    }
+    let amplitudes = ratint::solve_linear(&columns, initial)?;
+
+    // Closed form Σᵢ Aᵢ · exp(var·ln rᵢ).
+    let index = CasExpr::var(var);
+    let mut closed = CasExpr::zero();
+    for (amplitude, &root) in amplitudes.iter().zip(&roots) {
+        if amplitude.is_zero() {
+            continue;
+        }
+        let power = (index.clone() * CasExpr::Const(root).ln()).exp(); // rᵢ^var
+        closed = closed + CasExpr::Const(*amplitude) * power;
+    }
+
+    // Certify: a(n) − Σₖ cₖ·a(n−k) ≡ 0.
+    let mut residual = closed.clone();
+    for (k, coeff) in coefficients.iter().enumerate() {
+        let shift = i128::try_from(k + 1).ok()?;
+        let shifted = closed.substitute(var, &(index.clone() - CasExpr::int(shift)));
+        residual = residual - CasExpr::Const(*coeff) * shifted;
+    }
+    match equal(&residual, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(closed),
+        _ => None,
+    }
+}
+
 /// The binomial coefficient `C(n, k)` as an exact rational, or `None` on overflow.
 fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
     if k > n {
@@ -4190,6 +4281,32 @@ mod tests {
         let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
         let hpp = h.differentiate("x").differentiate("x");
         assert_equal(&(hpp + h.clone()), &CasExpr::zero());
+    }
+
+    #[test]
+    fn solve_recurrence_closed_forms() {
+        let ig = Rational::integer;
+        // aₙ = 5aₙ₋₁ − 6aₙ₋₂, a₀=0, a₁=1 ⇒ aₙ = 3ⁿ − 2ⁿ. Certified inside; here we
+        // independently verify it reproduces the sequence 0,1,5,19,65 by evalf.
+        let closed = solve_recurrence(&[ig(5), ig(-6)], &[ig(0), ig(1)], "n").expect("solvable");
+        let expected = [0.0, 1.0, 5.0, 19.0, 65.0];
+        for (n, &want) in expected.iter().enumerate() {
+            #[allow(clippy::cast_precision_loss)]
+            let got = evalf(&closed, &[("n", n as f64)]).unwrap();
+            assert!((got - want).abs() < 1e-9, "a_{n} = {got}, want {want}");
+        }
+
+        // aₙ = 3aₙ₋₁ − 2aₙ₋₂, a₀=2, a₁=3 ⇒ roots 1,2 ⇒ aₙ = 1 + 2ⁿ.
+        let closed2 = solve_recurrence(&[ig(3), ig(-2)], &[ig(2), ig(3)], "n").expect("solvable");
+        for (n, want) in [(0usize, 2.0), (1, 3.0), (2, 5.0), (3, 9.0)] {
+            #[allow(clippy::cast_precision_loss)]
+            let got = evalf(&closed2, &[("n", n as f64)]).unwrap();
+            assert!((got - want).abs() < 1e-9);
+        }
+
+        // Negative/irrational roots are outside the certifiable fragment: aₙ = aₙ₋₁ +
+        // aₙ₋₂ (Fibonacci, irrational golden-ratio roots) declines honestly.
+        assert!(solve_recurrence(&[ig(1), ig(1)], &[ig(0), ig(1)], "n").is_none());
     }
 
     #[test]
