@@ -605,3 +605,27 @@ refactor: carry the argument `CasExpr` alongside the atom key and add a
 `fold_radical`). This is the next real substrate step — it unlocks first-order
 ODEs, recurrences, and general `exp`/`log` simplification at once. Sequenced ahead
 of the assumptions engine.
+
+## 2026-07-20 — Entry 15: more Tier B/C breadth (171 tests)
+
+Kept building certifiable breadth without waiting on the exp-tower substrate:
+- **Inhomogeneous linear ODEs with polynomial forcing** (`dsolve_inhomogeneous`):
+  undetermined coefficients (with the `xˢ` resonance factor), particular solution
+  from an exact linear solve, plus the homogeneous part; **certified** by
+  substituting the full solution into the operator and zero-testing against the
+  forcing. Fully certifiable *without* the exp refactor — the particular part is
+  polynomial and the homogeneous exp terms are single atoms.
+- **Cyclotomic polynomials** (`cyclotomic_polynomial`): from `∏_{d∣n} Φ_d = xⁿ−1`
+  by exact recursive division; certified by the product identity.
+- **Exact trig values** (`evaluate_trig`): full unit-circle table at every multiple
+  of `π/12` (`sin(π/6)=1/2`, `tan(π/3)=√3`, `sin(π/12)=(√6−√2)/4`), keyed on the
+  reserved constant `pi`; compute op whose values interoperate with the certified
+  zero-test (`sin²+cos²=1` on the exact values certifies).
+- **`evalf`** (exact→decimal), **LU decomposition** (`P·A=L·U`, certified by
+  reconstruction), **`resultant`/`discriminant`**, and the **`sqrt(c)²→c` fold**
+  (all recorded earlier this day).
+
+**171 unit + 37 doctests, clippy-pedantic clean, WASM-green.** Gosper indefinite
+hypergeometric summation is in flight (sub-agent, telescoping-certified). The
+exp-combination/differential-tower refactor remains the sequenced next substrate
+step (unlocks first-order ODEs, recurrences, general exp/log simplification).

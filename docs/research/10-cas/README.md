@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 167 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 171 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -14,13 +14,14 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Area | Functions | Certified |
 |---|---|---|
 | Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `simplify`, `normalize`, `equal` (zero-test w/ witness) | equal ✓ |
-| Rational | `cancel` (uni+multivariate), `apart`, `factor`, `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus), `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
+| Rational | `cancel` (uni+multivariate), `apart`, `factor`, `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus), `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `cyclotomic_polynomial`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
 | Equations | `solve` (rational, quadratic, **complex** roots, and degree-≥3 that factors over ℚ into linear/quadratic) | rational + radical (√ fold) ✓ |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
-| Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial` | limit/sum ✓ |
-| ODEs | `dsolve_homogeneous` (constant-coeff linear) | ✓ (ODE operator) |
+| Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial`, `evalf` (numeric approx) | limit/sum ✓ |
+| ODEs | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing, undetermined coeffs) | ✓ (ODE operator) |
+| Trig | `evaluate_trig` (exact values at multiples of π/12), Pythagorean identity in the zero-test | compute (values certify) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
-| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial` | det/solve/null/eigvec ✓ |
+| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial` | det/solve/null/eigvec ✓ |
 | Vector calculus | `gradient`, `jacobian`, `divergence`, `curl` (certified partials) | ✓ |
 | Statistics | `stats`: mean/median/mode/variance/sample_variance; `standard_deviation` (surd-simplified) | exact |
 | Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
