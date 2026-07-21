@@ -60,6 +60,7 @@ pub mod ntheory_advanced;
 mod ratint;
 mod series;
 pub mod stats;
+pub mod sturm;
 
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use gosper::{geometric_power, gosper_sum};
@@ -1406,6 +1407,37 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
         _ => {}
     }
     Some(roots)
+}
+
+/// Isolate the real roots of a univariate polynomial `expr` in `var`: disjoint
+/// half-open intervals (ascending), each **Sturm-certified** to contain exactly one
+/// real root (multiplicity collapsed). `Some(vec![])` if there are no real roots;
+/// `None` if `expr` is not a univariate polynomial in `var` or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, real_root_intervals};
+/// let x = CasExpr::var("x");
+/// // x² − 2 has two real roots (±√2) → two disjoint isolating intervals.
+/// let intervals = real_root_intervals(&(x.pow(2) - CasExpr::int(2)), "x").unwrap();
+/// assert_eq!(intervals.len(), 2);
+/// ```
+#[must_use]
+pub fn real_root_intervals(expr: &CasExpr, var: &str) -> Option<Vec<(Rational, Rational)>> {
+    sturm::isolate_real_roots(&univariate_coeffs(expr, var)?)
+}
+
+/// The number of **distinct** real roots of a univariate polynomial `expr` in the
+/// half-open interval `(lower, upper]`, via Sturm's theorem (an exact,
+/// theorem-certified count). `None` if `expr` is not a univariate polynomial in
+/// `var` or on overflow.
+#[must_use]
+pub fn count_real_roots(
+    expr: &CasExpr,
+    var: &str,
+    lower: Rational,
+    upper: Rational,
+) -> Option<usize> {
+    sturm::count_real_roots_in(&univariate_coeffs(expr, var)?, lower, upper)
 }
 
 /// The (up to two) roots of `a·x² + b·x + c` as [`CasExpr`] values: rational when
