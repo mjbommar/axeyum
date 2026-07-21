@@ -247,15 +247,21 @@ session state.
 >    unwind cleanup, memory/effects, loops, and LLVM panic inference stay out of
 >    scope. This independent local lane advances while PLAN item 7 still awaits
 >    a genuinely different second machine; it does not substitute for that row.
->    Next, preregister the smallest source-annotation lowering into these
->    accepted `requires`/`ensures`/panic channels with replayed violation UX;
->    do not widen calls, effects, or unwind cleanup to make the syntax useful.
->    ADR-0316 now freezes that prerequisite after the macro audit found two
->    missing semantic seams: the source-AST path discards its tail result and
->    assumes every witness must panic. The proposed first slice is one
->    straight-line scalar function, retains its typed result, and gives a
->    normally returning postcondition violation distinct replay. It emits no
->    modular summary and does not claim source-to-MIR identity.
+>    ADR-0316 now accepts the smallest source-annotation prerequisite after the
+>    macro audit found two missing semantic seams: the source-AST path discarded
+>    its tail result and assumed every witness must panic. Outer `#[verify]`
+>    consumes typed `requires`/`ensures` markers for one straight-line scalar
+>    function, retains the result, and gives normally returning postcondition
+>    violations a distinct replay path. The exhaustive lowered-term gate covers
+>    all 256 `u8` rows at exactly 255 admitted, zero safe violations, and 255
+>    mutated violations with zero evaluation errors or drops; the complete
+>    package, doctests, strict gates, and unchanged 117-test reflection gate
+>    pass. It emits no modular summary and makes no source-to-MIR identity claim.
+>    Next, preregister the smallest authenticated source-contract-to-checked-MIR
+>    bridge: bind compiler/body identity, derive the existing scalar contract
+>    channels without trusting annotation text alone, and differentially match
+>    the accepted hand-built modular summary before emitting one. Do not widen
+>    branches, calls, effects, or unwind cleanup to make that bridge useful.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

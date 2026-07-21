@@ -3,8 +3,8 @@
 //! Produces a `proc_macro2::TokenStream` that (1) re-emits the original function
 //! and (2) emits a `#[test]` building the `axeyum_verify::ast::Program` and
 //! running the verifier — failing the test on a `Counterexample` (after
-//! confirming the witness reproduces a panic in the original fn) or an
-//! out-of-fragment `Unknown`.
+//! confirming the panic or normally returning postcondition violation in the
+//! original function) or an out-of-fragment `Unknown`.
 //!
 //! Out-of-subset constructs raise a `syn::Error` at the offending span, so the
 //! user gets a precise compile error, not a silent mis-model.
@@ -13,9 +13,59 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{
-    BinOp as SynBinOp, Block, Expr, ExprBinary, ExprUnary, FnArg, ItemFn, Lit, Local, Pat, Stmt,
-    Type, UnOp as SynUnOp,
+    BinOp as SynBinOp, Block, Expr, ExprBinary, ExprClosure, ExprUnary, FnArg, ItemFn, Lit, Local,
+    Pat, ReturnType, Stmt, Type, UnOp as SynUnOp,
 };
+
+struct SourceContract {
+    requires: Expr,
+    ensures: ExprClosure,
+}
+
+fn extract_source_contract(func: &ItemFn) -> syn::Result<Option<SourceContract>> {
+    let mut requires = None;
+    let mut ensures = None;
+    for attr in &func.attrs {
+        let name = attr
+            .path()
+            .segments
+            .last()
+            .map(|segment| segment.ident.to_string());
+        match name.as_deref() {
+            Some("requires") => {
+                if requires.is_some() {
+                    return Err(syn::Error::new(
+                        attr.span(),
+                        "duplicate `requires` attribute",
+                    ));
+                }
+                requires = Some(attr.parse_args::<Expr>()?);
+            }
+            Some("ensures") => {
+                if ensures.is_some() {
+                    return Err(syn::Error::new(
+                        attr.span(),
+                        "duplicate `ensures` attribute",
+                    ));
+                }
+                ensures = Some(attr.parse_args::<ExprClosure>()?);
+            }
+            _ => {}
+        }
+    }
+    match (requires, ensures) {
+        (None, None) => Ok(None),
+        (Some(requires), Some(ensures)) => Ok(Some(SourceContract { requires, ensures })),
+        (Some(_), None) => Err(syn::Error::new(
+            func.sig.span(),
+            "`requires` needs one `ensures`",
+        )),
+        (None, Some(_)) => Err(syn::Error::new(
+            func.sig.span(),
+            "`ensures` needs one `requires`",
+        )),
+    }
+}
 
 /// The bit width `usize`/`isize` are modeled at for the bounded check. Rust does
 /// not fix the pointer width, so we pick a documented, deterministic default
@@ -139,6 +189,11 @@ enum ParsedArg {
     Array(ArrayInfo),
 }
 
+struct ParsedParams {
+    scalars: Vec<ParamInfo>,
+    arrays: Vec<ArrayInfo>,
+}
+
 /// Classify a `name: ty` parameter as scalar (`uN`/`iN`/`bool`/`usize`/`isize`)
 /// or a fixed-length array (`[T; N]` / `&[T; N]`).
 fn parse_arg(name: String, ty: &Type) -> syn::Result<ParsedArg> {
@@ -147,6 +202,30 @@ fn parse_arg(name: String, ty: &Type) -> syn::Result<ParsedArg> {
     }
     let scalar = parse_scalar_ty(ty)?;
     Ok(ParsedArg::Scalar(ParamInfo { name, ty: scalar }))
+}
+
+fn parse_parameters(func: &ItemFn) -> syn::Result<ParsedParams> {
+    let mut scalars = Vec::new();
+    let mut arrays = Vec::new();
+    for arg in &func.sig.inputs {
+        let FnArg::Typed(pt) = arg else {
+            return Err(syn::Error::new(
+                arg.span(),
+                "axeyum::verify: `self` receivers are not supported",
+            ));
+        };
+        let Pat::Ident(pi) = &*pt.pat else {
+            return Err(syn::Error::new(
+                pt.pat.span(),
+                "axeyum::verify: only simple `name: ty` parameters are supported",
+            ));
+        };
+        match parse_arg(pi.ident.to_string(), &pt.ty)? {
+            ParsedArg::Scalar(param) => scalars.push(param),
+            ParsedArg::Array(array) => arrays.push(array),
+        }
+    }
+    Ok(ParsedParams { scalars, arrays })
 }
 
 /// Recognize a fixed-length array type `[elem; N]` or a reference to one
@@ -201,87 +280,75 @@ fn parse_array_len(len: &Expr) -> syn::Result<u128> {
     ))
 }
 
-/// Expand the whole function. `expect_bug` flips the generated `#[test]` to
-/// assert that a counterexample is *found* (and reproduces a panic in the
-/// original) rather than asserting the function verifies.
-pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
+struct BodyExpansion {
+    ordinary: Vec<TokenStream>,
+    contract: Option<TokenStream>,
+    ensures_source: Option<ExprClosure>,
+}
+
+struct ProgramExpansion {
+    params: Vec<TokenStream>,
+    arrays: Vec<TokenStream>,
+    body: Vec<TokenStream>,
+    contract: Option<TokenStream>,
+}
+
+fn emit_expansion(
+    func: &ItemFn,
+    expect_bug: bool,
+    repro: &TokenStream,
+    expansion: ProgramExpansion,
+) -> TokenStream {
+    let ProgramExpansion {
+        params,
+        arrays,
+        body,
+        contract,
+    } = expansion;
     let fn_name = func.sig.ident.to_string();
-
-    // --- parse parameters ---------------------------------------------------
-    let mut params: Vec<ParamInfo> = Vec::new();
-    let mut arrays: Vec<ArrayInfo> = Vec::new();
-    for arg in &func.sig.inputs {
-        let FnArg::Typed(pt) = arg else {
-            return Err(syn::Error::new(
-                arg.span(),
-                "axeyum::verify: `self` receivers are not supported",
-            ));
-        };
-        let Pat::Ident(pi) = &*pt.pat else {
-            return Err(syn::Error::new(
-                pt.pat.span(),
-                "axeyum::verify: only simple `name: ty` parameters are supported",
-            ));
-        };
-        match parse_arg(pi.ident.to_string(), &pt.ty)? {
-            ParsedArg::Scalar(p) => params.push(p),
-            ParsedArg::Array(a) => arrays.push(a),
-        }
-    }
-
-    // --- parse body into runtime-AST-building tokens ------------------------
-    // Function-level unwind bound (`#[axeyum::unwind(K)]` alongside the verify
-    // attribute), applied to every loop in the body.
-    let fn_unwind = extract_unwind(&func.attrs)?;
-    let mut ctx = Lowerer::new(fn_unwind);
-    for p in &params {
-        ctx.declare(&p.name, p.ty);
-    }
-    for a in &arrays {
-        ctx.declare_array(&a.name, a.elem, a.len);
-    }
-    let body_tokens = ctx.lower_block(&func.block)?;
-
-    let param_tokens: Vec<TokenStream> = params
-        .iter()
-        .map(|p| {
-            let name = &p.name;
-            let ty = p.ty.to_tokens();
-            quote! { axeyum_verify::ast::Param { name: #name.into(), ty: #ty } }
-        })
-        .collect();
-
-    let array_tokens: Vec<TokenStream> = arrays
-        .iter()
-        .map(|a| {
-            let name = &a.name;
-            let elem = a.elem.to_tokens();
-            let len = a.len;
-            quote! { axeyum_verify::ast::ArrayParam { name: #name.into(), elem: #elem, len: #len } }
-        })
-        .collect();
-
-    // --- reproduction glue: call the original fn on the witness -------------
-    let repro = reproduction_glue(func, &params, &arrays, expect_bug);
-
     let test_ident = format_ident!("axeyum_verify_{}", func.sig.ident);
     let verdict_ident = format_ident!("{}__axeyum_verdict", func.sig.ident);
     let program_ident = format_ident!("{}__axeyum_program", func.sig.ident);
-    let original = func;
+    let mut original = func.clone();
+    original.attrs.retain(|attr| {
+        !matches!(
+            attr.path()
+                .segments
+                .last()
+                .map(|segment| segment.ident.to_string())
+                .as_deref(),
+            Some("requires" | "ensures")
+        )
+    });
+    let (program_return, program_body, verify_call) = if let Some(contract) = contract {
+        (
+            quote! { axeyum_verify::ast::ContractProgram },
+            contract,
+            quote! { axeyum_verify::verify_contract_program(&program, &axeyum_verify::default_config()) },
+        )
+    } else {
+        (
+            quote! { axeyum_verify::ast::Program },
+            quote! {
+                axeyum_verify::ast::Program {
+                    name: #fn_name.into(),
+                    params: vec![ #(#params),* ],
+                    arrays: vec![ #(#arrays),* ],
+                    body: vec![ #(#body),* ],
+                }
+            },
+            quote! { axeyum_verify::verify_program(&program, &axeyum_verify::default_config()) },
+        )
+    };
 
-    Ok(quote! {
+    quote! {
         #original
 
         /// Builds the bounded-check program lowered from this `#[verify]` function.
         #[doc(hidden)]
         #[allow(non_snake_case)]
-        fn #program_ident() -> axeyum_verify::ast::Program {
-            axeyum_verify::ast::Program {
-                name: #fn_name.into(),
-                params: vec![ #(#param_tokens),* ],
-                arrays: vec![ #(#array_tokens),* ],
-                body: vec![ #(#body_tokens),* ],
-            }
+        fn #program_ident() -> #program_return {
+            #program_body
         }
 
         /// Runs the bounded check and returns the verdict (no asserts). Callers
@@ -291,7 +358,7 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
         #[allow(non_snake_case)]
         fn #verdict_ident() -> axeyum_verify::Verdict {
             let program = #program_ident();
-            axeyum_verify::verify_program(&program, &axeyum_verify::default_config())
+            #verify_call
                 .expect("axeyum-verify: solver hard error")
         }
 
@@ -320,12 +387,192 @@ pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
                 }
             }
         }
+    }
+}
+
+fn lower_source_body(
+    func: &ItemFn,
+    contract: Option<&SourceContract>,
+    params: &[ParamInfo],
+    param_tokens: &[TokenStream],
+    ctx: &mut Lowerer,
+) -> syn::Result<BodyExpansion> {
+    let Some(contract) = contract else {
+        return Ok(BodyExpansion {
+            ordinary: ctx.lower_block(&func.block)?,
+            contract: None,
+            ensures_source: None,
+        });
+    };
+
+    let return_ty = match &func.sig.output {
+        ReturnType::Type(_, ty) => parse_scalar_ty(ty)?,
+        ReturnType::Default => {
+            return Err(syn::Error::new(
+                func.sig.span(),
+                "source contracts require one scalar return type",
+            ));
+        }
+    };
+    let (body, result, actual_ty) = ctx.lower_contract_block(&func.block)?;
+    if actual_ty != return_ty {
+        return Err(syn::Error::new(
+            func.sig.output.span(),
+            "contract tail expression does not match the function return type",
+        ));
+    }
+    if contract.ensures.inputs.len() != 1 {
+        return Err(syn::Error::new(
+            contract.ensures.inputs.span(),
+            "`ensures` must be a one-argument closure",
+        ));
+    }
+    let Pat::Ident(result_pat) = &contract.ensures.inputs[0] else {
+        return Err(syn::Error::new(
+            contract.ensures.inputs[0].span(),
+            "`ensures` result binding must be a simple identifier",
+        ));
+    };
+    let mut contract_ctx = Lowerer::new(None);
+    for p in params {
+        contract_ctx.declare(&p.name, p.ty);
+    }
+    let (requires, requires_ty) = contract_ctx.lower_expr(&contract.requires)?;
+    if requires_ty != Ty::bool() {
+        return Err(syn::Error::new(
+            contract.requires.span(),
+            "`requires` must be bool",
+        ));
+    }
+    let result_name = result_pat.ident.to_string();
+    if contract_ctx.lookup(&result_name).is_some() {
+        return Err(syn::Error::new(
+            result_pat.span(),
+            "`ensures` result binding collides with a parameter",
+        ));
+    }
+    contract_ctx.declare(&result_name, return_ty);
+    let (ensures, ensures_ty) = contract_ctx.lower_expr(&contract.ensures.body)?;
+    if ensures_ty != Ty::bool() {
+        return Err(syn::Error::new(
+            contract.ensures.body.span(),
+            "`ensures` must be bool",
+        ));
+    }
+
+    let fn_name = func.sig.ident.to_string();
+    let contract_tokens = quote! {
+        axeyum_verify::ast::ContractProgram {
+            program: axeyum_verify::ast::Program {
+                name: #fn_name.into(),
+                params: vec![ #(#param_tokens),* ],
+                arrays: vec![],
+                body: vec![ #(#body),* ],
+            },
+            requires: #requires,
+            result: #result,
+            result_name: #result_name.into(),
+            ensures: #ensures,
+        }
+    };
+    Ok(BodyExpansion {
+        ordinary: Vec::new(),
+        contract: Some(contract_tokens),
+        ensures_source: Some(contract.ensures.clone()),
     })
 }
 
-/// Builds the `Counterexample` arm: extract typed witnesses, run the original
-/// function under `catch_unwind`, and assert it actually panics (DISAGREE=0),
-/// then fail the test reporting the reproducing inputs.
+/// Expand the whole function. `expect_bug` flips the generated `#[test]` to
+/// assert that a counterexample is *found* and source-reproduces rather than
+/// asserting the function verifies.
+pub fn expand(func: &ItemFn, expect_bug: bool) -> syn::Result<TokenStream> {
+    let contract = extract_source_contract(func)?;
+    if let Some(SourceContract {
+        requires: Expr::Lit(literal),
+        ..
+    }) = &contract
+        && matches!(&literal.lit, Lit::Bool(value) if !value.value)
+    {
+        return Err(syn::Error::new(
+            literal.span(),
+            "contract precondition is literally unsatisfiable",
+        ));
+    }
+
+    let ParsedParams {
+        scalars: params,
+        arrays,
+    } = parse_parameters(func)?;
+
+    if contract.is_some() && !arrays.is_empty() {
+        return Err(syn::Error::new(
+            func.sig.span(),
+            "source contracts currently admit scalar parameters only",
+        ));
+    }
+
+    // --- parse body into runtime-AST-building tokens ------------------------
+    // Function-level unwind bound (`#[axeyum::unwind(K)]` alongside the verify
+    // attribute), applied to every loop in the body.
+    let fn_unwind = extract_unwind(&func.attrs)?;
+    let mut ctx = Lowerer::new(fn_unwind);
+    for p in &params {
+        ctx.declare(&p.name, p.ty);
+    }
+    for a in &arrays {
+        ctx.declare_array(&a.name, a.elem, a.len);
+    }
+    let param_tokens: Vec<TokenStream> = params
+        .iter()
+        .map(|p| {
+            let name = &p.name;
+            let ty = p.ty.to_tokens();
+            quote! { axeyum_verify::ast::Param { name: #name.into(), ty: #ty } }
+        })
+        .collect();
+    let BodyExpansion {
+        ordinary: body_tokens,
+        contract: contract_tokens,
+        ensures_source,
+    } = lower_source_body(func, contract.as_ref(), &params, &param_tokens, &mut ctx)?;
+
+    let array_tokens: Vec<TokenStream> = arrays
+        .iter()
+        .map(|a| {
+            let name = &a.name;
+            let elem = a.elem.to_tokens();
+            let len = a.len;
+            quote! { axeyum_verify::ast::ArrayParam { name: #name.into(), elem: #elem, len: #len } }
+        })
+        .collect();
+
+    // --- reproduction glue: call the original fn on the witness -------------
+    let repro = reproduction_glue(
+        func,
+        &params,
+        &arrays,
+        expect_bug,
+        contract.as_ref().map(|contract| &contract.requires),
+        ensures_source.as_ref(),
+    );
+
+    Ok(emit_expansion(
+        func,
+        expect_bug,
+        &repro,
+        ProgramExpansion {
+            params: param_tokens,
+            arrays: array_tokens,
+            body: body_tokens,
+            contract: contract_tokens,
+        },
+    ))
+}
+
+/// Builds the `Counterexample` arm: extract typed witnesses and source-replay
+/// the class. Panic classes use `catch_unwind`; postcondition violations call
+/// normally and evaluate the source closure. A mismatch fails before reporting
+/// the reproducing inputs (DISAGREE=0).
 ///
 /// The call arguments are emitted in the **original signature order** (scalars
 /// and arrays interleaved), keyed by parameter name into the witness list.
@@ -334,11 +581,14 @@ fn reproduction_glue(
     params: &[ParamInfo],
     arrays: &[ArrayInfo],
     expect_bug: bool,
+    requires: Option<&Expr>,
+    ensures: Option<&ExprClosure>,
 ) -> TokenStream {
     let fn_ident = &func.sig.ident;
     let mut bindings = Vec::new();
     let mut call_args = Vec::new();
     let mut fmt_parts = Vec::new();
+    let mut source_aliases = Vec::new();
     // Iterate the original signature so call args are in declaration order.
     for (idx, arg) in func.sig.inputs.iter().enumerate() {
         let FnArg::Typed(pt) = arg else { continue };
@@ -349,6 +599,8 @@ fn reproduction_glue(
             scalar_binding(&var, &p.name, p.ty, &mut bindings);
             call_args.push(quote! { #var });
             fmt_parts.push(quote! { format!("{}={:?}", #pname, #var) });
+            let source_name = &pi.ident;
+            source_aliases.push(quote! { let #source_name = #var; });
         } else if let Some(a) = arrays.iter().find(|a| a.name == pname) {
             array_binding(&var, a, &mut bindings);
             if a.by_ref {
@@ -371,22 +623,47 @@ fn reproduction_glue(
         }
     } else {
         quote! {
+            let __replay_kind = if class == "postcondition violated" {
+                "the original function returns normally and violates its postcondition"
+            } else {
+                "the original function panics on these inputs"
+            };
             panic!(
-                "axeyum::verify[{}]: BUG FOUND — class `{}`, reproducing inputs: {} (the original function panics on these; this failing test IS the reproduction)",
-                stringify!(#fn_ident), class, __args.join(", ")
+                "axeyum::verify[{}]: BUG FOUND — class `{}`, reproducing inputs: {} ({}; this failing test IS the reproduction)",
+                stringify!(#fn_ident), class, __args.join(", "), __replay_kind
             );
+        }
+    };
+
+    let replay = if let (Some(requires), Some(ensures)) = (requires, ensures) {
+        quote! {
+            if class == "postcondition violated" {
+                #(#source_aliases)*
+                assert!(#requires, "contract witness must satisfy its precondition");
+                let __returned = #fn_ident( #(#call_args),* );
+                let __ensures = #ensures;
+                !__ensures(__returned)
+            } else {
+                axeyum_verify::reproduce::panics_on(|| {
+                    let _ = #fn_ident( #(#call_args),* );
+                })
+            }
+        }
+    } else {
+        quote! {
+            axeyum_verify::reproduce::panics_on(|| {
+                let _ = #fn_ident( #(#call_args),* );
+            })
         }
     };
 
     quote! {
         #(#bindings)*
         let __args: Vec<String> = vec![ #(#fmt_parts),* ];
-        let __reproduces = axeyum_verify::reproduce::panics_on(|| {
-            let _ = #fn_ident( #(#call_args),* );
-        });
+        let __reproduces = #replay;
         assert!(
             __reproduces,
-            "axeyum::verify: counterexample ({}) for `{}` did NOT reproduce a panic in the original function — lowering defect (class: {})",
+            "axeyum::verify: counterexample ({}) for `{}` did NOT reproduce its class in the original function — lowering defect (class: {})",
             __args.join(", "), stringify!(#fn_ident), class
         );
         #outcome
@@ -571,6 +848,37 @@ impl Lowerer {
             self.lower_stmt(stmt, is_tail, &mut out)?;
         }
         Ok(out)
+    }
+
+    /// Lowers the ADR-0316 straight-line body while retaining its tail value.
+    fn lower_contract_block(
+        &mut self,
+        block: &Block,
+    ) -> syn::Result<(Vec<TokenStream>, TokenStream, Ty)> {
+        let Some((tail, prefix)) = block.stmts.split_last() else {
+            return Err(syn::Error::new(
+                block.span(),
+                "contracted function needs a tail expression",
+            ));
+        };
+        let mut body = Vec::new();
+        for statement in prefix {
+            if !matches!(statement, Stmt::Local(_)) {
+                return Err(syn::Error::new(
+                    statement.span(),
+                    "contracted function body must be straight-line `let` bindings followed by one tail expression",
+                ));
+            }
+            self.lower_stmt(statement, false, &mut body)?;
+        }
+        let Stmt::Expr(expression, None) = tail else {
+            return Err(syn::Error::new(
+                tail.span(),
+                "contracted function requires one trailing scalar expression without `return`",
+            ));
+        };
+        let (result, ty) = self.lower_expr(expression)?;
+        Ok((body, result, ty))
     }
 
     fn lower_stmt(
@@ -2071,5 +2379,108 @@ impl syn::parse::Parse for AssertEqArgs {
             let _: proc_macro2::TokenTree = input.parse()?;
         }
         Ok(AssertEqArgs { left, right })
+    }
+}
+
+#[cfg(test)]
+mod contract_tests {
+    use super::*;
+    use syn::parse_quote;
+
+    fn error(item: &ItemFn) -> String {
+        expand(item, false).unwrap_err().to_string()
+    }
+
+    #[test]
+    fn contract_attribute_shape_failures_are_precise() {
+        let duplicate: ItemFn = parse_quote! {
+            #[requires(x < 2)] #[requires(x < 3)] #[ensures(|r| r == x)]
+            fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&duplicate).contains("duplicate `requires`"));
+
+        let duplicate_ensures: ItemFn = parse_quote! {
+            #[requires(x < 2)] #[ensures(|r| r == x)] #[ensures(|r| r < 2)]
+            fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&duplicate_ensures).contains("duplicate `ensures`"));
+
+        let missing: ItemFn = parse_quote! {
+            #[ensures(|r| r == x)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&missing).contains("needs one `requires`"));
+
+        let no_return: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|r| r)] fn f(x: u8) { let _y = x; }
+        };
+        assert!(error(&no_return).contains("scalar return type"));
+
+        let wrong_arity: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|a, b| a == b)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&wrong_arity).contains("one-argument closure"));
+
+        let non_closure: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(x == 1)] fn f(x: u8) -> u8 { x }
+        };
+        let non_closure_error = error(&non_closure);
+        assert!(
+            non_closure_error.contains("expected `|`"),
+            "{non_closure_error}"
+        );
+
+        let literal_false: ItemFn = parse_quote! {
+            #[requires(false)] #[ensures(|r| r == x)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&literal_false).contains("literally unsatisfiable"));
+    }
+
+    #[test]
+    fn contract_type_and_name_failures_are_precise() {
+        let unknown: ItemFn = parse_quote! {
+            #[requires(y < 3)] #[ensures(|r| r == x)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&unknown).contains("unknown variable `y`"));
+
+        let result_in_requires: ItemFn = parse_quote! {
+            #[requires(result == x)] #[ensures(|result| result == x)]
+            fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&result_in_requires).contains("unknown variable `result`"));
+
+        let ill_sorted: ItemFn = parse_quote! {
+            #[requires(x + 1)] #[ensures(|r| r == x)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&ill_sorted).contains("`requires` must be bool"));
+
+        let collision: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|x| x == x)] fn f(x: u8) -> u8 { x }
+        };
+        assert!(error(&collision).contains("collides with a parameter"));
+    }
+
+    #[test]
+    fn contract_control_and_call_boundaries_are_rejected() {
+        let explicit_return: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|r| r == x)] fn f(x: u8) -> u8 { return x; }
+        };
+        assert!(error(&explicit_return).contains("trailing scalar expression"));
+
+        let branch: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|r| r == x)]
+            fn f(x: u8) -> u8 { if x == 0 { let y = x; } x }
+        };
+        assert!(error(&branch).contains("straight-line"));
+
+        let loop_body: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|r| r == x)]
+            fn f(x: u8) -> u8 { while x == 0 {} x }
+        };
+        assert!(error(&loop_body).contains("straight-line"));
+
+        let call: ItemFn = parse_quote! {
+            #[requires(true)] #[ensures(|r| r == x)] fn f(x: u8) -> u8 { g(x) }
+        };
+        assert!(error(&call).contains("unsupported expression"));
     }
 }

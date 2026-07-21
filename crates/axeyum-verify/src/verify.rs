@@ -10,8 +10,8 @@
 use axeyum_ir::{Op, TermArena, TermId, TermNode, Value};
 use axeyum_solver::{ProofOutcome, SolverConfig, UnknownReason, prove, prove_unsat_to_lean_module};
 
-use crate::ast::{Program, Ty};
-use crate::lower::{LowerError, lower_program};
+use crate::ast::{ContractProgram, Program, Ty};
+use crate::lower::{BadState, LowerError, lower_contract_program, lower_program};
 
 /// A concrete value of one verified-function input, decoded from a bug witness.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -185,6 +185,124 @@ pub fn verify_program(
             let inputs = lift_inputs(&lowered, &model);
             Ok(Verdict::Counterexample { class, inputs })
         }
+        ProofOutcome::Unknown(reason) => Ok(Verdict::Unknown {
+            reason: format!("{reason:?}"),
+        }),
+    }
+}
+
+/// Lowers and decides one source-level scalar contract.
+///
+/// Panic bad states are guarded by the precondition. The postcondition is
+/// checked only on normal return, and its counterexample class remains distinct
+/// so macro-generated replay can validate a returned value instead of expecting
+/// a panic.
+///
+/// # Errors
+///
+/// Returns a solver error only for a hard engine failure. Lowering failures,
+/// unsatisfiable preconditions, and undecided checks are [`Verdict::Unknown`].
+pub fn verify_contract_program(
+    contract: &ContractProgram,
+    config: &SolverConfig,
+) -> Result<Verdict, axeyum_solver::SolverError> {
+    let mut arena = TermArena::new();
+    let mut lowered = match lower_contract_program(&mut arena, contract) {
+        Ok(lowered) => lowered,
+        Err(error) => {
+            return Ok(Verdict::Unknown {
+                reason: lower_unknown_reason(&error),
+            });
+        }
+    };
+    let not_requires = arena.not(lowered.requires)?;
+    match prove(&mut arena, &[], not_requires, config)? {
+        ProofOutcome::Proved(_) => {
+            return Ok(Verdict::Unknown {
+                reason: "invalid contract: precondition is unsatisfiable".into(),
+            });
+        }
+        ProofOutcome::Unknown(reason) => {
+            return Ok(Verdict::Unknown {
+                reason: format!("contract precondition satisfiability undecided: {reason:?}"),
+            });
+        }
+        ProofOutcome::Disproved(_) => {}
+    }
+
+    let raw_panic = or_all(
+        &mut arena,
+        &lowered
+            .program
+            .bad_states
+            .iter()
+            .map(|bad| bad.term)
+            .collect::<Vec<_>>(),
+    )?;
+    if !lowered.postcondition_bad_states.is_empty() {
+        let normal = arena.not(raw_panic)?;
+        let admitted_normal = arena.and(lowered.requires, normal)?;
+        let mut postcondition_panic_terms = Vec::new();
+        for bad in &lowered.postcondition_bad_states {
+            postcondition_panic_terms.push(arena.and(admitted_normal, bad.term)?);
+        }
+        let any_postcondition_panic = or_all(&mut arena, &postcondition_panic_terms)?;
+        let postcondition_total = arena.not(any_postcondition_panic)?;
+        match prove(&mut arena, &[], postcondition_total, config)? {
+            ProofOutcome::Proved(_) => {}
+            ProofOutcome::Disproved(_) => {
+                return Ok(Verdict::Unknown {
+                    reason:
+                        "invalid contract: postcondition may panic on an admitted normal return"
+                            .into(),
+                });
+            }
+            ProofOutcome::Unknown(reason) => {
+                return Ok(Verdict::Unknown {
+                    reason: format!("contract postcondition totality undecided: {reason:?}"),
+                });
+            }
+        }
+    }
+    for bad in &mut lowered.program.bad_states {
+        bad.term = arena.and(lowered.requires, bad.term)?;
+    }
+    let normal = arena.not(raw_panic)?;
+    let post_failed = arena.not(lowered.ensures)?;
+    let reached_normal = arena.and(lowered.requires, normal)?;
+    let post_failed = arena.and(reached_normal, post_failed)?;
+    lowered.program.bad_states.push(BadState {
+        label: "postcondition violated".into(),
+        term: post_failed,
+    });
+    let bad_terms = lowered
+        .program
+        .bad_states
+        .iter()
+        .map(|bad| bad.term)
+        .collect::<Vec<_>>();
+    let any_bad = or_all(&mut arena, &bad_terms)?;
+    let goal = arena.not(any_bad)?;
+    match prove(&mut arena, &[], goal, config)? {
+        ProofOutcome::Proved(report) => {
+            let certified = report.evidence.check(&arena, &[any_bad]).unwrap_or(false);
+            let lean_module = if certified {
+                let flat = flatten_conjuncts(&arena, &[any_bad]);
+                prove_unsat_to_lean_module(&mut arena, &flat)
+                    .ok()
+                    .map(|(_, module)| module)
+            } else {
+                None
+            };
+            Ok(Verdict::Verified {
+                certified,
+                lean_module,
+            })
+        }
+        ProofOutcome::Disproved(model) => Ok(Verdict::Counterexample {
+            class: attribute_class(&lowered.program.bad_states, &model, &arena),
+            inputs: lift_inputs(&lowered.program, &model),
+        }),
         ProofOutcome::Unknown(reason) => Ok(Verdict::Unknown {
             reason: format!("{reason:?}"),
         }),

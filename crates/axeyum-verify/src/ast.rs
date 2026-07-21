@@ -292,3 +292,21 @@ pub struct Program {
     /// The (whitelisted) body statements.
     pub body: Vec<Stmt>,
 }
+
+/// One source-level scalar contract attached to a restricted [`Program`].
+///
+/// This separate wrapper preserves the zero-annotation `Program` surface while
+/// retaining the tail result required to check a postcondition.
+#[derive(Debug, Clone)]
+pub struct ContractProgram {
+    /// Statements executed before the function's scalar tail expression.
+    pub program: Program,
+    /// Boolean precondition over source parameters.
+    pub requires: Expr,
+    /// Retained scalar tail expression.
+    pub result: Expr,
+    /// Reserved binding used by `ensures` for the retained result.
+    pub result_name: String,
+    /// Boolean postcondition over parameters and `result_name`.
+    pub ensures: Expr,
+}

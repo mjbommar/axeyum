@@ -11,8 +11,10 @@
 //! is a **clean compile error** at macro time — never silently mis-modeled.
 //!
 //! On a counterexample the generated test, by construction, also runs the
-//! original function on the witness inputs and asserts it panics (the
-//! soundness floor / DISAGREE=0 reproduction).
+//! original function on the witness inputs. Panic-class witnesses must panic;
+//! source-contract postcondition witnesses must return normally and make the
+//! original typed `ensures` closure false (the soundness floor / DISAGREE=0
+//! reproduction).
 #![forbid(unsafe_code)]
 
 mod parse;
@@ -51,5 +53,17 @@ pub fn verify(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// unchanged) so it type-checks on its own.
 #[proc_macro_attribute]
 pub fn unwind(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}
+
+/// Inert source-contract marker consumed by an outer [`verify`] attribute.
+#[proc_macro_attribute]
+pub fn requires(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    item
+}
+
+/// Inert source-contract marker consumed by an outer [`verify`] attribute.
+#[proc_macro_attribute]
+pub fn ensures(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
 }

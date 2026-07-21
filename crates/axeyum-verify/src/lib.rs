@@ -24,14 +24,43 @@
 //! - [`verify::Verdict::Unknown`] — undecided or out-of-fragment, never a wrong
 //!   verdict.
 //!
+//! ## Scalar source contracts
+//!
+//! A straight-line scalar function may retain its tail result and constrain the
+//! checked population with typed `requires` / `ensures` annotations. `verify`
+//! must remain the outer attribute so it can consume both inert markers:
+//!
+//! ```no_run
+//! #[axeyum_verify::verify]
+//! #[axeyum_verify::requires(x < 255)]
+//! #[axeyum_verify::ensures(|result| result == x + 1)]
+//! fn checked_inc(x: u8) -> u8 {
+//!     x + 1
+//! }
+//! ```
+//!
+//! A postcondition counterexample is replayed through a normal call and the
+//! original typed closure; it is never reported as a panic. Misordered markers
+//! are rejected instead of being silently ignored:
+//!
+//! ```compile_fail
+//! #[axeyum_verify::requires(x < 255)]
+//! #[axeyum_verify::verify]
+//! #[axeyum_verify::ensures(|result| result == x + 1)]
+//! fn misplaced_requires(x: u8) -> u8 {
+//!     x + 1
+//! }
+//! ```
+//!
 //! ## Soundness floor
 //!
 //! Every reported counterexample is validated by **actually running the
 //! original Rust function** on the witness inputs (the macro-generated test, or
-//! [`reproduce`] helpers). A witness that does not reproduce a panic is a
-//! lowering defect, not a finding. BV division is SMT-LIB-total (`÷0` =
-//! all-ones), *not* Rust's panic, so `/` and `%` emit an explicit `divisor == 0`
-//! bad state.
+//! [`reproduce`] helpers). A panic-class witness must panic; a postcondition
+//! witness must return normally and make the source `ensures` closure false. A
+//! witness that does not reproduce its class is a lowering defect, not a
+//! finding. BV division is SMT-LIB-total (`÷0` = all-ones), *not* Rust's panic,
+//! so `/` and `%` emit an explicit `divisor == 0` bad state.
 //!
 //! ## Out-of-fragment constructs are rejected at compile time
 //!
@@ -67,15 +96,16 @@ pub mod reproduce;
 pub mod verify;
 
 /// Re-export of the `#[verify]` attribute macro.
-pub use axeyum_verify_macros::verify;
+pub use axeyum_verify_macros::{ensures, requires, verify};
 
 /// Re-export of the `#[unwind(K)]` attribute macro: place it on a `#[verify]`
 /// function to set the loop-unwind bound `K` for the bounded check.
 pub use axeyum_verify_macros::unwind;
 
-pub use ast::{ArrayParam, BinOp, Expr, Param, Program, Stmt, Ty, UnOp};
+pub use ast::{ArrayParam, BinOp, ContractProgram, Expr, Param, Program, Stmt, Ty, UnOp};
 pub use verify::{
-    CertCoverage, Verdict, Witness, cert_coverage, default_config, signed_value, verify_program,
+    CertCoverage, Verdict, Witness, cert_coverage, default_config, signed_value,
+    verify_contract_program, verify_program,
 };
 
 /// The modeled `Option` constructor recognized by `#[axeyum::verify]`:

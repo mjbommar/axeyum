@@ -905,11 +905,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     concrete callee-panic witness, mutation teeth, and the 117-test standing
     semantics gate pass. Annotations and unwind cleanup remain separate.
   - [ADR-0316](../09-decisions/adr-0316-preregister-source-contract-annotations.md)
-    preregisters the first annotation slice after auditing the source verifier:
-    it must retain the currently discarded scalar tail result and distinguish a
+    accepts the first annotation slice after auditing the source verifier: it
+    retains the previously discarded scalar tail result and distinguishes a
     normally returning postcondition counterexample from the existing panic
-    replay. The fixed straight-line `u8` gate precedes branches, loops, calls,
-    modular summary emission, or any source-to-MIR identity claim.
+    replay. The exhaustive straight-line `u8` gate observes 255 admitted rows,
+    zero safe violations, and 255 mutated-postcondition violations with zero
+    evaluation errors or dropped rows. Branches, loops, calls, modular summary
+    emission, and source-to-MIR identity remain separate questions.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

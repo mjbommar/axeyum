@@ -19,7 +19,7 @@ use std::collections::HashMap;
 
 use axeyum_ir::{SymbolId, TermArena, TermId};
 
-use crate::ast::{ArrayParam, BinOp, Expr, Param, Program, Stmt, Ty, UnOp};
+use crate::ast::{ArrayParam, BinOp, ContractProgram, Expr, Param, Program, Stmt, Ty, UnOp};
 
 /// Why a lowering could not proceed (an out-of-fragment construct or a body the
 /// front-end accepted but the runtime cannot model). Surfaced as `Unknown`,
@@ -72,6 +72,23 @@ pub struct Lowered {
     pub array_syms: Vec<(String, Vec<SymbolId>, Ty)>,
     /// All bad states discovered along all paths.
     pub bad_states: Vec<BadState>,
+}
+
+/// Fully lowered source contract with a retained scalar result.
+pub struct ContractLowered {
+    /// Ordinary input symbols and panic-class bad states.
+    pub program: Lowered,
+    /// Panic predicates contributed by evaluating the postcondition itself.
+    /// These are specification-totality obligations, not function panics.
+    pub postcondition_bad_states: Vec<BadState>,
+    /// Boolean precondition over the input symbols.
+    pub requires: TermId,
+    /// Retained tail-result term.
+    pub result: TermId,
+    /// Retained tail-result type.
+    pub result_ty: Ty,
+    /// Boolean postcondition over inputs and the retained result.
+    pub ensures: TermId,
 }
 
 /// The walking interpreter.
@@ -818,6 +835,79 @@ pub fn lower_program(arena: &mut TermArena, program: &Program) -> Result<Lowered
         param_syms,
         array_syms,
         bad_states: lowerer.bad_states,
+    })
+}
+
+/// Lowers one annotated straight-line scalar program and retains its result.
+///
+/// # Errors
+///
+/// Returns [`LowerError`] for the ordinary program failures, an ill-sorted
+/// contract predicate, a precondition with panic side effects, or a result-name
+/// collision.
+pub fn lower_contract_program(
+    arena: &mut TermArena,
+    contract: &ContractProgram,
+) -> Result<ContractLowered, LowerError> {
+    let program = &contract.program;
+    if !program.arrays.is_empty() {
+        return Err(LowerError::Unsupported(
+            "source contracts currently admit scalar parameters only".into(),
+        ));
+    }
+    let mut env = HashMap::new();
+    let mut param_syms = Vec::new();
+    for Param { name, ty } in &program.params {
+        let sym = declare_scalar(arena, name, *ty)?;
+        let term = arena.var(sym);
+        env.insert(name.clone(), SymVal { term, ty: *ty });
+        param_syms.push((name.clone(), sym, *ty));
+    }
+    if env.contains_key(&contract.result_name) {
+        return Err(LowerError::Unsupported(format!(
+            "contract result binding `{}` collides with a parameter",
+            contract.result_name
+        )));
+    }
+    let mut lowerer = Lowerer {
+        arena,
+        env,
+        arrays: HashMap::new(),
+        path: Vec::new(),
+        bad_states: Vec::new(),
+        scopes: Vec::new(),
+    };
+    let requires = lowerer.lower_expr(&contract.requires)?;
+    expect_bool(requires, "contract precondition")?;
+    if !lowerer.bad_states.is_empty() {
+        return Err(LowerError::Unsupported(
+            "contract precondition must be panic-free".into(),
+        ));
+    }
+    lowerer.lower_block(&program.body)?;
+    let result = lowerer.lower_expr(&contract.result)?;
+    if lowerer.env.contains_key(&contract.result_name) {
+        return Err(LowerError::Unsupported(format!(
+            "contract result binding `{}` collides with a local",
+            contract.result_name
+        )));
+    }
+    lowerer.env.insert(contract.result_name.clone(), result);
+    let function_bad_state_count = lowerer.bad_states.len();
+    let ensures = lowerer.lower_expr(&contract.ensures)?;
+    expect_bool(ensures, "contract postcondition")?;
+    let postcondition_bad_states = lowerer.bad_states.split_off(function_bad_state_count);
+    Ok(ContractLowered {
+        program: Lowered {
+            param_syms,
+            array_syms: Vec::new(),
+            bad_states: lowerer.bad_states,
+        },
+        postcondition_bad_states,
+        requires: requires.term,
+        result: result.term,
+        result_ty: result.ty,
+        ensures: ensures.term,
     })
 }
 

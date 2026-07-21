@@ -1,6 +1,6 @@
 # ADR-0316: Preregister source scalar contract annotations
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -18,7 +18,7 @@ outer attribute and reads inert function-level attributes such as `#[unwind]`.
 The first contract slice can reuse that seam without changing MIR capture,
 calls, effects, or ADR-0315's checked-MIR contract representation.
 
-## Proposed decision
+## Decision
 
 Preregister one source-AST scalar annotation slice:
 
@@ -50,7 +50,9 @@ Version one has these boundaries:
 4. The verification population is the precondition. Panic bad states become
    `requires && panic`; the postcondition bad state is
    `requires && !panic && !ensures(result)`. An unsatisfiable precondition is a
-   precise contract error, not a vacuous proof.
+   precise contract error, not a vacuous proof. Panic predicates contributed by
+   evaluating `ensures` are specification-totality obligations rather than
+   function panics; a reachable one makes the contract invalid.
 5. A postcondition counterexample remains distinct from a panic counterexample.
    Generated replay calls the original function, confirms it returns normally,
    and evaluates the original typed `ensures` closure to false on the witnessed
@@ -88,6 +90,39 @@ Implementation is admitted only if all of these pass:
 
 No performance, modular-call, general-Rust, MIR-equivalence, or annotation-
 ergonomics claim follows from this experiment.
+
+## Acceptance evidence
+
+- `ContractProgram` and `ContractLowered` extend the source verifier without
+  changing `Program` or its constructors. They retain the typed tail result,
+  Boolean precondition, and Boolean postcondition as explicit terms.
+- The accepted verification rule guards every panic bad state by `requires`
+  and adds a separate `requires && !panic && !ensures(result)` bad state. A
+  literally false precondition is rejected by the macro; a symbolically
+  unsatisfiable one returns `Unknown` with a precise invalid-contract reason.
+- Postcondition-expression panic predicates are kept separate from body panic
+  predicates and must be unreachable on every admitted normal return. A
+  reachable postcondition panic returns a precise invalid-contract `Unknown`
+  instead of fabricating a function-panic counterexample.
+- `tests/source_contracts.rs` passes six tests: the guarded increment verifies,
+  the unguarded body retains its `x = 255` overflow witness, the mutated
+  postcondition returns normally and replays false, and the reachable division
+  panic is not mislabeled as a postcondition violation.
+- The same test lowers both safe and mutated contracts, evaluates the retained
+  terms over all 256 `u8` assignments, and observes exactly 255 admitted rows,
+  zero safe violations, 255 mutated violations, zero evaluation errors, and no
+  dropped rows. The excluded `x = 255` row still exposes the raw overflow
+  predicate, so precondition/normal-return guarding has mutation teeth.
+- Three macro unit tests cover duplicate/missing markers, non-closure and
+  wrong-arity postconditions, scalar-return, name/sort, result-binding,
+  straight-line/control/call, and literal-unsatisfiable boundaries. A compiled
+  documentation negative covers wrong attribute ordering; the accepted source
+  example compiles as documentation.
+- The complete `axeyum-verify` package and doctests, the macro package, the
+  81-variant / 17-group / ten-binary / 117-test reflection semantics gate,
+  strict Clippy, strict rustdoc, formatting, and documentation links pass with
+  one job inside the 4 GiB cap. The July 21 kernel journal contains no new OOM
+  kill; direct `dmesg` access is denied by the host.
 
 ## Rejected alternatives
 
