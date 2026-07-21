@@ -68,6 +68,7 @@ pub mod orthopoly;
 pub mod permutation;
 mod ratint;
 mod series;
+pub mod special;
 pub mod stats;
 pub mod sturm;
 
@@ -5486,6 +5487,30 @@ mod tests {
                 &(CasExpr::int(3) * v.get(i, 0).unwrap().clone()),
             );
         }
+    }
+
+    #[test]
+    fn hadamard_and_kronecker_products() {
+        let a = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(3), CasExpr::int(4)],
+        ])
+        .unwrap();
+        let b = Matrix::from_rows(vec![
+            vec![CasExpr::int(0), CasExpr::int(5)],
+            vec![CasExpr::int(6), CasExpr::int(7)],
+        ])
+        .unwrap();
+        // Hadamard: entrywise [[0,10],[18,28]].
+        let had = a.hadamard(&b).unwrap();
+        assert_equal(had.get(0, 1).unwrap(), &CasExpr::int(10));
+        assert_equal(had.get(1, 0).unwrap(), &CasExpr::int(18));
+        // Kronecker: 4×4, top-left block = a[0][0]·b = b, so (0,1) entry = 5.
+        let kron = a.kronecker(&b);
+        assert_eq!((kron.rows(), kron.cols()), (4, 4));
+        assert_equal(kron.get(0, 1).unwrap(), &CasExpr::int(5));
+        // (2,3) entry = a[1][1]·b[0][1] = 4·5 = 20.
+        assert_equal(kron.get(2, 3).unwrap(), &CasExpr::int(20));
     }
 
     #[test]

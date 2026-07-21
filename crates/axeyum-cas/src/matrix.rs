@@ -330,6 +330,43 @@ impl Matrix {
         })
     }
 
+    /// The **Hadamard** (entry-wise) product `self ∘ other`, each entry
+    /// canonicalized. `None` if the shapes differ.
+    #[must_use]
+    pub fn hadamard(&self, other: &Matrix) -> Option<Matrix> {
+        if self.rows != other.rows || self.cols != other.cols {
+            return None;
+        }
+        let data = self
+            .data
+            .iter()
+            .zip(&other.data)
+            .map(|(a, b)| simplify_entry(a.clone() * b.clone()))
+            .collect();
+        Some(Matrix {
+            rows: self.rows,
+            cols: self.cols,
+            data,
+        })
+    }
+
+    /// The **Kronecker** product `self ⊗ other` — the `(rows·other.rows) ×
+    /// (cols·other.cols)` block matrix whose `(i,j)` block is `self[i][j]·other`.
+    #[must_use]
+    pub fn kronecker(&self, other: &Matrix) -> Matrix {
+        let rows = self.rows * other.rows;
+        let cols = self.cols * other.cols;
+        let mut data = Vec::with_capacity(rows * cols);
+        for i in 0..rows {
+            for j in 0..cols {
+                let entry = self.at(i / other.rows, j / other.cols).clone()
+                    * other.at(i % other.rows, j % other.cols).clone();
+                data.push(simplify_entry(entry));
+            }
+        }
+        Matrix { rows, cols, data }
+    }
+
     /// Matrix product `self · other`, each result entry canonicalized via
     /// [`expand`](crate::expand). Returns `None` if `self.cols != other.rows`.
     #[must_use]
