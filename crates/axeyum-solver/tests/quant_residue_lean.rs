@@ -33,6 +33,14 @@ fn committed_clock_rows_reconstruct_and_route() {
             &certificate,
         )
         .unwrap_or_else(|error| panic!("{tag} reconstructs: {error}"));
+        if tag == "clock-3" {
+            let fnv1a = source
+                .bytes()
+                .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+                    (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+                });
+            assert_eq!((source.len(), fnv1a), (16_025, 0x4e97_fa30_7a29_d1d0));
+        }
         assert!(source.contains("theorem axeyum_refutation : False"));
         assert!(source.contains("euclidean_decomposition"));
         assert!(!source.contains("sorryAx"));
