@@ -1414,6 +1414,52 @@ pub fn poly_lcm(a: &CasExpr, b: &CasExpr, var: &str) -> Option<CasExpr> {
     Some(MultiPoly::from_univariate(var, &monic).to_expr())
 }
 
+/// The **content** of a univariate polynomial in `var` — the GCD of its
+/// coefficients, made positive (with the sign of the leading coefficient factored
+/// into the primitive part). Returns the content as a rational constant `CasExpr`.
+/// `None` if `expr` is not a univariate polynomial or is zero.
+#[must_use]
+pub fn content(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs = univariate_coeffs(expr, var)?;
+    poly::rat_degree(&coeffs)?; // reject zero
+    // Content = GCD of numerators / LCM of denominators, sign from leading coeff.
+    let mut num_gcd = 0i128;
+    let mut den_lcm = 1i128;
+    for c in &coeffs {
+        if c.is_zero() {
+            continue;
+        }
+        num_gcd = ntheory::gcd(num_gcd, c.numerator());
+        den_lcm = poly::lcm_i128(den_lcm, c.denominator())?;
+    }
+    let value = Rational::checked_new(num_gcd, den_lcm)?;
+    Some(CasExpr::Const(value))
+}
+
+/// The **primitive part** of a univariate polynomial in `var` — the polynomial
+/// divided by its [`content`], made to have a positive leading coefficient. `None`
+/// if `expr` is not a univariate polynomial or is zero.
+#[must_use]
+pub fn primitive_part(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs = univariate_coeffs(expr, var)?;
+    let degree = poly::rat_degree(&coeffs)?;
+    let CasExpr::Const(cont) = content(expr, var)? else {
+        return None;
+    };
+    // Divide by the content; flip sign so the leading coefficient is positive.
+    let sign = if coeffs[degree].numerator() < 0 {
+        Rational::integer(-1)
+    } else {
+        Rational::integer(1)
+    };
+    let divisor = cont.checked_mul(sign)?;
+    let primitive: Vec<Rational> = coeffs
+        .iter()
+        .map(|c| c.checked_div(divisor))
+        .collect::<Option<_>>()?;
+    Some(MultiPoly::from_univariate(var, &primitive).to_expr())
+}
+
 /// Whether a univariate polynomial `expr` in `var` is **irreducible over ℚ** (degree
 /// ≥ 1 and not a product of two non-constant rational polynomials). `None` if `expr`
 /// is not a univariate polynomial in `var` or on overflow.
@@ -5953,6 +5999,40 @@ mod tests {
         assert_equal(&coeff(&p, "x", 1).unwrap(), &CasExpr::int(-5));
         assert_equal(&coeff(&p, "x", 0).unwrap(), &CasExpr::int(7));
         assert_equal(&coeff(&p, "x", 5).unwrap(), &CasExpr::zero());
+    }
+
+    #[test]
+    fn content_primitive_and_matrix_predicates() {
+        let x = || v("x");
+        // content(6x² + 4x + 2) = 2; primitive part = 3x² + 2x + 1.
+        assert_equal(
+            &content(&(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)), "x").unwrap(),
+            &CasExpr::int(2),
+        );
+        assert_equal(
+            &primitive_part(&(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)), "x").unwrap(),
+            &(CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1)),
+        );
+        // content((1/2)x + (1/3)) = 1/6.
+        assert_equal(
+            &content(&(CasExpr::rat(1, 2) * x() + CasExpr::rat(1, 3)), "x").unwrap(),
+            &CasExpr::rat(1, 6),
+        );
+        // Matrix predicates.
+        let diag = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        assert!(diag.is_diagonal() && diag.is_upper_triangular() && diag.is_lower_triangular());
+        assert!(!diag.is_identity());
+        assert!(Matrix::identity(3).is_identity());
+        let upper = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        assert!(upper.is_upper_triangular() && !upper.is_lower_triangular() && !upper.is_diagonal());
     }
 
     #[test]

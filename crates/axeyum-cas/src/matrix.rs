@@ -54,6 +54,14 @@ fn simplify_entry(expr: CasExpr) -> CasExpr {
     }
 }
 
+/// Whether an entry certifiably equals zero via the zero-test.
+fn is_certified_zero_entry(entry: &CasExpr) -> bool {
+    matches!(
+        crate::equal(entry, &CasExpr::zero()),
+        crate::ZeroTest::Certified { equal: true, .. }
+    )
+}
+
 /// Extract the exact rational value of a constant entry, or `None` if the entry
 /// is not a bare [`CasExpr::Const`].
 fn as_rational(expr: &CasExpr) -> Option<Rational> {
@@ -241,6 +249,45 @@ impl Matrix {
             cols: self.rows,
             data,
         }
+    }
+
+    /// Whether every off-diagonal entry is (certifiably) zero. `false` if not square.
+    #[must_use]
+    pub fn is_diagonal(&self) -> bool {
+        self.rows == self.cols && self.all_where(|i, j, e| i == j || is_certified_zero_entry(e))
+    }
+
+    /// Whether every strictly-below-diagonal entry is zero (upper-triangular).
+    /// `false` if not square.
+    #[must_use]
+    pub fn is_upper_triangular(&self) -> bool {
+        self.rows == self.cols && self.all_where(|i, j, e| i <= j || is_certified_zero_entry(e))
+    }
+
+    /// Whether every strictly-above-diagonal entry is zero (lower-triangular).
+    /// `false` if not square.
+    #[must_use]
+    pub fn is_lower_triangular(&self) -> bool {
+        self.rows == self.cols && self.all_where(|i, j, e| i >= j || is_certified_zero_entry(e))
+    }
+
+    /// Whether the matrix is the identity (`1` on the diagonal, `0` off it). `false`
+    /// if not square.
+    #[must_use]
+    pub fn is_identity(&self) -> bool {
+        self.rows == self.cols
+            && self.all_where(|i, j, e| {
+                let target = if i == j { CasExpr::int(1) } else { CasExpr::zero() };
+                matches!(
+                    crate::equal(e, &target),
+                    crate::ZeroTest::Certified { equal: true, .. }
+                )
+            })
+    }
+
+    /// Test a predicate `(row, col, entry)` on every entry.
+    fn all_where(&self, predicate: impl Fn(usize, usize, &CasExpr) -> bool) -> bool {
+        (0..self.rows).all(|i| (0..self.cols).all(|j| predicate(i, j, self.at(i, j))))
     }
 
     /// Entry-wise sum `self + other`, each result entry canonicalized via
