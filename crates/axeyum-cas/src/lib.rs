@@ -3657,6 +3657,97 @@ fn expand_log_argument(arg: &CasExpr) -> CasExpr {
     }
 }
 
+/// If `term` is `c·ln(u)` for an **integer** `c` (including `ln u` and `−ln u`),
+/// return `(c, u)`; `None` otherwise.
+fn as_log_term(term: &CasExpr) -> Option<(i128, CasExpr)> {
+    match term {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => Some((1, (**arg).clone())),
+        CasExpr::Neg(inner) => {
+            let (c, u) = as_log_term(inner)?;
+            Some((c.checked_neg()?, u))
+        }
+        CasExpr::Mul(factors) => {
+            // Exactly one `ln` factor and the rest integer constants.
+            let mut coeff = 1i128;
+            let mut logarg: Option<CasExpr> = None;
+            for factor in factors {
+                match factor {
+                    CasExpr::Const(c) if c.denominator() == 1 => {
+                        coeff = coeff.checked_mul(c.numerator())?;
+                    }
+                    CasExpr::Unary(UnaryFunc::Ln, arg) if logarg.is_none() => {
+                        logarg = Some((**arg).clone());
+                    }
+                    _ => return None,
+                }
+            }
+            logarg.map(|u| (coeff, u))
+        }
+        _ => None,
+    }
+}
+
+/// Combine logarithms — the inverse of [`expand_log`]: `ln a + ln b → ln(a·b)`,
+/// `c·ln a → ln(aᶜ)` (integer `c`), `ln a − ln b → ln(a/b)`, collecting all
+/// integer-coefficient `ln` terms of a sum into a single logarithm. Recurses into
+/// subexpressions. A **compute** rewrite (sound for positive real arguments, which
+/// axeyum does not yet track — like `expand_log`).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, logcombine, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // ln x + ln y → ln(x·y).
+/// let combined = logcombine(&(x.clone().ln() + y.clone().ln()));
+/// assert!(matches!(equal(&combined, &(x * y).ln()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn logcombine(expr: &CasExpr) -> CasExpr {
+    // `c·ln u → ln(uᶜ)` as a `CasExpr` for an integer coefficient.
+    let as_ln_power = |coeff: i128, arg: &CasExpr| -> CasExpr {
+        let power = u32::try_from(coeff.unsigned_abs()).unwrap_or(u32::MAX);
+        if coeff >= 0 {
+            arg.clone().pow(power)
+        } else {
+            CasExpr::int(1) / arg.clone().pow(power)
+        }
+    };
+    match expr {
+        CasExpr::Add(terms) => {
+            let mut log_argument = CasExpr::int(1); // ∏ uᵢ^{cᵢ}
+            let mut has_log = false;
+            let mut others: Vec<CasExpr> = Vec::new();
+            for term in terms {
+                if let Some((coeff, arg)) = as_log_term(term) {
+                    has_log = true;
+                    log_argument = log_argument * as_ln_power(coeff, &arg);
+                } else {
+                    others.push(logcombine(term));
+                }
+            }
+            if !has_log {
+                return CasExpr::Add(others);
+            }
+            let mut result = simplify(&log_argument).ln();
+            for other in others {
+                result = result + other;
+            }
+            result
+        }
+        // A standalone `c·ln u` term also combines to `ln(uᶜ)`.
+        _ if as_log_term(expr).is_some() => {
+            let (coeff, arg) = as_log_term(expr).unwrap_or((1, expr.clone()));
+            simplify(&as_ln_power(coeff, &arg)).ln()
+        }
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(logcombine).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(logcombine(inner))),
+        CasExpr::Div(a, b) => CasExpr::Div(Box::new(logcombine(a)), Box::new(logcombine(b))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(logcombine(base)), *exp),
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(logcombine(arg))),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// Numerically approximate an expression as an `f64`, given `bindings` for its free
 /// variables (each `(name, value)`). Rational constants are exact-to-`f64`; the
 /// transcendental heads map to the corresponding `f64` functions.
@@ -5940,6 +6031,28 @@ mod tests {
         assert_equal(&simplify_radicals(&x().pow(2).sqrt()), &x().abs());
         // √(x⁴) = |x²| = x² … as |x²|; check it equals abs(x²).
         assert_equal(&simplify_radicals(&x().pow(4).sqrt()), &x().pow(2).abs());
+    }
+
+    #[test]
+    fn logcombine_rules() {
+        let x = || v("x");
+        let y = || v("y");
+        // ln x + ln y = ln(x·y).
+        assert_equal(&logcombine(&(x().ln() + y().ln())), &(x() * y()).ln());
+        // 2·ln x = ln(x²).
+        assert_equal(&logcombine(&(CasExpr::int(2) * x().ln())), &x().pow(2).ln());
+        // ln x − ln y = ln(x/y).
+        assert_equal(&logcombine(&(x().ln() - y().ln())), &(x() / y()).ln());
+        // 2·ln x + 3·ln y = ln(x²·y³).
+        assert_equal(
+            &logcombine(&(CasExpr::int(2) * x().ln() + CasExpr::int(3) * y().ln())),
+            &(x().pow(2) * y().pow(3)).ln(),
+        );
+        // Inverse of expand_log: logcombine(expand_log(ln(x²·y))) = ln(x²·y).
+        let start = (x().pow(2) * y()).ln();
+        assert_equal(&logcombine(&expand_log(&start)), &start);
+        // Non-log terms are preserved: ln x + 3 stays ln x + 3.
+        assert_equal(&logcombine(&(x().ln() + CasExpr::int(3))), &(x().ln() + CasExpr::int(3)));
     }
 
     #[test]
