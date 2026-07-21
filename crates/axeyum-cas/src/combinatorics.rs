@@ -338,6 +338,46 @@ pub fn lucas(n: u32) -> Option<i128> {
     Some(previous)
 }
 
+/// The **Pell number** `Pₙ` (with `P₀ = 0`, `P₁ = 1`, `Pₙ = 2Pₙ₋₁ + Pₙ₋₂`):
+/// `0, 1, 2, 5, 12, 29, 70, …` — the numerators/denominators of the continued-
+/// fraction convergents to `√2`. `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::pell;
+/// assert_eq!(pell(5), Some(29));
+/// ```
+#[must_use]
+pub fn pell(n: u32) -> Option<i128> {
+    let mut previous: i128 = 0; // P_0
+    let mut current: i128 = 1; // P_1
+    for _ in 0..n {
+        let next = current.checked_mul(2)?.checked_add(previous)?;
+        previous = current;
+        current = next;
+    }
+    Some(previous)
+}
+
+/// The **Jacobsthal number** `Jₙ` (with `J₀ = 0`, `J₁ = 1`, `Jₙ = Jₙ₋₁ + 2Jₙ₋₂`):
+/// `0, 1, 1, 3, 5, 11, 21, 43, …` (the nearest integer to `2ⁿ/3`). `None` on `i128`
+/// overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::jacobsthal;
+/// assert_eq!(jacobsthal(6), Some(21));
+/// ```
+#[must_use]
+pub fn jacobsthal(n: u32) -> Option<i128> {
+    let mut previous: i128 = 0; // J_0
+    let mut current: i128 = 1; // J_1
+    for _ in 0..n {
+        let next = current.checked_add(previous.checked_mul(2)?)?;
+        previous = current;
+        current = next;
+    }
+    Some(previous)
+}
+
 /// The **derangement** count `!n` (permutations of `n` elements with no fixed
 /// point): `!n = n·!(n−1) + (−1)ⁿ`, with `!0 = 1`, `!1 = 0`, `!2 = 1`, `!3 = 2`,
 /// `!4 = 9`. `None` on `i128` overflow.
@@ -444,6 +484,18 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pell_and_jacobsthal_sequences() {
+        let pell_expected = [0i128, 1, 2, 5, 12, 29, 70, 169, 408];
+        for (n, &want) in pell_expected.iter().enumerate() {
+            assert_eq!(pell(u32::try_from(n).unwrap()), Some(want), "P_{n}");
+        }
+        let jac_expected = [0i128, 1, 1, 3, 5, 11, 21, 43, 85];
+        for (n, &want) in jac_expected.iter().enumerate() {
+            assert_eq!(jacobsthal(u32::try_from(n).unwrap()), Some(want), "J_{n}");
+        }
+    }
 
     #[test]
     fn derangements_double_factorial_multinomial() {
