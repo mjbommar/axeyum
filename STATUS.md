@@ -366,6 +366,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   credit; no control/later proof runs, no output survives, and no OOM-delta
   failure is reported. Never rerun/weaken v2. Next: commit/push the exact
   negative, then audit the existing lowering-evidence path before a new ADR.
+  The audit finds the existing `certify_qf_bv_unsat_end_to_end_within` route,
+  which composes and rechecks a faithfulness-miter DRAT plus final-refutation
+  DRAT. ADR-0337 now freezes v3 as a narrow positive-row API correction with an
+  honest split proof/control policy; target semantics and controls are unchanged.
+  Commit/push this zero-result ADR before implementation. No v3 query exists.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
@@ -6089,6 +6094,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | WIP — **Authenticated Tock capture/parser admission DONE; proof v2 exposes an uncertified bit-blast boundary (ADR-0323--0336):** v3's raw-identical modules admit both helpers; v1 closes pre-query on a stale lock. Corrected v2 compiles and its first target query returns `Proved`, but the ledger is BitBlast=uncertified with certified Tseitin/SatRefutation, so the frozen gate grants zero credit and stops before controls/later proofs. No output survives. Audit whether the exact lowering has an existing checker; otherwise preregister certified bit-blast lifting as proof infrastructure. Do not weaken/rerun v2. |
 
 ## Changelog
+
+- **2026-07-21 — Preregistered the existing end-to-end Tock proof route
+  (ADR-0337).** Post-v2 audit confirms that dual-DRAT bit-blast certification is
+  already shipped; v3 changes only the positive-row API and truthfully splits
+  proof/control policies. No new checker research or v3 query is authorized yet.
 
 - **2026-07-21 — Accepted ADR-0336 as a target trust-boundary negative.** The
   first authenticated Tock query returns `Proved`, but its ledger marks

@@ -1086,6 +1086,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     `Proved`, but BitBlast is uncertified while Tseitin and SatRefutation are
     certified. The all-certified gate credits no row and cleanup leaves no
     output. Audit existing lowering evidence before proposing new proof work.
+  - [ADR-0337](../09-decisions/adr-0337-preregister-tock-end-to-end-proof-v3.md)
+    records that the checker already exists: v3 selects the dual-DRAT
+    `certify_qf_bv_unsat_end_to_end_within` route for positive rows, retains
+    controls unchanged, and reports its distinct enforceable proof policy.
+    Commit/push the zero-result ADR before implementation; no v3 query exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

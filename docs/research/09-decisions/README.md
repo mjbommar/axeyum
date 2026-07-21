@@ -391,3 +391,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0334](adr-0334-preregister-tock-llvm-capture-v3.md) | Preregister the narrow Tock LLVM capture-v3 structural replay correction | accepted |
 | [0335](adr-0335-preregister-tock-log2-proof-scoreboard.md) | Preregister authenticated Tock log2 proofs, replayed controls, and measured scoreboard; accept v1 as a pre-query stale-lock negative | accepted |
 | [0336](adr-0336-preregister-tock-log2-proof-v2.md) | Preregister proof v2 with the corrected lock; accept the first target proof as rejected because bit-blast trust is uncertified | accepted |
+| [0337](adr-0337-preregister-tock-end-to-end-proof-v3.md) | Preregister proof v3 selecting the existing dual-DRAT end-to-end QF_BV certification route | proposed |

@@ -539,6 +539,14 @@ session state.
 >    failure is reported. Never rerun or weaken v2. Commit/push the exact
 >    negative, then inspect the existing evidence/checker path read-only before
 >    deciding whether certified bit-blast lifting merits a new ADR.
+>    The audit closes that question cheaply: plain `prove` is documented to
+>    leave BitBlast uncertified on its DRAT fallback, while the already-shipped
+>    `certify_qf_bv_unsat_end_to_end_within` API runs a DRAT-checked independent
+>    bit-blast miter plus the final DRAT refutation and rechecks both. ADR-0337
+>    preregisters v3 as that narrow API-selection correction for positive rows;
+>    controls and target semantics stay unchanged, and the policy honestly
+>    separates end-to-end proof limits from control `SolverConfig`. Commit/push
+>    the zero-result ADR before implementation. No v3 query/certificate exists.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
