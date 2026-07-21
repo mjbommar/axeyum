@@ -904,6 +904,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     modular/inlined panic equality, all 256 `u8` rows at 255 normal/one panic, a
     concrete callee-panic witness, mutation teeth, and the 117-test standing
     semantics gate pass. Annotations and unwind cleanup remain separate.
+  - [ADR-0316](../09-decisions/adr-0316-preregister-source-contract-annotations.md)
+    preregisters the first annotation slice after auditing the source verifier:
+    it must retain the currently discarded scalar tail result and distinguish a
+    normally returning postcondition counterexample from the existing panic
+    replay. The fixed straight-line `u8` gate precedes branches, loops, calls,
+    modular summary emission, or any source-to-MIR identity claim.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

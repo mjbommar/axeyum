@@ -250,6 +250,12 @@ session state.
 >    Next, preregister the smallest source-annotation lowering into these
 >    accepted `requires`/`ensures`/panic channels with replayed violation UX;
 >    do not widen calls, effects, or unwind cleanup to make the syntax useful.
+>    ADR-0316 now freezes that prerequisite after the macro audit found two
+>    missing semantic seams: the source-AST path discards its tail result and
+>    assumes every witness must panic. The proposed first slice is one
+>    straight-line scalar function, retains its typed result, and gives a
+>    normally returning postcondition violation distinct replay. It emits no
+>    modular summary and does not claim source-to-MIR identity.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

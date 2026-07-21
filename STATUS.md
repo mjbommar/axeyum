@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0316 preregisters the actual annotation prerequisite.** A
+  source audit shows the current macro evaluates but discards the tail value,
+  while generated counterexample glue requires every witness to panic. The
+  first `requires`/`ensures` slice therefore retains one straight-line scalar
+  result and adds a distinct normally returning postcondition replay. It keeps
+  `#[verify]` outermost, uses typed Rust expressions rather than strings, and
+  defers branches/loops/calls, modular summary emission, and source-to-MIR
+  identity. Zero implementation rows exist; the syntax and replay gates are
+  frozen before code.
+
 - **2026-07-21 — ADR-0315 accepts modular MIR panic propagation before
   annotations.** The remaining cross-machine evidence row still requires a
   genuinely different host, so independent local work advances P5.2's smallest
