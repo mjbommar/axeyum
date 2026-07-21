@@ -446,3 +446,15 @@ exactly my additions.
   (`∫1/(x²+1)=arctan(x)`), via `CasExpr::Atan` + `d/dx atan u = u'/(1+u²)`. Then
   **2b** (irrational real roots, needs `RealAlgebraic::inv`).
 - Breadth: univariate factorization (C2/G5), multivariate GCD (G4).
+
+## 2026-07-20 — Entry 9: `atan` (Slice 2c) + ongoing sweep to parity
+
+`CasExpr::Atan` + `d/dx atan u = u'/(1+u²)` (opaque atom in the zero-test, like
+`ln`). Irreducible-quadratic integration: `∫(c₁x+c₀)/(ax²+bx+d) = (c₁/2a)ln(ax²+bx+d)
++ ((2ac₀−bc₁)/(a·s))atan((2ax+b)/s)`, `s=√(4ad−b²)` (rational-square case; irrational
+→ decline, needs algebraic numbers). `∫1/(x²+1)=atan(x)`, `∫1/(x²+4)=½atan(x/2)`,
+mixed ln+atan certified; `∫1/(x²+2)` declines (√2). **34 tests, clippy-clean.**
+Elementary rational-function integration is now essentially complete (rational +
+log + atan). Working continuously toward SymPy/Mathematica parity — next:
+elementary function heads (exp/sin/cos/sqrt) with certified differentiation, then
+factorization, linear algebra (sub-agent building `matrix.rs`), series, summation.

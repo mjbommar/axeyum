@@ -81,6 +81,10 @@ pub enum CasExpr {
     /// `d/dx ln(v) = v'/v` is rational, which is what lets integrals containing it
     /// be certified by differentiate-and-check.
     Ln(Box<CasExpr>),
+    /// The arctangent `atan(arg)`. Like [`CasExpr::Ln`], a transcendental head
+    /// whose derivative `d/dx atan(u) = u'/(1+u²)` is rational — introduced by
+    /// integration over irreducible quadratic denominators.
+    Atan(Box<CasExpr>),
 }
 
 impl CasExpr {
@@ -192,6 +196,11 @@ impl CasExpr {
                 // d/dx ln(v) = v' / v
                 CasExpr::Div(Box::new(arg.differentiate(var)), arg.clone())
             }
+            CasExpr::Atan(arg) => {
+                // d/dx atan(u) = u' / (1 + u²)
+                let denom = CasExpr::int(1) + CasExpr::Pow(arg.clone(), 2);
+                CasExpr::Div(Box::new(arg.differentiate(var)), Box::new(denom))
+            }
         }
     }
 
@@ -234,6 +243,7 @@ impl CasExpr {
                 CasExpr::Pow(Box::new(base.substitute(var, replacement)), *exp)
             }
             CasExpr::Ln(arg) => CasExpr::Ln(Box::new(arg.substitute(var, replacement))),
+            CasExpr::Atan(arg) => CasExpr::Atan(Box::new(arg.substitute(var, replacement))),
         }
     }
 
@@ -271,7 +281,7 @@ impl CasExpr {
                 Some(acc)
             }
             // Transcendental: no exact rational value.
-            CasExpr::Ln(_) => None,
+            CasExpr::Ln(_) | CasExpr::Atan(_) => None,
         }
     }
 }
@@ -350,6 +360,7 @@ impl CasExpr {
             ),
             CasExpr::Div(u, w) => (2, format!("{}/{}", u.render(3), w.render(3))),
             CasExpr::Ln(arg) => (4, format!("ln({})", arg.render(0))),
+            CasExpr::Atan(arg) => (4, format!("atan({})", arg.render(0))),
             CasExpr::Add(terms) => {
                 let mut out = String::new();
                 for (i, t) in terms.iter().enumerate() {
@@ -669,7 +680,7 @@ pub fn normalize(expr: &CasExpr) -> Option<MultiPoly> {
         CasExpr::Pow(base, exp) => normalize(base)?.pow(*exp),
         // A quotient (use [`normalize_rational`]) or a transcendental head is not
         // a polynomial: the polynomial normal form declines.
-        CasExpr::Div(..) | CasExpr::Ln(_) => None,
+        CasExpr::Div(..) | CasExpr::Ln(_) | CasExpr::Atan(_) => None,
     }
 }
 
@@ -813,17 +824,18 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // identities conservatively fail to reduce (→ not certified, never a false
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
-        CasExpr::Ln(arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&ln_atom_name(
-            arg,
+        CasExpr::Ln(arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("ln", arg)))),
+        CasExpr::Atan(arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+            "atan", arg,
         )))),
     }
 }
 
-/// A collision-resistant variable name standing for the transcendental atom
-/// `ln(arg)`, keyed by `arg`'s canonical rendering. The `\0` prefix cannot occur
+/// A collision-resistant variable name standing for a transcendental atom
+/// `head(arg)`, keyed by `arg`'s canonical rendering. The `\0` prefix cannot occur
 /// in a user variable name.
-fn ln_atom_name(arg: &CasExpr) -> String {
-    format!("\0ln:{}", arg.render(0))
+fn atom_name(head: &str, arg: &CasExpr) -> String {
+    format!("\0{head}:{}", arg.render(0))
 }
 
 /// The trust tag attached to a CAS answer
@@ -1070,18 +1082,104 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
         return Some(scaled_ln_expr(coeff, ln));
     }
     // Degree ≥ 2: Rothstein–Trager. ∫ C/D₁ = Σ cᵢ·ln(vᵢ), cᵢ the rational roots
-    // of Res_t, vᵢ = gcd(C − cᵢ·D₁', D₁). Declines to None on non-rational roots.
-    let terms = ratint::log_terms(&cc, &dd)?;
-    let mut sum: Vec<CasExpr> = Vec::with_capacity(terms.len());
-    for (coeff, v_poly) in terms {
-        let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()));
-        sum.push(scaled_ln_expr(coeff, ln));
+    // of Res_t, vᵢ = gcd(C − cᵢ·D₁', D₁).
+    if let Some(terms) = ratint::log_terms(&cc, &dd) {
+        let mut sum: Vec<CasExpr> = Vec::with_capacity(terms.len());
+        for (coeff, v_poly) in terms {
+            let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()));
+            sum.push(scaled_ln_expr(coeff, ln));
+        }
+        return match sum.len() {
+            0 => None,
+            1 => sum.into_iter().next(),
+            _ => Some(CasExpr::Add(sum)),
+        };
     }
-    match sum.len() {
+    // No rational roots: an irreducible **quadratic** denominator has a real
+    // closed form in ln + atan (∫ 1/(x²+1) = atan x). Higher-degree irreducible
+    // denominators need algebraic-number roots (a later slice) → None.
+    if poly::rat_degree(&dd)? == 2 {
+        return integrate_irreducible_quadratic(var, &cc, &dd);
+    }
+    None
+}
+
+/// `∫ (c₁·x + c₀)/(a·x² + b·x + d) dx` for an **irreducible** quadratic
+/// (discriminant `b² − 4ad < 0`) whose `√(4ad − b²)` is rational:
+/// `(c₁/2a)·ln(a·x²+b·x+d) + ((2a·c₀ − b·c₁)/(a·s))·atan((2a·x + b)/s)`,
+/// `s = √(4ad − b²)`. Declines (`None`) when the root is irrational (needs
+/// algebraic numbers). Certified downstream by differentiate-and-check.
+fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) -> Option<CasExpr> {
+    let a = dd[2];
+    let b = dd.get(1).copied().unwrap_or_else(Rational::zero);
+    let d = dd.first().copied().unwrap_or_else(Rational::zero);
+    let c1 = cc.get(1).copied().unwrap_or_else(Rational::zero);
+    let c0 = cc.first().copied().unwrap_or_else(Rational::zero);
+    // 4ad − b² must be positive (irreducible) and a perfect rational square.
+    let four_ad = Rational::integer(4).checked_mul(a)?.checked_mul(d)?;
+    let neg_disc = four_ad.checked_sub(b.checked_mul(b)?)?;
+    if neg_disc.numerator() <= 0 {
+        return None; // real roots — handled by the rational-root path, not here
+    }
+    let s = rational_sqrt(neg_disc)?;
+    let two_a = Rational::integer(2).checked_mul(a)?;
+
+    let mut parts: Vec<CasExpr> = Vec::new();
+    // ln term (present only when the numerator has an x-component).
+    if !c1.is_zero() {
+        let ln_coeff = c1.checked_div(two_a)?;
+        let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, dd).to_expr()));
+        parts.push(scaled_ln_expr(ln_coeff, ln));
+    }
+    // atan term: coefficient (2a·c₀ − b·c₁)/(a·s), argument (2a·x + b)/s.
+    let atan_coeff =
+        two_a.checked_mul(c0)?.checked_sub(b.checked_mul(c1)?)?.checked_div(a.checked_mul(s)?)?;
+    if !atan_coeff.is_zero() {
+        let arg = MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?])
+            .to_expr();
+        let atan = CasExpr::Atan(Box::new(arg));
+        parts.push(if atan_coeff == Rational::integer(1) {
+            atan
+        } else if atan_coeff == Rational::integer(-1) {
+            CasExpr::Neg(Box::new(atan))
+        } else {
+            CasExpr::Mul(vec![CasExpr::Const(atan_coeff), atan])
+        });
+    }
+    match parts.len() {
         0 => None,
-        1 => sum.into_iter().next(),
-        _ => Some(CasExpr::Add(sum)),
+        1 => parts.into_iter().next(),
+        _ => Some(CasExpr::Add(parts)),
     }
+}
+
+/// The exact square root of a non-negative rational, if it is rational (i.e.
+/// numerator and denominator are both perfect squares); else `None`.
+fn rational_sqrt(r: Rational) -> Option<Rational> {
+    let sn = isqrt(r.numerator())?;
+    let sd = isqrt(r.denominator())?;
+    if sn.checked_mul(sn)? == r.numerator() && sd.checked_mul(sd)? == r.denominator() {
+        Rational::checked_new(sn, sd)
+    } else {
+        None
+    }
+}
+
+/// Integer floor square root via Newton's method (`None` for negative input).
+fn isqrt(n: i128) -> Option<i128> {
+    if n < 0 {
+        return None;
+    }
+    if n < 2 {
+        return Some(n);
+    }
+    let mut x = n;
+    let mut y = x.midpoint(1);
+    while y < x {
+        x = y;
+        y = x.midpoint(n / x);
+    }
+    Some(x)
 }
 
 /// `coeff · ln_expr`, presenting `±1` cleanly (`ln_expr` / `−ln_expr`).
@@ -1512,11 +1610,29 @@ mod tests {
     }
 
     #[test]
-    fn integrate_declines_arctangent() {
-        // ∫ 1/(x²+1) dx = arctan(x): the Rothstein–Trager roots are ±i/2
-        // (complex), so the logarithmic route declines — honest None (a real
-        // closed form via atan is a later slice).
+    fn integrate_arctangent() {
+        // ∫ 1/(x²+1) dx = atan(x), certified by d/dx atan(x) = 1/(x²+1).
         let f = CasExpr::int(1) / (v("x").pow(2) + CasExpr::int(1));
+        let r1 = integrate(&f, "x").expect("arctangent integral");
+        assert!(r1.is_certified());
+        assert_equal(&r1.antiderivative.differentiate("x"), &f);
+        // ∫ 1/(x²+4) dx = ½·atan(x/2).
+        let g = CasExpr::int(1) / (v("x").pow(2) + CasExpr::int(4));
+        let r2 = integrate(&g, "x").expect("arctangent integral");
+        assert!(r2.is_certified());
+        assert_equal(&r2.antiderivative.differentiate("x"), &g);
+        // ∫ (x+1)/(x²+1) dx = ½·ln(x²+1) + atan(x) (mixed ln + atan).
+        let h = (v("x") + CasExpr::int(1)) / (v("x").pow(2) + CasExpr::int(1));
+        let r3 = integrate(&h, "x").expect("mixed integral");
+        assert!(r3.is_certified());
+        assert_equal(&r3.antiderivative.differentiate("x"), &h);
+    }
+
+    #[test]
+    fn integrate_declines_irrational_quadratic() {
+        // ∫ 1/(x²+2) dx = (1/√2)·atan(x/√2): the coefficient is irrational
+        // (needs algebraic numbers), so honest None — never a wrong answer.
+        let f = CasExpr::int(1) / (v("x").pow(2) + CasExpr::int(2));
         assert!(integrate(&f, "x").is_none());
     }
 

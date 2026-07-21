@@ -148,10 +148,7 @@ pub(crate) fn horowitz(
 /// `t` (LSB-first). Reuses the in-tree bivariate Sylvester machinery with `t` as
 /// the surviving variable. `None` on overflow or a degenerate (deg < 2)
 /// denominator.
-pub(crate) fn rothstein_trager_resultant(
-    p_bar: &[Rational],
-    q_bar: &[Rational],
-) -> Option<RatVec> {
+pub(crate) fn rothstein_trager_resultant(p_bar: &[Rational], q_bar: &[Rational]) -> Option<RatVec> {
     let q_deriv = poly::rat_derivative(q_bar)?;
     let flen = p_bar.len().max(q_deriv.len());
     // f(x) = P̄ − t·Q̄': the x^i coefficient is the length-2 poly [P̄_i, −Q̄'_i] in t.
@@ -227,9 +224,7 @@ pub(crate) fn rational_roots(poly_t: &[Rational]) -> Option<Vec<Rational>> {
                     sign.checked_mul(i128::try_from(p).ok()?)?,
                     i128::try_from(q).ok()?,
                 )?;
-                if poly::eval_rat_poly(&work, candidate)?.is_zero()
-                    && !roots.contains(&candidate)
-                {
+                if poly::eval_rat_poly(&work, candidate)?.is_zero() && !roots.contains(&candidate) {
                     roots.push(candidate);
                 }
             }
@@ -242,10 +237,7 @@ pub(crate) fn rational_roots(poly_t: &[Rational]) -> Option<Vec<Rational>> {
 /// `Q̄` with `gcd(P̄, Q̄) = 1`, when the resultant splits over ℚ. Returns the
 /// `(cᵢ, vᵢ)` term list (`vᵢ` monic), or `None` if a non-rational root is
 /// required (the caller then declines — the certificate never sees a wrong sum).
-pub(crate) fn log_terms(
-    p_bar: &[Rational],
-    q_bar: &[Rational],
-) -> Option<Vec<(Rational, RatVec)>> {
+pub(crate) fn log_terms(p_bar: &[Rational], q_bar: &[Rational]) -> Option<Vec<(Rational, RatVec)>> {
     let resultant = rothstein_trager_resultant(p_bar, q_bar)?;
     let roots = rational_roots(&resultant)?;
     if roots.is_empty() {
