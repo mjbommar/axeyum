@@ -402,8 +402,10 @@ session state.
 >    exact Git archives at identical Bubblewrap paths, a validated read-only
 >    locked cache, no network, raw full LLVM-module identity, compiler-matched
 >    hash-pinned LLVM 22 extraction, exact two-function checked admission, and
->    atomic local-only output under the 4 GiB cap. Implement producer/tests/
->    registration and commit them before the first official build; LLVM 21,
+>    atomic local-only output under the 4 GiB cap. The producer, ten focused
+>    mutation/cleanup tests, and hash-pinned registration are now frozen with
+>    zero official builds and zero target bytes. Commit/push this producer
+>    checkpoint, then run it once under the registered cgroup scope; LLVM 21,
 >    text slicing, feasibility-hash seeding, and early proof queries are barred.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit

@@ -1004,7 +1004,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     complete trees at identical virtual roots, validated locked offline cache,
     raw full-module identity, hash-pinned LLVM 22 extraction/assembly, exact
     two-symbol checked admission, atomic local output, and no property query.
-    The earlier feasibility module supplies no expected result.
+    Its producer, ten mutation/cleanup tests, and exact source/tool/namespace/
+    resource registration are now frozen before execution. The earlier
+    feasibility module supplies no expected result; no official build exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -109,9 +109,11 @@ No gate may be weakened after the first official build starts.
 
 ## Result
 
-Proposed. No producer, registration, LLVM-22 installation identity, official
-Tock build, retained target byte, extracted symbol, admission result, proof, or
-scoreboard row exists.
+Proposed. The producer, ten focused mutation/cleanup tests, exact LLVM-22 and
+support-tool identities, admission binary/source identity, and source/namespace/
+resource registration are frozen with zero official builds. No retained target
+byte, extracted official symbol, admission result, proof, or scoreboard row
+exists. Commit and push this checkpoint before the first official build.
 
 ## Rejected alternatives
 
