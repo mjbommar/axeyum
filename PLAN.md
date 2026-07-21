@@ -481,7 +481,14 @@ session state.
 >    1,196-line integer-inequality reconstruction tail follows; CAD
 >    parameterization remains later because it changes correctness-sensitive
 >    solver code and needs a semantic differential gate. Execute each as a
->    separate add/commit/push checkpoint.
+>    separate add/commit/push checkpoint. A1 is now complete: the unchanged ABV
+>    test bodies live in `abv/tests.rs`, six compile-time corpus paths gained the
+>    required relative parent component, and `abv.rs` falls 14,953→11,443 lines
+>    (23.5%). All 891 solver-library tests keep their `abv::tests::*` identities;
+>    strict Clippy and both strict rustdoc profiles pass. Continue with A2's
+>    334-line eager array-elimination certificate as a distinct trust-boundary
+>    module, preserving its two public paths and limiting the parent seam to the
+>    two measured helpers.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

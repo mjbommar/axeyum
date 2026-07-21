@@ -43,12 +43,14 @@ differential evidence than a module-only move.
 
 ## Ranked next slices
 
-1. **A1 -- extract the ABV tests (next).** Move the exact 3,514-line
-   `#[cfg(test)]` module to `abv/tests.rs`. Child-module privacy preserves every
-   existing `super::` import, and no production item, visibility, algorithm, or
-   public path changes. This reduces the file a reviewer opens by 23.5% in one
-   mechanical checkpoint.
-2. **A2 -- extract the eager array-elimination certificate.** Move the 334-line
+1. **A1 -- extract the ABV tests (done).** The exact 3,514-line inline module is
+   now a 3,510-line `abv/tests.rs` child plus the four-line parent module seam.
+   Six `include_str!` paths gained one relative parent component; test bodies,
+   names, privacy, and production code are unchanged. `abv.rs` falls from
+   14,953 to 11,443 lines (23.5%), and all 891 library tests retain their
+   `abv::tests::*` identities. Strict Clippy and both strict rustdoc profiles
+   pass under the bounded profile.
+2. **A2 -- extract the eager array-elimination certificate (next).** Move the 334-line
    certificate/rechecker into `abv/array_elim_certificate.rs` and re-export its
    two public items from `abv`. Keep `select_congruence_lemma` and elimination
    error mapping as the only measured parent seams. This is a trust-boundary
