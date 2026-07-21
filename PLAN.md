@@ -50,10 +50,14 @@ state.
 > proposed ADR-0344 now freezes 14 lifecycle/identity/resource invariants and a
 > checked 22-scenario prototype (four accepted controls, 18 rejected
 > mutations). A deterministic interrupted/resumed fixture is byte-identical to
-> its uninterrupted canonical merge. This is E0 design credit only: implement
-> and kill-test immutable atomic records, attempt/completion manifests, strict
-> merge, one-host aggregate enforcement, and multi-host recovery at E1-E3
-> before rerunning. Do not modify the frozen attempt or launch the candidate.
+> its uninterrupted canonical merge. E1a now also passes 8/8 real `SIGKILL`
+> recovery cells across tmpfs and the local ext-family worktree: identical
+> resume skips, conflicts/orphans quarantine, filename drift rejects, and
+> canonical merge remains equal. This is local record-mechanism credit only.
+> Integrate the writer, fake solver, attempt lifecycle, completion-last export,
+> strict duplicate rejection, and single-owner lease at E1b; then prove one-host
+> aggregate enforcement and multi-host recovery at E2-E3 before rerunning. Do
+> not modify the frozen attempt or launch the candidate.
 > The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
@@ -62,6 +66,7 @@ state.
 > [failed-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
 > Resume with the [resumable-run design](docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
 > and generated [failure/recovery matrix](docs/plan/generated/smtcomp-resumable-run-contract.md),
+> plus the [E1a result](docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md),
 > not with `distribute_run.sh`.
 
 > **Proof-gap refresh and resume point (2026-07-21).** The eight audit rows

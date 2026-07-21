@@ -64,7 +64,10 @@ A later 64,345-file cap/family candidate is **not a result**: its first
 52-shard execution stopped after 2,041 progress lines and produced zero raw
 shards. The cause is unknown. The failed attempt is frozen with zero credit,
 and a checked resumable-run contract now precedes any retry; production atomic
-checkpoint and multi-host recovery tests are still open.
+checkpoint and multi-host recovery tests are still open. The local checkpoint
+primitive has passed forced-process-kill recovery on tmpfs and ext-family
+storage, but it is not yet wired into the runner and says nothing about NFS,
+power loss, aggregate resources, or remote recovery.
 
 For UNSAT assurance, the 327 baseline UNSAT decisions partition as follows:
 

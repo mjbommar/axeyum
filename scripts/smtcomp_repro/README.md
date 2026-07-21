@@ -23,7 +23,7 @@ Section references in the code point at that document.
 | D. Division scoring: parallel, PAR-2, sequential, 24s, sat, unsat; disagreement removal | §7.2 | `scoring.py` | **done** |
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + local shard execution | — | `compete.py`, `run_repro.sh` | **bounded slice** |
-| —. Resumable distributed execution | — | `resume_contract.py`, ADR-0344 | **contract prototype; production open** |
+| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, ADR-0344 | **E0 + local E1a; runner/remote production open** |
 | —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
 Scoring/selection tests (42): `tests/test_scoring.py` (30, one per rule),
@@ -32,6 +32,10 @@ Scoring/selection tests (42): `tests/test_scoring.py` (30, one per rule),
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
 Six additional generator tests exercise the 14-invariant/22-scenario resume
 contract. These tests do not establish production filesystem durability.
+Four E1a filesystem tests add real child `SIGKILL` controls at four persistence
+boundaries. Run them once on default temporary storage and once with
+`AXEYUM_FS_FIXTURE_PARENT=.`; they remain local process-interruption evidence,
+not NFS or power-loss evidence.
 
 ## Reproduce
 
@@ -53,6 +57,8 @@ in the
 [`full-library handoff`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
 and generated
 [`resumable-run contract`](../../docs/plan/generated/smtcomp-resumable-run-contract.md).
+The local kill-tested boundary and its remaining E1b-E3 work are in the
+[`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
 
 ## Tracks
 

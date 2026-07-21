@@ -89,6 +89,13 @@ coverage, soundness, or OOM-cause claim.
   a later official-style rehearsal should use that external layer.
 - The v1 prototype passes all 22 declared scenarios and exact recovery
   equivalence without launching a solver or consuming the external corpus.
+- The follow-on
+  [E1a filesystem result](../../plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md)
+  passes 8/8 real `SIGKILL` recovery cells across local tmpfs and ext-family
+  storage. Identical resume skips, conflicts and truncated temporaries are
+  quarantined, filename/key drift rejects, and canonical output remains equal.
+  This is process-interruption evidence, not power-loss, NFS, launcher, cgroup,
+  or multi-host evidence.
 
 ## Alternatives
 
@@ -112,9 +119,10 @@ coverage, soundness, or OOM-cause claim.
 
 ## Consequences
 
-Large runs become restartable without mixing configurations or hiding failed
-attempts. Completeness is explicit, duplicate overwrite disappears, and
-resource control becomes a measured part of the experiment.
+Large runs can become restartable without mixing configurations or hiding
+failed attempts. E1a proves the local record primitive; completeness,
+duplicate-overwrite removal in the active runner, and measured resource control
+still require E1b-E3 integration.
 
 The cost is more artifact structure and a staged implementation before another
 large run. Result files must remain immutable, retries need fresh attempt IDs,

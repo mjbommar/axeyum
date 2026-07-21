@@ -392,10 +392,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   byte-identical. It separates terminal-less failed attempts from later honest
   shard completion, rejects silent duplicate overwrite and identity/resource
   drift, and requires a complete shard set before scoring. This is an in-memory
-  planning prototype, not production durability. Next: implement E1's atomic
-  immutable record writer, conflict quarantine, strict filesystem validator,
-  and real fake-worker kill matrix; then prove one-host aggregate enforcement
-  and multi-host recovery at E2-E3. Do not rerun the 64,345-file candidate first.
+  planning prototype, not production durability. E1a now implements the local
+  immutable record boundary and passes 8/8 real `SIGKILL` recovery cells over
+  tmpfs and the worktree's ext-family filesystem. Identical records skip,
+  conflicting/truncated artifacts quarantine without overwrite or promotion,
+  filename/key drift rejects, and all recovered canonical bundles equal the
+  uninterrupted control. This does not test power loss, NFS, solvers, leases,
+  cgroups, or remote hosts. Next: E1b integrates an opt-in writer and fake
+  solver into the active runner, makes completion last, rejects duplicate raw
+  merge, and defines single-owner recovery; E2-E3 then prove aggregate
+  enforcement and multi-host recovery. Do not rerun the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle
   logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed

@@ -45,10 +45,12 @@ Last updated: 2026-07-21
 > candidate run receives zero result credit, and proposed ADR-0344 now freezes
 > the prerequisite resume protocol. The generated contract checks 14
 > invariants across 22 scenarios and proves deterministic interrupted/resumed
-> merge equivalence, but only in memory. Production stages E1-E3 must implement
-> atomic immutable records, real kill-boundary recovery, strict completion,
-> aggregate resource enforcement, and multi-host loss/retry on a tiny corpus
-> before the 64,345-file candidate may be rerun. This is measurement
+> merge equivalence. E1a subsequently passes 8/8 real `SIGKILL` record-recovery
+> cells on local tmpfs and ext-family storage, but the active runner, solver,
+> leases, shared storage, and resources are untouched. Production stages E1b-E3
+> must integrate completion-last output, strict duplicate rejection,
+> single-owner recovery, aggregate resource enforcement, and multi-host
+> loss/retry on a tiny corpus before the 64,345-file candidate may be rerun. This is measurement
 > infrastructure under G1, not a new solver or foundation phase.
 
 ## Purpose

@@ -47,6 +47,9 @@ Do not reconstruct data from its logs or rerun the old launcher. The
 and [resumable-run contract](../plan/generated/smtcomp-resumable-run-contract.md)
 make atomic checkpoints, strict completion, and enforced aggregate resources
 prerequisites to another attempt.
+The local record primitive now passes forced-process-kill recovery on tmpfs and
+ext-family storage, but the active runner, shared filesystem, resource envelope,
+and remote retry protocol are still unchanged.
 
 A separate 24-file QF_BV comparison has Axeyum, cvc5, and Bitwuzla each deciding
 19/24; PAR-2 ranks Bitwuzla, cvc5, then Axeyum. That cell contains no Z3 result

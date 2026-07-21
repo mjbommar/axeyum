@@ -42,6 +42,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   attempt/completion accounting, strict merge, aggregate resource enforcement,
   and interruption/restart equivalence. It is a prerequisite design, not an
   authorization to rerun the candidate.
+- [`smtcomp-resumable-filesystem-e1a-2026-07-21.md`](smtcomp-resumable-filesystem-e1a-2026-07-21.md) —
+  bounded local E1a result: 8/8 forced-kill recoveries across tmpfs and the
+  worktree's ext-family filesystem, with no-overwrite install, orphan/conflict
+  quarantine, strict filename/key validation, and explicit power-loss/NFS/
+  solver/remote declines.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

@@ -1,6 +1,6 @@
 # Resumable distributed benchmark execution
 
-Status: contract prototype landed; production execution not implemented
+Status: E0 contract and E1a local filesystem prototype landed; production integration not implemented
 Date: 2026-07-21
 
 ## Plain-English outcome
@@ -15,6 +15,11 @@ measurement identity.
 The checked prototype now freezes that data contract. It does **not** rerun the
 corpus, modify the remote launcher, or turn the candidate selection into an
 official SMT-COMP population.
+
+The follow-on [E1a result](smtcomp-resumable-filesystem-e1a-2026-07-21.md)
+implements and kill-tests the local immutable-record boundary on tmpfs and the
+repository's ext-family filesystem. E1b launcher/solver integration remains
+open.
 
 ## Current implementation audit
 
@@ -171,6 +176,11 @@ declared. This authorizes design review only.
 Exit: kill a real fake-solver worker before write, after temporary fsync, after
 install, and after completion; resume each case and match an uninterrupted
 canonical output. Mutation-test truncation, conflicts, and identity drift.
+
+**E1a result:** the filesystem/record half passes 8/8 forced-kill recoveries
+across tmpfs and the local ext-family worktree plus conflict, orphan, and
+filename-drift controls. The actual solver/launcher, lease, current-raw export,
+and duplicate-merge replacement remain E1b; E1 as a whole is not complete.
 
 ### E2 — One-host enforced execution
 
