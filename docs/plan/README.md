@@ -1,15 +1,20 @@
 # docs/plan/ — the end-to-end plan
 
-This folder is the full engineering plan to take axeyum to **Z3 + Lean parity**.
-It is intentionally long and built to be followed task-by-task over weeks/months.
+This folder is the full engineering plan for Z3-class solving,
+certified-result coverage, Lean-core compatibility, and Lean workflow
+integration. It is intentionally long and built to be followed task-by-task
+over weeks/months. Read the short [Project State](../PROJECT-STATE.md) first if
+you are evaluating the current implementation rather than resuming engineering
+work.
 
 Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 [`STATUS.md`](../../STATUS.md) (live state). Then this folder.
 
 ## Layout
 
-- [`00-north-star.md`](00-north-star.md) — the definition of "done" for Z3 parity
-  and Lean parity; the sizing and status legends used everywhere.
+- [`00-north-star.md`](00-north-star.md) — the long-horizon reference targets;
+  operational status uses the separate parity axes below rather than one
+  "Z3 + Lean" percentage.
 - [`01-dependency-dag.md`](01-dependency-dag.md) — the cross-track dependency DAG,
   the two keystones, the critical paths, and the recommended execution order.
 - [`gap-analysis-z3-lean-2026-07-21.md`](gap-analysis-z3-lean-2026-07-21.md) —

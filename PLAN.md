@@ -1,10 +1,13 @@
 # PLAN.md — master index
 
-This is the entry point. The full, end-to-end engineering plan to take axeyum to
-**Z3 + Lean parity** lives under [`docs/plan/`](docs/plan/README.md). This file
-is the map and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker
-(current focus, per-phase state, changelog) and is the only file with mutable
-session state.
+This is the engineering entry point. The short, public account of what is built,
+measured, partial, and deliberately out of scope is
+[`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md). The full plan for Z3-class
+solving, certified-result coverage, Lean-core compatibility, and Lean workflow
+integration lives under [`docs/plan/`](docs/plan/README.md). This file is the map
+and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker (current
+focus, per-phase state, changelog) and is the only file with mutable session
+state.
 
 > The goal is large and deliberately multi-week/multi-month. It is decomposed
 > into tracks → phases → tasks, each with concrete reference file paths, sizing,
@@ -3114,29 +3117,30 @@ defined in
 
 ## Where we are vs the north star — measured reality check (2026-06-28)
 
-**Measured status: the build is well underway, soundness is holding, and there
-is a concrete, fully-mapped road to Z3 + Lean parity.** axeyum is a sound,
-pure-Rust reasoning stack — *measurably ahead on a growing set of fragments*,
-with every remaining fragment decomposed into sized, exit-criteria'd work. The
-job is exactly what it has always been: advance the next verifiable increment,
-relentlessly. Scored against [the north-star definition of done](docs/plan/00-north-star.md):
+**Measured status: the build is well underway, selected fragments are
+competitive, and the remaining distances are mapped on separate axes.** Axeyum
+is a pure-Rust reasoning stack with strong measured correctness evidence and a
+substantial certifying lane. The table does not turn finite tests into universal
+soundness or combine fragment parity, production replacement, proof coverage,
+kernel compatibility, and workflow integration into one percentage. Scored
+against [the north-star reference targets](docs/plan/00-north-star.md):
 
 | North-star criterion | Status | Evidence (measured, not asserted) |
 |---|---|---|
-| **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
+| **Measured correctness / fail-closed behavior** | **Strong evidence; not a universal proof** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed, demonstrating why this remains an empirical gate rather than a theorem. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
 | **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; do not hand-copy it), with decide-rate **0%–100%** across divisions. Arithmetic is decide-strong on the measured rows; the dominant wired-fragment gaps include QF_SLIA and bounded/general UF. Z3/cvc5 still cover more divisions and much deeper corpora than the measured set. |
 | **Measured performance (PAR-2 head-to-head)** | **Regime-dependent; broad production parity open** | The registered p4dfa 20-second controls decide 8/113 for Axeyum and 8/113 for the Z3 crate on different sets; the Z3 CLI control decides 9/113. That is bounded hard-corpus parity, not a universal lead. The neutral Glaurung six-cell study has Axeyum ahead of warm Z3 on three drivers and behind on Dptf, while warm Bitwuzla wins all four. Widen matched corpora, budgets, decision-set overlap, RSS, and warm/cold controls before a broad claim. |
 | **Lean certificate coverage** | **Substantial but uneven** | All 35 measured rows have complete dominance-audit artifacts: 327 baseline UNSAT decisions become 325 evidence-audit UNSAT outcomes, 267 certified + genuinely independently checked outcomes, and 260 Lean-checked outcomes. The affected v1 rows historically had 28 vacuous `bare-unsat` check booleans; the schema-v2 refresh now records zero, gates checking on certification, and attributes all residual bare outcomes to a decision backend/check mode. The full conjunction remains 259/327: 58 uncertified audit-row occurrences, eight reconstruction-only gaps, zero declared trust holes, and two QF_NIA `IntPow2` proof-production errors. Four stale QF_SEQ rows created before the string evidence soundness fix lose source-invalid DRAT credit: their old proof covered only the bounded/flat lowering, while the source verdicts remain unchanged. The parser-backed [shape census](docs/plan/generated/proof-gap-shape-census.md) deduplicates the 58 to 56 paths / 51 exact contents (25 arithmetic, 26 string/sequence): all 26 string/sequence contents use bounded lowering, 31 occurrences return through `smtlib-string-front-door`, 15 through `auto-solve`, and 12 through `nra-linear-abstraction`. The [causal design](docs/plan/evidence-route-provenance-design-2026-07-21.md) makes route/reduction tracing—starting with the QF_SEQ `source-side-channel-not-serialized` case—the next prerequisite, not a syntax-selected proof rule. The eight reconstruction-only gaps split into five measured selected-evidence plumbing wins (two quantified-BV plus all three QF_NIA proofs through the existing EUF consumer) and three distinct quantified-BV cost cases: scoped kernel closure exceeds 4 GiB, compact spooling misses 30 seconds after kernel closure below 600 MiB, and CPS tail reconstruction misses 30 seconds below 525 MiB. The production denominator remains unchanged until evidence-aware dispatch and official-Lean checking land; add no theorem family from query-only re-derivation failures. The current declared trust-hole ledger is zero, but 58 definitive results still lack certificates and the Lean tactic backend (P3.7) is unbuilt. |
 | **Pareto-dominance on selected rows** | **Strong selected-fragment result; timing refresh required** | 23/35 audited rows are fully dominant; the current mixed-vintage audit artifacts mark 594/753 measured decisions as dominant candidates ([DOMINANCE](bench-results/DOMINANCE.md)). The schema-v2 proof refresh changed 22 timing-derived flags, mostly in QF_SEQ, without changing verdicts; do not turn that unpaired rerun into a performance claim. Refresh paired timing cells before publication. |
 
-**Full parity across all of Z3/cvc5/Lean is not yet reached — and it is the
-destination we are actively building toward, not a wish.** The identity is:
-*untrusted fast search, trusted small checking* — sound everywhere measured,
-dominant on a growing fragment set, with a pure-Rust/WASM/certifying moat. The
-remaining decide-rate, performance, and proof-coverage work is mapped track by
-track below and under [`docs/plan/`](docs/plan/README.md); we advance it one
-increment at a time and record each one.
+**"Full parity across Z3/cvc5/Lean" is not one actionable destination.** The
+active product targets are measured fragment competitiveness, production
+SMT-LIB/API depth, complete evidence on claimed routes, a versioned Lean-core
+compatibility profile, and a fail-closed Lean bridge. The identity remains
+*untrusted fast search, trusted small checking*. Work on each axis is mapped
+below and under [`docs/plan/`](docs/plan/README.md); full Lean-system replacement
+is explicitly not part of the solver roadmap.
 
 **Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread
@@ -7491,12 +7495,13 @@ it's genuinely a 15-year catch-up (high-degree NRA), not where one IR change clo
 
 ## What "done" means
 
-See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
-definition. In one line: **Z3 parity** = feature coverage + competitive
-measured performance on the decidable/semidecidable fragments, with honest
-`unknown` where undecidable; **Lean parity** = every `unsat`/`valid` result
-carries a machine-checkable proof a Lean-grade kernel accepts, produced by an
-untrusted search and validated by small independent checkers.
+See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the separated
+definitions. In one line: **fragment decision parity** requires a matched query
+class, population, budgets, verdicts, decided sets, and PAR-2;
+**production-solver replacement** additionally requires broad protocol,
+portfolio, tooling, and deployment depth; **Lean integration** requires complete
+certified coverage on the claimed route, a versioned core-compatibility profile,
+and a fail-closed tactic/import bridge.
 
 ## The two load-bearing fronts
 
@@ -8497,7 +8502,7 @@ checklist:
 | **Seeded** | sound, verify-guarded first slice (often conjunctive / bounded / single-predicate) | **most newer engines** — CHC/PDR, abduction, interpolation, online combination |
 | **Decides** | complete on the decidable fragment; honest `unknown` outside | QF_BV, QF_UF, QF_LRA; NRA CAD decision side |
 | **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | selected rows plus bounded controls; p4dfa is 8/113 vs 8/113 at 20s on different sets, and Glaurung is workload-dependent |
-| **Certifying** | every `unsat` carries a Lean-checkable certificate | QF_BV (DRAT), QF_LRA (Farkas), QF_UF, degree-2 SOS — **ahead of Z3** |
+| **Certifying** | every definitive UNSAT in the registered fragment/population carries independently checked, trust-accounted, Lean-reconstructed evidence | 23 fully dominant measured rows; partial globally |
 | **Production** | tuned, scalable, robust across the division's *full* benchmark suite | **none yet** — Z3/cvc5 are here across all divisions |
 
 **The honest position:** axeyum has **breadth of seeds + a leading *certifying*
@@ -8523,8 +8528,9 @@ measured corpus behind it adds claim-surface, not parity.
 2. **Do not race Z3 to production depth on every division** — that is a 15-year
    loss. **Pick the divisions where axeyum can be both measured-competitive *and*
    fully-certifying** — QF_BV, QF_LRA, QF_UF, QF_LIA, QF_ABV — and drive those to the
-   top of the ladder. "Fast-enough **and** every `unsat` carries a Lean-checkable
-   proof" is a position **neither Z3 nor cvc5 occupies**; that is the winnable parity.
+   top of the ladder. "Fast-enough **and** every definitive UNSAT in the named
+   population carries independently checked Lean evidence" is the scoped,
+   reproducible position to pursue.
 3. **Accept sound-incompleteness on the hard frontiers** (NRA, strings, full
    quantifiers, large-scale CHC) as the honest steady state — match Z3's *practical*
    heuristics where cheap, return first-class `unknown` otherwise, and let

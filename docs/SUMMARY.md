@@ -2,6 +2,8 @@
 
 [Documentation Hub](README.md)
 
+[Project State](PROJECT-STATE.md)
+
 [Sibling Project Notes](sibling-projects.md)
 - [Foundational Resource Expansion](foundational-resources/README.md)
   - [Source Research Ledger](foundational-resources/SOURCES.md)

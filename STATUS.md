@@ -356,6 +356,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — the public project state no longer requires reading the battle
+  logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
+  measurements, selected-fragment parity, production Z3 distance, solver-proof
+  export, Lean-core compatibility, and explicitly out-of-scope full Lean-system
+  replacement. README, the docs hub, limitations, and benchmarks now route
+  through that page and no longer claim every UNSAT is certified, describe
+  WHNF/type checking as future work, turn finite differential evidence into
+  universal soundness, or publish the superseded p4dfa 3/20/60-second narrative.
+  `scripts/check-parity-docs.py` now guards these public pages and derives the
+  project-state solver/proof denominators from the committed artifacts. Next:
+  finish G10's contributor map from each measured gap to its module, corpus,
+  checker, and ADR; do not expand the executive page back into a second STATUS.
+
 - **2026-07-21 — the ordered SMT-LIB session contract is prototyped, and the
   real gap includes signature scope.** The official SMT-LIB 2.7 state machine,
   current parser/helper source, Z3 command-context source, and bounded local

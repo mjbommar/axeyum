@@ -409,6 +409,13 @@ machinery, and battle-log documentation make correct work difficult to audit.
 Treat modularization as research-infrastructure work: it must preserve generated
 artifacts and public behavior byte-for-byte before enabling new mechanisms.
 
+**Public-state entry point landed:** [`docs/PROJECT-STATE.md`](../PROJECT-STATE.md)
+now separates built surface, measured results, partial compatibility, and
+explicit non-claims without requiring readers to decode PLAN/STATUS. The parity
+docs gate derives its key solver/proof denominators from committed artifacts and
+checks this page plus the README, docs hub, benchmarks, and limitations for the
+stale claims that previously survived measurement corrections.
+
 **Exit:** a short contributor entry point maps each measured gap to its owning
 module, corpus, checker, and ADR; public namespaces expose the product surface
 rather than the internal scenario catalog.
@@ -451,4 +458,5 @@ reported as parity before it climbs the measured and certifying rungs.
 8. Design the ordered SMT-LIB session event/result IR and transcript invariants
    from the landed conformance matrix before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.
-10. Publish a one-page contributor map backed by these generated artifacts.
+10. Extend the public project-state entry point with a one-page contributor map
+    from each measured gap to its owning module, corpus, checker, and ADR.

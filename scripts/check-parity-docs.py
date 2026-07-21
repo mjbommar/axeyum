@@ -4,10 +4,11 @@
 This is intentionally a narrow guard, not a natural-language fact checker.  It
 owns the claims that have already rotted repeatedly: the generated division
 totals, exact dominance-audit denominators, the paired 20-second p4dfa control,
-and the source/test-backed categorical-engine maturity classification. New
-guarded numerical claims should be added only when they have one canonical,
-machine-readable artifact; the categorical markers guard the dated audit and
-the live roadmap language that points to it.
+the reviewer-facing project-state summary, and the source/test-backed
+categorical-engine maturity classification. New guarded numerical claims should
+be added only when they have one canonical, machine-readable artifact; the
+categorical markers guard the dated audit and the live roadmap language that
+points to it.
 """
 
 from __future__ import annotations
@@ -23,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
+PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 CATEGORICAL_AUDIT = (
     ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
 )
@@ -50,11 +52,15 @@ SMTCOMP_PROVENANCE = (
 )
 
 LIVE_DOCS = (
+    ROOT / "README.md",
     ROOT / "PLAN.md",
     ROOT / "STATUS.md",
     ROOT / "bench-results" / "SCOREBOARD.md",
+    ROOT / "docs" / "README.md",
+    PROJECT_STATE,
     ROOT / "docs" / "plan" / "README.md",
     ROOT / "docs" / "user-guide" / "benchmarks.md",
+    ROOT / "docs" / "user-guide" / "limitations.md",
     GAP_DOC,
     CATEGORICAL_AUDIT,
     ROOT / "docs" / "plan" / "01-dependency-dag.md",
@@ -63,6 +69,14 @@ LIVE_DOCS = (
     ROOT / "docs" / "plan" / "track-4-usecases-frontend" / "P4.6-chc-horn.md",
     ROOT / "docs" / "plan" / "track-4-usecases-frontend" / "P4.7-synthesis.md",
     ROOT / "docs" / "research" / "08-planning" / "roadmap.md",
+)
+
+PUBLIC_CLAIM_DOCS = (
+    ROOT / "README.md",
+    ROOT / "docs" / "README.md",
+    PROJECT_STATE,
+    ROOT / "docs" / "user-guide" / "benchmarks.md",
+    ROOT / "docs" / "user-guide" / "limitations.md",
 )
 
 STALE_PATTERNS = (
@@ -77,6 +91,14 @@ STALE_PATTERNS = (
     re.compile(r"biggest categorical gap", re.IGNORECASE),
     re.compile(r"categorically-missing", re.IGNORECASE),
     re.compile(r"T3\.8\.5 façade — DONE"),
+    re.compile(r"8[–-]8\s*@20s,\s*11[–-]11\s*@60s", re.IGNORECASE),
+    re.compile(r"parity is \*budget-robust\*", re.IGNORECASE),
+    re.compile(r"\|\s*20 s\s*\|\s*8 / 113\s*\|\s*9 / 113\s*\|", re.IGNORECASE),
+)
+
+PUBLIC_STALE_PATTERNS = (
+    re.compile(r"every\s+`unsat`\s+carries", re.IGNORECASE),
+    re.compile(r"It is sound \(`unknown`, never a wrong", re.IGNORECASE),
 )
 
 
@@ -129,6 +151,32 @@ def measured_snapshot() -> dict[str, int]:
         for instance in audit["instances"]
         if instance.get("baseline_outcome") == "unsat"
     ]
+
+    dominant_unsat = sum(
+        instance.get("audit_outcome") == "unsat"
+        and instance.get("evidence_certified") is True
+        and instance.get("evidence_checked") is True
+        and instance.get("lean_checked") is True
+        and not instance.get("trust_holes")
+        for instance in baseline_unsat_instances
+    )
+    uncertified_unsat = sum(
+        instance.get("audit_outcome") == "unsat"
+        and instance.get("evidence_certified") is not True
+        for instance in baseline_unsat_instances
+    )
+    lean_reconstruction_gap = sum(
+        instance.get("audit_outcome") == "unsat"
+        and instance.get("evidence_certified") is True
+        and instance.get("evidence_checked") is True
+        and instance.get("lean_checked") is not True
+        and not instance.get("trust_holes")
+        for instance in baseline_unsat_instances
+    )
+    proof_production_errors = sum(
+        instance.get("audit_outcome") != "unsat"
+        for instance in baseline_unsat_instances
+    )
 
     scoreboard_ids = []
     scoreboard_aggregate_only = 0
@@ -192,10 +240,15 @@ def measured_snapshot() -> dict[str, int]:
             for audit in audits
             for instance in audit["instances"]
         ),
+        "dominant_unsat": dominant_unsat,
+        "uncertified_unsat": uncertified_unsat,
+        "lean_reconstruction_gap": lean_reconstruction_gap,
+        "proof_production_errors": proof_production_errors,
         "p4dfa_axeyum_20s": decided(axeyum["summary"]),
         "p4dfa_z3_20s": decided(z3["summary"]),
         "public_inventory_files": inventory["aggregate"]["total"],
         "public_inventory_decided": inventory["aggregate"]["decided_correct"],
+        "public_inventory_declined": inventory["aggregate"]["declined"],
         "public_inventory_wrong": inventory["aggregate"]["WRONG"],
         "public_inventory_no_answer": inventory["aggregate"]["no_answer"],
         "qfbv_head_to_head_files": qfbv_division["n_benchmarks"],
@@ -223,6 +276,15 @@ def main() -> int:
             if match := pattern.search(text):
                 line = text.count("\n", 0, match.start()) + 1
                 failures.append(f"{path.relative_to(ROOT)}:{line}: stale parity claim: {match.group(0)!r}")
+
+    for path in PUBLIC_CLAIM_DOCS:
+        text = path.read_text(encoding="utf-8")
+        for pattern in PUBLIC_STALE_PATTERNS:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(
+                    f"{path.relative_to(ROOT)}:{line}: stale public claim: {match.group(0)!r}"
+                )
 
     required_gap_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
@@ -252,6 +314,33 @@ def main() -> int:
     for marker in required_gap_markers:
         if marker not in gap_text:
             failures.append(f"{GAP_DOC.relative_to(ROOT)}: missing measured marker {marker!r}")
+
+    project_state_markers = (
+        f"{snapshot['decided']} / {snapshot['files']}",
+        f"{snapshot['compared']} oracle-compared",
+        f"{snapshot['disagree']} recorded disagreements",
+        f"{snapshot['decide_strong_rows']} / {snapshot['rows']}",
+        f"{snapshot['fully_dominant_rows']} / {snapshot['complete_audits']}",
+        f"{snapshot['scoreboard_file_occurrences']} occurrences",
+        f"{snapshot['scoreboard_unique_ids']} unique normalized paths",
+        f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
+        f"{snapshot['public_inventory_declined']} explicit declines",
+        f"{snapshot['public_inventory_no_answer']} no-answer outcomes",
+        f"{snapshot['public_inventory_wrong']} wrong verdicts",
+        f"{snapshot['dominant_unsat']} / {snapshot['baseline_unsat']}",
+        f"{snapshot['uncertified_unsat']} uncertified",
+        f"{snapshot['lean_reconstruction_gap']} certified",
+        f"{snapshot['proof_production_errors']} proof-production errors",
+        f"{snapshot['p4dfa_axeyum_20s']} / 113",
+        f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
+        "zero interactive textual-session rows",
+    )
+    project_state_text = PROJECT_STATE.read_text(encoding="utf-8")
+    for marker in project_state_markers:
+        if marker not in project_state_text:
+            failures.append(
+                f"{PROJECT_STATE.relative_to(ROOT)}: missing measured marker {marker!r}"
+            )
 
     categorical_text = CATEGORICAL_AUDIT.read_text(encoding="utf-8")
     for marker in (
