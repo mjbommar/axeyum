@@ -1,0 +1,53 @@
+{
+  "schema": "axeyum.verify-fsm-mir-provenance.v1",
+  "profile": "scalar-contract",
+  "profile_use": "call-free checked scalar capture; no function contract authored or consumed",
+  "manifest": "$FIXTURE/Cargo.toml",
+  "lockfile": "$FIXTURE/Cargo.lock",
+  "source": "$FIXTURE/src/lib.rs",
+  "raw_module": "$FIXTURE/artifacts/handshake.mir",
+  "selection_summaries": [
+    "$FIXTURE/artifacts/handshake-step-summary.json",
+    "$FIXTURE/artifacts/handshake-step-bug-summary.json"
+  ],
+  "evidence": "$FIXTURE/artifacts/evidence.json",
+  "package": "axeyum-mir-fsm-fixture",
+  "target_kind": "lib",
+  "selected_functions": ["handshake_step", "handshake_step_bug"],
+  "target_usize_width": 64,
+  "rust_toolchain": "nightly-2026-05-01-x86_64-unknown-linux-gnu",
+  "rustc_release": "1.97.0-nightly",
+  "rustc_commit": "f53b654a8882fd5fc036c4ca7a4ff41ce32497a6",
+  "cargo_release": "1.97.0-nightly",
+  "cargo_commit": "eb9b60f1f6604b5e022c56be31692c215b8ba11d",
+  "ordered_cargo_args": [
+    "rustc",
+    "--manifest-path",
+    "$MANIFEST",
+    "--package",
+    "axeyum-mir-fsm-fixture",
+    "--lib",
+    "--target-dir",
+    "$TARGET_DIR",
+    "--locked",
+    "--quiet",
+    "--",
+    "-C",
+    "opt-level=0",
+    "-C",
+    "overflow-checks=yes",
+    "-Zunpretty=mir"
+  ],
+  "ordered_rustc_args": [
+    "-C",
+    "opt-level=0",
+    "-C",
+    "overflow-checks=yes",
+    "-Zunpretty=mir"
+  ],
+  "fresh_capture_repetitions_per_function": 2,
+  "fresh_raw_modules": 4,
+  "all_raw_modules_byte_identical": true,
+  "raw_module_bytes": 2691,
+  "raw_module_sha256": "4fd05de856b6921cd02f0b253119646e9078769cbd21a491fbc6332b2e784f8b"
+}

@@ -63,6 +63,13 @@ fn contract_manifest() -> PathBuf {
     .unwrap()
 }
 
+fn fsm_manifest() -> PathBuf {
+    fs::canonicalize(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/mir-fsm-target/Cargo.toml"),
+    )
+    .unwrap()
+}
+
 fn registered_tools() -> Option<(PathBuf, PathBuf)> {
     let lookup = |name: &str, override_name: &str| -> Option<PathBuf> {
         if let Some(path) = std::env::var_os(override_name) {
@@ -172,6 +179,42 @@ fn run_scalar_contract_capture(
             "--lib",
             "--function",
             "wrapping_inc",
+            "--profile",
+            "scalar-contract",
+            "--target-usize-width",
+            "64",
+            "--cargo",
+        ])
+        .arg(cargo)
+        .arg("--rustc")
+        .arg(rustc)
+        .arg("--target-dir")
+        .arg(target_dir)
+        .arg("--output")
+        .arg(output)
+        .current_dir("/")
+        .env("RUSTC_WRAPPER", "/bin/false")
+        .env("RUSTC_WORKSPACE_WRAPPER", "/bin/false")
+        .output()
+        .unwrap()
+}
+
+fn run_scalar_fsm_capture(
+    function: &str,
+    cargo: &Path,
+    rustc: &Path,
+    target_dir: &Path,
+    output: &Path,
+) -> Output {
+    Command::new(BIN)
+        .arg("--manifest-path")
+        .arg(fsm_manifest())
+        .args([
+            "--package",
+            "axeyum-mir-fsm-fixture",
+            "--lib",
+            "--function",
+            function,
             "--profile",
             "scalar-contract",
             "--target-usize-width",
@@ -412,6 +455,49 @@ fn compiler_page_table_selections_reproduce_the_authenticated_raw_module() {
     }
     eprintln!(
         "ADR0320_CAPTURE selections=2 raw_mismatches=0 projection_errors=0 wall_ms={}",
+        started.elapsed().as_millis()
+    );
+}
+
+#[test]
+fn compiler_fsm_selections_reproduce_the_authenticated_raw_module() {
+    let Some((cargo, rustc)) = exact_tools_or_skip() else {
+        return;
+    };
+    let scratch = Scratch::new("fsm-refinement");
+    let started = Instant::now();
+    let committed = fs::read(
+        fsm_manifest()
+            .parent()
+            .unwrap()
+            .join("artifacts/handshake.mir"),
+    )
+    .unwrap();
+    for (function, blocks) in [("handshake_step", 10), ("handshake_step_bug", 13)] {
+        let captured = scratch.path(&format!("{function}.mir"));
+        let output = run_scalar_fsm_capture(
+            function,
+            &cargo,
+            &rustc,
+            &scratch.path(&format!("{function}-target")),
+            &captured,
+        );
+        assert!(
+            output.status.success(),
+            "FSM {function} capture failed:\n{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let summary = String::from_utf8(output.stdout).unwrap();
+        assert!(summary.contains("\"profile\":\"scalar-contract\""));
+        assert!(summary.contains(&format!("\"function\":\"{function}\"")));
+        assert!(summary.contains("\"mir_bytes\":2691"));
+        assert!(summary.contains("\"parameter_types\":[\"u8\",\"u8\"]"));
+        assert!(summary.contains(&format!("\"blocks\":{blocks}")));
+        assert!(summary.contains("\"result_width\":8"));
+        assert_eq!(fs::read(&captured).unwrap(), committed, "{function} drift");
+    }
+    eprintln!(
+        "ADR0321_CAPTURE selections=2 raw_mismatches=0 projection_errors=0 wall_ms={}",
         started.elapsed().as_millis()
     );
 }

@@ -1,6 +1,6 @@
 # ADR-0321: Preregister reflected handshake FSM refinement
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -26,7 +26,7 @@ good selection has ten blocks, the buggy selection thirteen, both have two
 Cargo selections emit the same 2,691-byte raw module. This is sufficient to
 select an evidence experiment; it is not refinement evidence.
 
-## Proposed decision
+## Decision
 
 Create a new excluded, dependency-free `mir-fsm-target` fixture so no
 authenticated source or raw artifact from ADR-0317 or ADR-0320 changes. Its
@@ -121,6 +121,42 @@ one-way simulation needed for this deterministic cell.
 No gate may be weakened after the first fixture, capture, proof, transition-
 system, or replay result is observed. A failed gate records a negative result
 and removes/restores uncredited candidate changes.
+
+## Result
+
+Accepted. The new excluded, dependency-free fixture authenticates one
+2,691-byte raw compiler MIR module for both `handshake_step` selections. Two
+fresh owning-Cargo captures per function (four total) are byte-identical to
+the committed module at SHA-256
+`4fd05de856b6921cd02f0b253119646e9078769cbd21a491fbc6332b2e784f8b`.
+The pinned reproduction gate observes two exact selections and no raw or typed
+projection drift. The `scalar-contract` profile is used only as the existing
+call-free checked scalar capture path; no function contract is authored or
+consumed.
+
+All eight universal per-event proof groups pass. The independently built spec
+and reflected implementation have equal complete transition relations under
+the identity state relation, with identical init and bad predicates. PDR
+reports both systems safe. The deliberately buggy reflected system is
+reachable under both PDR and BMC, and its
+`CLOSED + RECV_SYNACK -> BAD_ESTABLISHED` witness replays against the reflected
+term, independent control, and exact Rust source.
+
+The exhaustive sampler covers exactly 256 states, four events, and two
+functions: 2,048 rows with zero reflection/spec/Rust disagreement, evaluation
+error, panic, or dropped row. All nine semantic mutations are refuted or alter
+the safety result as frozen, and artifact/configuration tampering fails closed.
+Observed wall times were 382 ms for pinned two-selection capture reproduction,
+100 ms for the eight per-event proofs, 11,896 ms for complete-relation equality
+and the two safe PDR runs, 23 ms for buggy PDR/BMC/source replay, and 67 ms for
+the exhaustive sampler.
+
+The complete `axeyum-verify` all-feature test and doctest suite, strict Clippy
+and rustdoc, the 81-variant reflection-semantics gate, scoped formatting, artifact
+hash, link, and one-job 4 GiB/OOM gates pass. No production code, public API,
+dependency, feature, executable-semantics variant, or existing authenticated
+fixture changed. This closes bounded deterministic scalar T5.3.3 v1 only;
+T5.3.4 and every broader protocol/refinement residual remain open.
 
 ## Rejected alternatives
 

@@ -946,14 +946,15 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     claims, three replayed broken controls, and exactly 4,096 sampler rows at
     zero disagreement/error/panic/drop. It adds no production semantic form
     and closes only the bounded four-entry obligation shape, not an MMU claim.
-- [ ] Can an authenticated compiler-reflected Rust step function refine the
+- [x] Can an authenticated compiler-reflected Rust step function refine the
   shipped declarative handshake transition system and transport safety?
   - [ADR-0321](../09-decisions/adr-0321-preregister-reflected-handshake-fsm-refinement.md)
-    freezes one scalar deterministic identity-refinement cell: four concrete
-    events, complete transition-relation equality, PDR-safe spec and reflected
-    implementation systems, a PDR/BMC/source-replayed blind-injection control,
-    and exactly 2,048 exhaustive reflection/spec/Rust rows. It adds no public
-    refinement API and makes no liveness or real-protocol claim.
+    accepts one scalar deterministic identity-refinement cell: eight universal
+    per-event proof groups, complete transition-relation equality, PDR-safe
+    spec and reflected implementation systems, a PDR/BMC/source-replayed
+    blind-injection control, and exactly 2,048 exhaustive reflection/spec/Rust
+    rows at zero disagreement/error/panic/drop. It adds no public refinement
+    API and makes no liveness or real-protocol claim.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

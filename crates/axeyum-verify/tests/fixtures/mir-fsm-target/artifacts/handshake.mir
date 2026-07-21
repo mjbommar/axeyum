@@ -1,0 +1,139 @@
+// WARNING: This output format is intended for human consumers only
+// and is subject to change without notice. Knock yourself out.
+// HINT: See also -Z dump-mir for MIR at specific points during compilation.
+fn handshake_step(_1: u8, _2: u8) -> u8 {
+    debug state => _1;
+    debug event => _2;
+    let mut _0: u8;
+    let mut _3: bool;
+    let mut _4: bool;
+    let mut _5: bool;
+    let mut _6: bool;
+    let mut _7: bool;
+
+    bb0: {
+        _3 = Eq(copy _2, const 2_u8);
+        switchInt(move _3) -> [0: bb2, otherwise: bb1];
+    }
+
+    bb1: {
+        _0 = const 0_u8;
+        goto -> bb9;
+    }
+
+    bb2: {
+        _4 = Eq(copy _1, const 0_u8);
+        switchInt(move _4) -> [0: bb5, otherwise: bb3];
+    }
+
+    bb3: {
+        _5 = Eq(copy _2, const 0_u8);
+        switchInt(move _5) -> [0: bb5, otherwise: bb4];
+    }
+
+    bb4: {
+        _0 = const 1_u8;
+        goto -> bb9;
+    }
+
+    bb5: {
+        _6 = Eq(copy _1, const 1_u8);
+        switchInt(move _6) -> [0: bb8, otherwise: bb6];
+    }
+
+    bb6: {
+        _7 = Eq(copy _2, const 1_u8);
+        switchInt(move _7) -> [0: bb8, otherwise: bb7];
+    }
+
+    bb7: {
+        _0 = const 2_u8;
+        goto -> bb9;
+    }
+
+    bb8: {
+        _0 = copy _1;
+        goto -> bb9;
+    }
+
+    bb9: {
+        return;
+    }
+}
+
+fn handshake_step_bug(_1: u8, _2: u8) -> u8 {
+    debug state => _1;
+    debug event => _2;
+    let mut _0: u8;
+    let mut _3: bool;
+    let mut _4: bool;
+    let mut _5: bool;
+    let mut _6: bool;
+    let mut _7: bool;
+    let mut _8: bool;
+    let mut _9: bool;
+
+    bb0: {
+        _3 = Eq(copy _1, const 0_u8);
+        switchInt(move _3) -> [0: bb3, otherwise: bb1];
+    }
+
+    bb1: {
+        _4 = Eq(copy _2, const 1_u8);
+        switchInt(move _4) -> [0: bb3, otherwise: bb2];
+    }
+
+    bb2: {
+        _0 = const 3_u8;
+        goto -> bb12;
+    }
+
+    bb3: {
+        _5 = Eq(copy _2, const 2_u8);
+        switchInt(move _5) -> [0: bb5, otherwise: bb4];
+    }
+
+    bb4: {
+        _0 = const 0_u8;
+        goto -> bb12;
+    }
+
+    bb5: {
+        _6 = Eq(copy _1, const 0_u8);
+        switchInt(move _6) -> [0: bb8, otherwise: bb6];
+    }
+
+    bb6: {
+        _7 = Eq(copy _2, const 0_u8);
+        switchInt(move _7) -> [0: bb8, otherwise: bb7];
+    }
+
+    bb7: {
+        _0 = const 1_u8;
+        goto -> bb12;
+    }
+
+    bb8: {
+        _8 = Eq(copy _1, const 1_u8);
+        switchInt(move _8) -> [0: bb11, otherwise: bb9];
+    }
+
+    bb9: {
+        _9 = Eq(copy _2, const 1_u8);
+        switchInt(move _9) -> [0: bb11, otherwise: bb10];
+    }
+
+    bb10: {
+        _0 = const 2_u8;
+        goto -> bb12;
+    }
+
+    bb11: {
+        _0 = copy _1;
+        goto -> bb12;
+    }
+
+    bb12: {
+        return;
+    }
+}

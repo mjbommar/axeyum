@@ -1,0 +1,49 @@
+{
+  "schema": "axeyum.verify-fsm-refinement-evidence.v1",
+  "status": "pass",
+  "raw_capture_gate": {
+    "functions": ["handshake_step", "handshake_step_bug"],
+    "fresh_repetitions_per_function": 2,
+    "raw_modules": 4,
+    "byte_identical": true,
+    "bytes_each": 2691,
+    "sha256": "4fd05de856b6921cd02f0b253119646e9078769cbd21a491fbc6332b2e784f8b"
+  },
+  "refinement": {
+    "per_event_universal_groups": 8,
+    "complete_transition_relation_equalities": 1,
+    "identity_init_predicate": true,
+    "identity_bad_predicate": true,
+    "disagreements": 0,
+    "unknown": 0
+  },
+  "safety": {
+    "spec_pdr_safe": true,
+    "reflected_implementation_pdr_safe": true,
+    "buggy_pdr_reachable": true,
+    "buggy_bmc_reachable": true,
+    "buggy_source_replay": true
+  },
+  "sampler": {
+    "states": 256,
+    "events": 4,
+    "functions": 2,
+    "rows": 2048,
+    "reflection_spec_rust_disagreements": 0,
+    "evaluation_errors": 0,
+    "panics": 0,
+    "dropped_rows": 0
+  },
+  "semantic_mutations": {
+    "tested": 9,
+    "unexpected_survivors": 0
+  },
+  "wall_time_observation_ms": {
+    "two_selection_pinned_capture_reproduction": 382,
+    "per_event_proofs": 100,
+    "complete_relation_and_two_safe_pdr_runs": 11896,
+    "buggy_pdr_bmc_source_replay": 23,
+    "sampler": 67
+  },
+  "claim_boundary": "one finite deterministic scalar handshake step; no liveness or real-protocol claim"
+}

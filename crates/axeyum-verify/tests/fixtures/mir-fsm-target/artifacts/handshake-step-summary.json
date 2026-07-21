@@ -1,0 +1,13 @@
+{
+  "schema": "axeyum.verify-fsm-selection.v1",
+  "source_schema": "axeyum.verify-mir-build-scalar-contract.v1",
+  "profile": "scalar-contract",
+  "function": "handshake_step",
+  "mir_bytes": 2691,
+  "parameter_types": ["u8", "u8"],
+  "blocks": 10,
+  "result_width": 8,
+  "result_signed": false,
+  "result_term_sha256": "27bbbf185a55531ce1378c0c0b723b45a8d29b8e835e45d4536414d38ad21712",
+  "panic_term_sha256": "1f3c24e146a378cc7d651636a0aff2df5e3ccae23ecec6244040bdbf4d1fcd69"
+}
