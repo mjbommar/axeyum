@@ -1152,14 +1152,20 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
     }
 }
 
-/// Normalize `exp(arg)` with the canonicalization that makes the exponent law's
-/// **cancelling** cases decidable: `exp(0) = 1`, and `exp(−A) = 1/exp(A)` (keyed on
-/// the sign-canonicalized argument), so a product `exp(−P)·exp(P)` reduces to `1`
-/// through rational-function normalization — the identity that certifies
-/// integrating-factor ODE solutions. Sound (`exp` is a real function, `exp(−A)` is
-/// exactly `1/exp(A)`). Falls back to an opaque atom when `arg` is outside the
-/// polynomial-over-atoms fragment. (General `exp(A)·exp(B) = exp(A+B)` for unrelated
-/// `A, B` still needs the full [exp tower](../../../docs/research/10-cas/exp-tower.md).)
+/// Normalize `exp(arg)` so the exponent law `exp(A+B) = exp(A)·exp(B)` becomes
+/// decidable: the argument is expanded to a polynomial `Σ termᵢ` and `exp` is
+/// distributed over the sum into a **product of primitive per-term factors**
+/// `∏ exp(termᵢ)`, each keyed on its sign-canonicalized term (a negative term
+/// contributing `1/exp(−termᵢ)`). Two spellings of the same exponential — `exp(x+y)`
+/// and `exp(x)·exp(y)`, or `exp(−P)·exp(P)` — then reach the same normal form, so
+/// the addition/cancellation identities certify (this is what makes
+/// integrating-factor ODE solutions self-check). `exp(0) = 1`.
+///
+/// Sound: `exp` is a homomorphism of `+` into `×`, so the decomposition is exact.
+/// Falls back to a single opaque atom when `arg` is outside the polynomial-over-atoms
+/// fragment. The *scaling* law `exp(2x) = exp(x)²` is **not** captured (per-term
+/// keys keep the coefficient), which is the remaining
+/// [exp-tower](../../../docs/research/10-cas/exp-tower.md) work.
 fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     let Some(arg_poly) = normalize(arg) else {
         return Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("exp", arg))));
@@ -1167,19 +1173,25 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     if arg_poly.is_zero() {
         return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))); // exp(0) = 1
     }
-    let negative = arg_poly
-        .terms
-        .iter()
-        .next_back()
-        .is_some_and(|(_, coeff)| coeff.numerator() < 0);
-    let canonical = if negative { arg_poly.neg()? } else { arg_poly };
-    let atom = MultiPoly::single_var(&atom_name("exp", &canonical.to_expr()));
-    if negative {
-        // exp(arg) = exp(−canonical) = 1 / exp(canonical).
-        RatFunc::from_poly(MultiPoly::constant(Rational::integer(1))).div(&RatFunc::from_poly(atom))
-    } else {
-        Some(RatFunc::from_poly(atom))
+    let mut result = RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
+    for (monomial, coeff) in &arg_poly.terms {
+        let negative = coeff.numerator() < 0;
+        let magnitude = if negative { coeff.checked_neg()? } else { *coeff };
+        // The primitive single-term argument `magnitude · monomial`, canonicalized.
+        let mut single = BTreeMap::new();
+        single.insert(monomial.clone(), magnitude);
+        let term_poly = MultiPoly { terms: single };
+        let atom = MultiPoly::single_var(&atom_name("exp", &term_poly.to_expr()));
+        let factor = if negative {
+            // exp(term) = exp(−|term|) = 1 / exp(|term|).
+            RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))
+                .div(&RatFunc::from_poly(atom))?
+        } else {
+            RatFunc::from_poly(atom)
+        };
+        result = result.mul(&factor)?;
     }
+    Some(result)
 }
 
 /// A collision-resistant variable name standing for a transcendental atom
@@ -4625,6 +4637,28 @@ mod tests {
         // Norm: ‖(3,4)‖ = 5; ‖(1,1)‖ = √2.
         assert_equal(&norm(&[CasExpr::int(3), CasExpr::int(4)]).unwrap(), &CasExpr::int(5));
         assert_equal(&norm(&[CasExpr::int(1), CasExpr::int(1)]).unwrap(), &CasExpr::int(2).sqrt());
+    }
+
+    #[test]
+    fn exponential_addition_law() {
+        let x = || v("x");
+        let y = || v("y");
+        // exp(x + y) = exp(x)·exp(y) — the addition law, via per-term decomposition.
+        assert_equal(&(x() + y()).exp(), &(x().exp() * y().exp()));
+        // exp(x)·exp(y) = exp(x + y).
+        assert_equal(&(x().exp() * y().exp()), &(x() + y()).exp());
+        // exp(a + b − a) = exp(b): the mixed cancel-and-combine the ODE cert needs.
+        let a = || CasExpr::var("a");
+        let b = || CasExpr::var("b");
+        assert_equal(&(a() + b() - a()).exp(), &b().exp());
+        // exp(x + 1)·exp(−x) = exp(1) (constant term survives, x cancels).
+        assert_equal(&((x() + CasExpr::int(1)).exp() * (-x()).exp()), &CasExpr::int(1).exp());
+        // A polynomial exponent splits into per-monomial factors and recombines:
+        // exp(x² + x) = exp(x²)·exp(x).
+        assert_equal(&(x().pow(2) + x()).exp(), &(x().pow(2).exp() * x().exp()));
+        // Sanity: the general non-cancelling product stays honest — exp(x)·exp(y) is
+        // not equal to exp(x) alone.
+        assert_not_equal(&(x().exp() * y().exp()), &x().exp());
     }
 
     #[test]
