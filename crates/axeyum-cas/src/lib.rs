@@ -2846,6 +2846,37 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
     ])
 }
 
+/// The Wronskian `W(f₁, …, fₙ)` of a list of functions in `var` — the determinant of
+/// the matrix whose row `j` holds the `j`-th derivatives `fᵢ⁽ʲ⁾`. It vanishes
+/// identically iff the functions are linearly dependent (over the fragment the
+/// zero-test decides), and appears in variation-of-parameters ODE solutions.
+/// Expanded to canonical form. `None` on an empty list or a degenerate matrix shape.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, wronskian, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // W(x, x²) = det[[x, x²],[1, 2x]] = x².
+/// let w = wronskian(&[x.clone(), x.clone().pow(2)], "x").unwrap();
+/// assert!(matches!(equal(&w, &x.pow(2)), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn wronskian(functions: &[CasExpr], var: &str) -> Option<CasExpr> {
+    let n = functions.len();
+    if n == 0 {
+        return None;
+    }
+    let rows: Vec<Vec<CasExpr>> = (0..n)
+        .map(|order| {
+            functions
+                .iter()
+                .map(|f| f.differentiate_n(var, order))
+                .collect()
+        })
+        .collect();
+    let determinant = Matrix::from_rows(rows)?.determinant()?;
+    Some(expand(&determinant).unwrap_or(determinant))
+}
+
 /// The LSB-first rational coefficient vector of a univariate polynomial `expr` in
 /// `var`, or `None` if `expr` is not a univariate polynomial in `var`.
 fn univariate_coeffs(expr: &CasExpr, var: &str) -> Option<Vec<Rational>> {
@@ -4944,6 +4975,24 @@ mod tests {
 
         // exp(x) about a nonzero center leaves the rational fragment → None.
         assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
+    }
+
+    #[test]
+    fn wronskian_of_function_families() {
+        let x = || v("x");
+        // W(x, x²) = x².
+        assert_equal(&wronskian(&[x(), x().pow(2)], "x").unwrap(), &x().pow(2));
+        // W(1, x, x²) = 2 (constant Wronskian of the monomial basis).
+        assert_equal(
+            &wronskian(&[CasExpr::int(1), x(), x().pow(2)], "x").unwrap(),
+            &CasExpr::int(2),
+        );
+        // W(eˣ, e⁻ˣ) = −2 — needs the exp tower (eˣ·e⁻ˣ = 1).
+        assert_equal(&wronskian(&[x().exp(), (-x()).exp()], "x").unwrap(), &CasExpr::int(-2));
+        // W(sin x, cos x) = −1 — needs the Pythagorean identity.
+        assert_equal(&wronskian(&[x().sin(), x().cos()], "x").unwrap(), &CasExpr::int(-1));
+        // Linearly dependent functions have a zero Wronskian: W(x, 2x) = 0.
+        assert_equal(&wronskian(&[x(), CasExpr::int(2) * x()], "x").unwrap(), &CasExpr::zero());
     }
 
     #[test]
