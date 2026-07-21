@@ -681,3 +681,24 @@ This is the gateway to RootOf / algebraic-number machinery — the prerequisite 
 next-wave #15 (Lazard–Rioboo–Trager algebraic-number integration). Hermite/Smith
 normal form (#9) delegated to a sub-agent. **191 unit + 39 doctests, clippy-clean,
 WASM-green.**
+
+## 2026-07-21 — Entry 19: normal forms, permutations, exp reciprocals (206 tests)
+
+- **Hermite & Smith normal forms** (`normalforms.rs`, sub-agent, next-wave #9):
+  `U·A=H` and `U·A·V=D` for integer matrices; certified by the re-multiply identity
+  (via `Matrix::mul`+`equal`) **and** `det(U)=det(V)=±1` (unimodularity). Unblocks
+  integer linear systems / Diophantine, module theory, f.g. abelian group structure.
+- **Permutations** (`permutation.rs`): symmetric-group objects — compose, inverse,
+  cycles, order, sign; group laws verified by direct computation.
+- **Polynomial inequalities** (`solve_polynomial_inequality`, k12 #2): sign chart →
+  interval unions, Sturm-guarded against irrational endpoints.
+- **exp reciprocal canonicalization** — `exp(0)=1`, `exp(−A)=1/exp(A)`, so
+  `exp(−P)·exp(P)=1` now decides (first partial step of the [exp tower](exp-tower.md);
+  zero regressions).
+
+**206 unit + 40 doctests, clippy-pedantic clean, WASM-green.** This session took the
+crate from 129 → 206 tests: full curriculum synthesis + ~23 new capabilities across
+Tier A–C (Gosper, Sturm, factorization, normal forms, ODE methods, exact trig,
+statistics, vector calculus, number theory, radicals, …). Remaining headline gaps:
+the full exp tower (unlocks first-order ODEs / recurrences / general exp-log), RootOf
+(unblocked by Sturm — next), Zeilberger, assumptions engine, Risch.

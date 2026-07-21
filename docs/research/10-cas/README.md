@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 191 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 206 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -22,7 +22,8 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | ODEs | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing, undetermined coeffs) | ✓ (ODE operator) |
 | Trig | `evaluate_trig` (exact values at multiples of π/12), Pythagorean identity in the zero-test | compute (values certify) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
-| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial` | det/solve/null/eigvec ✓ |
+| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial`; `hermite_normal_form`/`smith_normal_form` (integer) | det/solve/null/eigvec ✓; U·A(·V)=D ✓ |
+| Groups | `Permutation`: compose, inverse, cycles, order, sign (symmetric groups) | group laws ✓ |
 | Vector calculus | `gradient`, `jacobian`, `divergence`, `curl` (certified partials); `dot`, `cross`, `norm` | ✓ |
 | Logs / abs | `expand_log` (product/quotient/power rules), `Abs` head (`|·|`, `√(x²)→|x|`) | compute / exact |
 | Statistics | `stats`: mean/median/mode/variance/sample_variance; `standard_deviation` (surd-simplified) | exact |
