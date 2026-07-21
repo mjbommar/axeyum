@@ -42,7 +42,10 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Number theory | `ntheory` (gcd, mod-pow/inverse, `is_prime`, `factorize`, φ, CRT, binomial); `ntheory_advanced` (nPr, Legendre/Jacobi, quadratic residues, `sqrt_mod` (Tonelli–Shanks), `kronecker_symbol`, `solve_linear_congruence`, order, primitive root, discrete log, continued fractions, Pell); `ntheory_more` (Möbius, Mertens, σ_k, perfect/squarefree, radical, `perfect_power`, `integer_nth_root`, `aliquot_sum`/`are_amicable`, `primitive_pythagorean_triples`, Carmichael λ, primorial, next/prev prime, π(n), nth prime, Carmichael numbers) | re-check ✓ |
 | Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
 
-Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs` (extensible `Unary`). The zero-test
+Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs`, the inverse pair
+`asin/acos/asinh/acosh`, and the special functions `erf, Si, Ci, Ei, li, Shi, Chi,
+FresnelS, FresnelC, BesselJ0, BesselJ1` (extensible `Unary` — each adds a `name`,
+derivative, `series` rule, and `evalf` kernel; everything else is catch-all). The zero-test
 carries sound folds — `I²=−1`, Pythagorean `sin²+cos²=1`, `sqrt(c)²=c`, and the
 **exp tower** (`exp(A+B)=exp(A)exp(B)`, `exp(2x)=exp(x)²`, `exp(k·ln v)=vᵏ`) — which
 is what makes complex arithmetic, radical arithmetic, first-order ODEs, and
