@@ -3,6 +3,8 @@
 - Status: active guardrail
 - Feedback snapshot: 2026-07-16
 - Reconciled: 2026-07-20
+- Rechecked: 2026-07-21 against the user-provided copy and the current
+  Glaurung reviewer checklist; no disposition changed
 
 ## Purpose
 

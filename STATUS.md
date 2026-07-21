@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — Post-I2 remeasurement authorizes only I3.** The next clean
+  reviewer-facing seam is the contiguous 1,188-line ADR-0101/0106 single-pivot
+  equality-partition reconstruction family: 30 cohesive items, two outward
+  paths, six reconstruction tests, and six evidence tests including a 64-seed
+  Z3 differential sweep. Capture the SDLX generated Lean identity, then move the
+  family privately to `int_reconstruct/equality_partition.rs` with explicit
+  imports and unchanged paths/visibility/ordering/caps. The ABV replay wall,
+  algebraic CAD, and raw-size-driven splits remain unauthorized. Today’s
+  user-provided July 16 Glaurung feedback copy was also rechecked against the
+  current reviewer checklist; no evidence-based disposition changed.
+
 - **2026-07-20 — I2 privately extracts counterexample-cover reconstruction.**
   The cohesive ADR-0108 family now lives in the 1,465-line
   `int_reconstruct/counterexample_cover.rs` child with explicit imports and the
@@ -5704,6 +5715,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Rechecked Glaurung feedback and preregistered I3.** The July 16
+  feedback still preserves strict correctness/deployability safeguards while
+  later neutral controls supersede its broad speed and robustness claims. The
+  measured artifact successor is only the 1,188-line equality-partition proof
+  family; no behavior-bearing solver work is authorized.
 
 - **2026-07-20 — Extracted the ADR-0108 reconstruction family.** Moved the
   1,449-line counterexample-cover block into a private 1,465-line child with

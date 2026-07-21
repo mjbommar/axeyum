@@ -558,6 +558,17 @@ session state.
 >    reviewer navigation and dependency seams before authorizing a successor.
 >    Do not promote `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` merely
 >    because they are large.
+>    The post-I2 remeasurement now authorizes I3 only: move the contiguous
+>    1,188-line ADR-0101/0106 single-pivot equality-partition reconstruction
+>    family into private `int_reconstruct/equality_partition.rs`. Its 30
+>    top-level items have exactly two outward seams (the crate-visible router and
+>    historical public reconstructor), while six reconstruction tests and six
+>    evidence tests cover certificate checks, routing, mutations, near misses,
+>    and a 64-seed Z3 differential sweep. Capture and preserve the SDLX generated
+>    Lean bytes before moving; preserve all paths, visibility, representative
+>    order, assignments, caps, verdicts, and proof construction. No ABV replay,
+>    algebraic CAD, generic large-file, performance, or concretization work is
+>    implied by I3.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
@@ -574,6 +585,8 @@ session state.
 > item-by-item disposition, including the difference between closed safeguards,
 > superseded claims, and genuinely open work, is recorded in
 > [`glaurung-feedback-reconciliation-2026-07-20.md`](docs/research/08-planning/glaurung-feedback-reconciliation-2026-07-20.md).
+> The user-provided July 16 copy and current Glaurung reviewer checklist were
+> rechecked on 2026-07-21; the evidence-based dispositions did not change.
 
 > **WASM-safe speed: do not invest in SIMD (reviewed 2026-07-20).** A reported
 > scratch prototype explored portable SIMD against the WASM constraint, but its
