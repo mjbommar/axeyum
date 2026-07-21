@@ -144,6 +144,8 @@ pub enum UnaryFunc {
     Sqrt,
     /// Absolute value `abs`.
     Abs,
+    /// The **error function** `erf(x) = (2/√π)·∫₀ˣ e^{−t²} dt`.
+    Erf,
 }
 
 impl UnaryFunc {
@@ -159,6 +161,7 @@ impl UnaryFunc {
             UnaryFunc::Atan => "atan",
             UnaryFunc::Sqrt => "sqrt",
             UnaryFunc::Abs => "abs",
+            UnaryFunc::Erf => "erf",
         }
     }
 
@@ -188,6 +191,11 @@ impl UnaryFunc {
             }
             // d/du |u| = u/|u| (the sign of u; valid away from u = 0)
             UnaryFunc::Abs => u() / CasExpr::Unary(UnaryFunc::Abs, Box::new(u())),
+            // d/du erf(u) = (2/√π)·e^{−u²}
+            UnaryFunc::Erf => {
+                CasExpr::int(2) / CasExpr::var("pi").sqrt()
+                    * CasExpr::Neg(Box::new(u().pow(2))).exp()
+            }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -274,6 +282,12 @@ impl CasExpr {
     #[must_use]
     pub fn sqrt(self) -> Self {
         CasExpr::Unary(UnaryFunc::Sqrt, Box::new(self))
+    }
+
+    /// The **error function** `erf(self)` as a symbolic head.
+    #[must_use]
+    pub fn erf(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Erf, Box::new(self))
     }
 
     /// The absolute value `|self|`. A constant argument folds to its magnitude
@@ -5204,7 +5218,9 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
                 (UnaryFunc::Ln, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::zero()
                 }
-                (UnaryFunc::Atan, CasExpr::Const(c)) if c.is_zero() => CasExpr::zero(),
+                (UnaryFunc::Atan | UnaryFunc::Erf, CasExpr::Const(c)) if c.is_zero() => {
+                    CasExpr::zero()
+                }
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if c.is_zero() => CasExpr::zero(),
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::one()
@@ -5511,9 +5527,24 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Atan => value.atan(),
                 UnaryFunc::Sqrt => value.sqrt(),
                 UnaryFunc::Abs => value.abs(),
+                UnaryFunc::Erf => erf_f64(value),
             })
         }
     }
+}
+
+/// A numeric **error function** `erf(x)` for [`evalf`], via the Abramowitz–Stegun
+/// rational approximation 7.1.26 (max abs. error ≈ 1.5·10⁻⁷). `erf` is odd, so the
+/// magnitude is computed and the sign restored.
+fn erf_f64(x: f64) -> f64 {
+    let sign = if x < 0.0 { -1.0 } else { 1.0 };
+    let x = x.abs();
+    let t = 1.0 / (1.0 + 0.327_591_1 * x);
+    let poly = t
+        * (0.254_829_592
+            + t * (-0.284_496_736
+                + t * (1.421_413_741 + t * (-1.453_152_027 + t * 1.061_405_429))));
+    sign * (1.0 - poly * (-x * x).exp())
 }
 
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
@@ -6330,6 +6361,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_trig_monomial(expr, var),
         integrate_trig_square(expr, var),
         integrate_log_substitution(expr, var),
+        integrate_gaussian(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -7087,6 +7119,46 @@ fn integrate_log_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return Some(ln_x.ln());
     }
     None
+}
+
+/// Integrate a **Gaussian** `e^{−a·x²}` (`a > 0` rational, no linear/constant term
+/// in the exponent) to `(√π / (2·√a))·erf(√a·x)` — the definitional antiderivative
+/// of the error function. Certified downstream by differentiate-and-check: the
+/// derivative is `(√π/(2√a))·(2/√π)·e^{−(√a x)²}·√a = e^{−a x²}` (the `√π` and `√a`
+/// cancel in the zero-test). Returns `None` outside this shape.
+fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Unary(UnaryFunc::Exp, arg) = expr else {
+        return None;
+    };
+    let coeffs = normalize(arg)?.to_univariate(var)?;
+    if poly::rat_degree(&coeffs)? != 2 {
+        return None;
+    }
+    // Exponent must be exactly `−a·x²` (no constant or linear part).
+    if !coeffs[0].is_zero() || !coeffs.get(1).copied().unwrap_or_else(Rational::zero).is_zero() {
+        return None;
+    }
+    let quadratic = coeffs[2];
+    if quadratic.numerator() >= 0 {
+        return None; // need −a with a > 0 for a real (convergent-shaped) Gaussian
+    }
+    let a = quadratic.checked_neg()?;
+    // Require √a to be **rational** (a a perfect rational square): a surd `√a` in
+    // erf's argument leaves `(√a·x)²` unfolded inside the exp atom key, so the
+    // differentiate-and-check cert would not recognize it as `a·x²` — declined
+    // honestly rather than returned uncertified.
+    let CasExpr::Const(_) = simplify_radicals(&CasExpr::Const(a).sqrt()) else {
+        return None;
+    };
+    let sqrt_a = simplify_radicals(&CasExpr::Const(a).sqrt());
+    let sqrt_pi = CasExpr::var("pi").sqrt();
+    // erf(√a·x).
+    let erf_argument = fold_trivial(&(sqrt_a.clone() * CasExpr::var(var)));
+    let erf_term = erf_argument.erf();
+    // Coefficient √π / (2·√a). Keep the √π/√a atoms un-combined (do NOT rationalize
+    // the denominator) so they cancel cleanly against erf's derivative in the cert.
+    let coefficient = sqrt_pi / (CasExpr::int(2) * sqrt_a);
+    Some(fold_trivial(&(coefficient * erf_term)))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -10519,6 +10591,37 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn error_function_and_gaussian_integration() {
+        let x = || v("x");
+        // d/dx erf(x) = (2/√π)·e^{−x²}.
+        assert_equal(
+            &x().erf().differentiate("x"),
+            &(CasExpr::int(2) / v("pi").sqrt() * (-x().pow(2)).exp()),
+        );
+        // ∫e^{−a·x²} = (√π/(2√a))·erf(√a·x) for a perfect-square a — certified.
+        for (integrand, expected) in [
+            ((-x().pow(2)).exp(), v("pi").sqrt() / CasExpr::int(2) * x().erf()),
+            (
+                (CasExpr::int(-4) * x().pow(2)).exp(),
+                v("pi").sqrt() / CasExpr::int(4) * (CasExpr::int(2) * x()).erf(),
+            ),
+        ] {
+            let result = integrate(&integrand, "x").expect("gaussian integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+            assert_equal(&result.antiderivative, &expected);
+        }
+        // Surd a (∫e^{−2x²}) and a linear term are honestly declined.
+        assert!(integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").is_none());
+        // erf(0) = 0 (folded); numeric erf(1) ≈ 0.8427.
+        assert_eq!(
+            fold_elementary_constants(&CasExpr::int(0).erf()),
+            CasExpr::zero()
+        );
+        assert!((evalf(&CasExpr::int(1).erf(), &[]).unwrap() - 0.842_700_79).abs() < 1e-6);
     }
 
     #[test]
