@@ -69,9 +69,9 @@ session state.
 > do not schedule another interpolation/Horn/abduction seed.
 
 > **SMT-LIB/API conformance reset (2026-07-21).** The checked
-> [29-row matrix](docs/plan/generated/smtlib-api-conformance.md) separates parser
+> [30-row matrix](docs/plan/generated/smtlib-api-conformance.md) separates parser
 > state, execution semantics, output representation, assurance, exact tests, and
-> residual work. It finds five absent command families, seven syntactically
+> residual work. It finds six absent command families, seven syntactically
 > accepted no-ops, eight globally recorded surfaces, five command-point
 > surfaces, three semantic definitions, and one explicit rejection. Existing
 > Rust helpers already answer models, values, assignments, scoped assertions,
@@ -81,6 +81,18 @@ session state.
 > option/lifecycle semantics before adding another engine. The manifest's
 > negative source assertions force updates when recursive definitions,
 > interpolation, Horn, abduction, or SyGuS parser commands appear.
+>
+> The follow-up
+> [ordered-session contract](docs/plan/smtlib-session-contract-design-2026-07-21.md)
+> corrects the initial “runner over helpers” estimate. SMT-LIB 2.7 scopes
+> declarations and definitions by default, makes `reset-assertions` conditional
+> on `:global-declarations`, binds inspection to the exact preceding query, and
+> requires continued errors to leave state unchanged. Axeyum's shared arena,
+> global parser environments, final option maps, output no-ops, and silent pop
+> underflow cannot express those semantics. The checked abstract prototype
+> freezes 14 invariants and 20 transcripts / 107 commands under proposed
+> ADR-0342. P4.4 is now size L and resumes with capture-only complete ordered
+> command/event IR (S1), not a renderer or another isolated helper.
 
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no

@@ -26,14 +26,20 @@ Last updated: 2026-07-21
 > separate multi-oracle publication campaign.
 
 > **Current compatibility checkpoint.** P4.4 now has a machine-readable,
-> source/test-checked 29-row
+> source/test-checked 30-row
 > [SMT-LIB/API conformance matrix](../../../docs/plan/generated/smtlib-api-conformance.md).
-> It records five absent command families, seven accepted parser no-ops, and
+> It records six absent command families, seven accepted parser no-ops, and
 > zero ordered interactive-text outputs alongside the bounded Rust helpers that
-> already exist. The next frontend increment is a command-point session event/
-> result contract and transcript runner with option/lifecycle semantics. Do not
-> add another isolated output helper or report a direct interpolation/Horn/
-> abduction API as textual conformance.
+> already exist. The follow-up
+> [session contract](../../../docs/plan/generated/smtlib-session-contract.md)
+> freezes 14 invariants and 20 abstract fixtures / 107 commands under proposed
+> ADR-0342. It also finds a deeper signature gap: declarations/definitions must
+> be scoped by default, `reset-assertions` is conditional on
+> `:global-declarations`, full reset needs a fresh arena epoch, and continued
+> errors must be atomic. The next frontend increment is capture-only complete
+> command/event IR (S1), not a renderer. Do not add another isolated output
+> helper or report a direct interpolation/Horn/abduction API as textual
+> conformance.
 
 ## Purpose
 

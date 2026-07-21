@@ -606,10 +606,19 @@ Out of scope:
 ### Formats
 
 - [x] Full SMT-LIB script support or benchmark-slice parsing first?
-  - Answer: benchmark-slice parsing first, with explicit Unsupported errors
-    for arrays, UF, and incremental commands; implemented in `axeyum-smtlib`.
+  - Answer: benchmark-slice parsing first, implemented by ADR-0018 in
+    `axeyum-smtlib`. The parser later expanded through arrays, UF, incremental
+    queries, and additional theories; do not reuse the original slice boundary
+    as current status. The live surface is the generated
+    [command/API matrix](../../plan/generated/smtlib-api-conformance.md), and
+    full ordered-session work is proposed in ADR-0342.
 - [ ] Which SMT-LIB standard/theory versions should be pinned in artifacts
       and tests before adding conversion operators or future logics?
+  - Proposed answer for the command/session surface: pin the official SMT-LIB
+    2.7 release dated 2025-07-07 and implement the transactional state contract
+    in [ADR-0342](../09-decisions/adr-0342-preregister-ordered-smtlib-session.md).
+    The question remains open until the proposed transcript and Rust gates pass;
+    theory-version pins remain separate per-theory obligations.
 - [ ] When does BTOR2 import earn its keep?
 - [x] Where does the format parser crate boundary land?
   - Answer: `axeyum-smtlib` is a dedicated crate because parsing/writing is

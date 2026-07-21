@@ -145,7 +145,7 @@ Z3 or Lean. The checked replacement separates three different targets:
 2. **Proof compatibility:** a real Lean-checkable SMT proof lane now exists; the
    remaining work is certificate coverage, trusted-reduction shrinkage, kernel
    profile hardening, and integration—not a green-field Lean exporter.
-3. **Product compatibility:** the 29-row command/API inventory shows broad
+3. **Product compatibility:** the 30-row command/API inventory shows broad
    parsing and direct helper coverage, but no ordered interactive textual
    session result stream. That session contract is the next P4.4 architecture
    task.

@@ -41,10 +41,17 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   SyGuS, textual conformance, production depth, corpora, and certification open.
 - [`smtlib-api-conformance-v1.json`](smtlib-api-conformance-v1.json) and the
   generated [`SMT-LIB/API matrix`](generated/smtlib-api-conformance.md) —
-  checked 29-row command/protocol inventory separating parser state, execution,
+  checked 30-row command/protocol inventory separating parser state, execution,
   output representation, assurance, exact tests, and residuals. It prevents
   parser no-ops and direct Rust helpers from being reported as an ordered
   interactive SMT-LIB implementation.
+- [`smtlib-session-contract-design-2026-07-21.md`](smtlib-session-contract-design-2026-07-21.md),
+  the [machine-readable contract](smtlib-session-contract-v1.json), and its
+  generated [transcript matrix](generated/smtlib-session-contract.md) — pinned
+  SMT-LIB 2.7 state-machine design with 14 invariants and 20 executable abstract
+  fixtures / 107 commands. The audit exposes scoped declarations,
+  reset-assertions signature behavior, query snapshots, and error atomicity as
+  prerequisites to textual output; proposed ADR-0342 gates implementation.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map

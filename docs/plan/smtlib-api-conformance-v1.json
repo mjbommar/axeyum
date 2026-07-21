@@ -81,7 +81,7 @@
           "contains": ["pub fn solve_smtlib_get_option(", "not every standard option has full"]
         }
       ],
-      "residual": "No command-point option history and no full semantic enforcement for produce-* flags, channels, print-success, seeds, or resource limits."
+      "residual": "No command-point option history and no full semantic enforcement for produce-* flags, channels, print-success, seeds, or resource limits; the current default table also omits SMT-LIB 2.7 :produce-assertions."
     },
     {
       "id": "check-sat",
@@ -123,7 +123,7 @@
       "execution": "incremental-query",
       "output": "rust-value",
       "assurance": ["model-replay", "internal-proof-check"],
-      "scope": "Assumptions are applied to one query and discarded; arbitrary parsed Boolean terms are accepted rather than a separately validated literal grammar.",
+      "scope": "Assumptions are applied to one query and discarded; arbitrary parsed Boolean terms are accepted, matching the expanded SMT-LIB 2.7 grammar.",
       "api_symbols": ["solve_smtlib_incremental"],
       "tests": [
         {
@@ -147,7 +147,7 @@
       "execution": "incremental-query",
       "output": "none",
       "assurance": ["model-replay", "internal-proof-check"],
-      "scope": "Assertion scopes are semantically honored; declarations remain global and queries are re-solved from scratch rather than requiring retained backend state.",
+      "scope": "Assertion scopes are semantically honored; declarations remain global in the current implementation and queries are re-solved from scratch rather than requiring retained backend state.",
       "api_symbols": ["solve_smtlib_incremental"],
       "tests": [
         {
@@ -165,7 +165,7 @@
           "contains": ["\"push\" | \"pop\" => {", "ScriptCommand::Push", "ScriptCommand::Pop"]
         }
       ],
-      "residual": "Protocol compatibility is semantic but not necessarily warm-state performance compatibility; pop-underflow/error behavior needs a conformance fixture."
+      "residual": "Not protocol-conformant yet: SMT-LIB 2.7 scopes declarations and definitions by default unless :global-declarations is true; pop underflow is also silently ignored rather than producing an atomic error."
     },
     {
       "id": "reset-assertions",
@@ -175,7 +175,7 @@
       "execution": "incremental-query",
       "output": "none",
       "assurance": ["model-replay", "internal-proof-check"],
-      "scope": "Clears assertions and open scopes while retaining declarations in both single-query and incremental facades.",
+      "scope": "Clears assertions and open scopes while always retaining declarations in both single-query and incremental facades.",
       "api_symbols": ["solve_smtlib", "solve_smtlib_incremental"],
       "tests": [
         {
@@ -193,7 +193,7 @@
           "contains": ["\"reset-assertions\" => {", "ScriptCommand::ResetAssertions"]
         }
       ],
-      "residual": "No interactive success response or option-controlled print-success behavior."
+      "residual": "Not protocol-conformant yet: with the standard default :global-declarations=false, reset-assertions must also remove non-global declarations and definitions. Interactive success output is also absent."
     },
     {
       "id": "reset",
@@ -526,6 +526,25 @@
         }
       ],
       "residual": "No session lifecycle exists, so exit does not terminate command processing."
+    },
+    {
+      "id": "declare-sort-parameter",
+      "surface": "Global sort-parameter declaration",
+      "syntax": ["(declare-sort-parameter A)"],
+      "parse": "absent",
+      "execution": "none",
+      "output": "none",
+      "assurance": ["none"],
+      "scope": "SMT-LIB 2.7 adds a global sort parameter usable by later polymorphic declarations and definitions; no parser arm or IR environment exists.",
+      "api_symbols": [],
+      "tests": [],
+      "source_assertions": [
+        {
+          "path": "crates/axeyum-smtlib/src/parse.rs",
+          "excludes": ["\"declare-sort-parameter\" =>"]
+        }
+      ],
+      "residual": "Add global sort-parameter identity, collision checks, polymorphic sort resolution, round-trip rendering, and exact negative/positive fixtures before claiming the SMT-LIB 2.7 sort surface."
     },
     {
       "id": "declare-sort",

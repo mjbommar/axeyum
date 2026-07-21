@@ -323,12 +323,13 @@ def render(data: dict) -> str:
             "",
             "## Planning consequence",
             "",
-            "The immediate compatibility project is an ordered textual session runner, "
-            "not another theory engine. It should consume one command stream, emit one "
-            "response per output command at the exact command point, enforce option "
-            "preconditions, and reuse the existing helpers without re-solving or losing "
-            "scope. Textual interpolation, Horn, and abduction commands should expose "
-            "the existing verify-before-return direct APIs only after that runner gives "
+            "The immediate compatibility project is the ordered transactional state "
+            "boundary in the [session contract](smtlib-session-contract.md), not another "
+            "theory engine or a renderer over final helper values. It must first preserve "
+            "every command point, exact query snapshot, scoped signature, reset epoch, "
+            "option update, and atomic error; canonical textual output follows that state "
+            "contract. Textual interpolation, Horn, and abduction commands should expose "
+            "the existing verify-before-return direct APIs only after the runner gives "
             "their responses a precise ordering and error contract.",
             "",
         ]

@@ -362,21 +362,36 @@ the separate absent surface.
 
 **Prototype landed:** the machine-readable
 [conformance manifest](smtlib-api-conformance-v1.json) and generated
-[29-row matrix](generated/smtlib-api-conformance.md) classify parse state,
+[30-row matrix](generated/smtlib-api-conformance.md) classify parse state,
 execution mode, output representation, assurance, scope, exact tests, and
 residual work independently. Source-marker validation covers both positive and
 negative claims, so a newly added command makes the checked artifact stale. The
-snapshot finds five absent command families, seven accepted no-ops, eight
+snapshot finds six absent command families, seven accepted no-ops, eight
 globally recorded surfaces, five command-point surfaces, three semantic
 definitions, one explicit rejection, and zero interactive textual-session
 outputs. This changes the implementation priority: build one ordered session
-runner over the existing helpers before adding more isolated command helpers.
+runner before adding more isolated command helpers.
+
+**Contract prototype landed:** the
+[ordered-session design](smtlib-session-contract-design-2026-07-21.md),
+[machine-readable contract](smtlib-session-contract-v1.json), and generated
+[20-fixture/107-command transcript matrix](generated/smtlib-session-contract.md)
+pin the control plane to SMT-LIB 2.7. The standard/source audit found that the
+gap is not merely rendering: declarations and definitions are scope-local by
+default, `reset-assertions` conditionally removes them,
+`:global-declarations` is start-mode state, output options apply immediately,
+query inspection binds to the exact most-recent check, and continued errors
+must be state-atomic. Axeyum's current single arena, global parser environments,
+final option maps, output no-ops, and silent pop underflow cannot express that
+contract. Proposed ADR-0342 therefore stages complete command/event capture,
+query snapshots, scoped external-name environments, reset epochs, and only then
+canonical textual rendering.
 
 **Exit:** a generated SMT-LIB/API matrix distinguishes parsed, semantically
 implemented, round-tripped, incrementally correct, and deliberately unsupported
 features. One textual runner emits every response at the exact command point,
-honors option/lifecycle state, and makes unsupported commands fail visibly
-rather than being ignored.
+honors scoped signatures plus option/lifecycle state, and makes errors atomic
+and unsupported commands visible rather than ignored.
 
 ### G9 — Prove deployability claims with real consumer profiles
 

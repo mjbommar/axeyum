@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "title": "Axeyum SMT-LIB ordered session contract prototype",
+  "as_of": "2026-07-21",
+  "standard": {
+    "version": "2.7",
+    "release": "2025-07-07",
+    "url": "https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-07-07.pdf",
+    "sections": ["3.11.1", "4.1.1", "4.1.2", "4.1.4", "4.1.5", "4.1.7", "4.2.1", "4.2.2", "4.2.5", "4.2.6", "4.2.7"]
+  },
+  "prototype_policy": {
+    "error_behavior": "continued-execution",
+    "reset_success_uses": "pre-command print-success and regular-output-channel, then enters a new default epoch",
+    "set_option_output_uses": "the newly assigned output option applies to the set-option response itself",
+    "query_payloads": "query-N placeholders identify the exact most-recent check snapshot; production payloads must be typed and replay-checked"
+  },
+  "invariants": [
+    {
+      "id": "S1-ordered-command-points",
+      "rule": "Every input command is interpreted in source order and every response is bound to that exact command point; final global maps may not answer earlier requests.",
+      "source": "SMT-LIB 2.7 sections 3.11.1 and 4.1.2",
+      "implementation_gate": "One SessionEvent per processed command, with a monotonic command index and no output-query side vectors."
+    },
+    {
+      "id": "S2-explicit-modes",
+      "rule": "The session has start, assert, sat, unsat, and terminated modes; commands outside the permitted mode return an error.",
+      "source": "SMT-LIB 2.7 section 4.1.1 and figure 4.1",
+      "implementation_gate": "Mode transition tests cover every command class from every mode, including unknown entering sat mode and exit from all modes."
+    },
+    {
+      "id": "S3-error-atomicity",
+      "rule": "Under the selected continued-execution policy, an error emits one regular-channel error response and leaves all semantic state unchanged.",
+      "source": "SMT-LIB 2.7 section 4.1.2",
+      "implementation_gate": "Parse, sort, scope, option, and execution errors are staged before commit; mutation tests compare complete before/after state."
+    },
+    {
+      "id": "S4-query-snapshot",
+      "rule": "Model/proof/core/value responses refer to the most recent check command and its exact context, assumptions, model, verdict, and evidence until invalidated or replaced.",
+      "source": "SMT-LIB 2.7 sections 4.2.5 through 4.2.7",
+      "implementation_gate": "A QuerySnapshot carries epoch, query id, assertion generation, assumptions, result, model, evidence, and route; output commands never re-solve a reconstructed final script."
+    },
+    {
+      "id": "S5-option-gates",
+      "rule": "Each produce-* option is false by default and disabled output commands return an error rather than data or a silent no-op.",
+      "source": "SMT-LIB 2.7 section 4.1.7",
+      "implementation_gate": "Negative transcript fixtures cover every produce-* gate in both the right and wrong query modes."
+    },
+    {
+      "id": "S6-immediate-output-options",
+      "rule": "print-success and output-channel changes apply to the response of the set-option command that changes them.",
+      "source": "SMT-LIB 2.7 sections 3.11.1 and 4.2.1",
+      "implementation_gate": "The response event is constructed after option validation/commit and carries an output route snapshot, not a live writer reference."
+    },
+    {
+      "id": "S7-scoped-signature",
+      "rule": "Declarations and definitions belong to the current assertion level by default and disappear on pop; global-declarations=true makes subsequent declarations permanent.",
+      "source": "SMT-LIB 2.7 sections 4.1.4 and 4.1.5",
+      "implementation_gate": "Scope frames own assertions, declarations, definitions, aliases, and named terms; use-after-pop is an atomic error."
+    },
+    {
+      "id": "S8-reset-assertions",
+      "rule": "reset-assertions clears all assertions and levels; it also removes non-global declarations/definitions while preserving options, set-logic declarations, and explicitly global declarations.",
+      "source": "SMT-LIB 2.7 section 4.2.2",
+      "implementation_gate": "Default/global declaration transcript pairs prove opposite visibility after reset-assertions without changing options."
+    },
+    {
+      "id": "S9-full-reset-epoch",
+      "rule": "reset returns to startup state with default options and a fresh declaration/arena epoch; no TermId, model, or proof may cross the epoch boundary.",
+      "source": "SMT-LIB 2.7 sections 4.1.1 and 4.2.1",
+      "implementation_gate": "SessionState swaps in a fresh epoch atomically and renders any reset success response from a pre-reset response snapshot."
+    },
+    {
+      "id": "S10-assumptions-are-one-shot",
+      "rule": "check-sat-assuming does not mutate the context but its assumptions belong to the resulting query snapshot.",
+      "source": "SMT-LIB 2.7 section 4.2.5",
+      "implementation_gate": "The next assertion/check sees the original context; unsat-assumption and proof eligibility read the snapshot, not the current stack."
+    },
+    {
+      "id": "S11-proof-assumption-boundary",
+      "rule": "get-proof is legal only after an unsat check with an empty assumption set; unsat assumptions and cores remain distinct responses.",
+      "source": "SMT-LIB 2.7 section 4.2.7",
+      "implementation_gate": "Proof dispatch rejects a nonempty QuerySnapshot.assumptions before invoking any emitter."
+    },
+    {
+      "id": "S12-response-routing",
+      "rule": "Specific responses are emitted regardless of print-success; success is only the optional response for commands without a specific result, and exit emits success before termination when enabled.",
+      "source": "SMT-LIB 2.7 section 3.11.1",
+      "implementation_gate": "SessionResponse is typed independently from rendering; the CLI routes a frozen regular/diagnostic channel tag after the pure state transition."
+    },
+    {
+      "id": "S13-deterministic-identities",
+      "rule": "Epoch, command, query, and assertion-generation identifiers are monotonic deterministic values and never derive from addresses, hash iteration, Debug text, or backend handles.",
+      "source": "Axeyum determinism public-API rule",
+      "implementation_gate": "Two runs produce byte-identical typed event sequences and transcripts; reset changes only the specified epoch-relative identities."
+    },
+    {
+      "id": "S14-pure-core-io-boundary",
+      "rule": "The session core returns typed responses and output-route snapshots; filesystem/process I/O belongs to an adapter so library, CLI, WASM, and tests share semantics.",
+      "source": "Axeyum pure-Rust/WASM and checkability constraints",
+      "implementation_gate": "No std::fs write or process exit occurs below the adapter; an in-memory transcript sink exercises the complete contract."
+    }
+  ],
+  "implementation_findings": [
+    {
+      "id": "F1-narrow-command-ir",
+      "path": "crates/axeyum-smtlib/src/parse.rs",
+      "contains": ["pub enum ScriptCommand {", "GetAssertions,"],
+      "fact": "ScriptCommand records assertion-stack operations and get-assertions, not the complete protocol stream.",
+      "consequence": "Output/lifecycle commands cannot be associated with their exact state or preceding query."
+    },
+    {
+      "id": "F2-final-global-option-maps",
+      "path": "crates/axeyum-smtlib/src/parse.rs",
+      "contains": ["pub options: BTreeMap<String, String>", "pub get_option_keys: Vec<String>"],
+      "fact": "Option updates collapse into one final map while get-option requests live in a separate list.",
+      "consequence": "A request can observe a later value instead of the value at its command point."
+    },
+    {
+      "id": "F3-output-noops",
+      "path": "crates/axeyum-smtlib/src/parse.rs",
+      "contains": ["Output/query commands: accepted as no-ops at parse time", "\"get-unsat-assumptions\"", "\"get-objectives\""],
+      "fact": "Several standard output commands are syntax-only no-ops.",
+      "consequence": "Parser acceptance currently overstates executable command conformance."
+    },
+    {
+      "id": "F4-full-reset-rejected",
+      "path": "crates/axeyum-smtlib/src/parse.rs",
+      "contains": ["reset (full reset of declarations + assertions)", "single shared arena"],
+      "fact": "Full reset is rejected because every parsed term shares one arena.",
+      "consequence": "Production reset requires a fresh arena/session epoch, not clearing vectors in place."
+    },
+    {
+      "id": "F5-declarations-always-global",
+      "path": "crates/axeyum-smtlib/src/parse.rs",
+      "contains": ["declarations", "mutate the shared arena directly (and stay global)"],
+      "fact": "Declarations stay global across push/pop regardless of the standard global-declarations default.",
+      "consequence": "The current incremental helper is assertion-stack equivalent, not protocol/signature equivalent."
+    },
+    {
+      "id": "F6-pop-underflow-silent",
+      "path": "crates/axeyum-solver/src/smtlib.rs",
+      "contains": ["if let Some(depth) = scopes.pop()", "stack.truncate(depth)"],
+      "fact": "Pop consumes only available scopes and silently ignores underflow.",
+      "consequence": "A malformed command changes neither output nor error state as SMT-LIB requires; the runner needs transactional validation."
+    },
+    {
+      "id": "F7-session-types-absent",
+      "path": "crates/axeyum-solver/src/smtlib.rs",
+      "excludes": ["pub struct SmtLibSession", "pub enum SessionResponse"],
+      "fact": "No public session state or typed response contract exists.",
+      "consequence": "The new boundary can be designed without preserving an accidental public session ABI."
+    },
+    {
+      "id": "F8-unknown-has-no-model",
+      "path": "crates/axeyum-solver/src/backend.rs",
+      "contains": ["Sat(Model)", "Unknown(UnknownReason)"],
+      "fact": "CheckResult carries a model only for Sat, while SMT-LIB places both sat and unknown in its sat query mode.",
+      "consequence": "The session needs an explicit deterministic model-inspection policy for unknown; mode legality alone cannot manufacture a replayed model."
+    }
+  ],
+  "fixtures": [
+    {
+      "id": "print-success-immediate",
+      "purpose": "The print-success update affects its own response; disabling it suppresses its own success while specific echo output remains.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-option", "key": ":print-success", "value": false},
+        {"op": "echo", "text": "done"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:none",
+        "2:start>start:echo=\"done\"@stdout"
+      ]
+    },
+    {
+      "id": "regular-channel-immediate",
+      "purpose": "Changing the regular output channel routes the set-option success response and subsequent output to the new channel.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-option", "key": ":regular-output-channel", "value": "stderr"},
+        {"op": "set-logic", "logic": "QF_BV"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:success@stderr",
+        "2:start>assert:success@stderr"
+      ]
+    },
+    {
+      "id": "get-option-command-point",
+      "purpose": "get-option observes state at its own command point rather than the final option map.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "get-option", "key": ":print-success"},
+        {"op": "set-option", "key": ":print-success", "value": false},
+        {"op": "get-option", "key": ":print-success"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:option=true@stdout",
+        "2:start>start:none",
+        "3:start>start:option=false@stdout"
+      ]
+    },
+    {
+      "id": "default-declaration-scope",
+      "purpose": "With the standard default, a declaration made after push disappears on pop and use-after-pop is an atomic error.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "push", "count": 1},
+        {"op": "declare", "name": "x"},
+        {"op": "pop", "count": 1},
+        {"op": "assert-ref", "symbol": "x"},
+        {"op": "assert"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>assert:success@stdout",
+        "3:assert>assert:success@stdout",
+        "4:assert>assert:success@stdout",
+        "5:assert>assert:error=symbol-out-of-scope@stdout",
+        "6:assert>assert:success@stdout"
+      ]
+    },
+    {
+      "id": "global-declaration-scope",
+      "purpose": "global-declarations makes subsequent declarations survive pop.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-option", "key": ":global-declarations", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "push", "count": 1},
+        {"op": "declare", "name": "x"},
+        {"op": "pop", "count": 1},
+        {"op": "assert-ref", "symbol": "x"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:success@stdout",
+        "2:start>assert:success@stdout",
+        "3:assert>assert:success@stdout",
+        "4:assert>assert:success@stdout",
+        "5:assert>assert:success@stdout",
+        "6:assert>assert:success@stdout"
+      ]
+    },
+    {
+      "id": "reset-assertions-default-scope",
+      "purpose": "reset-assertions removes non-global declarations as well as assertions and levels.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "declare", "name": "x"},
+        {"op": "reset-assertions"},
+        {"op": "assert-ref", "symbol": "x"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>assert:success@stdout",
+        "3:assert>assert:success@stdout",
+        "4:assert>assert:error=symbol-out-of-scope@stdout"
+      ]
+    },
+    {
+      "id": "reset-assertions-global-scope",
+      "purpose": "reset-assertions preserves declarations made global by the start-mode option.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-option", "key": ":global-declarations", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "declare", "name": "x"},
+        {"op": "reset-assertions"},
+        {"op": "assert-ref", "symbol": "x"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:success@stdout",
+        "2:start>assert:success@stdout",
+        "3:assert>assert:success@stdout",
+        "4:assert>assert:success@stdout",
+        "5:assert>assert:success@stdout"
+      ]
+    },
+    {
+      "id": "full-reset-epoch",
+      "purpose": "Full reset returns to start defaults while its optional success response uses the pre-reset output snapshot.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-option", "key": ":regular-output-channel", "value": "stderr"},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "reset"},
+        {"op": "get-option", "key": ":print-success"},
+        {"op": "get-option", "key": ":regular-output-channel"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>start:success@stderr",
+        "2:start>assert:success@stderr",
+        "3:assert>start:success@stderr",
+        "4:start>start:option=false@stdout",
+        "5:start>start:option=\"stdout\"@stdout"
+      ]
+    },
+    {
+      "id": "pop-underflow-atomic",
+      "purpose": "Pop underflow is an error and continued execution sees the unchanged assertion stack.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "pop", "count": 1},
+        {"op": "assert"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>assert:error=pop-underflow@stdout",
+        "3:assert>assert:success@stdout"
+      ]
+    },
+    {
+      "id": "model-option-gate",
+      "purpose": "A sat result does not bypass the default-disabled produce-models option, and the error preserves sat mode.",
+      "commands": [
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "check", "result": "sat"},
+        {"op": "get-model"},
+        {"op": "get-info", "key": ":error-behavior"}
+      ],
+      "expected": [
+        "0:start>assert:none",
+        "1:assert>sat:sat@stdout",
+        "2:sat>sat:error=option-not-enabled@stdout",
+        "3:sat>sat:info=continued-execution@stdout"
+      ]
+    },
+    {
+      "id": "ordered-multi-query-snapshots",
+      "purpose": "Values and models bind to the exact preceding sat query while a later unsat query replaces the prior snapshot.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-models", "value": true},
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "declare", "name": "x"},
+        {"op": "check", "result": "sat"},
+        {"op": "get-value"},
+        {"op": "push", "count": 1},
+        {"op": "assert"},
+        {"op": "check", "result": "unsat"},
+        {"op": "pop", "count": 1},
+        {"op": "check", "result": "sat"},
+        {"op": "get-model"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>start:success@stdout",
+        "2:start>assert:success@stdout",
+        "3:assert>assert:success@stdout",
+        "4:assert>sat:sat@stdout",
+        "5:sat>sat:values=query-1@stdout",
+        "6:sat>assert:success@stdout",
+        "7:assert>assert:success@stdout",
+        "8:assert>unsat:unsat@stdout",
+        "9:unsat>assert:success@stdout",
+        "10:assert>sat:sat@stdout",
+        "11:sat>sat:model=query-3@stdout"
+      ]
+    },
+    {
+      "id": "later-check-replaces-query",
+      "purpose": "A later unsat check invalidates model inspection and enables proof inspection for only the new query.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-models", "value": true},
+        {"op": "set-option", "key": ":produce-proofs", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "check", "result": "sat"},
+        {"op": "check", "result": "unsat"},
+        {"op": "get-model"},
+        {"op": "get-proof"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>start:none",
+        "2:start>assert:none",
+        "3:assert>sat:sat@stdout",
+        "4:sat>unsat:unsat@stdout",
+        "5:unsat>unsat:error=wrong-mode@stdout",
+        "6:unsat>unsat:proof=query-2@stdout"
+      ]
+    },
+    {
+      "id": "proof-after-assumptions",
+      "purpose": "Proof retrieval rejects an unsat check with assumptions while get-unsat-assumptions reads that same snapshot.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-proofs", "value": true},
+        {"op": "set-option", "key": ":produce-unsat-assumptions", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "check", "result": "unsat", "assumptions": ["a"]},
+        {"op": "get-proof"},
+        {"op": "get-unsat-assumptions"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>start:none",
+        "2:start>assert:none",
+        "3:assert>unsat:unsat@stdout",
+        "4:unsat>unsat:error=proof-after-assumptions@stdout",
+        "5:unsat>unsat:unsat-assumptions=query-1@stdout"
+      ]
+    },
+    {
+      "id": "start-only-option-atomic",
+      "purpose": "A start-only produce option cannot be enabled after set-logic, and the failed update does not leak through a later model request.",
+      "commands": [
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "set-option", "key": ":produce-models", "value": true},
+        {"op": "check", "result": "sat"},
+        {"op": "get-model"}
+      ],
+      "expected": [
+        "0:start>assert:none",
+        "1:assert>assert:error=start-only-option@stdout",
+        "2:assert>sat:sat@stdout",
+        "3:sat>sat:error=option-not-enabled@stdout"
+      ]
+    },
+    {
+      "id": "unknown-enters-sat-mode",
+      "purpose": "The standard sat query mode includes unknown; enabled model inspection remains mode-legal even if production may return a partial value.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-models", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "check", "result": "unknown"},
+        {"op": "get-value"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>assert:none",
+        "2:assert>sat:unknown@stdout",
+        "3:sat>sat:values=query-1@stdout"
+      ]
+    },
+    {
+      "id": "exit-terminates",
+      "purpose": "Exit is valid in every mode, emits success first when enabled, and suppresses all later commands.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "exit"},
+        {"op": "assert"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>terminated:success@stdout"
+      ]
+    },
+    {
+      "id": "unsupported-is-atomic",
+      "purpose": "An unsupported command emits a specific response without mutating the session, which then continues.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "unsupported", "name": "future-command"},
+        {"op": "assert"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>assert:unsupported@stdout",
+        "3:assert>assert:success@stdout"
+      ]
+    },
+    {
+      "id": "assertion-snapshots",
+      "purpose": "get-assertions is option-gated and observes assertion depth at each exact request.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-assertions", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "assert"},
+        {"op": "get-assertions"},
+        {"op": "push", "count": 1},
+        {"op": "assert"},
+        {"op": "get-assertions"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>assert:none",
+        "2:assert>assert:none",
+        "3:assert>assert:assertions=1@stdout",
+        "4:assert>assert:none",
+        "5:assert>assert:none",
+        "6:assert>assert:assertions=2@stdout"
+      ]
+    },
+    {
+      "id": "unsat-core-snapshot",
+      "purpose": "An enabled unsat core is tied to the exact preceding unsat query.",
+      "commands": [
+        {"op": "set-option", "key": ":produce-unsat-cores", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "assert"},
+        {"op": "check", "result": "unsat"},
+        {"op": "get-unsat-core"}
+      ],
+      "expected": [
+        "0:start>start:none",
+        "1:start>assert:none",
+        "2:assert>assert:none",
+        "3:assert>unsat:unsat@stdout",
+        "4:unsat>unsat:unsat-core=query-1@stdout"
+      ]
+    },
+    {
+      "id": "duplicate-declaration-atomic",
+      "purpose": "Duplicate declarations fail without removing the original visible symbol.",
+      "commands": [
+        {"op": "set-option", "key": ":print-success", "value": true},
+        {"op": "set-logic", "logic": "QF_BV"},
+        {"op": "declare", "name": "x"},
+        {"op": "declare", "name": "x"},
+        {"op": "assert-ref", "symbol": "x"}
+      ],
+      "expected": [
+        "0:start>start:success@stdout",
+        "1:start>assert:success@stdout",
+        "2:assert>assert:success@stdout",
+        "3:assert>assert:error=duplicate-symbol@stdout",
+        "4:assert>assert:success@stdout"
+      ]
+    }
+  ]
+}
