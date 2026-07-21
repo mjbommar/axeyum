@@ -63,24 +63,24 @@ impl Witness {
 }
 
 /// Reinterprets an unsigned `width`-bit pattern as a two's-complement signed
-/// value (as an `i128`, which holds any width ≤ 127 exactly).
+/// value. Every width in `1..=128` is exact, including `i128::MIN`.
 #[must_use]
 pub fn signed_value(width: u32, bits: u128) -> i128 {
-    if width == 0 || width > 127 {
-        // No room to interpret the sign in i128; return the low bits verbatim.
+    if width == 0 || width > 128 {
+        // Invalid source widths are rejected before replay. Keep this helper
+        // total for direct callers without inventing a signed interpretation.
         return i128::try_from(bits & (i128::MAX as u128)).unwrap_or(0);
     }
-    let sign_bit = 1u128 << (width - 1);
-    let masked = bits & ((1u128 << width) - 1);
-    // `masked < 2^width ≤ 2^127`, so it always fits in i128; the `unwrap_or` is
-    // unreachable defensive code (keeps the helper panic-free).
-    let magnitude = i128::try_from(masked).unwrap_or(0);
-    if masked & sign_bit != 0 {
-        // Negative: subtract 2^width.
-        magnitude - (1i128 << width)
+    let mask = if width == 128 {
+        u128::MAX
     } else {
-        magnitude
-    }
+        (1_u128 << width) - 1
+    };
+    let shift = 128 - width;
+    // Move the source sign bit into bit 127, reinterpret the complete bit
+    // pattern, then arithmetic-shift it back. This avoids trying to represent
+    // positive 2^127 at width 127 and handles width 128 with `shift == 0`.
+    ((bits & mask) << shift).cast_signed() >> shift
 }
 
 /// The verdict of [`verify_program`].
