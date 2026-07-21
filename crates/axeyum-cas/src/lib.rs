@@ -50,7 +50,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Rational, poly};
 
+mod matrix;
 mod ratint;
+
+pub use matrix::Matrix;
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
 ///
@@ -1002,6 +1005,97 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     }
 }
 
+/// Factor a univariate polynomial over ℚ into its rational linear factors times a
+/// remaining (rational-root-free) polynomial — e.g. `x² − 3x + 2 → (x−1)·(x−2)`,
+/// `2x² − 6x + 4 → 2·(x−1)·(x−2)`. The result is **certified** equal to the input
+/// (re-multiplication zero-test). Returns `None` if `expr` is not a univariate
+/// polynomial or on overflow. (Irreducible factors of degree ≥ 2 are left intact;
+/// full factorization over ℚ is a later slice.)
+#[must_use]
+pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
+    if ratint::is_zero(&coeffs) {
+        return Some(CasExpr::zero());
+    }
+    let mut remaining = coeffs;
+    let mut factors: Vec<CasExpr> = Vec::new();
+    // Peel one rational-root linear factor per step (multiplicity re-found).
+    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
+        let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
+            break;
+        };
+        let divisor = vec![root.checked_neg()?, Rational::integer(1)]; // x − root
+        remaining = poly::rat_exact_div(&remaining, &divisor)?;
+        factors.push(CasExpr::var(var) - CasExpr::Const(root));
+    }
+    // A non-unit remaining factor (leading constant or an irreducible ≥2).
+    if remaining != vec![Rational::integer(1)] {
+        factors.push(MultiPoly::from_univariate(var, &remaining).to_expr());
+    }
+    let factored = match factors.len() {
+        0 => return Some(CasExpr::one()),
+        1 => factors.into_iter().next()?,
+        _ => CasExpr::Mul(factors),
+    };
+    match equal(&factored, expr) {
+        ZeroTest::Certified { equal: true, .. } => Some(factored),
+        _ => None,
+    }
+}
+
+/// Solve `expr = 0` for `var` over a univariate polynomial: returns the distinct
+/// real roots. Rational roots are exact; a leftover real quadratic is solved by
+/// the quadratic formula (rational when the discriminant is a perfect square,
+/// else a symbolic `sqrt`). Complex roots and degree-≥3 irreducible factors are
+/// omitted. `None` if `expr` is not a univariate polynomial.
+#[must_use]
+pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let mut remaining = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
+    poly::rat_degree(&remaining)?; // reject the zero polynomial (every x is a root)
+    let mut roots: Vec<CasExpr> = Vec::new();
+    let mut seen: Vec<Rational> = Vec::new();
+    let push_rational = |r: Rational, roots: &mut Vec<CasExpr>, seen: &mut Vec<Rational>| {
+        if !seen.contains(&r) {
+            seen.push(r);
+            roots.push(CasExpr::Const(r));
+        }
+    };
+    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
+        let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
+            break;
+        };
+        remaining =
+            poly::rat_exact_div(&remaining, &[root.checked_neg()?, Rational::integer(1)])?;
+        push_rational(root, &mut roots, &mut seen);
+    }
+    // Leftover real quadratic: (−b ± √(b²−4ac)) / 2a.
+    if poly::rat_degree(&remaining) == Some(2) {
+        let (a, b, c) = (remaining[2], remaining[1], remaining[0]);
+        let two_a = Rational::integer(2).checked_mul(a)?;
+        let disc = b
+            .checked_mul(b)?
+            .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(c)?)?;
+        let neg_b_over = b.checked_neg()?.checked_div(two_a)?;
+        if disc.numerator() >= 0 {
+            if let Some(s) = rational_sqrt(disc) {
+                for sign in [Rational::integer(1), Rational::integer(-1)] {
+                    let r = neg_b_over.checked_add(sign.checked_mul(s)?.checked_div(two_a)?)?;
+                    push_rational(r, &mut roots, &mut seen);
+                }
+            } else {
+                let sqrt_disc = CasExpr::Const(disc).sqrt();
+                for sign in [CasExpr::int(1), CasExpr::int(-1)] {
+                    roots.push(
+                        CasExpr::Const(neg_b_over)
+                            + sign * (sqrt_disc.clone() / CasExpr::Const(two_a)),
+                    );
+                }
+            }
+        }
+    }
+    Some(roots)
+}
+
 /// Expand an expression to canonical form and return it as a [`CasExpr`].
 ///
 /// For the polynomial fragment this is the expanded sum-of-monomials form; for a
@@ -1812,6 +1906,41 @@ mod tests {
             format!("{}", CasExpr::rat(1, 5) * v("x").pow(5)),
             "(1/5)*x^5"
         );
+    }
+
+    #[test]
+    fn factor_polynomials() {
+        let x = || v("x");
+        // x² − 3x + 2 = (x−1)(x−2)
+        let f = x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(2);
+        let factored = factor(&f, "x").expect("factorable");
+        assert_equal(&factored, &f); // certified equal to the input
+        assert_equal(
+            &factored,
+            &((x() - CasExpr::int(1)) * (x() - CasExpr::int(2))),
+        );
+        // 2x² − 6x + 4 = 2·(x−1)(x−2) (non-monic leading constant preserved)
+        let g = CasExpr::int(2) * x().pow(2) - CasExpr::int(6) * x() + CasExpr::int(4);
+        assert_equal(&factor(&g, "x").expect("factorable"), &g);
+    }
+
+    #[test]
+    fn solve_polynomials() {
+        let x = || v("x");
+        // x² − 3x + 2 = 0  ⇒  {1, 2}
+        let f = x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(2);
+        let roots = solve(&f, "x").expect("solvable");
+        assert_eq!(roots.len(), 2);
+        for r in &roots {
+            assert_equal(&f.substitute("x", r), &CasExpr::zero());
+        }
+        // x² − 4 = 0  ⇒  {2, −2} (quadratic formula, perfect-square discriminant)
+        let g = x().pow(2) - CasExpr::int(4);
+        let roots2 = solve(&g, "x").expect("solvable");
+        assert_eq!(roots2.len(), 2);
+        for r in &roots2 {
+            assert_equal(&g.substitute("x", r), &CasExpr::zero());
+        }
     }
 
     #[test]
