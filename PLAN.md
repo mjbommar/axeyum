@@ -579,6 +579,14 @@ session state.
 >    passes under the cap in 37.77 s with one independent-spec pass, two filtered
 >    tests, zero authenticated execution, and absent `proof-v4`. Commit/push this
 >    gate, then verify refs/output and invoke v4 exactly once.
+>    V4 is accepted at pushed runner `5267d6a5`: 8 end-to-end dual-DRAT proofs,
+>    6 reflected/native-replayed controls, UNKNOWN=0, DISAGREE=0, identity
+>    `c4acae04...a37c`. Both DRAT halves recheck; the hardest 64-bit rows take
+>    4.887/6.273 s and carry nontrivial DIMACS/DRAT/LRAT artifacts. Total query
+>    time is 12.700 s, peak RSS 1,256,496 KiB, and OOM deltas are zero. The
+>    committed summary matches the ignored full result field-for-field. T5.5.3
+>    is DONE. Commit/push the accepted result; next write T5.5.4's honest target
+>    comparison. Do not rerun, tune, or convert this into a speed headline.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

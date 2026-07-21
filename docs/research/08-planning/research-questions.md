@@ -1103,6 +1103,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
   - [ADR-0338](../09-decisions/adr-0338-preregister-tock-proof-v4-marker-parser.md)
     freezes that successor as exact parser-only normalization of one proof marker
     after the authenticated test-harness prefix; every v3 gate remains unchanged.
+    Accepted v4 then records 8 dual-DRAT proofs, 6 replayed controls, UNKNOWN=0,
+    DISAGREE=0, 12.700 s total query time, 1,256,496 KiB peak RSS, and zero OOM
+    deltas. T5.5.3 closes; T5.5.4 is the honest comparison/write-up, not a rerun.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

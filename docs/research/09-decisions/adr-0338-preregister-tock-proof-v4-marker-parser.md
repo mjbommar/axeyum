@@ -1,6 +1,6 @@
 # ADR-0338: Preregister Tock proof v4 marker parser
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -72,6 +72,40 @@ filtered tests, and no authenticated execution. `proof-v4` remains absent.
 Exact preflight metadata is committed in
 `bench-results/verify-tock-log2-20260721/proof-v4-preflight.json`. Commit/push
 this zero-query gate before refs/output verification and one official run.
+
+## Result
+
+Accepted. Runner commit `5267d6a5` was pushed and matched local HEAD, tracking,
+and remote `main` before the single official invocation. The exact authenticated
+canonicals produce two functions, eight end-to-end certified proof rows, and six
+replayed mutation controls with `UNKNOWN=0` and `DISAGREE=0`. Stable result
+identity `c4acae04...a37c` independently recomputes.
+
+Each positive row carries and rechecks the independent-reference faithfulness
+miter DRAT plus final CNF DRAT/LRAT. The two substantive 64-bit rows are:
+
+- floor-log equivalence: 545 terms, 4.887294 s, 44,705-byte DIMACS,
+  13,286-byte DRAT, 69,284-byte LRAT;
+- MSB characterization: 991 terms, 6.273062 s, 45,769-byte DIMACS,
+  6,081-byte DRAT, 57,481-byte LRAT.
+
+All three controls per width replay the correct reflection against the native
+Rust oracle and discriminate at the sign-bit witness: `2^31` yields 31 and
+`2^63` yields 63, while wrong-index, inverted-zero, and corrupted-high-partition
+mutations differ. Total query time is 12.699759 s; full runner time is 12.713594
+s; fresh Cargo wall time is 50.740 s; peak RSS is 1,256,496 KiB. All OOM deltas
+are zero.
+
+The ignored full local result SHA-256 is `80e89d0e...8d00`; exact committed
+summary metadata and every per-row certificate hash/size are in
+`bench-results/verify-tock-log2-20260721/proof-v4-result.json`. The summary was
+independently compared field-by-field with the local result. Generated build and
+full result bytes remain ignored.
+
+This closes T5.5.3 and supplies the reviewer track's concrete checked-DRAT use
+case. It does not establish performance leadership or general whole-kernel
+verification. Next is T5.5.4's honest comparison/write-up; no proof rerun or
+post-observation policy change is authorized.
 
 ## Rejected alternatives
 
