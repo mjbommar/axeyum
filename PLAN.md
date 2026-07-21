@@ -47,13 +47,22 @@ state.
 > is unavailable because `dmesg` is permission-denied on s4-s7. The attempt is
 > frozen incomplete and receives zero result credit.
 > Because raw output was end-of-shard only, it also exposes a resumability gap;
-> preregister atomic per-result checkpoints, terminal shard manifests, and an
-> interruption/restart equivalence gate before rerunning. The candidate is not
+> proposed ADR-0344 now freezes 14 lifecycle/identity/resource invariants and a
+> checked 22-scenario prototype (four accepted controls, 18 rejected
+> mutations). A deterministic interrupted/resumed fixture is byte-identical to
+> its uninterrupted canonical merge. This is E0 design credit only: implement
+> and kill-test immutable atomic records, attempt/completion manifests, strict
+> merge, one-host aggregate enforcement, and multi-host recovery at E1-E3
+> before rerunning. Do not modify the frozen attempt or launch the candidate.
+> The candidate is not
 > official selection evidence:
 > it still lacks the complete eligibility/status/difficulty policy, official
 > release/seed, corpus-tree identity, and per-selected-file hashes. Archive and
 > validate those boundaries before adding a third regime to the matrix. See the
 > [failed-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+> Resume with the [resumable-run design](docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
+> and generated [failure/recovery matrix](docs/plan/generated/smtcomp-resumable-run-contract.md),
+> not with `distribute_run.sh`.
 
 > **Proof-gap refresh and resume point (2026-07-21).** The eight audit rows
 > containing every historical bare UNSAT have been rerun sequentially under

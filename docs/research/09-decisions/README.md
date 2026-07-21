@@ -398,3 +398,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0341](adr-0341-preregister-source-bound-evidence-route-telemetry.md) | Preregister source-bound evidence-route telemetry with verdict-invariant recorder plumbing | proposed |
 | [0342](adr-0342-preregister-ordered-smtlib-session.md) | Preregister an ordered transactional SMT-LIB 2.7 session | proposed |
 | [0343](adr-0343-preregister-cross-regime-measurement-provenance.md) | Preregister cross-regime measurement provenance without a false global parity aggregate | proposed |
+| [0344](adr-0344-preregister-resumable-distributed-benchmark-execution.md) | Preregister resumable distributed benchmark execution before another large candidate run | proposed |

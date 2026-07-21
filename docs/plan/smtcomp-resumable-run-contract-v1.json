@@ -1,0 +1,164 @@
+{
+  "schema": "axeyum.smtcomp-resumable-run-contract.v1",
+  "status": "prototype",
+  "scope": "local SMT-COMP-style distributed execution; not official competition infrastructure",
+  "canonical_json": "UTF-8, sorted object keys, compact separators, one trailing LF",
+  "record_commit": "write and fsync a same-directory temporary file, atomically install the immutable final record, then fsync the directory",
+  "run_identity_fields": [
+    "contract_schema",
+    "benchmark_schema",
+    "selection_manifest_sha256",
+    "selected_list_sha256",
+    "corpus_identity_sha256",
+    "solver_binary_sha256",
+    "solver_command_sha256",
+    "runner_source_sha256",
+    "repository_commit",
+    "track",
+    "wall_limit_ms",
+    "cpu_limit_ms",
+    "memory_limit_bytes",
+    "cores",
+    "shard_count",
+    "shard_mapping",
+    "environment_class_sha256"
+  ],
+  "result_record_fields": [
+    "schema",
+    "run_identity_sha256",
+    "result_key",
+    "benchmark_id",
+    "benchmark_sha256",
+    "solver_id",
+    "shard_id",
+    "sequence",
+    "environment_class_sha256",
+    "expected_status",
+    "reported_status",
+    "wall_time_ns",
+    "cpu_time_ns",
+    "record_sha256"
+  ],
+  "attempt_launch_fields": [
+    "attempt_id",
+    "run_identity_sha256",
+    "shard_id",
+    "host_id",
+    "pid",
+    "assigned_count",
+    "launched_at_ns",
+    "enforcement_id",
+    "environment_class_sha256",
+    "terminal"
+  ],
+  "attempt_terminal_fields": [
+    "status",
+    "exit_code",
+    "signal",
+    "wall_time_ns",
+    "peak_rss_bytes",
+    "completed_count",
+    "result_set_sha256",
+    "missing_result_keys",
+    "ended_at_ns"
+  ],
+  "shard_completion_fields": [
+    "state",
+    "run_identity_sha256",
+    "assigned_count",
+    "completed_count",
+    "missing_result_keys",
+    "result_set_sha256",
+    "attempt_ids",
+    "unclosed_attempt_ids"
+  ],
+  "invariants": [
+    {
+      "id": "R1",
+      "statement": "Run identity binds corpus, selection, solver, runner, repository, limits, shard mapping, and measurement environment before launch."
+    },
+    {
+      "id": "R2",
+      "statement": "A result key binds normalized benchmark identity, exact input bytes, and solver identity."
+    },
+    {
+      "id": "R3",
+      "statement": "Each assigned result key belongs to exactly one shard; overlapping or unassigned records are rejected."
+    },
+    {
+      "id": "R4",
+      "statement": "Each immutable result record is self-hashed and installed atomically; malformed, truncated, or hash-mismatched records are rejected."
+    },
+    {
+      "id": "R5",
+      "statement": "Resume skips only an existing record whose key, content hash, and complete run identity validate; it never overwrites a record."
+    },
+    {
+      "id": "R6",
+      "statement": "Any duplicate record presented to central merge is an orchestration defect and is rejected, even when byte-identical."
+    },
+    {
+      "id": "R7",
+      "statement": "Every launch attempt has an immutable launch manifest; a missing terminal is preserved and explicitly accounted by a later shard completion manifest."
+    },
+    {
+      "id": "R8",
+      "statement": "A shard is complete only when all and only assigned keys validate, its result-set hash matches, and every launch attempt is terminal or explicitly recorded as unclosed."
+    },
+    {
+      "id": "R9",
+      "statement": "Central merge rejects missing or non-complete shard manifests and never treats partial coverage as a scoreable run."
+    },
+    {
+      "id": "R10",
+      "statement": "Per-process and aggregate host memory limits have named enforcement identities; declared concurrency cannot exceed the enforced aggregate budget."
+    },
+    {
+      "id": "R11",
+      "statement": "Every result uses the preregistered environment class; a retry on a different class is a new measurement run."
+    },
+    {
+      "id": "R12",
+      "statement": "Canonical merge order is independent of shard, host, attempt, and filesystem enumeration order."
+    },
+    {
+      "id": "R13",
+      "statement": "On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical result bytes are identical."
+    },
+    {
+      "id": "R14",
+      "statement": "Temporary, conflicting, malformed, and failed-attempt artifacts are retained outside the accepted immutable record set."
+    }
+  ],
+  "scenarios": [
+    {"id": "F01", "name": "uninterrupted", "expected": "accept", "invariants": ["R1", "R2", "R3", "R4", "R8", "R9", "R10", "R11", "R12"]},
+    {"id": "F02", "name": "interrupted_resume", "expected": "accept", "invariants": ["R5", "R7", "R8", "R13", "R14"]},
+    {"id": "F03", "name": "reordered_artifacts", "expected": "accept", "invariants": ["R12", "R13"]},
+    {"id": "F04", "name": "solver_identity_drift", "expected": "reject", "invariants": ["R1", "R5"]},
+    {"id": "F05", "name": "selection_identity_drift", "expected": "reject", "invariants": ["R1", "R5"]},
+    {"id": "F06", "name": "limit_identity_drift", "expected": "reject", "invariants": ["R1", "R5"]},
+    {"id": "F07", "name": "runner_identity_drift", "expected": "reject", "invariants": ["R1", "R5"]},
+    {"id": "F08", "name": "record_hash_tamper", "expected": "reject", "invariants": ["R4"]},
+    {"id": "F09", "name": "record_run_identity_drift", "expected": "reject", "invariants": ["R1", "R4", "R5"]},
+    {"id": "F10", "name": "conflicting_duplicate", "expected": "reject", "invariants": ["R6"]},
+    {"id": "F11", "name": "identical_duplicate", "expected": "reject", "invariants": ["R6"]},
+    {"id": "F12", "name": "missing_record", "expected": "reject", "invariants": ["R8", "R9"]},
+    {"id": "F13", "name": "unexpected_record", "expected": "reject", "invariants": ["R3", "R8"]},
+    {"id": "F14", "name": "missing_shard_completion", "expected": "reject", "invariants": ["R8", "R9"]},
+    {"id": "F15", "name": "wrong_result_set_hash", "expected": "reject", "invariants": ["R8"]},
+    {"id": "F16", "name": "overlapping_assignment", "expected": "reject", "invariants": ["R3"]},
+    {"id": "F17", "name": "unaccounted_crash", "expected": "reject", "invariants": ["R7", "R8"]},
+    {"id": "F18", "name": "accounted_prior_crash", "expected": "accept", "invariants": ["R7", "R8", "R14"]},
+    {"id": "F19", "name": "missing_resource_enforcement", "expected": "reject", "invariants": ["R10"]},
+    {"id": "F20", "name": "aggregate_memory_overcommit", "expected": "reject", "invariants": ["R10"]},
+    {"id": "F21", "name": "environment_class_drift", "expected": "reject", "invariants": ["R1", "R11"]},
+    {"id": "F22", "name": "truncated_record", "expected": "reject", "invariants": ["R4", "R14"]}
+  ],
+  "declines": [
+    "This prototype does not make the 2024 cap/family selection official or representative.",
+    "It does not implement remote launch, cgroups, NFS durability, leases, or production signal handling.",
+    "It does not claim real solver timing is byte-identical across retries; byte identity is a deterministic fixture gate for checkpoint semantics and canonical ordering.",
+    "It does not admit partial shards, human progress logs, or reconstructed records into scoring.",
+    "It does not replace BenchExec for an official competition rehearsal."
+  ]
+}

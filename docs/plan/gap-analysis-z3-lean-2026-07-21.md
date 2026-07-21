@@ -186,10 +186,15 @@ execution, a full-tree cap/family sampler, and a 52-shard s4-s7 distributor. Its
 external 2024 manifest records 438,631 pool files, 64,345 selected candidates,
 and 84 logics. The first 52-shard 300-second inventory terminated after 2,041
 logged progress rows, with zero raw shard JSON, no live workers, no traceback,
-and no traceback. Remote `dmesg` is permission-denied, so OOM is unverified. It
+and no structured footer. Remote `dmesg` is permission-denied, so OOM is unverified. It
 is frozen incomplete with zero result credit. End-of-shard-only raw
 serialization makes it non-resumable; an atomic
 checkpoint/resume protocol and terminal shard manifest are prerequisites to a
+rerun. Proposed ADR-0344 and the generated contract now close the E0 design
+slice with 14 invariants and 22 executable scenarios, including byte-identical
+deterministic interruption/restart recovery. Production durability remains
+open: E1-E3 must implement and kill-test atomic immutable records, strict
+filesystem merge, aggregate enforcement, and multi-host recovery before a
 rerun. This is not yet a third measured regime or an official selection. No result is committed,
 and the selector does not yet bind the complete eligibility/status/difficulty
 filters, official release and seed, corpus-tree digest, or per-selected-file
@@ -478,10 +483,11 @@ reported as parity before it climbs the measured and certifying rungs.
 1. Review proposed ADR-0343 and retain the landed shared provenance generator;
    never merge the two current scores or describe the 228-file view as an
    independent sample.
-2. Preserve the failed first attempt, then preregister atomic per-result
-   checkpoints, strict resume identity, terminal shard manifests, merge
-   completeness, interruption equivalence, and aggregate memory controls before
-   rerunning the 64,345-file candidate.
+2. Review proposed ADR-0344 and retain its landed E0 contract. Implement E1-E3:
+   atomic immutable result installation, conflict quarantine, exact resume
+   identity, attempt/completion manifests, strict filesystem merge, real
+   kill-boundary recovery, aggregate resource enforcement, and multi-host loss
+   recovery before rerunning the 64,345-file candidate.
 3. Extend the selector registration with the complete eligibility/status/
    difficulty exclusions, official release and seed, corpus-tree digest, and
    per-selected-file hashes before publishing an official-style view.

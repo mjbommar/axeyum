@@ -642,6 +642,17 @@ Out of scope:
     public inventory. Acceptance remains open; semantic near-duplicate policy,
     official selection, and matched neutral-oracle populations are not yet
     resolved.
+- [ ] What makes an interrupted distributed benchmark run safely resumable and
+      its final population scoreable?
+  - Proposed answer:
+    [ADR-0344](../09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
+    requires immutable per-result checkpoints, exact run/environment identity,
+    explicit accounting for terminal-less attempts, complete shard manifests,
+    strict merge, and aggregate resource enforcement. The checked prototype
+    exercises 14 invariants across 22 scenarios and makes deterministic
+    interrupted/resumed output byte-identical to an uninterrupted control. The
+    question remains open until real filesystem, process-kill, one-host, and
+    multi-host gates pass; the 64,345-case candidate must not be rerun first.
 
 ### Horizon: General Reasoning And Proving
 

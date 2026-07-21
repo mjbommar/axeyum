@@ -129,10 +129,13 @@ row's neutral status can change.
 ## Remaining research sequence
 
 1. Preserve the failed first 52-shard attempt with zero result credit. Before a
-   rerun, add atomic per-result checkpoints, strict resume identity, terminal
-   shard manifests, merge completeness, interruption equivalence, and aggregate
-   memory controls. The [handoff](smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
-   freezes the 2,041-row/no-raw-artifact failure.
+   rerun, advance proposed ADR-0344's landed E0 contract through E1-E3: atomic
+   immutable records, strict resume identity, attempt and shard-completion
+   manifests, fail-closed merge, real interruption equivalence, and aggregate
+   memory enforcement. The [handoff](smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
+   freezes the 2,041-row/no-raw-artifact failure; the
+   [resumable-run design](smtcomp-resumable-run-design-2026-07-21.md) freezes 14
+   invariants and 22 executable scenarios without authorizing the rerun.
 2. Extend its current cap/family sampler with the full eligibility/status/
    difficulty exclusions, official release and seed, corpus-tree digest, and
    per-selected-file hashes before calling it official-style.

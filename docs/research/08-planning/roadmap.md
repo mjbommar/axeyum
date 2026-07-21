@@ -41,6 +41,16 @@ Last updated: 2026-07-21
 > helper or report a direct interpolation/Horn/abduction API as textual
 > conformance.
 
+> **Current measurement-durability checkpoint.** G1's failed 52-shard
+> candidate run receives zero result credit, and proposed ADR-0344 now freezes
+> the prerequisite resume protocol. The generated contract checks 14
+> invariants across 22 scenarios and proves deterministic interrupted/resumed
+> merge equivalence, but only in memory. Production stages E1-E3 must implement
+> atomic immutable records, real kill-boundary recovery, strict completion,
+> aggregate resource enforcement, and multi-host loss/retry on a tiny corpus
+> before the 64,345-file candidate may be rerun. This is measurement
+> infrastructure under G1, not a new solver or foundation phase.
+
 ## Purpose
 
 Turn the research notes into an implementation sequence with explicit exit

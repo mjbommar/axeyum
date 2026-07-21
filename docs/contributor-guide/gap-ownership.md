@@ -62,6 +62,9 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 
 - [`scripts/gen-measurement-provenance.py`](../../scripts/gen-measurement-provenance.py)
 - [`docs/plan/measurement-provenance-v1.json`](../../docs/plan/measurement-provenance-v1.json)
+- [`scripts/gen-smtcomp-resume-contract.py`](../../scripts/gen-smtcomp-resume-contract.py)
+- [`scripts/smtcomp_repro/resume_contract.py`](../../scripts/smtcomp_repro/resume_contract.py)
+- [`docs/plan/smtcomp-resumable-run-contract-v1.json`](../../docs/plan/smtcomp-resumable-run-contract-v1.json)
 - [`scripts/smtcomp_repro/select_library.py`](../../scripts/smtcomp_repro/select_library.py)
 - [`scripts/smtcomp_repro/compete.py`](../../scripts/smtcomp_repro/compete.py)
 - [`scripts/smtcomp_repro/provenance.py`](../../scripts/smtcomp_repro/provenance.py)
@@ -73,6 +76,8 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/plan/generated/measurement-provenance-matrix.json`](../../docs/plan/generated/measurement-provenance-matrix.json)
 - [`docs/plan/measurement-provenance-design-2026-07-21.md`](../../docs/plan/measurement-provenance-design-2026-07-21.md)
 - [`docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
+- [`docs/plan/smtcomp-resumable-run-design-2026-07-21.md`](../../docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
+- [`docs/plan/generated/smtcomp-resumable-run-contract.json`](../../docs/plan/generated/smtcomp-resumable-run-contract.json)
 - [`bench-results/smtcomp-repro-20260721/inventory.json`](../../bench-results/smtcomp-repro-20260721/inventory.json)
 - [`bench-results/smtcomp-repro-20260721/provenance.json`](../../bench-results/smtcomp-repro-20260721/provenance.json)
 - [`bench-results/SCOREBOARD.md`](../../bench-results/SCOREBOARD.md)
@@ -80,13 +85,16 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 **Executable gates:**
 
 - `python3 scripts/gen-measurement-provenance.py --check`
+- `python3 scripts/gen-smtcomp-resume-contract.py --check`
+- `python3 -m unittest scripts.tests.test_gen_smtcomp_resume_contract`
 - `for t in test_scoring test_pipeline test_selection test_provenance; do python3 scripts/smtcomp_repro/tests/$t.py || exit 1; done`
 
 **Decision anchors:**
 
 - [`docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md`](../../docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
+- [`docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md`](../../docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
 
-**Next safe action:** Review ADR-0343 and the frozen failed-run handoff; preregister a resumable shard protocol before rerun, then add missing selection and syntax-normalized identities before any deduplicated score.
+**Next safe action:** Review ADR-0343/0344, then implement E1's atomic immutable filesystem writer and real fake-worker kill matrix; do not rerun the 64,345-file candidate before E1-E3 and the missing selection identities pass.
 
 <a id="g2"></a>
 

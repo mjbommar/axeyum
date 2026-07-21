@@ -35,6 +35,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   frozen first full-tree selection/run attempt: exact external manifest/list
   hashes, 438,631-to-64,345 candidate selection, incomplete 52-shard execution,
   zero raw-result credit, and the checkpoint/resume prerequisite to any rerun.
+- [`smtcomp-resumable-run-design-2026-07-21.md`](smtcomp-resumable-run-design-2026-07-21.md),
+  the [machine-readable contract](smtcomp-resumable-run-contract-v1.json), and
+  generated [failure/recovery matrix](generated/smtcomp-resumable-run-contract.md) —
+  G1's E0 prototype for immutable result checkpoints, exact run identity,
+  attempt/completion accounting, strict merge, aggregate resource enforcement,
+  and interruption/restart equivalence. It is a prerequisite design, not an
+  authorization to rerun the candidate.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

@@ -40,6 +40,14 @@ This view is not independent of the scoreboard. Exactly 99 contents occur in
 both regimes—43.4% of the public inventory and 12.7% of the scoreboard's unique
 file-backed contents. Keep the two results side by side; do not average them.
 
+The separate 64,345-file full-tree candidate has no benchmark result. Its first
+52-shard attempt stopped after 2,041 progress rows and wrote no raw shard JSON.
+Do not reconstruct data from its logs or rerun the old launcher. The
+[frozen handoff](../plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
+and [resumable-run contract](../plan/generated/smtcomp-resumable-run-contract.md)
+make atomic checkpoints, strict completion, and enforced aggregate resources
+prerequisites to another attempt.
+
 A separate 24-file QF_BV comparison has Axeyum, cvc5, and Bitwuzla each deciding
 19/24; PAR-2 ranks Bitwuzla, cvc5, then Axeyum. That cell contains no Z3 result
 and must not be described as a four-solver ranking.

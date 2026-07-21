@@ -1,5 +1,5 @@
-"""Resource-limited solver execution — a self-contained replica of the SMT-COMP
-execution service (§5), faithful for a single-process solver.
+"""Resource-limited solver execution — a bounded local approximation of the
+SMT-COMP execution service (§5) for a single-process solver.
 
 The competition runs each (solver, benchmark) pair under BenchExec on a
 dedicated node: a wall-clock limit `T`, a CPU limit `m*T` across `m` cores, and
@@ -13,7 +13,7 @@ any of the s0..s7 nodes:
   * mem limit  — RLIMIT_AS in a preexec hook (best-effort);
   * wall limit — a watchdog that kills the whole process group on timeout.
 
-For maximal fidelity on a real competition rehearsal, a BenchExec `runexec`
+For higher fidelity on a real competition rehearsal, a BenchExec `runexec`
 backend can be swapped in (see `use_benchexec`); the default needs no deps.
 
 The solver's stdout is parsed for the last sat/unsat/unknown token — the

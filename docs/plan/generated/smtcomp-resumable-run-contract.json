@@ -1,0 +1,347 @@
+{
+  "accepted_scenarios": 4,
+  "baseline_output_sha256": "eb60ed595cd30a90bd500b63793670a67c14005c1b570fabc75b8f38c77e98ee",
+  "declines": [
+    "This prototype does not make the 2024 cap/family selection official or representative.",
+    "It does not implement remote launch, cgroups, NFS durability, leases, or production signal handling.",
+    "It does not claim real solver timing is byte-identical across retries; byte identity is a deterministic fixture gate for checkpoint semantics and canonical ordering.",
+    "It does not admit partial shards, human progress logs, or reconstructed records into scoring.",
+    "It does not replace BenchExec for an official competition rehearsal."
+  ],
+  "deterministic_resume_byte_equal": true,
+  "invariant_count": 14,
+  "invariants": [
+    {
+      "id": "R1",
+      "statement": "Run identity binds corpus, selection, solver, runner, repository, limits, shard mapping, and measurement environment before launch."
+    },
+    {
+      "id": "R2",
+      "statement": "A result key binds normalized benchmark identity, exact input bytes, and solver identity."
+    },
+    {
+      "id": "R3",
+      "statement": "Each assigned result key belongs to exactly one shard; overlapping or unassigned records are rejected."
+    },
+    {
+      "id": "R4",
+      "statement": "Each immutable result record is self-hashed and installed atomically; malformed, truncated, or hash-mismatched records are rejected."
+    },
+    {
+      "id": "R5",
+      "statement": "Resume skips only an existing record whose key, content hash, and complete run identity validate; it never overwrites a record."
+    },
+    {
+      "id": "R6",
+      "statement": "Any duplicate record presented to central merge is an orchestration defect and is rejected, even when byte-identical."
+    },
+    {
+      "id": "R7",
+      "statement": "Every launch attempt has an immutable launch manifest; a missing terminal is preserved and explicitly accounted by a later shard completion manifest."
+    },
+    {
+      "id": "R8",
+      "statement": "A shard is complete only when all and only assigned keys validate, its result-set hash matches, and every launch attempt is terminal or explicitly recorded as unclosed."
+    },
+    {
+      "id": "R9",
+      "statement": "Central merge rejects missing or non-complete shard manifests and never treats partial coverage as a scoreable run."
+    },
+    {
+      "id": "R10",
+      "statement": "Per-process and aggregate host memory limits have named enforcement identities; declared concurrency cannot exceed the enforced aggregate budget."
+    },
+    {
+      "id": "R11",
+      "statement": "Every result uses the preregistered environment class; a retry on a different class is a new measurement run."
+    },
+    {
+      "id": "R12",
+      "statement": "Canonical merge order is independent of shard, host, attempt, and filesystem enumeration order."
+    },
+    {
+      "id": "R13",
+      "statement": "On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical result bytes are identical."
+    },
+    {
+      "id": "R14",
+      "statement": "Temporary, conflicting, malformed, and failed-attempt artifacts are retained outside the accepted immutable record set."
+    }
+  ],
+  "rejected_scenarios": 18,
+  "scenario_count": 22,
+  "scenarios": [
+    {
+      "canonical_byte_equal": true,
+      "expected": "accept",
+      "id": "F01",
+      "invariants": [
+        "R1",
+        "R2",
+        "R3",
+        "R4",
+        "R8",
+        "R9",
+        "R10",
+        "R11",
+        "R12"
+      ],
+      "name": "uninterrupted",
+      "observed": "accept",
+      "reason": "validated"
+    },
+    {
+      "canonical_byte_equal": true,
+      "expected": "accept",
+      "id": "F02",
+      "invariants": [
+        "R5",
+        "R7",
+        "R8",
+        "R13",
+        "R14"
+      ],
+      "name": "interrupted_resume",
+      "observed": "accept",
+      "reason": "validated"
+    },
+    {
+      "canonical_byte_equal": true,
+      "expected": "accept",
+      "id": "F03",
+      "invariants": [
+        "R12",
+        "R13"
+      ],
+      "name": "reordered_artifacts",
+      "observed": "accept",
+      "reason": "validated"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F04",
+      "invariants": [
+        "R1",
+        "R5"
+      ],
+      "name": "solver_identity_drift",
+      "observed": "reject",
+      "reason": "record run identity mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F05",
+      "invariants": [
+        "R1",
+        "R5"
+      ],
+      "name": "selection_identity_drift",
+      "observed": "reject",
+      "reason": "record run identity mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F06",
+      "invariants": [
+        "R1",
+        "R5"
+      ],
+      "name": "limit_identity_drift",
+      "observed": "reject",
+      "reason": "record run identity mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F07",
+      "invariants": [
+        "R1",
+        "R5"
+      ],
+      "name": "runner_identity_drift",
+      "observed": "reject",
+      "reason": "record run identity mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F08",
+      "invariants": [
+        "R4"
+      ],
+      "name": "record_hash_tamper",
+      "observed": "reject",
+      "reason": "record hash mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F09",
+      "invariants": [
+        "R1",
+        "R4",
+        "R5"
+      ],
+      "name": "record_run_identity_drift",
+      "observed": "reject",
+      "reason": "record run identity mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F10",
+      "invariants": [
+        "R6"
+      ],
+      "name": "conflicting_duplicate",
+      "observed": "reject",
+      "reason": "duplicate result record"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F11",
+      "invariants": [
+        "R6"
+      ],
+      "name": "identical_duplicate",
+      "observed": "reject",
+      "reason": "duplicate result record"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F12",
+      "invariants": [
+        "R8",
+        "R9"
+      ],
+      "name": "missing_record",
+      "observed": "reject",
+      "reason": "missing assigned result records"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F13",
+      "invariants": [
+        "R3",
+        "R8"
+      ],
+      "name": "unexpected_record",
+      "observed": "reject",
+      "reason": "unexpected or wrong-shard result record"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F14",
+      "invariants": [
+        "R8",
+        "R9"
+      ],
+      "name": "missing_shard_completion",
+      "observed": "reject",
+      "reason": "missing or unexpected shard completion"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F15",
+      "invariants": [
+        "R8"
+      ],
+      "name": "wrong_result_set_hash",
+      "observed": "reject",
+      "reason": "completion result-set hash mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F16",
+      "invariants": [
+        "R3"
+      ],
+      "name": "overlapping_assignment",
+      "observed": "reject",
+      "reason": "overlapping shard assignment"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F17",
+      "invariants": [
+        "R7",
+        "R8"
+      ],
+      "name": "unaccounted_crash",
+      "observed": "reject",
+      "reason": "unaccounted terminal-less attempt"
+    },
+    {
+      "canonical_byte_equal": true,
+      "expected": "accept",
+      "id": "F18",
+      "invariants": [
+        "R7",
+        "R8",
+        "R14"
+      ],
+      "name": "accounted_prior_crash",
+      "observed": "accept",
+      "reason": "validated"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F19",
+      "invariants": [
+        "R10"
+      ],
+      "name": "missing_resource_enforcement",
+      "observed": "reject",
+      "reason": "missing aggregate resource enforcement"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F20",
+      "invariants": [
+        "R10"
+      ],
+      "name": "aggregate_memory_overcommit",
+      "observed": "reject",
+      "reason": "aggregate memory budget overcommitted"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F21",
+      "invariants": [
+        "R1",
+        "R11"
+      ],
+      "name": "environment_class_drift",
+      "observed": "reject",
+      "reason": "measurement environment drift"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F22",
+      "invariants": [
+        "R4",
+        "R14"
+      ],
+      "name": "truncated_record",
+      "observed": "reject",
+      "reason": "record field set mismatch"
+    }
+  ],
+  "schema": "axeyum.smtcomp-resumable-run-contract-report.v1",
+  "source_schema": "axeyum.smtcomp-resumable-run-contract.v1",
+  "status": "prototype"
+}

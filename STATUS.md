@@ -386,6 +386,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   a versioned complete result and those omissions are explicit. The exact
   selection hashes, failure snapshot, and safe resume checks are in the
   [candidate-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+  Proposed ADR-0344 now supplies the E0 contract: 14 invariants and 22
+  executable scenarios (four accepted controls, 18 rejected mutations), with
+  deterministic interrupted/resumed and uninterrupted canonical output
+  byte-identical. It separates terminal-less failed attempts from later honest
+  shard completion, rejects silent duplicate overwrite and identity/resource
+  drift, and requires a complete shard set before scoring. This is an in-memory
+  planning prototype, not production durability. Next: implement E1's atomic
+  immutable record writer, conflict quarantine, strict filesystem validator,
+  and real fake-worker kill matrix; then prove one-host aggregate enforcement
+  and multi-host recovery at E2-E3. Do not rerun the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle
   logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
