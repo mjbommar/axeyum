@@ -203,6 +203,53 @@ pub fn jacobi_symbol(a: i128, n: i128) -> i32 {
     if bottom == 1 { result } else { 0 }
 }
 
+/// The **Kronecker symbol** `(a/n)`, extending the [`jacobi_symbol`] to **every**
+/// integer lower argument `n` (even, negative, or zero):
+/// `(a/0) = 1` iff `a = ±1` (else `0`); `(a/−1)` gives the sign of `a`;
+/// `(a/2)` is `0` for even `a`, `+1` for `a ≡ ±1 (mod 8)`, `−1` for `a ≡ ±3`; and
+/// `(a/n)` is multiplicative over `n = ±2^e·∏pᵢ`. Agrees with `jacobi_symbol` for
+/// odd positive `n`.
+///
+/// ```
+/// use axeyum_cas::ntheory_advanced::kronecker_symbol;
+/// assert_eq!(kronecker_symbol(5, 2), -1); // 5 ≡ 5 (mod 8)
+/// assert_eq!(kronecker_symbol(3, 1), 1);
+/// assert_eq!(kronecker_symbol(2, 0), 0);  // (a/0) = 0 unless a = ±1
+/// ```
+#[must_use]
+pub fn kronecker_symbol(a: i128, n: i128) -> i32 {
+    if n == 0 {
+        return i32::from(a == 1 || a == -1);
+    }
+    // (a/2): 0 for even a, ±1 by a mod 8.
+    let symbol_two = |a: i128| -> i32 {
+        if a.rem_euclid(2) == 0 {
+            0
+        } else {
+            match a.rem_euclid(8) {
+                1 | 7 => 1,
+                _ => -1, // 3 | 5
+            }
+        }
+    };
+    let mut result = 1i32;
+    let mut bottom = n;
+    // Sign factor (a/−1) = sign of a.
+    if bottom < 0 {
+        if a < 0 {
+            result = -result;
+        }
+        bottom = -bottom;
+    }
+    // Pull out factors of 2.
+    while bottom.rem_euclid(2) == 0 {
+        bottom /= 2;
+        result *= symbol_two(a);
+    }
+    // Odd part via Jacobi (bottom is now odd and positive; 1 gives Jacobi = 1).
+    result * jacobi_symbol(a, bottom)
+}
+
 /// Whether `a` is a quadratic residue modulo the **odd prime** `p`.
 ///
 /// True exactly when `x*x ≡ a (mod p)` has a solution `x`, i.e. when the
@@ -684,6 +731,36 @@ mod tests {
                 // is_quadratic_residue agrees with the brute-force existence test.
                 assert_eq!(is_quadratic_residue(a, p), brute_is_qr, "QR({a}, {p})");
             }
+        }
+    }
+
+    #[test]
+    fn kronecker_extends_jacobi() {
+        // Agrees with Jacobi for every odd positive n.
+        for n in (1..60).step_by(2) {
+            for a in -30..30 {
+                assert_eq!(
+                    kronecker_symbol(a, n),
+                    jacobi_symbol(a, n),
+                    "({a}/{n}) Kronecker vs Jacobi"
+                );
+            }
+        }
+        // (a/2): 0 for even a, +1 for a ≡ ±1 (mod 8), −1 for a ≡ ±3.
+        assert_eq!(kronecker_symbol(7, 2), 1); // 7 ≡ −1
+        assert_eq!(kronecker_symbol(1, 2), 1);
+        assert_eq!(kronecker_symbol(3, 2), -1);
+        assert_eq!(kronecker_symbol(5, 2), -1);
+        assert_eq!(kronecker_symbol(4, 2), 0);
+        // (a/0) = 1 iff a = ±1.
+        assert_eq!(kronecker_symbol(1, 0), 1);
+        assert_eq!(kronecker_symbol(-1, 0), 1);
+        assert_eq!(kronecker_symbol(2, 0), 0);
+        // Multiplicativity over n: (a/12) = (a/4)·(a/3) = (a/2)²·(a/3).
+        for a in -10..10 {
+            let composite = kronecker_symbol(a, 12);
+            let factored = kronecker_symbol(a, 4) * kronecker_symbol(a, 3);
+            assert_eq!(composite, factored, "({a}/12) multiplicativity");
         }
     }
 
