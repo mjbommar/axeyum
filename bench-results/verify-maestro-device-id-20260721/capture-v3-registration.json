@@ -1,0 +1,103 @@
+{
+  "adr": "ADR-0326",
+  "base_registration": {
+    "path": "bench-results/verify-maestro-device-id-20260721/capture-registration.json",
+    "sha256": "5217ed365e9244c0043011e67f3c409758662526a7580fa367340933ce52ee21"
+  },
+  "bwrap": {
+    "base_argv": [
+      "--die-with-parent",
+      "--new-session",
+      "--unshare-all",
+      "--ro-bind",
+      "/",
+      "/",
+      "--dev-bind",
+      "/dev",
+      "/dev",
+      "--proc",
+      "/proc"
+    ],
+    "path": "/usr/bin/bwrap",
+    "sha256": "0abea81db798ebf6b4742ac0664802d97521547a353c2a0dbdc21d76cbbfd2c0",
+    "version": "bubblewrap 0.11.1"
+  },
+  "final_rustc_tail": [
+    "-Ccodegen-units=1",
+    "-Clink-dead-code",
+    "--emit=llvm-ir"
+  ],
+  "local_output": "target/maestro-device-id-20260721/capture-v3",
+  "namespace": {
+    "environment": [
+      [
+        "CARGO_BUILD_JOBS",
+        "1"
+      ],
+      [
+        "CARGO_HOME",
+        "/home/mjbommar/.cargo"
+      ],
+      [
+        "CARGO_INCREMENTAL",
+        "0"
+      ],
+      [
+        "CARGO_PROFILE_RELEASE_DEBUG",
+        "0"
+      ],
+      [
+        "CARGO_TARGET_DIR",
+        "/axeyum-vroot/target"
+      ],
+      [
+        "HOME",
+        "/home/mjbommar"
+      ],
+      [
+        "LANG",
+        "C.UTF-8"
+      ],
+      [
+        "LC_ALL",
+        "C.UTF-8"
+      ],
+      [
+        "PATH",
+        "/home/mjbommar/.cargo/bin:/usr/local/bin:/usr/bin:/bin"
+      ],
+      [
+        "RUSTUP_HOME",
+        "/home/mjbommar/.rustup"
+      ],
+      [
+        "SOURCE_DATE_EPOCH",
+        "1783984251"
+      ]
+    ],
+    "virtual_root": "/axeyum-vroot",
+    "virtual_source": "/axeyum-vroot/source",
+    "virtual_target": "/axeyum-vroot/target",
+    "working_directory": "/axeyum-vroot/source/kernel"
+  },
+  "prior_result": {
+    "path": "bench-results/verify-maestro-device-id-20260721/capture-v2-result.json",
+    "sha256": "05cbe3f311c579d8495bc952d49df925f27efd5b529989f31a9f1cf5d1ee61b4"
+  },
+  "producer_files": [
+    {
+      "path": "docs/research/09-decisions/adr-0326-preregister-stable-virtual-root-maestro-capture.md",
+      "sha256": "3b60d2074cba1ff3802e8ec8c4e45854e29c5cdd3e78911104db5e565233b748"
+    },
+    {
+      "path": "scripts/capture-maestro-device-id-v3.py",
+      "sha256": "61c2918e51c8bf024f576cac6e496531cc1d549658d088cd91768e436f9913d0"
+    },
+    {
+      "path": "scripts/tests/test_capture_maestro_device_id_v3.py",
+      "sha256": "4bda7a27fa4bd9ce04bcb70ed3af5078e6a1daed2d16f584b00c0756b3627f3e"
+    }
+  ],
+  "result_path": "bench-results/verify-maestro-device-id-20260721/capture-v3-result.json",
+  "schema": "axeyum.maestro-device-id-capture-v3-registration.v1"
+}
