@@ -590,12 +590,15 @@ session state.
 >    its original 8,876 lines. Remeasure before any successor; no further
 >    integer-family split is implied.
 >    The post-I5 census authorizes one final narrow I6 seam: the original
->    ADR-0042 Diophantine reconstruction owns a 953-line / 46,691-byte body,
->    two public entries, three private top-level helpers, and 16 context methods
->    with no pre-family consumer. Move only those items to private
+>    ADR-0042 Diophantine reconstruction owns a corrected 732-line /
+>    35,870-byte body, two public entries, four family-only support items, and
+>    eight context methods with no other consumer. Move only those items to private
 >    `int_reconstruct/diophantine.rs`, keeping both paths and exact Lean bytes.
->    Nine context methods already used by closed-universal/nested-XOR remain in
->    the parent without visibility widening. Gate the move on all five focused
+>    Seventeen context methods already used by the parent or sibling proof
+>    families remain in the parent without visibility widening. The first
+>    compile gate corrected the initial same-file-only census by identifying
+>    four sibling-consumed methods and four transitive helpers before
+>    acceptance. Gate the move on all five focused
 >    reconstruction tests, four evidence tests, 19 committed math-resource
 >    routes, namespace compatibility, all 895 library tests, strict Clippy,
 >    both rustdoc profiles, links, and the bounded OOM audit. After I6, close

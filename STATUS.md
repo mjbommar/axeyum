@@ -322,11 +322,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — Post-I5 census authorizes only I6.** The original ADR-0042
-  Diophantine family has a clean 953-line / 46,691-byte body: two public
-  entries, three private top-level helpers, and 16 family-specific context
-  methods. Nine context methods with existing closed-universal/nested-XOR
-  consumers stay parent-owned and private. Capture the canonical
+- **2026-07-21 — Post-I5 census authorizes only I6 (dependency correction
+  recorded before acceptance).** The original ADR-0042 Diophantine family has
+  a clean 732-line / 35,870-byte body: two public entries, four family-only
+  support items, and eight family-specific context methods. The first compile
+  gate exposed four sibling-consumed helpers omitted by the same-file census
+  plus four transitive dependencies; all 17 shared context methods therefore
+  stay parent-owned and private. Capture the canonical
   `two_x_eq_one` Lean identity, then move only the independent body to private
   `int_reconstruct/diophantine.rs` with unchanged paths, ordering, caps,
   certificate selection, kernel checks, and evidence behavior. The gate is
@@ -5776,10 +5778,12 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
-- **2026-07-21 — Preregistered the Diophantine module seam.** Authorized only
-  the 953-line family-specific body, retained nine shared context methods in
-  the parent, and froze proof-byte, focused/resource, full, lint/doc, and OOM
-  gates. I6 is the integer structural lane's final planned extraction.
+- **2026-07-21 — Corrected and preregistered the Diophantine module seam.** The
+  first compile gate expanded the dependency census beyond same-file callers:
+  the authorized family-only body is 732 lines, while 17 shared context methods
+  stay in the parent. Proof-byte, focused/resource, full, lint/doc, and OOM
+  gates remain frozen. I6 is the integer structural lane's final planned
+  extraction.
 
 - **2026-07-21 — Extracted affine-growth reconstruction.** Moved the exact
   455-line production family into a private 467-line child, preserving proof
