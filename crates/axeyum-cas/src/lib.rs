@@ -52,6 +52,7 @@ use axeyum_ir::{Rational, poly};
 
 pub mod groebner;
 mod factor_int;
+mod gosper;
 mod matrix;
 pub mod mvpoly;
 pub mod ntheory;
@@ -61,6 +62,7 @@ mod series;
 pub mod stats;
 
 pub use factor_int::{factor_expr, factor_univariate_over_q};
+pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
