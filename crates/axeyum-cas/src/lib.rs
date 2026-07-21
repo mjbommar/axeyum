@@ -2094,44 +2094,116 @@ pub fn solve_recurrence(
             roots.push(root);
         }
     }
-    if roots.len() != order {
-        return None; // repeated, irrational, or non-positive roots — outside the fragment
-    }
-
-    // Vandermonde solve: Σᵢ Aᵢ·rᵢʲ = aⱼ for j = 0..order−1.
-    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(order);
-    for &root in &roots {
-        let mut column = Vec::with_capacity(order);
-        let mut power = Rational::integer(1);
-        for _ in 0..order {
-            column.push(power);
-            power = power.checked_mul(root)?;
+    if roots.len() == order {
+        // Vandermonde solve: Σᵢ Aᵢ·rᵢʲ = aⱼ for j = 0..order−1.
+        let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(order);
+        for &root in &roots {
+            let mut column = Vec::with_capacity(order);
+            let mut power = Rational::integer(1);
+            for _ in 0..order {
+                column.push(power);
+                power = power.checked_mul(root)?;
+            }
+            columns.push(column);
         }
-        columns.push(column);
-    }
-    let amplitudes = ratint::solve_linear(&columns, initial)?;
+        let amplitudes = ratint::solve_linear(&columns, initial)?;
 
-    // Closed form Σᵢ Aᵢ · exp(var·ln rᵢ).
+        // Closed form Σᵢ Aᵢ · exp(var·ln rᵢ).
+        let index = CasExpr::var(var);
+        let mut closed = CasExpr::zero();
+        for (amplitude, &root) in amplitudes.iter().zip(&roots) {
+            if amplitude.is_zero() {
+                continue;
+            }
+            let power = (index.clone() * CasExpr::Const(root).ln()).exp(); // rᵢ^var
+            closed = closed + CasExpr::Const(*amplitude) * power;
+        }
+
+        // Certify: a(n) − Σₖ cₖ·a(n−k) ≡ 0.
+        let mut residual = closed.clone();
+        for (k, coeff) in coefficients.iter().enumerate() {
+            let shift = i128::try_from(k + 1).ok()?;
+            let shifted = closed.substitute(var, &(index.clone() - CasExpr::int(shift)));
+            residual = residual - CasExpr::Const(*coeff) * shifted;
+        }
+        return match equal(&residual, &CasExpr::zero()) {
+            ZeroTest::Certified { equal: true, .. } => Some(closed),
+            _ => None,
+        };
+    }
+
+    // Fallback: an order-2 recurrence with a conjugate pair of **positive**
+    // quadratic-irrational roots (the golden-ratio family — e.g. `aₙ = 3aₙ₋₁ − aₙ₋₂`,
+    // roots `(3 ± √5)/2 = φ², ψ²`). Handled over ℚ(√D) with a roots-and-initials
+    // certificate that avoids evaluating `rⁿ`.
+    if order == 2 {
+        return solve_recurrence_quadratic_irrational(coefficients, initial, var);
+    }
+    None
+}
+
+/// Whether `equal(expr, 0)` is decided `true` — a small helper for algebraic-identity
+/// certificates.
+fn is_certified_zero(expr: &CasExpr) -> bool {
+    matches!(equal(expr, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+}
+
+/// Closed form of an order-2 recurrence `aₙ = c₁aₙ₋₁ + c₂aₙ₋₂` whose characteristic
+/// roots are a **positive** conjugate pair `(c₁ ± √D)/2` with `D = c₁² + 4c₂ > 0`
+/// non-square and `c₂ < 0` (so both roots are positive). Amplitudes are solved over
+/// ℚ(√D); the result is **certified** by verifying each root satisfies the
+/// characteristic equation and the amplitudes reproduce `a₀, a₁` — which, for
+/// distinct roots, implies the closed form solves the recurrence for all `n`.
+///
+/// `None` outside that fragment (rational/irrational-negative roots, `c₂ ≥ 0`) or on
+/// overflow. Fibonacci (`c₂ = 1 > 0`) has a negative conjugate root and is declined
+/// here — representing `(negative)ⁿ` for symbolic `n` needs the RootOf/power layer.
+fn solve_recurrence_quadratic_irrational(
+    coefficients: &[Rational],
+    initial: &[Rational],
+    var: &str,
+) -> Option<CasExpr> {
+    let (c1, c2) = (coefficients[0], coefficients[1]);
+    let discriminant = c1
+        .checked_mul(c1)?
+        .checked_add(Rational::integer(4).checked_mul(c2)?)?;
+    // Real irrational roots, both positive: D > 0 non-square, c₂ < 0, c₁ > 0.
+    if discriminant.numerator() <= 0
+        || rational_sqrt(discriminant).is_some()
+        || c2.numerator() >= 0
+        || c1.numerator() <= 0
+    {
+        return None;
+    }
+    let sqrt_d = simplify_radicals(&CasExpr::Const(discriminant).sqrt());
+    let half = || CasExpr::rat(1, 2);
+    let root1 = half() * (CasExpr::Const(c1) + sqrt_d.clone()); // (c₁ + √D)/2
+    let root2 = half() * (CasExpr::Const(c1) - sqrt_d.clone()); // (c₁ − √D)/2
+
+    // Amplitudes: A = (a₁ − a₀·r₂)/(r₁ − r₂) with r₁ − r₂ = √D; B = a₀ − A.
+    let (a0, a1) = (CasExpr::Const(initial[0]), CasExpr::Const(initial[1]));
+    let amp_a = (a1.clone() - a0.clone() * root2.clone()) / sqrt_d;
+    let amp_b = a0.clone() - amp_a.clone();
+
     let index = CasExpr::var(var);
-    let mut closed = CasExpr::zero();
-    for (amplitude, &root) in amplitudes.iter().zip(&roots) {
-        if amplitude.is_zero() {
-            continue;
-        }
-        let power = (index.clone() * CasExpr::Const(root).ln()).exp(); // rᵢ^var
-        closed = closed + CasExpr::Const(*amplitude) * power;
-    }
+    let closed = amp_a.clone() * (index.clone() * root1.clone().ln()).exp()
+        + amp_b.clone() * (index * root2.clone().ln()).exp();
 
-    // Certify: a(n) − Σₖ cₖ·a(n−k) ≡ 0.
-    let mut residual = closed.clone();
-    for (k, coeff) in coefficients.iter().enumerate() {
-        let shift = i128::try_from(k + 1).ok()?;
-        let shifted = closed.substitute(var, &(index.clone() - CasExpr::int(shift)));
-        residual = residual - CasExpr::Const(*coeff) * shifted;
-    }
-    match equal(&residual, &CasExpr::zero()) {
-        ZeroTest::Certified { equal: true, .. } => Some(closed),
-        _ => None,
+    // Certificate: each root solves x² − c₁x − c₂ = 0, and the amplitudes reproduce
+    // the two initial terms (r⁰ = 1, r¹ = r — no `rⁿ` evaluation needed).
+    let char_at = |r: &CasExpr| {
+        r.clone().pow(2) - CasExpr::Const(c1) * r.clone() - CasExpr::Const(c2)
+    };
+    let initial0 = amp_a.clone() + amp_b.clone() - a0;
+    let initial1 = amp_a * root1.clone() + amp_b * root2.clone() - a1;
+    if is_certified_zero(&char_at(&root1))
+        && is_certified_zero(&char_at(&root2))
+        && is_certified_zero(&initial0)
+        && is_certified_zero(&initial1)
+    {
+        Some(closed)
+    } else {
+        None
     }
 }
 
@@ -4304,8 +4376,19 @@ mod tests {
             assert!((got - want).abs() < 1e-9);
         }
 
-        // Negative/irrational roots are outside the certifiable fragment: aₙ = aₙ₋₁ +
-        // aₙ₋₂ (Fibonacci, irrational golden-ratio roots) declines honestly.
+        // Golden-ratio family: aₙ = 3aₙ₋₁ − aₙ₋₂ has roots (3±√5)/2 = φ², ψ² (both
+        // positive, irrational). With a₀=2, a₁=3 it is the Lucas-of-even-index
+        // sequence 2,3,7,18,47,123. Certified over ℚ(√5); verify by evalf.
+        let phi_sq = solve_recurrence(&[ig(3), ig(-1)], &[ig(2), ig(3)], "n").expect("golden family");
+        for (n, want) in [(0usize, 2.0), (1, 3.0), (2, 7.0), (3, 18.0), (4, 47.0)] {
+            #[allow(clippy::cast_precision_loss)]
+            let got = evalf(&phi_sq, &[("n", n as f64)]).unwrap();
+            assert!((got - want).abs() < 1e-6, "a_{n} = {got}, want {want}");
+        }
+
+        // Fibonacci (aₙ = aₙ₋₁ + aₙ₋₂) has c₂ = 1 > 0 → a NEGATIVE conjugate root
+        // ψ = (1−√5)/2; representing ψⁿ for symbolic n is beyond the exp(n·ln r)
+        // form (ln of a negative), so it declines honestly here.
         assert!(solve_recurrence(&[ig(1), ig(1)], &[ig(0), ig(1)], "n").is_none());
     }
 
