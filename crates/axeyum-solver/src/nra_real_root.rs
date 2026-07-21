@@ -3632,6 +3632,25 @@ enum Visit {
     Stop,
 }
 
+/// Which rational cells a recursive CAD visitor enumerates on each axis.
+#[derive(Clone, Copy)]
+enum RationalCellSelection {
+    /// Strict systems need only rational interiors of open cells.
+    OpenOnly,
+    /// Mixed/non-strict systems also need every rational critical section and
+    /// decline if any critical value is algebraic.
+    OpenAndRationalSections,
+}
+
+impl RationalCellSelection {
+    fn samples(self, crit: &[Root]) -> Option<Vec<Rational>> {
+        match self {
+            RationalCellSelection::OpenOnly => cell_samples(crit),
+            RationalCellSelection::OpenAndRationalSections => nonstrict_axis_samples(crit),
+        }
+    }
+}
+
 /// Recursive cylindrical decomposition for an ALL-STRICT system: invoke `visit`
 /// once per open cell of the arrangement of the zero sets of `polys` over `vars`,
 /// passing a RATIONAL interior sample point (covering ℝ^|vars| off the projection
@@ -3653,21 +3672,36 @@ fn visit_open_cells(
     budget: &CellBudget,
     visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
 ) -> Option<bool> {
+    visit_rational_cells(
+        polys,
+        vars,
+        partial,
+        budget,
+        RationalCellSelection::OpenOnly,
+        visit,
+    )
+}
+
+/// Shared rational recursive decomposition. Coverage is an explicit policy;
+/// projection, nullification declines, variable order, budget charges, and
+/// visitor short-circuiting are identical for both callers.
+fn visit_rational_cells(
+    polys: &[MultiPoly],
+    vars: &BTreeSet<SymbolId>,
+    partial: &SamplePoint,
+    budget: &CellBudget,
+    selection: RationalCellSelection,
+    visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
+) -> Option<bool> {
     if vars.is_empty() {
-        // No variables left: `partial` is a full cell point. Visit it.
         budget.charge()?;
         return Some(matches!(visit(partial)?, Visit::Stop));
     }
     if vars.len() == 1 {
         let var = *vars.iter().next().unwrap();
-        // Each poly is univariate in `var` (or constant); isolate all real roots.
         let mut roots: Vec<Root> = Vec::new();
         for p in polys {
             if degree_in(p, var) == 0 {
-                // Constant in `var`: contributes no critical value here (its sign
-                // does not depend on `var`). A poly mentioning a FOREIGN variable
-                // would have been rejected by `project_strict`'s subset check, so at
-                // this leaf there are no foreign vars.
                 continue;
             }
             let ipoly = p.to_single_var_integer_poly(var)?;
@@ -3677,7 +3711,7 @@ fn visit_open_cells(
             roots.extend(isolate_roots(&ipoly)?);
         }
         let crit = dedup_sorted_roots(&roots)?;
-        let samples = cell_samples(&crit)?;
+        let samples = selection.samples(&crit)?;
         for s in samples {
             budget.charge()?;
             let mut pt = partial.clone();
@@ -3689,51 +3723,46 @@ fn visit_open_cells(
         return Some(false);
     }
 
-    // N > 1: pick the (deterministic) first variable as the elimination var.
     let elim = *vars.iter().next().unwrap();
     let mut rest: BTreeSet<SymbolId> = vars.clone();
     rest.remove(&elim);
-
-    // PROJECTION: build the projection polynomials in `rest`.
     let projected = project_strict(polys, elim, &rest)?;
 
-    // Recurse to visit the open cells of the projection over `rest`. For each base
-    // point, substitute it into the ORIGINAL polys (univariate in `elim`), isolate
-    // the e-roots, sample the open e-intervals, and visit each extended point.
-    visit_open_cells(&projected, &rest, partial, budget, &mut |base_pt| {
-        let mut roots: Vec<Root> = Vec::new();
-        for p in polys {
-            // A poly constant in `elim` does not constrain the e-fiber; its critical
-            // loci were captured in the projection as `p` itself.
-            if degree_in(p, elim) == 0 {
-                continue;
+    visit_rational_cells(
+        &projected,
+        &rest,
+        partial,
+        budget,
+        selection,
+        &mut |base_pt| {
+            let mut roots: Vec<Root> = Vec::new();
+            for p in polys {
+                if degree_in(p, elim) == 0 {
+                    continue;
+                }
+                let residual = substitute_rationals(p, base_pt)?;
+                if degree_in(&residual, elim) == 0 {
+                    return None;
+                }
+                let ipoly = residual.to_single_var_integer_poly(elim)?;
+                if ipoly.len() <= 1 {
+                    return None;
+                }
+                roots.extend(isolate_roots(&ipoly)?);
             }
-            // Substitute the base rational point into `p` ⇒ univariate in `elim`.
-            // NULLIFICATION guard: if every e-coefficient vanishes at `base_pt` (the
-            // residual loses `elim` entirely) the e-degree of `p` collapsed here ⇒
-            // delineability fails ⇒ decline (propagate `None`).
-            let residual = substitute_rationals(p, base_pt)?;
-            if degree_in(&residual, elim) == 0 {
-                return None;
+            let crit = dedup_sorted_roots(&roots)?;
+            let samples = selection.samples(&crit)?;
+            for s in samples {
+                budget.charge()?;
+                let mut pt = base_pt.clone();
+                pt.insert(elim, s);
+                if matches!(visit(&pt)?, Visit::Stop) {
+                    return Some(Visit::Stop);
+                }
             }
-            let ipoly = residual.to_single_var_integer_poly(elim)?;
-            if ipoly.len() <= 1 {
-                return None; // residual mentions `elim` yet collapsed ⇒ decline
-            }
-            roots.extend(isolate_roots(&ipoly)?);
-        }
-        let crit = dedup_sorted_roots(&roots)?;
-        let samples = cell_samples(&crit)?;
-        for s in samples {
-            budget.charge()?;
-            let mut pt = base_pt.clone();
-            pt.insert(elim, s);
-            if matches!(visit(&pt)?, Visit::Stop) {
-                return Some(Visit::Stop);
-            }
-        }
-        Some(Visit::Continue)
-    })
+            Some(Visit::Continue)
+        },
+    )
 }
 
 /// Sort isolated `roots` ascending and deduplicate EQUAL critical values (a shared
@@ -4342,78 +4371,14 @@ fn visit_all_cells(
     budget: &CellBudget,
     visit: &mut dyn FnMut(&SamplePoint) -> Option<Visit>,
 ) -> Option<bool> {
-    if vars.is_empty() {
-        budget.charge()?;
-        return Some(matches!(visit(partial)?, Visit::Stop));
-    }
-    if vars.len() == 1 {
-        let var = *vars.iter().next().unwrap();
-        let mut roots: Vec<Root> = Vec::new();
-        for p in polys {
-            if degree_in(p, var) == 0 {
-                continue;
-            }
-            let ipoly = p.to_single_var_integer_poly(var)?;
-            if ipoly.len() <= 1 {
-                continue;
-            }
-            roots.extend(isolate_roots(&ipoly)?);
-        }
-        let crit = dedup_sorted_roots(&roots)?;
-        // Open-interval interiors AND rational critical values (decline on algebraic).
-        let samples = nonstrict_axis_samples(&crit)?;
-        for s in samples {
-            budget.charge()?;
-            let mut pt = partial.clone();
-            pt.insert(var, s);
-            if matches!(visit(&pt)?, Visit::Stop) {
-                return Some(true);
-            }
-        }
-        return Some(false);
-    }
-
-    // N > 1: eliminate the deterministic first variable.
-    let elim = *vars.iter().next().unwrap();
-    let mut rest: BTreeSet<SymbolId> = vars.clone();
-    rest.remove(&elim);
-
-    // PROJECTION onto `rest` — IDENTICAL to the strict path.
-    let projected = project_strict(polys, elim, &rest)?;
-
-    // Recurse over ALL cells of the projection (open + rational critical), then for
-    // each base point sample the e-fiber's open intervals AND rational critical
-    // values, declining on any algebraic e-critical value.
-    visit_all_cells(&projected, &rest, partial, budget, &mut |base_pt| {
-        let mut roots: Vec<Root> = Vec::new();
-        for p in polys {
-            if degree_in(p, elim) == 0 {
-                continue;
-            }
-            // NULLIFICATION guard: a base point that collapses `p`'s e-degree breaks
-            // delineability ⇒ decline (sound: never proceed past a gap).
-            let residual = substitute_rationals(p, base_pt)?;
-            if degree_in(&residual, elim) == 0 {
-                return None;
-            }
-            let ipoly = residual.to_single_var_integer_poly(elim)?;
-            if ipoly.len() <= 1 {
-                return None;
-            }
-            roots.extend(isolate_roots(&ipoly)?);
-        }
-        let crit = dedup_sorted_roots(&roots)?;
-        let samples = nonstrict_axis_samples(&crit)?;
-        for s in samples {
-            budget.charge()?;
-            let mut pt = base_pt.clone();
-            pt.insert(elim, s);
-            if matches!(visit(&pt)?, Visit::Stop) {
-                return Some(Visit::Stop);
-            }
-        }
-        Some(Visit::Continue)
-    })
+    visit_rational_cells(
+        polys,
+        vars,
+        partial,
+        budget,
+        RationalCellSelection::OpenAndRationalSections,
+        visit,
+    )
 }
 
 /// Decide a MIXED / NON-STRICT N ≥ 3-variable component `comp` (at least one
@@ -7448,6 +7413,59 @@ mod tests {
         // Empty synthetic inputs isolate the caller's entry policy: without the
         // explicit poll this would reach the empty residual cell and report Sat.
         assert!(strict_cad_along(&[], &[], y, x).is_none());
+    }
+
+    #[test]
+    fn nonstrict_nvar_rational_sections_keep_exact_witness() {
+        let (x_symbol, y_symbol, z_symbol) = three_syms();
+        let xyz = MultiPoly::var(x_symbol)
+            .mul(&MultiPoly::var(y_symbol))
+            .unwrap()
+            .mul(&MultiPoly::var(z_symbol))
+            .unwrap();
+        let atom = MultiAtom {
+            cmp: Cmp::Ge,
+            poly: xyz,
+        };
+        let vars: BTreeSet<SymbolId> = [x_symbol, y_symbol, z_symbol].into_iter().collect();
+        let Some(TwoVarVerdict::Sat(bindings)) = decide_nonstrict_cad_nvar(&[&atom], &vars) else {
+            panic!("x*y*z >= 0 must have a rational N-var CAD witness");
+        };
+        assert_eq!(
+            bindings,
+            vec![
+                (x_symbol, Value::Real(Rational::integer(1))),
+                (y_symbol, Value::Real(Rational::integer(-1))),
+                (z_symbol, Value::Real(Rational::integer(-1))),
+            ],
+            "non-strict N-var CAD must preserve open-before-section ordering"
+        );
+    }
+
+    #[test]
+    fn nonstrict_nvar_zero_cell_is_required_for_sat() {
+        let (x_symbol, y_symbol, z_symbol) = three_syms();
+        let xyz = MultiPoly::var(x_symbol)
+            .mul(&MultiPoly::var(y_symbol))
+            .unwrap()
+            .mul(&MultiPoly::var(z_symbol))
+            .unwrap();
+        let atom = MultiAtom {
+            cmp: Cmp::Eq,
+            poly: xyz,
+        };
+        let vars: BTreeSet<SymbolId> = [x_symbol, y_symbol, z_symbol].into_iter().collect();
+        let Some(TwoVarVerdict::Sat(bindings)) = decide_nonstrict_cad_nvar(&[&atom], &vars) else {
+            panic!("x*y*z = 0 needs a rational critical section witness");
+        };
+        assert_eq!(
+            bindings,
+            vec![
+                (x_symbol, Value::Real(Rational::zero())),
+                (y_symbol, Value::Real(Rational::integer(-1))),
+                (z_symbol, Value::Real(Rational::integer(-1))),
+            ]
+        );
     }
 
     #[test]

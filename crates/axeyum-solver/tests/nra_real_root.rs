@@ -1552,6 +1552,15 @@ fn strict_cad3_open_octant_ball_sat() {
     let CheckResult::Sat(model) = &r else {
         panic!("x²+y²+z²<9 ∧ x,y,z>0 must be Sat (open octant ball); got {r:?}");
     };
+    let mut expected = Model::new();
+    expected.set(xs, Value::Real(Rational::integer(1)));
+    expected.set(ys, Value::Real(Rational::integer(1)));
+    expected.set(zs, Value::Real(Rational::integer(1)));
+    assert_eq!(
+        r,
+        CheckResult::Sat(expected),
+        "strict N-var CAD must preserve its deterministic first witness"
+    );
     // Witness must be fully rational (open cells ⇒ rational interior samples).
     for (sym, name) in [(xs, "x"), (ys, "y"), (zs, "z")] {
         assert!(

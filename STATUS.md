@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — N1c closes CAD parameterization at the rational policy
+  boundary.** One `visit_rational_cells` recursion now takes explicit
+  `OpenOnly` or `OpenAndRationalSections`; historical strict/non-strict wrappers
+  remain, and algebraic traversal is untouched. Exact `(1,1,1)`, `(1,-1,-1)`,
+  and zero-cell `(0,-1,-1)` controls plus drop/reorder mutations pin the policy.
+  The 2,000-seed tally is exactly unchanged for a third run, all 86 focused NRA
+  and 895 library tests pass, and strict lint/doc/OOM gates are green. Production
+  falls 7,077→6,944 lines across N1; added controls make the whole file 7,503
+  lines, still 41 below baseline. Next: re-rank remaining artifact residuals;
+  do not genericize the algebraic value-domain traversal without new evidence.
+
 - **2026-07-20 — N1b shares two-variable projection without sharing CAD
   policy.** `two_var_critical_roots` now owns only leading/discriminant/resultant
   projection, isolation, ordering/deduplication, and the cell cap. Strict keeps
@@ -5671,6 +5682,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — N1c closes rational CAD visitor parameterization.** Shared the
+  identical rational N-variable recursion behind the explicit
+  `RationalCellSelection::{OpenOnly, OpenAndRationalSections}` policy and kept
+  both historical wrappers plus the algebraic value-domain traversal distinct.
+  Exact strict `(1,1,1)`, non-strict `(1,-1,-1)`, and zero-cell `(0,-1,-1)`
+  witnesses survive; open-only and section-first mutations fail their controls.
+  The third fixed 2,000-seed sweep reproduces all 1,807 joint agreements and
+  1,293 replayed SAT models with zero disagreements. All 86 focused NRA and 895
+  library tests, strict Clippy, both rustdoc profiles, formatting, links, and the
+  bounded OOM audit pass. Production falls 133 lines across N1; the 7,503-line
+  file remains 41 lines below baseline despite the added semantic tests.
 
 - **2026-07-20 — N1b shares two-variable CAD projection/root preparation.**
   Caller-specific deadlines and strict/non-strict sampling remain outside the

@@ -32,7 +32,7 @@ not repeat completed namespace/configuration sweeps.
 | ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
 | `int_reconstruct.rs` | 7,683 lines / 316,411 bytes | Shared integer kernel context plus the remaining proof families |
 | Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
-| `nra_real_root.rs` | 7,485 lines / 330,162 bytes | N1a/N1b share rational cell decision and 2-var projection; coverage/lifting remain distinct |
+| `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
 Raw size is not the only ranking signal. ABV has 28 public or crate-visible
@@ -91,7 +91,7 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    UFLIA interpolant tests, 10 namespace controls, all 891 library tests, strict
    Clippy, and both rustdoc profiles pass. The parent is now 7,683 lines, down
    13.4% from 8,876.
-5. **N1 -- parameterize CAD only under the frozen semantic gate (N1a/N1b done).** The
+5. **N1 -- parameterize CAD only under the frozen semantic gate (done).** The
    [census and preregistered gate](cad-parameterization-gate.md) rejects a single
    strict/non-strict/algebraic engine: the algebraic traversal has a different
    value domain, boundary derivation, and preparation path. N1a is authorized
@@ -102,14 +102,19 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    models pinned at `(1,1)` and `(1,0)` and the 2,000-seed Z3 differential gate
    at `DISAGREEMENTS: 0`. N1b now shares only two-variable projection/root
    preparation; exact roots `[0,1]` and a poll-removal mutation control pin its
-   semantics. The file is 7,485 lines, down 59 across both slices. N1c remains
-   optional; algebraic genericization is deferred.
+   semantics. N1c then proves the two rational N-variable visitors identical
+   except for explicit `OpenOnly`/`OpenAndRationalSections` selection. Zero-cell
+   and ordering mutations are detected; the exact 2,000-seed tally remains
+   unchanged; all 895 library tests pass. Production falls 7,077→6,944 lines
+   across N1. The whole file is 7,503 lines because the new semantic controls
+   add test code, still 41 lines below baseline. N1 is closed; algebraic
+   traversal remains separate.
 
 ## Standing gate
 
 Every structural slice must preserve public paths, visibility, default features,
 generated proof bytes where applicable, solver verdicts, and replay/checker
-behavior. Run the complete 891-test all-feature solver library, relevant focused
+behavior. Run the complete all-feature solver library, relevant focused
 integration tests, strict all-target Clippy, full/minimal warning-denied rustdoc,
 format/link checks, and the bounded OOM audit before acceptance. Keep each slice
 in its own add/commit/push checkpoint.

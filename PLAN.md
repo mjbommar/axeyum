@@ -529,9 +529,20 @@ session state.
 >    Exact critical roots `[0,1]` are pinned, removing the strict poll makes its
 >    mutation control fail, the 2,000-seed tally is exactly unchanged, and all
 >    893 library tests plus strict lint/doc/OOM gates pass. The file is 7,485
->    lines, down 59 across N1a--N1b. N1c remains optional, not implied: proceed
->    only if an explicit rational cell-selection policy is easier to audit than
->    the two roughly 90-line visitors. Algebraic traversal stays separate.
+>    lines, down 59 across N1a--N1b. N1c is now complete and closes N1: one
+>    `visit_rational_cells` recursion takes an explicit
+>    `RationalCellSelection::{OpenOnly, OpenAndRationalSections}` behind the
+>    historical strict/non-strict wrappers, while algebraic traversal stays
+>    separate. Exact `(1,1,1)`, `(1,-1,-1)`, and required zero-cell
+>    `(0,-1,-1)` witnesses pin strict, non-strict ordering, and boundary
+>    coverage; dropping rational sections or visiting them before open cells
+>    trips the corresponding mutation control. The fixed 2,000-seed tally is
+>    exactly unchanged for a third run, all 895 library tests and strict
+>    lint/doc/OOM gates pass, and production falls 7,077→6,944 lines across N1.
+>    Added semantic controls make the whole file 7,503 lines, still 41 below
+>    baseline. Re-rank the remaining artifact residuals before authorizing a new
+>    structural slice; do not genericize the algebraic value-domain traversal
+>    without new evidence.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.

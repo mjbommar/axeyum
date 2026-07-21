@@ -1,6 +1,6 @@
 # CAD parameterization gate
 
-Status: N1a/N1b accepted; N1c remains staged
+Status: N1a/N1b/N1c accepted; CAD parameterization closed
 Date: 2026-07-20
 Baseline: Axeyum `12f85d19`
 
@@ -213,3 +213,39 @@ across N1a--N1b. N1c remains optional: parameterizing the two roughly 90-line
 rational N-variable visitors is justified only if an explicit cell-selection
 policy is easier to audit than the present duplication. Algebraic traversal
 remains outside that decision.
+
+## N1c result
+
+The operation-by-operation comparison justified N1c. The strict and non-strict
+rational N-variable visitors had identical projection, recursion, variable
+order, nullification declines, budget charges, and visitor short-circuiting.
+Their only operational difference was axis sampling. One private
+`RationalCellSelection::{OpenOnly, OpenAndRationalSections}` now makes that
+difference explicit in `visit_rational_cells`; the historical
+`visit_open_cells` and `visit_all_cells` wrappers retain their names and roles.
+The algebraic `visit_all_cells_value` path is unchanged and separate.
+
+Exact controls pin:
+
+- strict N-variable open-cell model `(1, 1, 1)`;
+- non-strict open-before-section model `(1, -1, -1)` for `x*y*z >= 0`; and
+- the required zero-cell model `(0, -1, -1)` for `x*y*z = 0`.
+
+Two temporary policy mutations were detected and reverted. Mapping
+`OpenAndRationalSections` to open samples only makes the zero-cell test fail;
+visiting rational sections before open samples makes the deterministic
+non-strict witness test fail. All 86 focused NRA tests, including the algebraic
+fallback controls, pass.
+
+The fixed 2,000-seed Z3 sweep again reproduces the complete N1a/N1b tally:
+1,807 joint decisions and agreements, 191 structural `Unknown`s, two diagnostic
+outer timeouts, 1,293 replayed SAT models, 75 algebraic replay declines, zero Z3
+skips, and `DISAGREEMENTS: 0`. All 895 all-feature solver-library tests, strict
+all-target Clippy, both warning-denied rustdoc profiles, touched-file formatting,
+and the OOM audit pass under the bounded profile.
+
+Production before the first test-only item falls 6,979→6,944 lines in N1c and
+7,077→6,944 across N1. The two mutation-sensitive unit controls intentionally
+add test lines, so the whole file is 7,503 lines / 329,731 bytes: 18 lines above
+N1b but still 41 lines below the 7,544-line N1 baseline. This closes N1. Do not
+genericize algebraic traversal without new evidence and a new gate.
