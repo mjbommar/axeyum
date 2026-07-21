@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — P5.5 T5.5.1 selects Maestro device-number encoding.** The
+  exact external population is `major`/`minor`/`makedev` at Maestro revision
+  `650a3f62`. A disposable pinned owning-kernel build proves capture
+  feasibility and emits all three as single-block scalar LLVM, but no upstream
+  bytes or verification result are retained or credited. The selection note
+  freezes the universal inverse properties, candidate comparison, P5.1 gap
+  analysis, and a hard no-vendoring gate until the GPL-derived artifact
+  distribution/attribution boundary is resolved. Next: preregister T5.5.2's
+  exact whole-module capture and deterministic three-function extraction.
+
 - **2026-07-21 — ADR-0322 accepts the P5.3 obligation catalog and bounded v1
   phase exit.** Separate pages for control-flow constant-time, bounded
   memory/page-table math, and FSM refinement expose their exact goals,
@@ -5900,9 +5910,16 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
+| P5.5 | External target, measured (selected: Maestro device-number encoding) | WIP — **T5.5.1 DONE:** the exact Maestro `major`/`minor`/`makedev` population at `650a3f62` is selected with source/toolchain/build identities, smallest-viable comparison, universal inverse obligations, external-capture gap analysis, and a no-vendoring licensing gate. The disposable owning-build feasibility probe earns no result. Next is a zero-row T5.5.2 capture/extraction ADR; phase exit still requires a committed measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Selected the first P5.5 external target.** T5.5.1 freezes
+  Maestro's three device-number encode/decode functions at exact revision
+  `650a3f62`, with a pinned-owning-build feasibility observation, universal
+  full-width inverse properties, a five-candidate comparison, precise P5.1
+  capture gaps, and a no-vendoring gate for third-party-derived artifacts. No
+  source, LLVM artifact, proof, or scoreboard row is admitted by this note.
 
 - **2026-07-21 — Preregistered the authenticated source-contract/MIR bridge
   (ADR-0317).** The zero-row proposal freezes one total wrapping function,

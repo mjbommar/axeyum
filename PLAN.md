@@ -321,6 +321,14 @@ session state.
 >    expanding the other two cells into real-system claims. Return to the
 >    ranked Track 5 trajectory; the next phase-level milestone is P5.5 external-
 >    target measurement, not an unpreregistered P5.3 residual.
+>    P5.5 T5.5.1 now selects Maestro revision `650a3f62` and exactly three
+>    device-number functions (`major`, `minor`, `makedev`) as the smallest
+>    viable external cell. A pinned owning-kernel feasibility build emitted all
+>    three as straight-line scalar LLVM, but that temporary output earns no
+>    result. The next action is a zero-row T5.5.2 ADR freezing reproducible
+>    whole-module capture, deterministic extraction, source replay, failure
+>    taxonomy, and the GPL-derived-artifact no-vendoring boundary before any
+>    target bytes or proof result are retained.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
