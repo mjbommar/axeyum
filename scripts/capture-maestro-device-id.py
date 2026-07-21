@@ -417,7 +417,7 @@ def run_capture(args: argparse.Namespace) -> dict[str, Any]:
     require(not partial.exists(), "output", "partial_exists", str(partial))
     partial.mkdir()
     try:
-        with tempfile.TemporaryDirectory(prefix="maestro-source-", dir=target_root) as raw_temp:
+        with tempfile.TemporaryDirectory(prefix="maestro-source-") as raw_temp:
             temp = Path(raw_temp)
             roots = [temp / "root-a", temp / "root-b"]
             for root in roots:

@@ -185,6 +185,16 @@ reclassified away.
 Proposed. No official capture, extraction, parser-admission result, retained
 external byte, proof, or scoreboard row exists under this ADR.
 
+The first runner invocation was rejected before either credited build. It
+placed the two disposable source roots below Axeyum's ignored `target/`
+directory, so Cargo walked to Axeyum's ancestor workspace and rejected the
+foreign Maestro manifest as an undeclared member. No module or parser result
+was produced. The runner correction allocates only those two disposable source
+roots from the system temporary directory; retained local outputs remain below
+Axeyum's ignored `target/`. Source/tree validation, commands, toolchain,
+two-root byte-identity, extraction, parser, local-only, and all other frozen
+gates are unchanged.
+
 ## Rejected alternatives
 
 - **Commit the feasibility LLVM module.** Rejected: it predates this protocol,
