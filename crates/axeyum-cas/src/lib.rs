@@ -447,14 +447,27 @@ impl CasExpr {
             CasExpr::Var(v) => (4, v.clone()),
             CasExpr::Pow(base, exp) => (3, format!("{}^{exp}", base.render(4))),
             CasExpr::Neg(inner) => (2, format!("-{}", inner.render(3))),
-            CasExpr::Mul(factors) => (
-                2,
-                factors
-                    .iter()
-                    .map(|x| x.render(3))
-                    .collect::<Vec<_>>()
-                    .join("*"),
-            ),
+            CasExpr::Mul(factors) => {
+                // Pull a leading negative constant sign out front for readability
+                // (`-2*I` rather than `(-2)*I`, `-x*y` rather than `(-1)*x*y`).
+                let (sign, rendered): (&str, Vec<String>) = match factors.first() {
+                    Some(CasExpr::Const(k)) if k.numerator() < 0 => {
+                        let mut parts: Vec<String> = Vec::with_capacity(factors.len());
+                        if *k != Rational::integer(-1) {
+                            parts.push(CasExpr::Const(k.checked_neg().unwrap_or(*k)).render(3));
+                        }
+                        for factor in &factors[1..] {
+                            parts.push(factor.render(3));
+                        }
+                        if parts.is_empty() {
+                            parts.push("1".to_owned());
+                        }
+                        ("-", parts)
+                    }
+                    _ => ("", factors.iter().map(|x| x.render(3)).collect()),
+                };
+                (2, format!("{sign}{}", rendered.join("*")))
+            }
             CasExpr::Div(u, w) => (2, format!("{}/{}", u.render(3), w.render(3))),
             CasExpr::Unary(func, arg) => (4, format!("{}({})", func.name(), arg.render(0))),
             CasExpr::Add(terms) => {
@@ -1144,6 +1157,27 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
                             + sign * (sqrt_disc.clone() / CasExpr::Const(two_a)),
                     );
                 }
+            }
+        } else {
+            // Complex conjugate roots: (−b/2a) ± (√(−disc)/2a)·I.
+            let neg_disc = Rational::zero().checked_sub(disc)?;
+            let imag_unit = CasExpr::var("I");
+            for sign in [1_i128, -1] {
+                let imaginary = if let Some(s) = rational_sqrt(neg_disc) {
+                    scaled_term(
+                        Rational::integer(sign).checked_mul(s)?.checked_div(two_a)?,
+                        imag_unit.clone(),
+                    )
+                } else {
+                    CasExpr::int(sign)
+                        * (CasExpr::Const(neg_disc).sqrt() / CasExpr::Const(two_a))
+                        * imag_unit.clone()
+                };
+                roots.push(if neg_b_over.is_zero() {
+                    imaginary
+                } else {
+                    CasExpr::Const(neg_b_over) + imaginary
+                });
             }
         }
     }
@@ -2477,6 +2511,21 @@ mod tests {
         // 2x² − 6x + 4 = 2·(x−1)(x−2) (non-monic leading constant preserved)
         let g = CasExpr::int(2) * x().pow(2) - CasExpr::int(6) * x() + CasExpr::int(4);
         assert_equal(&factor(&g, "x").expect("factorable"), &g);
+    }
+
+    #[test]
+    fn solve_complex_roots() {
+        let x = || v("x");
+        let strs = |e: CasExpr| -> Vec<String> {
+            solve(&e, "x").unwrap().iter().map(ToString::to_string).collect()
+        };
+        // x² + 1 = 0 → ±I
+        assert_eq!(strs(x().pow(2) + CasExpr::int(1)), vec!["I", "-I"]);
+        // x² + 2x + 5 = 0 → −1 ± 2I
+        assert_eq!(
+            strs(x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(5)),
+            vec!["-1 + 2*I", "-1 - 2*I"]
+        );
     }
 
     #[test]
