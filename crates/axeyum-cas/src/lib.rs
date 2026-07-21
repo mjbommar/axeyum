@@ -2446,6 +2446,55 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Expand logarithms by the product/quotient/power rules: `ln(a·b) → ln a + ln b`,
+/// `ln(a/b) → ln a − ln b`, `ln(aⁿ) → n·ln a`, applied recursively throughout an
+/// expression (and inside the arguments of other heads).
+///
+/// This is a **compute** operation labelled as such: the rules hold for positive
+/// real arguments, which axeyum does not yet track (the assumptions engine is
+/// future work), so `expand_log` is offered as an explicit transform rather than a
+/// certified rewrite — mirroring the `force=True` mode of mainstream systems.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, expand_log, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // ln(x²·y) → 2·ln(x) + ln(y).
+/// let expanded = expand_log(&(x.clone().pow(2) * y.clone()).ln());
+/// let expected = CasExpr::int(2) * x.ln() + y.ln();
+/// assert!(matches!(equal(&expanded, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn expand_log(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => expand_log_argument(&expand_log(arg)),
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(expand_log(arg))),
+        CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(expand_log).collect()),
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(expand_log).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(expand_log(inner))),
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(expand_log(numerator)),
+            Box::new(expand_log(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(expand_log(base)), *exponent),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Apply the log laws to `ln(arg)` for a single (already log-expanded) argument.
+fn expand_log_argument(arg: &CasExpr) -> CasExpr {
+    match arg {
+        CasExpr::Mul(factors) => CasExpr::Add(factors.iter().map(expand_log_argument).collect()),
+        CasExpr::Div(numerator, denominator) => {
+            expand_log_argument(numerator) - expand_log_argument(denominator)
+        }
+        CasExpr::Pow(base, exponent) => {
+            CasExpr::int(i128::from(*exponent)) * expand_log_argument(base)
+        }
+        other => other.clone().ln(),
+    }
+}
+
 /// Numerically approximate an expression as an `f64`, given `bindings` for its free
 /// variables (each `(name, value)`). Rational constants are exact-to-`f64`; the
 /// transcendental heads map to the corresponding `f64` functions.
@@ -4053,6 +4102,25 @@ mod tests {
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
         assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn expand_log_rules() {
+        let x = || v("x");
+        let y = || v("y");
+        // ln(x·y) = ln x + ln y.
+        assert_equal(&expand_log(&(x() * y()).ln()), &(x().ln() + y().ln()));
+        // ln(x/y) = ln x − ln y.
+        assert_equal(&expand_log(&(x() / y()).ln()), &(x().ln() - y().ln()));
+        // ln(x³) = 3·ln x.
+        assert_equal(&expand_log(&x().pow(3).ln()), &(CasExpr::int(3) * x().ln()));
+        // ln(x²·y) = 2·ln x + ln y (product + power together).
+        assert_equal(
+            &expand_log(&(x().pow(2) * y()).ln()),
+            &(CasExpr::int(2) * x().ln() + y().ln()),
+        );
+        // A bare ln is untouched.
+        assert_equal(&expand_log(&x().ln()), &x().ln());
     }
 
     #[test]
