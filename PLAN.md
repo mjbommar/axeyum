@@ -589,20 +589,20 @@ session state.
 >    pass. `int_reconstruct.rs` falls 4,701→4,246 lines and is now 52.2% below
 >    its original 8,876 lines. Remeasure before any successor; no further
 >    integer-family split is implied.
->    The post-I5 census authorizes one final narrow I6 seam: the original
->    ADR-0042 Diophantine reconstruction owns a corrected 732-line /
->    35,870-byte body, two public entries, four family-only support items, and
->    eight context methods with no other consumer. Move only those items to private
->    `int_reconstruct/diophantine.rs`, keeping both paths and exact Lean bytes.
+>    I6 is now complete: the original ADR-0042 Diophantine reconstruction lives
+>    in private 767-line `int_reconstruct/diophantine.rs` with its two public
+>    paths unchanged and eight family-only context methods.
 >    Seventeen context methods already used by the parent or sibling proof
 >    families remain in the parent without visibility widening. The first
 >    compile gate corrected the initial same-file-only census by identifying
 >    four sibling-consumed methods and four transitive helpers before
->    acceptance. Gate the move on all five focused
->    reconstruction tests, four evidence tests, 19 committed math-resource
->    routes, namespace compatibility, all 895 library tests, strict Clippy,
->    both rustdoc profiles, links, and the bounded OOM audit. After I6, close
->    the integer structural lane rather than turning residual size into a queue.
+>    acceptance. The canonical `two_x_eq_one` Lean module remains exactly
+>    868,243 bytes at FNV-1a `d2f76675b12631ea`; all 5 reconstruction, 4
+>    evidence, 19 committed math-resource, and 10 namespace controls pass, as
+>    do all 895 library tests, strict Clippy, and both rustdoc profiles.
+>    `int_reconstruct.rs` falls 4,246→3,489 lines / 141,804 bytes, 60.7% below
+>    its original 8,876 lines. I6 closes the integer structural lane; do not
+>    turn residual size into a queue.
 >    Closed-universal and nested-XOR reconstruction remain parent-owned because
 >    their distinct entry points share a large kernel-helper region; do not hide
 >    both behind one cosmetic module.

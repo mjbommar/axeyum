@@ -45,6 +45,13 @@ fn two_x_eq_one_reconstructs_to_false() {
         source.contains("axeyum_refutation"),
         "rendered module should name the axeyum_refutation theorem"
     );
+    let source_fnv = source
+        .as_bytes()
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325, |hash, byte| {
+            (hash ^ u64::from(*byte)).wrapping_mul(0x0000_0100_0000_01b3)
+        });
+    assert_eq!((source.len(), source_fnv), (868_243, 0xd2f7_6675_b126_31ea));
     assert_eq!(
         scan_proof_fragment(&arena, &[e1, e2]),
         ProofFragment::Diophantine

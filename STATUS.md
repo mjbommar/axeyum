@@ -322,20 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — Post-I5 census authorizes only I6 (dependency correction
-  recorded before acceptance).** The original ADR-0042 Diophantine family has
-  a clean 732-line / 35,870-byte body: two public entries, four family-only
-  support items, and eight family-specific context methods. The first compile
+- **2026-07-21 — I6 privately extracts Diophantine reconstruction and closes
+  the integer structural lane.** The original ADR-0042 family now lives in the
+  767-line `int_reconstruct/diophantine.rs` child with both public paths
+  unchanged and eight family-specific context methods. The first compile
   gate exposed four sibling-consumed helpers omitted by the same-file census
   plus four transitive dependencies; all 17 shared context methods therefore
-  stay parent-owned and private. Capture the canonical
-  `two_x_eq_one` Lean identity, then move only the independent body to private
-  `int_reconstruct/diophantine.rs` with unchanged paths, ordering, caps,
-  certificate selection, kernel checks, and evidence behavior. The gate is
-  5 reconstruction + 4 evidence + 19 math-resource tests, namespace
-  compatibility, 895 library tests, strict Clippy/docs, links, and OOM audit.
-  I6 closes the integer structural lane; no generic large-file successor is
-  admitted.
+  stay parent-owned and private. `two_x_eq_one` remains exactly 868,243 Lean
+  bytes at FNV-1a `d2f76675b12631ea`. The 5 reconstruction, 4 evidence, 19
+  math-resource, 10 namespace, 895 library, strict Clippy, and both rustdoc
+  gates pass. `int_reconstruct.rs` falls 4,246→3,489 lines / 141,804 bytes,
+  60.7% below its original size. No generic large-file successor is admitted.
 
 - **2026-07-21 — I5 privately extracts affine-growth reconstruction.** The
   seven-item ADR-0097/0105 family now lives in the 467-line
@@ -5777,6 +5774,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Extracted Diophantine reconstruction.** Moved only the
+  corrected family-specific body into a private 767-line child, preserving
+  both public paths and the exact 868,243-byte Lean module. All focused,
+  resource, namespace, full-library, lint, and documentation gates pass; the
+  integer structural lane is closed.
 
 - **2026-07-21 — Corrected and preregistered the Diophantine module seam.** The
   first compile gate expanded the dependency census beyond same-file callers:
