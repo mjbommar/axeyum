@@ -2048,16 +2048,18 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
 /// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
 /// returning a closed form `a(var)` for the general term.
 ///
-/// The characteristic polynomial `xᵈ − c₁xᵈ⁻¹ − … − c_d` is factored; for
-/// **distinct positive rational** roots `rᵢ` the closed form is `Σ Aᵢ·rᵢ^var`
-/// (each `rᵢ^var` represented as `exp(var·ln rᵢ)`), with the `Aᵢ` fixed by the
-/// initial conditions (a Vandermonde solve). **Certified** by substituting the
-/// closed form back into the recurrence and zero-testing the residual — which now
-/// decides thanks to the exp tower (`exp(k·ln r) = rᵏ`).
+/// The characteristic polynomial `xᵈ − c₁xᵈ⁻¹ − … − c_d` drives the closed form
+/// `Σ Aᵢ·rᵢ^var`, with `rᵢ^var = exp(var·ln rᵢ)` for `rᵢ > 0` and
+/// `cos(π·var)·exp(var·ln|rᵢ|)` for `rᵢ < 0`, and the amplitudes `Aᵢ` fixed by the
+/// initial conditions. Two fragments are supported:
+/// - **distinct positive rational** roots (any order `d`) — Vandermonde solve over
+///   ℚ, certified by substituting the closed form into the recurrence;
+/// - **order-2 real quadratic-irrational** roots `(c₁ ± √D)/2` — solved over ℚ(√D)
+///   and certified by a roots-and-initials argument, so e.g. **Fibonacci** yields
+///   Binet's formula `(φⁿ − ψⁿ)/√5`.
 ///
-/// Returns `None` unless the characteristic roots are distinct, rational, and
-/// positive (the fragment the exp/ln-inverse certifies), if the input shapes
-/// disagree, or on overflow.
+/// Returns `None` for higher-order irrational/complex spectra, repeated roots, if
+/// the input shapes disagree, or on overflow.
 ///
 /// ```
 /// use axeyum_cas::solve_recurrence;
@@ -2148,16 +2150,79 @@ fn is_certified_zero(expr: &CasExpr) -> bool {
     matches!(equal(expr, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
 }
 
+/// Structurally fold the trivial identities `0·x → 0`, `1·x → x`, `x + 0 → x`, and
+/// `−0 → 0`, recursing through the tree **without** normalizing — so `sqrt`/`exp`/
+/// trig structure is preserved (unlike [`simplify`], which turns radicals into
+/// opaque atoms that no longer render or `evalf`). Value-preserving.
+fn fold_trivial(expr: &CasExpr) -> CasExpr {
+    let is_zero = |e: &CasExpr| matches!(e, CasExpr::Const(c) if c.is_zero());
+    let is_one = |e: &CasExpr| matches!(e, CasExpr::Const(c) if *c == Rational::integer(1));
+    match expr {
+        CasExpr::Add(terms) => {
+            let kept: Vec<CasExpr> = terms.iter().map(fold_trivial).filter(|t| !is_zero(t)).collect();
+            match kept.len() {
+                0 => CasExpr::zero(),
+                1 => kept.into_iter().next().unwrap_or_else(CasExpr::zero),
+                _ => CasExpr::Add(kept),
+            }
+        }
+        CasExpr::Mul(factors) => {
+            let folded: Vec<CasExpr> = factors.iter().map(fold_trivial).collect();
+            if folded.iter().any(is_zero) {
+                return CasExpr::zero();
+            }
+            let kept: Vec<CasExpr> = folded.into_iter().filter(|f| !is_one(f)).collect();
+            match kept.len() {
+                0 => CasExpr::one(),
+                1 => kept.into_iter().next().unwrap_or_else(CasExpr::one),
+                _ => CasExpr::Mul(kept),
+            }
+        }
+        CasExpr::Neg(inner) => {
+            let folded = fold_trivial(inner);
+            if is_zero(&folded) {
+                CasExpr::zero()
+            } else {
+                CasExpr::Neg(Box::new(folded))
+            }
+        }
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(fold_trivial(numerator)),
+            Box::new(fold_trivial(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(fold_trivial(base)), *exponent),
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_trivial(arg))),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// The symbolic power `rⁿ` for a real algebraic base `root` (a `CasExpr`) and index
+/// `n = index`, in a form that is real and `evalf`-able for integer `n`:
+/// `exp(n·ln r)` when `root > 0`, and `cos(π·n)·exp(n·ln|r|)` when `root < 0` (since
+/// `(−1)ⁿ = cos(πn)` for integer `n`). This is a **display/evaluation** form only —
+/// the recurrence certificate never substitutes it, so its opacity to the zero-test
+/// is harmless.
+fn algebraic_power(root: &CasExpr, positive: bool, index: &CasExpr) -> CasExpr {
+    if positive {
+        (index.clone() * root.clone().ln()).exp()
+    } else {
+        // rⁿ = (−1)ⁿ·|r|ⁿ = cos(π·n)·exp(n·ln(−r)),  with −r = |r| > 0.
+        let magnitude = fold_trivial(&CasExpr::Neg(Box::new(root.clone())));
+        let alternating = (CasExpr::var("pi") * index.clone()).cos();
+        alternating * (index.clone() * magnitude.ln()).exp()
+    }
+}
+
 /// Closed form of an order-2 recurrence `aₙ = c₁aₙ₋₁ + c₂aₙ₋₂` whose characteristic
-/// roots are a **positive** conjugate pair `(c₁ ± √D)/2` with `D = c₁² + 4c₂ > 0`
-/// non-square and `c₂ < 0` (so both roots are positive). Amplitudes are solved over
-/// ℚ(√D); the result is **certified** by verifying each root satisfies the
-/// characteristic equation and the amplitudes reproduce `a₀, a₁` — which, for
-/// distinct roots, implies the closed form solves the recurrence for all `n`.
+/// roots are a conjugate pair of **real irrational** algebraic numbers `(c₁ ± √D)/2`
+/// (`D = c₁² + 4c₂ > 0` non-square, `c₂ ≠ 0`). Amplitudes are solved over ℚ(√D); the
+/// result is **certified** by verifying each root satisfies the characteristic
+/// equation and the amplitudes reproduce `a₀, a₁` — which, for distinct roots,
+/// implies the closed form solves the recurrence for all `n` (no `rⁿ` substitution).
 ///
-/// `None` outside that fragment (rational/irrational-negative roots, `c₂ ≥ 0`) or on
-/// overflow. Fibonacci (`c₂ = 1 > 0`) has a negative conjugate root and is declined
-/// here — representing `(negative)ⁿ` for symbolic `n` needs the RootOf/power layer.
+/// Negative roots are represented via `cos(π·n)·exp(n·ln|r|)`, so **Fibonacci**
+/// (`aₙ=aₙ₋₁+aₙ₋₂`, roots `φ=(1+√5)/2 > 0`, `ψ=(1−√5)/2 < 0`) yields Binet's formula.
+/// `None` for rational/perfect-square `D`, `c₂ = 0`, or on overflow.
 fn solve_recurrence_quadratic_irrational(
     coefficients: &[Rational],
     initial: &[Rational],
@@ -2167,27 +2232,31 @@ fn solve_recurrence_quadratic_irrational(
     let discriminant = c1
         .checked_mul(c1)?
         .checked_add(Rational::integer(4).checked_mul(c2)?)?;
-    // Real irrational roots, both positive: D > 0 non-square, c₂ < 0, c₁ > 0.
-    if discriminant.numerator() <= 0
-        || rational_sqrt(discriminant).is_some()
-        || c2.numerator() >= 0
-        || c1.numerator() <= 0
-    {
+    // Distinct real irrational roots: D > 0 non-square, and c₂ ≠ 0 (roots nonzero).
+    if discriminant.numerator() <= 0 || rational_sqrt(discriminant).is_some() || c2.is_zero() {
         return None;
     }
     let sqrt_d = simplify_radicals(&CasExpr::Const(discriminant).sqrt());
     let half = || CasExpr::rat(1, 2);
-    let root1 = half() * (CasExpr::Const(c1) + sqrt_d.clone()); // (c₁ + √D)/2
-    let root2 = half() * (CasExpr::Const(c1) - sqrt_d.clone()); // (c₁ − √D)/2
+    let root1 = fold_trivial(&(half() * (CasExpr::Const(c1) + sqrt_d.clone()))); // (c₁ + √D)/2
+    let root2 = fold_trivial(&(half() * (CasExpr::Const(c1) - sqrt_d.clone()))); // (c₁ − √D)/2
+
+    // Exact signs (no floats): `(c₁+√D)/2 > 0 ⟺ c₁ ≥ 0 ∨ D > c₁²`;
+    // `(c₁−√D)/2 > 0 ⟺ c₁ > 0 ∧ c₁² > D`.
+    let c1_squared = c1.checked_mul(c1)?;
+    let root1_positive = c1.numerator() >= 0 || discriminant > c1_squared;
+    let root2_positive = c1.numerator() > 0 && c1_squared > discriminant;
 
     // Amplitudes: A = (a₁ − a₀·r₂)/(r₁ − r₂) with r₁ − r₂ = √D; B = a₀ − A.
     let (a0, a1) = (CasExpr::Const(initial[0]), CasExpr::Const(initial[1]));
-    let amp_a = (a1.clone() - a0.clone() * root2.clone()) / sqrt_d;
-    let amp_b = a0.clone() - amp_a.clone();
+    let amp_a = fold_trivial(&((a1.clone() - a0.clone() * root2.clone()) / sqrt_d));
+    let amp_b = fold_trivial(&(a0.clone() - amp_a.clone()));
 
     let index = CasExpr::var(var);
-    let closed = amp_a.clone() * (index.clone() * root1.clone().ln()).exp()
-        + amp_b.clone() * (index * root2.clone().ln()).exp();
+    let closed = fold_trivial(
+        &(amp_a.clone() * algebraic_power(&root1, root1_positive, &index)
+            + amp_b.clone() * algebraic_power(&root2, root2_positive, &index)),
+    );
 
     // Certificate: each root solves x² − c₁x − c₂ = 0, and the amplitudes reproduce
     // the two initial terms (r⁰ = 1, r¹ = r — no `rⁿ` evaluation needed).
@@ -3177,7 +3246,9 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
         CasExpr::Var(name) => bindings
             .iter()
             .find(|(bound, _)| bound == name)
-            .map(|&(_, value)| value),
+            .map(|&(_, value)| value)
+            // The reserved constant `pi` defaults to π when not explicitly bound.
+            .or_else(|| (name == "pi").then_some(core::f64::consts::PI)),
         CasExpr::Add(terms) => terms.iter().try_fold(0.0, |acc, term| Some(acc + evalf(term, bindings)?)),
         CasExpr::Mul(factors) => factors
             .iter()
@@ -4386,10 +4457,22 @@ mod tests {
             assert!((got - want).abs() < 1e-6, "a_{n} = {got}, want {want}");
         }
 
-        // Fibonacci (aₙ = aₙ₋₁ + aₙ₋₂) has c₂ = 1 > 0 → a NEGATIVE conjugate root
-        // ψ = (1−√5)/2; representing ψⁿ for symbolic n is beyond the exp(n·ln r)
-        // form (ln of a negative), so it declines honestly here.
-        assert!(solve_recurrence(&[ig(1), ig(1)], &[ig(0), ig(1)], "n").is_none());
+        // Fibonacci: aₙ = aₙ₋₁ + aₙ₋₂, a₀=0, a₁=1 ⇒ Binet's formula (roots φ>0 and
+        // ψ=(1−√5)/2 < 0, the negative root via cos(πn)·exp(n·ln|ψ|)). Certified over
+        // ℚ(√5); verify it reproduces 0,1,1,2,3,5,8,13.
+        let fib = solve_recurrence(&[ig(1), ig(1)], &[ig(0), ig(1)], "n").expect("Fibonacci");
+        for (n, want) in [(0usize, 0.0), (1, 1.0), (2, 1.0), (3, 2.0), (4, 3.0), (5, 5.0), (6, 8.0), (7, 13.0)] {
+            #[allow(clippy::cast_precision_loss)]
+            let got = evalf(&fib, &[("n", n as f64)]).unwrap();
+            assert!((got - want).abs() < 1e-6, "F({n}) = {got}, want {want}");
+        }
+        // Lucas numbers: same recurrence, a₀=2, a₁=1 ⇒ 2,1,3,4,7,11,18.
+        let lucas = solve_recurrence(&[ig(1), ig(1)], &[ig(2), ig(1)], "n").expect("Lucas");
+        for (n, want) in [(0usize, 2.0), (1, 1.0), (2, 3.0), (3, 4.0), (4, 7.0), (5, 11.0)] {
+            #[allow(clippy::cast_precision_loss)]
+            let got = evalf(&lucas, &[("n", n as f64)]).unwrap();
+            assert!((got - want).abs() < 1e-6, "L({n}) = {got}, want {want}");
+        }
     }
 
     #[test]
