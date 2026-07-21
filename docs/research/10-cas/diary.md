@@ -946,3 +946,33 @@ log,sin,cos}, exp×trig, trig monomials (odd+even), ∫tan, log-substitution, ad
 constant linearity, definite (FTC + constant folding), improper (±∞). Frontier: general
 substitution/by-parts, Risch; Zeilberger; Gruntz; multivariate factorization; Puiseux;
 erf/Si/Ci/Ei heads; arbitrary-precision N[].
+
+## 2026-07-21 — Entry 29: the special-function heads frontier (415 tests)
+
+Broke into the special-function frontier — the first genuinely "hard" roadmap tier.
+Since entry 28 (391 → 415, plus the calculus/number-theory fills at 391–411):
+
+**Nine new integral-defined special-function heads** (`UnaryFunc::Erf/Si/Ci/Ei/Li/Shi/Chi/
+FresnelS/FresnelC`), each carrying its **defining integral as a certified antiderivative**
+(differentiate-and-check): ∫e^{−x²}=(√π/2)erf(x) (perfect-square a), ∫sin x/x=Si, ∫cos x/x=Ci,
+∫eˣ/x=Ei, ∫1/ln x=li, ∫sinh x/x=Shi, ∫cosh x/x=Chi, ∫sin(πx²/2)=FresnelS, ∫cos(πx²/2)=FresnelC.
+Each has a chain-rule derivative, `.erf()/.si()/…` builders, a numeric `evalf` (their series /
+Abramowitz–Stegun), and `series`/`fold_elementary_constants` handling. **Key finding: adding a
+head is cheap** — only 4 match sites are exhaustive over `UnaryFunc` (`name`, `differentiate`,
+`series::unary_series`, `evalf`); all else (`normalize_rational`, `rewrite_exp`, `evaluate_trig`,
+`simplify_radicals`, `assumptions::sign_of`) has a catch-all.
+
+Supporting integration machinery: `integrate_gaussian`, `integrate_special_integral` (f(ax)/x),
+`integrate_fresnel`, and `integrate_split_fraction` (∫(f+g)/h=∫f/h+∫g/h via a `flatten_fraction`
+that collapses nested divisions) + denominator-constant and negated-numerator pulls in
+`split_constant_factor` — so Shi/Chi fall out of sinh/cosh-over-x by linearity.
+
+Also (391→411, the pre-frontier fills): ∫ additive/constant linearity, both-even trig, log-sub;
+improper integrals; `function_parity` + odd-over-symmetric definite shortcut; `average_value`,
+`root_mean_square`; `companion_matrix`; Tonelli–Shanks, Kronecker, Jordan totient, perfect-power,
+amicable/abundant/deficient, Pythagorean triples, linear congruences; ζ/η/λ/polygamma, Γ at
+negative half-integers; Pell/Jacobsthal/Tribonacci/Motzkin/Eulerian/Narayana/Lah numbers.
+
+**415 unit + 143 doctests, clippy-pedantic clean (incl. examples), WASM-green.** Frontier
+remaining: Gamma/digamma **heads** (derivative tower), Bessel, multivariate factorization,
+Puiseux, Zeilberger, general Gruntz/Risch, arbitrary-precision N[expr,d].
