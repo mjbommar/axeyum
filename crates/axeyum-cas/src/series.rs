@@ -321,7 +321,9 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         | UnaryFunc::Shi
         | UnaryFunc::Chi
         | UnaryFunc::FresnelS
-        | UnaryFunc::FresnelC => None,
+        | UnaryFunc::FresnelC
+        | UnaryFunc::BesselJ0
+        | UnaryFunc::BesselJ1 => None,
     }
 }
 

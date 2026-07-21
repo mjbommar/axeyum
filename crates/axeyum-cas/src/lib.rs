@@ -162,6 +162,10 @@ pub enum UnaryFunc {
     FresnelS,
     /// The **Fresnel cosine integral** `C(x) = ∫₀ˣ cos(π t²/2) dt` (`C′ = cos(π x²/2)`).
     FresnelC,
+    /// The **Bessel function** `J₀(x)` of the first kind, order 0 (`J₀′ = −J₁`).
+    BesselJ0,
+    /// The **Bessel function** `J₁(x)` of the first kind, order 1 (`J₁′ = J₀ − J₁/x`).
+    BesselJ1,
 }
 
 impl UnaryFunc {
@@ -186,6 +190,8 @@ impl UnaryFunc {
             UnaryFunc::Chi => "Chi",
             UnaryFunc::FresnelS => "FresnelS",
             UnaryFunc::FresnelC => "FresnelC",
+            UnaryFunc::BesselJ0 => "BesselJ0",
+            UnaryFunc::BesselJ1 => "BesselJ1",
         }
     }
 
@@ -243,6 +249,12 @@ impl UnaryFunc {
             }
             UnaryFunc::FresnelC => {
                 (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).cos()
+            }
+            // d/du J₀(u) = −J₁(u) ; d/du J₁(u) = J₀(u) − J₁(u)/u.
+            UnaryFunc::BesselJ0 => -CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(u())),
+            UnaryFunc::BesselJ1 => {
+                CasExpr::Unary(UnaryFunc::BesselJ0, Box::new(u()))
+                    - CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(u())) / u()
             }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
@@ -5619,6 +5631,8 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 }
                 UnaryFunc::FresnelS => fresnel_f64(value, true),
                 UnaryFunc::FresnelC => fresnel_f64(value, false),
+                UnaryFunc::BesselJ0 => bessel_j_f64(value, 0),
+                UnaryFunc::BesselJ1 => bessel_j_f64(value, 1),
             })
         }
     }
@@ -5718,6 +5732,27 @@ fn fresnel_f64(x: f64, sine: bool) -> f64 {
         let m = if sine { 2 * n + 1 } else { 2 * n };
         powered *= half_pi * half_pi;
         factorial *= f64::from((m + 1) * (m + 2));
+    }
+    sum
+}
+
+/// Numeric **Bessel function of the first kind** `J_order(x)` (order `0` or `1`)
+/// for [`evalf`], via the power series `Jₘ(x) = Σ_{k≥0} (−1)ᵏ/(k!(k+m)!)·(x/2)^{2k+m}`.
+fn bessel_j_f64(x: f64, order: u32) -> f64 {
+    let half = x / 2.0;
+    // k = 0 term: (x/2)^m / m!.
+    let mut term = half.powi(i32::try_from(order).unwrap_or(0));
+    for factor in 1..=order {
+        term /= f64::from(factor);
+    }
+    let mut sum = term;
+    for k in 1..100u32 {
+        // Ratio to previous term: −(x/2)² / (k·(k+m)).
+        term *= -half * half / (f64::from(k) * f64::from(k + order));
+        sum += term;
+        if term.abs() < 1e-18 {
+            break;
+        }
     }
     sum
 }
@@ -10901,6 +10936,26 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn bessel_j0_j1() {
+        let x = || v("x");
+        let j0 = |a: CasExpr| CasExpr::Unary(UnaryFunc::BesselJ0, Box::new(a));
+        let j1 = |a: CasExpr| CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(a));
+        // Closed derivative pair: J₀′=−J₁, J₁′=J₀−J₁/x.
+        assert_equal(&j0(x()).differentiate("x"), &(-j1(x())));
+        assert_equal(
+            &j1(x()).differentiate("x"),
+            &(j0(x()) - j1(x()) / x()),
+        );
+        // Numeric values against known references.
+        let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
+        close(evalf(&j0(CasExpr::int(0)), &[]).unwrap(), 1.0);
+        close(evalf(&j0(CasExpr::int(1)), &[]).unwrap(), 0.765_198);
+        close(evalf(&j1(CasExpr::int(1)), &[]).unwrap(), 0.440_051);
+        close(evalf(&j0(CasExpr::int(2)), &[]).unwrap(), 0.223_891);
+        close(evalf(&j1(CasExpr::int(0)), &[]).unwrap(), 0.0);
     }
 
     #[test]
