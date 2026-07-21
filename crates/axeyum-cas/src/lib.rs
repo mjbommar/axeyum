@@ -2934,7 +2934,12 @@ fn node_count(expr: &CasExpr) -> usize {
 pub fn simplify(expr: &CasExpr) -> CasExpr {
     let mut best = expr.clone();
     let mut best_size = node_count(&best);
-    for candidate in [cancel(expr), expand(expr)].into_iter().flatten() {
+    // `trigsimp` is included so the common entry point also collapses
+    // `sin²+cos²`; it returns an equality-gated (hence value-equal) form.
+    for candidate in [cancel(expr), expand(expr), Some(trigsimp(expr))]
+        .into_iter()
+        .flatten()
+    {
         let size = node_count(&candidate);
         if size < best_size {
             best = candidate;

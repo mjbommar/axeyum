@@ -806,3 +806,38 @@ it). **355 unit + 98 doctests, clippy-pedantic clean, WASM-green.** All on the
 `cas/parity-push` → `main` worktree, kept clear of the concurrent solver-side branch.
 Remaining frontier: assumptions engine, full Risch, Zeilberger, Jordan form for
 defective matrices, Gruntz limits, multivariate factorization, PDEs.
+
+## 2026-07-21 — Entry 24: assumptions, a zero-test soundness fix, clean display (365 tests)
+
+Consolidation + correctness pass, all in-lib. Since entry 23 (355 → 365):
+
+**Assumptions engine** (`assumptions.rs`): a `Sign` lattice (positive/negative/zero/
+nonneg/nonpos/unknown) with sound product/sum/negate combinators and an `Assumptions`
+set whose `sign_of` decides an expression's sign structurally (`exp>0`, even power ≥0,
+`|·|≥0`, `√·≥0`, product/sum of signs). Gates `simplify_under_assumptions`:
+`|u|→u`/`√(x²)→x` when `x≥0`, `|u|→−u` when `x≤0`.
+
+**Zero-test soundness fix (important).** The core cross-multiplication test treats each
+transcendental head as an *independent* atom — sound for asserting *equality*, but it
+was emitting `Certified{equal:false}` for **true** identities whose atoms are secretly
+related: `equal(tan x, sin x/cos x)` and `equal(cos 2x, 2cos²x−1)` were *false proofs of
+inequality*. Fix: `equal` now re-checks any non-equal core result on the `rewrite_exp`
+(Euler) canonical form — where sin/cos/tan become complex exponentials and the exp-tower
+makes distinct atoms genuinely independent (ℚ-linearly-independent exponents ⇒
+algebraically independent), so a nonzero witness is *sound*. Denotation-preserving and
+identity on trig-free input; an undecidable re-check downgrades to `Unknown`, never a
+false cert. Unlocks tan/double-angle/product identities in the zero-test.
+
+**Display fix (pervasive).** `expand`/`cancel`/`simplify` were leaking the internal
+`\0head:…` atom keys: `expand(sin(2x+1))` returned the literal `\0sin:2*x + 1`,
+`simplify(sin x)` returned ` sin:x`. Added `collect_atom_dictionary` + `deatomize`
+(reconstructing exp-tower per-term / integer-scaled / sign-canonical / conjugate-trig
+keys) as a post-pass. All transcendental output now renders cleanly.
+
+**New capability.** `trigsimp` (Pythagorean `sin²+cos²=1`, both reduction directions,
+equality-gated smallest form) — now also wired into `simplify`. Integration finders for
+`∫p·eˣ·sin|cos` (exp×trig, one coupled linear system), `∫sinᵐcosⁿ` (odd-power
+substitution), and `∫tan` (via the now-sound Euler equal).
+
+**365 unit + 99 doctests, clippy-pedantic clean, WASM-green.** Frontier unchanged:
+full Risch, Zeilberger, Jordan form, Gruntz limits, multivariate factorization, PDEs.
