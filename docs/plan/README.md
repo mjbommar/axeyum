@@ -21,6 +21,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   **current** scoped evidence map and ranked research program. It separates
   fragment decision parity, production Z3 replacement, certified-result
   coverage, Lean-kernel compatibility, and Lean workflow integration.
+- [`gap-ownership-v1.json`](gap-ownership-v1.json) and the generated
+  [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
+  routing from each research question to owning code, committed evidence,
+  executable gates, ADRs, and the next safe action.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

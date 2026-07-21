@@ -365,9 +365,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   WHNF/type checking as future work, turn finite differential evidence into
   universal soundness, or publish the superseded p4dfa 3/20/60-second narrative.
   `scripts/check-parity-docs.py` now guards these public pages and derives the
-  project-state solver/proof denominators from the committed artifacts. Next:
-  finish G10's contributor map from each measured gap to its module, corpus,
-  checker, and ADR; do not expand the executive page back into a second STATUS.
+  project-state solver/proof denominators from the committed artifacts. The
+  follow-on `gap-ownership-v1.json` manifest and generated contributor map route
+  all G0-G10 gaps to owner paths, evidence, executable gates, ADR anchors, and a
+  next safe action; path and gap-title drift fail generation. Three gaps expose
+  the absence of a gap-specific ADR rather than inventing one. Next: use this map
+  for the next behavior-preserving namespace/module split; do not expand the
+  executive page back into a second STATUS.
 
 - **2026-07-21 — the ordered SMT-LIB session contract is prototyped, and the
   real gap includes signature scope.** The official SMT-LIB 2.7 state machine,

@@ -67,6 +67,7 @@
 # Contributor Guide
 
 - [Contributor Guide](contributor-guide/README.md)
+  - [Measured-gap ownership map](contributor-guide/gap-ownership.md)
   - [Multi-agent worktrees](contributor-guide/multi-agent-worktrees.md)
 
 # Interactive

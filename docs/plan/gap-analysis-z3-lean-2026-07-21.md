@@ -416,9 +416,18 @@ docs gate derives its key solver/proof denominators from committed artifacts and
 checks this page plus the README, docs hub, benchmarks, and limitations for the
 stale claims that previously survived measurement corrections.
 
-**Exit:** a short contributor entry point maps each measured gap to its owning
-module, corpus, checker, and ADR; public namespaces expose the product surface
-rather than the internal scenario catalog.
+**Contributor routing landed:** the machine-readable
+[ownership manifest](gap-ownership-v1.json) and generated
+[G0-G10 map](../contributor-guide/gap-ownership.md) name each gap's first code
+owners, evidence artifacts, executable gates, ADR anchors, and next safe action.
+The generator validates all repository paths and title/order identity against
+this gap program; three gaps with no specific ADR expose that decision debt
+rather than inventing a reference.
+
+**Exit:** the contributor entry point is landed. Complete the structural half:
+public namespaces expose the product surface rather than the internal scenario
+catalog, and monolithic implementation files split only behind behavior-
+preserving gates.
 
 ## Execution order
 
@@ -458,5 +467,5 @@ reported as parity before it climbs the measured and certifying rungs.
 8. Design the ordered SMT-LIB session event/result IR and transcript invariants
    from the landed conformance matrix before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.
-10. Extend the public project-state entry point with a one-page contributor map
-    from each measured gap to its owning module, corpus, checker, and ADR.
+10. Use the generated ownership map to select the next bounded G10 namespace or
+    module split; preserve public behavior and generated artifacts byte-for-byte.

@@ -138,5 +138,5 @@ support, trust, and conformance ledgers—not in an unqualified product slogan.
 | Evaluating the project | [Limitations](user-guide/limitations.md) and [Benchmarks](user-guide/benchmarks.md) |
 | Running it | [User guide](user-guide/README.md) |
 | Reviewing assurance | [Capability matrix](research/08-planning/capability-matrix.md), [trust ledger](research/08-planning/trust-ledger.md), and [proof-gap matrix](plan/generated/proof-gap-matrix.md) |
-| Contributing | [Contributor guide](contributor-guide/README.md) and [scoped gap program](plan/gap-analysis-z3-lean-2026-07-21.md) |
+| Contributing | [Measured-gap ownership map](contributor-guide/gap-ownership.md), [contributor guide](contributor-guide/README.md), and [scoped gap program](plan/gap-analysis-z3-lean-2026-07-21.md) |
 | Resuming engineering work | [PLAN](../PLAN.md), then [STATUS](../STATUS.md) |

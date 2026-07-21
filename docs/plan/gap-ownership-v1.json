@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "source_gap_doc": "docs/plan/gap-analysis-z3-lean-2026-07-21.md",
+  "gaps": [
+    {
+      "id": "G0",
+      "title": "Stop documentation from overruling measurements",
+      "state": "prototype-landed",
+      "question": "Do live public claims still match the committed solver, proof, and protocol artifacts?",
+      "owner_paths": [
+        "scripts/check-parity-docs.py",
+        "scripts/gen-scoreboard.py"
+      ],
+      "evidence_paths": [
+        "bench-results/SCOREBOARD.md",
+        "docs/PROJECT-STATE.md"
+      ],
+      "gate_commands": [
+        "python3 scripts/check-parity-docs.py"
+      ],
+      "decision_paths": [],
+      "next_action": "Add a derived marker whenever a new public quantitative claim gains one canonical machine-readable source."
+    },
+    {
+      "id": "G1",
+      "title": "Replace aggregate decide-rate with a coverage-weighted parity matrix",
+      "state": "prototype-landed",
+      "question": "What source-balanced and deduplicated population does each solver score actually describe?",
+      "owner_paths": [
+        "scripts/smtcomp_repro/provenance.py",
+        "scripts/smtcomp_repro/scoring.py",
+        "scripts/gen-scoreboard.py"
+      ],
+      "evidence_paths": [
+        "bench-results/smtcomp-repro-20260721/inventory.json",
+        "bench-results/smtcomp-repro-20260721/provenance.json",
+        "bench-results/SCOREBOARD.md"
+      ],
+      "gate_commands": [
+        "python3 -m unittest discover -s scripts/smtcomp_repro/tests"
+      ],
+      "decision_paths": [],
+      "next_action": "Define one shared provenance schema across the 35-row regression scoreboard and 228-file public inventory without merging their scores."
+    },
+    {
+      "id": "G2",
+      "title": "Measure production depth, not isolated wins",
+      "state": "partially-landed",
+      "question": "Where do Axeyum, Z3, and Bitwuzla win across hard cold queries and retained embedded workloads?",
+      "owner_paths": [
+        "crates/axeyum-bench/src/main.rs",
+        "scripts/run-glaurung-six-cell-neutral.py",
+        "scripts/analyze-glaurung-paired-traces.py"
+      ],
+      "evidence_paths": [
+        "bench-results/baselines/qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json",
+        "bench-results/baselines/qf-bv-p4dfa-z3-standalone-20s.json",
+        "bench-results/glaurung-six-cell-neutral-20260719/result-summary.json"
+      ],
+      "gate_commands": [
+        "python3 scripts/check-parity-docs.py",
+        "python3 -m unittest scripts.tests.test_analyze_glaurung_paired_traces"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0272-preregister-six-cell-neutral-warm-regime.md"
+      ],
+      "next_action": "Add matched curves for at least three independently sourced QF_BV families, with RSS and decision-set overlap."
+    },
+    {
+      "id": "G3",
+      "title": "Broaden neutral correctness evidence",
+      "state": "partially-landed",
+      "question": "Do at least two independent external oracles agree with Axeyum in both verdict directions on every paper-claimed fragment?",
+      "owner_paths": [
+        "crates/axeyum-solver/tests/bv_differential_fuzz.rs",
+        "crates/axeyum-solver/tests/abv_differential_fuzz.rs",
+        "scripts/run-qfbv-independent-oracle-rounds.sh"
+      ],
+      "evidence_paths": [
+        "bench-results/qfbv-four-oracle-independent-20260718-600s/aggregate.json",
+        "bench-results/qfbv-four-oracle-independent-20260718-600s/README.md"
+      ],
+      "gate_commands": [
+        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --features z3 --test bv_differential_fuzz --test abv_differential_fuzz"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0224-standing-qfbv-multi-oracle-fuzz.md",
+        "docs/research/09-decisions/adr-0237-independent-edge-qfbv-four-oracle-fuzz.md"
+      ],
+      "next_action": "Freeze neutral multi-oracle profiles for arrays/UF and LIA/LRA before widening to FP, strings, and quantified finite fragments."
+    },
+    {
+      "id": "G4",
+      "title": "Close the weak decide-rate frontiers before polishing their proofs",
+      "state": "open",
+      "question": "Which repeated unsupported or unknown shape names the next decision mechanism with measurable public-corpus leverage?",
+      "owner_paths": [
+        "crates/axeyum-solver/tests/progress_frontier.rs",
+        "crates/axeyum-solver/src/backend.rs",
+        "crates/axeyum-solver/src/string_theory.rs",
+        "crates/axeyum-solver/src/uf_arith.rs"
+      ],
+      "evidence_paths": [
+        "bench-results/frontier/bv_reduction.json",
+        "bench-results/frontier/lia_cuts.json",
+        "bench-results/frontier/nia_unsat.json",
+        "bench-results/frontier/nra_degree.json",
+        "bench-results/frontier/string_bound.json"
+      ],
+      "gate_commands": [
+        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --test progress_frontier"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0259-preregister-cold-cnf-construction-attribution.md",
+        "docs/research/09-decisions/adr-0261-preregister-private-parity-leaf-elision.md"
+      ],
+      "next_action": "Select no implementation until a fresh residual-shape census identifies a repeated primitive and a preregistered row-level gate."
+    },
+    {
+      "id": "G5",
+      "title": "Make proof coverage a first-class denominator",
+      "state": "partially-landed",
+      "question": "Which exact definitive results lack serialized evidence, independent checking, trust closure, or Lean reconstruction?",
+      "owner_paths": [
+        "crates/axeyum-solver/src/evidence.rs",
+        "crates/axeyum-solver/src/reconstruct.rs",
+        "crates/axeyum-bench/examples/audit_dominance.rs"
+      ],
+      "evidence_paths": [
+        "docs/plan/generated/proof-gap-matrix.json",
+        "docs/plan/generated/proof-gap-shape-census.json",
+        "docs/plan/evidence-route-provenance-design-2026-07-21.md"
+      ],
+      "gate_commands": [
+        "python3 scripts/gen-proof-gap-matrix.py --check",
+        "python3 scripts/gen-proof-gap-shape-census.py --check"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0341-preregister-source-bound-evidence-route-telemetry.md"
+      ],
+      "next_action": "Review proposed ADR-0341, then add verdict-invariant attempt and obligation provenance beginning with the four source-invalid QF_SEQ rows."
+    },
+    {
+      "id": "G6",
+      "title": "Turn external Lean checking into a required tiered gate",
+      "state": "partially-landed",
+      "question": "Does official Lean accept a visible representative and exhaustive population of generated solver proofs without sorryAx?",
+      "owner_paths": [
+        "crates/axeyum-solver/tests/lean_crosscheck.rs",
+        ".github/workflows/ci.yml"
+      ],
+      "evidence_paths": [
+        "docs/plan/generated/proof-gap-matrix.json",
+        "docs/plan/lean-selected-evidence-prototype-2026-07-21.md"
+      ],
+      "gate_commands": [
+        "AXEYUM_REQUIRE_LEAN=1 AXEYUM_LEAN_BUDGET_SECS=0 AXEYUM_LEAN_JOBS=2 cargo test -p axeyum-solver --features full --test lean_crosscheck lean_crosscheck_representative -- --nocapture --exact"
+      ],
+      "decision_paths": [],
+      "next_action": "Archive the first required remote duration, RSS, checked-family count, and declined manifest before sizing the exhaustive scheduled gate."
+    },
+    {
+      "id": "G7",
+      "title": "Separate Lean certificate goals from kernel-compatibility research",
+      "state": "open",
+      "question": "Which versioned Lean-core profile does the Rust kernel accept identically to official Lean, independent of solver proof coverage?",
+      "owner_paths": [
+        "crates/axeyum-lean-kernel/src/tc.rs",
+        "crates/axeyum-lean-kernel/src/inductive.rs",
+        "crates/axeyum-lean-kernel/src/expr.rs"
+      ],
+      "evidence_paths": [
+        "docs/prover-track/research/06-kernel-gap-analysis.md",
+        "crates/axeyum-lean-kernel/tests/real_lean_inductive_crosscheck.rs"
+      ],
+      "gate_commands": [
+        "CARGO_BUILD_JOBS=2 cargo test -p axeyum-lean-kernel --tests"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0036-lean-kernel-crate.md",
+        "docs/research/09-decisions/adr-0165-lean-compatible-prop-large-elimination.md"
+      ],
+      "next_action": "Specify the compatibility corpus, then sequence bignum literals before literal typing, projections/eta, recursive inductives/positivity, quotients, and import format."
+    },
+    {
+      "id": "G8",
+      "title": "Measure the SMT-LIB and API compatibility surface",
+      "state": "prototype-landed",
+      "question": "Which commands are parsed, ordered, executed, rendered, and independently checked as one transactional SMT-LIB session?",
+      "owner_paths": [
+        "crates/axeyum-smtlib/src/parse.rs",
+        "crates/axeyum-solver/src/smtlib.rs",
+        "scripts/gen-smtlib-api-conformance.py",
+        "scripts/gen-smtlib-session-contract.py"
+      ],
+      "evidence_paths": [
+        "docs/plan/generated/smtlib-api-conformance.md",
+        "docs/plan/generated/smtlib-session-contract.md"
+      ],
+      "gate_commands": [
+        "python3 scripts/gen-smtlib-api-conformance.py --check",
+        "python3 scripts/gen-smtlib-session-contract.py --check"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0342-preregister-ordered-smtlib-session.md"
+      ],
+      "next_action": "Review proposed ADR-0342; if accepted, implement capture-only ordered command/event IR before rendering or adding command families."
+    },
+    {
+      "id": "G9",
+      "title": "Prove deployability claims with real consumer profiles",
+      "state": "partially-landed",
+      "question": "What time, memory, artifact-size, certificate-coverage, fallback, and decided-rate tradeoff does each real native/WASM consumer select?",
+      "owner_paths": [
+        "crates/axeyum-solver/Cargo.toml",
+        "crates/axeyum-wasm/src/lib.rs",
+        "scripts/check-qfbv-profile.sh",
+        "scripts/measure-wasm-qfbv.cjs"
+      ],
+      "evidence_paths": [
+        "bench-results/wasm-qfbv-deployability-20260717/report.json",
+        "bench-results/qfbv-proof-coverage-20260717/report.json"
+      ],
+      "gate_commands": [
+        "./scripts/check-qfbv-profile.sh"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0216-qfbv-default-and-explicit-consumer-profiles.md",
+        "docs/research/09-decisions/adr-0227-executable-qfbv-webassembly-deployability.md"
+      ],
+      "next_action": "Generate one native/WASM Pareto table with cold/warm latency, RSS, bundle size, certificate coverage, fallback rate, and decided rate."
+    },
+    {
+      "id": "G10",
+      "title": "Reduce reviewer and contributor risk",
+      "state": "partially-landed",
+      "question": "Can a new contributor find the owning module, evidence, checker, decision, and next safe action without reading PLAN/STATUS as battle logs?",
+      "owner_paths": [
+        "docs/PROJECT-STATE.md",
+        "docs/contributor-guide/README.md",
+        "crates/axeyum-solver/src/lib.rs"
+      ],
+      "evidence_paths": [
+        "docs/plan/gap-ownership-v1.json",
+        "docs/plan/gap-analysis-z3-lean-2026-07-21.md"
+      ],
+      "gate_commands": [
+        "python3 scripts/gen-gap-ownership.py --check",
+        "./scripts/check-links.sh"
+      ],
+      "decision_paths": [
+        "docs/research/09-decisions/adr-0307-theory-api-namespace.md"
+      ],
+      "next_action": "Use this map during the next gap increment; split the remaining monolith/API surfaces only behind behavior-preserving gates."
+    }
+  ]
+}
