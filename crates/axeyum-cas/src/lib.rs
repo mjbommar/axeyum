@@ -8090,8 +8090,19 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
         );
         return Some(scaled_term(coeff, ln));
     }
-    // Degree ≥ 2: Rothstein–Trager. ∫ C/D₁ = Σ cᵢ·ln(vᵢ), cᵢ the rational roots
-    // of Res_t, vᵢ = gcd(C − cᵢ·D₁', D₁).
+    // Degree ≥ 2: factor the squarefree denominator over ℚ and integrate each
+    // partial fraction — a linear factor gives a log, an irreducible quadratic a
+    // ln+atan. This is complete (never a *partial* result) for denominators that
+    // split into linear + irreducible-quadratic factors, closing mixed cases like
+    // `∫1/(x³+1) = ⅓ln(x+1) + (quadratic)`. Tried first because Rothstein–Trager's
+    // rational-root scan below can return an incomplete set of logs when some
+    // residues are irrational.
+    if let Some(result) = integrate_log_part_by_factoring(var, &cc, &dd) {
+        return Some(result);
+    }
+    // Fallback: Rothstein–Trager. ∫ C/D₁ = Σ cᵢ·ln(vᵢ), cᵢ the rational roots of
+    // Res_t, vᵢ = gcd(C − cᵢ·D₁', D₁). Only trusted when it covers the whole
+    // integrand (the certificate rejects any incomplete result downstream).
     if let Some(terms) = ratint::log_terms(&cc, &dd) {
         let mut sum: Vec<CasExpr> = Vec::with_capacity(terms.len());
         for (coeff, v_poly) in terms {
@@ -8107,13 +8118,61 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
             _ => Some(CasExpr::Add(sum)),
         };
     }
-    // No rational roots: an irreducible **quadratic** denominator has a real
-    // closed form in ln + atan (∫ 1/(x²+1) = atan x). Higher-degree irreducible
-    // denominators need algebraic-number roots (a later slice) → None.
-    if poly::rat_degree(&dd)? == 2 {
-        return integrate_irreducible_quadratic(var, &cc, &dd);
-    }
     None
+}
+
+/// Integrate `∫ C/D dx` for a **squarefree** `D` (deg `C` < deg `D`) by
+/// partial-fraction decomposition over ℚ-irreducible factors (via [`apart`]),
+/// integrating each piece with [`integrate_partial_fraction_term`]. `None` if any
+/// piece falls outside the supported linear/irreducible-quadratic shapes.
+fn integrate_log_part_by_factoring(var: &str, cc: &[Rational], dd: &[Rational]) -> Option<CasExpr> {
+    let cc_expr = MultiPoly::from_univariate(var, cc).to_expr();
+    let dd_expr = MultiPoly::from_univariate(var, dd).to_expr();
+    let decomposed = apart(&(cc_expr / dd_expr), var)?;
+    let terms = match &decomposed {
+        CasExpr::Add(ts) => ts.clone(),
+        other => vec![other.clone()],
+    };
+    let mut parts: Vec<CasExpr> = Vec::with_capacity(terms.len());
+    for term in &terms {
+        parts.push(integrate_partial_fraction_term(term, var)?);
+    }
+    match parts.len() {
+        0 => None,
+        1 => parts.into_iter().next(),
+        _ => Some(CasExpr::Add(parts)),
+    }
+}
+
+/// Integrate a single partial-fraction term: a polynomial, `N/(a·x+b)` → log, or
+/// `N/(irreducible quadratic)` → ln+atan. Directly (no recursion through
+/// [`integrate`]), so it cannot loop back through the factoring fallback. `None`
+/// for any other shape (e.g. a higher-degree irreducible denominator).
+fn integrate_partial_fraction_term(term: &CasExpr, var: &str) -> Option<CasExpr> {
+    match term {
+        CasExpr::Div(n, f) => {
+            let npoly = normalize(n)?.to_univariate(var)?;
+            let fpoly = normalize(f)?.to_univariate(var)?;
+            match poly::rat_degree(&fpoly)? {
+                1 => {
+                    // ∫ n₀/(a·x+b) = (n₀/a)·ln(a·x+b) (numerator is constant here).
+                    let n0 = npoly.first().copied().unwrap_or_else(Rational::zero);
+                    let coeff = n0.checked_div(fpoly[1])?;
+                    Some(scaled_term(
+                        coeff,
+                        MultiPoly::from_univariate(var, &fpoly).to_expr().ln(),
+                    ))
+                }
+                2 => integrate_irreducible_quadratic(var, &npoly, &fpoly),
+                _ => None,
+            }
+        }
+        other => {
+            let poly = normalize(other)?.to_univariate(var)?;
+            let anti = integrate_univariate_poly(&poly)?;
+            Some(MultiPoly::from_univariate(var, &anti).to_expr())
+        }
+    }
 }
 
 /// `∫ (c₁·x + c₀)/(a·x² + b·x + d) dx` for an **irreducible** quadratic
@@ -11499,6 +11558,28 @@ mod tests {
         // Even powers are NOT elementary — must decline, never fabricate.
         assert!(integrate(&x().pow(2).exp(), "x").is_none_or(|c| !c.is_certified()));
         assert!(integrate(&(x().pow(2) * x().pow(2).exp()), "x").is_none_or(|c| !c.is_certified()));
+    }
+
+    #[test]
+    fn mixed_rational_partial_fraction_integrals() {
+        let x = || v("x");
+        // Denominators mixing linear + irreducible-quadratic factors — partial
+        // fractions over ℚ, each piece a log or ln+atan. Certified.
+        for integrand in [
+            CasExpr::int(1) / (x().pow(3) + CasExpr::int(1)),   // (x+1)(x²−x+1)
+            CasExpr::int(1) / (x().pow(3) - CasExpr::int(1)),   // (x−1)(x²+x+1)
+            x() / (x().pow(3) + CasExpr::int(1)),
+            CasExpr::int(1) / ((x() + CasExpr::int(1)) * (x().pow(2) + CasExpr::int(1))),
+            (CasExpr::int(3) * x() + CasExpr::int(2))
+                / ((x() - CasExpr::int(1)) * (x().pow(2) + CasExpr::int(4))),
+        ] {
+            let r = integrate(&integrand, "x").expect("mixed rational integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // Purely irrational-real-root quadratics still need algebraic numbers → decline.
+        assert!(integrate(&(CasExpr::int(1) / (x().pow(2) - CasExpr::int(2))), "x")
+            .is_none_or(|c| !c.is_certified()));
     }
 
     #[test]
