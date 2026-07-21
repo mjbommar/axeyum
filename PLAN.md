@@ -356,6 +356,12 @@ session state.
 >    capture credit. Next preregister a fresh two-root build with dependency-
 >    wide remapping and require raw full-module equality before extraction;
 >    never normalize the observed modules or erase names after the fact.
+>    ADR-0325 now preregisters that fresh v2 build. Exact Cargo-encoded flags
+>    preserve `-Zexport-executable-symbols` and apply the root remap to every
+>    target dependency; the final rustc tail carries no remap. Both full
+>    modules must contain zero real-root tokens and match as raw bytes before
+>    symbol rediscovery or parser admission. Implement/run this capture next;
+>    inverse-property construction remains unauthorized.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

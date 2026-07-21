@@ -322,6 +322,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0325 preregisters the dependency-wide-remapped Maestro
+  capture.** The fresh v2 protocol uses exact Cargo-encoded target flags to
+  preserve upstream symbol export and remap every dependency, removes the
+  final-crate-only remap, requires zero real-root tokens and raw full-module
+  equality, then rediscovers and parser-admits the three selected definitions.
+  It cannot normalize ADR-0324 bytes or run proofs. Next: implement and execute
+  this bounded T5.5.2 retry.
+
 - **2026-07-21 — ADR-0324 identifies dependency-wide source-path leakage in
   the Maestro build protocol.** Its complete 40,665,637-byte diff classifies
   319,598 changed lines and finds seven absolute `utils` paths per module. The
@@ -5947,9 +5955,15 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured (selected: Maestro device-number encoding) | WIP — **T5.5.1 DONE; ADR-0323 capture negative; ADR-0324 diagnoses the root leak:** the exact Maestro population remains selected. The final-crate-only remap misses seven `utils` dependency paths per module and causes broad symbol/metadata drift; all three bodies parse, but no capture credit exists. Next is a preregistered dependency-wide-remapped build. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
+| P5.5 | External target, measured (selected: Maestro device-number encoding) | WIP — **T5.5.1 DONE; ADR-0323 capture negative; ADR-0324 diagnoses root leakage; ADR-0325 v2 proposed:** Cargo-encoded dependency-wide remapping must produce zero real-root tokens and byte-identical raw modules before symbol rediscovery/parser admission. All proof work remains blocked. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Preregistered dependency-wide Maestro path remapping
+  (ADR-0325).** The zero-result v2 retry preserves the upstream export flag,
+  remaps every Cargo target dependency, requires zero real-root tokens and raw
+  full-module equality, and only then permits symbol rediscovery and scalar
+  parser admission. It grants no proof authorization.
 
 - **2026-07-21 — Diagnosed the Maestro two-root LLVM drift (ADR-0324).** The
   complete diff classifies all 319,598 changed lines and identifies seven
