@@ -841,3 +841,30 @@ substitution), and `∫tan` (via the now-sound Euler equal).
 
 **365 unit + 99 doctests, clippy-pedantic clean, WASM-green.** Frontier unchanged:
 full Risch, Zeilberger, Jordan form, Gruntz limits, multivariate factorization, PDEs.
+
+## 2026-07-21 — Entry 25: numerics polish + matrix exp / ODE systems / ζ (371 tests)
+
+Continued the in-lib parity + polish push. Since entry 24 (365 → 371):
+
+**New capability.** `matrix_exp` (e^{A·t} for ℚ-diagonalizable A, certified by the
+defining IVP d/dt M = A·M ∧ M(0)=I); `linear_ode_system` (x′=Ax ⇒ x=e^{At}x0, cert
+inherited); `special::zeta` (exact ζ(2k)=(−1)^{k+1}B_{2k}(2π)^{2k}/(2(2k)!) = c·π^{2k},
+ζ(0)=−1/2, ζ(−m)=−B_{m+1}/(m+1) via the existing Bernoulli; honest None at the s=1
+pole and positive-odd s≥3); `series` of `tan` (sin/cos quotient) → unblocks
+`lim tan x/x`.
+
+**Polish (display/correctness).** `differentiate_n` now folds each step (`d³ sin =
+−cos`, not a giant tree); `fold_trivial` gained `−(−x)→x`, `x¹→x`, `x⁰→1`, nested-Mul
++ constant combining. `simplify_radicals` cancels constant denominators (√8/2→√2).
+Quadratic solver extracts/reduces surds (`solve(x²−12)=±2√3`, `solve(x²+4)=±2I`) via a
+new `simplify_surd`. `definite_integrate` folds elementary constants (∫₀^π sin x=2,
+∫₁² 1/x=ln 2). `apart` folds factor^1→factor.
+
+**Numerics note.** `evalf` remains f64 (~15 digits) — there is no arbitrary-precision
+`N[expr,d]` yet; that is a deliberate architectural fork (a pure-Rust WASM-safe bignum
+float + Euler-Maclaurin/AGM kernels), kept separate from the dependency-free core.
+Integer factorization is already fast (Brent Pollard-rho + Miller-Rabin, u128,
+overflow-safe) — adequate for all in-fragment inputs.
+
+**371 unit + 102 doctests, clippy-pedantic clean, WASM-green.** Frontier: Jordan form
+(defective), Zeilberger, Gruntz, multivariate factorization, arbitrary-precision N[].

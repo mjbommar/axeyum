@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 365 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 371 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -26,9 +26,9 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
 | Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable** | values compute; identities ✓ |
 | Complex | `imaginary_unit` (`I²=−1`), `conjugate`, `real_part`, `imaginary_part`, `modulus`, `roots_of_unity` | ✓ |
-| Linear algebra | `Matrix`: +/−/×, determinant (+ Bareiss), RREF, solve, inverse, `adjugate`/`cofactor`, `pow`, `hadamard`/`kronecker`, `null_space`, `lu`, `rank`, `trace`, char-poly, `eigenvalues`/`eigenvectors`, `minimal_polynomial`, `diagonalize` (P·D·P⁻¹), Hermite/Smith, `gram_schmidt`; `solve_linear_system`, `least_squares_polynomial` | det/solve/eigvec/diag ✓; U·A(·V)=D ✓ |
+| Linear algebra | `Matrix`: +/−/×, determinant (+ Bareiss), RREF, solve, inverse, `adjugate`/`cofactor`, `pow`, `hadamard`/`kronecker`, `null_space`, `lu`, `rank`, `trace`, char-poly, `eigenvalues`/`eigenvectors`, `minimal_polynomial`, `diagonalize` (P·D·P⁻¹), `matrix_exp` (e^{At}), `linear_ode_system` (x′=Ax), Hermite/Smith, `gram_schmidt`; `solve_linear_system`, `least_squares_polynomial` | det/solve/eigvec/diag/matexp/ODE-system ✓; U·A(·V)=D ✓ |
 | Logic / sets | `boolean::BoolExpr` (truth tables, tautology/SAT, DNF/CNF, Quine–McCluskey); `sets::RealSet` (interval unions, set algebra, measure); `interval_arith::Interval` (rigorous enclosures) | truth-table / exact ✓ |
-| Special functions | `special`: `gamma`/`beta` (integer + half-integer); `hyperbolic`: sinh/cosh/tanh/…/asinh/acosh/atanh (identities certify via exp tower) | ✓ (identities) |
+| Special functions | `special`: `gamma`/`beta` (integer + half-integer), `zeta` (exact ζ(2k)=c·π^{2k}, ζ(0), ζ(−m) via Bernoulli); `hyperbolic`: sinh/cosh/tanh/…/asinh/acosh/atanh (identities certify via exp tower) | ✓ (identities / Bernoulli) |
 | Finite fields | `gfp`: 𝔽ₚ[x] ring ops, gcd, `is_irreducible`, `factor_berlekamp`, `roots` | re-multiply ✓ |
 | Groups | `Permutation`: compose, inverse, cycles, order, sign (symmetric groups) | group laws ✓ |
 | Boolean algebra | `boolean::BoolExpr`: truth tables, tautology/SAT, DNF/CNF, `equivalent`, Quine–McCluskey minimization | truth-table ✓ |
