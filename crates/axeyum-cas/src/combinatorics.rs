@@ -338,9 +338,65 @@ pub fn lucas(n: u32) -> Option<i128> {
     Some(previous)
 }
 
+/// The **harmonic number** `Hₙ = Σ_{k=1}^{n} 1/k`, exact ([`Rational`]).
+/// `H₀ = 0`, `H₁ = 1`, `H₂ = 3/2`, `H₃ = 11/6`, `H₄ = 25/12`. `None` on `i128`
+/// overflow of the running numerator/denominator (the denominators grow as
+/// `lcm(1..n)`, so this bounds `n` to a few dozen).
+///
+/// ```
+/// use axeyum_cas::combinatorics::harmonic;
+/// use axeyum_ir::Rational;
+/// assert_eq!(harmonic(3), Some(Rational::new(11, 6)));
+/// ```
+#[must_use]
+pub fn harmonic(n: u32) -> Option<Rational> {
+    generalized_harmonic(n, 1)
+}
+
+/// The **generalized harmonic number** `H_n^{(r)} = Σ_{k=1}^{n} 1/kʳ`, exact.
+/// `H_n^{(1)}` is the ordinary [`harmonic`] number; `H_n^{(2)} → π²/6` as
+/// `n → ∞` (cf. [`crate::special::zeta`]). Requires `r ≥ 1` (`r == 0` is
+/// rejected); `None` also on `i128` overflow of `kʳ` or the running sum.
+///
+/// ```
+/// use axeyum_cas::combinatorics::generalized_harmonic;
+/// use axeyum_ir::Rational;
+/// // H_2^{(2)} = 1 + 1/4 = 5/4.
+/// assert_eq!(generalized_harmonic(2, 2), Some(Rational::new(5, 4)));
+/// ```
+#[must_use]
+pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
+    if r == 0 {
+        return None;
+    }
+    let mut sum = Rational::zero();
+    for k in 1..=n {
+        let base = i128::from(k);
+        let mut power = 1_i128;
+        for _ in 0..r {
+            power = power.checked_mul(base)?;
+        }
+        sum = sum.checked_add(Rational::checked_new(1, power)?)?;
+    }
+    Some(sum)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn harmonic_numbers_exact() {
+        assert_eq!(harmonic(0), Some(Rational::zero()));
+        assert_eq!(harmonic(1), Some(Rational::integer(1)));
+        assert_eq!(harmonic(2), Some(Rational::new(3, 2)));
+        assert_eq!(harmonic(3), Some(Rational::new(11, 6)));
+        assert_eq!(harmonic(4), Some(Rational::new(25, 12)));
+        // Generalized: H_2^{(2)} = 1 + 1/4 = 5/4; H_3^{(2)} = 1 + 1/4 + 1/9 = 49/36.
+        assert_eq!(generalized_harmonic(2, 2), Some(Rational::new(5, 4)));
+        assert_eq!(generalized_harmonic(3, 2), Some(Rational::new(49, 36)));
+        assert_eq!(generalized_harmonic(3, 0), None);
+    }
 
     #[test]
     fn bernoulli_known_values() {
