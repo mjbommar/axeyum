@@ -733,6 +733,43 @@ impl MultiPoly {
         Some(out)
     }
 
+    /// The mirror of [`fold_pythagorean`]: reduce `sin(u)^e → sin(u)^(e mod 2)·
+    /// (1 − cos(u)²)^(e/2)`, eliminating every squared sine in favour of cosine.
+    /// Sound (`sin²u = 1 − cos²u`); used by [`trigsimp`] as the other reduction
+    /// direction so the structurally smaller of the two forms can be chosen.
+    fn fold_pythagorean_to_cos(&self) -> Option<MultiPoly> {
+        let has_sin_sq = self.terms.keys().any(|m| {
+            m.powers
+                .iter()
+                .any(|(var, &e)| e >= 2 && var.starts_with("\0sin:"))
+        });
+        if !has_sin_sq {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut term = MultiPoly::constant(*coeff);
+            for (var, &exp) in &mono.powers {
+                let factor = if let Some(arg) = var.strip_prefix("\0sin:") {
+                    let cos_var = format!("\0cos:{arg}");
+                    let sin_pow = MultiPoly::single_var_pow(var, exp % 2);
+                    let mut one_minus_cos_sq = MultiPoly::constant(Rational::integer(1));
+                    let mut cos_sq = MultiPoly::zero();
+                    cos_sq
+                        .terms
+                        .insert(Monomial::var_pow(&cos_var, 2), Rational::integer(-1));
+                    one_minus_cos_sq = one_minus_cos_sq.add(&cos_sq)?;
+                    sin_pow.mul(&one_minus_cos_sq.pow(exp / 2)?)?
+                } else {
+                    MultiPoly::single_var_pow(var, exp)
+                };
+                term = term.mul(&factor)?;
+            }
+            out = out.add(&term)?;
+        }
+        Some(out)
+    }
+
     /// Reduce `sqrt(c)² → c` for every square-root atom whose radicand is a
     /// non-negative rational constant, so the zero-test knows exact radical
     /// arithmetic (`√2·√2 = 2`, `(√8/2)² = 2`). Sound: for `c ≥ 0`, `sqrt(c)` is a
@@ -1310,6 +1347,19 @@ fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr
                 atom_name(func.name(), arg),
                 CasExpr::Unary(*func, arg.clone()),
             );
+            // A Pythagorean reduction (see `trigsimp`) rewrites `cos²u` in terms
+            // of `sin u` and vice versa, introducing the *conjugate* trig head on
+            // the same argument. Register it so those forms decode cleanly.
+            if let Some(conjugate) = match func {
+                UnaryFunc::Sin => Some(UnaryFunc::Cos),
+                UnaryFunc::Cos => Some(UnaryFunc::Sin),
+                _ => None,
+            } {
+                dict.insert(
+                    atom_name(conjugate.name(), arg),
+                    CasExpr::Unary(conjugate, arg.clone()),
+                );
+            }
             if *func == UnaryFunc::Exp
                 && let Some(poly) = normalize(arg)
             {
@@ -2892,6 +2942,61 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
         }
     }
     best
+}
+
+/// Simplify trigonometric expressions using the Pythagorean identity
+/// `sin²u + cos²u = 1`, returning the structurally smallest **value-equal** form.
+///
+/// The expression is normalized to a rational function over `sin`/`cos` atoms and
+/// reduced in both directions — eliminating `cos²` in favour of `sin²` and vice
+/// versa (see [`MultiPoly::fold_pythagorean`] and its mirror) — and the smallest
+/// candidate that [`equal`] certifies value-equal to the input is chosen (the
+/// input itself in the worst case). So `sin²x + cos²x → 1`, `1 − cos²x → sin²x`,
+/// `2sin²x + 2cos²x → 2`, while an already-minimal form is returned unchanged.
+///
+/// Every returned form is guaranteed value-equal: candidates are gated on a
+/// [`ZeroTest::Certified`] equality, so a mis-reduction can never escape.
+#[must_use]
+pub fn trigsimp(expr: &CasExpr) -> CasExpr {
+    let mut best = expr.clone();
+    let mut best_size = node_count(&best);
+    for candidate in [pyth_reduce(expr, true), pyth_reduce(expr, false)]
+        .into_iter()
+        .flatten()
+    {
+        let size = node_count(&candidate);
+        if size < best_size
+            && matches!(equal(&candidate, expr), ZeroTest::Certified { equal: true, .. })
+        {
+            best = candidate;
+            best_size = size;
+        }
+    }
+    best
+}
+
+/// Reduce an expression by the Pythagorean identity, eliminating squared cosines
+/// in favour of sines when `to_sin` (else squared sines in favour of cosines),
+/// applied to both the numerator and denominator of its rational-function normal
+/// form. Returns the reconstructed, de-atomized [`CasExpr`], or `None` if the
+/// expression is outside the normalizable fragment or on overflow.
+fn pyth_reduce(expr: &CasExpr, to_sin: bool) -> Option<CasExpr> {
+    let rf = normalize_rational(expr)?;
+    let fold = |p: &MultiPoly| {
+        if to_sin {
+            p.fold_pythagorean()
+        } else {
+            p.fold_pythagorean_to_cos()
+        }
+    };
+    let num = fold(&rf.num)?;
+    let den = fold(&rf.den)?;
+    let result = if den == MultiPoly::constant(Rational::integer(1)) {
+        num.to_expr()
+    } else {
+        CasExpr::Div(Box::new(num.to_expr()), Box::new(den.to_expr()))
+    };
+    Some(deatomize_from(&result, expr))
 }
 
 /// The rank of a rational-constant matrix (number of nonzero rows of its reduced
@@ -5825,6 +5930,32 @@ mod tests {
             + CasExpr::int(3) * v("x")
             + CasExpr::int(1);
         assert_equal(&e, &hand);
+    }
+
+    #[test]
+    fn trigsimp_applies_pythagorean_identity() {
+        let x = || v("x");
+        let i = CasExpr::int;
+        // sin²+cos² → 1; 2sin²+2cos² → 2; (sin²+cos²)² → 1.
+        assert_equal(&trigsimp(&(x().sin().pow(2) + x().cos().pow(2))), &i(1));
+        assert_equal(
+            &trigsimp(&(i(2) * x().sin().pow(2) + i(2) * x().cos().pow(2))),
+            &i(2),
+        );
+        assert_equal(
+            &trigsimp(
+                &(x().sin().pow(4)
+                    + i(2) * x().sin().pow(2) * x().cos().pow(2)
+                    + x().cos().pow(4)),
+            ),
+            &i(1),
+        );
+        // 1−cos² → sin², 1−sin² → cos² (clean heads, value-equal).
+        let s2 = trigsimp(&(i(1) - x().cos().pow(2)));
+        assert_equal(&s2, &x().sin().pow(2));
+        assert!(!s2.to_string().contains('\0'));
+        // Every result is value-equal; a trig-free input is untouched.
+        assert_eq!(trigsimp(&(x().pow(2) + i(1))), x().pow(2) + i(1));
     }
 
     #[test]
