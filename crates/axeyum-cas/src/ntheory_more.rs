@@ -77,7 +77,11 @@ pub fn mobius(n: i128) -> i32 {
     if factors.iter().any(|&(_, exponent)| exponent > 1) {
         return 0;
     }
-    if factors.len().is_multiple_of(2) { 1 } else { -1 }
+    if factors.len().is_multiple_of(2) {
+        1
+    } else {
+        -1
+    }
 }
 
 /// The Mertens function `M(n) = sum_{k=1}^{n} mu(k)`.
@@ -446,7 +450,11 @@ mod tests {
         // sigma_0(n) equals the length of the divisor list.
         for n in [1i128, 6, 12, 28, 360, 1_000_000] {
             let expected = i128::try_from(divisors(n).len()).unwrap();
-            assert_eq!(sigma_k(0, n), Some(expected), "sigma_0({n}) vs divisor count");
+            assert_eq!(
+                sigma_k(0, n),
+                Some(expected),
+                "sigma_0({n}) vs divisor count"
+            );
         }
         // sigma_1(n) equals the sum of the divisor list.
         for n in [1i128, 6, 12, 28, 496] {
@@ -478,7 +486,11 @@ mod tests {
         assert!(!is_squarefree(0));
         // Squarefree iff the Mobius value is non-zero (for positive n).
         for n in 1i128..=100 {
-            assert_eq!(is_squarefree(n), mobius(n) != 0, "squarefree/mobius for {n}");
+            assert_eq!(
+                is_squarefree(n),
+                mobius(n) != 0,
+                "squarefree/mobius for {n}"
+            );
         }
     }
 

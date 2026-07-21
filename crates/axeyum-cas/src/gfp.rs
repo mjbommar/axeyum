@@ -541,7 +541,8 @@ fn null_space(matrix: &[Vec<i128>], p: i128) -> Option<Vec<Vec<i128>>> {
         if pivot_row >= rows {
             break;
         }
-        let Some(found) = (pivot_row..rows).find(|&candidate| work[candidate][col].rem_euclid(p) != 0)
+        let Some(found) =
+            (pivot_row..rows).find(|&candidate| work[candidate][col].rem_euclid(p) != 0)
         else {
             continue;
         };
@@ -710,9 +711,7 @@ pub fn factor_berlekamp(a: &[i128], p: i128) -> Option<Vec<(Vec<i128>, u32)>> {
             result.push((irreducible, multiplicity));
         }
     }
-    result.sort_by(|left, right| {
-        compare_poly(&left.0, &right.0).then(left.1.cmp(&right.1))
-    });
+    result.sort_by(|left, right| compare_poly(&left.0, &right.0).then(left.1.cmp(&right.1)));
     Some(result)
 }
 
@@ -931,15 +930,15 @@ mod tests {
         // Cross-check: build products of linears and irreducibles, factor, and
         // confirm re-multiplication reproduces the monic input.
         let cases: &[(&[i128], i128)] = &[
-            (&[6, 11, 6, 1], 7),         // (x+1)(x+2)(x+3)
-            (&[1, 0, 0, 0, 1], 5),       // x⁴ + 1
-            (&[0, 0, 0, 1, 1], 3),       // x³(x + 1) shifted -> x⁴ + x³
-            (&[1, 1, 1, 1, 1], 2),       // x⁴ + x³ + x² + x + 1
-            (&[4, 0, 0, 0, 1], 5),       // x⁴ + 4
+            (&[6, 11, 6, 1], 7),   // (x+1)(x+2)(x+3)
+            (&[1, 0, 0, 0, 1], 5), // x⁴ + 1
+            (&[0, 0, 0, 1, 1], 3), // x³(x + 1) shifted -> x⁴ + x³
+            (&[1, 1, 1, 1, 1], 2), // x⁴ + x³ + x² + x + 1
+            (&[4, 0, 0, 0, 1], 5), // x⁴ + 4
         ];
         for &(poly, p) in cases {
-            let factors = factor_berlekamp(poly, p)
-                .unwrap_or_else(|| panic!("factor {poly:?} over F{p}"));
+            let factors =
+                factor_berlekamp(poly, p).unwrap_or_else(|| panic!("factor {poly:?} over F{p}"));
             let expected = make_monic(poly, p);
             assert_eq!(
                 remultiply(&factors, p),

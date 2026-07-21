@@ -222,10 +222,7 @@ impl Interval {
             // Straddles zero: minimum is 0, maximum is the larger magnitude.
             let neg_lower = self.lower.checked_neg().expect("interval abs overflow");
             let upper = rat_max(neg_lower, self.upper).expect("interval abs overflow");
-            Interval {
-                lower: zero,
-                upper,
-            }
+            Interval { lower: zero, upper }
         }
     }
 }
@@ -378,7 +375,10 @@ mod tests {
         let interval = ivl(1, 4);
         assert_eq!(interval.width(), Rational::integer(3));
         assert_eq!(interval.midpoint(), Rational::new(5, 2));
-        assert_eq!(Interval::degenerate(Rational::integer(7)).width(), Rational::zero());
+        assert_eq!(
+            Interval::degenerate(Rational::integer(7)).width(),
+            Rational::zero()
+        );
     }
 
     #[test]
@@ -396,7 +396,11 @@ mod tests {
     fn evaluate_polynomial_encloses_x_squared_minus_two() {
         // p(x) = x² − 2 with LSB-first coefficients [−2, 0, 1] over [1,2].
         // x² ∈ [1,4], so p ∈ [−1,2].
-        let coeffs = [Rational::integer(-2), Rational::zero(), Rational::integer(1)];
+        let coeffs = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
         let x = ivl(1, 2);
         let enclosure = evaluate_polynomial(&coeffs, &x).expect("no overflow");
         let expected = Interval::new(Rational::integer(-1), Rational::integer(2)).expect("valid");
@@ -407,7 +411,11 @@ mod tests {
     fn evaluate_polynomial_enclosure_is_sound() {
         // Sample points of p(x) = x² − 2 across [1,2] must lie in the enclosure,
         // confirming the enclosure property (the soundness certificate).
-        let coeffs = [Rational::integer(-2), Rational::zero(), Rational::integer(1)];
+        let coeffs = [
+            Rational::integer(-2),
+            Rational::zero(),
+            Rational::integer(1),
+        ];
         let x = ivl(1, 2);
         let enclosure = evaluate_polynomial(&coeffs, &x).expect("no overflow");
         for numer in 4..=8 {

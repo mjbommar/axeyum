@@ -52,15 +52,16 @@ use axeyum_ir::{Rational, poly};
 
 pub mod algebraic;
 pub mod approx;
+pub mod assumptions;
 pub mod boolean;
 pub mod combinatorics;
+mod factor_int;
 pub mod geometry;
 pub mod gfp;
+mod gosper;
 pub mod groebner;
 pub mod hyperbolic;
 pub mod interval_arith;
-mod factor_int;
-mod gosper;
 mod matrix;
 pub mod mvpoly;
 mod normalforms;
@@ -78,18 +79,19 @@ pub mod sturm;
 
 pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
+pub use assumptions::{Assumptions, Sign};
 pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use geometry::{Circle, Line, Point};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
-pub use normalforms::{hermite_normal_form, smith_normal_form};
-pub use permutation::Permutation;
-pub use sets::{RealSet, finite_set};
 pub use mvpoly::MvPoly;
+pub use normalforms::{hermite_normal_form, smith_normal_form};
 pub use orthopoly::{chebyshev_t, chebyshev_u, hermite, laguerre, legendre};
+pub use permutation::Permutation;
 pub use series::{series, series_at};
+pub use sets::{RealSet, finite_set};
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
 ///
@@ -1214,7 +1216,11 @@ fn exp_ln_inverse(monomial: &Monomial, coeff: Rational) -> Option<Rational> {
 }
 
 fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
-    let opaque = || Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("exp", arg))));
+    let opaque = || {
+        Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+            "exp", arg,
+        ))))
+    };
     // Use the rational-function normal form so transcendental atoms (e.g. `ln`) in the
     // argument are handled; the argument must reduce to a polynomial (denominator 1)
     // to decompose it term-by-term — a genuine fraction like `exp(1/x)` stays opaque.
@@ -1226,7 +1232,9 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
     }
     let arg_poly = ratio.num;
     if arg_poly.is_zero() {
-        return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))); // exp(0) = 1
+        return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
+            1,
+        )))); // exp(0) = 1
     }
     let one = || RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
     let mut result = one();
@@ -1242,9 +1250,16 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         // exp(m)^c` — so `exp(2x) = exp(x)²` and `exp(x)·exp(2x) = exp(3x)` decide.
         // Otherwise key on the whole `|coeff|·monomial` term (power 1).
         let (primitive_coeff, power) = if coeff.denominator() == 1 {
-            (Rational::integer(1), u32::try_from(coeff.numerator().unsigned_abs()).ok()?)
+            (
+                Rational::integer(1),
+                u32::try_from(coeff.numerator().unsigned_abs()).ok()?,
+            )
         } else {
-            let magnitude = if negative { coeff.checked_neg()? } else { *coeff };
+            let magnitude = if negative {
+                coeff.checked_neg()?
+            } else {
+                *coeff
+            };
             (magnitude, 1)
         };
         let mut single = BTreeMap::new();
@@ -1372,7 +1387,9 @@ pub fn degree(expr: &CasExpr, var: &str) -> Option<usize> {
 #[must_use]
 pub fn coeff(expr: &CasExpr, var: &str, n: usize) -> Option<CasExpr> {
     let coeffs = normalize(expr)?.to_univariate(var)?;
-    Some(CasExpr::Const(coeffs.get(n).copied().unwrap_or_else(Rational::zero)))
+    Some(CasExpr::Const(
+        coeffs.get(n).copied().unwrap_or_else(Rational::zero),
+    ))
 }
 
 /// The leading coefficient (of the highest power of `var`) of a univariate
@@ -1572,10 +1589,7 @@ pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 /// assert_eq!(sol, vec![("x".to_string(), CasExpr::int(2)), ("y".to_string(), CasExpr::int(1))]);
 /// ```
 #[must_use]
-pub fn solve_linear_system(
-    equations: &[CasExpr],
-    vars: &[&str],
-) -> Option<Vec<(String, CasExpr)>> {
+pub fn solve_linear_system(equations: &[CasExpr], vars: &[&str]) -> Option<Vec<(String, CasExpr)>> {
     let n = vars.len();
     if n == 0 || equations.len() != n {
         return None;
@@ -1627,8 +1641,7 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
         let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
             break;
         };
-        remaining =
-            poly::rat_exact_div(&remaining, &[root.checked_neg()?, Rational::integer(1)])?;
+        remaining = poly::rat_exact_div(&remaining, &[root.checked_neg()?, Rational::integer(1)])?;
         push_rational(root, &mut roots, &mut seen);
     }
     // Leftover of degree ≥ 2 (no rational roots left). Degree 2 is solved directly;
@@ -1736,8 +1749,16 @@ pub fn solve_polynomial_inequality(
     // (Sturm) exceeds the rational roots found, an irrational real root exists.
     let total_real = sturm::count_real_roots_in(
         &coeffs,
-        roots.first().copied().unwrap_or(Rational::zero()).checked_sub(root_span(&coeffs)?)?,
-        roots.last().copied().unwrap_or(Rational::zero()).checked_add(root_span(&coeffs)?)?,
+        roots
+            .first()
+            .copied()
+            .unwrap_or(Rational::zero())
+            .checked_sub(root_span(&coeffs)?)?,
+        roots
+            .last()
+            .copied()
+            .unwrap_or(Rational::zero())
+            .checked_add(root_span(&coeffs)?)?,
     )?;
     if total_real != roots.len() {
         return None; // an irrational real root is present
@@ -1747,7 +1768,13 @@ pub fn solve_polynomial_inequality(
 
     // Sample the sign in each region delimited by the sorted roots.
     let sign_at = |x: Rational| -> Option<i32> {
-        Some(poly::eval_rat_poly(&coeffs, x)?.numerator().signum().try_into().unwrap_or(0))
+        Some(
+            poly::eval_rat_poly(&coeffs, x)?
+                .numerator()
+                .signum()
+                .try_into()
+                .unwrap_or(0),
+        )
     };
     let want_sign = if want_positive { 1 } else { -1 };
     let step = Rational::integer(1);
@@ -1757,7 +1784,12 @@ pub fn solve_polynomial_inequality(
     let mut selected: Vec<RealInterval> = Vec::new();
     if roots.is_empty() {
         if sign_at(Rational::zero())? == want_sign {
-            selected.push(RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false });
+            selected.push(RealInterval {
+                lower: None,
+                lower_closed: false,
+                upper: None,
+                upper_closed: false,
+            });
         }
         return Some(selected);
     }
@@ -1767,11 +1799,21 @@ pub fn solve_polynomial_inequality(
         } else if index == roots.len() {
             roots[roots.len() - 1].checked_add(step)?
         } else {
-            roots[index - 1].checked_add(roots[index])?.checked_div(Rational::integer(2))?
+            roots[index - 1]
+                .checked_add(roots[index])?
+                .checked_div(Rational::integer(2))?
         };
         if sign_at(sample)? == want_sign {
-            let lower = if index == 0 { None } else { Some(roots[index - 1]) };
-            let upper = if index == roots.len() { None } else { Some(roots[index]) };
+            let lower = if index == 0 {
+                None
+            } else {
+                Some(roots[index - 1])
+            };
+            let upper = if index == roots.len() {
+                None
+            } else {
+                Some(roots[index])
+            };
             selected.push(RealInterval {
                 lower,
                 lower_closed: false,
@@ -1798,7 +1840,11 @@ fn root_span(coeffs: &[Rational]) -> Option<Rational> {
     let mut bound = Rational::integer(1);
     for coeff in &coeffs[..degree] {
         let ratio = coeff.checked_div(leading)?;
-        let magnitude = if ratio.numerator() < 0 { ratio.checked_neg()? } else { ratio };
+        let magnitude = if ratio.numerator() < 0 {
+            ratio.checked_neg()?
+        } else {
+            ratio
+        };
         bound = bound.checked_add(magnitude)?;
     }
     bound.checked_add(Rational::integer(1))
@@ -1947,7 +1993,9 @@ fn quadratic_roots(a: Rational, b: Rational, c: Rational) -> Option<Vec<CasExpr>
         for sign in [1_i128, -1] {
             let imaginary = if let Some(root) = rational_sqrt(neg_disc) {
                 scaled_term(
-                    Rational::integer(sign).checked_mul(root)?.checked_div(two_a)?,
+                    Rational::integer(sign)
+                        .checked_mul(root)?
+                        .checked_div(two_a)?,
                     imag_unit.clone(),
                 )
             } else {
@@ -2209,8 +2257,7 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     let solution = neg_p * (inner.antiderivative + CasExpr::var("C0"));
 
     // Certify: y′ + p·y − q ≡ 0.
-    let residual =
-        solution.differentiate(var) + p.clone() * solution.clone() - q.clone();
+    let residual = solution.differentiate(var) + p.clone() * solution.clone() - q.clone();
     match equal(&residual, &CasExpr::zero()) {
         ZeroTest::Certified { equal: true, .. } => Some(solution),
         _ => None,
@@ -2320,7 +2367,10 @@ pub fn solve_recurrence(
 /// Whether `equal(expr, 0)` is decided `true` — a small helper for algebraic-identity
 /// certificates.
 fn is_certified_zero(expr: &CasExpr) -> bool {
-    matches!(equal(expr, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+    matches!(
+        equal(expr, &CasExpr::zero()),
+        ZeroTest::Certified { equal: true, .. }
+    )
 }
 
 /// Structurally fold the trivial identities `0·x → 0`, `1·x → x`, `x + 0 → x`, and
@@ -2332,7 +2382,11 @@ fn fold_trivial(expr: &CasExpr) -> CasExpr {
     let is_one = |e: &CasExpr| matches!(e, CasExpr::Const(c) if *c == Rational::integer(1));
     match expr {
         CasExpr::Add(terms) => {
-            let kept: Vec<CasExpr> = terms.iter().map(fold_trivial).filter(|t| !is_zero(t)).collect();
+            let kept: Vec<CasExpr> = terms
+                .iter()
+                .map(fold_trivial)
+                .filter(|t| !is_zero(t))
+                .collect();
             match kept.len() {
                 0 => CasExpr::zero(),
                 1 => kept.into_iter().next().unwrap_or_else(CasExpr::zero),
@@ -2433,9 +2487,8 @@ fn solve_recurrence_quadratic_irrational(
 
     // Certificate: each root solves x² − c₁x − c₂ = 0, and the amplitudes reproduce
     // the two initial terms (r⁰ = 1, r¹ = r — no `rⁿ` evaluation needed).
-    let char_at = |r: &CasExpr| {
-        r.clone().pow(2) - CasExpr::Const(c1) * r.clone() - CasExpr::Const(c2)
-    };
+    let char_at =
+        |r: &CasExpr| r.clone().pow(2) - CasExpr::Const(c1) * r.clone() - CasExpr::Const(c2);
     let initial0 = amp_a.clone() + amp_b.clone() - a0;
     let initial1 = amp_a * root1.clone() + amp_b * root2.clone() - a1;
     if is_certified_zero(&char_at(&root1))
@@ -2756,7 +2809,11 @@ pub fn characteristic_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> 
         let mut row = Vec::with_capacity(n);
         for j in 0..n {
             let entry = matrix.get(i, j)?.clone();
-            row.push(if i == j { entry - lambda.clone() } else { entry });
+            row.push(if i == j {
+                entry - lambda.clone()
+            } else {
+                entry
+            });
         }
         rows.push(row);
     }
@@ -2849,7 +2906,9 @@ pub fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
     let mut columns: Vec<Vec<CasExpr>> = Vec::new();
     for (lambda, basis) in eigenvectors(matrix, var)? {
         for vector in basis {
-            let column: Vec<CasExpr> = (0..n).map(|i| vector.get(i, 0).cloned()).collect::<Option<_>>()?;
+            let column: Vec<CasExpr> = (0..n)
+                .map(|i| vector.get(i, 0).cloned())
+                .collect::<Option<_>>()?;
             columns.push(column);
             eigenvalues.push(lambda.clone());
         }
@@ -2865,7 +2924,13 @@ pub fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
     let d_rows: Vec<Vec<CasExpr>> = (0..n)
         .map(|i| {
             (0..n)
-                .map(|j| if i == j { eigenvalues[i].clone() } else { CasExpr::zero() })
+                .map(|j| {
+                    if i == j {
+                        eigenvalues[i].clone()
+                    } else {
+                        CasExpr::zero()
+                    }
+                })
                 .collect()
         })
         .collect();
@@ -2984,7 +3049,10 @@ pub fn minimal_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> {
     let mut powers: Vec<Vec<Rational>> = Vec::new();
     let mut current = Matrix::identity(n); // A⁰ = I
     for _ in 0..=n {
-        let flat: Vec<Rational> = matrix_to_rationals(&current)?.into_iter().flatten().collect();
+        let flat: Vec<Rational> = matrix_to_rationals(&current)?
+            .into_iter()
+            .flatten()
+            .collect();
         match linear_dependency(&powers, &flat)? {
             Dependency::Combination(coeffs) => {
                 return Some(minimal_polynomial_expr(&coeffs, var));
@@ -3398,7 +3466,12 @@ pub fn gram_schmidt(vectors: &[Vec<CasExpr>]) -> Option<Vec<Vec<CasExpr>>> {
             }
         }
         // Drop a vector that collapsed to zero (linearly dependent).
-        if residual.iter().all(|c| matches!(equal(c, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })) {
+        if residual.iter().all(|c| {
+            matches!(
+                equal(c, &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            )
+        }) {
             continue;
         }
         basis.push(residual);
@@ -3507,6 +3580,80 @@ fn simplify_sqrt_const(value: Rational) -> Option<CasExpr> {
     }
 }
 
+/// Simplify an expression **under sign assumptions**, applying rewrites that are
+/// only sound given the assumed signs: `|u| → u` when `u ≥ 0` (or `−u` when `u ≤ 0`),
+/// and `√(b²ᵏ) → bᵏ` (rather than `|bᵏ|`) when `b ≥ 0`. Recurses structurally; parts
+/// whose sign is unknown are left as-is. This is the sound counterpart to
+/// [`simplify_radicals`]' unconditional `√(x²) → |x|`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, Assumptions, simplify_under_assumptions, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // Under x ≥ 0, √(x²) = x (not |x|).
+/// let simplified = simplify_under_assumptions(&x.clone().pow(2).sqrt(), &Assumptions::new().nonnegative("x"));
+/// assert!(matches!(equal(&simplified, &x), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn simplify_under_assumptions(expr: &CasExpr, assumptions: &Assumptions) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Abs, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            let sign = assumptions.sign_of(&inner);
+            if sign.is_nonnegative() {
+                inner
+            } else if matches!(sign, Sign::Negative | Sign::Nonpositive | Sign::Zero) {
+                simplify(&CasExpr::Neg(Box::new(inner)))
+            } else {
+                inner.abs()
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // √(b^{2k}) = bᵏ when b ≥ 0.
+            if let CasExpr::Pow(base, exponent) = &inner
+                && exponent % 2 == 0
+                && assumptions.is_nonnegative(base)
+            {
+                let half = exponent / 2;
+                return if half == 1 {
+                    (**base).clone()
+                } else {
+                    CasExpr::Pow(base.clone(), half)
+                };
+            }
+            simplify_radicals(&inner.sqrt())
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(
+            *func,
+            Box::new(simplify_under_assumptions(arg, assumptions)),
+        ),
+        CasExpr::Add(terms) => CasExpr::Add(
+            terms
+                .iter()
+                .map(|t| simplify_under_assumptions(t, assumptions))
+                .collect(),
+        ),
+        CasExpr::Mul(factors) => CasExpr::Mul(
+            factors
+                .iter()
+                .map(|f| simplify_under_assumptions(f, assumptions))
+                .collect(),
+        ),
+        CasExpr::Neg(inner) => {
+            CasExpr::Neg(Box::new(simplify_under_assumptions(inner, assumptions)))
+        }
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(simplify_under_assumptions(a, assumptions)),
+            Box::new(simplify_under_assumptions(b, assumptions)),
+        ),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(
+            Box::new(simplify_under_assumptions(base, assumptions)),
+            *exp,
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// Simplify surds throughout an expression: rewrite every `√c` on a non-negative
 /// rational constant `c` into `k·√m` with `m` square-free (extracting perfect
 /// squares and rationalizing denominators, e.g. `√12 → 2·√3`, `√(1/2) → (1/2)·√2`).
@@ -3545,9 +3692,7 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
             Box::new(simplify_radicals(numerator)),
             Box::new(simplify_radicals(denominator)),
         ),
-        CasExpr::Pow(base, exponent) => {
-            CasExpr::Pow(Box::new(simplify_radicals(base)), *exponent)
-        }
+        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(simplify_radicals(base)), *exponent),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
 }
@@ -3665,7 +3810,10 @@ fn trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
         UnaryFunc::Cos => Some(sine_at_twelfth(k + 6)), // cos θ = sin(θ + π/2)
         UnaryFunc::Tan => {
             let cosine = sine_at_twelfth(k + 6);
-            if matches!(equal(&cosine, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
+            if matches!(
+                equal(&cosine, &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
                 None // pole at π/2 + kπ
             } else {
                 let value = simplify(&(sine_at_twelfth(k) / cosine));
@@ -3699,7 +3847,8 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) => {
             let inner = evaluate_trig(arg);
-            trig_special_value(*func, &inner).unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+            trig_special_value(*func, &inner)
+                .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(evaluate_trig(arg))),
         CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(evaluate_trig).collect()),
@@ -3941,7 +4090,11 @@ pub fn rationalize(x: f64, max_denominator: i128) -> Option<Rational> {
     if k_curr == 0 {
         return None;
     }
-    let numerator = if negative { h_curr.checked_neg()? } else { h_curr };
+    let numerator = if negative {
+        h_curr.checked_neg()?
+    } else {
+        h_curr
+    };
     Rational::checked_new(numerator, k_curr)
 }
 
@@ -3967,7 +4120,9 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
             .map(|&(_, value)| value)
             // The reserved constant `pi` defaults to π when not explicitly bound.
             .or_else(|| (name == "pi").then_some(core::f64::consts::PI)),
-        CasExpr::Add(terms) => terms.iter().try_fold(0.0, |acc, term| Some(acc + evalf(term, bindings)?)),
+        CasExpr::Add(terms) => terms
+            .iter()
+            .try_fold(0.0, |acc, term| Some(acc + evalf(term, bindings)?)),
         CasExpr::Mul(factors) => factors
             .iter()
             .try_fold(1.0, |acc, factor| Some(acc * evalf(factor, bindings)?)),
@@ -3975,7 +4130,9 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
         CasExpr::Div(numerator, denominator) => {
             Some(evalf(numerator, bindings)? / evalf(denominator, bindings)?)
         }
-        CasExpr::Pow(base, exponent) => Some(evalf(base, bindings)?.powi(i32::try_from(*exponent).ok()?)),
+        CasExpr::Pow(base, exponent) => {
+            Some(evalf(base, bindings)?.powi(i32::try_from(*exponent).ok()?))
+        }
         CasExpr::Unary(func, arg) => {
             let value = evalf(arg, bindings)?;
             Some(match func {
@@ -4352,7 +4509,11 @@ fn truncated_series_mul(a: &[Rational], b: &[Rational], order: usize) -> Option<
 
 /// Compose a polynomial `poly` (coefficient vector) with a series `g`, truncated at
 /// degree `order` — the series of `poly(g(x))` — by Horner's method.
-fn compose_poly_with_series(poly: &[Rational], g: &[Rational], order: usize) -> Option<Vec<Rational>> {
+fn compose_poly_with_series(
+    poly: &[Rational],
+    g: &[Rational],
+    order: usize,
+) -> Option<Vec<Rational>> {
     let mut acc = vec![Rational::zero(); order + 1];
     for &coeff in poly.iter().rev() {
         acc = truncated_series_mul(&acc, g, order)?;
@@ -4659,8 +4820,8 @@ fn integrate_trig_square(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     } else {
         inv_2a
     };
-    let antiderivative = scaled_term(Rational::new(1, 2), CasExpr::var(var))
-        + scaled_term(cross_coeff, product);
+    let antiderivative =
+        scaled_term(Rational::new(1, 2), CasExpr::var(var)) + scaled_term(cross_coeff, product);
     Some(scaled_term(coeff, antiderivative))
 }
 
@@ -4926,7 +5087,10 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
         let lead = dd[1];
         let c0 = cc.first().copied().unwrap_or_else(Rational::zero);
         let coeff = c0.checked_div(lead)?;
-        let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, &dd).to_expr()));
+        let ln = CasExpr::Unary(
+            UnaryFunc::Ln,
+            Box::new(MultiPoly::from_univariate(var, &dd).to_expr()),
+        );
         return Some(scaled_term(coeff, ln));
     }
     // Degree ≥ 2: Rothstein–Trager. ∫ C/D₁ = Σ cᵢ·ln(vᵢ), cᵢ the rational roots
@@ -4934,7 +5098,10 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
     if let Some(terms) = ratint::log_terms(&cc, &dd) {
         let mut sum: Vec<CasExpr> = Vec::with_capacity(terms.len());
         for (coeff, v_poly) in terms {
-            let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()));
+            let ln = CasExpr::Unary(
+                UnaryFunc::Ln,
+                Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()),
+            );
             sum.push(scaled_term(coeff, ln));
         }
         return match sum.len() {
@@ -4976,15 +5143,20 @@ fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) 
     // ln term (present only when the numerator has an x-component).
     if !c1.is_zero() {
         let ln_coeff = c1.checked_div(two_a)?;
-        let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, dd).to_expr()));
+        let ln = CasExpr::Unary(
+            UnaryFunc::Ln,
+            Box::new(MultiPoly::from_univariate(var, dd).to_expr()),
+        );
         parts.push(scaled_term(ln_coeff, ln));
     }
     // atan term: coefficient (2a·c₀ − b·c₁)/(a·s), argument (2a·x + b)/s.
-    let atan_coeff =
-        two_a.checked_mul(c0)?.checked_sub(b.checked_mul(c1)?)?.checked_div(a.checked_mul(s)?)?;
+    let atan_coeff = two_a
+        .checked_mul(c0)?
+        .checked_sub(b.checked_mul(c1)?)?
+        .checked_div(a.checked_mul(s)?)?;
     if !atan_coeff.is_zero() {
-        let arg = MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?])
-            .to_expr();
+        let arg =
+            MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?]).to_expr();
         let atan = CasExpr::Unary(UnaryFunc::Atan, Box::new(arg));
         parts.push(if atan_coeff == Rational::integer(1) {
             atan
@@ -5309,7 +5481,10 @@ mod tests {
         assert_equal(&c, &f);
         // (x²y − y³)/(x − y) = x·y + y²
         let g = (v("x").pow(2) * v("y") - v("y").pow(3)) / (v("x") - v("y"));
-        assert_equal(&cancel(&g).expect("rational"), &(v("x") * v("y") + v("y").pow(2)));
+        assert_equal(
+            &cancel(&g).expect("rational"),
+            &(v("x") * v("y") + v("y").pow(2)),
+        );
     }
 
     #[test]
@@ -5569,7 +5744,8 @@ mod tests {
         // Golden-ratio family: aₙ = 3aₙ₋₁ − aₙ₋₂ has roots (3±√5)/2 = φ², ψ² (both
         // positive, irrational). With a₀=2, a₁=3 it is the Lucas-of-even-index
         // sequence 2,3,7,18,47,123. Certified over ℚ(√5); verify by evalf.
-        let phi_sq = solve_recurrence(&[ig(3), ig(-1)], &[ig(2), ig(3)], "n").expect("golden family");
+        let phi_sq =
+            solve_recurrence(&[ig(3), ig(-1)], &[ig(2), ig(3)], "n").expect("golden family");
         for (n, want) in [(0usize, 2.0), (1, 3.0), (2, 7.0), (3, 18.0), (4, 47.0)] {
             #[allow(clippy::cast_precision_loss)]
             let got = evalf(&phi_sq, &[("n", n as f64)]).unwrap();
@@ -5580,14 +5756,30 @@ mod tests {
         // ψ=(1−√5)/2 < 0, the negative root via cos(πn)·exp(n·ln|ψ|)). Certified over
         // ℚ(√5); verify it reproduces 0,1,1,2,3,5,8,13.
         let fib = solve_recurrence(&[ig(1), ig(1)], &[ig(0), ig(1)], "n").expect("Fibonacci");
-        for (n, want) in [(0usize, 0.0), (1, 1.0), (2, 1.0), (3, 2.0), (4, 3.0), (5, 5.0), (6, 8.0), (7, 13.0)] {
+        for (n, want) in [
+            (0usize, 0.0),
+            (1, 1.0),
+            (2, 1.0),
+            (3, 2.0),
+            (4, 3.0),
+            (5, 5.0),
+            (6, 8.0),
+            (7, 13.0),
+        ] {
             #[allow(clippy::cast_precision_loss)]
             let got = evalf(&fib, &[("n", n as f64)]).unwrap();
             assert!((got - want).abs() < 1e-6, "F({n}) = {got}, want {want}");
         }
         // Lucas numbers: same recurrence, a₀=2, a₁=1 ⇒ 2,1,3,4,7,11,18.
         let lucas = solve_recurrence(&[ig(1), ig(1)], &[ig(2), ig(1)], "n").expect("Lucas");
-        for (n, want) in [(0usize, 2.0), (1, 1.0), (2, 3.0), (3, 4.0), (4, 7.0), (5, 11.0)] {
+        for (n, want) in [
+            (0usize, 2.0),
+            (1, 1.0),
+            (2, 3.0),
+            (3, 4.0),
+            (4, 7.0),
+            (5, 11.0),
+        ] {
             #[allow(clippy::cast_precision_loss)]
             let got = evalf(&lucas, &[("n", n as f64)]).unwrap();
             assert!((got - want).abs() < 1e-6, "L({n}) = {got}, want {want}");
@@ -5607,7 +5799,8 @@ mod tests {
             &x(),
         );
         // y′ − y = x²  ⇒  residual y′ − y = x².
-        let sol3 = dsolve_first_order_linear(&CasExpr::int(-1), &x().pow(2), "x").expect("solvable");
+        let sol3 =
+            dsolve_first_order_linear(&CasExpr::int(-1), &x().pow(2), "x").expect("solvable");
         assert_equal(&(sol3.differentiate("x") - sol3.clone()), &x().pow(2));
     }
 
@@ -5623,7 +5816,8 @@ mod tests {
         assert_equal(&residual, &x());
 
         // y″ − y = x²  ⇒  particular −x² − 2.
-        let sol2 = dsolve_inhomogeneous(&[ig(-1), ig(0), ig(1)], &x().pow(2), "x").expect("solvable");
+        let sol2 =
+            dsolve_inhomogeneous(&[ig(-1), ig(0), ig(1)], &x().pow(2), "x").expect("solvable");
         let residual2 = sol2.differentiate("x").differentiate("x") - sol2.clone();
         assert_equal(&residual2, &x().pow(2));
 
@@ -5651,7 +5845,10 @@ mod tests {
         // Σ_{k=1}^{n} k² = n(n+1)(2n+1)/6.
         assert_equal(
             &definite_sum(&k().pow(2), "k", &CasExpr::int(1), &n()).unwrap(),
-            &(CasExpr::rat(1, 6) * n() * (n() + CasExpr::int(1)) * (CasExpr::int(2) * n() + CasExpr::int(1))),
+            &(CasExpr::rat(1, 6)
+                * n()
+                * (n() + CasExpr::int(1))
+                * (CasExpr::int(2) * n() + CasExpr::int(1))),
         );
         // Concrete bounds: Σ_{k=1}^{10} k = 55.
         assert_equal(
@@ -5694,10 +5891,12 @@ mod tests {
         assert_equal(&apart(&g, "x").expect("distinct linear factors"), &g);
         // Repeated factor: x/(x−1)² = 1/(x−1) + 1/(x−1)² — each certified equal.
         let repeated = x() / (x() - CasExpr::int(1)).pow(2);
-        assert_equal(&apart(&repeated, "x").expect("repeated linear factor"), &repeated);
+        assert_equal(
+            &apart(&repeated, "x").expect("repeated linear factor"),
+            &repeated,
+        );
         // Mixed distinct + repeated: 1/((x−1)(x−2)²).
-        let mixed = CasExpr::int(1)
-            / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)).pow(2));
+        let mixed = CasExpr::int(1) / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)).pow(2));
         assert_equal(&apart(&mixed, "x").expect("mixed factors"), &mixed);
         // Improper (numerator degree ≥ denominator): (x³)/(x−1)² has a polynomial part.
         let improper = x().pow(3) / (x() - CasExpr::int(1)).pow(2);
@@ -5727,11 +5926,17 @@ mod tests {
         assert_equal(&residue(&g, "x", ig(1)).unwrap(), &CasExpr::int(1));
         // 1/(x−1)² has residue 0 at 1 (purely a double-pole term).
         assert_equal(
-            &residue(&(CasExpr::int(1) / (x() - CasExpr::int(1)).pow(2)), "x", ig(1)).unwrap(),
+            &residue(
+                &(CasExpr::int(1) / (x() - CasExpr::int(1)).pow(2)),
+                "x",
+                ig(1),
+            )
+            .unwrap(),
             &CasExpr::zero(),
         );
         // (x²+1)/((x−2)(x−3)): Res₂ = (4+1)/(2−3) = −5, Res₃ = (9+1)/(3−2) = 10.
-        let h = (x().pow(2) + CasExpr::int(1)) / ((x() - CasExpr::int(2)) * (x() - CasExpr::int(3)));
+        let h =
+            (x().pow(2) + CasExpr::int(1)) / ((x() - CasExpr::int(2)) * (x() - CasExpr::int(3)));
         assert_equal(&residue(&h, "x", ig(2)).unwrap(), &CasExpr::int(-5));
         assert_equal(&residue(&h, "x", ig(3)).unwrap(), &CasExpr::int(10));
     }
@@ -5758,12 +5963,24 @@ mod tests {
         holds(t(), CasExpr::int(1) / s().pow(2));
         holds(t().pow(2), CasExpr::int(2) / s().pow(3));
         // L{e^{3t}} = 1/(s−3).
-        holds((CasExpr::int(3) * t()).exp(), CasExpr::int(1) / (s() - CasExpr::int(3)));
+        holds(
+            (CasExpr::int(3) * t()).exp(),
+            CasExpr::int(1) / (s() - CasExpr::int(3)),
+        );
         // L{sin(2t)} = 2/(s²+4); L{cos(2t)} = s/(s²+4).
-        holds((CasExpr::int(2) * t()).sin(), CasExpr::int(2) / (s().pow(2) + CasExpr::int(4)));
-        holds((CasExpr::int(2) * t()).cos(), s() / (s().pow(2) + CasExpr::int(4)));
+        holds(
+            (CasExpr::int(2) * t()).sin(),
+            CasExpr::int(2) / (s().pow(2) + CasExpr::int(4)),
+        );
+        holds(
+            (CasExpr::int(2) * t()).cos(),
+            s() / (s().pow(2) + CasExpr::int(4)),
+        );
         // L{t·e^{2t}} = 1/(s−2)² (frequency-shift via differentiation).
-        holds(t() * (CasExpr::int(2) * t()).exp(), CasExpr::int(1) / (s() - CasExpr::int(2)).pow(2));
+        holds(
+            t() * (CasExpr::int(2) * t()).exp(),
+            CasExpr::int(1) / (s() - CasExpr::int(2)).pow(2),
+        );
         // Linearity: L{3t + 2e^{t}} = 3/s² + 2/(s−1).
         holds(
             CasExpr::int(3) * t() + CasExpr::int(2) * t().exp(),
@@ -5800,7 +6017,8 @@ mod tests {
         let log1p = series_reversion(&(x().exp() - CasExpr::int(1)), "x", 4).unwrap();
         assert_equal(
             &log1p,
-            &(x() - CasExpr::rat(1, 2) * x().pow(2) + CasExpr::rat(1, 3) * x().pow(3) - CasExpr::rat(1, 4) * x().pow(4)),
+            &(x() - CasExpr::rat(1, 2) * x().pow(2) + CasExpr::rat(1, 3) * x().pow(3)
+                - CasExpr::rat(1, 4) * x().pow(4)),
         );
         // Reversion is a genuine inverse: composing f(g(x)) recovers x to the order.
         // Verify for f = x + x²: f(reversion(f)) ≡ x mod x⁵.
@@ -5820,14 +6038,20 @@ mod tests {
             &(CasExpr::int(1) / x() + CasExpr::int(1) + x() + x().pow(2)),
         );
         // 1/x² is its own Laurent series.
-        assert_equal(&laurent_series(&(CasExpr::int(1) / x().pow(2)), "x", 1).unwrap(), &(CasExpr::int(1) / x().pow(2)));
+        assert_equal(
+            &laurent_series(&(CasExpr::int(1) / x().pow(2)), "x", 1).unwrap(),
+            &(CasExpr::int(1) / x().pow(2)),
+        );
         // (x+1)/x = 1/x + 1.
         assert_equal(
             &laurent_series(&((x() + CasExpr::int(1)) / x()), "x", 0).unwrap(),
             &(CasExpr::int(1) / x() + CasExpr::int(1)),
         );
         // The x⁻¹ coefficient is the residue at 0: for 1/(x(1−x)) it is 1.
-        assert_equal(&residue(&f, "x", Rational::zero()).unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &residue(&f, "x", Rational::zero()).unwrap(),
+            &CasExpr::int(1),
+        );
         // An analytic function's Laurent series is its Taylor series (no principal
         // part): 1/(1−x) = 1 + x + x².
         assert_equal(
@@ -5841,7 +6065,10 @@ mod tests {
         let x = || v("x");
         let at0 = LimitPoint::Finite(Rational::zero());
         // lim_{x→0} sin(x)/x = 1.
-        assert_equal(&limit(&(x().sin() / x()), "x", at0).unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &limit(&(x().sin() / x()), "x", at0).unwrap(),
+            &CasExpr::int(1),
+        );
         // lim_{x→0} (1 − cos x)/x² = 1/2.
         assert_equal(
             &limit(&((CasExpr::int(1) - x().cos()) / x().pow(2)), "x", at0).unwrap(),
@@ -5859,7 +6086,10 @@ mod tests {
         );
         // Analytic point: lim_{x→0} cos(x) = 1; lim_{x→0} (sin x + 2) = 2.
         assert_equal(&limit(&x().cos(), "x", at0).unwrap(), &CasExpr::int(1));
-        assert_equal(&limit(&(x().sin() + CasExpr::int(2)), "x", at0).unwrap(), &CasExpr::int(2));
+        assert_equal(
+            &limit(&(x().sin() + CasExpr::int(2)), "x", at0).unwrap(),
+            &CasExpr::int(2),
+        );
         // Shifted point: lim_{x→1} sin(x−1)/(x−1) = 1.
         assert_equal(
             &limit(
@@ -5880,12 +6110,22 @@ mod tests {
         let at = |n: i128| LimitPoint::Finite(Rational::integer(n));
         // continuous: lim_{x→1} (x+1)/(x−2) = −2
         assert_equal(
-            &limit(&((x() + CasExpr::int(1)) / (x() - CasExpr::int(2))), "x", at(1)).unwrap(),
+            &limit(
+                &((x() + CasExpr::int(1)) / (x() - CasExpr::int(2))),
+                "x",
+                at(1),
+            )
+            .unwrap(),
             &CasExpr::int(-2),
         );
         // 0/0 via cancellation: lim_{x→2} (x²−4)/(x−2) = 4
         assert_equal(
-            &limit(&((x().pow(2) - CasExpr::int(4)) / (x() - CasExpr::int(2))), "x", at(2)).unwrap(),
+            &limit(
+                &((x().pow(2) - CasExpr::int(4)) / (x() - CasExpr::int(2))),
+                "x",
+                at(2),
+            )
+            .unwrap(),
             &CasExpr::int(4),
         );
         // lim_{x→0} (x²+3x)/x = 3
@@ -6040,10 +6280,30 @@ mod tests {
     fn bareiss_determinant_matches_cofactor() {
         // A 4×4 integer matrix — Bareiss (O(n³)) must agree with cofactor expansion.
         let m = Matrix::from_rows(vec![
-            vec![CasExpr::int(2), CasExpr::int(1), CasExpr::int(0), CasExpr::int(3)],
-            vec![CasExpr::int(1), CasExpr::int(4), CasExpr::int(2), CasExpr::int(1)],
-            vec![CasExpr::int(0), CasExpr::int(2), CasExpr::int(5), CasExpr::int(1)],
-            vec![CasExpr::int(3), CasExpr::int(1), CasExpr::int(1), CasExpr::int(6)],
+            vec![
+                CasExpr::int(2),
+                CasExpr::int(1),
+                CasExpr::int(0),
+                CasExpr::int(3),
+            ],
+            vec![
+                CasExpr::int(1),
+                CasExpr::int(4),
+                CasExpr::int(2),
+                CasExpr::int(1),
+            ],
+            vec![
+                CasExpr::int(0),
+                CasExpr::int(2),
+                CasExpr::int(5),
+                CasExpr::int(1),
+            ],
+            vec![
+                CasExpr::int(3),
+                CasExpr::int(1),
+                CasExpr::int(1),
+                CasExpr::int(6),
+            ],
         ])
         .unwrap();
         assert_equal(&m.bareiss_determinant().unwrap(), &m.determinant().unwrap());
@@ -6219,20 +6479,35 @@ mod tests {
     fn definite_integral_certifies_by_ftc() {
         let x = || v("x");
         // ∫₀¹ 3x² dx = 1.
-        let d = definite_integrate(&(CasExpr::int(3) * x().pow(2)), "x", &CasExpr::int(0), &CasExpr::int(1))
-            .unwrap();
+        let d = definite_integrate(
+            &(CasExpr::int(3) * x().pow(2)),
+            "x",
+            &CasExpr::int(0),
+            &CasExpr::int(1),
+        )
+        .unwrap();
         assert!(d.is_certified());
         assert_equal(&d.value, &CasExpr::int(1));
 
         // ∫₁³ (2x) dx = 9 − 1 = 8.
-        let d2 = definite_integrate(&(CasExpr::int(2) * x()), "x", &CasExpr::int(1), &CasExpr::int(3))
-            .unwrap();
+        let d2 = definite_integrate(
+            &(CasExpr::int(2) * x()),
+            "x",
+            &CasExpr::int(1),
+            &CasExpr::int(3),
+        )
+        .unwrap();
         assert!(d2.is_certified());
         assert_equal(&d2.value, &CasExpr::int(8));
 
         // Reversed bounds negate: ∫₃¹ 2x dx = −8.
-        let d3 = definite_integrate(&(CasExpr::int(2) * x()), "x", &CasExpr::int(3), &CasExpr::int(1))
-            .unwrap();
+        let d3 = definite_integrate(
+            &(CasExpr::int(2) * x()),
+            "x",
+            &CasExpr::int(3),
+            &CasExpr::int(1),
+        )
+        .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
     }
 
@@ -6260,7 +6535,10 @@ mod tests {
         let x = || v("x");
         // Falling factorial x⁽³⁾ = x(x−1)(x−2) = x³ − 3x² + 2x.
         let ff3 = falling_factorial(&x(), 3);
-        assert_equal(&ff3, &(x().pow(3) - CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x()));
+        assert_equal(
+            &ff3,
+            &(x().pow(3) - CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x()),
+        );
         // The finite power rule: Δ[x⁽³⁾] = 3·x⁽²⁾.
         assert_equal(
             &forward_difference(&ff3, "x"),
@@ -6272,8 +6550,14 @@ mod tests {
             &(x().pow(3) + CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x()),
         );
         // Forward difference of x² = 2x + 1; backward difference of x² = 2x − 1.
-        assert_equal(&forward_difference(&x().pow(2), "x"), &(CasExpr::int(2) * x() + CasExpr::int(1)));
-        assert_equal(&backward_difference(&x().pow(2), "x"), &(CasExpr::int(2) * x() - CasExpr::int(1)));
+        assert_equal(
+            &forward_difference(&x().pow(2), "x"),
+            &(CasExpr::int(2) * x() + CasExpr::int(1)),
+        );
+        assert_equal(
+            &backward_difference(&x().pow(2), "x"),
+            &(CasExpr::int(2) * x() - CasExpr::int(1)),
+        );
         // Δ of a constant is 0; falling_factorial(x, 0) = 1.
         assert_equal(&forward_difference(&CasExpr::int(5), "x"), &CasExpr::zero());
         assert_equal(&falling_factorial(&x(), 0), &CasExpr::int(1));
@@ -6284,13 +6568,20 @@ mod tests {
         let x = || v("x");
         let ig = Rational::integer;
         // Exact line through collinear points: (0,1),(1,3),(2,5) → 2x + 1.
-        let line = least_squares_polynomial(&[(ig(0), ig(1)), (ig(1), ig(3)), (ig(2), ig(5))], 1, "x").unwrap();
+        let line =
+            least_squares_polynomial(&[(ig(0), ig(1)), (ig(1), ig(3)), (ig(2), ig(5))], 1, "x")
+                .unwrap();
         assert_equal(&line, &(CasExpr::int(2) * x() + CasExpr::int(1)));
         // Overdetermined least squares: fit a line to (0,0),(1,0),(2,2),(3,2) — the
         // exact rational best fit is y = (2/3)x − 1/5? Compute and re-check via the
         // symmetric-data slope: points symmetric about (1.5, 1) with slope 2/3.
         let fit = least_squares_polynomial(
-            &[(ig(0), ig(0)), (ig(1), ig(0)), (ig(2), ig(2)), (ig(3), ig(2))],
+            &[
+                (ig(0), ig(0)),
+                (ig(1), ig(0)),
+                (ig(2), ig(2)),
+                (ig(3), ig(2)),
+            ],
             1,
             "x",
         )
@@ -6298,7 +6589,9 @@ mod tests {
         // The fit passes through the centroid (3/2, 1): evaluating at x = 3/2 gives 1.
         assert_equal(&fit.substitute("x", &CasExpr::rat(3, 2)), &CasExpr::int(1));
         // Exact quadratic through 3 points: (0,0),(1,1),(2,4) → x².
-        let quad = least_squares_polynomial(&[(ig(0), ig(0)), (ig(1), ig(1)), (ig(2), ig(4))], 2, "x").unwrap();
+        let quad =
+            least_squares_polynomial(&[(ig(0), ig(0)), (ig(1), ig(1)), (ig(2), ig(4))], 2, "x")
+                .unwrap();
         assert_equal(&quad, &x().pow(2));
     }
 
@@ -6309,7 +6602,10 @@ mod tests {
         // f = x³ + x²y + y²: Hessian = [[6x+2y, 2x],[2x, 2]].
         let f = x().pow(3) + x().pow(2) * y() + y().pow(2);
         let h = hessian(&f, &["x", "y"]).unwrap();
-        assert_equal(h.get(0, 0).unwrap(), &(CasExpr::int(6) * x() + CasExpr::int(2) * y()));
+        assert_equal(
+            h.get(0, 0).unwrap(),
+            &(CasExpr::int(6) * x() + CasExpr::int(2) * y()),
+        );
         assert_equal(h.get(0, 1).unwrap(), &(CasExpr::int(2) * x()));
         assert_equal(h.get(1, 0).unwrap(), &(CasExpr::int(2) * x())); // symmetric
         assert_equal(h.get(1, 1).unwrap(), &CasExpr::int(2));
@@ -6319,7 +6615,10 @@ mod tests {
             &(CasExpr::int(6) * x() + CasExpr::int(2) * y() + CasExpr::int(2)),
         );
         // A harmonic function has zero Laplacian: ∇²(x²−y²) = 2 − 2 = 0.
-        assert_equal(&laplacian(&(x().pow(2) - y().pow(2)), &["x", "y"]), &CasExpr::zero());
+        assert_equal(
+            &laplacian(&(x().pow(2) - y().pow(2)), &["x", "y"]),
+            &CasExpr::zero(),
+        );
     }
 
     #[test]
@@ -6333,11 +6632,20 @@ mod tests {
             &CasExpr::int(2),
         );
         // W(eˣ, e⁻ˣ) = −2 — needs the exp tower (eˣ·e⁻ˣ = 1).
-        assert_equal(&wronskian(&[x().exp(), (-x()).exp()], "x").unwrap(), &CasExpr::int(-2));
+        assert_equal(
+            &wronskian(&[x().exp(), (-x()).exp()], "x").unwrap(),
+            &CasExpr::int(-2),
+        );
         // W(sin x, cos x) = −1 — needs the Pythagorean identity.
-        assert_equal(&wronskian(&[x().sin(), x().cos()], "x").unwrap(), &CasExpr::int(-1));
+        assert_equal(
+            &wronskian(&[x().sin(), x().cos()], "x").unwrap(),
+            &CasExpr::int(-1),
+        );
         // Linearly dependent functions have a zero Wronskian: W(x, 2x) = 0.
-        assert_equal(&wronskian(&[x(), CasExpr::int(2) * x()], "x").unwrap(), &CasExpr::zero());
+        assert_equal(
+            &wronskian(&[x(), CasExpr::int(2) * x()], "x").unwrap(),
+            &CasExpr::zero(),
+        );
     }
 
     #[test]
@@ -6361,7 +6669,10 @@ mod tests {
 
         // div(x², y², z²) = 2x + 2y + 2z.
         let div = divergence(&[x().pow(2), y().pow(2), z().pow(2)], &["x", "y", "z"]).unwrap();
-        assert_equal(&div, &(CasExpr::int(2) * x() + CasExpr::int(2) * y() + CasExpr::int(2) * z()));
+        assert_equal(
+            &div,
+            &(CasExpr::int(2) * x() + CasExpr::int(2) * y() + CasExpr::int(2) * z()),
+        );
 
         // A gradient field (−y, x, 0)? curl = (0,0,2). Standard example curl of
         // (−y, x, 0) = (0, 0, 2).
@@ -6372,12 +6683,46 @@ mod tests {
     }
 
     #[test]
+    fn assumptions_gated_simplification() {
+        let x = || v("x");
+        // Under x ≥ 0: √(x²) = x (not |x|); |x| = x.
+        let nonneg = Assumptions::new().nonnegative("x");
+        assert_equal(
+            &simplify_under_assumptions(&x().pow(2).sqrt(), &nonneg),
+            &x(),
+        );
+        assert_equal(&simplify_under_assumptions(&x().abs(), &nonneg), &x());
+        // Under x < 0: |x| = −x.
+        let neg = Assumptions::new().negative("x");
+        assert_equal(&simplify_under_assumptions(&x().abs(), &neg), &(-x()));
+        // Without assumptions: √(x²) stays |x|, |x| stays |x|.
+        let none = Assumptions::new();
+        assert_equal(
+            &simplify_under_assumptions(&x().pow(2).sqrt(), &none),
+            &x().abs(),
+        );
+        // √(x⁴) under x ≥ 0 = x²; |x·y| under both positive = x·y.
+        assert_equal(
+            &simplify_under_assumptions(&x().pow(4).sqrt(), &nonneg),
+            &x().pow(2),
+        );
+        let both = Assumptions::new().positive("x").positive("y");
+        assert_equal(
+            &simplify_under_assumptions(&(x() * v("y")).abs(), &both),
+            &(x() * v("y")),
+        );
+    }
+
+    #[test]
     fn radical_simplification_extracts_squares() {
         // √12 = 2√3.
         let s = simplify_radicals(&CasExpr::int(12).sqrt());
         assert_equal(&s, &(CasExpr::int(2) * CasExpr::int(3).sqrt()));
         // √9 = 3 (perfect square → rational).
-        assert_equal(&simplify_radicals(&CasExpr::int(9).sqrt()), &CasExpr::int(3));
+        assert_equal(
+            &simplify_radicals(&CasExpr::int(9).sqrt()),
+            &CasExpr::int(3),
+        );
         // √(1/2) = (1/2)·√2 (rationalized denominator).
         let half = simplify_radicals(&CasExpr::rat(1, 2).sqrt());
         assert_equal(&half, &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()));
@@ -6389,7 +6734,10 @@ mod tests {
         // Certificate (square it back): (2√3)² = 12, checked by squaring the rational
         // coefficient and the square-free part — here 2²·3 = 12.
         // √2 is already square-free — left unchanged.
-        assert_equal(&simplify_radicals(&CasExpr::int(2).sqrt()), &CasExpr::int(2).sqrt());
+        assert_equal(
+            &simplify_radicals(&CasExpr::int(2).sqrt()),
+            &CasExpr::int(2).sqrt(),
+        );
         // Negative radicand is left symbolic (no real simplification).
         let neg = CasExpr::int(-3).sqrt();
         assert_equal(&simplify_radicals(&neg), &neg);
@@ -6425,7 +6773,10 @@ mod tests {
             &(CasExpr::rat(1, 3) * CasExpr::int(6).sqrt()),
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
-        assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &sample_standard_deviation(&small).unwrap(),
+            &CasExpr::int(1),
+        );
     }
 
     #[test]
@@ -6468,7 +6819,10 @@ mod tests {
         let start = (x().pow(2) * y()).ln();
         assert_equal(&logcombine(&expand_log(&start)), &start);
         // Non-log terms are preserved: ln x + 3 stays ln x + 3.
-        assert_equal(&logcombine(&(x().ln() + CasExpr::int(3))), &(x().ln() + CasExpr::int(3)));
+        assert_equal(
+            &logcombine(&(x().ln() + CasExpr::int(3))),
+            &(x().ln() + CasExpr::int(3)),
+        );
     }
 
     #[test]
@@ -6502,10 +6856,19 @@ mod tests {
             )
         };
         // Double angle: cos(2x) = 2cos²x − 1 = 1 − 2sin²x.
-        assert!(holds((CasExpr::int(2) * x()).cos(), CasExpr::int(2) * x().cos().pow(2) - CasExpr::int(1)));
-        assert!(holds((CasExpr::int(2) * x()).cos(), CasExpr::int(1) - CasExpr::int(2) * x().sin().pow(2)));
+        assert!(holds(
+            (CasExpr::int(2) * x()).cos(),
+            CasExpr::int(2) * x().cos().pow(2) - CasExpr::int(1)
+        ));
+        assert!(holds(
+            (CasExpr::int(2) * x()).cos(),
+            CasExpr::int(1) - CasExpr::int(2) * x().sin().pow(2)
+        ));
         // sin(2x) = 2 sin x cos x.
-        assert!(holds((CasExpr::int(2) * x()).sin(), CasExpr::int(2) * x().sin() * x().cos()));
+        assert!(holds(
+            (CasExpr::int(2) * x()).sin(),
+            CasExpr::int(2) * x().sin() * x().cos()
+        ));
         // Pythagorean (already known, but via Euler too): sin²x + cos²x = 1.
         assert!(holds(x().sin().pow(2) + x().cos().pow(2), CasExpr::int(1)));
         // Angle-sum: cos(x+y) = cos x cos y − sin x sin y.
@@ -6524,7 +6887,10 @@ mod tests {
             (CasExpr::int(1) - (CasExpr::int(2) * x()).cos()) / CasExpr::int(2),
         ));
         // A NON-identity is not falsely certified: cos(2x) ≠ 2cos²x.
-        assert!(!holds((CasExpr::int(2) * x()).cos(), CasExpr::int(2) * x().cos().pow(2)));
+        assert!(!holds(
+            (CasExpr::int(2) * x()).cos(),
+            CasExpr::int(2) * x().cos().pow(2)
+        ));
     }
 
     #[test]
@@ -6536,8 +6902,14 @@ mod tests {
         // Standard unit-circle values.
         assert_equal(&sin(pi() / CasExpr::int(6)), &CasExpr::rat(1, 2));
         assert_equal(&cos(pi() / CasExpr::int(3)), &CasExpr::rat(1, 2));
-        assert_equal(&sin(pi() / CasExpr::int(4)), &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()));
-        assert_equal(&cos(pi() / CasExpr::int(6)), &(CasExpr::rat(1, 2) * CasExpr::int(3).sqrt()));
+        assert_equal(
+            &sin(pi() / CasExpr::int(4)),
+            &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()),
+        );
+        assert_equal(
+            &cos(pi() / CasExpr::int(6)),
+            &(CasExpr::rat(1, 2) * CasExpr::int(3).sqrt()),
+        );
         assert_equal(&tan(pi() / CasExpr::int(4)), &CasExpr::int(1));
         assert_equal(&tan(pi() / CasExpr::int(3)), &CasExpr::int(3).sqrt());
         // sin(0) = 0, cos(0) = 1, sin(π/2) = 1, cos(π/2) = 0, sin(π) = 0.
@@ -6549,16 +6921,23 @@ mod tests {
         // 15° = π/12 = (√6 − √2)/4 — the fine-grained table entry.
         assert_equal(
             &sin(pi() / CasExpr::int(12)),
-            &(CasExpr::rat(1, 4) * CasExpr::int(6).sqrt() - CasExpr::rat(1, 4) * CasExpr::int(2).sqrt()),
+            &(CasExpr::rat(1, 4) * CasExpr::int(6).sqrt()
+                - CasExpr::rat(1, 4) * CasExpr::int(2).sqrt()),
         );
         // Pythagorean check on the exact values: sin²(π/5? no) — use π/6: (1/2)²+(√3/2)²=1.
         let s = sin(pi() / CasExpr::int(6));
         let c = cos(pi() / CasExpr::int(6));
         assert_equal(&(s.pow(2) + c.pow(2)), &CasExpr::int(1));
         // tan(π/2) is a pole → left unevaluated.
-        assert!(matches!(tan(pi() / CasExpr::int(2)), CasExpr::Unary(UnaryFunc::Tan, _)));
+        assert!(matches!(
+            tan(pi() / CasExpr::int(2)),
+            CasExpr::Unary(UnaryFunc::Tan, _)
+        ));
         // A non-special angle (π/5) is left unevaluated.
-        assert!(matches!(sin(pi() / CasExpr::int(5)), CasExpr::Unary(UnaryFunc::Sin, _)));
+        assert!(matches!(
+            sin(pi() / CasExpr::int(5)),
+            CasExpr::Unary(UnaryFunc::Sin, _)
+        ));
     }
 
     #[test]
@@ -6568,7 +6947,10 @@ mod tests {
         assert_eq!(rationalize(1.0 / 3.0, 100), Some(Rational::new(1, 3)));
         assert_eq!(rationalize(-2.0 / 7.0, 100), Some(Rational::new(-2, 7)));
         // π ≈ 3.14159 → 355/113 (the famous convergent) with denominator ≤ 1000.
-        assert_eq!(rationalize(std::f64::consts::PI, 1000), Some(Rational::new(355, 113)));
+        assert_eq!(
+            rationalize(std::f64::consts::PI, 1000),
+            Some(Rational::new(355, 113))
+        );
         // An exact integer.
         assert_eq!(rationalize(5.0, 100), Some(Rational::integer(5)));
         assert!(rationalize(f64::NAN, 100).is_none());
@@ -6578,11 +6960,22 @@ mod tests {
     fn evalf_approximates() {
         let x = || v("x");
         // √2 ≈ 1.4142…
-        assert!((evalf(&CasExpr::int(2).sqrt(), &[]).unwrap() - std::f64::consts::SQRT_2).abs() < 1e-12);
+        assert!(
+            (evalf(&CasExpr::int(2).sqrt(), &[]).unwrap() - std::f64::consts::SQRT_2).abs() < 1e-12
+        );
         // exp(0) = 1, sin(0) = 0.
         assert!((evalf(&CasExpr::int(0).exp(), &[]).unwrap() - 1.0).abs() < 1e-12);
         // A bound variable: 2x² + 1 at x = 3 → 19.
-        assert!((evalf(&(CasExpr::int(2) * x().pow(2) + CasExpr::int(1)), &[("x", 3.0)]).unwrap() - 19.0).abs() < 1e-12);
+        assert!(
+            (evalf(
+                &(CasExpr::int(2) * x().pow(2) + CasExpr::int(1)),
+                &[("x", 3.0)]
+            )
+            .unwrap()
+                - 19.0)
+                .abs()
+                < 1e-12
+        );
         // stddev {1,2,3} = (1/3)√6 ≈ 0.8165.
         let data: Vec<Rational> = [1, 2, 3].into_iter().map(Rational::integer).collect();
         let sd = standard_deviation(&data).unwrap();
@@ -6642,8 +7035,14 @@ mod tests {
         let perpendicular = cross(&vec_u, &vec_w).unwrap();
         assert_equal(&dot(&perpendicular, &vec_u).unwrap(), &CasExpr::zero());
         // Norm: ‖(3,4)‖ = 5; ‖(1,1)‖ = √2.
-        assert_equal(&norm(&[CasExpr::int(3), CasExpr::int(4)]).unwrap(), &CasExpr::int(5));
-        assert_equal(&norm(&[CasExpr::int(1), CasExpr::int(1)]).unwrap(), &CasExpr::int(2).sqrt());
+        assert_equal(
+            &norm(&[CasExpr::int(3), CasExpr::int(4)]).unwrap(),
+            &CasExpr::int(5),
+        );
+        assert_equal(
+            &norm(&[CasExpr::int(1), CasExpr::int(1)]).unwrap(),
+            &CasExpr::int(2).sqrt(),
+        );
     }
 
     #[test]
@@ -6659,18 +7058,27 @@ mod tests {
         let b = || CasExpr::var("b");
         assert_equal(&(a() + b() - a()).exp(), &b().exp());
         // exp(x + 1)·exp(−x) = exp(1) (constant term survives, x cancels).
-        assert_equal(&((x() + CasExpr::int(1)).exp() * (-x()).exp()), &CasExpr::int(1).exp());
+        assert_equal(
+            &((x() + CasExpr::int(1)).exp() * (-x()).exp()),
+            &CasExpr::int(1).exp(),
+        );
         // A polynomial exponent splits into per-monomial factors and recombines:
         // exp(x² + x) = exp(x²)·exp(x).
         assert_equal(&(x().pow(2) + x()).exp(), &(x().pow(2).exp() * x().exp()));
         // Integer scaling: exp(2x) = exp(x)², and exp(x)·exp(2x) = exp(3x).
         assert_equal(&(CasExpr::int(2) * x()).exp(), &x().exp().pow(2));
-        assert_equal(&(x().exp() * (CasExpr::int(2) * x()).exp()), &(CasExpr::int(3) * x()).exp());
+        assert_equal(
+            &(x().exp() * (CasExpr::int(2) * x()).exp()),
+            &(CasExpr::int(3) * x()).exp(),
+        );
         // exp(2) = exp(1)² (constant argument, integer scaling).
         assert_equal(&CasExpr::int(2).exp(), &CasExpr::int(1).exp().pow(2));
         // exp/ln inverse: exp(ln 5) = 5, exp(2·ln 3) = 9, exp(−ln 2) = 1/2.
         assert_equal(&CasExpr::int(5).ln().exp(), &CasExpr::int(5));
-        assert_equal(&(CasExpr::int(2) * CasExpr::int(3).ln()).exp(), &CasExpr::int(9));
+        assert_equal(
+            &(CasExpr::int(2) * CasExpr::int(3).ln()).exp(),
+            &CasExpr::int(9),
+        );
         assert_equal(&(-CasExpr::int(2).ln()).exp(), &CasExpr::rat(1, 2));
         // Sanity: the general non-cancelling product stays honest — exp(x)·exp(y) is
         // not equal to exp(x) alone.
@@ -6693,7 +7101,10 @@ mod tests {
         );
         // exp(P)·exp(−P) = 1 for a polynomial argument P = x² − 3.
         let poly_arg = x().pow(2) - CasExpr::int(3);
-        assert_equal(&(poly_arg.clone().exp() * (-poly_arg).exp()), &CasExpr::int(1));
+        assert_equal(
+            &(poly_arg.clone().exp() * (-poly_arg).exp()),
+            &CasExpr::int(1),
+        );
         // Sanity: exp(x)·exp(y) is NOT reduced (different atoms) — must stay unknown-
         // /non-equal to exp(x+y) (the general law needs the exp tower). Assert it does
         // not falsely certify equal to something wrong: exp(x) ≠ 1.
@@ -6731,35 +7142,100 @@ mod tests {
         let p = x().pow(2) - CasExpr::int(5) * x() + CasExpr::int(6);
         let gt = solve_polynomial_inequality(&p, "x", InequalityOp::Greater).unwrap();
         assert_eq!(gt.len(), 2);
-        assert_eq!(gt[0], RealInterval { lower: None, lower_closed: false, upper: Some(ig(2)), upper_closed: false });
-        assert_eq!(gt[1], RealInterval { lower: Some(ig(3)), lower_closed: false, upper: None, upper_closed: false });
+        assert_eq!(
+            gt[0],
+            RealInterval {
+                lower: None,
+                lower_closed: false,
+                upper: Some(ig(2)),
+                upper_closed: false
+            }
+        );
+        assert_eq!(
+            gt[1],
+            RealInterval {
+                lower: Some(ig(3)),
+                lower_closed: false,
+                upper: None,
+                upper_closed: false
+            }
+        );
         // x² − 5x + 6 ≤ 0  ⇒  [2, 3].
         let le = solve_polynomial_inequality(&p, "x", InequalityOp::LessEqual).unwrap();
-        assert_eq!(le, vec![RealInterval { lower: Some(ig(2)), lower_closed: true, upper: Some(ig(3)), upper_closed: true }]);
+        assert_eq!(
+            le,
+            vec![RealInterval {
+                lower: Some(ig(2)),
+                lower_closed: true,
+                upper: Some(ig(3)),
+                upper_closed: true
+            }]
+        );
         // x² + 1 > 0  ⇒  all reals (no real roots, positive everywhere).
-        let all = solve_polynomial_inequality(&(x().pow(2) + CasExpr::int(1)), "x", InequalityOp::Greater).unwrap();
-        assert_eq!(all, vec![RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false }]);
+        let all = solve_polynomial_inequality(
+            &(x().pow(2) + CasExpr::int(1)),
+            "x",
+            InequalityOp::Greater,
+        )
+        .unwrap();
+        assert_eq!(
+            all,
+            vec![RealInterval {
+                lower: None,
+                lower_closed: false,
+                upper: None,
+                upper_closed: false
+            }]
+        );
         // x² + 1 < 0  ⇒  empty.
-        assert!(solve_polynomial_inequality(&(x().pow(2) + CasExpr::int(1)), "x", InequalityOp::Less).unwrap().is_empty());
+        assert!(
+            solve_polynomial_inequality(&(x().pow(2) + CasExpr::int(1)), "x", InequalityOp::Less)
+                .unwrap()
+                .is_empty()
+        );
         // (x−1)² ≥ 0  ⇒  all reals (double root included, both sides positive).
         let sq = x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1);
         let ge = solve_polynomial_inequality(&sq, "x", InequalityOp::GreaterEqual).unwrap();
-        assert_eq!(ge, vec![RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false }]);
+        assert_eq!(
+            ge,
+            vec![RealInterval {
+                lower: None,
+                lower_closed: false,
+                upper: None,
+                upper_closed: false
+            }]
+        );
         // An irrational-root polynomial (x² − 2 > 0) declines (endpoints ±√2).
-        assert!(solve_polynomial_inequality(&(x().pow(2) - CasExpr::int(2)), "x", InequalityOp::Greater).is_none());
+        assert!(
+            solve_polynomial_inequality(
+                &(x().pow(2) - CasExpr::int(2)),
+                "x",
+                InequalityOp::Greater
+            )
+            .is_none()
+        );
     }
 
     #[test]
     fn cyclotomic_polynomials() {
         let x = || v("x");
         // Known small cases.
-        assert_equal(&cyclotomic_polynomial(1, "x").unwrap(), &(x() - CasExpr::int(1)));
-        assert_equal(&cyclotomic_polynomial(2, "x").unwrap(), &(x() + CasExpr::int(1)));
+        assert_equal(
+            &cyclotomic_polynomial(1, "x").unwrap(),
+            &(x() - CasExpr::int(1)),
+        );
+        assert_equal(
+            &cyclotomic_polynomial(2, "x").unwrap(),
+            &(x() + CasExpr::int(1)),
+        );
         assert_equal(
             &cyclotomic_polynomial(3, "x").unwrap(),
             &(x().pow(2) + x() + CasExpr::int(1)),
         );
-        assert_equal(&cyclotomic_polynomial(4, "x").unwrap(), &(x().pow(2) + CasExpr::int(1)));
+        assert_equal(
+            &cyclotomic_polynomial(4, "x").unwrap(),
+            &(x().pow(2) + CasExpr::int(1)),
+        );
         assert_equal(
             &cyclotomic_polynomial(6, "x").unwrap(),
             &(x().pow(2) - x() + CasExpr::int(1)),
@@ -6782,7 +7258,12 @@ mod tests {
         let x = || v("x");
         // Common root ⇒ resultant 0; coprime ⇒ nonzero.
         assert_equal(
-            &resultant(&(x().pow(2) - CasExpr::int(1)), &(x() - CasExpr::int(1)), "x").unwrap(),
+            &resultant(
+                &(x().pow(2) - CasExpr::int(1)),
+                &(x() - CasExpr::int(1)),
+                "x",
+            )
+            .unwrap(),
             &CasExpr::zero(),
         );
         assert!(matches!(
@@ -6804,7 +7285,8 @@ mod tests {
             &CasExpr::zero(),
         );
         // Cubic with a double root has zero discriminant: (x−1)²(x−2) = x³−4x²+5x−2.
-        let cubic = x().pow(3) - CasExpr::int(4) * x().pow(2) + CasExpr::int(5) * x() - CasExpr::int(2);
+        let cubic =
+            x().pow(3) - CasExpr::int(4) * x().pow(2) + CasExpr::int(5) * x() - CasExpr::int(2);
         assert_equal(&discriminant(&cubic, "x").unwrap(), &CasExpr::zero());
     }
 
@@ -6824,11 +7306,19 @@ mod tests {
         let x = || v("x");
         // content(6x² + 4x + 2) = 2; primitive part = 3x² + 2x + 1.
         assert_equal(
-            &content(&(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)), "x").unwrap(),
+            &content(
+                &(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)),
+                "x",
+            )
+            .unwrap(),
             &CasExpr::int(2),
         );
         assert_equal(
-            &primitive_part(&(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)), "x").unwrap(),
+            &primitive_part(
+                &(CasExpr::int(6) * x().pow(2) + CasExpr::int(4) * x() + CasExpr::int(2)),
+                "x",
+            )
+            .unwrap(),
             &(CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(1)),
         );
         // content((1/2)x + (1/3)) = 1/6.
@@ -6850,7 +7340,9 @@ mod tests {
             vec![CasExpr::zero(), CasExpr::int(3)],
         ])
         .unwrap();
-        assert!(upper.is_upper_triangular() && !upper.is_lower_triangular() && !upper.is_diagonal());
+        assert!(
+            upper.is_upper_triangular() && !upper.is_lower_triangular() && !upper.is_diagonal()
+        );
     }
 
     #[test]
@@ -6859,16 +7351,33 @@ mod tests {
         // lcm(x²−1, x²−2x+1) = (x−1)(x+1)(x−1)/gcd... = (x−1)²(x+1)/(x−1) monic
         // Actually lcm((x-1)(x+1), (x-1)²) = (x-1)²(x+1) = x³−x²−x+1.
         assert_equal(
-            &poly_lcm(&(x().pow(2) - CasExpr::int(1)), &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)), "x").unwrap(),
+            &poly_lcm(
+                &(x().pow(2) - CasExpr::int(1)),
+                &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)),
+                "x",
+            )
+            .unwrap(),
             &(x().pow(3) - x().pow(2) - x() + CasExpr::int(1)),
         );
         // Irreducibility over ℚ: x²+1 and x²−2 irreducible; x²−1 reducible.
-        assert_eq!(is_irreducible(&(x().pow(2) + CasExpr::int(1)), "x"), Some(true));
-        assert_eq!(is_irreducible(&(x().pow(2) - CasExpr::int(2)), "x"), Some(true));
-        assert_eq!(is_irreducible(&(x().pow(2) - CasExpr::int(1)), "x"), Some(false));
+        assert_eq!(
+            is_irreducible(&(x().pow(2) + CasExpr::int(1)), "x"),
+            Some(true)
+        );
+        assert_eq!(
+            is_irreducible(&(x().pow(2) - CasExpr::int(2)), "x"),
+            Some(true)
+        );
+        assert_eq!(
+            is_irreducible(&(x().pow(2) - CasExpr::int(1)), "x"),
+            Some(false)
+        );
         // Swinnerton–Dyer quartic x⁴−10x²+1 is irreducible over ℚ.
         assert_eq!(
-            is_irreducible(&(x().pow(4) - CasExpr::int(10) * x().pow(2) + CasExpr::int(1)), "x"),
+            is_irreducible(
+                &(x().pow(4) - CasExpr::int(10) * x().pow(2) + CasExpr::int(1)),
+                "x"
+            ),
             Some(true),
         );
     }
@@ -6878,11 +7387,21 @@ mod tests {
         let x = || v("x");
         // gcd(x²−1, x²−2x+1) = x−1
         assert_equal(
-            &poly_gcd(&(x().pow(2) - CasExpr::int(1)), &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)), "x").unwrap(),
+            &poly_gcd(
+                &(x().pow(2) - CasExpr::int(1)),
+                &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)),
+                "x",
+            )
+            .unwrap(),
             &(x() - CasExpr::int(1)),
         );
         // (x³−1) = (x²+x+1)(x−1) + 0
-        let (q, r) = poly_div(&(x().pow(3) - CasExpr::int(1)), &(x() - CasExpr::int(1)), "x").unwrap();
+        let (q, r) = poly_div(
+            &(x().pow(3) - CasExpr::int(1)),
+            &(x() - CasExpr::int(1)),
+            "x",
+        )
+        .unwrap();
         assert_equal(&q, &(x().pow(2) + x() + CasExpr::int(1)));
         assert_equal(&r, &CasExpr::zero());
     }
@@ -6903,7 +7422,10 @@ mod tests {
         assert_equal(&factor(&g, "x").expect("factorable"), &g);
         // x² − 2x + 1 = (x−1)² (repeated root grouped into a power)
         let h = x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1);
-        assert_equal(&factor(&h, "x").expect("factorable"), &(x() - CasExpr::int(1)).pow(2));
+        assert_equal(
+            &factor(&h, "x").expect("factorable"),
+            &(x() - CasExpr::int(1)).pow(2),
+        );
         // 4th derivative of x⁴ is 24
         assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
     }
@@ -6935,16 +7457,28 @@ mod tests {
         assert_equal(&real_part(&z).unwrap(), &CasExpr::int(3));
         assert_equal(&imaginary_part(&z).unwrap(), &CasExpr::int(4));
         // |z|² = z·conj(z) = 25 (real)
-        assert_equal(&real_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::int(25));
-        assert_equal(&imaginary_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::zero());
+        assert_equal(
+            &real_part(&(z.clone() * conjugate(&z))).unwrap(),
+            &CasExpr::int(25),
+        );
+        assert_equal(
+            &imaginary_part(&(z.clone() * conjugate(&z))).unwrap(),
+            &CasExpr::zero(),
+        );
     }
 
     #[test]
     fn complex_modulus_and_roots_of_unity() {
         let i = CasExpr::imaginary_unit();
         // |3 + 4i| = 5; |1 + i| = √2; |5| = 5.
-        assert_equal(&modulus(&(CasExpr::int(3) + CasExpr::int(4) * i.clone())).unwrap(), &CasExpr::int(5));
-        assert_equal(&modulus(&(CasExpr::int(1) + i.clone())).unwrap(), &CasExpr::int(2).sqrt());
+        assert_equal(
+            &modulus(&(CasExpr::int(3) + CasExpr::int(4) * i.clone())).unwrap(),
+            &CasExpr::int(5),
+        );
+        assert_equal(
+            &modulus(&(CasExpr::int(1) + i.clone())).unwrap(),
+            &CasExpr::int(2).sqrt(),
+        );
         assert_equal(&modulus(&CasExpr::int(5)).unwrap(), &CasExpr::int(5));
         // 4th roots of unity: 1, i, −1, −i.
         let roots = roots_of_unity(4).unwrap();
@@ -6959,7 +7493,10 @@ mod tests {
         }
         // 6th roots include the primitive (1+√3 i)/2 at k=1: cos(π/3)+i sin(π/3).
         let six = roots_of_unity(6).unwrap();
-        assert_equal(&six[1], &(CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * i));
+        assert_equal(
+            &six[1],
+            &(CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * i),
+        );
     }
 
     #[test]
@@ -6976,7 +7513,10 @@ mod tests {
         assert_equal(&(CasExpr::int(1) + im()).pow(2), &(CasExpr::int(2) * im()));
         // complex roots of x²+1 verify: I²+1 = 0
         for r in solve(&(v("x").pow(2) + CasExpr::int(1)), "x").unwrap() {
-            assert_equal(&(v("x").pow(2) + CasExpr::int(1)).substitute("x", &r), &CasExpr::zero());
+            assert_equal(
+                &(v("x").pow(2) + CasExpr::int(1)).substitute("x", &r),
+                &CasExpr::zero(),
+            );
         }
     }
 
@@ -6984,7 +7524,11 @@ mod tests {
     fn solve_complex_roots() {
         let x = || v("x");
         let strs = |e: CasExpr| -> Vec<String> {
-            solve(&e, "x").unwrap().iter().map(ToString::to_string).collect()
+            solve(&e, "x")
+                .unwrap()
+                .iter()
+                .map(ToString::to_string)
+                .collect()
         };
         // x² + 1 = 0 → ±I
         assert_eq!(strs(x().pow(2) + CasExpr::int(1)), vec!["I", "-I"]);
@@ -7022,7 +7566,13 @@ mod tests {
         assert_equal(&sol3[1].1, &CasExpr::int(2));
         assert_equal(&sol3[2].1, &CasExpr::int(3));
         // Singular system (no unique solution) declines.
-        assert!(solve_linear_system(&[x() + y(), CasExpr::int(2) * x() + CasExpr::int(2) * y()], &["x", "y"]).is_none());
+        assert!(
+            solve_linear_system(
+                &[x() + y(), CasExpr::int(2) * x() + CasExpr::int(2) * y()],
+                &["x", "y"]
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -7078,10 +7628,10 @@ mod tests {
         let x = || v("x");
         // Each certified by d/dx(answer) = integrand.
         for integrand in [
-            x().ln(),                    // ∫ ln x = x ln x − x
-            x().atan(),                  // ∫ atan x = x·atan x − ½ln(1+x²)
-            x() * x().ln(),              // ∫ x ln x = ½x² ln x − ¼x²
-            x().pow(2) * x().ln(),       // ∫ x² ln x
+            x().ln(),                                             // ∫ ln x = x ln x − x
+            x().atan(),                                           // ∫ atan x = x·atan x − ½ln(1+x²)
+            x() * x().ln(),                                       // ∫ x ln x = ½x² ln x − ¼x²
+            x().pow(2) * x().ln(),                                // ∫ x² ln x
             (CasExpr::int(3) * x() + CasExpr::int(1)) * x().ln(), // ∫ (3x+1) ln x
         ] {
             let result = integrate(&integrand, "x").expect("integrable");
@@ -7095,12 +7645,12 @@ mod tests {
         let x = || v("x");
         // Each certified by d/dx(answer) = integrand.
         for integrand in [
-            x().exp(),                              // ∫ exp(x) = exp(x)
-            x().sin(),                              // ∫ sin(x) = -cos(x)
-            x().cos(),                              // ∫ cos(x) = sin(x)
-            (CasExpr::int(3) * x()).exp(),          // ∫ exp(3x) = (1/3)exp(3x)
-            (CasExpr::int(2) * x()).cos(),          // ∫ cos(2x) = (1/2)sin(2x)
-            x().ln(),                               // ∫ ln(x) = x·ln(x) - x
+            x().exp(),                     // ∫ exp(x) = exp(x)
+            x().sin(),                     // ∫ sin(x) = -cos(x)
+            x().cos(),                     // ∫ cos(x) = sin(x)
+            (CasExpr::int(3) * x()).exp(), // ∫ exp(3x) = (1/3)exp(3x)
+            (CasExpr::int(2) * x()).cos(), // ∫ cos(2x) = (1/2)sin(2x)
+            x().ln(),                      // ∫ ln(x) = x·ln(x) - x
         ] {
             let result = integrate(&integrand, "x").expect("elementary integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");

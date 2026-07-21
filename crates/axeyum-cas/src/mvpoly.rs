@@ -665,11 +665,9 @@ impl MvPoly {
         match expr {
             CasExpr::Const(value) => Some(MvPoly::constant(*value)),
             CasExpr::Var(name) => Some(MvPoly::var(name)),
-            CasExpr::Add(terms) => terms
-                .iter()
-                .try_fold(MvPoly::zero(), |acc, term| {
-                    acc.add(&MvPoly::from_cas_expr(term)?)
-                }),
+            CasExpr::Add(terms) => terms.iter().try_fold(MvPoly::zero(), |acc, term| {
+                acc.add(&MvPoly::from_cas_expr(term)?)
+            }),
             CasExpr::Mul(factors) => factors
                 .iter()
                 .try_fold(MvPoly::constant(Rational::integer(1)), |acc, factor| {
@@ -847,7 +845,11 @@ mod tests {
         let shared = var_x().sub(&var_y()).unwrap(); // d = x - y
         let poly_p = var_x().add(&MvPoly::constant(ri(1))).unwrap(); // p = x + 1
         let poly_q = var_x().add(&MvPoly::constant(ri(2))).unwrap(); // q = x + 2
-        assert_eq!(poly_p.gcd(&poly_q).unwrap().total_degree(), 0, "p, q coprime");
+        assert_eq!(
+            poly_p.gcd(&poly_q).unwrap().total_degree(),
+            0,
+            "p, q coprime"
+        );
 
         let poly_a = poly_p.mul(&shared).unwrap();
         let poly_b = poly_q.mul(&shared).unwrap();

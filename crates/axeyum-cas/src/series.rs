@@ -297,9 +297,8 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
             .and_then(|inner| compose(&inner, cosine_coeff)),
         UnaryFunc::Atan => require_vanishing(&argument, constant_term)
             .and_then(|inner| compose(&inner, arctangent_coeff)),
-        UnaryFunc::Ln => {
-            require_unit(argument, constant_term).and_then(|inner| compose(&inner, log_one_plus_coeff))
-        }
+        UnaryFunc::Ln => require_unit(argument, constant_term)
+            .and_then(|inner| compose(&inner, log_one_plus_coeff)),
         UnaryFunc::Sqrt => {
             require_unit(argument, constant_term).and_then(|inner| compose(&inner, binomial_half))
         }
@@ -424,7 +423,9 @@ fn binomial_half(degree: usize) -> Option<Rational> {
     for step in 0..degree {
         let factor_numerator = half.checked_sub(Rational::integer(i128::try_from(step).ok()?))?;
         let factor_denominator = Rational::integer(i128::try_from(step + 1).ok()?);
-        result = result.checked_mul(factor_numerator)?.checked_div(factor_denominator)?;
+        result = result
+            .checked_mul(factor_numerator)?
+            .checked_div(factor_denominator)?;
     }
     Some(result)
 }
@@ -493,7 +494,8 @@ mod tests {
     fn sine_series() {
         // sin(x) = x - x³/6 + x⁵/120.
         let result = series(&var().sin(), "x", 5).expect("elementary");
-        let expected = var() - CasExpr::rat(1, 6) * var().pow(3) + CasExpr::rat(1, 120) * var().pow(5);
+        let expected =
+            var() - CasExpr::rat(1, 6) * var().pow(3) + CasExpr::rat(1, 120) * var().pow(5);
         assert_matches(&result, &expected);
         assert_eq!(
             coeffs(&var().sin(), 5),
@@ -512,7 +514,8 @@ mod tests {
     fn cosine_series() {
         // cos(x) = 1 - x²/2 + x⁴/24.
         let result = series(&var().cos(), "x", 4).expect("elementary");
-        let expected = CasExpr::int(1) - CasExpr::rat(1, 2) * var().pow(2) + CasExpr::rat(1, 24) * var().pow(4);
+        let expected = CasExpr::int(1) - CasExpr::rat(1, 2) * var().pow(2)
+            + CasExpr::rat(1, 24) * var().pow(4);
         assert_matches(&result, &expected);
     }
 
@@ -521,7 +524,8 @@ mod tests {
         // ln(1+x) = x - x²/2 + x³/3 - x⁴/4.
         let expr = (CasExpr::int(1) + var()).ln();
         let result = series(&expr, "x", 4).expect("elementary");
-        let expected = var() - CasExpr::rat(1, 2) * var().pow(2) + CasExpr::rat(1, 3) * var().pow(3)
+        let expected = var() - CasExpr::rat(1, 2) * var().pow(2)
+            + CasExpr::rat(1, 3) * var().pow(3)
             - CasExpr::rat(1, 4) * var().pow(4);
         assert_matches(&result, &expected);
     }
@@ -545,7 +549,8 @@ mod tests {
     fn arctangent_series() {
         // atan(x) = x - x³/3 + x⁵/5.
         let result = series(&var().atan(), "x", 5).expect("elementary");
-        let expected = var() - CasExpr::rat(1, 3) * var().pow(3) + CasExpr::rat(1, 5) * var().pow(5);
+        let expected =
+            var() - CasExpr::rat(1, 3) * var().pow(3) + CasExpr::rat(1, 5) * var().pow(5);
         assert_matches(&result, &expected);
     }
 
@@ -574,7 +579,15 @@ mod tests {
             + CasExpr::int(2) * var().pow(2)
             + CasExpr::int(2) * var().pow(3);
         assert_matches(&result, &expected);
-        assert_eq!(coeffs(&expr, 3), vec![Rational::integer(1), Rational::integer(2), Rational::integer(2), Rational::integer(2)]);
+        assert_eq!(
+            coeffs(&expr, 3),
+            vec![
+                Rational::integer(1),
+                Rational::integer(2),
+                Rational::integer(2),
+                Rational::integer(2)
+            ]
+        );
     }
 
     #[test]

@@ -733,7 +733,11 @@ mod tests {
             let (x, y) = pell_fundamental_solution(d).expect("non-square d has a solution");
             let identity = x
                 .checked_mul(x)
-                .and_then(|xx| y.checked_mul(y).and_then(|yy| yy.checked_mul(d)).map(|dyy| xx - dyy))
+                .and_then(|xx| {
+                    y.checked_mul(y)
+                        .and_then(|yy| yy.checked_mul(d))
+                        .map(|dyy| xx - dyy)
+                })
                 .unwrap();
             assert_eq!(identity, 1, "Pell identity for d = {d}: ({x}, {y})");
             assert!(x > 0 && y > 0);

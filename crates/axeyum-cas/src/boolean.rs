@@ -617,10 +617,7 @@ mod tests {
     #[test]
     fn dnf_and_cnf_round_trip_equivalent() {
         // A mixed formula and its two normal forms all agree semantically.
-        let expr = BoolExpr::iff(
-            BoolExpr::xor(vec![a(), b()]),
-            BoolExpr::implies(c(), a()),
-        );
+        let expr = BoolExpr::iff(BoolExpr::xor(vec![a(), b()]), BoolExpr::implies(c(), a()));
         let dnf = expr.to_dnf();
         let cnf = expr.to_cnf();
         assert_eq!(expr.equivalent(&dnf), Some(true));

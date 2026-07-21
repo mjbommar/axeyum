@@ -334,7 +334,9 @@ fn cmp_lower_bound(a: &Interval, b: &Interval) -> Ordering {
         (None, None) => Ordering::Equal,
         (None, Some(_)) => Ordering::Less,
         (Some(_), None) => Ordering::Greater,
-        (Some(av), Some(bv)) => av.cmp(&bv).then_with(|| b.lower_closed.cmp(&a.lower_closed)),
+        (Some(av), Some(bv)) => av
+            .cmp(&bv)
+            .then_with(|| b.lower_closed.cmp(&a.lower_closed)),
     }
 }
 
@@ -346,7 +348,9 @@ fn cmp_upper_bound(a: &Interval, b: &Interval) -> Ordering {
         (None, None) => Ordering::Equal,
         (None, Some(_)) => Ordering::Greater,
         (Some(_), None) => Ordering::Less,
-        (Some(av), Some(bv)) => av.cmp(&bv).then_with(|| a.upper_closed.cmp(&b.upper_closed)),
+        (Some(av), Some(bv)) => av
+            .cmp(&bv)
+            .then_with(|| a.upper_closed.cmp(&b.upper_closed)),
     }
 }
 
@@ -423,7 +427,10 @@ mod tests {
         // [1, 2] ∪ (2, 3] = [1, 3]: they share the closed point 2.
         let a = RealSet::interval(Interval::closed(r(1), r(2)));
         let b = RealSet::interval(Interval::open_closed(r(2), r(3)));
-        assert!(a.union(&b).is_equal(&RealSet::interval(Interval::closed(r(1), r(3)))));
+        assert!(
+            a.union(&b)
+                .is_equal(&RealSet::interval(Interval::closed(r(1), r(3))))
+        );
     }
 
     #[test]
@@ -442,7 +449,10 @@ mod tests {
         // [0, 2] ∩ [1, 3] = [1, 2].
         let a = RealSet::interval(Interval::closed(r(0), r(2)));
         let b = RealSet::interval(Interval::closed(r(1), r(3)));
-        assert!(a.intersection(&b).is_equal(&RealSet::interval(Interval::closed(r(1), r(2)))));
+        assert!(
+            a.intersection(&b)
+                .is_equal(&RealSet::interval(Interval::closed(r(1), r(2))))
+        );
     }
 
     #[test]
@@ -470,7 +480,10 @@ mod tests {
                 upper_closed: false,
             },
         ]);
-        assert!(s.complement().is_equal(&RealSet::interval(Interval::open(r(0), r(1)))));
+        assert!(
+            s.complement()
+                .is_equal(&RealSet::interval(Interval::open(r(0), r(1))))
+        );
     }
 
     #[test]

@@ -197,7 +197,11 @@ impl Matrix {
                 });
             }
         }
-        Matrix { rows: n, cols: n, data }
+        Matrix {
+            rows: n,
+            cols: n,
+            data,
+        }
     }
 
     /// The `rows × cols` matrix of zeros.
@@ -277,7 +281,11 @@ impl Matrix {
     pub fn is_identity(&self) -> bool {
         self.rows == self.cols
             && self.all_where(|i, j, e| {
-                let target = if i == j { CasExpr::int(1) } else { CasExpr::zero() };
+                let target = if i == j {
+                    CasExpr::int(1)
+                } else {
+                    CasExpr::zero()
+                };
                 matches!(
                     crate::equal(e, &target),
                     crate::ZeroTest::Certified { equal: true, .. }
@@ -497,7 +505,11 @@ impl Matrix {
     /// This matrix as a nested row grid of cloned `CasExpr` entries.
     fn to_grid(&self) -> Vec<Vec<CasExpr>> {
         (0..self.rows)
-            .map(|row| (0..self.cols).map(|col| self.at(row, col).clone()).collect())
+            .map(|row| {
+                (0..self.cols)
+                    .map(|col| self.at(row, col).clone())
+                    .collect()
+            })
             .collect()
     }
 
@@ -786,7 +798,10 @@ mod tests {
     /// Assert two `CasExpr` values are certified equal by the decidable zero-test.
     fn assert_expr_equal(left: &CasExpr, right: &CasExpr) {
         match equal(left, right) {
-            ZeroTest::Certified { equal: is_equal, witness } => {
+            ZeroTest::Certified {
+                equal: is_equal,
+                witness,
+            } => {
                 assert!(is_equal, "expected equal; difference witness = {witness:?}");
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) result"),
@@ -810,11 +825,8 @@ mod tests {
     #[test]
     fn identity_is_multiplicative_unit() {
         // A · I = A and I · A = A for a symbolic 2×2 matrix.
-        let matrix = Matrix::from_rows(vec![
-            vec![var("a"), var("b")],
-            vec![var("c"), var("d")],
-        ])
-        .expect("rectangular");
+        let matrix = Matrix::from_rows(vec![vec![var("a"), var("b")], vec![var("c"), var("d")]])
+            .expect("rectangular");
         let identity = Matrix::identity(2);
         assert_matrix_equal(&matrix.mul(&identity).expect("conformable"), &matrix);
         assert_matrix_equal(&identity.mul(&matrix).expect("conformable"), &matrix);
@@ -831,22 +843,16 @@ mod tests {
     #[test]
     fn determinant_two_by_two_numeric() {
         // det [[1, 2], [3, 4]] = 1·4 − 2·3 = −2.
-        let matrix = Matrix::from_rows(vec![
-            vec![konst(1), konst(2)],
-            vec![konst(3), konst(4)],
-        ])
-        .expect("rectangular");
+        let matrix = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3), konst(4)]])
+            .expect("rectangular");
         assert_expr_equal(&matrix.determinant().expect("square"), &konst(-2));
     }
 
     #[test]
     fn determinant_two_by_two_symbolic() {
         // det [[a, b], [c, d]] = a·d − b·c.
-        let matrix = Matrix::from_rows(vec![
-            vec![var("a"), var("b")],
-            vec![var("c"), var("d")],
-        ])
-        .expect("rectangular");
+        let matrix = Matrix::from_rows(vec![vec![var("a"), var("b")], vec![var("c"), var("d")]])
+            .expect("rectangular");
         let claimed = var("a") * var("d") - var("b") * var("c");
         assert_expr_equal(&matrix.determinant().expect("square"), &claimed);
     }
@@ -889,16 +895,10 @@ mod tests {
     #[test]
     fn determinant_is_multiplicative_numeric() {
         // det(A·B) = det(A)·det(B) for concrete 2×2 matrices, certified by `equal`.
-        let first = Matrix::from_rows(vec![
-            vec![konst(1), konst(2)],
-            vec![konst(3), konst(4)],
-        ])
-        .expect("rectangular");
-        let second = Matrix::from_rows(vec![
-            vec![konst(0), konst(1)],
-            vec![konst(5), konst(6)],
-        ])
-        .expect("rectangular");
+        let first = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3), konst(4)]])
+            .expect("rectangular");
+        let second = Matrix::from_rows(vec![vec![konst(0), konst(1)], vec![konst(5), konst(6)]])
+            .expect("rectangular");
         let product = first.mul(&second).expect("conformable");
         let lhs = product.determinant().expect("square");
         let rhs = first.determinant().expect("square") * second.determinant().expect("square");
@@ -908,16 +908,10 @@ mod tests {
     #[test]
     fn determinant_is_multiplicative_symbolic() {
         // det(A·B) = det(A)·det(B) with fully symbolic 2×2 entries (Cauchy–Binet).
-        let first = Matrix::from_rows(vec![
-            vec![var("a"), var("b")],
-            vec![var("c"), var("d")],
-        ])
-        .expect("rectangular");
-        let second = Matrix::from_rows(vec![
-            vec![var("e"), var("f")],
-            vec![var("g"), var("h")],
-        ])
-        .expect("rectangular");
+        let first = Matrix::from_rows(vec![vec![var("a"), var("b")], vec![var("c"), var("d")]])
+            .expect("rectangular");
+        let second = Matrix::from_rows(vec![vec![var("e"), var("f")], vec![var("g"), var("h")]])
+            .expect("rectangular");
         let product = first.mul(&second).expect("conformable");
         let lhs = product.determinant().expect("square");
         let rhs = first.determinant().expect("square") * second.determinant().expect("square");
@@ -941,16 +935,10 @@ mod tests {
 
     #[test]
     fn add_and_sub_are_inverse() {
-        let first = Matrix::from_rows(vec![
-            vec![var("a"), konst(2)],
-            vec![konst(3), var("b")],
-        ])
-        .expect("rectangular");
-        let second = Matrix::from_rows(vec![
-            vec![konst(5), var("c")],
-            vec![var("d"), konst(7)],
-        ])
-        .expect("rectangular");
+        let first = Matrix::from_rows(vec![vec![var("a"), konst(2)], vec![konst(3), var("b")]])
+            .expect("rectangular");
+        let second = Matrix::from_rows(vec![vec![konst(5), var("c")], vec![var("d"), konst(7)]])
+            .expect("rectangular");
         let sum = first.add(&second).expect("same shape");
         let recovered = sum.sub(&second).expect("same shape");
         assert_matrix_equal(&recovered, &first);
@@ -974,21 +962,13 @@ mod tests {
     #[test]
     fn mul_numeric_known_product() {
         // [[1,2],[3,4]] · [[0,1],[5,6]] = [[10,13],[20,27]].
-        let first = Matrix::from_rows(vec![
-            vec![konst(1), konst(2)],
-            vec![konst(3), konst(4)],
-        ])
-        .expect("rectangular");
-        let second = Matrix::from_rows(vec![
-            vec![konst(0), konst(1)],
-            vec![konst(5), konst(6)],
-        ])
-        .expect("rectangular");
-        let expected = Matrix::from_rows(vec![
-            vec![konst(10), konst(13)],
-            vec![konst(20), konst(27)],
-        ])
-        .expect("rectangular");
+        let first = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3), konst(4)]])
+            .expect("rectangular");
+        let second = Matrix::from_rows(vec![vec![konst(0), konst(1)], vec![konst(5), konst(6)]])
+            .expect("rectangular");
+        let expected =
+            Matrix::from_rows(vec![vec![konst(10), konst(13)], vec![konst(20), konst(27)]])
+                .expect("rectangular");
         assert_matrix_equal(&first.mul(&second).expect("conformable"), &expected);
     }
 
@@ -1012,22 +992,16 @@ mod tests {
 
     #[test]
     fn rref_declines_non_constant_entries() {
-        let matrix = Matrix::from_rows(vec![
-            vec![var("x"), konst(1)],
-            vec![konst(2), konst(3)],
-        ])
-        .expect("rectangular");
+        let matrix = Matrix::from_rows(vec![vec![var("x"), konst(1)], vec![konst(2), konst(3)]])
+            .expect("rectangular");
         assert!(matrix.rref().is_none());
     }
 
     #[test]
     fn solve_recovers_solution_and_substitutes_back() {
         // A·x = rhs with A = [[1,1],[1,-1]], rhs = [[3],[1]] → x = [[2],[1]].
-        let coeff = Matrix::from_rows(vec![
-            vec![konst(1), konst(1)],
-            vec![konst(1), konst(-1)],
-        ])
-        .expect("rectangular");
+        let coeff = Matrix::from_rows(vec![vec![konst(1), konst(1)], vec![konst(1), konst(-1)]])
+            .expect("rectangular");
         let rhs = Matrix::from_rows(vec![vec![konst(3)], vec![konst(1)]]).expect("column");
         let solution = coeff.solve(&rhs).expect("nonsingular");
         assert_matrix_equal(
@@ -1042,18 +1016,12 @@ mod tests {
     #[test]
     fn solve_with_rational_solution() {
         // A = [[2,1],[1,3]], rhs = [[1],[2]] → x = [[1/5],[3/5]].
-        let coeff = Matrix::from_rows(vec![
-            vec![konst(2), konst(1)],
-            vec![konst(1), konst(3)],
-        ])
-        .expect("rectangular");
+        let coeff = Matrix::from_rows(vec![vec![konst(2), konst(1)], vec![konst(1), konst(3)]])
+            .expect("rectangular");
         let rhs = Matrix::from_rows(vec![vec![konst(1)], vec![konst(2)]]).expect("column");
         let solution = coeff.solve(&rhs).expect("nonsingular");
-        let expected = Matrix::from_rows(vec![
-            vec![CasExpr::rat(1, 5)],
-            vec![CasExpr::rat(3, 5)],
-        ])
-        .expect("column");
+        let expected = Matrix::from_rows(vec![vec![CasExpr::rat(1, 5)], vec![CasExpr::rat(3, 5)]])
+            .expect("column");
         assert_matrix_equal(&solution, &expected);
         // And it satisfies the system.
         assert_matrix_equal(&coeff.mul(&solution).expect("conformable"), &rhs);
@@ -1062,11 +1030,8 @@ mod tests {
     #[test]
     fn solve_multiple_right_hand_sides() {
         // Solving against the identity computes the inverse; A·A⁻¹ = I.
-        let coeff = Matrix::from_rows(vec![
-            vec![konst(4), konst(7)],
-            vec![konst(2), konst(6)],
-        ])
-        .expect("rectangular");
+        let coeff = Matrix::from_rows(vec![vec![konst(4), konst(7)], vec![konst(2), konst(6)]])
+            .expect("rectangular");
         let inverse = coeff.solve(&Matrix::identity(2)).expect("nonsingular");
         assert_matrix_equal(
             &coeff.mul(&inverse).expect("conformable"),
@@ -1076,22 +1041,16 @@ mod tests {
 
     #[test]
     fn solve_singular_is_none() {
-        let coeff = Matrix::from_rows(vec![
-            vec![konst(1), konst(2)],
-            vec![konst(2), konst(4)],
-        ])
-        .expect("rectangular");
+        let coeff = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(2), konst(4)]])
+            .expect("rectangular");
         let rhs = Matrix::from_rows(vec![vec![konst(1)], vec![konst(2)]]).expect("column");
         assert!(coeff.solve(&rhs).is_none());
     }
 
     #[test]
     fn solve_non_constant_is_none() {
-        let coeff = Matrix::from_rows(vec![
-            vec![var("x"), konst(1)],
-            vec![konst(0), konst(1)],
-        ])
-        .expect("rectangular");
+        let coeff = Matrix::from_rows(vec![vec![var("x"), konst(1)], vec![konst(0), konst(1)]])
+            .expect("rectangular");
         let rhs = Matrix::from_rows(vec![vec![konst(1)], vec![konst(1)]]).expect("column");
         assert!(coeff.solve(&rhs).is_none());
     }
@@ -1101,9 +1060,7 @@ mod tests {
         // Wrong-length flat data is rejected.
         assert!(Matrix::new(2, 2, vec![konst(1), konst(2), konst(3)]).is_none());
         // Ragged rows are rejected.
-        assert!(
-            Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3)]]).is_none()
-        );
+        assert!(Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3)]]).is_none());
         // A well-formed construction round-trips through the accessors.
         let matrix = Matrix::new(2, 2, vec![konst(1), konst(2), konst(3), konst(4)])
             .expect("correct length");
@@ -1115,11 +1072,8 @@ mod tests {
 
     #[test]
     fn display_puts_rows_on_separate_lines() {
-        let matrix = Matrix::from_rows(vec![
-            vec![konst(1), konst(2)],
-            vec![konst(3), konst(4)],
-        ])
-        .expect("rectangular");
+        let matrix = Matrix::from_rows(vec![vec![konst(1), konst(2)], vec![konst(3), konst(4)]])
+            .expect("rectangular");
         assert_eq!(format!("{matrix}"), "[1, 2]\n[3, 4]");
     }
 }

@@ -601,9 +601,11 @@ fn fp_right_nullspace(matrix: &[Vec<i128>], n: usize, p: i128) -> Vec<Vec<i128>>
         }
         let mut vector = vec![0i128; n];
         vector[free] = 1;
-        for (r, &pcol) in pivot_col_of_row.iter().enumerate().filter_map(|(r, opt)| {
-            opt.as_ref().map(|c| (r, c))
-        }) {
+        for (r, &pcol) in pivot_col_of_row
+            .iter()
+            .enumerate()
+            .filter_map(|(r, opt)| opt.as_ref().map(|c| (r, c)))
+        {
             vector[pcol] = (-m[r][free]).rem_euclid(p);
         }
         basis.push(vector);
@@ -749,7 +751,10 @@ fn hensel_lift_two(
         modulus = next_modulus;
         step += 1;
     }
-    Some((reduce_mod(&lifted_g, big_modulus), reduce_mod(&lifted_h, big_modulus)))
+    Some((
+        reduce_mod(&lifted_g, big_modulus),
+        reduce_mod(&lifted_h, big_modulus),
+    ))
 }
 
 /// The Bezout cofactor `t` of `h` over 𝔽ₚ: a polynomial with `s·g + t·h ≡ 1` for
@@ -774,11 +779,7 @@ fn fp_bezout_cofactor(g: &[i128], h: &[i128], p: i128) -> Option<Vec<i128>> {
 
 /// Extended Euclidean algorithm over 𝔽ₚ: returns `(gcd, s, t)` with `s·a + t·b =
 /// gcd`. `None` on overflow.
-fn fp_ext_gcd(
-    left: &[i128],
-    right: &[i128],
-    p: i128,
-) -> Option<(Vec<i128>, Vec<i128>, Vec<i128>)> {
+fn fp_ext_gcd(left: &[i128], right: &[i128], p: i128) -> Option<(Vec<i128>, Vec<i128>, Vec<i128>)> {
     let mut old_rem = reduce_mod(left, p);
     let mut rem = reduce_mod(right, p);
     let mut old_s = vec![1i128];
@@ -806,12 +807,7 @@ fn fp_ext_gcd(
 
 /// Compute `base + scale · correction (mod modulus)`, where `correction` has
 /// coefficients over 𝔽ₚ. `None` on overflow.
-fn add_scaled(
-    base: &[i128],
-    correction: &[i128],
-    scale: i128,
-    modulus: i128,
-) -> Option<Vec<i128>> {
+fn add_scaled(base: &[i128], correction: &[i128], scale: i128, modulus: i128) -> Option<Vec<i128>> {
     let n = base.len().max(correction.len());
     let mut out = vec![0i128; n];
     for (i, slot) in out.iter_mut().enumerate() {
@@ -832,11 +828,7 @@ fn add_scaled(
 /// subset product, scaled by the current leading coefficient and reduced to the
 /// symmetric range, is trial-divided into the remaining polynomial. `None` on
 /// overflow or if the iteration cap is exceeded.
-fn recombine(
-    lifted: &[Vec<i128>],
-    f: &[i128],
-    big_modulus: i128,
-) -> Option<Vec<Vec<i128>>> {
+fn recombine(lifted: &[Vec<i128>], f: &[i128], big_modulus: i128) -> Option<Vec<Vec<i128>>> {
     let mut pool: Vec<Vec<i128>> = lifted.to_vec();
     let mut remaining = ipoly_primitive(f)?;
     let mut result: Vec<Vec<i128>> = Vec::new();

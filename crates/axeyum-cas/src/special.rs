@@ -93,17 +93,29 @@ mod tests {
         // Γ(1/2) = √π.
         assert_equal(&gamma(Rational::new(1, 2)).unwrap(), &sqrt_pi());
         // Γ(3/2) = (1/2)√π.
-        assert_equal(&gamma(Rational::new(3, 2)).unwrap(), &(CasExpr::rat(1, 2) * sqrt_pi()));
+        assert_equal(
+            &gamma(Rational::new(3, 2)).unwrap(),
+            &(CasExpr::rat(1, 2) * sqrt_pi()),
+        );
         // Γ(5/2) = (3/4)√π.
-        assert_equal(&gamma(Rational::new(5, 2)).unwrap(), &(CasExpr::rat(3, 4) * sqrt_pi()));
+        assert_equal(
+            &gamma(Rational::new(5, 2)).unwrap(),
+            &(CasExpr::rat(3, 4) * sqrt_pi()),
+        );
     }
 
     #[test]
     fn beta_values() {
         // B(2,3) = Γ(2)Γ(3)/Γ(5) = 1·2/24 = 1/12 (rational — reduces via the zero-test).
-        assert_equal(&beta(Rational::integer(2), Rational::integer(3)).unwrap(), &CasExpr::rat(1, 12));
+        assert_equal(
+            &beta(Rational::integer(2), Rational::integer(3)).unwrap(),
+            &CasExpr::rat(1, 12),
+        );
         // B(3,4) = 2·6/720 = 1/60.
-        assert_equal(&beta(Rational::integer(3), Rational::integer(4)).unwrap(), &CasExpr::rat(1, 60));
+        assert_equal(
+            &beta(Rational::integer(3), Rational::integer(4)).unwrap(),
+            &CasExpr::rat(1, 60),
+        );
         // B(1/2, 1/2) = Γ(1/2)²/Γ(1) = √π·√π (which equals π for π>0; the zero-test
         // keeps it as √π·√π since `pi` is a symbol, not a non-negative constant).
         assert_equal(

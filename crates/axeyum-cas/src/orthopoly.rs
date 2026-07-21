@@ -110,7 +110,9 @@ where
 
 /// `2n − 1` as an exact rational, or `None` on `i128` overflow.
 fn two_n_minus_one(n: u32) -> Option<Rational> {
-    Some(Rational::integer(i128::from(n).checked_mul(2)?.checked_sub(1)?))
+    Some(Rational::integer(
+        i128::from(n).checked_mul(2)?.checked_sub(1)?,
+    ))
 }
 
 /// `n − 1` as an exact rational, or `None` on `i128` overflow.
@@ -224,7 +226,10 @@ mod tests {
     fn assert_equal(actual: &CasExpr, expected: &CasExpr) {
         match equal(actual, expected) {
             ZeroTest::Certified { equal, witness } => {
-                assert!(equal, "polynomial mismatch; difference witness = {witness:?}");
+                assert!(
+                    equal,
+                    "polynomial mismatch; difference witness = {witness:?}"
+                );
             }
             ZeroTest::Unknown => panic!("expected a decidable (Certified) comparison"),
         }
@@ -293,13 +298,13 @@ mod tests {
     fn boundary_degree_one_members() {
         // The correct first-degree member of each family.
         assert_equal(&chebyshev_t(1, "x").expect("T₁"), &var());
-        assert_equal(&chebyshev_u(1, "x").expect("U₁"), &(CasExpr::int(2) * var()));
+        assert_equal(
+            &chebyshev_u(1, "x").expect("U₁"),
+            &(CasExpr::int(2) * var()),
+        );
         assert_equal(&legendre(1, "x").expect("P₁"), &var());
         assert_equal(&hermite(1, "x").expect("H₁"), &(CasExpr::int(2) * var()));
-        assert_equal(
-            &laguerre(1, "x").expect("L₁"),
-            &(CasExpr::int(1) - var()),
-        );
+        assert_equal(&laguerre(1, "x").expect("L₁"), &(CasExpr::int(1) - var()));
     }
 
     #[test]

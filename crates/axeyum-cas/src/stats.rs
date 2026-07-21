@@ -148,12 +148,21 @@ mod tests {
         assert_eq!(median(&data()), Some(Rational::new(9, 2)));
         // Odd count.
         assert_eq!(
-            median(&[Rational::integer(3), Rational::integer(1), Rational::integer(2)]),
+            median(&[
+                Rational::integer(3),
+                Rational::integer(1),
+                Rational::integer(2)
+            ]),
             Some(Rational::integer(2))
         );
         // Even count with a fractional midpoint: median(1,2,3,4) = 5/2.
         assert_eq!(
-            median(&[1, 2, 3, 4].into_iter().map(Rational::integer).collect::<Vec<_>>()),
+            median(
+                &[1, 2, 3, 4]
+                    .into_iter()
+                    .map(Rational::integer)
+                    .collect::<Vec<_>>()
+            ),
             Some(Rational::new(5, 2))
         );
     }
@@ -163,7 +172,12 @@ mod tests {
         assert_eq!(mode(&data()), vec![Rational::integer(4)]);
         // Bimodal: 1,1,2,2,3 → {1,2}.
         assert_eq!(
-            mode(&[1, 1, 2, 2, 3].into_iter().map(Rational::integer).collect::<Vec<_>>()),
+            mode(
+                &[1, 1, 2, 2, 3]
+                    .into_iter()
+                    .map(Rational::integer)
+                    .collect::<Vec<_>>()
+            ),
             vec![Rational::integer(1), Rational::integer(2)]
         );
         assert!(mode(&[]).is_empty());
@@ -174,7 +188,10 @@ mod tests {
         // Population variance of the textbook set is exactly 4.
         assert_eq!(variance(&data()), Some(Rational::integer(4)));
         // Sample variance of {1,2,3} = 1: Σ(dev²)=2, /(3−1)=1.
-        let small = [1, 2, 3].into_iter().map(Rational::integer).collect::<Vec<_>>();
+        let small = [1, 2, 3]
+            .into_iter()
+            .map(Rational::integer)
+            .collect::<Vec<_>>();
         assert_eq!(sample_variance(&small), Some(Rational::integer(1)));
         // Population variance of {1,2,3} = 2/3.
         assert_eq!(variance(&small), Some(Rational::new(2, 3)));

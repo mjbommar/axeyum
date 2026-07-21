@@ -297,9 +297,7 @@ fn s_polynomial(first: &MvPoly, second: &MvPoly) -> Option<MvPoly> {
         &monomial_quotient(&lcm, &second_mono),
         Rational::integer(1).checked_div(second_coeff)?,
     )?;
-    first_factor
-        .mul(first)?
-        .sub(&second_factor.mul(second)?)
+    first_factor.mul(first)?.sub(&second_factor.mul(second)?)
 }
 
 // --- Public API -------------------------------------------------------------

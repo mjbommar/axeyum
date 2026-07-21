@@ -100,7 +100,9 @@ impl Point {
     pub fn triangle_area(a: &Point, b: &Point, c: &Point) -> Rational {
         let twice = cross(a, b, c).expect("triangle-area cross-product overflow");
         let magnitude = if twice.numerator() < 0 {
-            twice.checked_neg().expect("triangle-area magnitude overflow")
+            twice
+                .checked_neg()
+                .expect("triangle-area magnitude overflow")
         } else {
             twice
         };

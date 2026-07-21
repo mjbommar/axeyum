@@ -122,7 +122,12 @@ type Transform = (i128, i128, i128, i128);
 /// Replace rows `first` and `second` in place with the unimodular combination
 /// carried by `transform`, applying the same coefficients to both rows. `None`
 /// on overflow.
-fn combine_rows(grid: &mut [Vec<i128>], first: usize, second: usize, transform: Transform) -> Option<()> {
+fn combine_rows(
+    grid: &mut [Vec<i128>],
+    first: usize,
+    second: usize,
+    transform: Transform,
+) -> Option<()> {
     let (a11, a12, a21, a22) = transform;
     let (row_first, row_second) = two_rows_mut(grid, first, second);
     for (upper, lower) in row_first.iter_mut().zip(row_second.iter_mut()) {
@@ -143,7 +148,12 @@ fn combine_rows(grid: &mut [Vec<i128>], first: usize, second: usize, transform: 
 /// Replace columns `first` and `second` in place with the unimodular combination
 /// carried by `transform`, applying the same coefficients to both columns. `None`
 /// on overflow.
-fn combine_columns(grid: &mut [Vec<i128>], first: usize, second: usize, transform: Transform) -> Option<()> {
+fn combine_columns(
+    grid: &mut [Vec<i128>],
+    first: usize,
+    second: usize,
+    transform: Transform,
+) -> Option<()> {
     let (a11, a12, a21, a22) = transform;
     for row in grid.iter_mut() {
         let prior_first = row[first];
@@ -169,7 +179,12 @@ fn swap_columns(grid: &mut [Vec<i128>], first: usize, second: usize) {
 
 /// Add `factor` times row `source` into row `target` (`target += factor *
 /// source`). `None` on overflow.
-fn add_row_multiple(grid: &mut [Vec<i128>], target: usize, source: usize, factor: i128) -> Option<()> {
+fn add_row_multiple(
+    grid: &mut [Vec<i128>],
+    target: usize,
+    source: usize,
+    factor: i128,
+) -> Option<()> {
     let (row_target, row_source) = two_rows_mut(grid, target, source);
     for (accumulator, addend) in row_target.iter_mut().zip(row_source.iter()) {
         *accumulator = accumulator.checked_add(factor.checked_mul(*addend)?)?;
@@ -204,7 +219,12 @@ fn reduce_rows_by_gcd(
     let (gcd_value, bezout_pivot, bezout_other) = extended_gcd(pivot_value, other_value);
     let pivot_ratio = pivot_value.checked_div(gcd_value)?;
     let other_ratio = other_value.checked_div(gcd_value)?;
-    let transform = (bezout_pivot, bezout_other, other_ratio.checked_neg()?, pivot_ratio);
+    let transform = (
+        bezout_pivot,
+        bezout_other,
+        other_ratio.checked_neg()?,
+        pivot_ratio,
+    );
     combine_rows(primary, pivot_row, other_row, transform)?;
     combine_rows(aux, pivot_row, other_row, transform)?;
     Some(())
@@ -227,7 +247,12 @@ fn reduce_columns_by_gcd(
     let (gcd_value, bezout_pivot, bezout_other) = extended_gcd(pivot_value, other_value);
     let pivot_ratio = pivot_value.checked_div(gcd_value)?;
     let other_ratio = other_value.checked_div(gcd_value)?;
-    let transform = (bezout_pivot, bezout_other, other_ratio.checked_neg()?, pivot_ratio);
+    let transform = (
+        bezout_pivot,
+        bezout_other,
+        other_ratio.checked_neg()?,
+        pivot_ratio,
+    );
     combine_columns(primary, pivot_col, other_col, transform)?;
     combine_columns(aux, pivot_col, other_col, transform)?;
     Some(())
@@ -235,7 +260,12 @@ fn reduce_columns_by_gcd(
 
 /// The first `(row, col)` with `row >= start` and `col >= start` whose entry is
 /// nonzero, or `None` if the trailing submatrix is entirely zero.
-fn find_nonzero(grid: &[Vec<i128>], start: usize, rows: usize, cols: usize) -> Option<(usize, usize)> {
+fn find_nonzero(
+    grid: &[Vec<i128>],
+    start: usize,
+    rows: usize,
+    cols: usize,
+) -> Option<(usize, usize)> {
     for (row_index, row) in grid.iter().enumerate().take(rows).skip(start) {
         for (col_index, &value) in row.iter().enumerate().take(cols).skip(start) {
             if value != 0 {
@@ -288,11 +318,7 @@ fn hermite_grids(a: &[Vec<i128>], rows: usize, cols: usize) -> Option<(IntGrid, 
 }
 
 /// Compute the Smith grids `(left, work, right)` with `left * a * right = work`.
-fn smith_grids(
-    a: &[Vec<i128>],
-    rows: usize,
-    cols: usize,
-) -> Option<(IntGrid, IntGrid, IntGrid)> {
+fn smith_grids(a: &[Vec<i128>], rows: usize, cols: usize) -> Option<(IntGrid, IntGrid, IntGrid)> {
     let mut work = a.to_vec();
     let mut left = identity_grid(rows);
     let mut right = identity_grid(cols);
@@ -376,7 +402,8 @@ fn certify_product_equals(product: &Matrix, target: &Matrix) -> bool {
     }
     for row in 0..product.rows() {
         for col in 0..product.cols() {
-            let (Some(left_entry), Some(right_entry)) = (product.get(row, col), target.get(row, col))
+            let (Some(left_entry), Some(right_entry)) =
+                (product.get(row, col), target.get(row, col))
             else {
                 return false;
             };
@@ -537,7 +564,11 @@ mod tests {
         // above a pivot is reduced into `0..pivot`.
         for row in 0..hermite.rows() {
             for col in 0..row.min(hermite.cols()) {
-                assert_eq!(entry_at(&hermite, row, col), 0, "H must be upper-triangular");
+                assert_eq!(
+                    entry_at(&hermite, row, col),
+                    0,
+                    "H must be upper-triangular"
+                );
             }
             let pivot = entry_at(&hermite, row, row);
             assert!(pivot > 0, "pivot ({row},{row}) must be positive");
@@ -558,7 +589,11 @@ mod tests {
 
         for row in 0..hermite.rows() {
             for col in 0..row {
-                assert_eq!(entry_at(&hermite, row, col), 0, "H must be upper-triangular");
+                assert_eq!(
+                    entry_at(&hermite, row, col),
+                    0,
+                    "H must be upper-triangular"
+                );
             }
             assert!(entry_at(&hermite, row, row) > 0, "positive pivot");
         }
@@ -571,7 +606,11 @@ mod tests {
 
         // U * A * V = D, re-checked with the certified product.
         assert_certified_equal(
-            &left.mul(&a).expect("conformable").mul(&right).expect("conformable"),
+            &left
+                .mul(&a)
+                .expect("conformable")
+                .mul(&right)
+                .expect("conformable"),
             &diagonal,
         );
         assert_unimodular(&left);
@@ -581,7 +620,11 @@ mod tests {
         for row in 0..diagonal.rows() {
             for col in 0..diagonal.cols() {
                 if row != col {
-                    assert_eq!(entry_at(&diagonal, row, col), 0, "off-diagonal must be zero");
+                    assert_eq!(
+                        entry_at(&diagonal, row, col),
+                        0,
+                        "off-diagonal must be zero"
+                    );
                 }
             }
         }
@@ -606,7 +649,11 @@ mod tests {
         let (left, diagonal, right) = smith_normal_form(&a).expect("integer SNF exists");
 
         assert_certified_equal(
-            &left.mul(&a).expect("conformable").mul(&right).expect("conformable"),
+            &left
+                .mul(&a)
+                .expect("conformable")
+                .mul(&right)
+                .expect("conformable"),
             &diagonal,
         );
         assert_unimodular(&left);
@@ -626,7 +673,11 @@ mod tests {
         let (left, diagonal, right) = smith_normal_form(&a).expect("integer SNF exists");
 
         assert_certified_equal(
-            &left.mul(&a).expect("conformable").mul(&right).expect("conformable"),
+            &left
+                .mul(&a)
+                .expect("conformable")
+                .mul(&right)
+                .expect("conformable"),
             &diagonal,
         );
         assert_certified_equal(&diagonal, &Matrix::identity(3));
@@ -641,14 +692,22 @@ mod tests {
         let (left, diagonal, right) = smith_normal_form(&a).expect("integer SNF exists");
 
         assert_certified_equal(
-            &left.mul(&a).expect("conformable").mul(&right).expect("conformable"),
+            &left
+                .mul(&a)
+                .expect("conformable")
+                .mul(&right)
+                .expect("conformable"),
             &diagonal,
         );
         assert_unimodular(&left);
         assert_unimodular(&right);
 
         assert_eq!(entry_at(&diagonal, 0, 0), 1);
-        assert_eq!(entry_at(&diagonal, 1, 1), 0, "trailing invariant factor is zero");
+        assert_eq!(
+            entry_at(&diagonal, 1, 1),
+            0,
+            "trailing invariant factor is zero"
+        );
         assert_eq!(entry_at(&diagonal, 0, 1), 0);
         assert_eq!(entry_at(&diagonal, 1, 0), 0);
     }

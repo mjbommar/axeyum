@@ -71,7 +71,11 @@ impl AlgebraicReal {
             return None;
         }
         let sign_at = |x: Rational| -> Option<i128> {
-            Some(poly::eval_rat_poly(&self.minimal_poly, x)?.numerator().signum())
+            Some(
+                poly::eval_rat_poly(&self.minimal_poly, x)?
+                    .numerator()
+                    .signum(),
+            )
         };
         let lower_sign = sign_at(self.lower)?;
         let (mut lower, mut upper) = (self.lower, self.upper);
@@ -81,7 +85,9 @@ impl AlgebraicReal {
             if guard > 100_000 {
                 break;
             }
-            let mid = lower.checked_add(upper)?.checked_div(Rational::integer(2))?;
+            let mid = lower
+                .checked_add(upper)?
+                .checked_div(Rational::integer(2))?;
             match sign_at(mid)? {
                 0 => {
                     // Exact rational root at the midpoint.
@@ -228,6 +234,13 @@ mod tests {
         let roots = real_roots(&poly_from(&[-2, 0, 0, 1])).unwrap(); // ∛2
         let refined = roots[0].refine(Rational::new(1, 1_000_000)).unwrap();
         let (lower, upper) = refined.isolating_interval();
-        assert!(upper.checked_sub(lower).unwrap().checked_cmp(&Rational::new(1, 1_000_000)).unwrap() != core::cmp::Ordering::Greater);
+        assert!(
+            upper
+                .checked_sub(lower)
+                .unwrap()
+                .checked_cmp(&Rational::new(1, 1_000_000))
+                .unwrap()
+                != core::cmp::Ordering::Greater
+        );
     }
 }

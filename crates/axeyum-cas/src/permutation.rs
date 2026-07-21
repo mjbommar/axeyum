@@ -217,9 +217,17 @@ mod tests {
     #[test]
     fn sign_matches_transposition_parity() {
         // A single transposition is odd.
-        assert_eq!(Permutation::from_cycles(&[vec![0, 1]], 3).unwrap().sign(), -1);
+        assert_eq!(
+            Permutation::from_cycles(&[vec![0, 1]], 3).unwrap().sign(),
+            -1
+        );
         // A 3-cycle is even (two transpositions).
-        assert_eq!(Permutation::from_cycles(&[vec![0, 1, 2]], 3).unwrap().sign(), 1);
+        assert_eq!(
+            Permutation::from_cycles(&[vec![0, 1, 2]], 3)
+                .unwrap()
+                .sign(),
+            1
+        );
         // The identity is even.
         assert_eq!(Permutation::identity(4).sign(), 1);
         // sign is a homomorphism: sign(p∘q) = sign(p)·sign(q).

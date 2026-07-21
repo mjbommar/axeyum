@@ -189,10 +189,7 @@ fn geometric_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
 fn certifies_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> bool {
     let shifted = sum.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
     let delta = shifted - sum.clone();
-    matches!(
-        equal(&delta, term),
-        ZeroTest::Certified { equal: true, .. }
-    )
+    matches!(equal(&delta, term), ZeroTest::Certified { equal: true, .. })
 }
 
 /// The reduced consecutive ratio `term(var+1)/term(var) = a(var)/b(var)` of a
@@ -294,7 +291,11 @@ fn dispersion_resultant(a: &[Rational], b: &[Rational]) -> Option<RatVec> {
     let mut b_coeffs: Vec<RatVec> = Vec::with_capacity(db + 1);
     for i in 0..=db {
         let mut in_j = vec![Rational::zero(); db - i + 1];
-        for (m, slot) in in_j.iter_mut().enumerate().map(|(offset, s)| (offset + i, s)) {
+        for (m, slot) in in_j
+            .iter_mut()
+            .enumerate()
+            .map(|(offset, s)| (offset + i, s))
+        {
             let term = b[m].checked_mul(binomial_rat(m, i)?)?;
             *slot = term;
         }
@@ -628,8 +629,7 @@ mod tests {
     fn telescoping_rational_one_over_k_kplus1() {
         // ∑ 1/(k(k+1)) = −1/k, a telescoping rational sum. Δ[−1/k] = 1/(k(k+1)).
         let k = CasExpr::var("k");
-        let term =
-            CasExpr::int(1) / (k.clone() * (k.clone() + CasExpr::int(1)));
+        let term = CasExpr::int(1) / (k.clone() * (k.clone() + CasExpr::int(1)));
         let sum = certified_sum(&term, "k");
         // Expect exactly −1/k (up to an additive constant, which the telescoping
         // check absorbs); confirm value-equality with −1/k.

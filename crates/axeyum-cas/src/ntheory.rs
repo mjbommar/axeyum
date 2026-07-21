@@ -86,8 +86,7 @@ fn gcd_u128(mut first: u128, mut second: u128) -> u128 {
 
 /// The 12-witness base set that makes `Miller–Rabin` deterministic well beyond
 /// the full `u64` range (see [`is_prime`]).
-const MILLER_RABIN_WITNESSES: [u128; 12] =
-    [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
+const MILLER_RABIN_WITNESSES: [u128; 12] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37];
 
 /// A single `Miller–Rabin` strong-probable-prime round for base `witness`.
 ///

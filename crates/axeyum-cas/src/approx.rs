@@ -129,7 +129,12 @@ fn pade_coeffs(
         return None;
     }
     // Series coefficient accessor: out-of-range indices read as zero.
-    let coeff = |idx: usize| series_coeffs.get(idx).copied().unwrap_or_else(Rational::zero);
+    let coeff = |idx: usize| {
+        series_coeffs
+            .get(idx)
+            .copied()
+            .unwrap_or_else(Rational::zero)
+    };
 
     // Denominator unknowns q₁..qₙ solve, for each order k = m+1..=m+n,
     //   Σ_{u=1}^{n} q_u · a_{k-u} = −a_k        (with q₀ = 1).
@@ -142,7 +147,9 @@ fn pade_coeffs(
                 (0..n)
                     .map(|row| {
                         let order = m + 1 + row;
-                        order.checked_sub(unknown).map_or_else(Rational::zero, coeff)
+                        order
+                            .checked_sub(unknown)
+                            .map_or_else(Rational::zero, coeff)
                     })
                     .collect()
             })
@@ -307,7 +314,12 @@ mod tests {
         let (numer, denom) = pade_fraction(series, m, n).unwrap();
         let qa = poly::ratpoly_mul(&denom, series).unwrap();
         let diff = poly::ratpoly_add(&numer, &poly::ratpoly_neg(&qa).unwrap()).unwrap();
-        (0..=m + n).all(|k| diff.get(k).copied().unwrap_or_else(Rational::zero).is_zero())
+        (0..=m + n).all(|k| {
+            diff.get(k)
+                .copied()
+                .unwrap_or_else(Rational::zero)
+                .is_zero()
+        })
     }
 
     #[test]
@@ -331,10 +343,7 @@ mod tests {
         // [2/2] Padé of exp = (1 + x/2 + x²/12) / (1 − x/2 + x²/12).
         let series = exp_series();
         let (numer, denom) = pade_fraction(&series, 2, 2).unwrap();
-        assert_eq!(
-            numer,
-            vec![r(1), Rational::new(1, 2), Rational::new(1, 12)]
-        );
+        assert_eq!(numer, vec![r(1), Rational::new(1, 2), Rational::new(1, 12)]);
         assert_eq!(
             denom,
             vec![r(1), Rational::new(-1, 2), Rational::new(1, 12)]
@@ -345,8 +354,8 @@ mod tests {
         let numer_expr = CasExpr::int(1)
             + x.clone() * CasExpr::rat(1, 2)
             + x.clone().pow(2) * CasExpr::rat(1, 12);
-        let denom_expr = CasExpr::int(1) - x.clone() * CasExpr::rat(1, 2)
-            + x.pow(2) * CasExpr::rat(1, 12);
+        let denom_expr =
+            CasExpr::int(1) - x.clone() * CasExpr::rat(1, 2) + x.pow(2) * CasExpr::rat(1, 12);
         let expected = numer_expr / denom_expr;
         assert_certified_equal(&got, &expected);
         assert!(pade_matches_series(&series, 2, 2));

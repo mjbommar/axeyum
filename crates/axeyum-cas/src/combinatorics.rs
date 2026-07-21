@@ -246,7 +246,11 @@ pub fn partition_count(n: u32) -> Option<i128> {
             if pent_low > bound {
                 break;
             }
-            let sign: i128 = if k.unsigned_abs().is_multiple_of(2) { -1 } else { 1 };
+            let sign: i128 = if k.unsigned_abs().is_multiple_of(2) {
+                -1
+            } else {
+                1
+            };
             let index_low = i - usize::try_from(pent_low).ok()?;
             total = total.checked_add(sign.checked_mul(partitions[index_low])?)?;
 

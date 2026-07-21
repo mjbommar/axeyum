@@ -155,7 +155,12 @@ pub fn isolate_real_roots(p: &[Rational]) -> Option<Vec<(Rational, Rational)>> {
 /// Refine an isolating interval `(lower, upper]` for a **simple** root of the
 /// square-free polynomial `p` down to width `< width` by sign-bisection, returning
 /// the midpoint as a rational approximation. `None` on overflow.
-fn refine_root(p: &[Rational], mut lower: Rational, mut upper: Rational, width: Rational) -> Option<Rational> {
+fn refine_root(
+    p: &[Rational],
+    mut lower: Rational,
+    mut upper: Rational,
+    width: Rational,
+) -> Option<Rational> {
     let sign_at = |x: Rational| -> Option<i32> {
         let value = poly::eval_rat_poly(p, x)?;
         Some(value.numerator().signum().try_into().unwrap_or(0))
@@ -167,7 +172,9 @@ fn refine_root(p: &[Rational], mut lower: Rational, mut upper: Rational, width: 
         if guard > 100_000 {
             break;
         }
-        let mid = lower.checked_add(upper)?.checked_div(Rational::integer(2))?;
+        let mid = lower
+            .checked_add(upper)?
+            .checked_div(Rational::integer(2))?;
         let mid_sign = sign_at(mid)?;
         if mid_sign == 0 {
             return Some(mid); // landed exactly on the root
@@ -230,7 +237,10 @@ mod tests {
         let p = poly_from(&[-2, 0, 1]);
         let intervals = isolate_real_roots(&p).unwrap();
         assert_eq!(intervals.len(), 2);
-        assert_eq!(count_real_roots_in(&p, intervals[0].0, intervals[0].1), Some(1));
+        assert_eq!(
+            count_real_roots_in(&p, intervals[0].0, intervals[0].1),
+            Some(1)
+        );
         // The negative root's interval is entirely negative, the positive's positive.
         assert!(intervals[0].1.numerator() < 0 || intervals[0].0.numerator() < 0);
     }
@@ -271,8 +281,17 @@ mod tests {
     fn counts_roots_in_a_subinterval() {
         // x³ − 6x² + 11x − 6 (roots 1,2,3): (0,2] holds {1,2}, (2,4] holds {3}.
         let p = poly_from(&[-6, 11, -6, 1]);
-        assert_eq!(count_real_roots_in(&p, Rational::integer(0), Rational::integer(2)), Some(2));
-        assert_eq!(count_real_roots_in(&p, Rational::integer(2), Rational::integer(4)), Some(1));
-        assert_eq!(count_real_roots_in(&p, Rational::integer(4), Rational::integer(10)), Some(0));
+        assert_eq!(
+            count_real_roots_in(&p, Rational::integer(0), Rational::integer(2)),
+            Some(2)
+        );
+        assert_eq!(
+            count_real_roots_in(&p, Rational::integer(2), Rational::integer(4)),
+            Some(1)
+        );
+        assert_eq!(
+            count_real_roots_in(&p, Rational::integer(4), Rational::integer(10)),
+            Some(0)
+        );
     }
 }
