@@ -36,6 +36,7 @@ not repeat completed namespace/configuration sweeps.
 | Single-pivot equality-partition reconstruction | 1,200 lines / 50,231 bytes | Private child; one crate router and one public re-export |
 | Euclidean-residue reconstruction | 354 lines / 13,361 bytes | Private child; one crate router, one public re-export, one private parent helper |
 | Affine-growth reconstruction | 467 lines / 17,354 bytes | Private child; one crate router, one public re-export, one private parent helper |
+| Diophantine reconstruction candidate | 953 lines / 46,691 bytes | Two public entries, three private top-level helpers, and 16 family-specific context methods; nine shared kernel methods remain parent-owned |
 | `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -181,11 +182,28 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    43,108 generated Lean bytes at FNV-1a `dd4d24cdf0168fb9`. All nine focused
    controls, all 895 library tests, strict Clippy, and both rustdoc profiles
    pass.
+10. **I6 -- extract Diophantine reconstruction (preregistered).** The original
+   ADR-0042 integer-infeasibility family has a measured 953-line / 46,691-byte
+   body: two historical public entries, three private top-level helpers, and
+   16 context methods used only by this family. It is distinct from the shared
+   integer normalizer/context and from closed-universal/nested-XOR proof
+   construction. Move only that body to private
+   `int_reconstruct/diophantine.rs`, re-export both public paths unchanged, and
+   keep the nine context methods already consumed before the family in the
+   parent. Do not widen them or move the shared 164-line / 6,346-byte seam for
+   cosmetic completeness. Preserve certificate selection, equality/variable
+   order, proof-size caps, kernel gating, rendered Lean bytes, and all evidence
+   behavior. Add pre/post byte identity for the canonical `two_x_eq_one`
+   module. The focused gate is all five reconstruction controls (including
+   real Lean), all four evidence controls, all 19 math-resource LIA routes,
+   namespace compatibility, the complete solver library, strict Clippy, both
+   rustdoc profiles, format/links, and the bounded OOM audit.
 
-## Post-I5 residual posture
+## Post-I5 census and residual posture
 
-1. I5 is complete. Remeasure reviewer navigation and dependency seams before
-   authorizing any successor; no further integer-family split is implied.
+1. I5 is complete. The post-I5 census authorizes only I6's 953-line
+   Diophantine family. This is the final independently owned proof-family seam
+   in the parent, not permission for another generic size sweep.
 2. Keep closed-universal and nested-XOR reconstruction in the parent. Their two
    entry points share a large kernel-helper region, and a combined move would
    hide two distinct proof families behind one cosmetic module.
@@ -200,6 +218,10 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    refactor queue. Remeasure reviewer navigation and dependency seams before
    adding `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` to this inventory;
    raw line count alone is not the acceptance criterion.
+6. After I6, close the integer structural lane. The expected parent is the
+   shared integer kernel context plus the deliberately coupled
+   closed-universal/nested-XOR region; further movement would widen shared
+   privacy or separate helpers from all of their consumers.
 
 ## Standing gate
 

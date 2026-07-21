@@ -589,6 +589,17 @@ session state.
 >    pass. `int_reconstruct.rs` falls 4,701→4,246 lines and is now 52.2% below
 >    its original 8,876 lines. Remeasure before any successor; no further
 >    integer-family split is implied.
+>    The post-I5 census authorizes one final narrow I6 seam: the original
+>    ADR-0042 Diophantine reconstruction owns a 953-line / 46,691-byte body,
+>    two public entries, three private top-level helpers, and 16 context methods
+>    with no pre-family consumer. Move only those items to private
+>    `int_reconstruct/diophantine.rs`, keeping both paths and exact Lean bytes.
+>    Nine context methods already used by closed-universal/nested-XOR remain in
+>    the parent without visibility widening. Gate the move on all five focused
+>    reconstruction tests, four evidence tests, 19 committed math-resource
+>    routes, namespace compatibility, all 895 library tests, strict Clippy,
+>    both rustdoc profiles, links, and the bounded OOM audit. After I6, close
+>    the integer structural lane rather than turning residual size into a queue.
 >    Closed-universal and nested-XOR reconstruction remain parent-owned because
 >    their distinct entry points share a large kernel-helper region; do not hide
 >    both behind one cosmetic module.
