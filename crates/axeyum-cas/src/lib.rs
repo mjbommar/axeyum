@@ -2157,42 +2157,43 @@ fn quadratic_roots(a: Rational, b: Rational, c: Rational) -> Option<Vec<CasExpr>
     if disc.is_zero() {
         out.push(CasExpr::Const(neg_b_over)); // repeated root
     } else if disc.numerator() >= 0 {
-        if let Some(root) = rational_sqrt(disc) {
-            for sign in [Rational::integer(1), Rational::integer(-1)] {
-                out.push(CasExpr::Const(
-                    neg_b_over.checked_add(sign.checked_mul(root)?.checked_div(two_a)?)?,
-                ));
-            }
-        } else {
-            let sqrt_disc = CasExpr::Const(disc).sqrt();
-            for sign in [CasExpr::int(1), CasExpr::int(-1)] {
-                out.push(
-                    CasExpr::Const(neg_b_over) + sign * (sqrt_disc.clone() / CasExpr::Const(two_a)),
-                );
-            }
+        // √disc = coeff·√radicand (radicand square-free). Real roots
+        // neg_b_over ± (coeff/2a)·√radicand.
+        let (coeff, radicand) = simplify_surd(disc)?;
+        let amplitude = coeff.checked_div(two_a)?;
+        for sign in [Rational::integer(1), Rational::integer(-1)] {
+            let signed = sign.checked_mul(amplitude)?;
+            let root = if radicand == Rational::integer(1) {
+                CasExpr::Const(neg_b_over.checked_add(signed)?)
+            } else {
+                let surd = scaled_term(signed, CasExpr::Const(radicand).sqrt());
+                fold_trivial(&(CasExpr::Const(neg_b_over) + surd))
+            };
+            out.push(root);
         }
     } else {
-        // Complex conjugate roots: (−b/2a) ± (√(−disc)/2a)·I.
+        // Complex conjugate roots: neg_b_over ± (coeff/2a)·√radicand·I.
         let neg_disc = Rational::zero().checked_sub(disc)?;
+        let (coeff, radicand) = simplify_surd(neg_disc)?;
+        let amplitude = coeff.checked_div(two_a)?;
         let imag_unit = CasExpr::var("I");
-        for sign in [1_i128, -1] {
-            let imaginary = if let Some(root) = rational_sqrt(neg_disc) {
-                scaled_term(
-                    Rational::integer(sign)
-                        .checked_mul(root)?
-                        .checked_div(two_a)?,
-                    imag_unit.clone(),
-                )
+        for sign in [Rational::integer(1), Rational::integer(-1)] {
+            let signed = sign.checked_mul(amplitude)?;
+            let imaginary = if radicand == Rational::integer(1) {
+                scaled_term(signed, imag_unit.clone())
             } else {
-                CasExpr::int(sign)
-                    * (CasExpr::Const(neg_disc).sqrt() / CasExpr::Const(two_a))
-                    * imag_unit.clone()
+                CasExpr::Mul(vec![
+                    CasExpr::Const(signed),
+                    CasExpr::Const(radicand).sqrt(),
+                    imag_unit.clone(),
+                ])
             };
-            out.push(if neg_b_over.is_zero() {
+            let root = if neg_b_over.is_zero() {
                 imaginary
             } else {
                 CasExpr::Const(neg_b_over) + imaginary
-            });
+            };
+            out.push(fold_trivial(&root));
         }
     }
     Some(out)
@@ -5814,6 +5815,36 @@ fn rational_sqrt(r: Rational) -> Option<Rational> {
     }
 }
 
+/// Decompose `√value` (for `value ≥ 0`) into `coeff · √radicand` with a
+/// **square-free integer** `radicand`, so `√8 → 2·√2` and `√(8) / 2 → √2`.
+/// Returns `(coeff, radicand)`; `radicand == 1` means `value` is a perfect
+/// rational square (`coeff = √value`). `None` for negative input or overflow.
+///
+/// `√(p/q) = √(p·q)/q`; factor `p·q`, pull each prime pair outside the root.
+fn simplify_surd(value: Rational) -> Option<(Rational, Rational)> {
+    if value.numerator() < 0 {
+        return None;
+    }
+    let q = value.denominator();
+    let under = value.numerator().checked_mul(q)?; // p·q, the integer under the root
+    if under == 0 {
+        return Some((Rational::zero(), Rational::integer(1)));
+    }
+    let mut coeff_num = 1_i128;
+    let mut radicand = 1_i128;
+    for (prime, mult) in ntheory::factorize(under) {
+        for _ in 0..mult / 2 {
+            coeff_num = coeff_num.checked_mul(prime)?;
+        }
+        if mult % 2 == 1 {
+            radicand = radicand.checked_mul(prime)?;
+        }
+    }
+    // √value = √under / q = (coeff_num / q)·√radicand.
+    let coeff = Rational::checked_new(coeff_num, q)?;
+    Some((coeff, Rational::integer(radicand)))
+}
+
 /// Integer floor square root via Newton's method (`None` for negative input).
 fn isqrt(n: i128) -> Option<i128> {
     if n < 0 {
@@ -8335,6 +8366,30 @@ mod tests {
         assert_eq!(roots2.len(), 2);
         for r in &roots2 {
             assert_equal(&g.substitute("x", r), &CasExpr::zero());
+        }
+    }
+
+    #[test]
+    fn solve_irrational_roots_are_simplified_surds() {
+        let x = || v("x");
+        // x² − 12 = 0 ⇒ ±2√3 (surd extracted and reduced, not ±√12/1).
+        let f = x().pow(2) - CasExpr::int(12);
+        let roots = solve(&f, "x").expect("solvable");
+        assert_eq!(roots.len(), 2);
+        let two_sqrt3 = CasExpr::int(2) * CasExpr::int(3).sqrt();
+        assert_equal(&roots[0], &two_sqrt3);
+        assert_equal(&roots[1], &(-two_sqrt3));
+        for r in &roots {
+            assert_equal(&f.substitute("x", r), &CasExpr::zero());
+        }
+        // x² − 2 = 0 ⇒ ±√2 exactly (the /2a cancels the extracted factor).
+        let g = x().pow(2) - CasExpr::int(2);
+        let g_roots = solve(&g, "x").unwrap();
+        assert_equal(&g_roots[0], &CasExpr::int(2).sqrt());
+        // 2x² − 4x − 3 = 0 ⇒ 1 ± √10/2.
+        let h = CasExpr::int(2) * x().pow(2) - CasExpr::int(4) * x() - CasExpr::int(3);
+        for r in &solve(&h, "x").unwrap() {
+            assert_equal(&h.substitute("x", r), &CasExpr::zero());
         }
     }
 
