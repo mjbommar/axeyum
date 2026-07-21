@@ -86,6 +86,31 @@ computes their decidable shadow and labels the rest. The reviews confirmed the
 roadmap is honest about these; adding them as "compute targets" would violate the
 no-false-certification rule. They belong to the P3.6/P3.7 Lean track (via item 39).
 
+## 4b. Build status (2026-07-20)
+
+**Tier A — shipped, certified, TDD'd** (166 unit + 33 doctests, clippy-clean,
+WASM-green): eigenvectors (1), null space (2), minimal polynomial (3), definite
+integration (4), arbitrary-center Taylor (5), radical simplification (6), the
+number-theory bundle (7 — `ntheory_advanced`), statistics + `standard_deviation`
+(8), gradient/jacobian/divergence/curl (9), univariate factorization over ℤ/ℚ
+(10 — `factor_int`, Berlekamp–Zassenhaus).
+
+**Tier B — partially shipped:** public `resultant`/`discriminant` (14) done;
+`solve` now factors degree-≥3 leftovers over ℚ and solves quadratic factors;
+**new sound fold `sqrt(c)²→c`** added to the zero-test (certifies radical
+arithmetic and irrational quadratic roots). Remaining Tier B (first-order ODEs 12,
+linear recurrences 11, exact trig-value table 19, `Abs` head 13, `evalf` 16,
+inequality solving 18, log rules 20, `RealAlgebraic` wiring 17) still open.
+
+**Newly identified substrate blocker.** First-order linear ODEs (12) and linear
+recurrences (11) both need the zero-test to know `e^A·e^B = e^{A+B}`. The
+opaque-atom representation keys `exp` by the render of its argument, so combining
+requires summing argument *expressions* — an atom-representation refactor (carry
+the argument `CasExpr`, add `fold_exponential`, mirroring the just-added
+`fold_radical`). This is now the **next substrate step**: it unlocks first-order
+ODEs, recurrences, and general `exp`/`log` simplification together. Sequenced
+ahead of the assumptions engine (34).
+
 ## 5. Sequenced build plan for this wave
 
 Tier A (items 1–10) first — all certifiable on today's machinery — then Tier B as

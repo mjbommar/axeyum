@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 150+ tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 166 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -14,8 +14,8 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Area | Functions | Certified |
 |---|---|---|
 | Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `simplify`, `normalize`, `equal` (zero-test w/ witness) | equal ✓ |
-| Rational | `cancel` (uni+multivariate), `apart`, `factor`, `poly_gcd`, `poly_div`, `degree`/`coeff`/`leading_coeff` | factor/apart ✓ |
-| Equations | `solve` (rational, real-quadratic, **complex** roots) | rational ✓ |
+| Rational | `cancel` (uni+multivariate), `apart`, `factor`, `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus), `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
+| Equations | `solve` (rational, quadratic, **complex** roots, and degree-≥3 that factors over ℚ into linear/quadratic) | rational + radical (√ fold) ✓ |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial` | limit/sum ✓ |
 | ODEs | `dsolve_homogeneous` (constant-coeff linear) | ✓ (ODE operator) |

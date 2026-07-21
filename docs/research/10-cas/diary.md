@@ -570,3 +570,38 @@ Then built the whole **Tier A** wave, each certified and TDD'd:
 factorization over ℤ/ℚ (Berlekamp–Zassenhaus, sub-agent). Next (Tier B): first-order
 ODE methods, linear-recurrence closed forms, public resultant/discriminant, the
 `Abs` head, exact trig-value table.
+
+## 2026-07-20 — Entry 14: Tier B progress + a new sound fold (166 tests)
+
+Continued the next-wave build past Tier A into Tier B, all certified/TDD:
+- **`resultant` / `discriminant`** (public) — exposing the existing Sylvester
+  machinery. `resultant = 0` iff common root/factor; `disc(x²+bx+c) = b²−4c`;
+  `disc = 0` detects repeated roots (incl. a cubic with a double root). Fixed the
+  trimmed-empty-determinant (vanishing resultant) case to return `Const(0)`.
+- **Univariate factorization over ℤ/ℚ** (`factor_int`, sub-agent, verified):
+  Berlekamp–Zassenhaus (Yun squarefree → Berlekamp mod p → Hensel lift → complete
+  recombination). `x⁴−10x²+1` correctly irreducible; `factor_expr` returns only
+  `Certified`-equal results.
+- **`solve` via factorization** — degree-≥3 leftovers are now factored over ℚ and
+  each quadratic factor solved, so products of irreducible quadratics fully solve
+  (`x⁴+5x²+4 → ±I,±2I`; `x⁴−5x²+6 → ±√2,±√3`; `x³−x²+x−1 → 1,±I`).
+- **`fold_radical`** — a new **sound** zero-test reduction `sqrt(c)² → c` for
+  `c ≥ 0` (rational radicand parsed from the atom key), the same shape as the
+  imaginary/Pythagorean folds. It certifies radical arithmetic (`√2·√2 = 2`,
+  `(1+√2)² = 3+2√2`, `(√3−1)(√3+1) = 2`) **and** the irrational-root substitutions
+  above — turning `simplify_radicals`' output and irrational quadratic roots into
+  certified results.
+
+**166 unit + 33 doctests, clippy-pedantic clean, WASM-green.**
+
+**Identified blocker (recorded, not yet built).** First-order linear ODEs and
+linear-recurrence closed forms both need the zero-test to know
+`e^A·e^B = e^{A+B}` (the integrating-factor / `rⁿ`-as-`e^{n ln r}` cancellations).
+The opaque-atom representation keys `exp` by the *render* of its argument, so
+combining two exp atoms requires summing their argument *expressions*, which the
+current MultiPoly (string-keyed atoms) can't do. The fix is an atom-representation
+refactor: carry the argument `CasExpr` alongside the atom key and add a
+`fold_exponential` that sums exp arguments within a monomial (mirroring
+`fold_radical`). This is the next real substrate step — it unlocks first-order
+ODEs, recurrences, and general `exp`/`log` simplification at once. Sequenced ahead
+of the assumptions engine.
