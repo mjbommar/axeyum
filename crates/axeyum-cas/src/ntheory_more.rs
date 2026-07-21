@@ -182,6 +182,36 @@ pub fn aliquot_sum(n: i128) -> Option<i128> {
     sigma_k(1, n)?.checked_sub(n)
 }
 
+/// Whether `n > 0` is **abundant** — its proper divisors sum to more than `n`
+/// ([`aliquot_sum`]`(n) > n`, equivalently `σ(n) > 2n`). `12, 18, 20, 24, …` are
+/// abundant. `false` for `n ≤ 0` or on overflow.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::is_abundant;
+/// assert!(is_abundant(12));   // 1+2+3+4+6 = 16 > 12
+/// assert!(!is_abundant(6));   // perfect
+/// assert!(!is_abundant(10));  // deficient
+/// ```
+#[must_use]
+pub fn is_abundant(n: i128) -> bool {
+    matches!(aliquot_sum(n), Some(s) if s > n)
+}
+
+/// Whether `n > 0` is **deficient** — its proper divisors sum to less than `n`
+/// ([`aliquot_sum`]`(n) < n`, equivalently `σ(n) < 2n`). All primes and prime
+/// powers are deficient. `false` for `n ≤ 0` or on overflow.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::is_deficient;
+/// assert!(is_deficient(10));  // 1+2+5 = 8 < 10
+/// assert!(!is_deficient(6));  // perfect
+/// assert!(!is_deficient(12)); // abundant
+/// ```
+#[must_use]
+pub fn is_deficient(n: i128) -> bool {
+    matches!(aliquot_sum(n), Some(s) if s < n)
+}
+
 /// Whether `m` and `n` form an **amicable pair**: distinct positive integers each
 /// equal to the other's [`aliquot_sum`] (`s(m) = n` and `s(n) = m`). The smallest
 /// pair is `(220, 284)`. A perfect number is *not* amicable with itself (the pair
@@ -604,6 +634,13 @@ mod tests {
         for n in 1..=30i128 {
             assert_eq!(aliquot_sum(n) == Some(n), is_perfect(n), "n={n}");
         }
+        // Trichotomy: every n > 0 is exactly one of perfect / abundant / deficient.
+        for n in 1..=100i128 {
+            let flags = [is_perfect(n), is_abundant(n), is_deficient(n)];
+            assert_eq!(flags.iter().filter(|&&b| b).count(), 1, "trichotomy n={n}");
+        }
+        assert!(is_abundant(12) && is_abundant(18) && is_abundant(20));
+        assert!(is_deficient(10) && is_deficient(8) && is_deficient(7));
     }
 
     #[test]
