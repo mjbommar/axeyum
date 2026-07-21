@@ -900,3 +900,25 @@ the `/nas4` volume via `TMPDIR` (see `axeyum-cas-worktree` memory).
 
 **379 unit + 109 doctests, clippy-pedantic clean, WASM-green.** Frontier: Zeilberger,
 Gruntz (general), multivariate factorization, Puiseux, arbitrary-precision N[].
+
+## 2026-07-21 — Entry 27: ODE suite, Z-transform, trig/improper (386 tests)
+
+Solving + transforms + ODE breadth wave. Since entry 26 (379 → 386):
+
+**First-order ODE suite completed**: `dsolve_separable` (y′=f(x)g(y) ⇒ implicit
+G(y)−F(x)−C0, certified by ∂S/∂y=1/g ∧ ∂S/∂x=−f), `dsolve_exact` (M dx+N dy=0 with
+∂M/∂y=∂N/∂x ⇒ potential F, certified ∂F/∂x=M ∧ ∂F/∂y=N), `dsolve_bernoulli` (y′+py=qy²
+via v=1/y → the linear solver, certified by substitute-back). Joins the existing
+homogeneous/inhomogeneous/integrating-factor solvers.
+
+**Z-transform pair** (`z_transform`/`inverse_z_transform`): discrete Laplace over the
+geometric fragment (z/(z−a) ↔ aⁿ), inverse via partial fractions of X(z)/z, round-trip
+certified. **Trig equation solving** in `solve` (2sin x−1⇒π/6,5π/6, principal in [0,2π)).
+**Improper integrals** (`improper_integrate`, ±∞ bounds via the exp-dominance limit —
+∫₀^∞ x²e^{−x}=2, divergence declined). **Combinatorics**: derangements, double
+factorial, multinomial.
+
+**386 unit + 117 doctests, clippy-pedantic clean, WASM-green.** (Infra: a mid-session
+home-quota exhaustion is worked around via `TMPDIR=/nas4/...` for rustdoc; see the
+`axeyum-cas-worktree` memory.) Frontier: Zeilberger, general Gruntz, multivariate
+factorization, Puiseux, new special-function heads (erf/Si/Ci/Ei), arbitrary-precision N[].
