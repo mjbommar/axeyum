@@ -383,4 +383,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0326](adr-0326-preregister-stable-virtual-root-maestro-capture.md) | Reject isolated Maestro capture when its owning build requires an unregistered network font input | accepted |
 | [0327](adr-0327-preregister-tock-log2-reflection.md) | Accept typed LLVM call-result ranges and `ctlz` poison semantics for the selected Tock integer-log replacement target | accepted |
 | [0328](adr-0328-preregister-tock-log2-llvm-capture.md) | Preregister two-root offline LLVM-22 capture and exact admission for the selected Tock integer-log target | accepted |
-| [0329](adr-0329-preregister-tock-dedicated-cargo-cache.md) | Preregister dedicated locked Tock Cargo-cache preparation and canonical inventory before capture v2 | proposed |
+| [0329](adr-0329-preregister-tock-dedicated-cargo-cache.md) | Preregister dedicated locked Tock Cargo-cache preparation and canonical inventory before capture v2 | accepted |

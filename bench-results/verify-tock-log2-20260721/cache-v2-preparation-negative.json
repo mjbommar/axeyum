@@ -1,0 +1,41 @@
+{
+  "attempt": {
+    "networked_fetches_completed": 0,
+    "networked_fetches_started": 1,
+    "observed_at_utc": "2026-07-21T10:22:46Z",
+    "preparation_invocations": 1,
+    "producer_commit": "de343f633e3b409bf971a759d1596012862b5213",
+    "producer_was_pushed_before_invocation": true
+  },
+  "error": {
+    "detail": "Updating git repository `https://github.com/flux-rs/flux.git`\nwarning: spurious network error (3 tries remaining): failed to resolve address for github.com: Temporary failure in name resolution; class=Net (12)\nwarning: spurious network error (2 tries remaining): failed to resolve address for github.com: Temporary failure in name resolution; class=Net (12)\nwarning: spurious network error (1 try remaining): failed to resolve address for github.com: Temporary failure in name resolution; class=Net (12)\nerror: failed to get `flux-rs` as a dependency of package `kernel v0.2.3-dev (/axeyum-vroot/source/kernel)`",
+    "kind": "cargo_fetch",
+    "stage": "fetch"
+  },
+  "outputs": {
+    "cache_envelope_exists": false,
+    "inventory": false,
+    "offline_probes": 0,
+    "partial_directories": 0,
+    "property_queries": 0,
+    "target_builds": 0
+  },
+  "registration_sha256": "f0852783ec187255248f31501d0c79b4ed54cffd32e003e460c41755c2e1cb48",
+  "resolver_observation": {
+    "host_resolv_conf_sha256": "acfee52a6a0860bf1ff42bfa79d349f2373a9defc0fb05990489743ae0965ec1",
+    "host_resolv_conf_target": "/run/systemd/resolve/stub-resolv.conf",
+    "registered_root_contains_target": false
+  },
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-cache-v2-preparation-negative.v1",
+  "status": "rejected",
+  "upstream": {
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  }
+}

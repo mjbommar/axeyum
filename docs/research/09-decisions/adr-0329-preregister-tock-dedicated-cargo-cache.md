@@ -1,6 +1,6 @@
 # ADR-0329: Preregister dedicated Tock Cargo-cache preparation
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -97,12 +97,32 @@ after the networked fetch begins.
 
 ## Result
 
-Proposed. The separate preparation producer, nine focused mutation/cleanup
-tests, exact support/source/tool/environment/namespace/command/resource
-registration, and live no-op network/offline namespace probes are frozen with
-zero networked fetches. Commit and push this checkpoint before the one official
-preparation invocation. No dedicated cache byte, inventory, successor build,
-target artifact, or property result exists.
+Accepted as a negative preparation-v2 result. Producer commit `de343f63` was
+pushed before the one official capped invocation. The exact locked fetch starts
+with the optional Flux Git dependency, but all three attempts fail before any
+download:
+
+```text
+stage=fetch
+kind=cargo_fetch
+detail=... failed to resolve address for github.com: Temporary failure in name resolution
+```
+
+The registered network namespace shares the host network but its constructed
+root binds `/etc` without `/run`; host `/etc/resolv.conf` is the relative symlink
+`../run/systemd/resolve/stub-resolv.conf`, so the resolver input is absent inside
+the namespace. The live no-op probe did not exercise name resolution and was
+therefore insufficient.
+
+Zero fetches complete. No cache envelope, inventory, offline probe, build,
+capture, query, output, or partial directory exists, and the producer reports
+the fetch failure rather than an OOM-delta failure. Exact negative metadata is
+committed in `cache-v2-preparation-negative.json`.
+
+Adding `/run` after observing this failure and rerunning preparation v2 would
+change its frozen namespace. V2 ends here. A successor must first preregister a
+minimal exact resolver-file bind plus an actual DNS lookup probe, while retaining
+every non-network preparation and inventory gate unchanged.
 
 ## Rejected alternatives
 
@@ -121,10 +141,10 @@ target artifact, or property result exists.
 ## Consequences
 
 - Network access is confined to a named non-crediting input-preparation phase.
-- The eventual official builds can use one exact read-only cache rather than an
-  ambient cache whose completeness and unrelated contents are unknown.
-- Full-workspace fetch may be larger than the active kernel closure; that cost
-  is preferable to an adaptive post-miss subset and will be measured honestly.
+- Preparation v2 establishes no cache because its namespace omits the runtime
+  target of the host resolver symlink.
+- A successor must authenticate resolver availability rather than treating a
+  successful `/usr/bin/true` namespace probe as a network probe.
 
 ## References
 

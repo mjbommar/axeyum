@@ -416,10 +416,13 @@ session state.
 >    network-isolated read-only full-workspace metadata probe, whole-tree
 >    canonical inventory, cgroup/OOM accounting, and atomic local retention.
 >    Its separate producer, nine mutation/cleanup tests, exact registration,
->    and live no-op namespaces are now frozen with zero fetches. Commit/push
->    this checkpoint, then invoke the preparation once under its registered
->    cgroup. Preparation cannot compile, capture, admit, query, or authorize v1
->    rerun.
+>    and live no-op namespaces were pushed before invocation. ADR-0329 accepts
+>    the exact negative: the network namespace omits the runtime target of the
+>    host `/etc/resolv.conf` symlink, so Flux Git resolution fails, zero fetches
+>    complete, and no cache/partial/OOM result exists. Never add `/run` and
+>    rerun preparation v2. Next preregister a minimal hash-pinned resolver-file
+>    bind plus a real DNS probe as preparation v3, retaining every locked-fetch,
+>    offline-read-only, inventory, atomicity, and no-compilation gate.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
