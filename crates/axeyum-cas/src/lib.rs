@@ -532,6 +532,13 @@ impl Monomial {
         Monomial { powers }
     }
 
+    /// The monomial `name^exp` (`exp` assumed ≥ 1).
+    fn var_pow(name: &str, exp: u32) -> Self {
+        let mut powers = BTreeMap::new();
+        powers.insert(name.to_owned(), exp);
+        Monomial { powers }
+    }
+
     /// The total degree (sum of exponents); the constant monomial has degree 0.
     fn total_degree(&self) -> u64 {
         self.powers.values().map(|&e| u64::from(e)).sum()
@@ -629,6 +636,58 @@ impl MultiPoly {
             }
         }
         Some(out)
+    }
+
+    /// Reduce `cos²(u) → 1 − sin²(u)` for every argument `u`, so the zero-test
+    /// knows the Pythagorean identity `sin²+cos² = 1`. Sound (reduction modulo the
+    /// true relation) and complete for that single relation; other trig identities
+    /// (double-angle, sum) are not captured and conservatively fail. `None` on
+    /// overflow.
+    fn fold_pythagorean(&self) -> Option<MultiPoly> {
+        // Fast path: no cosine atom raised to a power ≥ 2.
+        let has_cos_sq = self.terms.keys().any(|m| {
+            m.powers
+                .iter()
+                .any(|(var, &e)| e >= 2 && var.starts_with("\0cos:"))
+        });
+        if !has_cos_sq {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            // Rebuild the term as a product of per-variable factors, replacing
+            // cos(u)^e with cos(u)^(e mod 2)·(1 − sin(u)²)^(e/2).
+            let mut term = MultiPoly::constant(*coeff);
+            for (var, &exp) in &mono.powers {
+                let factor = if let Some(arg) = var.strip_prefix("\0cos:") {
+                    let sin_var = format!("\0sin:{arg}");
+                    let cos_pow = MultiPoly::single_var_pow(var, exp % 2);
+                    let mut one_minus_sin_sq = MultiPoly::constant(Rational::integer(1));
+                    let mut sin_sq = MultiPoly::zero();
+                    sin_sq
+                        .terms
+                        .insert(Monomial::var_pow(&sin_var, 2), Rational::integer(-1));
+                    one_minus_sin_sq = one_minus_sin_sq.add(&sin_sq)?;
+                    cos_pow.mul(&one_minus_sin_sq.pow(exp / 2)?)?
+                } else {
+                    MultiPoly::single_var_pow(var, exp)
+                };
+                term = term.mul(&factor)?;
+            }
+            out = out.add(&term)?;
+        }
+        Some(out)
+    }
+
+    /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
+    /// `exp == 0`).
+    fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
+        if exp == 0 {
+            return MultiPoly::constant(Rational::integer(1));
+        }
+        let mut terms = BTreeMap::new();
+        terms.insert(Monomial::var_pow(var, exp), Rational::integer(1));
+        MultiPoly { terms }
     }
 
     /// Exact polynomial addition, or `None` on `i128` coefficient overflow.
@@ -1091,7 +1150,11 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let Some(neg_cb) = cb.neg() else {
         return ZeroTest::Unknown;
     };
-    match ad.add(&neg_cb).and_then(|w| w.fold_imaginary()) {
+    match ad
+        .add(&neg_cb)
+        .and_then(|w| w.fold_imaginary())
+        .and_then(|w| w.fold_pythagorean())
+    {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
             witness,
@@ -2658,6 +2721,25 @@ mod tests {
         assert_equal(&factor(&h, "x").expect("factorable"), &(x() - CasExpr::int(1)).pow(2));
         // 4th derivative of x⁴ is 24
         assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
+    }
+
+    #[test]
+    fn pythagorean_identity_is_certified() {
+        let x = || v("x");
+        // sin²x + cos²x = 1
+        assert_equal(&(x().sin().pow(2) + x().cos().pow(2)), &CasExpr::int(1));
+        // 1 − cos²x = sin²x
+        assert_equal(&(CasExpr::int(1) - x().cos().pow(2)), &x().sin().pow(2));
+        // cos⁴x − sin⁴x = cos²x − sin²x  (factors as (cos²+sin²)(cos²−sin²))
+        assert_equal(
+            &(x().cos().pow(4) - x().sin().pow(4)),
+            &(x().cos().pow(2) - x().sin().pow(2)),
+        );
+        // per-argument: sin²(2x) + cos²(2x) = 1
+        assert_equal(
+            &((CasExpr::int(2) * x()).sin().pow(2) + (CasExpr::int(2) * x()).cos().pow(2)),
+            &CasExpr::int(1),
+        );
     }
 
     #[test]
