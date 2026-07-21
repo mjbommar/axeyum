@@ -1,0 +1,22 @@
+[package]
+name = "axeyum-cas"
+description = "Proof-carrying computer algebra for Axeyum: symbolic transforms whose results are certified by lowering to the decidable IR core (ADR-0301)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+# The decidable core: exact `Rational` arithmetic and univariate polynomial
+# algebra (`poly::rat_derivative`, ...) used as the trusted certifier. Pure Rust,
+# WASM-safe. No solver dependency: Phase C0 certifies entirely via exact
+# polynomial normal forms (the normal form *is* the witness).
+axeyum-ir.workspace = true
+
+[lints]
+workspace = true

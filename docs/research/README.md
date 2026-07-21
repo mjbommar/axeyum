@@ -43,6 +43,7 @@ losing context.
 | `07-verification/` | Evidence, checking, differential testing, and soundness strategy. |
 | `08-planning/` | Foundational DAG, roadmap, phase audits, benchmarking methodology, and open research questions. |
 | `09-decisions/` | Decision records (ADRs) that close open questions. |
+| `10-cas/` | **Computer algebra system** initiative: a proof-carrying CAS (SymPy/Mathematica compute surface) built on the decidable core. Vision, decidability map, gap analysis, phased build plan, running diary. |
 | `templates/` | Templates for future research notes. |
 
 ## Research Template

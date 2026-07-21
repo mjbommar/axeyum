@@ -4,6 +4,7 @@ members = [
     "crates/axeyum-aig",
     "crates/axeyum-bench",
     "crates/axeyum-bv",
+    "crates/axeyum-cas",
     "crates/axeyum-cnf",
     "crates/axeyum-egraph",
     "crates/axeyum-evm",
@@ -36,6 +37,7 @@ categories = ["science", "mathematics"]
 [workspace.dependencies]
 axeyum-aig = { path = "crates/axeyum-aig", version = "0.1.0" }
 axeyum-bv = { path = "crates/axeyum-bv", version = "0.1.0" }
+axeyum-cas = { path = "crates/axeyum-cas", version = "0.1.0" }
 axeyum-cnf = { path = "crates/axeyum-cnf", version = "0.1.0" }
 axeyum-egraph = { path = "crates/axeyum-egraph", version = "0.1.0" }
 axeyum-fp = { path = "crates/axeyum-fp", version = "0.1.0" }

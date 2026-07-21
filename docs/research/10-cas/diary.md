@@ -1,0 +1,448 @@
+# CAS initiative — research & build diary
+
+A running, append-only log of research, decisions, prototypes, and references for
+the [CAS initiative](README.md). Newest entries at the bottom of each day.
+
+---
+
+## 2026-07-20 — Entry 1: kickoff, framing, substrate survey
+
+### Goal (as set)
+Build the compute-side functionality of SymPy / Mathematica in axeyum — carefully,
+comprehensively, patiently: research → design → prototype → document, keeping this
+diary as we go.
+
+### Orientation (docs read)
+- `docs/research/README.md`, `00-orientation/*` (north star: general reasoning /
+  logic / proving; untrusted search / trusted checking).
+- `08-planning/`: `roadmap.md` (foundation phases 0–7 landed; parity plan in
+  PLAN.md), `capability-matrix.md` (certified DRAT/Alethe/Lean procedures across
+  BV/UF/LIA/LRA/NRA/NIA/FP/arrays/datatypes/quantifiers),
+  `formal-mathematics-tour.md` (backward-derived math DAG + per-node decidable
+  fragment; already contemplates "symbolic-derivative-rule checks"),
+  `foundational-example-suites.md` (decidability lens; `unknown` first-class;
+  double-duty artifacts; oracle-free ground truth per ADR-0008),
+  `foundational-dag.md` (every layer needs semantics + checker + replay before it
+  is public).
+
+### Framing settled
+The Pareto-dominant, honest target is a **proof-carrying CAS**: compute
+`transform(expr)` and, wherever the fragment is decidable, return a checkable
+witness that the transform is denotation-preserving; label everything else
+`computed-uncertified`. This is axeyum's identity applied to algebra and the
+compute-side realization of the destinations `formal-mathematics-tour.md` already
+maps (number theory, linear algebra, calculus). Not "reimplement Mathematica" —
+"be the CAS that certifies which of its answers are proven." Written up in
+[README.md](README.md).
+
+### Substrate survey (sub-agent, read-only) → [substrate-map.md](substrate-map.md)
+**Already built (the hard half):** hash-consed typed term DAG = the `head[args]`
+model; exact univariate rational polynomial algebra (`poly.rs`: derivative, rem,
+GCD, exact div, squarefree, resultants/Sylvester, Sturm chains, exact real-root
+counting); real-algebraic numbers with field arithmetic (`real_algebraic.rs`,
+deg ≤ 24); ground evaluator over all sorts (`eval.rs`); a fixed ~60-rule
+denotation-preserving canonicalizer (`axeyum-rewrite/canonical.rs`);
+congruence-closure e-graph with e-matching + proof explanations (`axeyum-egraph`).
+
+**Missing (the compute side to build):** symbolic differentiation *over terms*;
+symbolic simplification *returning a term* (expand/collect/factor/normal form);
+multivariate polynomials + Gröbner; univariate factorization (Berlekamp/
+Zassenhaus/LLL) + partial fractions; a general rewrite/equality-saturation engine
+(the e-graph matches but never applies rules or extracts); **transcendental
+function operators** (exp/log/sin/cos/sqrt as heads — the IR has none);
+integration/summation/limits/series/equation-solving; public symbolic linear
+algebra; a substitution/match-and-rewrite API.
+
+### Key architectural finding
+The solver IR deliberately has **no transcendental heads** and is confined to
+decidable theories. So the CAS should be a **new `axeyum-cas` layer** carrying the
+broad (partly-undecidable) surface, which **lowers to the decidable IR core**
+(poly/RCF/SMT/`real_algebraic`) exactly where certification happens — *broad
+algebra, narrow certifier*. Proposed as option (B) in
+[substrate-map.md](substrate-map.md#architectural-implication); to be ratified in
+the initiative's first ADR. This keeps the solver core clean and makes the
+decidability boundary an explicit lowering boundary.
+
+### The first thin vertical slice (proposed)
+Per ADR-0001 (thin slice first) and the decidable-first rule: the **certified
+polynomial kernel** — `canonicalize`, `differentiate`, and **decidable
+`equal?`** (polynomial zero-testing) over the rational-function fragment, lowered
+to the IR and certified via `poly.rs` + NRA. This directly answers the user's own
+exemplar "check `D[x²+c] = 2x`": compute `D[x²+c] = 2x + 0`, then *decide*
+`2x + 0 ≡ 2x` by zero-testing `(2x+0) − 2x = 0`. It is simultaneously compute-side
+(returns a new expression) and fully certifiable (polynomial zero-testing is
+decidable; exact rational arithmetic and RCF are already in-tree). Design to
+follow in [build-plan.md](build-plan.md) after the architecture + decidability
+docs land.
+
+### Pending (sub-agents in flight)
+- Oracle/harness survey (`axeyum-scenarios` `self_check` mechanism; curriculum
+  DAG; is the corpus a non-circular oracle?) → feeds the "test harness for a CAS"
+  claim with exact mechanism.
+- CAS architecture web research (SymPy/Mathematica/Symbolica internals; capability
+  taxonomy; the decidability boundary incl. Richardson's theorem & Risch) → feeds
+  [cas-architecture-survey.md](cas-architecture-survey.md) and
+  [decidability-map.md](decidability-map.md).
+
+### Next actions
+1. On oracle survey: write the harness/oracle section of the vision + confirm the
+   self-check mechanism.
+2. On web research: write `cas-architecture-survey.md` + `decidability-map.md`.
+3. Then `gap-analysis.md`, `vision.md`, `build-plan.md`, and the first-slice ADR.
+4. Then prototype the certified polynomial kernel, TDD, decidable-first.
+
+### References gathered so far
+- Existing in-tree docs linked above.
+- (Web references to be added by the architecture-research sub-agent.)
+
+---
+
+## 2026-07-20 — Entry 2: design set + first slice shipped & verified
+
+### Recon complete (3 sub-agents)
+- **Substrate** → [substrate-map.md](substrate-map.md). Confirmed: `head[args]`
+  DAG, exact univariate poly algebra, real-algebraic numbers, canonicalizer,
+  e-graph. Missing: differentiation-over-terms, transcendental heads,
+  multivariate polys, factorization, integration, general rewrite/saturation.
+- **Oracle/harness** → [oracle-as-test-harness.md](oracle-as-test-harness.md).
+  Confirmed the corpus is a **non-circular** oracle: `Scenario::self_check`
+  (`lib.rs:349`) trusts only `eval`; exhaustive enumeration ≤20 bits is a real
+  finite-domain UNSAT proof; ~165 instances / 83 generators / 23 families /
+  23-node decidability-tagged curriculum DAG; **zero compute-shaped functions** —
+  a pure test harness for a CAS, exactly as claimed.
+- **CAS architecture (web)** → [cas-architecture-survey.md](cas-architecture-survey.md).
+  SymPy (`args` invariant, `polys` domain tower, portfolio `integrate`), Wolfram
+  (uniform `head[args]` rewriting + `Flat`/`Orderless`), Symbolica (proprietary;
+  MIT `numerica`/`graphica` spin-outs), the algorithm/decidability taxonomy, and
+  Richardson/Risch as the load-bearing bounds. **Opening confirmed:** no
+  permissively-licensed Rust CAS, and *no CAS in any language* makes per-answer
+  trust machine-checkable — axeyum's differentiator.
+
+### Design docs written
+`vision.md`, `decidability-map.md`, `gap-analysis.md` (16 build units G0–G16),
+`build-plan.md` (phases C0–C7, decidable-first, evidence-gated), and
+**ADR-0301** (ratifies the `axeyum-cas` layer + reduce-to-decide certifier;
+rejects extending the IR with transcendental heads and rejects external-CAS
+oracle laundering).
+
+### Phase C0 shipped — the certified polynomial kernel (TDD, verified)
+New crate **`crates/axeyum-cas`** (leaf; depends only on `axeyum-ir`; no solver
+dep; pure Rust). Implements over the polynomial fragment:
+- `CasExpr` + `differentiate` (sum/product/power rules on the tree);
+- `MultiPoly` — canonical multivariate sparse-polynomial normal form (this is
+  also a head start on **G3**, the polynomial tower);
+- `normalize` (expand to `MultiPoly`), `equal` (decidable zero-test returning a
+  trust-tagged `ZeroTest` whose `witness` is the re-checkable difference poly),
+  `prove_derivative`.
+
+**Certification is oracle-free**: the canonical form *is* the certificate; exact
+`Rational` arithmetic throughout; overflow → honest `ZeroTest::Unknown`, never a
+wrong answer.
+
+**Verification (all green):**
+- 11 unit tests + 1 doctest pass. Includes the exemplar **`D[x²+c] = 2x`
+  certified**; product/power/multivariate partial derivatives; rational
+  coefficients exact.
+- **Independent cross-check**: symbolic `differentiate` agrees exactly with the
+  trusted numeric `poly::rat_derivative` on univariate polynomials.
+- **Self-check in the `axeyum-scenarios` spirit**: `normalize` preserves value at
+  sample points under the trusted evaluator; certified-equal agrees with
+  evaluation; overflow declines to `Unknown`.
+- `cargo clippy -p axeyum-cas --all-targets` — **clean** (pedantic).
+- `cargo build -p axeyum-cas --target wasm32-unknown-unknown` — **succeeds**
+  (WASM-green).
+
+### Honest status of the C0 exit gate
+Met: differentiate/equal correct + certified; exemplar certified; `poly.rs`
+cross-check; clippy + wasm green. **Not yet done (deliberately deferred, not
+faked):** the *formal* double-duty self-checking scenario in `axeyum-scenarios`.
+That corpus is verification-shaped (asserts a `Query`, self-checks via `eval`
+over BV); turning a *compute-transform* certificate into that shape is a real
+design question (how a computed transform becomes a self-checking scenario),
+worth its own careful slice — tracked as the next step, not claimed complete.
+
+### Next actions
+1. **C0.1** — design how a certified compute-transform lands as a double-duty
+   self-checking scenario (bridge the poly-normal-form certificate into the
+   `Scenario`/`Family` machinery), closing the last C0 gate.
+2. **C1 start** — extend the kernel to **rational functions**: `Div` + quotient
+   rule; zero-test of `p/q` via numerator (still fully decidable/certified);
+   then subresultant multivariate GCD to reduce `MultiPoly` fractions.
+3. Add a QF_NRA test-only differential cross-check (via `axeyum-solver` as a
+   dev-dependency) as a second independent certifier for the rational fragment.
+
+---
+
+## 2026-07-20 — Entry 3: C1 rational functions green; `expand` added
+
+### C1 — rational-function fragment (verified)
+Extended `axeyum-cas` with `CasExpr::Div`, the **quotient rule**, a `RatFunc`
+(num/den) normal form, and rational-function `equal` by **cross-multiplication**
+(`a/b = c/d` iff `a·d − c·b ≡ 0`; denominators non-zero by construction, so no
+GCD reduction is needed to *decide* equality). Division by an identically-zero
+denominator → honest `Unknown`.
+
+**Verified:** `cargo test -p axeyum-cas` → **15 passed / 0 failed** (+ doctest),
+`cargo clippy --all-targets` clean, `wasm32` build green. New tests: quotient
+rule `d/dx(1/x)=-1/x²` and `d/dx(x/(x+1))=1/(x+1)²` (the latter also confirmed by
+the trusted evaluator at sample points), cancellation equality
+**`(x²−1)/(x−1)=x+1` certified without a GCD**, and division-by-zero→`Unknown`.
+
+### `expand` — return the canonical expression, not just a yes/no
+Added `MultiPoly::to_expr` and `expand(expr) -> Option<CasExpr>`: the compute
+transform now hands back the actual expanded/canonical expression (core CAS
+ergonomics — "give me the simplified form"), certified value-equal to the input
+by round-trip (`equal(expand(e), e)` is proven). Tests: `expand((x+1)³) =
+x³+3x²+3x+1` (and certified equal to the original); rational `expand`
+value-preserving. **Verified:** `cargo test -p axeyum-cas` → **17 passed / 0
+failed** (+ doctest), clippy clean.
+
+### Interaction note
+The developer is concurrently running `cargo test --workspace --all-features`,
+which now also compiles/tests the new `axeyum-cas` crate — the initiative is
+integrated into the workspace test from the first commit.
+
+### `cancel` — reduce to lowest terms (univariate GCD), verified
+Added `RatFunc::reduced` (univariate case) reusing the in-tree exact
+`poly::rat_gcd` + `poly::rat_exact_div`, with denominator-sign canonicalization,
+and the public `cancel(expr) -> Option<CasExpr>`. Multivariate functions are left
+expanded-but-unreduced (still value-equal) pending multivariate GCD (G4).
+
+**Verified:** `cargo test -p axeyum-cas` → **20 passed / 0 failed** (+ doctest),
+clippy `--all-targets` clean, `wasm32` build green. Tests: `(x²−1)/(x−1) → x+1`
+(fully cancels to a polynomial), `(2x²+2x)/(x+1) → 2x`, and value-preservation
+`(x²−4)/(x−2) = x+2` confirmed by the trusted evaluator at four points.
+
+### Kernel state after this session
+`axeyum-cas` now offers, over polynomials **and** rational functions, all
+certified / oracle-free / WASM-safe: **`differentiate`** (sum/product/quotient/
+power), **`normalize`** (canonical multivariate polynomial), **`equal`**
+(decidable zero-test with re-checkable witness), **`expand`**, **`cancel`**
+(univariate lowest-terms). 20 tests + doctest, clippy-clean. This realizes the
+Phase C0 slice and most of C1; it is the working seed of the certified core.
+
+### Next
+- **Multivariate GCD** (G4, subresultant PRS / content-primitive) → full
+  `cancel`/canonical reduced form for the multivariate case; gateway to `factor`
+  (G5) and partial fractions → **certified rational integration** (G11, the
+  flagship differentiate-and-check demo).
+- **C0.1** scenario bridge (double-duty artifact in `axeyum-scenarios`).
+- **QF_NRA** second, independent certifier (test-only, via `axeyum-solver`
+  dev-dependency).
+- A `Display` for `CasExpr` for human-readable output.
+
+---
+
+## 2026-07-20 — Entry 4: curriculum coverage correction (+ parallel-build setup)
+
+### Prompt
+"Did you plan/envision the *entire* curriculum — number theory, real & complex
+analysis, geometry, differential & integral calculus, linear algebra,
+differential equations?"
+
+### Honest finding: the first plan was incomplete
+I planned the certified polynomial/analysis/linear-algebra/number-theory core
+well and tied the vision to `formal-mathematics-tour.md`, but I did **not** map
+the build units node-by-node onto the actual 23-node curriculum, and I omitted:
+- **complex analysis** — the `complex` node (lean-horizon, "NRA over pairs") had
+  **no** CAS unit;
+- **differential equations** — not a curriculum node, and absent from my plan
+  entirely (a core SymPy capability);
+- **geometry** — only implicit via NRA; never called out.
+
+### Fix → [curriculum-coverage.md](curriculum-coverage.md)
+Read the authoritative `docs/curriculum/curriculum.toml` (23 nodes, 4 layers) and
+wrote a full node-by-node map: each node → the CAS capability that makes it
+computational + its trust ceiling, under the unifying frame **"each node's
+`decidability` tag is the CAS's trust ceiling for that node."** Added build units
+**G17 (complex numbers/ℚ(i)/complex-algebraic)** and **G18 (differential
+equations)** to `gap-analysis.md`, plus **C4b/C6b** phases and a geometry-suite
+note to `build-plan.md`. The lean-horizon nodes (cardinality, complex-*analysis*,
+sequences-and-limits, calculus-foundations) are honestly the decidable-fragment +
+Lean-reconstruction split, never false claims.
+
+Key reframe recorded: **ODE solving is proof-carrying exactly like integration** —
+substitute the candidate solution into the ODE and zero-test the residual; linear
+constant-coefficient ODEs are decidable via the characteristic polynomial (reuses
+factorization G5).
+
+### Parallel-build setup (with the other agent)
+Confirmed clean isolation: all CAS work is a new crate + new docs (only 2 shared
+one-line diffs), on shared branch `main`. To avoid cargo build-lock contention
+with the other agent's `cargo test --workspace`, my builds now use a **separate
+`CARGO_TARGET_DIR=/nas4/data/workspace-infosec/claude-axeyum-cas-target`**
+(verified: 5.4s cold, contention-free thereafter; 20 tests pass there).
+
+---
+
+## 2026-07-20 — Entry 5: certified integration flagship (polynomial slice)
+
+Goal refined to: follow the `10-cas/` docs, always reasoning backwards from
+**axeyum = (Lean/Z3/cvc5 decide+prove) + (Mathematica/SymPy compute)**.
+
+### The flagship, in its first fully-decidable slice
+Brought the C6 flagship forward in its polynomial slice — the clearest embodiment
+of the thesis: **`integrate` computes an antiderivative and returns it bundled
+with a proof of its own correctness** (`CertifiedIntegral { antiderivative,
+certificate }`). The certificate is produced by *differentiating the answer and
+zero-testing it against the integrand* — reusing C0's `differentiate` + `equal`.
+So the compute step is SymPy-shaped and the certify step is Lean/Z3-shaped, in one
+call. Justified as decidable-first: polynomial integration is fully decidable and
+always certifiable.
+
+`integrate_in` on `MultiPoly` (∫ term-by-term, exact rational coeffs, drops `+C`),
+`CertifiedIntegral` + `is_certified()`, public `integrate(expr,var)`.
+
+**Verified** (isolated target dir, no contention): `cargo test -p axeyum-cas` →
+**25 passed / 0 failed** (+ doctests), clippy `--all-targets` clean, wasm green.
+Tests: `∫(3x²+2x)=x³+x²` certified; `∫x⁴=(1/5)x⁵` (exact rational); multivariate
+`∫(xy+y²)dx=(1/2)x²y+y²x` (other vars as constants); fundamental-theorem roundtrip
+`d/dx ∫f dx = f` over a batch; **honest decline** (`None`) on non-polynomial input
+(rational integration is the next slice). A doctest shows the proof-carrying loop.
+
+### In flight (parallel research)
+Launched a research sub-agent (sonnet) on **univariate rational-function
+integration** (Hermite reduction rational part + Rothstein–Trager log part) mapped
+onto the in-tree `poly` primitives, focused on the certification angle (Hermite
+part → pure rational zero-test; log part → the minimal zero-test extension). Feeds
+the next slice: extend `integrate` to `Div` inputs, still certified by
+differentiate-and-check.
+
+### Display + runnable demo (shipped, +1 test → 26)
+Added a precedence-aware `Display` for `CasExpr` (SymPy-like infix output) and a
+runnable example `examples/certified_calculus.rs`
+(`cargo run -p axeyum-cas --example certified_calculus`). Output:
+```
+d/dx (x^2 + c) = 2*x   [= 2*x, CERTIFIED]
+∫ (3*x^2 + 2*x) dx = x^2 + x^3   [CERTIFIED by differentiate-and-check]
+expand((x + 1)^3) = 1 + 3*x + 3*x^2 + x^3
+cancel((x^2 - 1)/(x - 1)) = 1 + x
+```
+26 tests + 2 doctests, clippy `--all-targets` clean (incl. example), wasm green.
+(Monomial print order is ascending-degree from the `BTreeMap`; a descending/
+SymPy-style order is a cosmetic follow-up.)
+
+### Also shipped this session: `substitute` (G0 foundational)
+Added `CasExpr::substitute(var, replacement)` (composition / change-of-variables /
+solution-checking) — the substitution API the gap analysis flagged missing in G0.
+Structural, denotation-preserving. Tests: `x²[x:=(y+1)] = y²+2y+1`; root check
+`(x²−2x+1)[x:=1] = 0`. **28 tests + 2 doctests, clippy `--all-targets` clean,
+wasm green**, canonical descending-degree output, runnable demo.
+
+### Next
+- Implement rational-function integration (Hermite reduction first — the rational
+  part is certified by a rational-function zero-test I already have); **awaiting
+  the research sub-agent's algorithm design note** (it maps Hermite/Rothstein–
+  Trager onto the in-tree `poly` primitives and flags the new primitives needed:
+  extended-Euclid cofactors, full squarefree factorization). Holding on this
+  rather than rushing a subtle algorithm from memory.
+- Then univariate factorization (C2/G5) and multivariate GCD (G4) for breadth.
+
+### Session tally (public API of `axeyum-cas` so far)
+`CasExpr` (+ `Display`, arithmetic ops), `differentiate`, `substitute`,
+`normalize`/`MultiPoly` (canonical form + `to_expr`/`to_univariate`), `equal`
+(decidable zero-test, `ZeroTest` witness), `expand`, `cancel`, `integrate`
+(`CertifiedIntegral`), `prove_derivative`. All certified/oracle-free/WASM-safe.
+
+---
+
+## 2026-07-20 — Entry 6: certified rational-function integration (Horowitz)
+
+Research sub-agent returned a precise, sourced design note (Bronstein Ch. 2 +
+SymPy `ratint`) mapping Hermite/Rothstein–Trager onto the in-tree `poly`
+primitives. Distilled it into [rational-integration.md](rational-integration.md).
+
+### Implemented — Slice 1 (rational part), verified
+New module `crates/axeyum-cas/src/ratint.rs` (operates only on `poly.rs` public
+functions — **no `axeyum-ir` edits**, parallelism preserved):
+- `divrem` (quotient+remainder), `solve_linear` (exact-rational Gauss–Jordan —
+  also the seed of C3 linear algebra), `horowitz` (Horowitz–Ostrogradsky rational
+  part via one linear system).
+`integrate` now handles the **univariate rational fragment**: proper/improper
+split → gcd-reduce → Horowitz → certify. **Deviation from the research note:**
+used Horowitz (like SymPy) not Hermite — simpler primitives, no
+squarefree-factorization list / extended-Euclid; correct on the same class.
+
+**Certification = correctness backstop.** Every antiderivative is differentiated
+and zero-tested against the integrand; `integrate` returns `Some` only when the
+certificate confirms. So a buggy finder or a log-part case declines to `None`,
+never a wrong answer.
+
+**Verified:** `cargo test` → **31 passed / 0 failed** (+ 2 doctests), clippy
+`--all-targets` clean, wasm green. `∫1/x² = −1/x` certified; improper
+`∫(x²+1)/x² = x − 1/x`; self-certifying roundtrip over `{1/x, 1/(x²+1),
+x/(x+1)}` (differentiate R → integrate back → certificate confirms); honest
+decline on `∫1/x`, `∫2x/(x²+1)` (need logs). Demo updated:
+`∫ (1/x^2) dx = (-1)/x [CERTIFIED]`.
+
+### Next: the logarithmic part (Slice 2a)
+Rational-root Rothstein–Trager: resultant `Res_x(P̄−tQ̄',Q̄)` via the **existing**
+`sylvester_*` (no new resultant code), `CasExpr::Ln` + `d/dx ln v = v'/v`,
+rational root finder; certifies through the existing zero-test once `Ln`
+differentiates away. Then 2b (irrational roots, needs `RealAlgebraic::inv`),
+2c (`atan` folding). Details in [rational-integration.md](rational-integration.md).
+
+---
+
+## 2026-07-20 — Entry 7: `∫1/x = ln(x)` certified (log part, Slice 2a-i)
+
+Added the transcendental head **`CasExpr::Ln`** (arms in differentiate — `d/dx ln
+v = v'/v` — eval → None, substitute, `Display` → `ln(v)`, normalize → None) and
+the **linear-denominator logarithmic integration** case: after Horowitz, a log
+part `C/D₁` with `D₁ = a·x + b` linear → `(C/a)·ln(a·x+b)`. Higher-degree log
+denominators decline (Rothstein–Trager, Slice 2a-ii).
+
+**The key soundness idea** (this is what makes it certify): the certificate must
+zero-test the derivative of a *log-containing* antiderivative, but the product
+rule leaves a spurious `c'·ln(v)` term. Fix: `normalize_rational` now treats each
+`ln(v)` as an **opaque atom** — a fresh variable keyed by `v`'s canonical
+rendering. This is *sound*: a zero normal form proves equality (atoms are
+independent), while genuine log identities conservatively fail to reduce (→ not
+certified, never a false certification). So `d/dx(1·ln x) = 0·ln x + 1/x` reduces
+to `1/x` (the `0·ln x` drops), matching the integrand → certified.
+
+**Verified:** `cargo test` → **32 passed / 0 failed** (+ 2 doctests), clippy
+`--all-targets` clean, wasm green. `∫1/x = ln(x)` and `∫1/(2x+1) = ½ln(2x+1)`
+certified (differentiate back → integrand); `∫2x/(x²+1)` correctly declines
+(deg-2 log, needs Slice 2a-ii). Demo: `∫ (1/x) dx = ln(x)  [CERTIFIED]`.
+
+### Next
+- **Slice 2a-ii:** Rothstein–Trager for deg ≥ 2 squarefree log denominators with
+  rational resultant roots (∫1/(x²−1), ∫2x/(x²+1)=ln(x²+1)). Resultant via the
+  existing `sylvester_matrix`/`sylvester_determinant` (convention confirmed:
+  coefficients indexed by eliminated-var exponent, entries polys in `t`); add a
+  rational root finder over `R(t)`. Then 2b/2c.
+- Breadth: univariate factorization (C2/G5), multivariate GCD (G4).
+
+---
+
+## 2026-07-20 — Entry 8: Rothstein–Trager log part (Slice 2a-ii); first commit
+
+### General rational-function integration, certified
+Implemented the degree-≥2 logarithmic part in `ratint.rs`:
+`rothstein_trager_resultant` (`R(t)=Res_x(P̄−t·Q̄',Q̄)` via the **existing**
+`sylvester_matrix`/`sylvester_determinant` — `t` the surviving variable, **no new
+resultant code**), `rational_roots` (rational-root theorem + bounded divisor
+search), and `log_terms` (per rational root `cᵢ`: `vᵢ = gcd(P̄−cᵢQ̄', Q̄)` monic;
+the identically-zero-shift case gives `vᵢ = Q̄`). `integrate_log_part` now assembles
+`Σ cᵢ·ln(vᵢ)`.
+
+**Verified:** `cargo test` → **33 passed / 0 failed** (+ 2 doctests), clippy
+`--all-targets` clean, wasm green. `∫2x/(x²+1)=ln(x²+1)` (root t=1, v=x²+1);
+`∫1/(x²−1)=½ln(x−1)−½ln(x+1)` (roots ±½); `∫1/(x²+1)` **declines** (arctan; roots
+±i/2 are complex → honest None, `atan` folding is Slice 2c). All certified by
+differentiate-and-check. This covers a large part of SymPy's `ratint`: polynomial +
+rational (Horowitz) + logarithmic (Rothstein–Trager, rational roots), every answer
+proof-carrying.
+
+### Committing
+Per instruction, committing regularly. Isolated to my files (new crate + new docs,
+2 one-line shared diffs); shared branch `main`, so I stage only my paths (never the
+other agent's in-progress work) and verified the `Cargo.toml`/README diffs are
+exactly my additions.
+
+### Next
+- **Slice 2c:** complex-conjugate-root folding → real `atan` closed forms
+  (`∫1/(x²+1)=arctan(x)`), via `CasExpr::Atan` + `d/dx atan u = u'/(1+u²)`. Then
+  **2b** (irrational real roots, needs `RealAlgebraic::inv`).
+- Breadth: univariate factorization (C2/G5), multivariate GCD (G4).
