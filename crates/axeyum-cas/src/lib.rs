@@ -1467,6 +1467,45 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     best
 }
 
+/// The complex conjugate of an expression: replace the imaginary unit `I` with
+/// `−I`. Purely structural.
+#[must_use]
+pub fn conjugate(expr: &CasExpr) -> CasExpr {
+    expr.substitute("I", &CasExpr::Neg(Box::new(CasExpr::imaginary_unit())))
+}
+
+/// The real part of a polynomial expression in the imaginary unit `I` (and other
+/// variables): the terms free of `I` after reducing `I² = −1`. `None` if `expr`
+/// is not in the polynomial fragment or on overflow.
+#[must_use]
+pub fn real_part(expr: &CasExpr) -> Option<CasExpr> {
+    let folded = normalize(expr)?.fold_imaginary()?;
+    let mut re = MultiPoly::zero();
+    for (mono, coeff) in &folded.terms {
+        if !mono.powers.contains_key("I") {
+            re.terms.insert(mono.clone(), *coeff);
+        }
+    }
+    Some(re.to_expr())
+}
+
+/// The imaginary part of a polynomial expression in the imaginary unit `I`: the
+/// coefficient of `I` after reducing `I² = −1`. `None` if `expr` is not in the
+/// polynomial fragment or on overflow.
+#[must_use]
+pub fn imaginary_part(expr: &CasExpr) -> Option<CasExpr> {
+    let folded = normalize(expr)?.fold_imaginary()?;
+    let mut im = MultiPoly::zero();
+    for (mono, coeff) in &folded.terms {
+        if mono.powers.get("I") == Some(&1) {
+            let mut powers = mono.powers.clone();
+            powers.remove("I");
+            im.terms.insert(Monomial { powers }, *coeff);
+        }
+    }
+    Some(im.to_expr())
+}
+
 /// A point at which to take a [`limit`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LimitPoint {
@@ -2584,6 +2623,18 @@ mod tests {
         assert_equal(&factor(&h, "x").expect("factorable"), &(x() - CasExpr::int(1)).pow(2));
         // 4th derivative of x⁴ is 24
         assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
+    }
+
+    #[test]
+    fn complex_conjugate_real_imaginary() {
+        let im = CasExpr::imaginary_unit;
+        let z = CasExpr::int(3) + CasExpr::int(4) * im(); // 3 + 4I
+        assert_equal(&conjugate(&z), &(CasExpr::int(3) - CasExpr::int(4) * im()));
+        assert_equal(&real_part(&z).unwrap(), &CasExpr::int(3));
+        assert_equal(&imaginary_part(&z).unwrap(), &CasExpr::int(4));
+        // |z|² = z·conj(z) = 25 (real)
+        assert_equal(&real_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::int(25));
+        assert_equal(&imaginary_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::zero());
     }
 
     #[test]
