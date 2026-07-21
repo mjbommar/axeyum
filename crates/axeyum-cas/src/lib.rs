@@ -238,6 +238,13 @@ impl CasExpr {
         CasExpr::Unary(UnaryFunc::Sqrt, Box::new(self))
     }
 
+    /// The imaginary unit `I`. It is a reserved symbol: the zero-test ([`equal`])
+    /// knows `I² = −1`, so complex-number identities are decidable and certified.
+    #[must_use]
+    pub fn imaginary_unit() -> Self {
+        CasExpr::var("I")
+    }
+
     /// The symbolic derivative of this expression with respect to `var`.
     ///
     /// Applies the mechanical rules — constant, variable, sum, product, and power
@@ -583,6 +590,45 @@ impl MultiPoly {
     #[must_use]
     pub fn is_zero(&self) -> bool {
         self.terms.is_empty()
+    }
+
+    /// Reduce powers of the reserved imaginary-unit variable `I` using `I² = −1`,
+    /// giving an equivalent polynomial with `I`-degree ≤ 1. Applied by the
+    /// zero-test so complex identities decide correctly. `None` on overflow.
+    fn fold_imaginary(&self) -> Option<MultiPoly> {
+        const IMAG: &str = "I";
+        // Fast path: no imaginary unit present.
+        if !self.terms.keys().any(|m| m.powers.contains_key(IMAG)) {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let exp = mono.powers.get(IMAG).copied().unwrap_or(0);
+            // I^exp = (−1)^(exp/2) · I^(exp mod 2).
+            let sign = if (exp / 2) % 2 == 0 {
+                Rational::integer(1)
+            } else {
+                Rational::integer(-1)
+            };
+            let new_coeff = coeff.checked_mul(sign)?;
+            let mut powers = mono.powers.clone();
+            if exp % 2 == 0 {
+                powers.remove(IMAG);
+            } else {
+                powers.insert(IMAG.to_owned(), 1);
+            }
+            let mono = Monomial { powers };
+            let combined = match out.terms.get(&mono).copied() {
+                Some(existing) => existing.checked_add(new_coeff)?,
+                None => new_coeff,
+            };
+            if combined.is_zero() {
+                out.terms.remove(&mono);
+            } else {
+                out.terms.insert(mono, combined);
+            }
+        }
+        Some(out)
     }
 
     /// Exact polynomial addition, or `None` on `i128` coefficient overflow.
@@ -1045,7 +1091,7 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let Some(neg_cb) = cb.neg() else {
         return ZeroTest::Unknown;
     };
-    match ad.add(&neg_cb) {
+    match ad.add(&neg_cb).and_then(|w| w.fold_imaginary()) {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
             witness,
@@ -2538,6 +2584,24 @@ mod tests {
         assert_equal(&factor(&h, "x").expect("factorable"), &(x() - CasExpr::int(1)).pow(2));
         // 4th derivative of x⁴ is 24
         assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
+    }
+
+    #[test]
+    fn complex_arithmetic_is_certified() {
+        let im = CasExpr::imaginary_unit;
+        // I² = −1
+        assert_equal(&im().pow(2), &CasExpr::int(-1));
+        // (1 + I)(1 − I) = 2
+        assert_equal(
+            &((CasExpr::int(1) + im()) * (CasExpr::int(1) - im())),
+            &CasExpr::int(2),
+        );
+        // (1 + I)² = 2I
+        assert_equal(&(CasExpr::int(1) + im()).pow(2), &(CasExpr::int(2) * im()));
+        // complex roots of x²+1 verify: I²+1 = 0
+        for r in solve(&(v("x").pow(2) + CasExpr::int(1)), "x").unwrap() {
+            assert_equal(&(v("x").pow(2) + CasExpr::int(1)).substitute("x", &r), &CasExpr::zero());
+        }
     }
 
     #[test]
