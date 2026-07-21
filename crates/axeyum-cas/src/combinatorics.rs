@@ -415,6 +415,33 @@ pub fn narayana(n: u32, k: u32) -> Option<i128> {
     Some(product / n_i)
 }
 
+/// The **(unsigned) Lah number** `L(n, k) = C(n−1, k−1)·n!/k!` — the number of ways
+/// to partition `{1,…,n}` into `k` non-empty **ordered** lists (the coefficients
+/// converting rising to falling factorials). `L(n,1) = n!`, `L(n,n) = 1`;
+/// `L(0,0) = 1`; `0` outside `1 ≤ k ≤ n`. `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::lah;
+/// assert_eq!(lah(4, 2), Some(36)); // row 4: 24, 36, 12, 1
+/// assert_eq!(lah(4, 4), Some(1));
+/// ```
+#[must_use]
+pub fn lah(n: u32, k: u32) -> Option<i128> {
+    if n == 0 {
+        return Some(i128::from(k == 0));
+    }
+    if k < 1 || k > n {
+        return Some(0);
+    }
+    // L(n,k) = C(n−1,k−1)·n!/k! (the division n!/k! is exact since k ≤ n).
+    let choose = binomial(i128::from(n) - 1, i128::from(k) - 1)?;
+    let mut ratio: i128 = 1; // n!/k! = (k+1)·(k+2)·…·n
+    for factor in i128::from(k) + 1..=i128::from(n) {
+        ratio = ratio.checked_mul(factor)?;
+    }
+    choose.checked_mul(ratio)
+}
+
 /// The **Eulerian number** `A(n, k)` — the number of permutations of `{1,…,n}`
 /// with exactly `k` ascents — via `A(n,k) = (k+1)·A(n−1,k) + (n−k)·A(n−1,k−1)`,
 /// with `A(0,0) = 1`. Each row sums to `n!`, and the row is symmetric
@@ -600,6 +627,26 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn lah_triangle() {
+        assert_eq!(
+            (1..=4).map(|k| lah(4, k).unwrap()).collect::<Vec<_>>(),
+            vec![24, 36, 12, 1]
+        );
+        assert_eq!(
+            (1..=5).map(|k| lah(5, k).unwrap()).collect::<Vec<_>>(),
+            vec![120, 240, 120, 20, 1]
+        );
+        // Edges: L(n,1)=n!, L(n,n)=1; out-of-range is 0; L(0,0)=1.
+        for n in 1..=8u32 {
+            assert_eq!(lah(n, 1), crate::ntheory::factorial(i128::from(n)));
+            assert_eq!(lah(n, n), Some(1));
+            assert_eq!(lah(n, 0), Some(0));
+            assert_eq!(lah(n, n + 1), Some(0));
+        }
+        assert_eq!(lah(0, 0), Some(1));
+    }
 
     #[test]
     fn narayana_triangle() {
