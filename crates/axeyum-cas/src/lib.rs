@@ -886,8 +886,28 @@ impl RatFunc {
                     den: MultiPoly::from_univariate(var, &den),
                 })
             }
-            _ => Some(self.clone()),
+            _ => {
+                // Multivariate: reduce via the multivariate GCD (mvpoly). If any
+                // step declines, fall back to the unreduced (still value-equal)
+                // fraction rather than failing.
+                self.reduced_multivariate().or_else(|| Some(self.clone()))
+            }
         }
+    }
+
+    /// Reduce a multivariate rational function to lowest terms via the
+    /// multivariate GCD ([`mvpoly::MvPoly`]). `None` if any conversion or exact
+    /// division declines (the caller then keeps the unreduced form).
+    fn reduced_multivariate(&self) -> Option<RatFunc> {
+        let num_mv = mvpoly::MvPoly::from_cas_expr(&self.num.to_expr())?;
+        let den_mv = mvpoly::MvPoly::from_cas_expr(&self.den.to_expr())?;
+        let gcd = num_mv.gcd(&den_mv)?;
+        let num_reduced = num_mv.exact_div(&gcd)?;
+        let den_reduced = den_mv.exact_div(&gcd)?;
+        Some(RatFunc {
+            num: normalize(&num_reduced.to_cas_expr())?,
+            den: normalize(&den_reduced.to_cas_expr())?,
+        })
     }
 }
 
@@ -2101,6 +2121,18 @@ mod tests {
         let f = (v("x").pow(2) - CasExpr::int(1)) / (v("x") + CasExpr::int(2));
         let e = expand(&f).expect("rational");
         assert_equal(&e, &f);
+    }
+
+    #[test]
+    fn cancel_multivariate_via_mvpoly() {
+        // (x²−y²)/(x−y) = x+y — needs the multivariate GCD.
+        let f = (v("x").pow(2) - v("y").pow(2)) / (v("x") - v("y"));
+        let c = cancel(&f).expect("rational");
+        assert_equal(&c, &(v("x") + v("y")));
+        assert_equal(&c, &f);
+        // (x²y − y³)/(x − y) = x·y + y²
+        let g = (v("x").pow(2) * v("y") - v("y").pow(3)) / (v("x") - v("y"));
+        assert_equal(&cancel(&g).expect("rational"), &(v("x") * v("y") + v("y").pow(2)));
     }
 
     #[test]
