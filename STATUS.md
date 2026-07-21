@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — Post-N1 residual ranking authorizes I2, not broader cleanup.**
+  The next behavior-neutral reviewer cut is the contiguous 1,449-line ADR-0108
+  quantified-counterexample-cover family: 28 cohesive items, only two outward
+  seams, and a 247-line integration suite. Move it privately under
+  `int_reconstruct/counterexample_cover.rs` while preserving paths, visibility,
+  ordering, caps, verdicts, and generated Lean bytes. The 4,531-line ABV
+  replay/repair block stays deferred because its ROW ownership and 16 private
+  test imports make the seam wide; algebraic CAD stays separate. Raw size does
+  not authorize work on other large files. Next: execute I2 as its own
+  add/commit/push checkpoint.
+
 - **2026-07-20 — N1c closes CAD parameterization at the rational policy
   boundary.** One `visit_rational_cells` recursion now takes explicit
   `OpenOnly` or `OpenAndRationalSections`; historical strict/non-strict wrappers
@@ -5682,6 +5693,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — Re-ranked artifact residuals after N1.** Authorized only the
+  private I2 extraction of the 1,449-line ADR-0108 counterexample-cover proof
+  family. Deferred the ABV replay/repair residual, stopped CAD consolidation at
+  the algebraic boundary, and rejected raw file size as an automatic queue.
 
 - **2026-07-20 — N1c closes rational CAD visitor parameterization.** Shared the
   identical rational N-variable recursion behind the explicit

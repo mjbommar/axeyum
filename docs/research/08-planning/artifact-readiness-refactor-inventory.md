@@ -109,6 +109,37 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    across N1. The whole file is 7,503 lines because the new semantic controls
    add test code, still 41 lines below baseline. N1 is closed; algebraic
    traversal remains separate.
+6. **I2 -- extract quantified counterexample-cover reconstruction (next).** The
+   ADR-0108 family is one contiguous 1,449-line / 57,436-byte block with 28
+   top-level items. Twenty-six are private implementation details; the only
+   outward seams are the crate-visible router predicate and the existing public
+   reconstruction entry point. Its source-bound checking, Boolean case tree,
+   integer normalization, and compact Lean rendering form one proof family, and
+   the existing 247-line integration suite exercises certificate checking,
+   reconstruction, mutation rejection, evidence routing, and real-corpus use.
+   Move the block to a private `int_reconstruct/counterexample_cover.rs` child,
+   re-export the two historical paths, and import the parent integer-kernel
+   context/helpers explicitly. Do not change proof search, source flattening,
+   witness/case order, caps, generated Lean bytes, or public visibility. This
+   should reduce the 7,683-line parent to about 6,239 lines without creating a
+   new API.
+
+## Post-N1 residual ranking
+
+1. Execute I2 as the next behavior-neutral reviewer-facing slice. Its cohesive
+   proof-family boundary gives a larger visible reduction than I1 with a
+   narrower outward surface.
+2. Keep the 4,531-line ABV replay/repair residual in place. Sixteen private
+   items are directly test-reached and the block shares ROW/extensional replay
+   ownership; moving it now would widen visibility or combine a test
+   reorganization with production ownership changes.
+3. Stop CAD cleanup at N1. Rational strict/non-strict mechanics are shared;
+   algebraic lifting has a different value domain and needs new semantic
+   evidence before any common traversal is authorized.
+4. Do not turn the repository's next-largest-file list into an automatic
+   refactor queue. After I2, remeasure reviewer navigation and dependency seams
+   before adding `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` to this
+   inventory; raw line count alone is not the acceptance criterion.
 
 ## Standing gate
 

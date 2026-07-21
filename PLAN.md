@@ -543,6 +543,19 @@ session state.
 >    baseline. Re-rank the remaining artifact residuals before authorizing a new
 >    structural slice; do not genericize the algebraic value-domain traversal
 >    without new evidence.
+>    That post-N1 ranking is now complete. The ABV replay/repair residual remains
+>    deferred because 16 private items are test-reached and ROW/extensional
+>    replay ownership is shared; further CAD consolidation remains barred at the
+>    rational/algebraic boundary. I2 is the next authorized slice: move the
+>    contiguous 1,449-line ADR-0108 quantified-counterexample-cover proof family
+>    into private `int_reconstruct/counterexample_cover.rs`. Its 28 top-level
+>    items have only two outward seams (the crate-visible router and historical
+>    public reconstructor), and the existing 247-line integration suite owns the
+>    certificate, mutation, evidence-routing, and real-corpus behavior. Preserve
+>    exact public paths, visibility, source/case/witness order, caps, verdicts,
+>    and generated Lean bytes; import parent kernel helpers explicitly. Do not
+>    promote `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` merely because
+>    they are large—remeasure reviewer navigation and dependency seams after I2.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
