@@ -685,6 +685,47 @@ impl MultiPoly {
         Some(out)
     }
 
+    /// Reduce `sqrt(c)² → c` for every square-root atom whose radicand is a
+    /// non-negative rational constant, so the zero-test knows exact radical
+    /// arithmetic (`√2·√2 = 2`, `(√8/2)² = 2`). Sound: for `c ≥ 0`, `sqrt(c)` is a
+    /// real number whose square is exactly `c`. Atoms whose radicand is not a
+    /// parseable non-negative rational (e.g. `sqrt(x)`, `sqrt(−3)`) are left
+    /// untouched — conservative, never a false reduction. `None` on overflow.
+    fn fold_radical(&self) -> Option<MultiPoly> {
+        const SQRT: &str = "\0sqrt:";
+        let has_sqrt_sq = self.terms.keys().any(|m| {
+            m.powers
+                .iter()
+                .any(|(var, &e)| e >= 2 && var.starts_with(SQRT))
+        });
+        if !has_sqrt_sq {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut term = MultiPoly::constant(*coeff);
+            for (var, &exp) in &mono.powers {
+                let radicand = var
+                    .strip_prefix(SQRT)
+                    .and_then(parse_rational_render)
+                    .filter(|value| value.numerator() >= 0);
+                let factor = if let Some(radicand) = radicand {
+                    // sqrt(c)^exp = c^(exp/2) · sqrt(c)^(exp mod 2).
+                    let mut power = Rational::integer(1);
+                    for _ in 0..(exp / 2) {
+                        power = power.checked_mul(radicand)?;
+                    }
+                    MultiPoly::constant(power).mul(&MultiPoly::single_var_pow(var, exp % 2))?
+                } else {
+                    MultiPoly::single_var_pow(var, exp)
+                };
+                term = term.mul(&factor)?;
+            }
+            out = out.add(&term)?;
+        }
+        Some(out)
+    }
+
     /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
     /// `exp == 0`).
     fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
@@ -1089,6 +1130,17 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
     format!("\0{head}:{}", arg.render(0))
 }
 
+/// Parse a rational from the canonical rendering of a [`CasExpr::Const`] — an
+/// integer `"n"` or a fraction `"n/d"` — or `None` if `text` is not such a literal.
+/// Used to recover the radicand of a `sqrt` atom for [`MultiPoly::fold_radical`].
+fn parse_rational_render(text: &str) -> Option<Rational> {
+    if let Some((numerator, denominator)) = text.split_once('/') {
+        Rational::checked_new(numerator.parse().ok()?, denominator.parse().ok()?)
+    } else {
+        Some(Rational::integer(text.parse().ok()?))
+    }
+}
+
 /// The trust tag attached to a CAS answer
 /// ([decidability-map.md](../../../docs/research/10-cas/decidability-map.md)).
 ///
@@ -1160,6 +1212,7 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
         .add(&neg_cb)
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
+        .and_then(|w| w.fold_radical())
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
@@ -1296,53 +1349,97 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
             poly::rat_exact_div(&remaining, &[root.checked_neg()?, Rational::integer(1)])?;
         push_rational(root, &mut roots, &mut seen);
     }
-    // Leftover real quadratic: (−b ± √(b²−4ac)) / 2a.
-    if poly::rat_degree(&remaining) == Some(2) {
-        let (a, b, c) = (remaining[2], remaining[1], remaining[0]);
-        let two_a = Rational::integer(2).checked_mul(a)?;
-        let disc = b
-            .checked_mul(b)?
-            .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(c)?)?;
-        let neg_b_over = b.checked_neg()?.checked_div(two_a)?;
-        if disc.numerator() >= 0 {
-            if let Some(s) = rational_sqrt(disc) {
-                for sign in [Rational::integer(1), Rational::integer(-1)] {
-                    let r = neg_b_over.checked_add(sign.checked_mul(s)?.checked_div(two_a)?)?;
-                    push_rational(r, &mut roots, &mut seen);
-                }
-            } else {
-                let sqrt_disc = CasExpr::Const(disc).sqrt();
-                for sign in [CasExpr::int(1), CasExpr::int(-1)] {
-                    roots.push(
-                        CasExpr::Const(neg_b_over)
-                            + sign * (sqrt_disc.clone() / CasExpr::Const(two_a)),
-                    );
-                }
-            }
-        } else {
-            // Complex conjugate roots: (−b/2a) ± (√(−disc)/2a)·I.
-            let neg_disc = Rational::zero().checked_sub(disc)?;
-            let imag_unit = CasExpr::var("I");
-            for sign in [1_i128, -1] {
-                let imaginary = if let Some(s) = rational_sqrt(neg_disc) {
-                    scaled_term(
-                        Rational::integer(sign).checked_mul(s)?.checked_div(two_a)?,
-                        imag_unit.clone(),
-                    )
-                } else {
-                    CasExpr::int(sign)
-                        * (CasExpr::Const(neg_disc).sqrt() / CasExpr::Const(two_a))
-                        * imag_unit.clone()
-                };
-                roots.push(if neg_b_over.is_zero() {
-                    imaginary
-                } else {
-                    CasExpr::Const(neg_b_over) + imaginary
-                });
+    // Leftover of degree ≥ 2 (no rational roots left). Degree 2 is solved directly;
+    // higher degree is factored over ℚ and each quadratic factor solved — so
+    // products of irreducible quadratics (e.g. `(x²+1)(x²+2)`) are fully solved.
+    let push_root = |root: CasExpr, roots: &mut Vec<CasExpr>| {
+        if !roots.contains(&root) {
+            roots.push(root);
+        }
+    };
+    match poly::rat_degree(&remaining) {
+        Some(2) => {
+            for root in quadratic_roots(remaining[2], remaining[1], remaining[0])? {
+                push_root(root, &mut roots);
             }
         }
+        Some(degree) if degree >= 3 => {
+            for (factor, _multiplicity) in factor_univariate_over_q(&remaining)? {
+                match poly::rat_degree(&factor) {
+                    Some(1) => {
+                        let root = factor[0].checked_neg()?.checked_div(factor[1])?;
+                        push_root(CasExpr::Const(root), &mut roots);
+                    }
+                    Some(2) => {
+                        for root in quadratic_roots(factor[2], factor[1], factor[0])? {
+                            push_root(root, &mut roots);
+                        }
+                    }
+                    // Irreducible cubic or higher: no general radical solution here.
+                    _ => {}
+                }
+            }
+        }
+        _ => {}
     }
     Some(roots)
+}
+
+/// The (up to two) roots of `a·x² + b·x + c` as [`CasExpr`] values: rational when
+/// the discriminant is a perfect square, a symbolic real `√` when the discriminant
+/// is positive non-square, and a complex-conjugate pair (via `I`) when it is
+/// negative. A zero discriminant yields the single (double) root. `None` if `a` is
+/// zero or on overflow.
+fn quadratic_roots(a: Rational, b: Rational, c: Rational) -> Option<Vec<CasExpr>> {
+    if a.is_zero() {
+        return None;
+    }
+    let two_a = Rational::integer(2).checked_mul(a)?;
+    let disc = b
+        .checked_mul(b)?
+        .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(c)?)?;
+    let neg_b_over = b.checked_neg()?.checked_div(two_a)?;
+    let mut out = Vec::new();
+    if disc.is_zero() {
+        out.push(CasExpr::Const(neg_b_over)); // repeated root
+    } else if disc.numerator() >= 0 {
+        if let Some(root) = rational_sqrt(disc) {
+            for sign in [Rational::integer(1), Rational::integer(-1)] {
+                out.push(CasExpr::Const(
+                    neg_b_over.checked_add(sign.checked_mul(root)?.checked_div(two_a)?)?,
+                ));
+            }
+        } else {
+            let sqrt_disc = CasExpr::Const(disc).sqrt();
+            for sign in [CasExpr::int(1), CasExpr::int(-1)] {
+                out.push(
+                    CasExpr::Const(neg_b_over) + sign * (sqrt_disc.clone() / CasExpr::Const(two_a)),
+                );
+            }
+        }
+    } else {
+        // Complex conjugate roots: (−b/2a) ± (√(−disc)/2a)·I.
+        let neg_disc = Rational::zero().checked_sub(disc)?;
+        let imag_unit = CasExpr::var("I");
+        for sign in [1_i128, -1] {
+            let imaginary = if let Some(root) = rational_sqrt(neg_disc) {
+                scaled_term(
+                    Rational::integer(sign).checked_mul(root)?.checked_div(two_a)?,
+                    imag_unit.clone(),
+                )
+            } else {
+                CasExpr::int(sign)
+                    * (CasExpr::Const(neg_disc).sqrt() / CasExpr::Const(two_a))
+                    * imag_unit.clone()
+            };
+            out.push(if neg_b_over.is_zero() {
+                imaginary
+            } else {
+                CasExpr::Const(neg_b_over) + imaginary
+            });
+        }
+    }
+    Some(out)
 }
 
 /// Solve a **constant-coefficient linear homogeneous ODE**
@@ -3547,6 +3644,26 @@ mod tests {
     }
 
     #[test]
+    fn radical_arithmetic_certifies() {
+        // √2·√2 = 2, (√8)² = 8, and (1+√2)² = 3 + 2√2 — all decided by the
+        // sqrt(c)²→c fold in the zero-test.
+        let sqrt2 = CasExpr::int(2).sqrt();
+        assert_equal(&(sqrt2.clone() * sqrt2.clone()), &CasExpr::int(2));
+        assert_equal(&CasExpr::int(8).sqrt().pow(2), &CasExpr::int(8));
+        let one_plus_sqrt2 = CasExpr::int(1) + sqrt2.clone();
+        assert_equal(
+            &one_plus_sqrt2.pow(2),
+            &(CasExpr::int(3) + CasExpr::int(2) * sqrt2),
+        );
+        // Difference of squares with surds: (√3−1)(√3+1) = 2.
+        let sqrt3 = CasExpr::int(3).sqrt();
+        assert_equal(
+            &((sqrt3.clone() - CasExpr::int(1)) * (sqrt3 + CasExpr::int(1))),
+            &CasExpr::int(2),
+        );
+    }
+
+    #[test]
     fn resultant_and_discriminant() {
         let x = || v("x");
         // Common root ⇒ resultant 0; coprime ⇒ nonzero.
@@ -3703,6 +3820,35 @@ mod tests {
         assert_eq!(roots2.len(), 2);
         for r in &roots2 {
             assert_equal(&g.substitute("x", r), &CasExpr::zero());
+        }
+    }
+
+    #[test]
+    fn solve_quartic_via_factorization() {
+        let x = || v("x");
+        // x⁴ + 5x² + 4 = (x²+1)(x²+4): no rational roots, four complex roots ±I, ±2I.
+        // Factorization over ℚ splits it into quadratics that solve() then solves; the
+        // rational-imaginary roots certify via the I²=−1 fold in the zero-test.
+        let quartic = x().pow(4) + CasExpr::int(5) * x().pow(2) + CasExpr::int(4);
+        let roots = solve(&quartic, "x").expect("solvable via factorization");
+        assert_eq!(roots.len(), 4);
+        for r in &roots {
+            assert_equal(&quartic.substitute("x", r), &CasExpr::zero());
+        }
+        // (x²−2)(x²−3) = x⁴ − 5x² + 6: four real irrational roots ±√2, ±√3. Each now
+        // certifies on substitution via the sqrt(c)²→c fold in the zero-test.
+        let real = x().pow(4) - CasExpr::int(5) * x().pow(2) + CasExpr::int(6);
+        let real_roots = solve(&real, "x").expect("solvable");
+        assert_eq!(real_roots.len(), 4);
+        for r in &real_roots {
+            assert_equal(&real.substitute("x", r), &CasExpr::zero());
+        }
+        // Mixed: (x−1)(x²+1) = x³ − x² + x − 1 → rational 1 plus ±I.
+        let mixed = x().pow(3) - x().pow(2) + x() - CasExpr::int(1);
+        let mixed_roots = solve(&mixed, "x").expect("solvable");
+        assert_eq!(mixed_roots.len(), 3);
+        for r in &mixed_roots {
+            assert_equal(&mixed.substitute("x", r), &CasExpr::zero());
         }
     }
 
