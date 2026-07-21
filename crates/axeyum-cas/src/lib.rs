@@ -1949,6 +1949,52 @@ pub fn dsolve_inhomogeneous(
     }
 }
 
+/// Solve a **first-order linear ODE** `y′ + p(x)·y = q(x)` by the integrating-factor
+/// method: with `P = ∫p dx` and `μ = e^P`, the general solution is
+/// `y = e^{−P}·(∫ μ·q dx + C₀)`.
+///
+/// **Certified** by substituting the solution into `y′ + p·y − q` and zero-testing
+/// the residual — which now decides because the exp tower reduces the
+/// `e^{−P}·e^P = 1` cancellation. Returns `None` unless both integrals `∫p` and
+/// `∫μq` are found and certified by [`integrate`] (e.g. constant `p` with polynomial
+/// forcing), or on overflow — an honest decline outside that fragment.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_first_order_linear};
+/// let x = CasExpr::var("x");
+/// // y′ + y = x  ⇒  y = (x − 1) + C₀·e^{−x}.
+/// let solution = dsolve_first_order_linear(&CasExpr::int(1), &x, "x").unwrap();
+/// let _ = solution; // certified inside the call
+/// ```
+#[must_use]
+pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<CasExpr> {
+    // P = ∫ p dx (certified antiderivative).
+    let big_p = integrate(p, var)?;
+    if !big_p.is_certified() {
+        return None;
+    }
+    let antiderivative_p = big_p.antiderivative;
+
+    // Integrating factor μ = exp(P); inner integrand μ·q.
+    let mu = antiderivative_p.clone().exp();
+    let inner = integrate(&(mu * q.clone()), var)?;
+    if !inner.is_certified() {
+        return None;
+    }
+
+    // y = exp(−P)·(R + C₀).
+    let neg_p = CasExpr::Neg(Box::new(antiderivative_p)).exp();
+    let solution = neg_p * (inner.antiderivative + CasExpr::var("C0"));
+
+    // Certify: y′ + p·y − q ≡ 0.
+    let residual =
+        solution.differentiate(var) + p.clone() * solution.clone() - q.clone();
+    match equal(&residual, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(solution),
+        _ => None,
+    }
+}
+
 /// The binomial coefficient `C(n, k)` as an exact rational, or `None` on overflow.
 fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
     if k > n {
@@ -4095,6 +4141,23 @@ mod tests {
         let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
         let hpp = h.differentiate("x").differentiate("x");
         assert_equal(&(hpp + h.clone()), &CasExpr::zero());
+    }
+
+    #[test]
+    fn dsolve_first_order_linear_integrating_factor() {
+        let x = || v("x");
+        // y′ + y = x  ⇒  certified; verify y′ + y = x independently.
+        let sol = dsolve_first_order_linear(&CasExpr::int(1), &x(), "x").expect("solvable");
+        assert_equal(&(sol.differentiate("x") + sol.clone()), &x());
+        // y′ + 2y = x  (constant coefficient, polynomial forcing).
+        let sol2 = dsolve_first_order_linear(&CasExpr::int(2), &x(), "x").expect("solvable");
+        assert_equal(
+            &(sol2.differentiate("x") + CasExpr::int(2) * sol2.clone()),
+            &x(),
+        );
+        // y′ − y = x²  ⇒  residual y′ − y = x².
+        let sol3 = dsolve_first_order_linear(&CasExpr::int(-1), &x().pow(2), "x").expect("solvable");
+        assert_equal(&(sol3.differentiate("x") - sol3.clone()), &x().pow(2));
     }
 
     #[test]
