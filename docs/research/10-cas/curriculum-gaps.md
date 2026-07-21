@@ -104,10 +104,16 @@ polynomials**; **exact trig values** at multiples of π/12 (19); **LU** decompos
 isolation** + numeric approximation (next-wave #8); **polynomial inequality solving**
 (18). Hermite/Smith normal form (9) is delegated (in flight).
 
-**Still open:** first-order ODEs (12) and linear recurrences (11) — both blocked on
-the [exp-tower substrate](exp-tower.md); full `RealAlgebraic`/RootOf wiring (17);
-Zeilberger (needs the exp tower for the geometric fragment); Lazard–Rioboo–Trager
-(needs RootOf, now unblocked by Sturm); assumptions engine (34); special functions.
+**Exp tower shipped** → first-order ODEs (12, `dsolve_first_order_linear`) and
+linear recurrences (11, `solve_recurrence`) now **certify** (see
+[exp-tower.md](exp-tower.md)); Hermite/Smith (9), permutations, inequality solving
+(18), partial fractions with repeated factors all landed too.
+
+**Still open:** full `RealAlgebraic`/RootOf wiring (17) — the residual exp-tower
+scaling (`exp(x/2)`) and Lazard–Rioboo–Trager (15) both need it; Zeilberger (needs
+the exp tower for its geometric fragment — now partly there); assumptions engine
+(34) — would upgrade `expand_log`/`√(x²)=|x|` to certified; special functions;
+Risch; multivariate factorization; Jordan form; Laurent/Puiseux.
 
 **Newly identified substrate blocker.** First-order linear ODEs (12) and linear
 recurrences (11) both need the zero-test to know `e^A·e^B = e^{A+B}`. The
