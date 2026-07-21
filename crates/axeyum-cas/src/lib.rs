@@ -1556,6 +1556,36 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     best
 }
 
+/// The characteristic polynomial `det(A − λ·I)` of a square matrix, as an
+/// (expanded) polynomial in `var` (= λ). `None` if the matrix is not square or on
+/// overflow.
+#[must_use]
+pub fn characteristic_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> {
+    let n = matrix.rows();
+    if n != matrix.cols() {
+        return None;
+    }
+    let lambda = CasExpr::var(var);
+    let mut rows: Vec<Vec<CasExpr>> = Vec::with_capacity(n);
+    for i in 0..n {
+        let mut row = Vec::with_capacity(n);
+        for j in 0..n {
+            let entry = matrix.get(i, j)?.clone();
+            row.push(if i == j { entry - lambda.clone() } else { entry });
+        }
+        rows.push(row);
+    }
+    let determinant = Matrix::from_rows(rows)?.determinant()?;
+    Some(expand(&determinant).unwrap_or(determinant))
+}
+
+/// The eigenvalues of a square matrix: the roots of its characteristic
+/// polynomial (rational + real-quadratic + complex), via [`solve`].
+#[must_use]
+pub fn eigenvalues(matrix: &Matrix, var: &str) -> Option<Vec<CasExpr>> {
+    solve(&characteristic_polynomial(matrix, var)?, var)
+}
+
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
 /// `−I`. Purely structural.
 #[must_use]
@@ -2720,6 +2750,37 @@ mod tests {
         );
         // pole: lim_{x→2} 1/(x−2) has no finite limit
         assert!(limit(&(CasExpr::int(1) / (x() - CasExpr::int(2))), "x", at(2)).is_none());
+    }
+
+    #[test]
+    fn characteristic_polynomial_and_eigenvalues() {
+        // diag(2,3): char poly (2−λ)(3−λ) = λ²−5λ+6, eigenvalues {2,3}
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::zero()],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        let cp = characteristic_polynomial(&m, "L").unwrap();
+        assert_equal(
+            &cp,
+            &(v("L").pow(2) - CasExpr::int(5) * v("L") + CasExpr::int(6)),
+        );
+        let eig = eigenvalues(&m, "L").unwrap();
+        assert_eq!(eig.len(), 2);
+        for e in &eig {
+            assert_equal(&cp.substitute("L", e), &CasExpr::zero());
+        }
+        // rotation [[0,-1],[1,0]]: char poly λ²+1, eigenvalues ±I
+        let rot = Matrix::from_rows(vec![
+            vec![CasExpr::zero(), CasExpr::int(-1)],
+            vec![CasExpr::int(1), CasExpr::zero()],
+        ])
+        .unwrap();
+        assert_equal(
+            &characteristic_polynomial(&rot, "L").unwrap(),
+            &(v("L").pow(2) + CasExpr::int(1)),
+        );
+        assert_eq!(eigenvalues(&rot, "L").unwrap().len(), 2);
     }
 
     #[test]
