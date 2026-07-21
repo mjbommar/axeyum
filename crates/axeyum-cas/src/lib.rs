@@ -1144,10 +1144,41 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // identities conservatively fail to reduce (→ not certified, never a false
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
+        CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
         CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
             func.name(),
             arg,
         )))),
+    }
+}
+
+/// Normalize `exp(arg)` with the canonicalization that makes the exponent law's
+/// **cancelling** cases decidable: `exp(0) = 1`, and `exp(−A) = 1/exp(A)` (keyed on
+/// the sign-canonicalized argument), so a product `exp(−P)·exp(P)` reduces to `1`
+/// through rational-function normalization — the identity that certifies
+/// integrating-factor ODE solutions. Sound (`exp` is a real function, `exp(−A)` is
+/// exactly `1/exp(A)`). Falls back to an opaque atom when `arg` is outside the
+/// polynomial-over-atoms fragment. (General `exp(A)·exp(B) = exp(A+B)` for unrelated
+/// `A, B` still needs the full [exp tower](../../../docs/research/10-cas/exp-tower.md).)
+fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
+    let Some(arg_poly) = normalize(arg) else {
+        return Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("exp", arg))));
+    };
+    if arg_poly.is_zero() {
+        return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))); // exp(0) = 1
+    }
+    let negative = arg_poly
+        .terms
+        .iter()
+        .next_back()
+        .is_some_and(|(_, coeff)| coeff.numerator() < 0);
+    let canonical = if negative { arg_poly.neg()? } else { arg_poly };
+    let atom = MultiPoly::single_var(&atom_name("exp", &canonical.to_expr()));
+    if negative {
+        // exp(arg) = exp(−canonical) = 1 / exp(canonical).
+        RatFunc::from_poly(MultiPoly::constant(Rational::integer(1))).div(&RatFunc::from_poly(atom))
+    } else {
+        Some(RatFunc::from_poly(atom))
     }
 }
 
@@ -4534,6 +4565,32 @@ mod tests {
         // Norm: ‖(3,4)‖ = 5; ‖(1,1)‖ = √2.
         assert_equal(&norm(&[CasExpr::int(3), CasExpr::int(4)]).unwrap(), &CasExpr::int(5));
         assert_equal(&norm(&[CasExpr::int(1), CasExpr::int(1)]).unwrap(), &CasExpr::int(2).sqrt());
+    }
+
+    #[test]
+    fn exponential_reciprocal_cancels() {
+        let x = || v("x");
+        // exp(x)·exp(−x) = 1 — the reciprocal canonicalization makes this decidable.
+        assert_equal(&(x().exp() * (-x()).exp()), &CasExpr::int(1));
+        // exp(0) = 1.
+        assert_equal(&CasExpr::zero().exp(), &CasExpr::int(1));
+        // exp(x)/exp(x) = 1 (already worked, still holds).
+        assert_equal(&(x().exp() / x().exp()), &CasExpr::int(1));
+        // exp(2x)·exp(−2x) = 1 with a scaled argument.
+        assert_equal(
+            &((CasExpr::int(2) * x()).exp() * (CasExpr::int(-2) * x()).exp()),
+            &CasExpr::int(1),
+        );
+        // exp(P)·exp(−P) = 1 for a polynomial argument P = x² − 3.
+        let poly_arg = x().pow(2) - CasExpr::int(3);
+        assert_equal(&(poly_arg.clone().exp() * (-poly_arg).exp()), &CasExpr::int(1));
+        // Sanity: exp(x)·exp(y) is NOT reduced (different atoms) — must stay unknown-
+        // /non-equal to exp(x+y) (the general law needs the exp tower). Assert it does
+        // not falsely certify equal to something wrong: exp(x) ≠ 1.
+        assert!(!matches!(
+            equal(&x().exp(), &CasExpr::int(1)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
