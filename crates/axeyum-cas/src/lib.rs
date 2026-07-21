@@ -4182,6 +4182,51 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Fold every elementary head at an argument where it has an exact closed value:
+/// the trigonometric special values of [`evaluate_trig`] (`sin`/`cos`/`tan` at
+/// rational multiples of `π`) **plus** `exp(0)=1`, `ln(1)=0`, `sqrt(0)=0`,
+/// `sqrt(1)=1`, `atan(0)=0`. Applied to a definite integral's `F(b) − F(a)` so
+/// results like `∫₀^π sin x = cos 0 − cos π` collapse to `2` and `ln 1` vanishes.
+/// Non-special arguments are left untouched; recurses structurally.
+fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(func, arg) => {
+            let inner = fold_elementary_constants(arg);
+            match (func, &inner) {
+                (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan, _) => {
+                    trig_special_value(*func, &inner)
+                        .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+                }
+                (UnaryFunc::Exp, CasExpr::Const(c)) if c.is_zero() => CasExpr::one(),
+                (UnaryFunc::Ln, CasExpr::Const(c)) if *c == Rational::integer(1) => {
+                    CasExpr::zero()
+                }
+                (UnaryFunc::Atan, CasExpr::Const(c)) if c.is_zero() => CasExpr::zero(),
+                (UnaryFunc::Sqrt, CasExpr::Const(c)) if c.is_zero() => CasExpr::zero(),
+                (UnaryFunc::Sqrt, CasExpr::Const(c)) if *c == Rational::integer(1) => {
+                    CasExpr::one()
+                }
+                _ => CasExpr::Unary(*func, Box::new(inner)),
+            }
+        }
+        CasExpr::Add(terms) => {
+            CasExpr::Add(terms.iter().map(fold_elementary_constants).collect())
+        }
+        CasExpr::Mul(factors) => {
+            CasExpr::Mul(factors.iter().map(fold_elementary_constants).collect())
+        }
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_elementary_constants(inner))),
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(fold_elementary_constants(numerator)),
+            Box::new(fold_elementary_constants(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => {
+            CasExpr::Pow(Box::new(fold_elementary_constants(base)), *exponent)
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// Rewrite trigonometric heads via **Euler's formula** into complex exponentials:
 /// `cos(u) → (e^{iu} + e^{−iu})/2`, `sin(u) → (e^{iu} − e^{−iu})/(2i)`,
 /// `tan(u) → sin/cos`, throughout an expression (`i` is the reserved imaginary
@@ -5098,7 +5143,9 @@ pub fn definite_integrate(
     let indefinite = integrate(expr, var)?;
     let at_upper = indefinite.antiderivative.substitute(var, upper);
     let at_lower = indefinite.antiderivative.substitute(var, lower);
-    let value = simplify(&(at_upper - at_lower));
+    // Fold exact elementary constants (sin 0 = 0, cos π = −1, ln 1 = 0, …) before
+    // the structural simplify, so numeric bounds collapse to closed values.
+    let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
     Some(DefiniteIntegral {
         value,
         antiderivative: indefinite.antiderivative,
@@ -7152,6 +7199,29 @@ mod tests {
         )
         .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn definite_integral_folds_elementary_constants() {
+        let x = || v("x");
+        let pi = || v("pi");
+        // ∫₀^π sin x = −cos π + cos 0 = 2 (trig constants folded).
+        let s = definite_integrate(&x().sin(), "x", &CasExpr::int(0), &pi()).unwrap();
+        assert!(s.is_certified());
+        assert_equal(&s.value, &CasExpr::int(2));
+        // ∫₁² 1/x = ln 2 − ln 1 = ln 2 (ln 1 = 0 folded).
+        let l = definite_integrate(
+            &(CasExpr::int(1) / x()),
+            "x",
+            &CasExpr::int(1),
+            &CasExpr::int(2),
+        )
+        .unwrap();
+        assert_equal(&l.value, &CasExpr::int(2).ln());
+        // ∫₀^{π/2} cos x = sin(π/2) − sin 0 = 1.
+        let c = definite_integrate(&x().cos(), "x", &CasExpr::int(0), &(pi() / CasExpr::int(2)))
+            .unwrap();
+        assert_equal(&c.value, &CasExpr::int(1));
     }
 
     #[test]
