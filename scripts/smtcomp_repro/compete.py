@@ -383,6 +383,9 @@ def main() -> int:
                     help="soft internal timeout passed to axeyum (ms)")
     ap.add_argument("--out", default=None)
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--file-list", default=None,
+                    help="run over the .smt2 paths in this file (one per line) "
+                         "instead of globbing --corpus")
     ap.add_argument("--shard", default=None,
                     help="I/J : run only shard I of J (benchmarks striped)")
     ap.add_argument("--dump-raw", default=None,
@@ -413,11 +416,18 @@ def main() -> int:
                 json.dump(report, fh, indent=2)
         return 0
 
-    if not solvers or not args.corpus:
-        print("--corpus and --solver required (unless --score-raw)", file=sys.stderr)
+    if not solvers or not (args.corpus or args.file_list):
+        print("--corpus or --file-list, and --solver, required (unless --score-raw)",
+              file=sys.stderr)
         return 1
 
-    benchmarks = collect_benchmarks(args.corpus, args.limit)
+    if args.file_list:
+        with open(args.file_list, "r", encoding="utf-8") as fh:
+            benchmarks = [ln.strip() for ln in fh if ln.strip()]
+        if args.limit is not None:
+            benchmarks = benchmarks[: args.limit]
+    else:
+        benchmarks = collect_benchmarks(args.corpus, args.limit)
     if args.shard:
         i, j = (int(x) for x in args.shard.split("/") if x) if "/" in args.shard \
             else (int(args.shard.split(":")[0]), int(args.shard.split(":")[1]))
