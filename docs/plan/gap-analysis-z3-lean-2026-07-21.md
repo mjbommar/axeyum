@@ -190,9 +190,11 @@ and no structured footer. Remote `dmesg` is permission-denied, so OOM is unverif
 is frozen incomplete with zero result credit. End-of-shard-only raw
 serialization makes it non-resumable; an atomic
 checkpoint/resume protocol and terminal shard manifest are prerequisites to a
-rerun. Proposed ADR-0344 and the generated contract now close the E0 design
-slice with 14 invariants and 22 executable scenarios, including byte-identical
-deterministic interruption/restart recovery. E1a further passes 8/8 real local
+rerun. Proposed ADR-0344 and the generated v2 contract now close the E0 design
+slice with 18 invariants and 28 executable scenarios, including byte-identical
+deterministic interruption/restart scoring projection. V2 supersedes v1 before
+integration because the runner audit exposed missing process/attempt evidence.
+E1a further passes 8/8 real local
 `SIGKILL` recovery cells over tmpfs and ext-family storage. Production
 durability remains open: E1b-E3 must integrate the writer/solver/lifecycle,
 strict duplicate rejection, leases, aggregate enforcement, and multi-host recovery before a
@@ -202,6 +204,13 @@ filters, official release and seed, corpus-tree digest, or per-selected-file
 hashes. Preserve the run, but grant no matrix or representativeness credit until
 those facts are archived and validated. See the
 [failed-run handoff](smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+
+The [E1b source audit](smtcomp-runner-e1b-audit-2026-07-21.md) additionally
+finds that the local executor suppresses a parsed response on wall timeout,
+contrary to SMT-COMP 2026 section 7.1.2, and heuristically labels every other
+signal as memory exhaustion. The 228-file artifact lacks output/termination
+evidence, so its two no-answer rows remain unreclassifiable rather than silently
+corrected. V2 makes both facts explicit for future runs.
 
 **Research:** classify every row/file by source hash, source family, provenance,
 difficulty, theory/operators, SAT/UNSAT direction, exact/near duplication,
@@ -485,8 +494,10 @@ reported as parity before it climbs the measured and certifying rungs.
    never merge the two current scores or describe the 228-file view as an
    independent sample.
 2. Review proposed ADR-0344 and retain its landed E0/E1a contract and local
-   filesystem result. Implement E1b-E3: active-runner/fake-solver integration,
-   attempt/completion manifests, strict duplicate rejection, single-owner
+   filesystem result and v2 runner audit. Implement E1b-E3: one-solver active-
+   runner/fake-solver integration, typed termination, timeout-response
+   preservation, output sidecars, attempt/completion manifests, strict
+   duplicate rejection, single-owner
    leases, aggregate resource enforcement, and multi-host loss recovery before
    rerunning the 64,345-file candidate.
 3. Extend the selector registration with the complete eligibility/status/

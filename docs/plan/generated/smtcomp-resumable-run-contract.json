@@ -1,23 +1,24 @@
 {
-  "accepted_scenarios": 4,
-  "baseline_output_sha256": "eb60ed595cd30a90bd500b63793670a67c14005c1b570fabc75b8f38c77e98ee",
+  "accepted_scenarios": 5,
+  "baseline_output_sha256": "31f0271a5e34e951aedfacded5f436a9d906684e032b3f4efce62623e9c95588",
   "declines": [
+    "V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.",
     "This prototype does not make the 2024 cap/family selection official or representative.",
-    "It does not implement remote launch, cgroups, NFS durability, leases, or production signal handling.",
-    "It does not claim real solver timing is byte-identical across retries; byte identity is a deterministic fixture gate for checkpoint semantics and canonical ordering.",
-    "It does not admit partial shards, human progress logs, or reconstructed records into scoring.",
+    "It does not yet integrate compete.py, verify stdout/stderr sidecars, execute solvers, launch remotely, enforce cgroups, prove NFS durability, or manage leases.",
+    "It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.",
+    "It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.",
     "It does not replace BenchExec for an official competition rehearsal."
   ],
   "deterministic_resume_byte_equal": true,
-  "invariant_count": 14,
+  "invariant_count": 18,
   "invariants": [
     {
       "id": "R1",
-      "statement": "Run identity binds corpus, selection, solver, runner, repository, limits, shard mapping, and measurement environment before launch."
+      "statement": "Run identity binds corpus, selection, one solver configuration, runner, source tree, toolchain, limits, shard mapping, policies, and measurement environment before launch."
     },
     {
       "id": "R2",
-      "statement": "A result key binds normalized benchmark identity, exact input bytes, and solver identity."
+      "statement": "A result key binds normalized benchmark identity, exact input bytes, and solver-configuration identity."
     },
     {
       "id": "R3",
@@ -57,19 +58,35 @@
     },
     {
       "id": "R12",
-      "statement": "Canonical merge order is independent of shard, host, attempt, and filesystem enumeration order."
+      "statement": "Canonical scoring projection is independent of shard, host, attempt, and filesystem enumeration order."
     },
     {
       "id": "R13",
-      "statement": "On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical result bytes are identical."
+      "statement": "On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical scoring bytes are identical even though lifecycle evidence differs."
     },
     {
       "id": "R14",
       "statement": "Temporary, conflicting, malformed, and failed-attempt artifacts are retained outside the accepted immutable record set."
+    },
+    {
+      "id": "R15",
+      "statement": "Observed solver response and scoring-admitted response are separate; the SMT-COMP 2026 policy admits a response even after timeout or abnormal termination."
+    },
+    {
+      "id": "R16",
+      "statement": "Termination is a checked tagged state over exit, signal, and evidenced resource-limit facts; an arbitrary signal is never relabeled as memory exhaustion, and scoring wall time remains bounded separately from runner overhead."
+    },
+    {
+      "id": "R17",
+      "statement": "Every result names its installing attempt, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets."
+    },
+    {
+      "id": "R18",
+      "statement": "Stdout and stderr are content-addressed with exact byte counts; production validation must verify their sidecars before score export."
     }
   ],
-  "rejected_scenarios": 18,
-  "scenario_count": 22,
+  "rejected_scenarios": 23,
+  "scenario_count": 28,
   "scenarios": [
     {
       "canonical_byte_equal": true,
@@ -84,7 +101,11 @@
         "R9",
         "R10",
         "R11",
-        "R12"
+        "R12",
+        "R15",
+        "R16",
+        "R17",
+        "R18"
       ],
       "name": "uninterrupted",
       "observed": "accept",
@@ -99,7 +120,8 @@
         "R7",
         "R8",
         "R13",
-        "R14"
+        "R14",
+        "R17"
       ],
       "name": "interrupted_resume",
       "observed": "accept",
@@ -127,7 +149,7 @@
       ],
       "name": "solver_identity_drift",
       "observed": "reject",
-      "reason": "record run identity mismatch"
+      "reason": "solver configuration digest mismatch"
     },
     {
       "canonical_byte_equal": null,
@@ -174,7 +196,7 @@
       ],
       "name": "record_hash_tamper",
       "observed": "reject",
-      "reason": "record hash mismatch"
+      "reason": "observed verdict was not admitted"
     },
     {
       "canonical_byte_equal": null,
@@ -198,7 +220,7 @@
       ],
       "name": "conflicting_duplicate",
       "observed": "reject",
-      "reason": "duplicate result record"
+      "reason": "runner elapsed time is below scoring wall time"
     },
     {
       "canonical_byte_equal": null,
@@ -288,7 +310,8 @@
       "invariants": [
         "R7",
         "R8",
-        "R14"
+        "R14",
+        "R17"
       ],
       "name": "accounted_prior_crash",
       "observed": "accept",
@@ -339,9 +362,89 @@
       "name": "truncated_record",
       "observed": "reject",
       "reason": "record field set mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F23",
+      "invariants": [
+        "R7",
+        "R17"
+      ],
+      "name": "attempt_attribution_drift",
+      "observed": "reject",
+      "reason": "terminal new-result attribution mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F24",
+      "invariants": [
+        "R16"
+      ],
+      "name": "illegal_termination_state",
+      "observed": "reject",
+      "reason": "illegal typed termination state"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F25",
+      "invariants": [
+        "R18"
+      ],
+      "name": "invalid_output_identity",
+      "observed": "reject",
+      "reason": "invalid SHA-256 field: stdout_sha256"
+    },
+    {
+      "canonical_byte_equal": false,
+      "expected": "accept",
+      "id": "F26",
+      "invariants": [
+        "R15",
+        "R16"
+      ],
+      "name": "timeout_response_retained",
+      "observed": "accept",
+      "reason": "validated"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F27",
+      "invariants": [
+        "R7",
+        "R17"
+      ],
+      "name": "terminal_attribution_mismatch",
+      "observed": "reject",
+      "reason": "terminal new/skipped partition mismatch"
+    },
+    {
+      "canonical_byte_equal": null,
+      "expected": "reject",
+      "id": "F28",
+      "invariants": [
+        "R16"
+      ],
+      "name": "scoring_time_out_of_range",
+      "observed": "reject",
+      "reason": "scoring wall time exceeds registered limit"
     }
   ],
-  "schema": "axeyum.smtcomp-resumable-run-contract-report.v1",
-  "source_schema": "axeyum.smtcomp-resumable-run-contract.v1",
-  "status": "prototype"
+  "schema": "axeyum.smtcomp-resumable-run-contract-report.v2",
+  "source_schema": "axeyum.smtcomp-resumable-run-contract.v2",
+  "status": "prototype",
+  "supersedes": "axeyum.smtcomp-resumable-run-contract.v1",
+  "timeout_response_retained": true,
+  "v1_corrections": [
+    "Attribute every result to the attempt that installed it.",
+    "Retain observed solver response separately from the response admitted to scoring.",
+    "Use a typed termination class instead of an ambiguous memory-exceeded boolean.",
+    "Retain exit, signal, resource-limit, peak-RSS, and content-addressed output facts.",
+    "Separate the scoring wall time, which is bounded by the registered limit, from runner elapsed time that may include watchdog kill and reap overhead.",
+    "Partition each terminal's durable result set into newly installed and skipped prior records.",
+    "Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity."
+  ]
 }

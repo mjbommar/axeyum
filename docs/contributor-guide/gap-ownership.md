@@ -67,6 +67,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`scripts/smtcomp_repro/resume_fs.py`](../../scripts/smtcomp_repro/resume_fs.py)
 - [`scripts/smtcomp_repro/resume_fs_fixture_worker.py`](../../scripts/smtcomp_repro/resume_fs_fixture_worker.py)
 - [`docs/plan/smtcomp-resumable-run-contract-v1.json`](../../docs/plan/smtcomp-resumable-run-contract-v1.json)
+- [`docs/plan/smtcomp-resumable-run-contract-v2.json`](../../docs/plan/smtcomp-resumable-run-contract-v2.json)
 - [`scripts/smtcomp_repro/select_library.py`](../../scripts/smtcomp_repro/select_library.py)
 - [`scripts/smtcomp_repro/compete.py`](../../scripts/smtcomp_repro/compete.py)
 - [`scripts/smtcomp_repro/provenance.py`](../../scripts/smtcomp_repro/provenance.py)
@@ -80,6 +81,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
 - [`docs/plan/smtcomp-resumable-run-design-2026-07-21.md`](../../docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
 - [`docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md)
+- [`docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md)
 - [`docs/plan/generated/smtcomp-resumable-run-contract.json`](../../docs/plan/generated/smtcomp-resumable-run-contract.json)
 - [`bench-results/smtcomp-repro-20260721/inventory.json`](../../bench-results/smtcomp-repro-20260721/inventory.json)
 - [`bench-results/smtcomp-repro-20260721/provenance.json`](../../bench-results/smtcomp-repro-20260721/provenance.json)
@@ -99,7 +101,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md`](../../docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
 - [`docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md`](../../docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
 
-**Next safe action:** Review ADR-0343/0344 and E1a, then integrate the opt-in writer, fake solver, attempt lifecycle, completion-last export, duplicate rejection, and single-owner lease at E1b; do not rerun the 64,345-file candidate before E1b-E3 and the missing selection identities pass.
+**Next safe action:** Review ADR-0343/0344, E1a, and the v2 E1b audit; then integrate one-solver manifests, typed process outcomes, observed/admitted verdicts, output sidecars, attempt lifecycle, completion-last export, duplicate rejection, and a single-owner lease. Do not rerun the 64,345-file candidate before E1b-E3 and the missing selection identities pass.
 
 <a id="g2"></a>
 

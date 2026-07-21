@@ -23,11 +23,12 @@ class ResumeContractTests(unittest.TestCase):
 
     def test_full_contract_passes(self) -> None:
         report = MODULE.evaluate(self.source())
-        self.assertEqual(report["invariant_count"], 14)
-        self.assertEqual(report["scenario_count"], 22)
-        self.assertEqual(report["accepted_scenarios"], 4)
-        self.assertEqual(report["rejected_scenarios"], 18)
+        self.assertEqual(report["invariant_count"], 18)
+        self.assertEqual(report["scenario_count"], 28)
+        self.assertEqual(report["accepted_scenarios"], 5)
+        self.assertEqual(report["rejected_scenarios"], 23)
         self.assertTrue(report["deterministic_resume_byte_equal"])
+        self.assertTrue(report["timeout_response_retained"])
 
     def test_all_invariants_have_failure_or_control_coverage(self) -> None:
         report = MODULE.evaluate(self.source())

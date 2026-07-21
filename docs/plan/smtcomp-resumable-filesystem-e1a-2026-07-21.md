@@ -15,6 +15,11 @@ not close E1 launcher integration, E2 aggregate resource enforcement, E3
 multi-host recovery, or the separate official-style selection ledger. The
 64,345-file candidate remains unauthorized.
 
+The matrix was rerun clean after the
+[v2 process-evidence correction](smtcomp-runner-e1b-audit-2026-07-21.md):
+attempt-attributed v2 records retain the same 8/8 local recovery result and
+canonical scoring projection.
+
 ## Implementation under test
 
 [`scripts/smtcomp_repro/resume_fs.py`](../../scripts/smtcomp_repro/resume_fs.py)

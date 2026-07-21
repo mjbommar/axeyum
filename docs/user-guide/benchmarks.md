@@ -36,6 +36,14 @@ zero wrong verdicts against recorded statuses. This is not the official
 SMT-COMP selection and is dominated numerically by one hard 113-file p4dfa
 family.
 
+The [E1b runner audit](../plan/smtcomp-runner-e1b-audit-2026-07-21.md)
+finds one scoring-fidelity gap in this local path: a parsed response is
+currently discarded when the watchdog times out, while the SMT-COMP 2026 rule
+admits responses after timeout or abnormal termination. Because the committed
+raw artifact omits stdout and typed termination, its two no-answer rows
+cannot be retrospectively reclassified. Preserve 82/144/2 as the artifact's result;
+do not upgrade or downgrade it without a new v2 run.
+
 This view is not independent of the scoreboard. Exactly 99 contents occur in
 both regimes—43.4% of the public inventory and 12.7% of the scoreboard's unique
 file-backed contents. Keep the two results side by side; do not average them.

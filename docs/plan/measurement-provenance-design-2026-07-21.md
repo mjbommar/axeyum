@@ -35,6 +35,11 @@ is the reference policy, not a label these local runs inherit.
 
 The schema therefore records `official_selection = false` for both regimes.
 It keeps official-style within-row PAR-2 while declining a cross-regime score.
+The later [E1b runner audit](smtcomp-runner-e1b-audit-2026-07-21.md) also finds
+that the local public-inventory executor suppresses timeout-observed responses.
+Its two no-answer rows lack the stdout/termination evidence needed for
+retroactive reclassification, which is an additional reason the row remains
+local/non-official.
 
 ## Source audit
 
@@ -129,14 +134,14 @@ row's neutral status can change.
 ## Remaining research sequence
 
 1. Preserve the failed first 52-shard attempt with zero result credit. Before a
-   rerun, advance proposed ADR-0344's landed E0 contract and E1a local
+   rerun, advance proposed ADR-0344's landed E0/v2 contract and E1a local
    filesystem prototype through E1b-E3: integrate immutable records and strict
    resume identity with the active runner, add attempt and shard-completion
    manifests, fail-closed duplicate handling, leases, aggregate memory
    enforcement, and multi-host recovery. The [handoff](smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
    freezes the 2,041-row/no-raw-artifact failure; the
-   [resumable-run design](smtcomp-resumable-run-design-2026-07-21.md) freezes 14
-   invariants and 22 executable scenarios without authorizing the rerun; the
+   [resumable-run design](smtcomp-resumable-run-design-2026-07-21.md) freezes 18
+   invariants and 28 executable v2 scenarios without authorizing the rerun; the
    [E1a result](smtcomp-resumable-filesystem-e1a-2026-07-21.md) adds 8/8 local
    forced-kill recoveries but explicitly declines shared-storage credit.
 2. Extend its current cap/family sampler with the full eligibility/status/

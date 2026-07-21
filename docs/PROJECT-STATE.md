@@ -55,6 +55,13 @@ flattering and equally important view: **82 / 228** decided-correct,
 the recorded statuses. It is not an official or population-weighted SMT-COMP
 selection.
 
+A later runner audit found that this local reproduction path suppresses a
+parsed response if its watchdog fires, whereas SMT-COMP 2026 counts a response
+even after timeout or abnormal termination. The committed raw artifact does not
+retain stdout/termination evidence, so the two no-answer rows
+cannot be retroactively classified. The counts above remain exact artifact counts, not a
+claim that this execution path was fully competition-faithful.
+
 The two regimes are also not independent: **99 exact contents** appear in both,
 covering 43.4% of the public inventory and 12.7% of the scoreboard's unique
 file-backed contents. Their decide rates describe different weightings of an

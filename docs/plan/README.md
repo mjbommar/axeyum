@@ -36,7 +36,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   hashes, 438,631-to-64,345 candidate selection, incomplete 52-shard execution,
   zero raw-result credit, and the checkpoint/resume prerequisite to any rerun.
 - [`smtcomp-resumable-run-design-2026-07-21.md`](smtcomp-resumable-run-design-2026-07-21.md),
-  the [machine-readable contract](smtcomp-resumable-run-contract-v1.json), and
+  the active [machine-readable v2 contract](smtcomp-resumable-run-contract-v2.json),
+  preserved [v1 sketch](smtcomp-resumable-run-contract-v1.json), and
   generated [failure/recovery matrix](generated/smtcomp-resumable-run-contract.md) —
   G1's E0 prototype for immutable result checkpoints, exact run identity,
   attempt/completion accounting, strict merge, aggregate resource enforcement,
@@ -47,6 +48,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   worktree's ext-family filesystem, with no-overwrite install, orphan/conflict
   quarantine, strict filename/key validation, and explicit power-loss/NFS/
   solver/remote declines.
+- [`smtcomp-runner-e1b-audit-2026-07-21.md`](smtcomp-runner-e1b-audit-2026-07-21.md) —
+  source-backed integration audit that supersedes the thin v1 process schema,
+  separates observed from scoring-admitted responses, replaces signal-to-OOM
+  guessing with typed termination, attributes results to attempts, and freezes
+  the opt-in one-solver E1b seams without changing the active runner.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

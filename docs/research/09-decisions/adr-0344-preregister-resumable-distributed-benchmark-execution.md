@@ -28,10 +28,15 @@ enforced aggregate resources before any large distributed candidate rerun.**
 
 Specifically:
 
-- a run identity binds corpus/selection, solver/command, runner/repository,
-  limits, shard mapping, and measurement environment;
+- a single-solver run identity binds corpus/selection, solver configuration,
+  runner/source/toolchain, limits, policies, shard mapping, and measurement
+  environment;
 - each solver/benchmark result is self-hashed and atomically installed under a
-  key that includes normalized benchmark ID, exact input hash, and solver ID;
+  key that includes normalized benchmark ID, exact input hash, and solver-
+  configuration identity;
+- each result names its installing attempt, retains observed and scoring-
+  admitted verdicts separately, uses a typed termination state, and content-
+  addresses stdout/stderr;
 - resume skips only a completely validating immutable record and never
   overwrites a prior record;
 - every launch attempt is retained; a later shard completion must explicitly
@@ -42,19 +47,22 @@ Specifically:
 - per-process limits are accompanied by recorded aggregate cgroup-v2 or
   equivalent enforcement and a non-overcommit preflight.
 
-Individual immutable record files are the v1 persistence unit. Append-only
+Individual immutable record files are the v2 persistence unit. The preserved
+v1 prototype is superseded before integration because it lacked real-process
+and attempt-attribution evidence. Append-only
 JSONL remains an alternative only if it later proves an equally fail-closed
 framing, tail-recovery, fsync, conflict, and restart contract.
 
 ## Evidence and preregistered gates
 
-1. The machine-readable contract has one canonical JSON encoding, 14 uniquely
+1. The active v2 machine-readable contract has one canonical JSON encoding, 18 uniquely
    identified invariants, and a generated human-readable view.
-2. Twenty-two executable scenarios include four accepted controls and 18
+2. Twenty-eight executable scenarios include five accepted controls and 23
    rejected mutations covering solver/list/limit/runner/environment drift,
    record tampering/truncation, duplicates, missing/unexpected results,
    assignment overlap, incomplete shards, attempt-accounting failure, and
-   aggregate-resource failure.
+   aggregate-resource failure, typed termination, output identity, late-
+   response admission, and per-result attempt/terminal attribution.
 3. On deterministic fake results, uninterrupted, reordered, and
    interrupted/resumed bundles produce byte-identical canonical merged output.
 4. Production stage E1 must kill a real fake-solver process at each persistence
@@ -87,8 +95,9 @@ coverage, soundness, or OOM-cause claim.
   [documentation](https://github.com/sosy-lab/benchexec/blob/main/doc/benchexec.md)
   binds tasks and resource limits and emits individual execution measurements;
   a later official-style rehearsal should use that external layer.
-- The v1 prototype passes all 22 declared scenarios and exact recovery
-  equivalence without launching a solver or consuming the external corpus.
+- The v2 prototype passes all 28 declared scenarios and exact scoring-
+  projection recovery equivalence without launching a solver or consuming the
+  external corpus. It preserves v1 as an explicitly superseded sketch.
 - The follow-on
   [E1a filesystem result](../../plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md)
   passes 8/8 real `SIGKILL` recovery cells across local tmpfs and ext-family
@@ -96,6 +105,11 @@ coverage, soundness, or OOM-cause claim.
   quarantined, filename/key drift rejects, and canonical output remains equal.
   This is process-interruption evidence, not power-loss, NFS, launcher, cgroup,
   or multi-host evidence.
+- The [E1b runner audit](../../plan/smtcomp-runner-e1b-audit-2026-07-21.md)
+  finds that the active executor discards a parsed verdict on wall timeout,
+  contrary to SMT-COMP 2026 section 7.1.2, and guesses that every other signal
+  means memory exhaustion. V2 represents observed/admitted verdicts and typed
+  process outcomes without granting a retroactive result correction.
 
 ## Alternatives
 
@@ -109,7 +123,7 @@ coverage, soundness, or OOM-cause claim.
 - **Require every attempt to emit a terminal.** Rejected: SIGKILL, host loss,
   and OOM can prevent it. Absence must be observable and later accounted, not
   made impossible by specification.
-- **Allow identical duplicates at merge.** Rejected for v1: correct resume
+- **Allow identical duplicates at merge.** Rejected for v2: correct resume
   skips an existing record, so duplicates reveal overlapping ownership or
   orchestration drift.
 - **Move immediately to BenchExec.** Deferred until selection and environment

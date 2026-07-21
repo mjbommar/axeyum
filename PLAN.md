@@ -47,10 +47,13 @@ state.
 > is unavailable because `dmesg` is permission-denied on s4-s7. The attempt is
 > frozen incomplete and receives zero result credit.
 > Because raw output was end-of-shard only, it also exposes a resumability gap;
-> proposed ADR-0344 now freezes 14 lifecycle/identity/resource invariants and a
-> checked 22-scenario prototype (four accepted controls, 18 rejected
-> mutations). A deterministic interrupted/resumed fixture is byte-identical to
-> its uninterrupted canonical merge. E1a now also passes 8/8 real `SIGKILL`
+> proposed ADR-0344's v2 contract now freezes 18 lifecycle/process/identity/
+> resource invariants and a checked 28-scenario prototype (five accepted
+> controls, 23 rejected mutations). It supersedes v1 before production because
+> v1 omitted attempt attribution, typed termination, observed-vs-admitted
+> verdicts, and content-addressed outputs. A deterministic interrupted/resumed
+> scoring projection is byte-identical to its uninterrupted control. E1a also
+> passes 8/8 real `SIGKILL`
 > recovery cells across tmpfs and the local ext-family worktree: identical
 > resume skips, conflicts/orphans quarantine, filename drift rejects, and
 > canonical merge remains equal. This is local record-mechanism credit only.
@@ -67,7 +70,11 @@ state.
 > Resume with the [resumable-run design](docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
 > and generated [failure/recovery matrix](docs/plan/generated/smtcomp-resumable-run-contract.md),
 > plus the [E1a result](docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md),
-> not with `distribute_run.sh`.
+> and [E1b runner audit](docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md), not
+> with `distribute_run.sh`. The active runner still drops timeout-observed
+> responses contrary to the registered SMT-COMP policy and guesses any other
+> signal is memory exhaustion; fix and mutation-test those paths only inside
+> opt-in v2 mode before changing legacy scoring behavior.
 
 > **Proof-gap refresh and resume point (2026-07-21).** The eight audit rows
 > containing every historical bare UNSAT have been rerun sequentially under

@@ -30,8 +30,10 @@ Scoring/selection tests (42): `tests/test_scoring.py` (30, one per rule),
 `tests/test_pipeline.py` (5, full aggregation/ranking),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
-Six additional generator tests exercise the 14-invariant/22-scenario resume
-contract. These tests do not establish production filesystem durability.
+Six additional generator tests exercise the active v2 18-invariant/28-scenario
+resume contract. V2 preserves observed timeout responses, uses typed process
+outcomes, and attributes each record to an attempt; these tests do not establish
+production filesystem durability or change the active runner.
 Four E1a filesystem tests add real child `SIGKILL` controls at four persistence
 boundaries. Run them once on default temporary storage and once with
 `AXEYUM_FS_FIXTURE_PARENT=.`; they remain local process-interruption evidence,
@@ -59,6 +61,8 @@ and generated
 [`resumable-run contract`](../../docs/plan/generated/smtcomp-resumable-run-contract.md).
 The local kill-tested boundary and its remaining E1b-E3 work are in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
+The source-backed v2 process-schema correction and narrow integration seams are
+in the [`E1b audit`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md).
 
 ## Tracks
 

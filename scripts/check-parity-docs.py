@@ -356,6 +356,8 @@ def main() -> int:
         f"{snapshot['p4dfa_axeyum_20s']} / 113",
         f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
         "zero interactive textual-session rows",
+        "cannot be retroactively classified",
+        "fully competition-faithful",
     )
     project_state_text = PROJECT_STATE.read_text(encoding="utf-8")
     for marker in project_state_markers:
@@ -372,6 +374,8 @@ def main() -> int:
         f"{snapshot['cross_regime_unique_overlap']} contents occur",
         "43.4% of the public inventory",
         "do not average them",
+        "cannot be retrospectively reclassified",
+        "without a new v2 run",
         "`CARGO_BUILD_JOBS=1`",
     ):
         if marker not in benchmark_text:

@@ -386,10 +386,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   a versioned complete result and those omissions are explicit. The exact
   selection hashes, failure snapshot, and safe resume checks are in the
   [candidate-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
-  Proposed ADR-0344 now supplies the E0 contract: 14 invariants and 22
-  executable scenarios (four accepted controls, 18 rejected mutations), with
-  deterministic interrupted/resumed and uninterrupted canonical output
-  byte-identical. It separates terminal-less failed attempts from later honest
+  Proposed ADR-0344 now supplies the v2 E0 contract: 18 invariants and 28
+  executable scenarios (five accepted controls, 23 rejected mutations), with
+  deterministic interrupted/resumed and uninterrupted scoring projections
+  byte-identical. V2 supersedes the committed v1 prototype before integration:
+  it adds per-result attempt attribution, typed process termination,
+  observed-vs-admitted verdicts, content-addressed outputs, and complete policy/
+  source/toolchain identity. It separates terminal-less failed attempts from later honest
   shard completion, rejects silent duplicate overwrite and identity/resource
   drift, and requires a complete shard set before scoring. This is an in-memory
   planning prototype, not production durability. E1a now implements the local
@@ -400,7 +403,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   uninterrupted control. This does not test power loss, NFS, solvers, leases,
   cgroups, or remote hosts. Next: E1b integrates an opt-in writer and fake
   solver into the active runner, makes completion last, rejects duplicate raw
-  merge, and defines single-owner recovery; E2-E3 then prove aggregate
+  merge, verifies output sidecars, preserves timeout-observed responses under
+  the SMT-COMP 2026 rule, removes signal-to-OOM guessing, and defines
+  single-owner recovery; E2-E3 then prove aggregate
   enforcement and multi-host recovery. Do not rerun the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate and render the resumable SMT-COMP execution contract."""
+"""Validate and render the v2 resumable SMT-COMP execution contract."""
 
 from __future__ import annotations
 
@@ -15,15 +15,17 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts" / "smtcomp_repro"))
 
 from resume_contract import (  # noqa: E402
-    Bundle,
     ATTEMPT_LAUNCH_FIELDS,
     ATTEMPT_TERMINAL_FIELDS,
-    ContractError,
-    RESULT_SCHEMA,
+    CONTRACT_SCHEMA,
     RESULT_RECORD_FIELDS,
-    RUN_SCHEMA,
+    RESULT_SCHEMA,
     RUN_IDENTITY_FIELDS,
+    RUN_SCHEMA,
     SHARD_COMPLETION_FIELDS,
+    VERDICT_POLICY,
+    Bundle,
+    ContractError,
     canonical_bytes,
     clone_bundle,
     digest,
@@ -33,7 +35,7 @@ from resume_contract import (  # noqa: E402
     seal_record,
 )
 
-SOURCE = ROOT / "docs" / "plan" / "smtcomp-resumable-run-contract-v1.json"
+SOURCE = ROOT / "docs" / "plan" / "smtcomp-resumable-run-contract-v2.json"
 OUTPUT_JSON = ROOT / "docs" / "plan" / "generated" / "smtcomp-resumable-run-contract.json"
 OUTPUT_MD = ROOT / "docs" / "plan" / "generated" / "smtcomp-resumable-run-contract.md"
 
@@ -43,16 +45,31 @@ def fake_sha(label: str) -> str:
 
 
 def _identity() -> dict[str, Any]:
+    solver_id = "axeyum"
+    solver_binary = fake_sha("solver-binary")
+    solver_command = fake_sha("solver-command")
+    solver_config = digest(
+        {
+            "solver_id": solver_id,
+            "solver_binary_sha256": solver_binary,
+            "solver_command_sha256": solver_command,
+        }
+    )
     return {
-        "contract_schema": "axeyum.smtcomp-resumable-run-contract.v1",
-        "benchmark_schema": RESULT_SCHEMA,
+        "contract_schema": CONTRACT_SCHEMA,
+        "run_schema": RUN_SCHEMA,
+        "result_schema": RESULT_SCHEMA,
         "selection_manifest_sha256": fake_sha("selection-manifest"),
         "selected_list_sha256": fake_sha("selected-list"),
         "corpus_identity_sha256": fake_sha("corpus-tree"),
-        "solver_binary_sha256": fake_sha("solver-binary"),
-        "solver_command_sha256": fake_sha("solver-command"),
+        "solver_id": solver_id,
+        "solver_binary_sha256": solver_binary,
+        "solver_command_sha256": solver_command,
+        "solver_config_sha256": solver_config,
         "runner_source_sha256": fake_sha("runner-source"),
         "repository_commit": fake_sha("repository-commit"),
+        "source_tree_state_sha256": fake_sha("clean-source-tree"),
+        "toolchain_identity_sha256": fake_sha("toolchain"),
         "track": "single_query",
         "wall_limit_ms": 20_000,
         "cpu_limit_ms": 80_000,
@@ -61,30 +78,80 @@ def _identity() -> dict[str, Any]:
         "shard_count": 2,
         "shard_mapping": "striped-index-v1",
         "environment_class_sha256": fake_sha("fixture-host-class"),
+        "resource_policy_sha256": fake_sha("fixture-resource-policy"),
+        "output_capture_policy_sha256": fake_sha("fixture-output-policy"),
+        "verdict_policy": VERDICT_POLICY,
     }
 
 
-def _row(identity_hash: str, shard_id: str, sequence: int) -> dict[str, Any]:
+def _row(
+    identity_hash: str,
+    identity: dict[str, Any],
+    shard_id: str,
+    sequence: int,
+    attempt_id: str,
+) -> dict[str, Any]:
     benchmark_id = f"QF_BV/family/case-{sequence}.smt2"
     benchmark_hash = fake_sha(f"benchmark-{sequence}")
-    solver_id = "axeyum"
+    verdict = "sat" if sequence % 2 == 0 else "unsat"
+    solver_config = identity["solver_config_sha256"]
+    empty_hash = hashlib.sha256(b"").hexdigest()
     return seal_record(
         {
             "schema": RESULT_SCHEMA,
             "run_identity_sha256": identity_hash,
-            "result_key": result_key(benchmark_id, benchmark_hash, solver_id),
+            "result_key": result_key(benchmark_id, benchmark_hash, solver_config),
             "benchmark_id": benchmark_id,
             "benchmark_sha256": benchmark_hash,
-            "solver_id": solver_id,
+            "solver_id": identity["solver_id"],
+            "solver_config_sha256": solver_config,
             "shard_id": shard_id,
             "sequence": sequence,
-            "environment_class_sha256": fake_sha("fixture-host-class"),
-            "expected_status": "sat" if sequence % 2 == 0 else "unsat",
-            "reported_status": "sat" if sequence % 2 == 0 else "unsat",
+            "attempt_id": attempt_id,
+            "environment_class_sha256": identity["environment_class_sha256"],
+            "expected_status": verdict,
+            "observed_status": verdict,
+            "reported_status": verdict,
+            "verdict_admission": "admitted",
+            "termination_class": "completed",
+            "exit_code": 0,
+            "signal": None,
+            "resource_limit_kind": None,
             "wall_time_ns": 1_000_000 + sequence,
+            "runner_elapsed_ns": 1_000_000 + sequence,
             "cpu_time_ns": 900_000 + sequence,
+            "peak_rss_bytes": 8_388_608 + sequence,
+            "stdout_sha256": empty_hash,
+            "stdout_bytes": 0,
+            "stderr_sha256": empty_hash,
+            "stderr_bytes": 0,
         }
     )
+
+
+def _terminal(
+    rows: list[dict[str, Any]],
+    assigned: set[str],
+    new_keys: list[str],
+    skipped_keys: list[str],
+) -> dict[str, Any]:
+    durable = sorted(set(new_keys) | set(skipped_keys))
+    by_key = {row["result_key"]: row for row in rows}
+    missing = sorted(assigned - set(durable))
+    return {
+        "status": "completed" if not missing else "stopped",
+        "exit_code": 0 if not missing else 75,
+        "signal": None,
+        "wall_time_ns": 2_000_000,
+        "peak_rss_bytes": 8_388_608,
+        "completed_count": len(durable),
+        "result_set_sha256": record_set_sha256([by_key[key] for key in durable]),
+        "durable_result_keys": durable,
+        "new_result_keys": sorted(new_keys),
+        "skipped_result_keys": sorted(skipped_keys),
+        "missing_result_keys": missing,
+        "ended_at_ns": 3_000_000,
+    }
 
 
 def make_bundle(interrupted: bool = False) -> Bundle:
@@ -101,57 +168,79 @@ def make_bundle(interrupted: bool = False) -> Bundle:
             "aggregate_memory_bytes": 2_147_483_648,
         },
     }
+
+    attempt_for_sequence = {
+        0: "0-a",
+        1: "1-a",
+        2: "0-b" if interrupted else "0-a",
+        3: "1-a",
+    }
     rows = [
-        _row(identity_hash, "0", 0),
-        _row(identity_hash, "1", 1),
-        _row(identity_hash, "0", 2),
-        _row(identity_hash, "1", 3),
+        _row(identity_hash, identity, str(sequence % 2), sequence, attempt_for_sequence[sequence])
+        for sequence in range(4)
     ]
     assignments = []
     attempts: dict[str, list[dict[str, Any]]] = {}
     completions: dict[str, dict[str, Any]] = {}
+
     for shard_id in ("0", "1"):
         shard_rows = [row for row in rows if row["shard_id"] == shard_id]
+        assigned = {row["result_key"] for row in shard_rows}
         assignments.append(
-            {"shard_id": shard_id, "result_keys": [row["result_key"] for row in shard_rows]}
+            {"shard_id": shard_id, "result_keys": sorted(assigned)}
         )
-        def attempt(attempt_id: str, terminal: bool) -> dict[str, Any]:
-            terminal_value = None
-            if terminal:
-                terminal_value = {
-                    "status": "completed",
-                    "exit_code": 0,
-                    "signal": None,
-                    "wall_time_ns": 2_000_000,
-                    "peak_rss_bytes": 8_388_608,
-                    "completed_count": len(shard_rows),
-                    "result_set_sha256": record_set_sha256(shard_rows),
-                    "missing_result_keys": [],
-                    "ended_at_ns": 3_000_000,
-                }
+
+        def launch(
+            attempt_id: str,
+            *,
+            terminal: dict[str, Any] | None,
+            pid_offset: int,
+        ) -> dict[str, Any]:
             return {
                 "attempt_id": attempt_id,
                 "run_identity_sha256": identity_hash,
                 "shard_id": shard_id,
                 "host_id": "fixture-host",
-                "pid": 1000 + int(shard_id),
-                "assigned_count": len(shard_rows),
-                "launched_at_ns": 1_000_000,
+                "pid": 1000 + int(shard_id) + pid_offset,
+                "assigned_count": len(assigned),
+                "launched_at_ns": 1_000_000 + pid_offset,
                 "enforcement_id": fake_sha("fixture-cgroup"),
-                "environment_class_sha256": fake_sha("fixture-host-class"),
-                "terminal": terminal_value,
+                "environment_class_sha256": identity["environment_class_sha256"],
+                "terminal": terminal,
             }
 
         if interrupted and shard_id == "0":
-            attempts[shard_id] = [attempt("0-a", False), attempt("0-b", True)]
+            first_key = next(row["result_key"] for row in shard_rows if row["sequence"] == 0)
+            second_key = next(row["result_key"] for row in shard_rows if row["sequence"] == 2)
+            attempts[shard_id] = [
+                launch("0-a", terminal=None, pid_offset=0),
+                launch(
+                    "0-b",
+                    terminal=_terminal(shard_rows, assigned, [second_key], [first_key]),
+                    pid_offset=10,
+                ),
+            ]
             unclosed = ["0-a"]
         else:
-            attempts[shard_id] = [attempt(f"{shard_id}-a", True)]
+            attempt_id = f"{shard_id}-a"
+            attempts[shard_id] = [
+                launch(
+                    attempt_id,
+                    terminal=_terminal(
+                        shard_rows,
+                        assigned,
+                        [row["result_key"] for row in shard_rows],
+                        [],
+                    ),
+                    pid_offset=0,
+                )
+            ]
             unclosed = []
+
         completions[shard_id] = {
             "state": "complete",
             "run_identity_sha256": identity_hash,
-            "assigned_count": len(shard_rows),
+            "assigned_count": len(assigned),
             "completed_count": len(shard_rows),
             "missing_result_keys": [],
             "result_set_sha256": record_set_sha256(shard_rows),
@@ -168,6 +257,19 @@ def reseal_run(bundle: Bundle) -> None:
 def _mutate_run_identity(bundle: Bundle, field: str, value: Any) -> None:
     bundle.run["identity"][field] = value
     reseal_run(bundle)
+
+
+def refresh_record_sets(bundle: Bundle) -> None:
+    for shard_id, attempts in bundle.attempts.items():
+        rows = [row for row in bundle.records if row["shard_id"] == shard_id]
+        by_key = {row["result_key"]: row for row in rows}
+        for attempt in attempts:
+            terminal = attempt["terminal"]
+            if terminal is not None:
+                terminal["result_set_sha256"] = record_set_sha256(
+                    [by_key[key] for key in terminal["durable_result_keys"]]
+                )
+        bundle.completions[shard_id]["result_set_sha256"] = record_set_sha256(rows)
 
 
 def scenario_bundles() -> dict[str, Bundle]:
@@ -219,7 +321,9 @@ def scenario_bundles() -> dict[str, Bundle]:
     extra = copy.deepcopy(candidate.records[0])
     extra["benchmark_id"] = "QF_BV/family/unassigned.smt2"
     extra["benchmark_sha256"] = fake_sha("unassigned")
-    extra["result_key"] = result_key(extra["benchmark_id"], extra["benchmark_sha256"], extra["solver_id"])
+    extra["result_key"] = result_key(
+        extra["benchmark_id"], extra["benchmark_sha256"], extra["solver_config_sha256"]
+    )
     candidate.records.append(seal_record(extra))
     scenarios["unexpected_record"] = candidate
 
@@ -255,11 +359,58 @@ def scenario_bundles() -> dict[str, Bundle]:
     candidate = clone_bundle(base)
     del candidate.records[0]["cpu_time_ns"]
     scenarios["truncated_record"] = candidate
+
+    candidate = clone_bundle(base)
+    candidate.records[0]["attempt_id"] = "missing-attempt"
+    candidate.records[0] = seal_record(candidate.records[0])
+    refresh_record_sets(candidate)
+    scenarios["attempt_attribution_drift"] = candidate
+
+    candidate = clone_bundle(base)
+    candidate.records[0]["exit_code"] = 7
+    candidate.records[0] = seal_record(candidate.records[0])
+    scenarios["illegal_termination_state"] = candidate
+
+    candidate = clone_bundle(base)
+    candidate.records[0]["stdout_sha256"] = "not-a-hash"
+    candidate.records[0] = seal_record(candidate.records[0])
+    scenarios["invalid_output_identity"] = candidate
+
+    candidate = clone_bundle(base)
+    candidate.records[0].update(
+        {
+            "termination_class": "wall-timeout",
+            "exit_code": None,
+            "signal": 9,
+            "resource_limit_kind": "wall",
+            "wall_time_ns": candidate.run["identity"]["wall_limit_ms"] * 1_000_000,
+            "runner_elapsed_ns": candidate.run["identity"]["wall_limit_ms"]
+            * 1_000_000
+            + 5_000_000,
+        }
+    )
+    candidate.records[0] = seal_record(candidate.records[0])
+    refresh_record_sets(candidate)
+    scenarios["timeout_response_retained"] = candidate
+
+    candidate = clone_bundle(base)
+    terminal = candidate.attempts["0"][0]["terminal"]
+    assert terminal is not None
+    terminal["new_result_keys"].pop()
+    scenarios["terminal_attribution_mismatch"] = candidate
+
+    candidate = clone_bundle(base)
+    candidate.records[0]["wall_time_ns"] = (
+        candidate.run["identity"]["wall_limit_ms"] * 1_000_000 + 1
+    )
+    candidate.records[0]["runner_elapsed_ns"] = candidate.records[0]["wall_time_ns"]
+    candidate.records[0] = seal_record(candidate.records[0])
+    scenarios["scoring_time_out_of_range"] = candidate
     return scenarios
 
 
 def evaluate(source: dict[str, Any]) -> dict[str, Any]:
-    if source.get("schema") != "axeyum.smtcomp-resumable-run-contract.v1":
+    if source.get("schema") != CONTRACT_SCHEMA:
         raise ContractError("source contract schema mismatch")
     declared_fields = {
         "run_identity_fields": RUN_IDENTITY_FIELDS,
@@ -281,6 +432,12 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
         raise ContractError("declared and implemented scenario sets differ")
 
     baseline = merge_complete(fixtures["uninterrupted"])
+    equal_controls = {
+        "uninterrupted",
+        "interrupted_resume",
+        "reordered_artifacts",
+        "accounted_prior_crash",
+    }
     rows = []
     for spec in source["scenarios"]:
         if not set(spec["invariants"]).issubset(known):
@@ -298,12 +455,7 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
                 f"{spec['id']} expected {spec['expected']} but observed {observed}: {reason}"
             )
         byte_equal = output == baseline if output is not None else None
-        if spec["name"] in {
-            "uninterrupted",
-            "interrupted_resume",
-            "reordered_artifacts",
-            "accounted_prior_crash",
-        } and not byte_equal:
+        if spec["name"] in equal_controls and not byte_equal:
             raise ContractError(f"{spec['id']}: accepted fixture differs from baseline")
         rows.append(
             {
@@ -314,12 +466,13 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
-    covered = {inv for row in rows for inv in row["invariants"]}
+    covered = {invariant for row in rows for invariant in row["invariants"]}
     if covered != known:
         raise ContractError(f"uncovered invariants: {sorted(known - covered)}")
     return {
-        "schema": "axeyum.smtcomp-resumable-run-contract-report.v1",
+        "schema": "axeyum.smtcomp-resumable-run-contract-report.v2",
         "source_schema": source["schema"],
+        "supersedes": source["supersedes"],
         "status": source["status"],
         "invariant_count": len(source["invariants"]),
         "scenario_count": len(rows),
@@ -328,7 +481,11 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
         "deterministic_resume_byte_equal": next(
             row["canonical_byte_equal"] for row in rows if row["name"] == "interrupted_resume"
         ),
+        "timeout_response_retained": next(
+            row["observed"] == "accept" for row in rows if row["name"] == "timeout_response_retained"
+        ),
         "baseline_output_sha256": hashlib.sha256(baseline).hexdigest(),
+        "v1_corrections": source["v1_corrections"],
         "invariants": source["invariants"],
         "scenarios": rows,
         "declines": source["declines"],
@@ -337,37 +494,44 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
 
 def render_markdown(report: dict[str, Any]) -> str:
     lines = [
-        "# Resumable SMT-COMP-style run contract",
+        "# Resumable SMT-COMP-style run contract v2",
         "",
         "> **Generated; do not edit by hand.** Source: "
-        "[`docs/plan/smtcomp-resumable-run-contract-v1.json`](../smtcomp-resumable-run-contract-v1.json). "
+        "[`docs/plan/smtcomp-resumable-run-contract-v2.json`](../smtcomp-resumable-run-contract-v2.json). "
         "Regenerate with `python3 scripts/gen-smtcomp-resume-contract.py`.",
         "",
-        "Status: prototype; no full-library rerun is authorized by this artifact.",
+        "Status: prototype; supersedes v1 before production integration; no full-library rerun is authorized.",
         "",
         "## Result",
         "",
         f"- Invariants: **{report['invariant_count']}**",
         f"- Executable scenarios: **{report['scenario_count']}** "
         f"({report['accepted_scenarios']} accepted controls, {report['rejected_scenarios']} rejected mutations)",
-        f"- Interrupted/resumed deterministic fixture byte-identical to uninterrupted: **{str(report['deterministic_resume_byte_equal']).lower()}**",
+        f"- Interrupted/resumed scoring projection byte-identical to uninterrupted: **{str(report['deterministic_resume_byte_equal']).lower()}**",
+        f"- Response observed before a forced timeout remains admitted: **{str(report['timeout_response_retained']).lower()}**",
         f"- Canonical baseline SHA-256: `{report['baseline_output_sha256']}`",
         "",
-        "## Invariants",
+        "## Why v1 was insufficient",
         "",
     ]
+    lines.extend(f"- {item}" for item in report["v1_corrections"])
+    lines.extend(["", "## Invariants", ""])
     lines.extend(f"- **{row['id']}** — {row['statement']}" for row in report["invariants"])
     lines.extend(
         [
             "",
             "## Failure and recovery matrix",
             "",
-            "| ID | Scenario | Expected | Observed | Canonical bytes | Contract result |",
+            "| ID | Scenario | Expected | Observed | Baseline bytes | Contract result |",
             "|---|---|---:|---:|---:|---|",
         ]
     )
     for row in report["scenarios"]:
-        byte_equal = "n/a" if row["canonical_byte_equal"] is None else str(row["canonical_byte_equal"]).lower()
+        byte_equal = (
+            "n/a"
+            if row["canonical_byte_equal"] is None
+            else str(row["canonical_byte_equal"]).lower()
+        )
         lines.append(
             f"| {row['id']} | `{row['name']}` | {row['expected']} | {row['observed']} | "
             f"{byte_equal} | {row['reason']} |"
@@ -379,9 +543,9 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Implementation boundary",
             "",
-            "The prototype validates the data and lifecycle contract in memory. Production work still has to implement same-directory temporary writes plus fsync/rename, immutable launch and terminal manifests, single-owner shard leases, cgroup-v2 (or equivalent) aggregate enforcement, signal-safe best-effort terminal emission, conflict quarantine, and strict central merge over real filesystem artifacts. A tiny fake-solver process test must kill an actual worker at fixed record boundaries before the 64,345-case candidate can be rerun.",
+            "The v2 in-memory and E1a filesystem prototypes validate evidence shape, attribution, no-overwrite persistence, and canonical scoring projection. E1b still has to integrate one-solver run manifests, exact benchmark IDs/hashes, output sidecars, typed process outcomes, attempt lifecycle, completion-last export, duplicate rejection, and a fake solver into `compete.py` without changing central scoring semantics.",
             "",
-            "BenchExec remains the external reference execution layer for official-style rehearsal; this local protocol exists to make Axeyum's pre-rehearsal distributed evidence durable and auditable.",
+            "The current runner drops a parsed response on wall timeout and labels any other signal as memory exhaustion. V2 deliberately cannot encode those guesses as valid SMT-COMP evidence: observed and admitted verdicts are separate, and memory-limit classification requires actual enforcement evidence.",
             "",
         ]
     )
@@ -403,13 +567,19 @@ def main() -> int:
     args = parser.parse_args()
     source = json.loads(SOURCE.read_text(encoding="utf-8"))
     report = evaluate(source)
-    write_or_check(OUTPUT_JSON, json.dumps(report, indent=2, sort_keys=True).encode() + b"\n", args.check)
+    write_or_check(
+        OUTPUT_JSON,
+        json.dumps(report, indent=2, sort_keys=True).encode() + b"\n",
+        args.check,
+    )
     write_or_check(OUTPUT_MD, render_markdown(report).encode("utf-8"), args.check)
     print(
         "smtcomp-resume-contract|"
-        f"invariants={report['invariant_count']}|scenarios={report['scenario_count']}|"
+        f"version=2|invariants={report['invariant_count']}|"
+        f"scenarios={report['scenario_count']}|"
         f"accept={report['accepted_scenarios']}|reject={report['rejected_scenarios']}|"
-        f"resume_byte_equal={str(report['deterministic_resume_byte_equal']).lower()}"
+        f"resume_byte_equal={str(report['deterministic_resume_byte_equal']).lower()}|"
+        f"timeout_response_retained={str(report['timeout_response_retained']).lower()}"
     )
     return 0
 

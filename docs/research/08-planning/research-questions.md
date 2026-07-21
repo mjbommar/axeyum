@@ -648,11 +648,14 @@ Out of scope:
     [ADR-0344](../09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
     requires immutable per-result checkpoints, exact run/environment identity,
     explicit accounting for terminal-less attempts, complete shard manifests,
-    strict merge, and aggregate resource enforcement. The checked prototype
-    exercises 14 invariants across 22 scenarios and makes deterministic
-    interrupted/resumed output byte-identical to an uninterrupted control. The
-    question remains open until real filesystem, process-kill, one-host, and
-    multi-host gates pass; the 64,345-case candidate must not be rerun first.
+    strict merge, and aggregate resource enforcement. Its v2 correction adds
+    typed process outcomes, observed/admitted verdict separation, per-result
+    attempt ownership, and content-addressed outputs. The checked prototype
+    exercises 18 invariants across 28 scenarios and makes deterministic
+    interrupted/resumed scoring output byte-identical to an uninterrupted
+    control. E1a passes local kill tests; the question remains open until E1b
+    runner/solver/lease/output integration and E2-E3 resource/multi-host gates
+    pass. The 64,345-case candidate must not be rerun first.
 
 ### Horizon: General Reasoning And Proving
 

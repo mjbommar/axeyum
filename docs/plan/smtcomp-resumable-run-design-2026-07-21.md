@@ -1,6 +1,6 @@
 # Resumable distributed benchmark execution
 
-Status: E0 contract and E1a local filesystem prototype landed; production integration not implemented
+Status: E0/v2 contract and E1a local filesystem prototype landed; production integration not implemented
 Date: 2026-07-21
 
 ## Plain-English outcome
@@ -63,13 +63,16 @@ official-style execution rehearsal after selection provenance is complete.
 
 ## Contract prototype
 
-The source contract is
-[`smtcomp-resumable-run-contract-v1.json`](smtcomp-resumable-run-contract-v1.json).
+The active source contract is
+[`smtcomp-resumable-run-contract-v2.json`](smtcomp-resumable-run-contract-v2.json).
+It supersedes the preserved v1 prototype before production integration because
+the [E1b audit](smtcomp-runner-e1b-audit-2026-07-21.md) found v1 could not
+represent real process outcomes or retry attribution without loss.
 Its generated
 [failure/recovery matrix](generated/smtcomp-resumable-run-contract.md) checks
-**14 invariants against 22 executable scenarios**: four accepted controls and
-18 fail-closed mutations. The interrupted/resumed deterministic fixture merges
-byte-for-byte identically to its uninterrupted control.
+**18 invariants against 28 executable scenarios**: five accepted controls and
+23 fail-closed mutations. The interrupted/resumed deterministic scoring
+projection merges byte-for-byte identically to its uninterrupted control.
 
 The prototype establishes five boundaries.
 
@@ -154,13 +157,15 @@ is preserved and a new run identity is created rather than mixing trials.
 
 ## Staged production plan
 
-### E0 — Data contract (landed prototype)
+### E0 — Data contract (landed v2 prototype)
 
-- Machine-readable v1 contract.
+- Preserved v1 sketch plus active machine-readable v2 process-evidence contract.
 - Self-hashed immutable records and strict merge model.
 - Attempt versus shard-completion semantics.
-- 22-scenario mutation matrix.
+- 28-scenario mutation matrix.
 - Deterministic interruption/recovery byte-equivalence control.
+- Typed termination, observed/admitted verdict separation, per-result attempt
+  attribution, terminal new/skipped partitions, and output identities.
 
 Exit: generated artifacts are byte-stable and all mutations behave as
 declared. This authorizes design review only.
@@ -181,6 +186,12 @@ canonical output. Mutation-test truncation, conflicts, and identity drift.
 across tmpfs and the local ext-family worktree plus conflict, orphan, and
 filename-drift controls. The actual solver/launcher, lease, current-raw export,
 and duplicate-merge replacement remain E1b; E1 as a whole is not complete.
+
+The E1b source audit also finds two active-runner semantic defects that v2 must
+correct inside opt-in mode: a parsed timeout response is discarded despite the
+SMT-COMP 2026 response rule, and any other negative POSIX return code is guessed
+to mean memory exhaustion. See the
+[runner audit](smtcomp-runner-e1b-audit-2026-07-21.md).
 
 ### E2 — One-host enforced execution
 
