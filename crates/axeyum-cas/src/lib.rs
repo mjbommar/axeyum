@@ -76,15 +76,75 @@ pub enum CasExpr {
     Div(Box<CasExpr>, Box<CasExpr>),
     /// A non-negative integer power `base^exp`.
     Pow(Box<CasExpr>, u32),
-    /// The natural logarithm `ln(arg)`. A transcendental head (outside the
-    /// polynomial/rational fragment), introduced by integration; its derivative
-    /// `d/dx ln(v) = v'/v` is rational, which is what lets integrals containing it
-    /// be certified by differentiate-and-check.
-    Ln(Box<CasExpr>),
-    /// The arctangent `atan(arg)`. Like [`CasExpr::Ln`], a transcendental head
-    /// whose derivative `d/dx atan(u) = u'/(1+u²)` is rational — introduced by
-    /// integration over irreducible quadratic denominators.
-    Atan(Box<CasExpr>),
+    /// A unary transcendental function applied to an argument, e.g. `ln(u)`,
+    /// `exp(u)`, `sin(u)`. Outside the polynomial/rational fragment, but every
+    /// such head has a mechanical chain-rule derivative, so expressions built
+    /// from them are still differentiable and (where the derivative reduces to a
+    /// decidable identity) certifiable.
+    Unary(UnaryFunc, Box<CasExpr>),
+}
+
+/// A unary transcendental function head (see [`CasExpr::Unary`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnaryFunc {
+    /// Natural logarithm `ln`.
+    Ln,
+    /// Exponential `exp`.
+    Exp,
+    /// Sine `sin`.
+    Sin,
+    /// Cosine `cos`.
+    Cos,
+    /// Tangent `tan`.
+    Tan,
+    /// Arctangent `atan`.
+    Atan,
+    /// Principal square root `sqrt`.
+    Sqrt,
+}
+
+impl UnaryFunc {
+    /// The function's display name.
+    #[must_use]
+    pub fn name(self) -> &'static str {
+        match self {
+            UnaryFunc::Ln => "ln",
+            UnaryFunc::Exp => "exp",
+            UnaryFunc::Sin => "sin",
+            UnaryFunc::Cos => "cos",
+            UnaryFunc::Tan => "tan",
+            UnaryFunc::Atan => "atan",
+            UnaryFunc::Sqrt => "sqrt",
+        }
+    }
+
+    /// The chain-rule derivative `d/dx f(u) = f'(u) · du_dx`, given the argument
+    /// `arg` (= `u`) and its derivative `arg_deriv` (= `du/dx`).
+    fn differentiate(self, arg: &CasExpr, arg_deriv: CasExpr) -> CasExpr {
+        let u = || arg.clone();
+        // f'(u) as a CasExpr.
+        let outer = match self {
+            // d/du ln u = 1/u
+            UnaryFunc::Ln => CasExpr::int(1) / u(),
+            // d/du exp u = exp u
+            UnaryFunc::Exp => CasExpr::Unary(UnaryFunc::Exp, Box::new(u())),
+            // d/du sin u = cos u
+            UnaryFunc::Sin => CasExpr::Unary(UnaryFunc::Cos, Box::new(u())),
+            // d/du cos u = -sin u
+            UnaryFunc::Cos => -CasExpr::Unary(UnaryFunc::Sin, Box::new(u())),
+            // d/du tan u = 1 + tan² u
+            UnaryFunc::Tan => {
+                CasExpr::int(1) + CasExpr::Unary(UnaryFunc::Tan, Box::new(u())).pow(2)
+            }
+            // d/du atan u = 1/(1+u²)
+            UnaryFunc::Atan => CasExpr::int(1) / (CasExpr::int(1) + u().pow(2)),
+            // d/du sqrt u = 1/(2·sqrt u)
+            UnaryFunc::Sqrt => {
+                CasExpr::int(1) / (CasExpr::int(2) * CasExpr::Unary(UnaryFunc::Sqrt, Box::new(u())))
+            }
+        };
+        CasExpr::Mul(vec![outer, arg_deriv])
+    }
 }
 
 impl CasExpr {
@@ -131,7 +191,43 @@ impl CasExpr {
     /// The natural logarithm of `self`.
     #[must_use]
     pub fn ln(self) -> Self {
-        CasExpr::Ln(Box::new(self))
+        CasExpr::Unary(UnaryFunc::Ln, Box::new(self))
+    }
+
+    /// The exponential `exp(self)`.
+    #[must_use]
+    pub fn exp(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Exp, Box::new(self))
+    }
+
+    /// The sine of `self`.
+    #[must_use]
+    pub fn sin(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Sin, Box::new(self))
+    }
+
+    /// The cosine of `self`.
+    #[must_use]
+    pub fn cos(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Cos, Box::new(self))
+    }
+
+    /// The tangent of `self`.
+    #[must_use]
+    pub fn tan(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Tan, Box::new(self))
+    }
+
+    /// The arctangent of `self`.
+    #[must_use]
+    pub fn atan(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Atan, Box::new(self))
+    }
+
+    /// The principal square root of `self`.
+    #[must_use]
+    pub fn sqrt(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Sqrt, Box::new(self))
     }
 
     /// The symbolic derivative of this expression with respect to `var`.
@@ -192,15 +288,7 @@ impl CasExpr {
                     base.differentiate(var),
                 ])
             }
-            CasExpr::Ln(arg) => {
-                // d/dx ln(v) = v' / v
-                CasExpr::Div(Box::new(arg.differentiate(var)), arg.clone())
-            }
-            CasExpr::Atan(arg) => {
-                // d/dx atan(u) = u' / (1 + u²)
-                let denom = CasExpr::int(1) + CasExpr::Pow(arg.clone(), 2);
-                CasExpr::Div(Box::new(arg.differentiate(var)), Box::new(denom))
-            }
+            CasExpr::Unary(func, arg) => func.differentiate(arg, arg.differentiate(var)),
         }
     }
 
@@ -242,8 +330,9 @@ impl CasExpr {
             CasExpr::Pow(base, exp) => {
                 CasExpr::Pow(Box::new(base.substitute(var, replacement)), *exp)
             }
-            CasExpr::Ln(arg) => CasExpr::Ln(Box::new(arg.substitute(var, replacement))),
-            CasExpr::Atan(arg) => CasExpr::Atan(Box::new(arg.substitute(var, replacement))),
+            CasExpr::Unary(func, arg) => {
+                CasExpr::Unary(*func, Box::new(arg.substitute(var, replacement)))
+            }
         }
     }
 
@@ -281,7 +370,7 @@ impl CasExpr {
                 Some(acc)
             }
             // Transcendental: no exact rational value.
-            CasExpr::Ln(_) | CasExpr::Atan(_) => None,
+            CasExpr::Unary(_, _) => None,
         }
     }
 }
@@ -359,8 +448,7 @@ impl CasExpr {
                     .join("*"),
             ),
             CasExpr::Div(u, w) => (2, format!("{}/{}", u.render(3), w.render(3))),
-            CasExpr::Ln(arg) => (4, format!("ln({})", arg.render(0))),
-            CasExpr::Atan(arg) => (4, format!("atan({})", arg.render(0))),
+            CasExpr::Unary(func, arg) => (4, format!("{}({})", func.name(), arg.render(0))),
             CasExpr::Add(terms) => {
                 let mut out = String::new();
                 for (i, t) in terms.iter().enumerate() {
@@ -680,7 +768,7 @@ pub fn normalize(expr: &CasExpr) -> Option<MultiPoly> {
         CasExpr::Pow(base, exp) => normalize(base)?.pow(*exp),
         // A quotient (use [`normalize_rational`]) or a transcendental head is not
         // a polynomial: the polynomial normal form declines.
-        CasExpr::Div(..) | CasExpr::Ln(_) | CasExpr::Atan(_) => None,
+        CasExpr::Div(..) | CasExpr::Unary(..) => None,
     }
 }
 
@@ -824,9 +912,9 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // identities conservatively fail to reduce (→ not certified, never a false
         // certification). It is exactly what lets `d/dx (c·ln v) = c'·ln v + c·v'/v`
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
-        CasExpr::Ln(arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("ln", arg)))),
-        CasExpr::Atan(arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
-            "atan", arg,
+        CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
+            func.name(),
+            arg,
         )))),
     }
 }
@@ -1007,16 +1095,72 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
             certificate,
         });
     }
-    // Univariate rational-function path (Horowitz rational part). Certify by
-    // differentiate-and-check; a case that needs a logarithmic part (or any
-    // finder shortfall) declines to `None` rather than returning a wrong answer.
-    let antiderivative = integrate_rational(expr, var)?;
-    let certificate = prove_derivative(&antiderivative, var, expr);
-    match certificate {
-        ZeroTest::Certified { equal: true, .. } => Some(CertifiedIntegral {
-            antiderivative,
-            certificate,
-        }),
+    // Try each finder (univariate rational via Horowitz; elementary-function
+    // table). Every candidate is certified by differentiate-and-check, so a
+    // finder shortfall or out-of-fragment case declines to `None` rather than
+    // returning a wrong answer.
+    for antiderivative in [
+        integrate_rational(expr, var),
+        integrate_elementary(expr, var),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        let certificate = prove_derivative(&antiderivative, var, expr);
+        if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+            return Some(CertifiedIntegral {
+                antiderivative,
+                certificate,
+            });
+        }
+    }
+    None
+}
+
+/// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
+/// standard elementary function and the argument is linear in `var`. Returns the
+/// antiderivative or `None` outside the supported shapes; certified downstream.
+fn integrate_elementary(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Peel an optional rational constant coefficient: k · f(..).
+    let (coeff, inner) = match expr {
+        CasExpr::Unary(_, _) => (Rational::integer(1), expr),
+        CasExpr::Neg(a) => (Rational::integer(-1), a.as_ref()),
+        CasExpr::Mul(factors) if factors.len() == 2 => match (&factors[0], &factors[1]) {
+            (CasExpr::Const(k), u @ CasExpr::Unary(_, _))
+            | (u @ CasExpr::Unary(_, _), CasExpr::Const(k)) => (*k, u),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let CasExpr::Unary(func, arg) = inner else {
+        return None;
+    };
+    // The argument must be linear in `var`: a·x + b (a ≠ 0).
+    let arg_poly = normalize(arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let a = arg_poly[1];
+    let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    // ∫ k·f(a·x+b) dx for the closed-form cases.
+    let build = |c: Rational, body: CasExpr| -> Option<CasExpr> {
+        let k = coeff.checked_mul(c)?.checked_div(a)?;
+        Some(scaled_term(k, body))
+    };
+    match func {
+        // ∫ exp(u) = (1/a) exp(u)
+        UnaryFunc::Exp => build(Rational::integer(1), arg_expr.exp()),
+        // ∫ sin(u) = -(1/a) cos(u)
+        UnaryFunc::Sin => build(Rational::integer(-1), arg_expr.cos()),
+        // ∫ cos(u) = (1/a) sin(u)
+        UnaryFunc::Cos => build(Rational::integer(1), arg_expr.sin()),
+        // ∫ ln(u) = (u/a)(ln(u) − 1)  [by parts]
+        UnaryFunc::Ln => {
+            let k = coeff.checked_div(a)?;
+            let body = CasExpr::Mul(vec![arg_expr.clone(), arg_expr.ln() - CasExpr::int(1)]);
+            Some(scaled_term(k, body))
+        }
+        // atan / tan / sqrt closed forms are later slices.
         _ => None,
     }
 }
@@ -1078,16 +1222,16 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
         let lead = dd[1];
         let c0 = cc.first().copied().unwrap_or_else(Rational::zero);
         let coeff = c0.checked_div(lead)?;
-        let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, &dd).to_expr()));
-        return Some(scaled_ln_expr(coeff, ln));
+        let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, &dd).to_expr()));
+        return Some(scaled_term(coeff, ln));
     }
     // Degree ≥ 2: Rothstein–Trager. ∫ C/D₁ = Σ cᵢ·ln(vᵢ), cᵢ the rational roots
     // of Res_t, vᵢ = gcd(C − cᵢ·D₁', D₁).
     if let Some(terms) = ratint::log_terms(&cc, &dd) {
         let mut sum: Vec<CasExpr> = Vec::with_capacity(terms.len());
         for (coeff, v_poly) in terms {
-            let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()));
-            sum.push(scaled_ln_expr(coeff, ln));
+            let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, &v_poly).to_expr()));
+            sum.push(scaled_term(coeff, ln));
         }
         return match sum.len() {
             0 => None,
@@ -1128,8 +1272,8 @@ fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) 
     // ln term (present only when the numerator has an x-component).
     if !c1.is_zero() {
         let ln_coeff = c1.checked_div(two_a)?;
-        let ln = CasExpr::Ln(Box::new(MultiPoly::from_univariate(var, dd).to_expr()));
-        parts.push(scaled_ln_expr(ln_coeff, ln));
+        let ln = CasExpr::Unary(UnaryFunc::Ln, Box::new(MultiPoly::from_univariate(var, dd).to_expr()));
+        parts.push(scaled_term(ln_coeff, ln));
     }
     // atan term: coefficient (2a·c₀ − b·c₁)/(a·s), argument (2a·x + b)/s.
     let atan_coeff =
@@ -1137,7 +1281,7 @@ fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) 
     if !atan_coeff.is_zero() {
         let arg = MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?])
             .to_expr();
-        let atan = CasExpr::Atan(Box::new(arg));
+        let atan = CasExpr::Unary(UnaryFunc::Atan, Box::new(arg));
         parts.push(if atan_coeff == Rational::integer(1) {
             atan
         } else if atan_coeff == Rational::integer(-1) {
@@ -1183,7 +1327,7 @@ fn isqrt(n: i128) -> Option<i128> {
 }
 
 /// `coeff · ln_expr`, presenting `±1` cleanly (`ln_expr` / `−ln_expr`).
-fn scaled_ln_expr(coeff: Rational, ln_expr: CasExpr) -> CasExpr {
+fn scaled_term(coeff: Rational, ln_expr: CasExpr) -> CasExpr {
     if coeff == Rational::integer(1) {
         ln_expr
     } else if coeff == Rational::integer(-1) {
@@ -1667,6 +1811,68 @@ mod tests {
         assert_eq!(
             format!("{}", CasExpr::rat(1, 5) * v("x").pow(5)),
             "(1/5)*x^5"
+        );
+    }
+
+    #[test]
+    fn integrate_elementary_functions() {
+        let x = || v("x");
+        // Each certified by d/dx(answer) = integrand.
+        for integrand in [
+            x().exp(),                              // ∫ exp(x) = exp(x)
+            x().sin(),                              // ∫ sin(x) = -cos(x)
+            x().cos(),                              // ∫ cos(x) = sin(x)
+            (CasExpr::int(3) * x()).exp(),          // ∫ exp(3x) = (1/3)exp(3x)
+            (CasExpr::int(2) * x()).cos(),          // ∫ cos(2x) = (1/2)sin(2x)
+            x().ln(),                               // ∫ ln(x) = x·ln(x) - x
+        ] {
+            let result = integrate(&integrand, "x").expect("elementary integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_declines_nonlinear_argument() {
+        // ∫ sin(x²) dx has no elementary closed form: honest None.
+        assert!(integrate(&v("x").pow(2).sin(), "x").is_none());
+    }
+
+    #[test]
+    fn elementary_function_derivatives() {
+        let x = || v("x");
+        // d/dx exp(x) = exp(x)
+        assert_equal(&x().exp().differentiate("x"), &x().exp());
+        // d/dx sin(x) = cos(x)
+        assert_equal(&x().sin().differentiate("x"), &x().cos());
+        // d/dx cos(x) = -sin(x)
+        assert_equal(&x().cos().differentiate("x"), &(-x().sin()));
+        // d/dx ln(x) = 1/x
+        assert_equal(&x().ln().differentiate("x"), &(CasExpr::int(1) / x()));
+        // d/dx atan(x) = 1/(1+x²)
+        assert_equal(
+            &x().atan().differentiate("x"),
+            &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
+        );
+    }
+
+    #[test]
+    fn chain_rule_on_elementary_functions() {
+        let x = || v("x");
+        // d/dx sin(x²) = 2x·cos(x²)
+        assert_equal(
+            &x().pow(2).sin().differentiate("x"),
+            &(CasExpr::int(2) * x() * x().pow(2).cos()),
+        );
+        // d/dx exp(3x) = 3·exp(3x)
+        assert_equal(
+            &(CasExpr::int(3) * x()).exp().differentiate("x"),
+            &(CasExpr::int(3) * (CasExpr::int(3) * x()).exp()),
+        );
+        // d/dx ln(x²+1) = 2x/(x²+1)
+        assert_equal(
+            &(x().pow(2) + CasExpr::int(1)).ln().differentiate("x"),
+            &((CasExpr::int(2) * x()) / (x().pow(2) + CasExpr::int(1))),
         );
     }
 
