@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — I5 privately extracts affine-growth reconstruction.** The
+  seven-item ADR-0097/0105 family now lives in the 467-line
+  `int_reconstruct/affine_growth.rs` child with explicit imports, unchanged
+  outward paths, and one existing private parent helper. `repair-const-nterm`
+  remains exactly 43,108 Lean bytes at FNV-1a `dd4d24cdf0168fb9`. All nine
+  focused controls, including every 64-seed Z3 positive/near-miss row, all 895
+  library tests, strict Clippy, and both rustdoc profiles pass.
+  `int_reconstruct.rs` falls 4,701→4,246 lines, 52.2% below its original size.
+  Next: remeasure; no further integer-family split is automatically admitted.
+
 - **2026-07-21 — Post-I4 census authorizes only I5.** The independent affine-
   growth family is a contiguous 456-line ADR-0097/0105 seam with seven cohesive
   items, two outward paths, and nine focused controls including a 64-seed Z3
@@ -5752,6 +5762,10 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Extracted affine-growth reconstruction.** Moved the exact
+  455-line production family into a private 467-line child, preserving proof
+  bytes, paths, certificate semantics, and all focused/full/lint/doc gates.
 
 - **2026-07-21 — Preregistered the affine-growth module seam.** Authorized only
   the seven-item, 456-line ADR-0097/0105 family with a proof-byte gate and all

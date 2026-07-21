@@ -579,16 +579,16 @@ session state.
 >    both rustdoc profiles pass. `int_reconstruct.rs` falls 5,045→4,701 lines
 >    and is now 47.0% below its original 8,876 lines. Remeasure before any
 >    successor; affine growth remains an independent candidate, not implied.
->    That independent census now authorizes I5 only: move the contiguous
->    456-line ADR-0097/0105 affine-growth reconstruction family into private
->    `int_reconstruct/affine_growth.rs`. Its seven top-level items expose only
->    the crate router and historical public reconstructor; four reconstruction
->    controls plus five evidence/termination/differential controls include a
->    64-seed Z3 positive/near-miss sweep. Capture and preserve the
->    `repair-const-nterm` generated Lean bytes, exact binder/parameter/branch
->    order, certificate match, cap, paths, and visibility. It may reuse the
->    existing private `peel_closed_foralls` parent helper but must not depend on
->    or merge with the residue child.
+>    I5 is now complete: the ADR-0097/0105 affine-growth reconstruction family
+>    lives in private 467-line `int_reconstruct/affine_growth.rs` with explicit
+>    imports, unchanged router/public paths, and only the existing private
+>    `peel_closed_foralls` parent helper. `repair-const-nterm` remains exactly
+>    43,108 generated Lean bytes at FNV-1a `dd4d24cdf0168fb9`; all nine focused
+>    controls pass, including every 64-seed Z3 positive and satisfiable-near-
+>    miss row. All 895 library tests, strict Clippy, and both rustdoc profiles
+>    pass. `int_reconstruct.rs` falls 4,701→4,246 lines and is now 52.2% below
+>    its original 8,876 lines. Remeasure before any successor; no further
+>    integer-family split is implied.
 >    Closed-universal and nested-XOR reconstruction remain parent-owned because
 >    their distinct entry points share a large kernel-helper region; do not hide
 >    both behind one cosmetic module.
