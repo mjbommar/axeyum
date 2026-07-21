@@ -6172,6 +6172,21 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
             certificate,
         });
     }
+    // Constant-multiple rule: ∫ c·g = c·∫g. Pulls a rational constant out of a
+    // `Div`-by-const, a `Neg`, or a `Mul` with constant factors (so e.g.
+    // `sinh x = (eˣ − e^{−x})/2` reduces to the additive-linearity path below).
+    if let Some((constant, rest)) = split_constant_factor(expr)
+        && let Some(inner) = integrate(&rest, var)
+            && inner.is_certified() {
+                let antiderivative = fold_trivial(&scaled_term(constant, inner.antiderivative));
+                let certificate = prove_derivative(&antiderivative, var, expr);
+                if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+                    return Some(CertifiedIntegral {
+                        antiderivative,
+                        certificate,
+                    });
+                }
+            }
     // Additive linearity: ∫(f + g) = ∫f + ∫g, so a sum integrates if every term
     // does. Certified as usual by differentiate-and-check on the assembled sum.
     if let CasExpr::Add(terms) = expr {
@@ -6529,6 +6544,44 @@ fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         CasExpr::Mul(vec![a_expr, arg_expr.clone().cos()]),
         CasExpr::Mul(vec![b_expr, arg_expr.sin()]),
     ]))
+}
+
+/// Split a leading **rational constant** multiplier out of `expr`, returning
+/// `(c, g)` with `expr = c·g` and `c ≠ 1` — for a `Div`-by-constant (`g/c`), a
+/// `Neg` (`−1·g`), or a `Mul` carrying constant factors. `None` if there is no
+/// non-trivial constant to factor out (so `∫` recursion terminates).
+fn split_constant_factor(expr: &CasExpr) -> Option<(Rational, CasExpr)> {
+    match expr {
+        CasExpr::Div(a, b) => {
+            let CasExpr::Const(c) = b.as_ref() else {
+                return None;
+            };
+            if c.is_zero() {
+                return None;
+            }
+            Some((Rational::integer(1).checked_div(*c)?, (**a).clone()))
+        }
+        CasExpr::Neg(a) => Some((Rational::integer(-1), (**a).clone())),
+        CasExpr::Mul(_) => {
+            let mut constant = Rational::integer(1);
+            let mut rest: Vec<CasExpr> = Vec::new();
+            for factor in flatten_mul(expr) {
+                match factor {
+                    CasExpr::Const(c) => constant = constant.checked_mul(c)?,
+                    other => rest.push(other),
+                }
+            }
+            if constant == Rational::integer(1) || rest.is_empty() {
+                return None; // nothing to pull, or all-constant (handled elsewhere)
+            }
+            let remaining = match rest.len() {
+                1 => rest.into_iter().next()?,
+                _ => CasExpr::Mul(rest),
+            };
+            Some((constant, remaining))
+        }
+        _ => None,
+    }
 }
 
 /// Flatten a (possibly left-nested) product into its multiplicative factors.
@@ -10189,6 +10242,23 @@ mod tests {
         let b = integrate(&(CasExpr::int(1) / (x() * x().ln())), "x").unwrap();
         assert!(b.is_certified());
         assert_equal(&b.antiderivative, &x().ln().ln());
+    }
+
+    #[test]
+    fn integrate_pulls_constant_factors() {
+        let x = || v("x");
+        // ∫c·f = c·∫f: a Neg, a Mul-with-constant, a Div-by-constant. The last
+        // also exercises hyperbolic integrands ((eˣ−e^{−x})/2 = sinh x ⇒ cosh x).
+        for integrand in [
+            CasExpr::int(-1) * x().sin(),           // −sin x ⇒ cos x
+            CasExpr::int(3) * x().exp(),            // 3eˣ
+            (x().exp() - (CasExpr::int(-1) * x()).exp()) / CasExpr::int(2), // sinh x
+            (x().exp() + (CasExpr::int(-1) * x()).exp()) / CasExpr::int(2), // cosh x
+        ] {
+            let result = integrate(&integrand, "x").expect("constant pulled out");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
     }
 
     #[test]
