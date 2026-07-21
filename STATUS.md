@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — the post-R4/item-10 residual inventory selects the ABV test
+  split next.** `abv.rs` is 14,953 lines / 547,072 bytes, of which the exact
+  inline test module is 3,514 lines. Moving that module to `abv/tests.rs` cuts
+  the reviewer-facing file by 23.5% without changing production visibility,
+  algorithms, or public paths. The ranked follow-ons are the 334-line eager
+  array-elimination certificate, a separately censused 4,968-line lazy-ext
+  replay/repair lane, and the 1,196-line integer-inequality reconstruction tail.
+  Strict/non-strict/algebraic CAD deduplication remains real but later because it
+  is solver behavior and needs an oracle/differential gate. Next: execute ABV A1
+  as its own mechanical commit and push.
+
 - **2026-07-20 — ADR-0314 makes the only censused invalid `SolverConfig` state
   unrepresentable.** `BitLoweringMode` now selects eager, dense-demand, or
   admission-controlled range-demand cold lowering; the old fluent selectors
@@ -5578,6 +5589,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — item 10 is re-ranked from measured residual structure.** The
+  new artifact-readiness inventory separates low-risk module/test moves from
+  correctness-sensitive CAD deduplication and selects the exact 3,514-line ABV
+  test-module extraction as the next bounded checkpoint.
 
 - **2026-07-20 — ADR-0314 accepts a typed cold bit-lowering mode.** The public
   `SolverConfig` can no longer represent simultaneous dense-demand and

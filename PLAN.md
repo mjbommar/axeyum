@@ -470,7 +470,18 @@ session state.
 >    no-ops, so do not broaden this into a boolean-grouping sweep. This closes
 >    the Axeyum half of reviewer item 8. Next re-rank the remaining item-10
 >    artifact work from measured duplication/module review cost rather than
->    reopening R4 or changing solver policy without a separate ADR.
+>    reopening R4 or changing solver policy without a separate ADR. The measured
+>    residual inventory is now recorded in
+>    [`artifact-readiness-refactor-inventory.md`](docs/research/08-planning/artifact-readiness-refactor-inventory.md).
+>    `abv.rs` remains the largest reviewer-facing wall at 14,953 lines, but its
+>    exact 3,514-line inline test module is the lowest-risk first cut: move it to
+>    `abv/tests.rs` for a 23.5% visible reduction with no production seam or API
+>    change. Follow with the 334-line eager array-elimination certificate, then
+>    census the 4,968-line lazy-ext lane before exposing helpers. The
+>    1,196-line integer-inequality reconstruction tail follows; CAD
+>    parameterization remains later because it changes correctness-sensitive
+>    solver code and needs a semantic differential gate. Execute each as a
+>    separate add/commit/push checkpoint.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
