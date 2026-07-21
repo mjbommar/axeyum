@@ -50,6 +50,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use axeyum_ir::{Rational, poly};
 
+pub mod algebraic;
 pub mod groebner;
 mod factor_int;
 mod gosper;
@@ -64,6 +65,7 @@ mod series;
 pub mod stats;
 pub mod sturm;
 
+pub use algebraic::AlgebraicReal;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
@@ -1733,6 +1735,17 @@ pub fn count_real_roots(
 #[must_use]
 pub fn approximate_real_roots(expr: &CasExpr, var: &str, width: Rational) -> Option<Vec<Rational>> {
     sturm::approximate_real_roots(&univariate_coeffs(expr, var)?, width)
+}
+
+/// Every **real** root of a univariate polynomial `expr` in `var` as an exact
+/// [`AlgebraicReal`] (`RootOf`) — the minimal polynomial (irreducible factor over
+/// ℚ) plus a certified isolating interval — sorted ascending. Unlike [`solve`], this
+/// represents roots of *any* degree exactly (cube roots, non-solvable quintics, …),
+/// each refinable to arbitrary precision. `None` if `expr` is not a univariate
+/// polynomial in `var` or on overflow.
+#[must_use]
+pub fn real_roots(expr: &CasExpr, var: &str) -> Option<Vec<AlgebraicReal>> {
+    algebraic::real_roots(&univariate_coeffs(expr, var)?)
 }
 
 /// The (up to two) roots of `a·x² + b·x + c` as [`CasExpr`] values: rational when
