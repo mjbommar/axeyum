@@ -2846,6 +2846,38 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
     ])
 }
 
+/// The Hessian matrix `H[i][j] = ∂²f/∂xᵢ∂xⱼ` of a scalar field `f` over `vars` — the
+/// symmetric matrix of second partial derivatives, each entry expanded to canonical
+/// form and certified (a second partial of the certified `differentiate`). `None`
+/// if `vars` is empty.
+#[must_use]
+pub fn hessian(f: &CasExpr, vars: &[&str]) -> Option<Matrix> {
+    let rows: Vec<Vec<CasExpr>> = vars
+        .iter()
+        .map(|outer| {
+            let first = f.differentiate(outer);
+            vars.iter()
+                .map(|inner| {
+                    let second = first.differentiate(inner);
+                    expand(&second).unwrap_or(second)
+                })
+                .collect()
+        })
+        .collect();
+    Matrix::from_rows(rows)
+}
+
+/// The Laplacian `∇²f = Σ ∂²f/∂xᵢ²` of a scalar field `f` over `vars`, expanded to
+/// canonical form. Certified (a sum of certified second partials).
+#[must_use]
+pub fn laplacian(f: &CasExpr, vars: &[&str]) -> CasExpr {
+    let mut sum = CasExpr::zero();
+    for var in vars {
+        sum = sum + f.differentiate(var).differentiate(var);
+    }
+    expand(&sum).unwrap_or(sum)
+}
+
 /// The Wronskian `W(f₁, …, fₙ)` of a list of functions in `var` — the determinant of
 /// the matrix whose row `j` holds the `j`-th derivatives `fᵢ⁽ʲ⁾`. It vanishes
 /// identically iff the functions are linearly dependent (over the fragment the
@@ -5028,6 +5060,26 @@ mod tests {
 
         // exp(x) about a nonzero center leaves the rational fragment → None.
         assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
+    }
+
+    #[test]
+    fn hessian_and_laplacian() {
+        let x = || v("x");
+        let y = || v("y");
+        // f = x³ + x²y + y²: Hessian = [[6x+2y, 2x],[2x, 2]].
+        let f = x().pow(3) + x().pow(2) * y() + y().pow(2);
+        let h = hessian(&f, &["x", "y"]).unwrap();
+        assert_equal(h.get(0, 0).unwrap(), &(CasExpr::int(6) * x() + CasExpr::int(2) * y()));
+        assert_equal(h.get(0, 1).unwrap(), &(CasExpr::int(2) * x()));
+        assert_equal(h.get(1, 0).unwrap(), &(CasExpr::int(2) * x())); // symmetric
+        assert_equal(h.get(1, 1).unwrap(), &CasExpr::int(2));
+        // Laplacian ∇²(x³+x²y+y²) = (6x+2y) + 2 = 6x+2y+2.
+        assert_equal(
+            &laplacian(&f, &["x", "y"]),
+            &(CasExpr::int(6) * x() + CasExpr::int(2) * y() + CasExpr::int(2)),
+        );
+        // A harmonic function has zero Laplacian: ∇²(x²−y²) = 2 − 2 = 0.
+        assert_equal(&laplacian(&(x().pow(2) - y().pow(2)), &["x", "y"]), &CasExpr::zero());
     }
 
     #[test]
