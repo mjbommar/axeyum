@@ -6,24 +6,34 @@ Last updated: 2026-07-20
 ## Progress snapshot (2026-07-20)
 
 Shipped and verified in `crates/axeyum-cas` (pure Rust, WASM-green, clippy-clean,
-**31 tests + 2 doctests**, runnable `examples/certified_calculus.rs`):
+**99 unit tests + 18 doctests + runnable example**). Every transform is either
+denotation-preserving-by-construction or **certified** by the decidable zero-test
+(`equal`) / differentiate-and-check; the certificate is a correctness backstop, so
+out-of-fragment cases decline to `None`, never a wrong answer.
 
-- **C0 — certified polynomial kernel:** `differentiate`, `substitute`,
-  `normalize` (canonical multivariate polynomial), decidable `equal`
-  (witness-carrying zero-test). ✓
-- **C1 — rational functions:** `Div` + quotient rule, cross-multiplication
-  zero-test, `expand`, `cancel` (univariate lowest-terms via `poly::rat_gcd`). ✓
-- **C6 flagship — certified integration:** `integrate` returns a
-  `CertifiedIntegral` — antiderivative **plus a differentiate-and-check proof**.
-  Polynomials **and** the univariate **rational** fragment (Horowitz–Ostrogradsky
-  rational part; [rational-integration.md](rational-integration.md)). The
-  differentiate-and-check certificate is a correctness backstop: wrong/log-part
-  cases decline to `None`, never a wrong answer. ✓
-- Ergonomics: precedence-aware `Display`, descending-degree canonical output.
+**Core algebra:** `differentiate` (full chain rule incl. transcendental heads),
+`substitute`, `normalize`/`equal` (decidable polynomial zero-test with witness;
+transcendental heads handled as sound opaque atoms), `expand`, `cancel`, `factor`
+(rational linear factors, certified), `solve` (rational + quadratic roots),
+`apart` (partial fractions, certified), `simplify`, `together`-via-`expand`,
+`Display`.
 
-**In flight:** integration logarithmic part (Slice 2a: Rothstein–Trager,
-rational roots). **Next after:** univariate factorization (C2/G5), multivariate
-GCD (G4).
+**Calculus:** `integrate` → `CertifiedIntegral` across polynomials, the full
+univariate **rational** fragment (Horowitz rational part + Rothstein–Trager logs +
+irreducible-quadratic `atan`), and `∫ k·f(ax+b)` / `∫ p(x)·e^(ax)` /
+`∫ p(x)·sin|cos(ax)`; `limit` (continuous, 0/0, ±∞); `series` (Maclaurin/Taylor);
+`sum_polynomial` (certified by telescoping); `dsolve_homogeneous` (constant-coeff
+linear ODEs, certified by the ODE operator).
+
+**Heads:** `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`).
+
+**Modules:** `matrix.rs` (symbolic linear algebra — det, RREF, solve, inverse),
+`ntheory.rs` (gcd, mod-pow/inverse, deterministic `is_prime`, `factorize`, CRT,
+Euler φ, …), `series.rs`, `ratint.rs` (integration internals).
+
+**Next:** complex numbers (`I`, ℚ(i), complex roots — G17), multivariate GCD /
+Gröbner (G4/G6), trig/log identity simplification, first-order & inhomogeneous
+ODEs, integration by parts/substitution beyond the current table, assumptions.
 
 ---
 
