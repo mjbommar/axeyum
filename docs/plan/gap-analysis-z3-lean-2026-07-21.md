@@ -253,6 +253,16 @@ Prototype reconstruction from the selected `Evidence` object before writing any
 new theorem family. This is a measured plumbing/re-derivation hypothesis, not
 yet a claim that all eight will close.
 
+The bounded [selected-evidence prototype](lean-selected-evidence-prototype-2026-07-21.md)
+tests the five quantified-BV rows. Existing certificate consumers reconstruct
+two immediately (15,174-byte closed-universal and 18,551,050-byte paired-
+existential modules). Both alternation rows enter existing reconstruction and
+build 8,524/13,824-command tails but miss a 30-second outer bound before a final
+module; the conjunctive row also times out without a completed stage. This
+confirms a mixed plumbing plus proof-size/export-cost gap, not five missing Lean
+fragments. The three QF_NIA selected-Alethe cases remain untested and retain
+their separate denominator.
+
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
 is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
 not filenames. It contracts 58 audit occurrences to 56 paths and 51 unique

@@ -371,6 +371,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   reconstruction-only gaps remain an independent lane: five quantified-BV
   selected certificates and three QF_NIA Alethe proofs should be consumed
   directly by a bounded Lean prototype before any new theorem family is added.
+  The first selected-evidence prototype now closes two BV rows directly (15 KB
+  closed-universal and 18.5 MB paired-existential modules); two alternation rows
+  build 8,524/13,824-command tails but miss a 30-second outer bound, and the
+  conjunctive row times out without a completed stage. Measure proof-size/RSS/
+  external-Lean cost before changing reconstruction; keep the three QF_NIA
+  proof-object cases separate.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
@@ -6211,6 +6217,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-21 — Prototyped Lean reconstruction from selected evidence.** The
+  exact five quantified-BV reconstruction gaps are not five theorem gaps: two
+  existing certificate consumers return kernel-checked Lean modules, while the
+  other three hit bounded size/cost limits after entering existing routes. The
+  durable diagnostic and result note preserve the 30-second per-row protocol;
+  QF_NIA selected-Alethe consumption remains the next independent prototype.
 
 - **2026-07-21 — Refreshed the complete bare-UNSAT population under audit v2.**
   Corrected the v1 vacuous-check accounting in the artifacts themselves,

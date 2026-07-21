@@ -30,6 +30,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   completed dominance-v2 population refresh and vacuous-check correction,
   measured decision-backend prevalence, stable route IDs, obligation
   fingerprints, and the gate for selecting actual proof mechanisms.
+- [`lean-selected-evidence-prototype-2026-07-21.md`](lean-selected-evidence-prototype-2026-07-21.md) —
+  bounded five-row prototype showing that quantified-BV reconstruction-only
+  gaps split into direct selected-certificate successes and large-module/
+  timeout cases, with QF_NIA proof-object consumption kept separate.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map

@@ -38,6 +38,16 @@ session state.
 > select a proof mechanism from syntax counts or turn the 22 unpaired timing-
 > flag changes into a performance claim.
 
+> **Lean reconstruction-only lane (2026-07-21).** The exact eight-row generated
+> queue splits five quantified-BV certificates from three QF_NIA Alethe proofs.
+> A selected-evidence diagnostic closes two BV rows directly (15 KB and 18.5 MB
+> modules); two alternation rows enter existing reconstruction but miss a 30 s
+> outer render/reconstruction bound after building 8,524/13,824-command tails;
+> the conjunctive row also times out without a completed stage. This is proof-
+> object plumbing plus size/export cost, not evidence for five missing theorem
+> families. Next measure phase/RSS/module/external-Lean cost on the same five,
+> then prototype direct consumption of the three checked QF_NIA Alethe proofs.
+
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
 > validated policy difference, no residual coverage gap, symbolic memory not
