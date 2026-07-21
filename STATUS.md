@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0320 preregisters the bounded T5.3.2 evidence retry.**
+  Rejected ADR-0318 is not reused. The new zero-result protocol freezes four
+  fresh owning-Cargo captures, one authenticated raw module and two typed
+  summaries, independent finite-walk specifications, universal reflected
+  panic/alignment/permission proofs, three replayed broken controls, and an
+  ordered eight-table/all-256-address sampler with exactly 4,096 good-function
+  rows. No production semantic widening is authorized; a newly exposed form or
+  failed gate records another negative result.
+
 - **2026-07-21 — ADR-0319 accepts exact compiler lexical-scope metadata.**
   Bare decimal nested `scope N {}` blocks now flatten only admitted `let`
   declarations into the existing ordered local inventory; debug names and

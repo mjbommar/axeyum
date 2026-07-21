@@ -940,6 +940,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     duplicate/type mutations, and structured-noise gates pass, and the exact
     walk fixture now reaches the existing checked-memory profile. No raw walk
     artifact or page-table result is admitted; a retry needs a fresh ADR.
+  - [ADR-0320](../09-decisions/adr-0320-preregister-bounded-reflected-page-table-evidence.md)
+    preregisters that fresh evidence-only retry: four byte-identical captures,
+    authenticated raw bytes and typed summaries, independent finite-walk
+    specifications, universal good-case proofs, replayed broken controls, and
+    an exact 4,096-row sampler. It permits no production semantic widening.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

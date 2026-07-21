@@ -293,6 +293,12 @@ session state.
 >    8,218-byte live compiler capture without adding an executable semantics
 >    variant. No raw walk artifact or page-table proof is admitted; any retry
 >    requires a fresh preregistered successor to rejected ADR-0318.
+>    ADR-0320 now preregisters that successor as an evidence-only cell before
+>    capture. It freezes four fresh owning-Cargo copies, one authenticated raw
+>    module with two typed good-function summaries, independent finite-walk
+>    specifications, universal panic/alignment/permission proofs, three
+>    replayed broken controls, and an exact 4,096-row sampler. It authorizes no
+>    production semantic change and must stop on any newly exposed form.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
