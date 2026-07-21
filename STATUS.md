@@ -28,7 +28,8 @@ exit-criteria'd tracks we advance one increment at a time.
   (`582ecba8`, public QF_BV p4dfa, lazy-vs-eager at 3s/20s, DISAGREE=0): lazy
   weakly dominates (7>4 decided at 20s) but `lazy_ops_total=0` everywhere. The
   later paired controls correct the old Z3 premise: Axeyum and the Z3 crate each
-  decide 8/113 at 20s on different sets (Z3 CLI 9/113). This is bounded corpus
+  decide 8/113 at 20s; exact overlap is 6 jointly decided, 2 Axeyum-only, and 2
+  Z3-only (Z3 CLI 9/113). This is bounded corpus
   parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
   remain open.
 - **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
@@ -64,13 +65,19 @@ integration. The first prototype, `scripts/check-parity-docs.py`, derives the
 live scoreboard/dominance/p4dfa denominators from committed artifacts and is in
 `just check`; it caught and corrected the stale universal-sweep Z3 premise plus
 stale decide/proof denominators in PLAN, STATUS, and SCOREBOARD. The same gate
-now binds the branch's harder 228-file SMT-COMP-style inventory (82 decided,
-zero wrong) and 24-file QF_BV three-solver control (19/24 each). Next research
-is one shared source-family/deduplication schema for that inventory and the
-35-row scoreboard. The required representative official-Lean solver-proof CI
-tier is now wired beside the inductive cross-check with no budget skips; its
-first remote duration/RSS and checked-family count must be recorded before
-sizing the scheduled exhaustive tier.
+now binds the branch's harder 228-file SMT-COMP-style inventory and 24-file
+QF_BV three-solver control (19/24 each). The public inventory's legacy
+82-decision scorer field is
+**78 known-status agreements plus 4 unadjudicated decisions**, with zero
+contradictions of known statuses; the exact p4dfa overlap is 6 jointly decided,
+2 Axeyum-only, and 2 Z3-only. General Z3 solving-power distance is therefore
+unmeasured, while production compatibility remains demonstrably far. The
+required 71-family official-Lean solver-proof CI tier is wired beside the
+inductive cross-check, but the latest inspected job failed in Lean action setup
+before either cross-check ran. Repair it and record the first remote
+duration/RSS, Lean version, and checked-family count before sizing the scheduled
+exhaustive tier. See the
+[target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
   `Sort::Seq` + seq ops), and **A.2 landed (ADR-0052)**: the `bv2nat`-linear→BV

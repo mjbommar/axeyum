@@ -25,6 +25,16 @@ state.
 > corpus parity, not a universal performance claim. `just parity-docs` now
 > rejects the stale p4dfa and proof-denominator claims that had survived in live
 > prose after their correcting measurements landed.
+> The follow-up [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md)
+> tightens this again: the p4dfa artifacts have **6 jointly decided**, **2
+> Axeyum-only**, and **2 Z3-only** cases. The public inventory's legacy 82/228
+> scorer field partitions into **78 known-status agreements** plus **4
+> unadjudicated decisions**, not 82 independently correct answers. General Z3
+> solving-power distance remains unmeasured until a representative matched run;
+> production/API replacement remains demonstrably far. The 71-family
+> official-Lean gate is wired but has not earned remote acceptance credit: the
+> latest inspected job failed in Lean action setup before either external-Lean
+> test. Repair and archive that gate before claiming it is mandatory and green.
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact

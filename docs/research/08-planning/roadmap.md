@@ -13,6 +13,12 @@ Last updated: 2026-07-21
 > [ADR-0056](../09-decisions/adr-0056-verified-systems-track.md)), with the
 > current scoped gap analysis in
 > [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+> Its [target evidence audit](../../../docs/plan/parity-target-evidence-audit-2026-07-21.md)
+> prevents one “distance” label from crossing targets: selected fragment cells
+> can be competitive; general Z3 solving-power distance is unmeasured;
+> production Z3 compatibility is demonstrably far; solver-proof export to Lean
+> is substantial but its official-Lean CI gate is not yet recorded green; full
+> Lean language/toolchain parity is out of scope.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

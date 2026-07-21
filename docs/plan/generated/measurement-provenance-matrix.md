@@ -11,6 +11,8 @@ This is one vocabulary over **two separate measurement regimes**, not one merged
 | Curated/regression scoreboard | 35 | 992 | 927 | 837 | 778 | 65 | 58 | 753 | 0 |
 | Partial public inventory | 18 | 228 | 228 | 228 | 228 | 0 | 0 | 82 | 0 |
 
+The public inventory's legacy 82/228 scorer field contains **78 known-status agreements** and **4 unadjudicated decisions**. Its 83 benchmarks without known status do not inherit benchmark-status correctness credit.
+
 The scoreboard's 927 file occurrences contract to 837 normalized paths and **778 unique byte contents**. Its 58 exact-alias groups remove 59 further path identities after path deduplication; 65 synthetic cases have no file identity and remain explicit.
 
 The regimes overlap on **99 exact contents**: 43.4% of the 228-file inventory and 12.7% of the scoreboard's unique file-backed contents. The public inventory is therefore a harder differently weighted view, but not an independent sample. The two decide rates must not be averaged or treated as replication.
@@ -56,8 +58,8 @@ The regimes overlap on **99 exact contents**: 43.4% of the 228-file inventory an
 | scoreboard | `UF` / `uf-cvc5-regress-clean-quantified` | `frontier` | 5 | 5 | 5 | 0 | 0 | 0 | 5 | 0 | 10 | 0.000 | `:status` | absent |
 | scoreboard | `QF_NRA` / `qf-nra-synthetic-graduated` | `decide-strong` | 33 | — | — | 33 | 14 | 16 | 3 | 0 | 30 | 5.455 | `z3-binary` | absent |
 | scoreboard | `QF_NIA` / `qf-nia-synthetic-graduated` | `decide-strong` | 32 | — | — | 32 | 16 | 16 | 0 | 0 | 30 | 6.772 | `z3-binary` | absent |
-| public | `QF_BV` / `QF_BV` | `frontier` | 113 | 113 | 113 | 0 | 6 | 0 | 107 | 0 | 120 | 229.523 | `benchmark-status` | absent |
-| public | `QF_LRA` / `QF_LRA` | `decide-strong` | 12 | 12 | 12 | 0 | 7 | 3 | 2 | 0 | 120 | 40.007 | `benchmark-status` | absent |
+| public | `QF_BV` / `QF_BV` | `frontier` | 113 | 113 | 113 | 0 | 6 | 0 | 107 | 0 | 120 | 229.523 | `benchmark-status-partial+unadjudicated` | absent |
+| public | `QF_LRA` / `QF_LRA` | `decide-strong` | 12 | 12 | 12 | 0 | 7 | 3 | 2 | 0 | 120 | 40.007 | `benchmark-status-partial+unadjudicated` | absent |
 | public | `QF_UF` / `QF_UF` | `decide-strong` | 23 | 23 | 23 | 0 | 8 | 14 | 1 | 0 | 120 | 10.518 | `benchmark-status` | absent |
 | public | `QF_UFBV` / `QF_UFBV` | `decide-strong` | 4 | 4 | 4 | 0 | 2 | 2 | 0 | 0 | 120 | 0.008 | `benchmark-status` | absent |
 | public | `QF_UFBVFS` / `QF_UFBVFS` | `decide-strong` | 1 | 1 | 1 | 0 | 1 | 0 | 0 | 0 | 120 | 0.005 | `benchmark-status` | absent |

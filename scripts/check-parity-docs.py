@@ -20,10 +20,13 @@ import re
 import sys
 from pathlib import Path
 
+from parity_evidence import audit_inventory_raw, paired_decision_overlap
+
 
 ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
+PARITY_AUDIT = ROOT / "docs" / "plan" / "parity-target-evidence-audit-2026-07-21.md"
 PROJECT_STATE = ROOT / "docs" / "PROJECT-STATE.md"
 BENCHMARK_GUIDE = ROOT / "docs" / "user-guide" / "benchmarks.md"
 CATEGORICAL_AUDIT = (
@@ -45,6 +48,10 @@ Z3_P4DFA = (
 SMTCOMP_INVENTORY = (
     ROOT / "bench-results" / "smtcomp-repro-20260721" / "inventory.json"
 )
+SMTCOMP_INVENTORY_RAW = (
+    ROOT / "bench-results" / "smtcomp-repro-20260721" / "inventory_raw.json"
+)
+SMTCOMP_README = ROOT / "bench-results" / "smtcomp-repro-20260721" / "README.md"
 SMTCOMP_QFBV = (
     ROOT / "bench-results" / "smtcomp-repro-20260721" / "head_to_head_qfbv.json"
 )
@@ -66,6 +73,8 @@ LIVE_DOCS = (
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
     GAP_DOC,
+    PARITY_AUDIT,
+    SMTCOMP_README,
     CATEGORICAL_AUDIT,
     ROOT / "docs" / "plan" / "01-dependency-dag.md",
     ROOT / "docs" / "plan" / "track-3-proof-lean" / "P3.8-interpolation.md",
@@ -81,6 +90,7 @@ PUBLIC_CLAIM_DOCS = (
     PROJECT_STATE,
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     ROOT / "docs" / "user-guide" / "limitations.md",
+    SMTCOMP_README,
 )
 
 STALE_PATTERNS = (
@@ -103,6 +113,8 @@ STALE_PATTERNS = (
 PUBLIC_STALE_PATTERNS = (
     re.compile(r"every\s+`unsat`\s+carries", re.IGNORECASE),
     re.compile(r"It is sound \(`unknown`, never a wrong", re.IGNORECASE),
+    re.compile(r"axeyum is \*\*never wrong\*\*", re.IGNORECASE),
+    re.compile(r"82\s*/\s*228\*\* decided-correct", re.IGNORECASE),
 )
 
 
@@ -137,6 +149,7 @@ def measured_snapshot() -> dict[str, int]:
     axeyum = load_json(AXEYUM_P4DFA)
     z3 = load_json(Z3_P4DFA)
     inventory = load_json(SMTCOMP_INVENTORY)
+    inventory_raw = load_json(SMTCOMP_INVENTORY_RAW)
     qfbv = load_json(SMTCOMP_QFBV)
     provenance = load_json(SMTCOMP_PROVENANCE)
     measurement = load_json(MEASUREMENT_PROVENANCE)
@@ -152,6 +165,22 @@ def measured_snapshot() -> dict[str, int]:
         raise RuntimeError("p4dfa Axeyum/Z3 controls do not bind the same corpus hash")
     qfbv_division = qfbv["divisions"]["QF_BV"]
     qfbv_solvers = qfbv_division["solvers"]
+    inventory_audit = audit_inventory_raw(inventory_raw, solver="axeyum")
+    p4dfa_overlap = paired_decision_overlap(axeyum, z3)
+    aggregate = inventory["aggregate"]
+    expected_legacy = {
+        "total": inventory_audit["total"],
+        "decided_correct": inventory_audit["legacy_decided_correct"],
+        "declined": inventory_audit["declines"],
+        "no_answer": inventory_audit["no_answers"],
+        "WRONG": inventory_audit["known_status_disagreements"],
+    }
+    for key, value in expected_legacy.items():
+        if aggregate.get(key) != value:
+            raise RuntimeError(
+                f"public inventory aggregate {key}={aggregate.get(key)!r} "
+                f"does not reconcile with raw audit {value}"
+            )
 
     baseline_unsat_instances = [
         instance
@@ -254,8 +283,18 @@ def measured_snapshot() -> dict[str, int]:
         "proof_production_errors": proof_production_errors,
         "p4dfa_axeyum_20s": decided(axeyum["summary"]),
         "p4dfa_z3_20s": decided(z3["summary"]),
+        "p4dfa_both_decided_20s": p4dfa_overlap["both_decided"],
+        "p4dfa_axeyum_only_20s": p4dfa_overlap["left_only_decided"],
+        "p4dfa_z3_only_20s": p4dfa_overlap["right_only_decided"],
+        "p4dfa_both_disagree_20s": p4dfa_overlap["both_decided_disagreements"],
         "public_inventory_files": inventory["aggregate"]["total"],
         "public_inventory_decided": inventory["aggregate"]["decided_correct"],
+        "public_inventory_known_status": inventory_audit["known_status_benchmarks"],
+        "public_inventory_unknown_status": inventory_audit["unknown_status_benchmarks"],
+        "public_inventory_known_agree": inventory_audit["known_status_agreements"],
+        "public_inventory_unadjudicated_decisions": inventory_audit[
+            "unadjudicated_decisions"
+        ],
         "public_inventory_declined": inventory["aggregate"]["declined"],
         "public_inventory_wrong": inventory["aggregate"]["WRONG"],
         "public_inventory_no_answer": inventory["aggregate"]["no_answer"],
@@ -314,7 +353,12 @@ def main() -> int:
         f"{snapshot['lean_checked_unsat']} Lean-checked outcomes",
         f"{snapshot['p4dfa_axeyum_20s']} / 113",
         f"{snapshot['p4dfa_z3_20s']} / 113",
+        f"{snapshot['p4dfa_both_decided_20s']} jointly decided",
+        f"{snapshot['p4dfa_axeyum_only_20s']} Axeyum-only",
+        f"{snapshot['p4dfa_z3_only_20s']} Z3-only",
         f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
+        f"{snapshot['public_inventory_known_agree']} known-status agreements",
+        f"{snapshot['public_inventory_unadjudicated_decisions']} unadjudicated decisions",
         f"{snapshot['public_inventory_wrong']} wrong verdicts",
         f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
         f"{snapshot['scoreboard_file_occurrences']} file-backed occurrences",
@@ -333,6 +377,21 @@ def main() -> int:
         if marker not in gap_text:
             failures.append(f"{GAP_DOC.relative_to(ROOT)}: missing measured marker {marker!r}")
 
+    parity_audit_text = PARITY_AUDIT.read_text(encoding="utf-8")
+    for marker in (
+        f"{snapshot['public_inventory_known_agree']} known-status agreements",
+        f"{snapshot['public_inventory_unadjudicated_decisions']} unadjudicated decisions",
+        f"{snapshot['p4dfa_both_decided_20s']} jointly decided",
+        f"{snapshot['p4dfa_axeyum_only_20s']} Axeyum-only",
+        f"{snapshot['p4dfa_z3_only_20s']} Z3-only",
+        "general solving-power distance to Z3 is not measured",
+        "not yet backed by",
+    ):
+        if marker not in parity_audit_text:
+            failures.append(
+                f"{PARITY_AUDIT.relative_to(ROOT)}: missing evidence-audit marker {marker!r}"
+            )
+
     project_state_markers = (
         f"{snapshot['decided']} / {snapshot['files']}",
         f"{snapshot['compared']} oracle-compared",
@@ -346,6 +405,8 @@ def main() -> int:
         f"{snapshot['scoreboard_exact_duplicate_excess']} additional path",
         f"{snapshot['cross_regime_unique_overlap']} exact contents",
         f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
+        f"{snapshot['public_inventory_known_agree']} known-status agreements",
+        f"{snapshot['public_inventory_unadjudicated_decisions']} unadjudicated decisions",
         f"{snapshot['public_inventory_declined']} explicit declines",
         f"{snapshot['public_inventory_no_answer']} no-answer outcomes",
         f"{snapshot['public_inventory_wrong']} wrong verdicts",
@@ -372,6 +433,8 @@ def main() -> int:
         f"{snapshot['scoreboard_unique_ids']} normalized paths",
         f"{snapshot['scoreboard_unique_sha256']} exact byte contents",
         f"{snapshot['cross_regime_unique_overlap']} contents occur",
+        f"{snapshot['public_inventory_known_agree']} known-status agreements",
+        f"{snapshot['public_inventory_unadjudicated_decisions']} unadjudicated decisions",
         "43.4% of the public inventory",
         "do not average them",
         "cannot be retrospectively reclassified",

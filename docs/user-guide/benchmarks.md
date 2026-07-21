@@ -30,9 +30,11 @@ completeness estimate.
 ### Harder public inventory
 
 The [SMT-COMP-style reproduction](../../bench-results/smtcomp-repro-20260721/README.md)
-runs a separate 228-file public convenience inventory at a 120-second ceiling:
-**82 / 228** decided-correct, 144 explicit declines, two no-answer outcomes, and
-zero wrong verdicts against recorded statuses. This is not the official
+runs a separate 228-file public convenience inventory at a 120-second ceiling.
+Its legacy scorer reports **82 / 228** decisions; status-aware audit separates
+those into **78 known-status agreements** and **4 unadjudicated decisions**,
+with 144 explicit declines, two no-answer outcomes, and zero wrong verdicts
+against known statuses. This is not the official
 SMT-COMP selection and is dominated numerically by one hard 113-file p4dfa
 family.
 
@@ -66,7 +68,8 @@ and must not be described as a four-solver ranking.
 ### Registered p4dfa control
 
 At the authoritative same-corpus, 20-second cell, Axeyum and the in-process Z3
-crate each decide **8 / 113**, on different decided sets. A separately recorded
+crate each decide **8 / 113**. Exact matching finds six jointly decided, two
+Axeyum-only, and two Z3-only cases. A separately recorded
 Z3 CLI artifact decides 9/113. Equal solved counts in this one deliberately hard
 cell are bounded corpus parity, not general QF_BV or production parity. See the
 [scoped parity analysis](../plan/gap-analysis-z3-lean-2026-07-21.md#corrected-public-qf_bv-control).

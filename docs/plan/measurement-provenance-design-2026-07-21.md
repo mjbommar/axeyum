@@ -12,7 +12,9 @@ are one population, two independent samples, or an official SMT-COMP result?
 This is G1 in the
 [scoped gap program](gap-analysis-z3-lean-2026-07-21.md). The answer matters
 because the existing headline denominators differ sharply: 753/992 decided in
-the regression record versus 82/228 in the harder convenience inventory. A
+the regression record versus the legacy 82/228 scorer field in the harder
+convenience inventory. Direct raw audit partitions the latter into 78
+known-status agreements plus four unadjudicated decisions. A
 single weighted average would hide both selection policies.
 
 ## External policy boundary

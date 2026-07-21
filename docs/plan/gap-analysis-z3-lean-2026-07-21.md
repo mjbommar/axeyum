@@ -78,8 +78,10 @@ The branch's in-tree SMT-COMP scoring reproduction supplies a second,
 non-combinable view. At a 120-second ceiling over all 228 public SMT-LIB files
 currently present on the NAS, Axeyum records:
 
-- **82 / 228** decided-correct, 144 explicit declines, two no-answer outcomes,
-  and **0 wrong verdicts** against known `:status` values;
+- a legacy scorer result of **82 / 228** decisions, partitioned by direct raw
+  audit into **78 known-status agreements** and **4 unadjudicated decisions**,
+  plus 144 explicit declines, two no-answer outcomes, and **0 wrong verdicts**
+  against known `:status` values;
 - 22/23 QF_UF, 14/17 QF_UFLIA, 10/12 QF_LRA, but only 6/113 on the hard p4dfa
   QF_BV family; and
 - a separate 24-file QF_BV head-to-head where Axeyum, cvc5, and Bitwuzla each
@@ -104,6 +106,8 @@ for the committed control. At the registered
 
 - Axeyum's authoritative paired artifact decides **8 / 113**.
 - The standalone Z3 crate artifact decides **8 / 113**.
+- Exact pairing gives **6 jointly decided**, **2 Axeyum-only**, and **2 Z3-only**
+  cases, with zero disagreements on the joint set.
 - The separately recorded Z3 CLI control decides 9/113; the decided sets are
   not identical.
 
@@ -130,7 +134,8 @@ search work, but it does not support a “Z3 sweeps; Axeyum cannot solve” fram
 | Label | Required evidence | Current reading |
 |---|---|---|
 | Fragment decision parity | Same supported query class; matched corpus, budget, hardware, and verdict directions; comparable decided set/PAR-2 | Achieved on selected rows and bounded controls; unmeasured or incomplete elsewhere |
-| Production Z3 replacement | Broad SMT-LIB surface, incremental robustness, portfolio depth, full-corpus measurements, stable API/tooling | Far; this is the main engineering-depth gap |
+| General Z3 solving power | Representative same-population, same-budget decided sets and resource curves across the supported logic surface | Unknown/unmeasured; bounded wins and partial convenience sets cannot assign a global distance |
+| Production Z3 replacement | Broad SMT-LIB surface, incremental robustness, portfolio depth, full-corpus measurements, stable API/tooling | Far; the command/session and portfolio gaps directly demonstrate this engineering distance |
 | Certified-result parity | Every definitive result in the claimed fragment has independently rechecked evidence with an empty trust-hole set | Achieved on 23 complete measured rows; partial globally |
 | Lean-kernel compatibility | Accept/reject the same core proof terms and declarations as official Lean for a stated format/profile | Partial; useful solver-proof subset exists, full kernel compatibility does not |
 | Lean workflow integration | Fail-closed tactic/import path that discharges real Lean goals and reports axioms/trust | Not shipped; out-of-band modules exist |
@@ -367,13 +372,18 @@ ignored. Before this increment, CI hard-required official Lean only for the
 separate inductive cross-check, so the solver-proof sweep could take its optional
 local-development skip.
 
-**Prototype landed:** the official-Lean CI job now runs the inductive cross-check
-and `lean_crosscheck_representative` with one module from every registered
-solver-proof family, an explicit Lean binary, two workers, and no time-budget
-skip. The docs-consistency gate asserts that this command remains present.
+**Prototype wired, acceptance not yet observed:** the official-Lean CI job is
+configured to run the inductive cross-check and `lean_crosscheck_representative`
+with one module from every one of the **71 registered solver-proof families**,
+an explicit Lean binary, two workers, and no time-budget skip. The docs-
+consistency gate asserts that this command remains present. The latest inspected
+remote job installed Lean 4.30 but failed in `leanprover/lean-action` setup for
+want of `lake-manifest.json`, before either repository cross-check ran. Wiring is
+not execution credit.
 
-**Remaining research:** record the first remote duration/RSS and checked-family
-count, then add the exhaustive sweep on a scheduled/release cadence with an
+**Remaining research:** repair the action setup, then record the first successful
+remote duration/RSS, Lean version, and checked-family count. Only then add the
+exhaustive sweep on a scheduled/release cadence with an
 archived checked/declined manifest and `#print axioms` summary.
 
 **Exit:** representative external-Lean coverage is required on every change to

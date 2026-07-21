@@ -21,6 +21,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   **current** scoped evidence map and ranked research program. It separates
   fragment decision parity, production Z3 replacement, certified-result
   coverage, Lean-kernel compatibility, and Lean workflow integration.
+- [`parity-target-evidence-audit-2026-07-21.md`](parity-target-evidence-audit-2026-07-21.md) —
+  executable-evidence correction to the word “parity”: 78 adjudicated public
+  agreements plus four unadjudicated decisions, exact 6/2/2 p4dfa solved-set
+  overlap, unmeasured general Z3 solving-power distance, directly measured
+  production-compatibility gaps, and the not-yet-green official-Lean gate.
 - [`gap-ownership-v1.json`](gap-ownership-v1.json) and the generated
   [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
   routing from each research question to owning code, committed evidence,

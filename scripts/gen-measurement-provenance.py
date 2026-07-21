@@ -208,7 +208,7 @@ def classify_public(result: dict) -> str:
         return "no_answer"
     if reported == "unknown":
         return "declined"
-    if expected is None or reported == expected:
+    if expected not in {"sat", "unsat"} or reported == expected:
         return "decided_correct"
     return "wrong"
 
@@ -232,6 +232,11 @@ def build_public(manifest: dict) -> tuple[list[dict], dict, dict[str, set[str]]]
             "declined": 0,
             "no_answer": 0,
             "wrong": 0,
+            "known_status_cases": 0,
+            "unknown_status_cases": 0,
+            "known_status_agreements": 0,
+            "known_status_disagreements": 0,
+            "unadjudicated_decisions": 0,
             "par2_wall": 0.0,
         }
     )
@@ -256,11 +261,18 @@ def build_public(manifest: dict) -> tuple[list[dict], dict, dict[str, set[str]]]
         cell["ids_by_hash"][prov["sha256"]].add(benchmark_id)
         cell["families"].add(prov["source_family"])
         global_ids_by_hash[prov["sha256"]].add(benchmark_id)
+        known_status = result.get("expected_status") in {"sat", "unsat"}
+        cell["known_status_cases" if known_status else "unknown_status_cases"] += 1
         if outcome == "decided_correct":
             cell[result["reported_status"]] += 1
+            cell[
+                "known_status_agreements" if known_status else "unadjudicated_decisions"
+            ] += 1
             cell["par2_wall"] += float(result["wall_time"])
         else:
             cell[outcome] += 1
+            if outcome == "wrong":
+                cell["known_status_disagreements"] += 1
             cell["par2_wall"] += 2.0 * wall_limit
 
     rows: list[dict] = []
@@ -292,11 +304,20 @@ def build_public(manifest: dict) -> tuple[list[dict], dict, dict[str, set[str]]]
                 "declined_or_no_answer": cell["declined"] + cell["no_answer"],
                 "soundness_metric": "wrong-verdict",
                 "soundness_failures": cell["wrong"],
+                "known_status_cases": cell["known_status_cases"],
+                "unknown_status_cases": cell["unknown_status_cases"],
+                "known_status_agreements": cell["known_status_agreements"],
+                "known_status_disagreements": cell["known_status_disagreements"],
+                "unadjudicated_decisions": cell["unadjudicated_decisions"],
                 "wall_limit_s": wall_limit,
                 "par2_mean_wall_s": cell["par2_wall"] / raw_cases,
                 "par2_source": policy["score_source"],
                 "coverage_class": coverage_class(decided, raw_cases),
-                "oracle_source": "benchmark-status",
+                "oracle_source": (
+                    "benchmark-status-partial+unadjudicated"
+                    if cell["unknown_status_cases"]
+                    else "benchmark-status"
+                ),
                 "neutral_oracle_status": policy["neutral_oracle_status"],
                 "source_family_status": f"{len(cell['families'])} exact-path families",
                 "operator_profile_status": "logic-only",
@@ -313,6 +334,17 @@ def build_public(manifest: dict) -> tuple[list[dict], dict, dict[str, set[str]]]
         **exact_stats(global_ids_by_hash),
         "source_families": provenance["summary"]["source_families"],
         "decided": sum(row["decided"] for row in rows),
+        "known_status_cases": sum(row["known_status_cases"] for row in rows),
+        "unknown_status_cases": sum(row["unknown_status_cases"] for row in rows),
+        "known_status_agreements": sum(
+            row["known_status_agreements"] for row in rows
+        ),
+        "known_status_disagreements": sum(
+            row["known_status_disagreements"] for row in rows
+        ),
+        "unadjudicated_decisions": sum(
+            row["unadjudicated_decisions"] for row in rows
+        ),
         "soundness_failures": sum(row["soundness_failures"] for row in rows),
         "neutral_oracle_rows": sum(
             row["neutral_oracle_status"] == "present-on-exact-population" for row in rows
@@ -322,6 +354,15 @@ def build_public(manifest: dict) -> tuple[list[dict], dict, dict[str, set[str]]]
         raise ValueError(f"public row drift: {summary['rows']}")
     if summary["raw_cases"] != policy["expected_raw_cases"]:
         raise ValueError(f"public population drift: {summary['raw_cases']}")
+    for summary_key, policy_key in (
+        ("known_status_cases", "expected_known_status_cases"),
+        ("known_status_agreements", "expected_known_status_agreements"),
+        ("unadjudicated_decisions", "expected_unadjudicated_decisions"),
+    ):
+        if summary[summary_key] != policy[policy_key]:
+            raise ValueError(
+                f"public {summary_key} drift: {summary[summary_key]}"
+            )
     for key in ("files", "unique_content_sha256", "exact_duplicate_groups"):
         expected = provenance["summary"][key]
         actual_key = "raw_cases" if key == "files" else key
@@ -395,6 +436,12 @@ def render_markdown(report: dict) -> str:
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         f"| Curated/regression scoreboard | {score['rows']} | {score['raw_cases']} | {score['file_backed_occurrences']} | {score['unique_normalized_ids']} | {score['unique_content_sha256']} | {score['aggregate_only_cases']} | {score['exact_duplicate_groups']} | {score['decided']} | {score['neutral_oracle_rows']} |",
         f"| Partial public inventory | {public['rows']} | {public['raw_cases']} | {public['file_backed_occurrences']} | {public['unique_normalized_ids']} | {public['unique_content_sha256']} | {public['aggregate_only_cases']} | {public['exact_duplicate_groups']} | {public['decided']} | {public['neutral_oracle_rows']} |",
+        "",
+        f"The public inventory's legacy {public['decided']}/228 scorer field contains "
+        f"**{public['known_status_agreements']} known-status agreements** and "
+        f"**{public['unadjudicated_decisions']} unadjudicated decisions**. Its "
+        f"{public['unknown_status_cases']} benchmarks without known status do not "
+        "inherit benchmark-status correctness credit.",
         "",
         f"The scoreboard's {score['file_backed_occurrences']} file occurrences contract to "
         f"{score['unique_normalized_ids']} normalized paths and **{score['unique_content_sha256']} "
@@ -502,6 +549,8 @@ def main() -> int:
         f"rows={len(report['rows'])}|"
         f"score_raw={score['raw_cases']}|score_sha={score['unique_content_sha256']}|"
         f"public_raw={public['raw_cases']}|public_sha={public['unique_content_sha256']}|"
+        f"public_known_agree={public['known_status_agreements']}|"
+        f"public_unadjudicated={public['unadjudicated_decisions']}|"
         f"overlap_sha={overlap['unique_content_overlap']}|neutral_rows=0"
     )
     return 0

@@ -50,10 +50,11 @@ identity. Zero observed disagreement is strong regression evidence; it is not a
 proof of universal soundness.
 
 A separate, harder 228-file public convenience inventory gives the less
-flattering and equally important view: **82 / 228** decided-correct,
-**144 explicit declines**, **2 no-answer outcomes**, and **0 wrong verdicts** against
-the recorded statuses. It is not an official or population-weighted SMT-COMP
-selection.
+flattering and equally important view. Its legacy scorer reports **82 / 228**
+decisions, but direct status-aware audit partitions those into **78 known-status agreements**
+and **4 unadjudicated decisions**; it also records **144 explicit declines**,
+**2 no-answer outcomes**, and **0 wrong verdicts** against known
+statuses. It is not an official or population-weighted SMT-COMP selection.
 
 A later runner audit found that this local reproduction path suppresses a
 parsed response if its watchdog fires, whereas SMT-COMP 2026 counts a response
@@ -93,14 +94,18 @@ The authoritative sources are the generated
 
 ## How close is it to Z3?
 
-There are two different answers:
+There are three different answers:
 
 1. **Selected-fragment parity:** achieved on several measured rows and bounded
    controls. In the registered 20-second p4dfa control, Axeyum and the Z3 crate
-   each decide **8 / 113**, on different decided sets. In a separate 24-file
+   each decide **8 / 113**. Exact pairing finds six jointly decided and two
+   unique decisions per solver, with no joint disagreement. In a separate 24-file
    QF_BV comparison, Axeyum, cvc5, and Bitwuzla each decide **19 / 24**, with Axeyum
    third on PAR-2.
-2. **Production Z3 replacement:** not close. Public-corpus depth is uneven;
+2. **General solving-power distance:** not measured. The successful cells are
+   bounded or convenience samples, while the larger full-tree attempt yielded
+   no admissible result. The repository does not yet justify a global distance.
+3. **Production Z3 replacement:** not close. Public-corpus depth is uneven;
    strategy portfolios and broad performance characterization remain immature;
    and the checked 30-row SMT-LIB/API audit finds six absent command families,
    seven accepted no-ops, and **zero interactive textual-session rows**.
@@ -118,9 +123,11 @@ See the [benchmark guide](user-guide/benchmarks.md) and generated
 Again, there are distinct targets:
 
 - **Solver proof export:** substantial and useful today. Supported refutations
-  become kernel-checked terms and self-contained Lean modules. CI is configured
-  to send one representative module from each registered proof family to the
-  official Lean binary; the exhaustive every-module sweep is not a required
+  become kernel-checked terms and self-contained Lean modules. The harness
+  registers 71 proof-family builders and CI is configured to send one module
+  per family to official Lean. That gate is not yet demonstrated green: the
+  latest inspected job failed during Lean action setup before the repository
+  cross-checks ran. The exhaustive every-module sweep is not a required
   per-change gate.
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof

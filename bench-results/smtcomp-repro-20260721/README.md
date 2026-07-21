@@ -5,8 +5,10 @@ the first **complete capability + soundness inventory** of axeyum over a real
 SMT-LIB benchmark set. Built by reading the official rules/tooling for reference
 only — nothing was pushed to or PR-ed against the SMT-COMP repositories.
 
-> **Headline:** axeyum is **never wrong** — 0 incorrect verdicts across 228 real
-> SMT-LIB benchmarks *and* across a 3-solver QF_BV head-to-head (72 runs). On the
+> **Headline:** axeyum records **zero contradictions of known statuses** across
+> 228 real SMT-LIB benchmarks and zero head-to-head disagreements across 72
+> QF_BV runs. Four definitive inventory answers have no known status and remain
+> unadjudicated. On the
 > fragments it targets it decides most (UF 96 %, UFBV/UFIDL/UFNRA 100 %, UFLIA
 > 82 %, LRA 83 %); it declines honestly elsewhere. On this particular slice it is
 > speed-competitive with cvc5 and bitwuzla (same 19/24, ~3 % slower on PAR-2).
@@ -49,10 +51,15 @@ Three artifacts, one harness (`scripts/smtcomp_repro/`, committed at `f80b697b`)
 
 | | count | % |
 |---|---:|---:|
-| decided-correct (sat/unsat matching `:status`) | 82 | 36.0 % |
+| known-status agreement | 78 | 34.2 % |
+| unadjudicated sat/unsat (no known status) | 4 | 1.8 % |
 | declined (honest `unknown` / unsupported) | 144 | 63.2 % |
 | no answer (timeout/abort, no verdict) | 2 | 0.9 % |
-| **WRONG (incorrect sat/unsat)** | **0** | **0.0 %** |
+| **known-status disagreement** | **0** | **0.0 %** |
+
+The frozen competition-style scorer combines the first two rows as 82/228
+`decided_correct`. That is a scoring convention, not independent correctness
+evidence for the four benchmarks without a known status.
 
 Per-logic decide rate (logic read from each file's `set-logic`, not the directory):
 
@@ -131,7 +138,8 @@ population. The set is source-skewed (113/228 are p4dfa), and exact/near-
 duplicate source-family groups require separate treatment. The committed
 `provenance.json` finds seven source families and zero exact byte-duplicate
 groups; it does not identify renamed or semantic near duplicates. Keep the
-82/228 result separate from the curated/regression scoreboard's denominator.
+legacy 82/228 scorer result—78 known-status agreements plus four unadjudicated
+decisions—separate from the curated/regression scoreboard's denominator.
 The current cross-artifact research plan is
 [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
 

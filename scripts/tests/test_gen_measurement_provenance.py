@@ -40,8 +40,17 @@ class MeasurementProvenanceTests(unittest.TestCase):
             (35, 992, 927, 837, 778, 58, 59, 65),
         )
         self.assertEqual(
-            (public["rows"], public["raw_cases"], public["unique_content_sha256"]),
-            (18, 228, 228),
+            (
+                public["rows"],
+                public["raw_cases"],
+                public["unique_content_sha256"],
+                public["known_status_cases"],
+                public["unknown_status_cases"],
+                public["known_status_agreements"],
+                public["known_status_disagreements"],
+                public["unadjudicated_decisions"],
+            ),
+            (18, 228, 228, 145, 83, 78, 0, 4),
         )
         self.assertEqual(overlap["unique_content_overlap"], 99)
         self.assertEqual(len(self.report["cross_regime_exact_overlap"]), 99)
@@ -77,6 +86,18 @@ class MeasurementProvenanceTests(unittest.TestCase):
         mutated["regimes"][0]["expected_raw_cases"] += 1
         with self.assertRaisesRegex(ValueError, "scoreboard population drift"):
             MODULE.build_report(mutated)
+
+    def test_missing_status_never_becomes_benchmark_status_credit(self) -> None:
+        public_rows = [
+            row for row in self.report["rows"] if row["regime_id"] == "public-inventory"
+        ]
+        self.assertEqual(sum(row["unadjudicated_decisions"] for row in public_rows), 4)
+        for row in public_rows:
+            if row["unknown_status_cases"]:
+                self.assertEqual(
+                    row["oracle_source"],
+                    "benchmark-status-partial+unadjudicated",
+                )
 
 
 if __name__ == "__main__":
