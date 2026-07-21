@@ -1022,7 +1022,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     freezes that narrow preparation-v3 correction: bind only the exact
     hash/mode/size-pinned systemd-resolved stub at the selected path, require a
     pinned real `getent` IPv4 lookup, then retain every ADR-0329 non-network
-    gate. No v3 producer, DNS probe, fetch, or cache exists yet.
+    gate. The separate producer, 14 combined preparation tests, compact exact
+    registration, and resolver-mount no-op check pass pre-DNS. Push that
+    checkpoint before the first lookup; no DNS result, fetch, or cache exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

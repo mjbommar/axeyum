@@ -425,9 +425,11 @@ session state.
 >    offline-read-only, inventory, atomicity, and no-compilation gate.
 >    ADR-0330 now freezes exactly that correction: one 939-byte resolver file,
 >    its precise network-only mount path/order, hash-pinned `getent`, and a real
->    IPv4 lookup before the otherwise unchanged locked fetch. Implement and
->    push a separate v3 producer/tests/registration before any DNS probe or
->    fetch; never bind all of `/run` or inject a resolved address into Cargo.
+>    IPv4 lookup before the otherwise unchanged locked fetch. The separate v3
+>    producer, five focused v3 plus nine inherited v2 tests, compact exact
+>    registration, and resolver-mount no-op check are now frozen with zero DNS
+>    lookups. Commit/push this checkpoint, then invoke preparation v3 once under
+>    its cgroup; never bind all of `/run` or inject an address into Cargo.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

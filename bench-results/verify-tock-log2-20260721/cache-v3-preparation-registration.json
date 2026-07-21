@@ -1,0 +1,46 @@
+{
+  "base_registration": {
+    "path": "bench-results/verify-tock-log2-20260721/cache-v2-preparation-registration.json",
+    "sha256": "f0852783ec187255248f31501d0c79b4ed54cffd32e003e460c41755c2e1cb48"
+  },
+  "dns_args": [
+    "ahostsv4",
+    "github.com"
+  ],
+  "getent": {
+    "path": "/usr/bin/getent",
+    "sha256": "fb07378c47e0560ca954eb2c48b2138f0560ee86132ce8ad0bd296e472df5c04",
+    "version": "getent (Ubuntu GLIBC 2.43-2ubuntu2) 2.43",
+    "version_args": [
+      "--version"
+    ]
+  },
+  "network_root_suffix": [
+    "--dir",
+    "/run",
+    "--dir",
+    "/run/systemd",
+    "--dir",
+    "/run/systemd/resolve",
+    "--ro-bind",
+    "/run/systemd/resolve/stub-resolv.conf",
+    "/run/systemd/resolve/stub-resolv.conf"
+  ],
+  "producer_files": [
+    {
+      "path": "scripts/prepare-tock-log2-cache-v3.py",
+      "sha256": "1c0a598c9ee8dd6094efcd75e7248debbef679cafa948914a5a85f333f8f8d16"
+    },
+    {
+      "path": "scripts/tests/test_prepare_tock_log2_cache_v3.py",
+      "sha256": "bd13104ed6f8b8d570d15e2090c323390f1d6d11fad127dcdc625706e895a874"
+    }
+  ],
+  "resolver": {
+    "mode": 420,
+    "path": "/run/systemd/resolve/stub-resolv.conf",
+    "sha256": "acfee52a6a0860bf1ff42bfa79d349f2373a9defc0fb05990489743ae0965ec1",
+    "size": 939
+  },
+  "schema": "axeyum.tock-log2-cache-v3-preparation-registration.v1"
+}

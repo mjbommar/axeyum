@@ -80,10 +80,14 @@ weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. The resolver file and `getent` identities are pre-observations from
-the host boundary selected by ADR-0329's exact failure. No v3 producer,
-registration, DNS probe, fetch, cache byte, inventory, build, capture, or query
-exists.
+Proposed. The separate v3 producer reuses the frozen v2 source/fetch/offline/
+inventory/resource support and adds only resolver validation, the network-root
+suffix, strict IPv4 parsing, and a new atomic output version. Five focused v3
+tests plus all nine v2 tests pass; the compact overlay registration pins five
+producer files, six tools, the resolver identity, DNS command, and mount suffix.
+A live no-op namespace check confirms the exact resolver path is mounted, but no
+DNS command has run. Commit and push this checkpoint before the first lookup.
+No DNS result, fetch, cache byte, inventory, build, capture, or query exists.
 
 ## Rejected alternatives
 
