@@ -158,6 +158,10 @@ pub enum UnaryFunc {
     Shi,
     /// The **hyperbolic cosine integral** `Chi(x)` (with `Chi′(x) = cosh x / x`).
     Chi,
+    /// The **Fresnel sine integral** `S(x) = ∫₀ˣ sin(π t²/2) dt` (`S′ = sin(π x²/2)`).
+    FresnelS,
+    /// The **Fresnel cosine integral** `C(x) = ∫₀ˣ cos(π t²/2) dt` (`C′ = cos(π x²/2)`).
+    FresnelC,
 }
 
 impl UnaryFunc {
@@ -180,6 +184,8 @@ impl UnaryFunc {
             UnaryFunc::Li => "li",
             UnaryFunc::Shi => "Shi",
             UnaryFunc::Chi => "Chi",
+            UnaryFunc::FresnelS => "FresnelS",
+            UnaryFunc::FresnelC => "FresnelC",
         }
     }
 
@@ -230,6 +236,13 @@ impl UnaryFunc {
                 let exp_u = CasExpr::Unary(UnaryFunc::Exp, Box::new(u()));
                 let exp_neg = CasExpr::Neg(Box::new(u())).exp();
                 (exp_u + exp_neg) / (CasExpr::int(2) * u())
+            }
+            // d/du S(u) = sin(π u²/2) ; d/du C(u) = cos(π u²/2).
+            UnaryFunc::FresnelS => {
+                (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).sin()
+            }
+            UnaryFunc::FresnelC => {
+                (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).cos()
             }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
@@ -5604,6 +5617,8 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Chi => {
                     f64::midpoint(exponential_integral_f64(value), exponential_integral_f64(-value))
                 }
+                UnaryFunc::FresnelS => fresnel_f64(value, true),
+                UnaryFunc::FresnelC => fresnel_f64(value, false),
             })
         }
     }
@@ -5677,6 +5692,32 @@ fn exponential_integral_f64(x: f64) -> f64 {
         if term.abs() < 1e-18 && n > 2 {
             break;
         }
+    }
+    sum
+}
+
+/// Numeric **Fresnel integrals** for [`evalf`]: `S(x)=∫₀ˣ sin(πt²/2)dt` when
+/// `sine`, else `C(x)=∫₀ˣ cos(πt²/2)dt`, via their power series
+/// `S = Σ (−1)ⁿ (π/2)^{2n+1} x^{4n+3}/((2n+1)!(4n+3))`,
+/// `C = Σ (−1)ⁿ (π/2)^{2n} x^{4n+1}/((2n)!(4n+1))`.
+fn fresnel_f64(x: f64, sine: bool) -> f64 {
+    let half_pi = core::f64::consts::FRAC_PI_2;
+    let mut sum = 0.0;
+    // powered = (π/2)^m; factorial = m!; where m = 2n+1 (sine) or 2n (cosine).
+    let (mut powered, mut factorial) = if sine { (half_pi, 1.0) } else { (1.0, 1.0) };
+    for n in 0..60u32 {
+        let power_exp = if sine { 4 * n + 3 } else { 4 * n + 1 };
+        let sign = if n % 2 == 0 { 1.0 } else { -1.0 };
+        let exponent = i32::try_from(power_exp).unwrap_or(i32::MAX);
+        let term = sign * powered / factorial * x.powi(exponent) / f64::from(power_exp);
+        sum += term;
+        if term.abs() < 1e-18 && n > 2 {
+            break;
+        }
+        // Advance to the next n: multiply (π/2)² and (m+1)(m+2) into the factorial.
+        let m = if sine { 2 * n + 1 } else { 2 * n };
+        powered *= half_pi * half_pi;
+        factorial *= f64::from((m + 1) * (m + 2));
     }
     sum
 }
@@ -6497,6 +6538,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
+        integrate_fresnel(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7395,6 +7437,28 @@ fn flatten_fraction(expr: &CasExpr) -> (CasExpr, CasExpr) {
             )
         }
         other => (other.clone(), CasExpr::one()),
+    }
+}
+
+/// Integrate the defining forms of the **Fresnel integrals**:
+/// `∫ sin(π·x²/2) dx = S(x)`, `∫ cos(π·x²/2) dx = C(x)` (the exact `π/2`
+/// convention). Certified downstream by differentiate-and-check. `None` otherwise.
+fn integrate_fresnel(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Unary(inner @ (UnaryFunc::Sin | UnaryFunc::Cos), arg) = expr else {
+        return None;
+    };
+    let head = match inner {
+        UnaryFunc::Sin => UnaryFunc::FresnelS,
+        _ => UnaryFunc::FresnelC,
+    };
+    // The argument must equal `π·var²/2` (decided by the zero-test, so the exact
+    // Div-vs-scaled-coefficient spelling does not matter).
+    let expected = CasExpr::var("pi") * CasExpr::var(var).pow(2) / CasExpr::int(2);
+    match equal(arg, &expected) {
+        ZeroTest::Certified { equal: true, .. } => {
+            Some(CasExpr::Unary(head, Box::new(CasExpr::var(var))))
+        }
+        _ => None,
     }
 }
 
@@ -10828,6 +10892,29 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn fresnel_integrals() {
+        let x = || v("x");
+        let arg = || v("pi") * x().pow(2) / CasExpr::int(2); // π·x²/2
+        // Defining derivatives: S′=sin(πx²/2), C′=cos(πx²/2).
+        assert_equal(
+            &CasExpr::Unary(UnaryFunc::FresnelS, Box::new(x())).differentiate("x"),
+            &arg().sin(),
+        );
+        // ∫sin(πx²/2)=S(x), ∫cos(πx²/2)=C(x) — certified.
+        let s = integrate(&arg().sin(), "x").expect("fresnel S");
+        assert!(s.is_certified());
+        assert_equal(&s.antiderivative, &CasExpr::Unary(UnaryFunc::FresnelS, Box::new(x())));
+        let c = integrate(&arg().cos(), "x").expect("fresnel C");
+        assert_equal(&c.antiderivative, &CasExpr::Unary(UnaryFunc::FresnelC, Box::new(x())));
+        // A non-Fresnel argument (sin x²) is declined.
+        assert!(integrate(&x().pow(2).sin(), "x").is_none());
+        // Numeric FresnelS(1) ≈ 0.4383, FresnelC(1) ≈ 0.7799.
+        let s1 = evalf(&CasExpr::Unary(UnaryFunc::FresnelS, Box::new(CasExpr::int(1))), &[]).unwrap();
+        let c1 = evalf(&CasExpr::Unary(UnaryFunc::FresnelC, Box::new(CasExpr::int(1))), &[]).unwrap();
+        assert!((s1 - 0.438_259).abs() < 1e-4 && (c1 - 0.779_893).abs() < 1e-4);
     }
 
     #[test]
