@@ -371,6 +371,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   DRAT. ADR-0337 now freezes v3 as a narrow positive-row API correction with an
   honest split proof/control policy; target semantics and controls are unchanged.
   Commit/push this zero-result ADR before implementation. No v3 query exists.
+  ADR commit `27bcabdc` is pushed. V3 now selects/rechecks the dual-DRAT route,
+  reports both certificate halves, and preserves controls. Ten Python protocol
+  tests, two ordinary Rust tests, a small non-target route smoke, and targeted
+  Clippy pass under the cap; `proof-v3` is absent. Next: commit/push exact bytes,
+  then run only the archived non-authenticated compilation preflight.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),

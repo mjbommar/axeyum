@@ -1,4 +1,4 @@
-//! ADR-0335 authenticated Tock integer-log proof and replay scoreboard.
+//! ADR-0337 authenticated Tock integer-log end-to-end proof and replay scoreboard.
 
 use std::env;
 use std::fmt::Write as _;
@@ -7,7 +7,10 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use axeyum_ir::{Assignment, Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{BitLoweringMode, Evidence, EvidenceReport, ProofOutcome, SolverConfig, prove};
+use axeyum_solver::{
+    BitLoweringMode, EndToEndUnsatOutcome, ProofOutcome, SolverConfig,
+    certify_qf_bv_unsat_end_to_end_within, prove,
+};
 use axeyum_verify::reflect::llvm::checked::{DefinedValue, reflect_scalar_into_checked};
 use sha2::{Digest, Sha256};
 
@@ -181,56 +184,44 @@ fn eval_bool(arena: &TermArena, term: TermId, symbol: SymbolId, width: u32, inpu
     }
 }
 
-fn evidence_family(report: &EvidenceReport) -> &'static str {
-    match &report.evidence {
-        Evidence::UnsatAletheProof(_) => "alethe_bitblast_resolution",
-        Evidence::Unsat(Some(_)) => "drat",
-        other => panic!("proof lacks an accepted checked evidence family: {other:?}"),
-    }
-}
-
-fn check_provenance(report: &EvidenceReport) {
-    let provenance = &report.provenance;
-    assert_eq!(provenance.timeout, Some(Duration::from_secs(TIMEOUT_SECS)));
-    assert_eq!(provenance.resource_limit, Some(RESOURCE_LIMIT));
-    assert_eq!(provenance.node_budget, Some(NODE_BUDGET));
-    assert_eq!(provenance.cnf_variable_budget, Some(CNF_VARIABLE_BUDGET));
-    assert_eq!(provenance.cnf_clause_budget, Some(CNF_CLAUSE_BUDGET));
-    assert!(provenance.prove_unsat, "DRAT re-check must be enabled");
-    assert!(
-        !report.trusted_steps.is_empty(),
-        "wide target proof must report its trust steps"
-    );
-    assert!(
-        report.trusted_steps.iter().all(|step| step.certified),
-        "every target proof trust step must be certified: {:?}",
-        report.trusted_steps
-    );
-}
-
 fn prove_row(arena: &mut TermArena, target: Target, property: &str, goal: TermId) -> u128 {
     let started = Instant::now();
-    let outcome = prove(arena, &[], goal, &solver_config()).unwrap();
-    let wall_us = started.elapsed().as_micros();
-    let ProofOutcome::Proved(report) = outcome else {
+    let negated_goal = arena.not(goal).unwrap();
+    let deadline = Some(Instant::now() + Duration::from_secs(TIMEOUT_SECS));
+    let outcome = certify_qf_bv_unsat_end_to_end_within(arena, &[negated_goal], deadline).unwrap();
+    assert_eq!(
+        outcome.recheck(),
+        Ok(true),
+        "{} {property} end-to-end certificate must recheck",
+        target.name,
+    );
+    let EndToEndUnsatOutcome::Certified {
+        faithfulness_dimacs,
+        faithfulness_drat,
+        unsat,
+    } = outcome
+    else {
         panic!(
-            "{} {property} expected Proved, got {outcome:?}",
+            "{} {property} expected end-to-end Certified, got {outcome:?}",
             target.name
         );
     };
-    check_provenance(&report);
-    let evidence = evidence_family(&report);
-    let trust = report
-        .trusted_steps
-        .iter()
-        .map(|step| format!("{}:certified", step.id.label()))
-        .collect::<Vec<_>>()
-        .join(",");
+    let wall_us = started.elapsed().as_micros();
+    let final_lrat = unsat.lrat.as_deref().unwrap_or("");
     println!(
-        "TOCK_PROOF|target={}|width={}|property={property}|outcome=proved|evidence={evidence}|backend={}|trust={trust}|terms={}|wall_us={wall_us}",
+        "TOCK_PROOF|target={}|width={}|property={property}|outcome=proved|evidence=drat|backend=end-to-end-qfbv|trust=bit-blast-miter:certified,tseitin:certified,sat-refutation:certified|faithfulness=miter_drat|recheck=pass|faithfulness_dimacs_bytes={}|faithfulness_dimacs_sha256={}|faithfulness_drat_bytes={}|faithfulness_drat_sha256={}|final_dimacs_bytes={}|final_dimacs_sha256={}|final_drat_bytes={}|final_drat_sha256={}|final_lrat_bytes={}|final_lrat_sha256={}|terms={}|wall_us={wall_us}",
         target.name,
         target.width,
-        report.provenance.backend,
+        faithfulness_dimacs.len(),
+        sha256(faithfulness_dimacs.as_bytes()),
+        faithfulness_drat.len(),
+        sha256(faithfulness_drat.as_bytes()),
+        unsat.dimacs.len(),
+        sha256(unsat.dimacs.as_bytes()),
+        unsat.drat.len(),
+        sha256(unsat.drat.as_bytes()),
+        final_lrat.len(),
+        sha256(final_lrat.as_bytes()),
         arena.len(),
     );
     wall_us
@@ -409,6 +400,15 @@ fn independent_floor_log_spec_matches_native_small_rows() {
             );
         }
     }
+}
+
+#[test]
+fn end_to_end_proof_route_rechecks_small_row() {
+    let mut arena = TermArena::new();
+    let symbol = arena.declare("x", Sort::BitVec(2)).unwrap();
+    let input = arena.var(symbol);
+    let goal = arena.eq(input, input).unwrap();
+    assert!(prove_row(&mut arena, TARGETS[0], "route_smoke", goal) > 0);
 }
 
 #[test]

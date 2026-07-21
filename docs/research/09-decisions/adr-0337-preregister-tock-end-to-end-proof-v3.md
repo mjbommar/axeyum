@@ -71,6 +71,26 @@ No v3 proof query, certificate hash/size, control, row, or output may be observe
 before the v3 producer and registration are committed, pushed, and pass their
 no-query archived compilation preflight.
 
+## Pre-invocation implementation state
+
+The Rust runner now negates each unchanged positive goal, calls the existing
+deadline-aware end-to-end API, requires `Certified` plus successful dual
+recheck, and reports deterministic byte counts/SHA-256 for both faithfulness
+artifacts and the final DIMACS/DRAT/LRAT artifacts. Controls retain the exact v2
+`SolverConfig` and replay path. A small non-target end-to-end smoke row rechecks.
+
+The v3 producer validates exact v2 lineage, truthfully registers separate proof
+and control policies, delegates build/archive/resource/atomicity behavior to the
+frozen base runner, and strengthens row parsing to require the dual-DRAT
+metadata. Registration SHA-256 is `a458ce33...7960`; runner, producer, and focused
+test hashes are `5d46bac1...b632`, `e3bcf911...1cc4`, and
+`5fa2857a...b8c8`.
+
+Six v3 tests plus four inherited parser/identity/archive/cleanup tests pass. The
+two ordinary Rust tests pass with the authenticated test ignored, and targeted
+strict Clippy is clean under the cap. `proof-v3` remains absent. Commit and push
+these exact bytes before the archived non-authenticated compilation preflight.
+
 ## Rejected alternatives
 
 - **Mark v2 BitBlast certified because the global ledger says it is

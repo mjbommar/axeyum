@@ -1091,6 +1091,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     `certify_qf_bv_unsat_end_to_end_within` route for positive rows, retains
     controls unchanged, and reports its distinct enforceable proof policy.
     Commit/push the zero-result ADR before implementation; no v3 query exists.
+    V3 implementation now requires dual recheck plus artifact hashes/sizes,
+    preserves controls, and passes ten producer tests, two ordinary Rust tests,
+    a non-target route smoke, and targeted Clippy. Push before archive preflight.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

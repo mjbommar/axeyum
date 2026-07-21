@@ -547,6 +547,12 @@ session state.
 >    controls and target semantics stay unchanged, and the policy honestly
 >    separates end-to-end proof limits from control `SolverConfig`. Commit/push
 >    the zero-result ADR before implementation. No v3 query/certificate exists.
+>    ADR commit `27bcabdc` is pushed. The v3 runner now uses the existing dual-
+>    DRAT API, requires recheck, and emits hashes/sizes for both certificate
+>    halves; controls stay unchanged. The versioned producer/registration, six
+>    focused plus four inherited tests, two ordinary Rust tests, small non-target
+>    route smoke, and targeted Clippy pass under the cap; `proof-v3` is absent.
+>    Commit/push these bytes before archived-HEAD compilation. No target query.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
