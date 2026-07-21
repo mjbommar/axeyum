@@ -2055,6 +2055,77 @@ fn sylvester_determinant_expr(a: &[CasExpr], b: &[CasExpr]) -> Option<CasExpr> {
     Matrix::from_rows(rows)?.determinant()
 }
 
+/// Solve a **trigonometric equation** `A·f(var) + C = 0` for a single `sin`/`cos`/
+/// `tan` head with a bare `var` argument and rational constants `A, C`: returns the
+/// **principal solutions in `[0, 2π)`** — the special angles `k·π/12` whose
+/// `f`-value equals `−C/A` — each certified by substitution + [`evaluate_trig`].
+/// `None` if `expr` is not of this shape or the target value is not attained at a
+/// tabulated angle. The full solution family is these values plus the head's period.
+fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    // Match A·f(var) + C with exactly one trig head on a bare `var`.
+    let terms = match expr {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    let mut func: Option<UnaryFunc> = None;
+    let mut coeff = Rational::integer(1);
+    let mut constant = Rational::zero();
+    for term in &terms {
+        // A variable-free constant term (`5`, `−1`, `3/2`, …) goes to the constant.
+        if let Some(c) = constant_term(term) {
+            constant = constant.checked_add(c)?;
+            continue;
+        }
+        // Otherwise the term must be `A·f(var)` with a single trig head.
+        let mut trig_here: Option<UnaryFunc> = None;
+        let mut term_coeff = Rational::integer(1);
+        for factor in flatten_mul(term) {
+            match factor {
+                CasExpr::Const(c) => term_coeff = term_coeff.checked_mul(c)?,
+                CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg)
+                    if trig_here.is_none() && matches!(&*arg, CasExpr::Var(v) if v == var) =>
+                {
+                    trig_here = Some(f);
+                }
+                _ => return None, // non-constant/non-trig factor, or a second head
+            }
+        }
+        if func.is_some() {
+            return None; // more than one trig term
+        }
+        func = Some(trig_here?);
+        coeff = term_coeff;
+    }
+    let func = func?;
+    let target = constant.checked_neg()?.checked_div(coeff)?; // f(var) = −C/A
+    let pi = CasExpr::var("pi");
+    let mut roots: Vec<CasExpr> = Vec::new();
+    // Scan the tabulated angles k·π/12 in [0, 2π): k = 0..24.
+    for k in 0..24u32 {
+        let angle = fold_trivial(&(CasExpr::Const(Rational::new(i128::from(k), 12)) * pi.clone()));
+        let value = evaluate_trig(&CasExpr::Unary(func, Box::new(angle.clone())));
+        // Skip `tan` poles (value stays an unevaluated `tan(...)`) and non-matches.
+        if matches!(value, CasExpr::Unary(_, _)) {
+            continue;
+        }
+        if matches!(
+            equal(&value, &CasExpr::Const(target)),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            // Certify against the original equation.
+            let residual = expr.substitute(var, &angle);
+            if matches!(
+                equal(&evaluate_trig(&residual), &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            ) && !roots.contains(&angle)
+            {
+                roots.push(angle);
+            }
+        }
+    }
+    if roots.is_empty() { None } else { Some(roots) }
+}
+
 /// Solve `expr = 0` for `var`. Over a univariate polynomial: returns the distinct
 /// real roots (rational roots exact; a leftover real quadratic via the quadratic
 /// formula, rational or symbolic `sqrt`; complex roots and irreducible cubics+
@@ -2065,6 +2136,11 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Elementary transcendental equations `A·exp(ax+b)+C=0`, `A·ln(ax+b)+C=0`
     // fall outside the polynomial fragment; try them first.
     if let Some(roots) = solve_transcendental(expr, var) {
+        return Some(roots);
+    }
+    // Trigonometric equations `A·f(var)+C=0` (f ∈ {sin,cos,tan}) — principal
+    // solutions in [0, 2π) from the special-angle table.
+    if let Some(roots) = solve_trigonometric(expr, var) {
         return Some(roots);
     }
     let mut remaining = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
@@ -9455,6 +9531,29 @@ mod tests {
             solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
             2
         );
+    }
+
+    #[test]
+    fn solve_trigonometric_equations() {
+        let x = || v("x");
+        let pi = || v("pi");
+        // 2sin x − 1 = 0 ⇒ x ∈ {π/6, 5π/6}; each root certifies against the equation.
+        let s = solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(1)), "x").expect("solvable");
+        assert_eq!(s.len(), 2);
+        for root in &s {
+            let residual = evaluate_trig(
+                &(CasExpr::int(2) * root.clone().sin() - CasExpr::int(1)),
+            );
+            assert_equal(&residual, &CasExpr::zero());
+        }
+        assert!(s.contains(&(CasExpr::rat(1, 6) * pi())));
+        assert!(s.contains(&(CasExpr::rat(5, 6) * pi())));
+        // tan x − 1 = 0 ⇒ {π/4, 5π/4}.
+        let t = solve(&(x().tan() - CasExpr::int(1)), "x").unwrap();
+        assert!(t.contains(&(CasExpr::rat(1, 4) * pi())));
+        assert!(t.contains(&(CasExpr::rat(5, 4) * pi())));
+        // 2sin x − 3 = 0 has no solution (|sin| ≤ 1) — declined.
+        assert!(solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(3)), "x").is_none());
     }
 
     #[test]
