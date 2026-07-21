@@ -19,6 +19,13 @@ the two modules under local ignored storage, retains a complete diff, classifies
 every changed line, and compares the selected function projections. Its result
 cannot revise ADR-0323 or grant capture credit.
 
+That diagnostic identifies a build-protocol root leak: the trailing rustc
+remap applies to the final kernel crate, while seven absolute paths from the
+`utils` dependency remain in each module and cascade into symbol/metadata
+identity. All three selected functions pass the scalar parser, but all three
+mangled names and current canonical hashes differ. `drift-result.json` records
+the metadata-only result; the external bytes remain local and ignored.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 

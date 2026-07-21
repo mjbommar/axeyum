@@ -1,6 +1,6 @@
 # ADR-0324: Preregister the Maestro LLVM root-drift diagnostic
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -110,8 +110,53 @@ valuable whether drift is narrow, semantic, broad, or unreproduced.
 
 ## Result
 
-Proposed. No diagnostic rerun, retained module, diff, selected-function
-comparison, parser result, or successor identity exists under this ADR.
+Accepted as a diagnostic result with no capture credit. Both exact owning-
+kernel builds reproduced the broad drift while staying below the memory cap:
+
+| Root | LLVM bytes | Lines | SHA-256 | Wall | Peak RSS |
+|---|---:|---:|---|---:|---:|
+| A | 36,038,043 | 446,429 | `9a7402491b1a5d2674a56f98a4335ce9f7afa2e0e01d272b49fad96f6e88d5f8` | 43,946 ms | 998,648 KiB |
+| B | 36,038,537 | 446,429 | `f55a7b75f28cc2b46542a999f7be1ab3304b8e78a1e3fbc55433dcc0343e3ef4` | 43,842 ms | 997,760 KiB |
+
+The complete 40,665,637-byte diff has SHA-256
+`9209b68292689510dd3e5da10443ef7bce2878e76820ecbfc901d7a12977434d`,
+65,752 hunks, and exactly 159,799 added plus 159,799 removed lines. All
+319,598 changed lines are classified: 151,370 metadata, 101,000 function body
+or terminator, 39,282 other, 15,274 global/function/COMDAT identity, 12,620
+comment/whitespace, 48 attribute, and four module/source-identity lines. The
+nonzero `other` bucket and body-scale churn forbid a semantics-free conclusion
+from the complete diff.
+
+Both modules contain seven copies of their own absolute source root. Direct
+local inspection locates all seven in path constants from the Maestro `utils`
+path dependency (collection and pointer modules). The registered remap was a
+trailing `cargo rustc -- ...` argument, which Cargo applies to the final
+`kernel` crate rather than every dependency. The unremapped dependency paths
+therefore enter constant identities and cascade through hashes, symbols, and
+metadata. This is an identified build-protocol root leak, not an LLVM-parser
+failure.
+
+All three selected functions are discovered once in both modules and pass the
+existing checked scalar admission profile at the expected widths, one block,
+zero PHIs, and 6/5/13 instructions. However, all three mangled symbols differ
+across roots, so their ModuleID-agnostic extracted hashes and current frontend-
+canonical hashes also differ. A local line diff shows that each small frontend
+canonical pair differs only in the mangled function name, with its instruction
+text unchanged. That final observation was not a frozen name-erasure gate and
+earns no equality or capture credit; ADR-0324's selected-symbol-drift branch
+therefore fires.
+
+The committed result contains only hashes, sizes, aggregate categories,
+admission metadata, and the outcome. The two modules, 40 MB diff, extracted
+functions, and canonical text remain ignored local artifacts. No solver query
+ran, ADR-0323 remains negative, T5.5.2 remains open, and no verification or
+scoreboard row exists.
+
+The result selects a new build-reproducibility decision: preregister a fresh
+two-root retry in which root remapping reaches every Cargo dependency (not only
+the final crate), then require raw full-module equality before extraction. Do
+not normalize the observed modules or use name-erased selected bodies as a
+substitute.
 
 ## Rejected alternatives
 

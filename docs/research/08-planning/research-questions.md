@@ -973,11 +973,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     diagnostic is required before any canonical identity, inverse-property
     query, or scoreboard row.
   - [ADR-0324](../09-decisions/adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md)
-    preregisters that non-crediting diagnostic: reproduce and retain both local
-    modules, classify every changed diff line, discover and compare the three
-    selected definitions and checked typed projections, and select at most a
-    later canonical-identity proposal. It cannot revise ADR-0323 or accept
-    T5.5.2 by selected-function equality alone.
+    diagnoses broad drift: 319,598 changed lines, seven absolute dependency-
+    source paths per module, and three changed selected symbols/canonical
+    hashes. The final-crate-only remap missed Maestro's path dependencies.
+    Every selected scalar body is admitted, but symbol drift fires the frozen
+    negative branch and grants no capture credit. Next preregister a fresh
+    dependency-wide remapped build; do not normalize these modules.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

@@ -17,7 +17,7 @@
   "producer_files": [
     {
       "path": "docs/research/09-decisions/adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md",
-      "sha256": "4e59518636521f72f13df5b328eff4d2c389f9248697b7cf04a2f944eabf9489"
+      "sha256": "3903ce40f001bdbb5d1154396350059aef42730ac4374c7ba4f39d4bac5508a1"
     },
     {
       "path": "scripts/diagnose-maestro-llvm-root-drift.py",

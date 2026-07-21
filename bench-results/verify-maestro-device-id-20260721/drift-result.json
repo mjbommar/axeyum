@@ -1,0 +1,147 @@
+{
+  "artifacts": {
+    "external_bytes_committed": 0,
+    "local_diff_sha256": "9209b68292689510dd3e5da10443ef7bce2878e76820ecbfc901d7a12977434d",
+    "local_only": true
+  },
+  "builds": [
+    {
+      "absolute_root_occurrences": 7,
+      "module_bytes": 36038043,
+      "module_lines": 446429,
+      "module_sha256": "9a7402491b1a5d2674a56f98a4335ce9f7afa2e0e01d272b49fad96f6e88d5f8",
+      "peak_rss_kib": 998648,
+      "root": "a",
+      "wall_ms": 43946
+    },
+    {
+      "absolute_root_occurrences": 7,
+      "module_bytes": 36038537,
+      "module_lines": 446429,
+      "module_sha256": "f55a7b75f28cc2b46542a999f7be1ab3304b8e78a1e3fbc55433dcc0343e3ef4",
+      "peak_rss_kib": 997760,
+      "root": "b",
+      "wall_ms": 43842
+    }
+  ],
+  "capture_credit": false,
+  "diff": {
+    "added_lines": 159799,
+    "bucket_counts": {
+      "attribute": 48,
+      "comment_or_whitespace": 12620,
+      "function_body_or_terminator": 101000,
+      "global_function_comdat_identity": 15274,
+      "metadata": 151370,
+      "module_source_identity": 4,
+      "other": 39282
+    },
+    "bytes": 40665637,
+    "classified_lines": 319598,
+    "hunks": 65752,
+    "removed_lines": 159799,
+    "root_path_occurrences": [7, 7],
+    "sha256": "9209b68292689510dd3e5da10443ef7bce2878e76820ecbfc901d7a12977434d"
+  },
+  "identity_sha256": "5c889c233054decbf37d101f9029ad6090cbfca42039f52dd4098236c07eae93",
+  "registration_sha256": "21a389c92d24d1a2c20b9c5d245e7f30d59c16aca3b2a89b7e4b333ab3cdadf3",
+  "root_cause": {
+    "class": "final_crate_only_path_remap",
+    "detail": "seven absolute source paths from the Maestro utils path dependency remain in each module",
+    "next_gate": "dependency_wide_remapped_two_root_build"
+  },
+  "runner_commit": "f7b8ebcf25ba532a6d5144b9cc3937d8254dabd4",
+  "schema": "axeyum.maestro-llvm-root-drift-result.v1",
+  "selected": [
+    {
+      "admission": {
+        "blocks": 1,
+        "instructions": 6,
+        "parameter_widths": [64],
+        "phis": 0,
+        "return_width": 32
+      },
+      "frontend_canonical_equal": false,
+      "frontend_canonical_sha256": [
+        "119a5ff671fa7980c4773847e7a18eba2193518cbb7c5816c2336e02ad2ad0f1",
+        "8666c07cd71a0a0addb3eced081befe0937aa94e034ec0f2f03dc2671a029102"
+      ],
+      "moduleid_agnostic_equal": false,
+      "moduleid_agnostic_sha256": [
+        "7b83870364fba04a42971b1f20eb4316bca8904ec4fe9d502e00ebc942967d52",
+        "5660f367815778f896e0869c9f1a637573992515588730a1a18e12317823cff6"
+      ],
+      "name": "major",
+      "symbol_equal": false,
+      "symbols": [
+        "_ZN6kernel6device2id5major17he3342d7bfeb10ac0E",
+        "_ZN6kernel6device2id5major17h04d2cfb22178abc3E"
+      ]
+    },
+    {
+      "admission": {
+        "blocks": 1,
+        "instructions": 5,
+        "parameter_widths": [64],
+        "phis": 0,
+        "return_width": 32
+      },
+      "frontend_canonical_equal": false,
+      "frontend_canonical_sha256": [
+        "554a126422fa2827d007f085d754504e5c6a0d5e8e94ebea391cd06ea704ac78",
+        "f5fc5e13ce1b621d3afb15df4cbacd465d3c82f5d16245257eaa189f70c47d5c"
+      ],
+      "moduleid_agnostic_equal": false,
+      "moduleid_agnostic_sha256": [
+        "29cb46dac9c5de124d839dbb385bae293117ecf22507956323b5bdabc877741f",
+        "8f977fb1761497b5b271f43d5f33d1e909a45238e5b85bdaa69508c4be4ebdac"
+      ],
+      "name": "minor",
+      "symbol_equal": false,
+      "symbols": [
+        "_ZN6kernel6device2id5minor17hc184ea76d81c5169E",
+        "_ZN6kernel6device2id5minor17h6c365eaeeac495d8E"
+      ]
+    },
+    {
+      "admission": {
+        "blocks": 1,
+        "instructions": 13,
+        "parameter_widths": [32, 32],
+        "phis": 0,
+        "return_width": 64
+      },
+      "frontend_canonical_equal": false,
+      "frontend_canonical_sha256": [
+        "ca3cc56e1d9672d5f3a1f25391087490cf703facbad7a13969b3119073f96f64",
+        "9f0b516e40619d8812cf5d29809dd272b33ace38ee1de9397fe4bd92c34c93d7"
+      ],
+      "moduleid_agnostic_equal": false,
+      "moduleid_agnostic_sha256": [
+        "514ad526fc19dd0ea60e7ea5ac524b8ce6c463395d36385e94a4a7f615f8a241",
+        "b3ba415a47b8efdc888eca3c587cbd92fc5e6d481fbb19886b7e688c8b4f5fed"
+      ],
+      "name": "makedev",
+      "symbol_equal": false,
+      "symbols": [
+        "_ZN6kernel6device2id7makedev17h880b7265ae3a8806E",
+        "_ZN6kernel6device2id7makedev17hb5336e032a6c517eE"
+      ]
+    }
+  ],
+  "status": "accepted_diagnostic_no_capture_credit",
+  "summary": {
+    "all_selected_frontend_canonical_equal": false,
+    "all_selected_moduleid_agnostic_equal": false,
+    "all_selected_symbols_equal": false,
+    "builds": 2,
+    "dropped": 0,
+    "solver_queries": 0,
+    "targets": 3
+  },
+  "upstream": {
+    "commit": "650a3f62c386d113b4cbbc11645d945d57620cbb",
+    "repository": "https://github.com/maestro-os/maestro.git",
+    "tree": "6a51753d1f7b80117979db4f35146f55f5e248b4"
+  }
+}

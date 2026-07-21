@@ -348,6 +348,14 @@ session state.
 >    checked typed projections. Even exact selected-function equality cannot
 >    revise ADR-0323 or accept T5.5.2; it may select only a later independently
 >    specified canonical-identity proposal.
+>    ADR-0324's result diagnoses broad build-root drift: 319,598 changed lines,
+>    seven absolute `utils` dependency paths in each module, and different
+>    mangled symbols/current canonical hashes for all three selected functions.
+>    The registered trailing rustc remap reached only the final kernel crate;
+>    each selected body still admits at 6/5/13 instructions, but that earns no
+>    capture credit. Next preregister a fresh two-root build with dependency-
+>    wide remapping and require raw full-module equality before extraction;
+>    never normalize the observed modules or erase names after the fact.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
