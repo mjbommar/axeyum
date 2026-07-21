@@ -322,6 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — I3 privately extracts equality-partition reconstruction.** The
+  cohesive ADR-0101/0106 family now lives in the 1,200-line
+  `int_reconstruct/equality_partition.rs` child with explicit imports and the
+  same crate router/public reconstructor paths. The SDLX Lean output remains
+  exactly 30,644 bytes at FNV-1a `84fe8e457b9b6b27`. All twelve focused tests,
+  including the 64-seed Z3 differential sweep, all 895 library tests, strict
+  Clippy, and both rustdoc profiles pass. `int_reconstruct.rs` falls
+  6,233→5,045 lines, 43.2% below its original size. Next: remeasure reviewer
+  navigation/dependency seams; do not infer another split from raw size.
+
 - **2026-07-21 — Post-I2 remeasurement authorizes only I3.** The next clean
   reviewer-facing seam is the contiguous 1,188-line ADR-0101/0106 single-pivot
   equality-partition reconstruction family: 30 cohesive items, two outward
@@ -5715,6 +5725,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Extracted the single-pivot equality-partition proof family.**
+  Moved the 1,188-line parent block into a private 1,200-line child with explicit
+  dependencies and unchanged re-exports. Exact SDLX proof bytes, all twelve
+  focused controls, 895 library tests, strict lint, and both docs profiles pass;
+  the parent drops to 5,045 lines.
 
 - **2026-07-21 — Rechecked Glaurung feedback and preregistered I3.** The July 16
   feedback still preserves strict correctness/deployability safeguards while

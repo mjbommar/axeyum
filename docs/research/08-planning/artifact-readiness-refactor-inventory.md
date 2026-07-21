@@ -30,10 +30,10 @@ not repeat completed namespace/configuration sweeps.
 | ABV lazy-ext CEGAR orchestrator | 446 lines / 17,014 bytes | Named child module; ten items; one parent entry point |
 | ABV replay/repair residual | 4,531 parent lines (6,137--10,667) | Shared by ROW and extensional replay; 16 private items directly test-reached |
 | ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
-| `int_reconstruct.rs` | 6,233 lines / 258,948 bytes | Shared integer kernel context plus the remaining proof families |
+| `int_reconstruct.rs` | 5,045 lines / 209,201 bytes | Shared integer kernel context plus the remaining proof families |
 | Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
 | Quantified counterexample-cover reconstruction | 1,465 lines / 58,079 bytes | Private child; one crate router and one public re-export |
-| Single-pivot equality-partition reconstruction | 1,188 parent lines / 49,816 bytes | Thirty cohesive items; one crate router and one public entry point |
+| Single-pivot equality-partition reconstruction | 1,200 lines / 50,231 bytes | Private child; one crate router and one public re-export |
 | `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -129,7 +129,7 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    Lean-byte preservation. All seven ordinary integration controls plus the
    explicitly exercised real-corpus Lean reconstruction, all 895 library tests,
    strict Clippy, and both rustdoc profiles pass under the bounded profile.
-7. **I3 -- extract single-pivot equality-partition reconstruction (next).** The
+7. **I3 -- extract single-pivot equality-partition reconstruction (done).** The
    ADR-0101/0106 family is one contiguous 1,188-line / 49,816-byte block with 30
    top-level items. Twenty-eight are private lowering, finite-partition, proof,
    and kernel-rendering details; only the crate-visible shape router and the
@@ -140,14 +140,17 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    bytes. The focused gate is the six-test reconstruction suite plus the
    six-test evidence suite, including the 64-seed Z3 differential sweep. Add a
    pre/post byte-identity control to the existing SDLX reconstruction before the
-   move. This should reduce the 6,233-line parent to roughly 5,050 lines without
-   introducing an API or semantic change.
+   move. The private child is 1,200 lines / 50,231 bytes with explicit imports,
+   and the parent falls exactly 6,233→5,045 lines without an API or semantic
+   change. The committed SDLX control preserves the pre-move 30,644-byte Lean
+   module at FNV-1a `84fe8e457b9b6b27`. All twelve focused tests pass, including
+   mutation/near-miss gates and the complete 64-seed Z3 differential sweep; all
+   895 library tests, strict Clippy, and both rustdoc profiles also pass.
 
-## Post-I2 residual posture
+## Post-I3 residual posture
 
-1. The remeasurement authorizes I3 as the next and only current structural
-   slice. Its proof-family boundary is narrow and already owns independent
-   certificate, reconstruction, routing, mutation, and differential controls.
+1. I3 is complete. Remeasure reviewer navigation and dependency seams before
+   authorizing any successor; completion itself grants no further slice.
 2. Keep the 4,531-line ABV replay/repair residual in place. Sixteen private
    items are directly test-reached and the block shares ROW/extensional replay
    ownership; moving it now would widen visibility or combine a test

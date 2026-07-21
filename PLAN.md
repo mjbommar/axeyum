@@ -558,17 +558,18 @@ session state.
 >    reviewer navigation and dependency seams before authorizing a successor.
 >    Do not promote `incremental.rs`, `qinst_egraph.rs`, or `auto.rs` merely
 >    because they are large.
->    The post-I2 remeasurement now authorizes I3 only: move the contiguous
->    1,188-line ADR-0101/0106 single-pivot equality-partition reconstruction
->    family into private `int_reconstruct/equality_partition.rs`. Its 30
->    top-level items have exactly two outward seams (the crate-visible router and
->    historical public reconstructor), while six reconstruction tests and six
->    evidence tests cover certificate checks, routing, mutations, near misses,
->    and a 64-seed Z3 differential sweep. Capture and preserve the SDLX generated
->    Lean bytes before moving; preserve all paths, visibility, representative
->    order, assignments, caps, verdicts, and proof construction. No ABV replay,
+>    I3 is now complete: the ADR-0101/0106 single-pivot equality-partition
+>    reconstruction family lives in private 1,200-line
+>    `int_reconstruct/equality_partition.rs` with explicit imports and the same
+>    crate-visible router/public reconstructor paths. The SDLX generated module
+>    remains exactly 30,644 bytes at FNV-1a `84fe8e457b9b6b27`; all twelve
+>    focused reconstruction/evidence controls pass, including every 64-seed Z3
+>    differential row. All 895 library tests, strict Clippy, and both rustdoc
+>    profiles pass. `int_reconstruct.rs` falls 6,233→5,045 lines in I3 and is
+>    now 43.2% below its original 8,876 lines. Remeasure reviewer navigation and
+>    dependency seams before authorizing any successor. No ABV replay,
 >    algebraic CAD, generic large-file, performance, or concretization work is
->    implied by I3.
+>    implied by completion.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
