@@ -310,9 +310,9 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
             let cos = compose(&inner, cosine_coeff)?;
             sin.div(&cos)
         }
-        // `abs` and `erf` are outside the rational-coefficient series fragment
-        // (`erf`'s Maclaurin series carries a `√π` factor).
-        UnaryFunc::Abs | UnaryFunc::Erf => None,
+        // `abs`, `erf`, and the Si/Ci/Ei integrals are outside the
+        // rational-coefficient series fragment (√π factors / logarithmic terms).
+        UnaryFunc::Abs | UnaryFunc::Erf | UnaryFunc::Si | UnaryFunc::Ci | UnaryFunc::Ei => None,
     }
 }
 

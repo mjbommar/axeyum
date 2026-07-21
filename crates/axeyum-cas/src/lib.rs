@@ -146,6 +146,12 @@ pub enum UnaryFunc {
     Abs,
     /// The **error function** `erf(x) = (2/√π)·∫₀ˣ e^{−t²} dt`.
     Erf,
+    /// The **sine integral** `Si(x) = ∫₀ˣ sin t / t dt` (so `Si′(x) = sin x / x`).
+    Si,
+    /// The **cosine integral** `Ci(x)` (with `Ci′(x) = cos x / x`).
+    Ci,
+    /// The **exponential integral** `Ei(x)` (with `Ei′(x) = eˣ / x`).
+    Ei,
 }
 
 impl UnaryFunc {
@@ -162,6 +168,9 @@ impl UnaryFunc {
             UnaryFunc::Sqrt => "sqrt",
             UnaryFunc::Abs => "abs",
             UnaryFunc::Erf => "erf",
+            UnaryFunc::Si => "Si",
+            UnaryFunc::Ci => "Ci",
+            UnaryFunc::Ei => "Ei",
         }
     }
 
@@ -196,6 +205,10 @@ impl UnaryFunc {
                 CasExpr::int(2) / CasExpr::var("pi").sqrt()
                     * CasExpr::Neg(Box::new(u().pow(2))).exp()
             }
+            // d/du Si(u) = sin u / u ; Ci(u) = cos u / u ; Ei(u) = eᵘ / u.
+            UnaryFunc::Si => CasExpr::Unary(UnaryFunc::Sin, Box::new(u())) / u(),
+            UnaryFunc::Ci => CasExpr::Unary(UnaryFunc::Cos, Box::new(u())) / u(),
+            UnaryFunc::Ei => CasExpr::Unary(UnaryFunc::Exp, Box::new(u())) / u(),
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -288,6 +301,24 @@ impl CasExpr {
     #[must_use]
     pub fn erf(self) -> Self {
         CasExpr::Unary(UnaryFunc::Erf, Box::new(self))
+    }
+
+    /// The **sine integral** `Si(self)` as a symbolic head.
+    #[must_use]
+    pub fn si(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Si, Box::new(self))
+    }
+
+    /// The **cosine integral** `Ci(self)` as a symbolic head.
+    #[must_use]
+    pub fn ci(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Ci, Box::new(self))
+    }
+
+    /// The **exponential integral** `Ei(self)` as a symbolic head.
+    #[must_use]
+    pub fn ei(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Ei, Box::new(self))
     }
 
     /// The absolute value `|self|`. A constant argument folds to its magnitude
@@ -5528,6 +5559,9 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Sqrt => value.sqrt(),
                 UnaryFunc::Abs => value.abs(),
                 UnaryFunc::Erf => erf_f64(value),
+                UnaryFunc::Si => sine_integral_f64(value),
+                UnaryFunc::Ci => cosine_integral_f64(value),
+                UnaryFunc::Ei => exponential_integral_f64(value),
             })
         }
     }
@@ -5545,6 +5579,64 @@ fn erf_f64(x: f64) -> f64 {
             + t * (-0.284_496_736
                 + t * (1.421_413_741 + t * (-1.453_152_027 + t * 1.061_405_429))));
     sign * (1.0 - poly * (-x * x).exp())
+}
+
+/// The Euler–Mascheroni constant `γ`, for the numeric Ci/Ei kernels.
+const EULER_GAMMA: f64 = 0.577_215_664_901_532_9;
+
+/// Numeric **sine integral** `Si(x) = ∫₀ˣ sin t/t dt = Σ (−1)ⁿ x^{2n+1}/((2n+1)(2n+1)!)`
+/// for [`evalf`]. The alternating series converges for all `x` (accurately for
+/// moderate `|x|`).
+fn sine_integral_f64(x: f64) -> f64 {
+    let mut term = x; // n = 0 term: x / 1
+    let mut sum = x;
+    for n in 1..100 {
+        let k = f64::from(2 * n);
+        // Ratio to the previous term: −x²·(2n−1)/((2n+1)·(2n)·(2n+1)).
+        term *= -x * x / (k * (k + 1.0));
+        sum += term / (k + 1.0);
+        if term.abs() < 1e-18 {
+            break;
+        }
+    }
+    sum
+}
+
+/// Numeric **cosine integral** `Ci(x) = γ + ln|x| + Σ_{n≥1} (−1)ⁿ x^{2n}/((2n)(2n)!)`
+/// for [`evalf`] (`x ≠ 0`; returns `−∞` at `0`).
+fn cosine_integral_f64(x: f64) -> f64 {
+    if x == 0.0 {
+        return f64::NEG_INFINITY;
+    }
+    let mut term = 1.0; // running x^{2n}/(2n)!
+    let mut sum = EULER_GAMMA + x.abs().ln();
+    for n in 1..100 {
+        let k = f64::from(2 * n);
+        term *= -x * x / (k * (k - 1.0));
+        sum += term / k;
+        if term.abs() < 1e-18 {
+            break;
+        }
+    }
+    sum
+}
+
+/// Numeric **exponential integral** `Ei(x) = γ + ln|x| + Σ_{n≥1} xⁿ/(n·n!)` for
+/// [`evalf`] (`x ≠ 0`; returns `−∞` at `0`).
+fn exponential_integral_f64(x: f64) -> f64 {
+    if x == 0.0 {
+        return f64::NEG_INFINITY;
+    }
+    let mut term = 1.0; // running xⁿ/n!
+    let mut sum = EULER_GAMMA + x.abs().ln();
+    for n in 1..200 {
+        term *= x / f64::from(n);
+        sum += term / f64::from(n);
+        if term.abs() < 1e-18 && n > 2 {
+            break;
+        }
+    }
+    sum
 }
 
 /// The complex conjugate of an expression: replace the imaginary unit `I` with
@@ -6362,6 +6454,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_trig_square(expr, var),
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
+        integrate_special_integral(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -7159,6 +7252,34 @@ fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     // the denominator) so they cancel cleanly against erf's derivative in the cert.
     let coefficient = sqrt_pi / (CasExpr::int(2) * sqrt_a);
     Some(fold_trivial(&(coefficient * erf_term)))
+}
+
+/// Integrate the defining forms of the special integrals: `∫ sin(a·x)/x dx =
+/// Si(a·x)`, `∫ cos(a·x)/x dx = Ci(a·x)`, `∫ e^{a·x}/x dx = Ei(a·x)` (the argument
+/// must be `a·x` with no constant term, so `d/dx F(a·x) = f(a·x)/x`). Certified
+/// downstream by differentiate-and-check. `None` outside these shapes.
+fn integrate_special_integral(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    if !matches!(denominator.as_ref(), CasExpr::Var(v) if v == var) {
+        return None;
+    }
+    let CasExpr::Unary(inner, arg) = numerator.as_ref() else {
+        return None;
+    };
+    let head = match inner {
+        UnaryFunc::Sin => UnaryFunc::Si,
+        UnaryFunc::Cos => UnaryFunc::Ci,
+        UnaryFunc::Exp => UnaryFunc::Ei,
+        _ => return None,
+    };
+    // The argument must be `a·var` (degree 1, zero constant term).
+    let arg_poly = normalize(arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 || !arg_poly[0].is_zero() {
+        return None;
+    }
+    Some(CasExpr::Unary(head, arg.clone()))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -10591,6 +10712,34 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn special_integrals_si_ci_ei() {
+        let x = || v("x");
+        // Defining derivatives: Si′=sin/x, Ci′=cos/x, Ei′=eˣ/x.
+        assert_equal(&x().si().differentiate("x"), &(x().sin() / x()));
+        assert_equal(&x().ci().differentiate("x"), &(x().cos() / x()));
+        assert_equal(&x().ei().differentiate("x"), &(x().exp() / x()));
+        // Certified antiderivatives (including a scaled argument).
+        for (integrand, expected) in [
+            (x().sin() / x(), x().si()),
+            (x().cos() / x(), x().ci()),
+            (x().exp() / x(), x().ei()),
+            ((CasExpr::int(2) * x()).sin() / x(), (CasExpr::int(2) * x()).si()),
+            ((CasExpr::int(3) * x()).exp() / x(), (CasExpr::int(3) * x()).ei()),
+        ] {
+            let r = integrate(&integrand, "x").expect("special integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative, &expected);
+        }
+        // A constant term in the argument (sin(x+1)/x) is declined.
+        assert!(integrate(&((x() + CasExpr::int(1)).sin() / x()), "x").is_none());
+        // Numeric values.
+        let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
+        close(evalf(&CasExpr::int(1).si(), &[]).unwrap(), 0.946_083);
+        close(evalf(&CasExpr::int(1).ci(), &[]).unwrap(), 0.337_404);
+        close(evalf(&CasExpr::int(1).ei(), &[]).unwrap(), 1.895_118);
     }
 
     #[test]
