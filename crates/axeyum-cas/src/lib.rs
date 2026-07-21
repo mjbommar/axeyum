@@ -1556,6 +1556,21 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     best
 }
 
+/// The trace of a square matrix (sum of the diagonal entries), expanded to
+/// canonical form. `None` if the matrix is not square.
+#[must_use]
+pub fn trace(matrix: &Matrix) -> Option<CasExpr> {
+    let n = matrix.rows();
+    if n != matrix.cols() {
+        return None;
+    }
+    let mut sum = CasExpr::zero();
+    for i in 0..n {
+        sum = sum + matrix.get(i, i)?.clone();
+    }
+    Some(expand(&sum).unwrap_or(sum))
+}
+
 /// The characteristic polynomial `det(A − λ·I)` of a square matrix, as an
 /// (expanded) polynomial in `var` (= λ). `None` if the matrix is not square or on
 /// overflow.
@@ -2765,6 +2780,7 @@ mod tests {
             &cp,
             &(v("L").pow(2) - CasExpr::int(5) * v("L") + CasExpr::int(6)),
         );
+        assert_equal(&trace(&m).unwrap(), &CasExpr::int(5)); // 2 + 3
         let eig = eigenvalues(&m, "L").unwrap();
         assert_eq!(eig.len(), 2);
         for e in &eig {
