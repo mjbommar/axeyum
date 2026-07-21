@@ -1100,6 +1100,30 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     }
 }
 
+/// The degree of a univariate polynomial in `var`, or `None` if `expr` is not a
+/// univariate polynomial in `var` (the zero polynomial also returns `None`).
+#[must_use]
+pub fn degree(expr: &CasExpr, var: &str) -> Option<usize> {
+    poly::rat_degree(&normalize(expr)?.to_univariate(var)?)
+}
+
+/// The coefficient of `var^n` in a univariate polynomial `expr`, as a constant
+/// `CasExpr`. `None` if `expr` is not a univariate polynomial in `var`.
+#[must_use]
+pub fn coeff(expr: &CasExpr, var: &str, n: usize) -> Option<CasExpr> {
+    let coeffs = normalize(expr)?.to_univariate(var)?;
+    Some(CasExpr::Const(coeffs.get(n).copied().unwrap_or_else(Rational::zero)))
+}
+
+/// The leading coefficient (of the highest power of `var`) of a univariate
+/// polynomial. `None` if `expr` is not a univariate polynomial in `var` or is zero.
+#[must_use]
+pub fn leading_coeff(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let coeffs = normalize(expr)?.to_univariate(var)?;
+    let d = poly::rat_degree(&coeffs)?;
+    Some(CasExpr::Const(coeffs[d]))
+}
+
 /// The monic greatest common divisor of two univariate polynomials over ℚ.
 /// `None` if either argument is not a univariate polynomial in `var` (or on
 /// overflow). `gcd(x²−1, x²−2x+1) = x−1`.
@@ -2588,6 +2612,17 @@ mod tests {
         );
         // pole: lim_{x→2} 1/(x−2) has no finite limit
         assert!(limit(&(CasExpr::int(1) / (x() - CasExpr::int(2))), "x", at(2)).is_none());
+    }
+
+    #[test]
+    fn polynomial_queries() {
+        let x = || v("x");
+        let p = CasExpr::int(3) * x().pow(2) - CasExpr::int(5) * x() + CasExpr::int(7);
+        assert_eq!(degree(&p, "x"), Some(2));
+        assert_equal(&leading_coeff(&p, "x").unwrap(), &CasExpr::int(3));
+        assert_equal(&coeff(&p, "x", 1).unwrap(), &CasExpr::int(-5));
+        assert_equal(&coeff(&p, "x", 0).unwrap(), &CasExpr::int(7));
+        assert_equal(&coeff(&p, "x", 5).unwrap(), &CasExpr::zero());
     }
 
     #[test]
