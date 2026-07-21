@@ -4,6 +4,9 @@
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_AUFLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2"
@@ -34,6 +37,9 @@
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_AUFLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2"
@@ -89,6 +95,9 @@
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2"
@@ -118,6 +127,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2"
@@ -144,6 +156,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2"
@@ -168,6 +183,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2"
@@ -195,6 +213,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2"
@@ -223,6 +244,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2"
@@ -249,6 +273,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2"
@@ -274,6 +301,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2"
@@ -302,6 +332,9 @@
       "assertions": 5,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2"
@@ -328,6 +361,9 @@
       "assertions": 5,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2"
@@ -356,6 +392,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2"
@@ -382,6 +421,9 @@
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2"
@@ -407,6 +449,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2"
@@ -437,6 +482,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2"
@@ -463,6 +511,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2"
@@ -489,6 +540,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2"
@@ -513,6 +567,9 @@
       "assertions": 6,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2"
@@ -541,6 +598,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2"
@@ -569,6 +629,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2"
@@ -597,6 +660,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2"
@@ -621,6 +687,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
       "declared_logic": "QF_NRA",
       "files": [
         "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2"
@@ -645,6 +714,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2"
@@ -674,6 +746,9 @@
       "assertions": 7,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2"
@@ -707,6 +782,9 @@
       "assertions": 9,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2"
@@ -742,6 +820,9 @@
       "assertions": 8,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2"
@@ -771,6 +852,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2"
@@ -803,6 +887,9 @@
       "assertions": 0,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2"
@@ -825,6 +912,9 @@
       "assertions": 5,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2"
@@ -859,6 +949,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2"
@@ -887,6 +980,9 @@
       "assertions": 2,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
@@ -913,6 +1009,9 @@
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_S",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2"
@@ -938,6 +1037,9 @@
       "assertions": 4,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SEQ",
       "files": [
         "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2"
@@ -970,6 +1072,9 @@
       "assertions": 3,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
@@ -1008,6 +1113,9 @@
       "assertions": 0,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2"
@@ -1034,6 +1142,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2"
@@ -1064,6 +1175,9 @@
       "assertions": 0,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
@@ -1087,6 +1201,9 @@
       "assertions": 8,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2"
@@ -1126,6 +1243,9 @@
       "assertions": 7,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
@@ -1157,6 +1277,9 @@
       "assertions": 3,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2"
@@ -1192,6 +1315,9 @@
       "assertions": 12,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
@@ -1229,6 +1355,9 @@
       "assertions": 12,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2"
@@ -1265,6 +1394,9 @@
       "assertions": 9,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
@@ -1299,9 +1431,163 @@
       "unique_ir_terms": 624
     },
     {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.replace_all",
+        "seq.unit"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 50
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.rev",
+        "seq.unit"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 85
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.unit",
+        "seq.update"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 147
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.unit",
+        "seq.update"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 88
+    },
+    {
       "assertions": 1,
       "audit_occurrences": 1,
       "canonical_file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
       "declared_logic": "QF_SLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2"
@@ -1327,6 +1613,9 @@
       "assertions": 1248,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_UFLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
@@ -1368,6 +1657,9 @@
       "assertions": 1248,
       "audit_occurrences": 2,
       "canonical_file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
       "declared_logic": "QF_UFLIA",
       "files": [
         "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
@@ -1406,14 +1698,34 @@
       "unique_ir_terms": 4024
     }
   ],
+  "decision_backends": [
+    {
+      "audit_occurrences": 31,
+      "decision_backend": "smtlib-string-front-door",
+      "unique_contents": 26,
+      "unique_paths": 31
+    },
+    {
+      "audit_occurrences": 15,
+      "decision_backend": "auto-solve",
+      "unique_contents": 13,
+      "unique_paths": 13
+    },
+    {
+      "audit_occurrences": 12,
+      "decision_backend": "nra-linear-abstraction",
+      "unique_contents": 12,
+      "unique_paths": 12
+    }
+  ],
   "declared_logics": [
+    {
+      "logic": "QF_SLIA",
+      "unique_contents": 15
+    },
     {
       "logic": "QF_NRA",
       "unique_contents": 13
-    },
-    {
-      "logic": "QF_SLIA",
-      "unique_contents": 11
     },
     {
       "logic": "QF_S",
@@ -1481,6 +1793,12 @@
     },
     {
       "audit_occurrences": 4,
+      "description": "No current high-level tag matched; inspect exact heads/ops.",
+      "family": "uncategorized",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
       "description": "Source uses `str.to_code`.",
       "family": "string-code",
       "unique_contents": 3
@@ -1535,7 +1853,10 @@
         {
           "audit_logic": "QF_AUFLIA",
           "audit_slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2"
         }
       ],
@@ -1575,7 +1896,10 @@
         {
           "audit_logic": "QF_AUFLIA",
           "audit_slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2"
         }
       ],
@@ -1640,7 +1964,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2"
         }
       ],
@@ -1678,7 +2005,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2"
         }
       ],
@@ -1713,7 +2043,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2"
         }
       ],
@@ -1746,7 +2079,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2"
         }
       ],
@@ -1782,7 +2118,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2"
         }
       ],
@@ -1819,7 +2158,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2"
         }
       ],
@@ -1854,7 +2196,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2"
         }
       ],
@@ -1888,7 +2233,10 @@
         {
           "audit_logic": "QF_NIA",
           "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2"
         }
       ],
@@ -1925,7 +2273,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2"
         }
       ],
@@ -1960,7 +2311,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2"
         }
       ],
@@ -1997,7 +2351,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2"
         }
       ],
@@ -2032,7 +2389,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2"
         }
       ],
@@ -2067,7 +2427,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2"
         }
       ],
@@ -2106,7 +2469,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2"
         }
       ],
@@ -2141,7 +2507,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2"
         }
       ],
@@ -2176,7 +2545,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2"
         }
       ],
@@ -2209,7 +2581,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2"
         }
       ],
@@ -2246,7 +2621,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2"
         }
       ],
@@ -2283,7 +2661,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2"
         }
       ],
@@ -2320,7 +2701,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2"
         }
       ],
@@ -2353,7 +2737,10 @@
         {
           "audit_logic": "QF_NRA",
           "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2"
         }
       ],
@@ -2386,6 +2773,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2"
         }
@@ -2432,6 +2822,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2"
         }
@@ -2464,6 +2857,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2"
         }
@@ -2503,6 +2899,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2"
         }
@@ -2531,6 +2930,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2"
         }
@@ -2580,6 +2982,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2"
         }
@@ -2618,6 +3023,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2"
         }
@@ -2660,6 +3068,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2"
         }
@@ -2704,6 +3115,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2"
         }
@@ -2743,6 +3157,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2"
         }
@@ -2782,6 +3199,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2"
         }
@@ -2827,6 +3247,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2"
         }
@@ -2873,6 +3296,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2"
         }
@@ -2919,6 +3345,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2"
         }
@@ -2964,6 +3393,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2"
         }
@@ -3005,6 +3437,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2"
         }
@@ -3033,6 +3468,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2"
         }
@@ -3076,6 +3514,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2"
         }
@@ -3113,6 +3554,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
         }
@@ -3148,6 +3592,9 @@
         {
           "audit_logic": "QF_S",
           "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2"
         }
@@ -3182,7 +3629,10 @@
         {
           "audit_logic": "QF_SEQ",
           "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2"
         }
       ],
@@ -3219,11 +3669,201 @@
       "unique_ir_terms": 97
     },
     {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "ir_ops": {
+        "BoolAnd": 7,
+        "BoolOr": 7,
+        "BvUle": 1,
+        "BvUlt": 7,
+        "Eq": 8,
+        "Extract": 8
+      },
+      "ir_sorts": {
+        "BitVec": 20,
+        "Bool": 30
+      },
+      "logic": "QF_SLIA",
+      "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.replace_all": 2,
+        "seq.unit": 10
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 50
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2",
+      "ir_ops": {
+        "BoolAnd": 7,
+        "BoolOr": 7,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvMul": 1,
+        "BvOr": 1,
+        "BvShl": 2,
+        "BvSub": 1,
+        "BvUle": 1,
+        "BvUlt": 7,
+        "Concat": 7,
+        "Eq": 11,
+        "Extract": 15,
+        "Ite": 4,
+        "ZeroExt": 4
+      },
+      "ir_sorts": {
+        "BitVec": 52,
+        "Bool": 33
+      },
+      "logic": "QF_SLIA",
+      "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.rev": 1,
+        "seq.unit": 4
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 85
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2",
+      "ir_ops": {
+        "BoolAnd": 9,
+        "BoolOr": 7,
+        "BvAdd": 5,
+        "BvAnd": 3,
+        "BvMul": 3,
+        "BvOr": 5,
+        "BvShl": 8,
+        "BvSub": 3,
+        "BvUle": 1,
+        "BvUlt": 9,
+        "Concat": 23,
+        "Eq": 8,
+        "Extract": 30,
+        "Ite": 1,
+        "ZeroExt": 10
+      },
+      "ir_sorts": {
+        "BitVec": 113,
+        "Bool": 34
+      },
+      "logic": "QF_SLIA",
+      "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 5,
+        "seq.unit": 8,
+        "seq.update": 1
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 147
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2",
+      "ir_ops": {
+        "BoolAnd": 9,
+        "BoolOr": 7,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvMul": 1,
+        "BvOr": 1,
+        "BvShl": 2,
+        "BvSub": 1,
+        "BvUle": 1,
+        "BvUlt": 9,
+        "Concat": 8,
+        "Eq": 8,
+        "Extract": 17,
+        "Ite": 1,
+        "ZeroExt": 3
+      },
+      "ir_sorts": {
+        "BitVec": 54,
+        "Bool": 34
+      },
+      "logic": "QF_SLIA",
+      "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.unit": 5,
+        "seq.update": 1
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 88
+    },
+    {
       "assertions": 1,
       "audit_occurrences": [
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2"
         }
@@ -3258,6 +3898,9 @@
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__leq.smt2"
         }
@@ -3304,6 +3947,9 @@
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2"
         }
@@ -3332,6 +3978,9 @@
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-mod-eq.smt2"
         }
@@ -3371,6 +4020,9 @@
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__str-code-unsat-3.smt2"
         }
@@ -3417,6 +4069,9 @@
         {
           "audit_logic": "QF_SLIA",
           "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
           "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__strings-leq-trans-unsat.smt2"
         }
@@ -3462,13 +4117,19 @@
         {
           "audit_logic": "QF_UFLIA",
           "audit_slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
         },
         {
           "audit_logic": "QF_UFLIA",
           "audit_slice": "qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
         }
       ],
@@ -3518,13 +4179,19 @@
         {
           "audit_logic": "QF_UFLIA",
           "audit_slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
         },
         {
           "audit_logic": "QF_UFLIA",
           "audit_slice": "qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json",
-          "evidence_checked": true,
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
           "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
         }
       ],
@@ -3571,19 +4238,19 @@
   ],
   "ir_op_prevalence": [
     {
-      "audit_occurrences": 42,
+      "audit_occurrences": 46,
       "ir_op": "Eq",
-      "unique_contents": 36
+      "unique_contents": 40
+    },
+    {
+      "audit_occurrences": 36,
+      "ir_op": "BoolOr",
+      "unique_contents": 30
     },
     {
       "audit_occurrences": 32,
-      "ir_op": "BoolOr",
-      "unique_contents": 26
-    },
-    {
-      "audit_occurrences": 28,
       "ir_op": "BoolAnd",
-      "unique_contents": 22
+      "unique_contents": 26
     },
     {
       "audit_occurrences": 27,
@@ -3591,24 +4258,59 @@
       "unique_contents": 22
     },
     {
-      "audit_occurrences": 22,
+      "audit_occurrences": 26,
       "ir_op": "BvUlt",
-      "unique_contents": 18
+      "unique_contents": 22
     },
     {
-      "audit_occurrences": 22,
+      "audit_occurrences": 26,
       "ir_op": "Extract",
-      "unique_contents": 18
+      "unique_contents": 22
     },
     {
-      "audit_occurrences": 21,
+      "audit_occurrences": 25,
       "ir_op": "BvUle",
-      "unique_contents": 17
+      "unique_contents": 21
     },
     {
       "audit_occurrences": 12,
       "ir_op": "RealMul",
       "unique_contents": 12
+    },
+    {
+      "audit_occurrences": 12,
+      "ir_op": "BvAdd",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 12,
+      "ir_op": "ZeroExt",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvAnd",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvOr",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvShl",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvSub",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "Concat",
+      "unique_contents": 9
     },
     {
       "audit_occurrences": 8,
@@ -3621,43 +4323,13 @@
       "unique_contents": 7
     },
     {
-      "audit_occurrences": 9,
-      "ir_op": "BvAdd",
-      "unique_contents": 7
-    },
-    {
-      "audit_occurrences": 9,
-      "ir_op": "ZeroExt",
+      "audit_occurrences": 8,
+      "ir_op": "Ite",
       "unique_contents": 7
     },
     {
       "audit_occurrences": 9,
       "ir_op": "IntAdd",
-      "unique_contents": 6
-    },
-    {
-      "audit_occurrences": 8,
-      "ir_op": "BvAnd",
-      "unique_contents": 6
-    },
-    {
-      "audit_occurrences": 8,
-      "ir_op": "BvOr",
-      "unique_contents": 6
-    },
-    {
-      "audit_occurrences": 8,
-      "ir_op": "BvShl",
-      "unique_contents": 6
-    },
-    {
-      "audit_occurrences": 8,
-      "ir_op": "BvSub",
-      "unique_contents": 6
-    },
-    {
-      "audit_occurrences": 8,
-      "ir_op": "Concat",
       "unique_contents": 6
     },
     {
@@ -3696,11 +4368,6 @@
       "unique_contents": 4
     },
     {
-      "audit_occurrences": 5,
-      "ir_op": "Ite",
-      "unique_contents": 4
-    },
-    {
       "audit_occurrences": 4,
       "ir_op": "IntLt",
       "unique_contents": 4
@@ -3713,6 +4380,11 @@
     {
       "audit_occurrences": 5,
       "ir_op": "IntNeg",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "ir_op": "BvMul",
       "unique_contents": 3
     },
     {
@@ -3772,9 +4444,9 @@
   },
   "source_head_prevalence": [
     {
-      "audit_occurrences": 38,
+      "audit_occurrences": 42,
       "source_head": "=",
-      "unique_contents": 32
+      "unique_contents": 36
     },
     {
       "audit_occurrences": 23,
@@ -3858,6 +4530,16 @@
     },
     {
       "audit_occurrences": 4,
+      "source_head": "seq.++",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "seq.unit",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
       "source_head": "re.*",
       "unique_contents": 3
     },
@@ -3904,6 +4586,11 @@
     {
       "audit_occurrences": 2,
       "source_head": "re.range",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "seq.update",
       "unique_contents": 2
     },
     {
@@ -4088,6 +4775,16 @@
     },
     {
       "audit_occurrences": 1,
+      "source_head": "seq.replace_all",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "seq.rev",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
       "source_head": "sk",
       "unique_contents": 1
     },
@@ -4114,14 +4811,15 @@
   ],
   "summary": {
     "arithmetic_contents": 25,
-    "audit_occurrences": 54,
-    "audit_reported_check_true_occurrences": 28,
+    "audit_occurrences": 58,
+    "audit_reported_check_true_occurrences": 0,
     "exact_duplicate_groups": 5,
     "independently_checked_occurrences": 0,
-    "string_sequence_contents": 22,
-    "unique_content_sha256": 47,
-    "unique_paths": 52,
+    "schema_v2_attributed_occurrences": 58,
+    "string_sequence_contents": 26,
+    "unique_content_sha256": 51,
+    "unique_paths": 56,
     "zero_ir_term_contents": 3
   },
-  "version": 1
+  "version": 2
 }

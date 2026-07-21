@@ -26,7 +26,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   IR while refusing to infer a proof mechanism from operator presence alone.
 - [`evidence-route-provenance-design-2026-07-21.md`](evidence-route-provenance-design-2026-07-21.md) —
   causal instrumentation design for the four bare-UNSAT exits, including the
-  dominance-v1 vacuous-check correction, stable route IDs, obligation
+  completed dominance-v2 population refresh and vacuous-check correction,
+  measured decision-backend prevalence, stable route IDs, obligation
   fingerprints, and the gate for selecting actual proof mechanisms.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and

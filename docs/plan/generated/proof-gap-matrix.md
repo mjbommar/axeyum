@@ -13,32 +13,30 @@ instances only; SAT model replay is outside this report.
 |---|---:|---:|
 | Baseline UNSAT | 327 | 100.0% |
 | Evidence audit reproduced UNSAT | 325 | 99.4% |
-| Evidence marked certified | 271 | 82.9% |
-| Evidence independently checked | 271 | 82.9% |
-| Audit UNSAT with no declared trust hole | 321 | 98.2% |
-| Lean reconstruction checked | 261 | 79.8% |
+| Evidence marked certified | 267 | 81.7% |
+| Evidence independently checked | 267 | 81.7% |
+| Audit UNSAT with no declared trust hole | 325 | 99.4% |
+| Lean reconstruction checked | 260 | 79.5% |
 | All dominance conditions | 259 | 79.2% |
 
-The stages are not a monotone funnel: one `bare-unsat` row has an
-independent Lean reconstruction but remains uncertified, and one
-Lean-checked DRAT row retains a declared
-`bit-blast` trust hole. The final row is therefore the conjunction, not the
-minimum of the preceding totals. Historical audit JSON reports
-`evidence_checked=true` for 28 uncertified `bare-unsat` rows because the
-no-certificate
-`Evidence::check` path returns structural `Ok(true)`; this generator
-normalizes those rows to independently unchecked.
+The stages are not assumed to be a monotone funnel; the final row is the
+explicit conjunction of certification, independent checking, zero declared
+trust holes, and Lean reconstruction. Schema-v1 audit artifacts historically
+reported `evidence_checked=true` for 28 uncertified `bare-unsat` rows
+because the no-certificate `Evidence::check` path returns structural
+`Ok(true)`. The refreshed current artifacts contain 0 such overcredited rows, and this generator always
+normalizes uncertified outcomes to independently unchecked.
 
 ## Exclusive outcome categories
 
 | Category | Instances | Meaning |
 |---|---:|---|
 | `proof-production-error` | 2 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 54 | The UNSAT route is neither certified nor independently checked. |
+| `uncertified-and-unchecked` | 58 | The UNSAT route is neither certified nor independently checked. |
 | `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
-| `trust-hole-and-lean-gap` | 3 | Checked evidence retains a trust hole and has no Lean reconstruction. |
-| `trust-hole` | 1 | Lean reconstruction exists, but a declared trust hole remains. |
+| `trust-hole-and-lean-gap` | 0 | Checked evidence retains a trust hole and has no Lean reconstruction. |
+| `trust-hole` | 0 | Lean reconstruction exists, but a declared trust hole remains. |
 | `lean-reconstruction-gap` | 8 | Certified, checked, trust-free evidence lacks Lean reconstruction. |
 | `dominant` | 259 | Certified, checked, trust-free, and Lean-reconstructed UNSAT. |
 
@@ -49,8 +47,7 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 54 | 0 | 0 | 1 | 0 | 0 | 54 |
-| `drat-unsat` | 4 | 4 | 4 | 1 | 4 | 0 | 4 |
+| `bare-unsat` | 58 | 0 | 0 | 1 | 0 | 0 | 58 |
 | `alethe-unsat` | 12 | 12 | 12 | 9 | 0 | 9 | 3 |
 | `(none)` | 2 | 0 | 0 | 0 | 0 | 0 | 2 |
 | `bv-alternation-counterexample-unsat` | 2 | 2 | 2 | 0 | 0 | 0 | 2 |
@@ -123,7 +120,7 @@ mechanisms that should drive reconstruction work.
 | QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 1 | 1 | 2 | 0 | 1 | 0 | `uncertified-and-unchecked`=13 |
 | QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
 | QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 28 | 28 | 8 | 8 | 8 | 0 | 8 | 0 | `uncertified-and-unchecked`=20 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 4 | 4 | 1 | 4 | 0 | 0 | `trust-hole-and-lean-gap`=3, `trust-hole`=1, `uncertified-and-unchecked`=1 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=5 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 8 | 8 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=6 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
@@ -139,9 +136,7 @@ mechanisms that should drive reconstruction work.
 
 ## Declared trust holes
 
-| Trust hole | Instances |
-|---|---:|
-| `bit-blast` | 4 |
+None.
 
 ## Proof-production errors
 
@@ -152,9 +147,9 @@ mechanisms that should drive reconstruction work.
 
 ## Evidence-driven priority
 
-1. Replace the 54 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
+1. Replace the 58 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
 2. Add Lean reconstruction for the 8 already certified, checked, trust-free instances.
-3. Eliminate the 4 declared trust-hole instances rather than counting Lean module acceptance alone.
+3. Eliminate the 0 declared trust-hole instances rather than counting Lean module acceptance alone.
 4. Fix the 2 proof-production errors and rerun their exact committed rows.
 
 These priorities are prevalence-ranked within the committed audits. They do

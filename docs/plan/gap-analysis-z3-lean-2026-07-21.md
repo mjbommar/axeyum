@@ -42,27 +42,26 @@ The division scoreboard contains 35 rows across 24 logic labels:
   disagreements.
 - **25 / 35 rows** meet the scoreboard's `>= 80%` decide-strong threshold.
 - All 35 dominance audits are complete. **23 / 35 audited rows** are fully
-  dominant under the registered row definition; **616 / 753 decisions** are
+  dominant under the registered row definition; **594 / 753 decisions** are
   dominant candidates.
 - The rows contain **327 baseline `unsat` decisions**. The evidence audit
-  reproduces **325 evidence-audit `unsat` outcomes**; **271 certified outcomes**
-  have **271 independently checked outcomes**, and Lean reconstruction checks
-  **261 Lean-checked outcomes**. Existing v1 JSON contains
-  **28 vacuous `bare-unsat` check results** recorded as
-  `evidence_checked=true`; the generated
-  matrix normalizes them because no certificate exists, and the v2 producer now
-  gates checking on certification. The two-case 327→325 difference is explicit:
+  reproduces **325 evidence-audit `unsat` outcomes**; **267 certified outcomes**
+  have **267 independently checked outcomes**, and Lean reconstruction checks
+  **260 Lean-checked outcomes**. The affected v1 rows historically contained 28
+  structurally accepted but uncertified checks; the v2 refresh now records
+  **0 vacuous `bare-unsat` check results** and gates checking on certification.
+  The two-case 327→325 difference is explicit:
   QF_NIA proof production rejects `IntPow2` before producing evidence. Coverage
-  is substantial but uneven, not 261 fully audited outcomes out of 327:
+  is substantial but uneven, not 260 fully audited outcomes out of 327:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
 - The generated [proof-gap matrix](generated/proof-gap-matrix.md) applies the
   full conjunction rather than treating Lean acceptance as sufficient:
   **259 / 327 baseline UNSATs** are certified, independently checked,
-  trust-hole-free, and Lean-reconstructed. The residual is 54 uncertified
-  audit-row occurrences, eight trust-free Lean-reconstruction gaps, four
-  declared `bit-blast` trust holes, and two proof-production errors. The 54
-  occurrences reduce to **52 paths / 47 unique exact contents** after
+  trust-hole-free, and Lean-reconstructed. The residual is 58 uncertified
+  audit-row occurrences, eight trust-free Lean-reconstruction gaps, zero
+  declared trust holes, and two proof-production errors. The 58
+  occurrences reduce to **56 paths / 51 unique exact contents** after
   provenance deduplication.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
@@ -217,11 +216,12 @@ an adversarial differential gate; rejected mechanisms remain documented.
 ### G5 — Make proof coverage a first-class denominator
 
 The dominance audits provide five necessary denominators: 327 baseline UNSAT
-decisions, 325 evidence-audit UNSAT outcomes, 271 certified and independently
-checked outcomes, and 261 Lean-checked outcomes. The v1 audit's 28 vacuous bare-
-UNSAT check results and the two QF_NIA proof-production errors must remain
-visible rather than being folded into nominal audit denominators. Remaining
-holes cluster by reduction and theory.
+decisions, 325 evidence-audit UNSAT outcomes, 267 certified and independently
+checked outcomes, and 260 Lean-checked outcomes. The v1 audit's historical 28
+vacuous bare-UNSAT check results are now corrected to zero in the refreshed
+artifacts; the two QF_NIA proof-production errors remain visible rather than
+being folded into nominal audit denominators. Remaining holes cluster by
+reduction and theory.
 
 **Research:** generate an operator/reduction trust matrix per unsat; separate
 missing evidence, evidence-check failure, Lean reconstruction absence, external-
@@ -231,18 +231,24 @@ not bespoke one-row proof modules.
 **Prototype landed:** `scripts/gen-proof-gap-matrix.py` deterministically emits
 the checked [Markdown matrix](generated/proof-gap-matrix.md) and its
 [machine-readable JSON](generated/proof-gap-matrix.json). It shows that the
-largest gap is not Lean kernel expressiveness: 54 audit-row occurrences remain
+largest gap is not Lean kernel expressiveness: 58 audit-row occurrences remain
 uncertified and independently unchecked, all `bare-unsat`. Eight instances
 already have certified, checked,
-trust-free evidence and are direct reconstruction work; four QF_SEQ DRAT rows
-retain a `bit-blast` trust hole; two QF_NIA `IntPow2` rows fail evidence
-production. `just parity-docs` rejects stale generated outputs.
+trust-free evidence and are direct reconstruction work; zero current rows retain
+declared trust holes; two QF_NIA `IntPow2` rows fail evidence production. The
+schema-v2 refresh exposed a current QF_SEQ regression: four rows formerly
+reported as certified DRAT with a declared `bit-blast` trust hole now fall back
+to bare UNSAT. Their verdicts remain unchanged, but they correctly enlarge the
+uncertified denominator. `just parity-docs` rejects stale generated outputs.
 
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
 is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
-not filenames. It contracts 54 audit occurrences to 52 paths and 47 unique
-contents (five exact duplicate groups), split into 25 arithmetic and 22
-string/sequence contents. The leading non-exclusive structural families are
+not filenames. It contracts 58 audit occurrences to 56 paths and 51 unique
+contents (five exact duplicate groups), split into 25 arithmetic and 26
+string/sequence contents. Decision-backend attribution is complete: 31
+occurrences return through `smtlib-string-front-door`, 15 through `auto-solve`,
+and 12 through `nra-linear-abstraction`. These are coarse seams, not yet causal
+certificate failures. The leading non-exclusive structural families are
 real nonlinear multiplication (12 contents), string concatenation (nine), and
 string regex (seven). Three unique string contents have zero reachable parsed-
 IR terms because front-end handling discharges them before the ordinary
@@ -350,11 +356,11 @@ reported as parity before it climbs the measured and certifying rungs.
    schema while preserving separate scores.
 5. Observe and archive the required representative official-Lean solver-proof
    CI result; size the scheduled exhaustive tier from that measurement.
-6. Rerun the exact 47-content population with dominance schema v2 for corrected
-   check semantics and coarse backend attribution. Then instrument every bare
-   result with stable attempt IDs, source-to-lowered obligation maps, checker
-   identity, and first uncertified reduction before selecting a shared proof
-   mechanism. Handle the eight reconstruction-only gaps independently.
+6. Instrument the now-refreshed 51-content bare-UNSAT population with stable
+   attempt IDs, source-to-lowered obligation maps, checker identity, and first
+   uncertified reduction before selecting a shared proof mechanism. Investigate
+   the four current QF_SEQ DRAT-to-bare regressions as the first bounded case;
+   handle the eight reconstruction-only gaps independently.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.

@@ -7,10 +7,12 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 0.906628,
+      "elapsed_ms": 1.186152,
       "evidence_certified": false,
-      "evidence_checked": true,
+      "evidence_check_mode": "not-applicable-uncertified",
+      "evidence_checked": false,
       "evidence_kind": "bare-unsat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
       "lean_checked": false,
@@ -18,12 +20,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.002124,
-        "lean_reconstruction": 0.140965,
-        "parse_evidence": 0.099679,
-        "parse_lean": 0.032714,
-        "produce_evidence": 0.613075,
-        "read": 0.010587000000000001
+        "check_evidence": 0.000118,
+        "lean_reconstruction": 0.100134,
+        "parse_evidence": 0.286674,
+        "parse_lean": 0.034146,
+        "produce_evidence": 0.7179369999999999,
+        "read": 0.033009000000000004
       },
       "trust_holes": [],
       "trust_steps": []
@@ -33,9 +35,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.8314920000000001,
+      "elapsed_ms": 5.684711999999999,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__eqrange3.smt2",
@@ -44,12 +48,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.016382,
+        "check_evidence": 0.050123,
         "lean_reconstruction": null,
-        "parse_evidence": 0.045434,
+        "parse_evidence": 0.141826,
         "parse_lean": null,
-        "produce_evidence": 1.757212,
-        "read": 0.01028
+        "produce_evidence": 5.453157,
+        "read": 0.032230999999999996
       },
       "trust_holes": [],
       "trust_steps": []
@@ -59,9 +63,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 1.212177,
+      "elapsed_ms": 2.65728,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__prop__cadical_bug8.smt2",
@@ -70,12 +76,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.009743,
+        "check_evidence": 0.007923,
         "lean_reconstruction": null,
-        "parse_evidence": 0.042515000000000004,
+        "parse_evidence": 0.17594400000000002,
         "parse_lean": null,
-        "produce_evidence": 1.1461489999999999,
-        "read": 0.011441999999999999
+        "produce_evidence": 2.439966,
+        "read": 0.030565000000000002
       },
       "trust_holes": [],
       "trust_steps": []
@@ -85,9 +91,11 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "sat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": true,
-      "elapsed_ms": 0.286729,
+      "elapsed_ms": 0.861689,
       "evidence_certified": true,
+      "evidence_check_mode": "independent-recheck-attempted",
       "evidence_checked": true,
       "evidence_kind": "sat-model",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__uf__issue4446.smt2",
@@ -96,12 +104,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.0016920000000000001,
+        "check_evidence": 0.008029000000000001,
         "lean_reconstruction": null,
-        "parse_evidence": 0.025067,
+        "parse_evidence": 0.061309,
         "parse_lean": null,
-        "produce_evidence": 0.24513900000000002,
-        "read": 0.012522
+        "produce_evidence": 0.739577,
+        "read": 0.045689999999999995
       },
       "trust_holes": [],
       "trust_steps": []
@@ -111,10 +119,12 @@
       "audit_phase": "complete",
       "baseline_matches_audit": true,
       "baseline_outcome": "unsat",
+      "decision_backend": "auto-solve",
       "dominant_candidate": false,
-      "elapsed_ms": 11.033007,
+      "elapsed_ms": 16.227261,
       "evidence_certified": false,
-      "evidence_checked": true,
+      "evidence_check_mode": "not-applicable-uncertified",
+      "evidence_checked": false,
       "evidence_kind": "bare-unsat",
       "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
       "lean_checked": false,
@@ -122,12 +132,12 @@
       "lean_fragment": null,
       "lean_module_bytes": null,
       "phase_timings_ms": {
-        "check_evidence": 0.000106,
-        "lean_reconstruction": 0.121,
-        "parse_evidence": 0.155343,
-        "parse_lean": 0.086639,
-        "produce_evidence": 10.647498,
-        "read": 0.013223
+        "check_evidence": 0.000141,
+        "lean_reconstruction": 0.123244,
+        "parse_evidence": 0.410593,
+        "parse_lean": 0.097687,
+        "produce_evidence": 15.534414,
+        "read": 0.051127
       },
       "trust_holes": [],
       "trust_steps": []
@@ -145,12 +155,12 @@
     "dominant_candidates": 3,
     "dominant_pct_audited": 60.0,
     "evidence_certified": 3,
-    "evidence_checked": 5,
+    "evidence_checked": 3,
     "instances": 7,
     "lean_checked_unsat": 0,
     "lean_unsat_pct": 0.0,
     "timeouts": 0
   },
   "timeout_ms": 10000,
-  "version": 1
+  "version": 2
 }

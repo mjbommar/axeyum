@@ -18,9 +18,9 @@ the decision/evidence pipeline itself before a proof mechanism is selected.
 | Pure real fallback | `nra-linear-abstraction` | SOS, even-power, and linear proof routes decline; `check_with_nra` decides UNSAT without a transferable certificate |
 | General mixed-theory fallback | `auto-solve` | Structural/Alethe/arithmetic/bounded certificates decline; under an explicit evidence timeout the expensive reduced-CNF proof is skipped |
 | String text front door | `smtlib-string-front-door` | The sound string route decides UNSAT, but regex-emptiness and word-clash certificate upgrades decline; concat/length/other side-channel conflicts remain unserialized |
-| QF_BV XOR fallback | SAT-BV backend identity | Interleaved XOR/CDCL can refute without an RUP-checkable artifact; unlike the current 47-content population, this route already records explicit trust steps |
+| QF_BV XOR fallback | SAT-BV backend identity | Interleaved XOR/CDCL can refute without an RUP-checkable artifact; this route already records explicit trust steps |
 
-The 47 unique uncertified contents therefore cannot be treated as one Lean
+The 51 unique uncertified contents therefore cannot be treated as one Lean
 reconstruction backlog. At minimum they contain NRA decision proofs, mixed
 theory evidence-budget/coverage gaps, and string-side-channel conflicts.
 
@@ -42,10 +42,13 @@ The v2 audit producer now:
 - retains Lean reconstruction as a separate axis, because Lean may independently
   reconstruct an original query even when the selected solver evidence is bare.
 
-The generated proof-gap reports normalize existing v1 artifacts immediately:
-**271**, not 299, baseline-UNSAT occurrences carry independently checked
-certified evidence. A fresh v2 audit is still required before using
-`decision_backend` for causal prevalence.
+The generated proof-gap reports originally normalized the v1 artifacts to
+**271**, not 299, independently checked certified outcomes. The eight affected
+rows have now been rerun under v2: current artifacts report **267** certified
+and independently checked outcomes, zero uncertified rows with
+`evidence_checked=true`, and complete backend attribution for all 58 bare-UNSAT
+occurrences. The reduction from 271 is not an accounting change: four QF_SEQ
+rows now stably fall back from DRAT-with-`bit-blast`-trust to bare UNSAT.
 
 A focused three-instance v2 smoke confirms the coarse seam without claiming
 population prevalence:
@@ -58,8 +61,29 @@ population prevalence:
 
 The audit example's unit test separately fixes the semantic invariant that a
 structural `Ok(true)` on `Unsat(None)` is not an independent check. The three
-smoke rows validate attribution wiring only; the exact 47-content v2 rerun is
-still the population gate.
+smoke rows validated attribution wiring before the population refresh.
+
+### Population refresh result
+
+The release-profile v2 rerun covers the eight audit rows that contained every
+historical bare-UNSAT occurrence: QF_AUFLIA, QF_NIA, QF_NRA, QF_S, QF_SEQ,
+QF_SLIA, and two QF_UFLIA slices. Across 211 decided instances it preserves all
+baseline verdicts with zero mismatches and zero timeouts; the two pre-existing
+QF_NIA `IntPow2` proof-production errors remain. Coarse backend prevalence for
+the 58 current bare outcomes is:
+
+| Decision backend | Occurrences | Unique paths | Unique contents |
+|---|---:|---:|---:|
+| `smtlib-string-front-door` | 31 | 31 | 26 |
+| `auto-solve` | 15 | 13 | 13 |
+| `nra-linear-abstraction` | 12 | 12 | 12 |
+
+This closes P0's population gate, but it does not identify which certificate
+attempt declined inside `auto-solve` or the string front door. The rerun also
+changed 22 timing-derived `dominant_candidate` flags, mostly in QF_SEQ, because
+the audit recomputes one-shot timing against historical baseline cells. Verdict
+and evidence denominators, rather than those unpaired timing flags, are the
+appropriate evidence for this refresh.
 
 ## Proposed diagnostic schema
 
@@ -180,9 +204,10 @@ work.
 
 - Correct the vacuous-check accounting.
 - Emit existing `Provenance.backend` and explicit check mode in dominance v2.
-- Keep generated v1 normalization until every row has been rerun.
+- Refresh every row containing a historical bare UNSAT under schema v2.
 
-Exit: no uncertified evidence is reported as independently checked.
+Exit met: no uncertified evidence is reported as independently checked, and all
+58 current bare outcomes carry a decision backend and explicit check mode.
 
 ### P1 — Trace the four bare-UNSAT exits
 
@@ -210,7 +235,7 @@ source or a reduced obligation changes the appropriate identity.
 
 ### P3 — Rerun and select mechanisms
 
-Rerun the exact 47-content SHA set plus the eight reconstruction-only cases.
+Rerun the exact 51-content SHA set plus the eight reconstruction-only cases.
 Generate raw-occurrence, path-deduplicated, and exact-content-deduplicated route
 tables.
 
@@ -227,10 +252,10 @@ A proof mechanism is authorized only when:
 
 The next proof task is **not** “implement the largest syntax family.” It is:
 
-1. rerun dominance v2 to obtain coarse decision backends and corrected check
-   semantics;
+1. investigate the four stable QF_SEQ DRAT-to-bare regressions as a bounded
+   trace case;
 2. implement P1 tracing at the four bare exits;
-3. regenerate the 47-content causal matrix; then
+3. regenerate the 51-content causal matrix; then
 4. choose between NRA certificate work, string side-channel serialization, or a
    mixed-theory reduction proof based on route prevalence.
 

@@ -12,28 +12,41 @@ implement a proof rule.
 
 | Population | Count |
 |---|---:|
-| Audit-row occurrences | 54 |
-| Historical audit `evidence_checked=true` | 28 |
+| Audit-row occurrences | 58 |
+| Schema-v2 occurrences with a decision backend | 58 |
+| Current audit `evidence_checked=true` despite no certificate | 0 |
 | Independently checked certificate occurrences | 0 |
-| Unique normalized paths | 52 |
-| Unique exact contents (SHA-256) | 47 |
+| Unique normalized paths | 56 |
+| Unique exact contents (SHA-256) | 51 |
 | Exact duplicate groups | 5 |
 | Unique contents with zero reachable parsed-IR terms | 3 |
 
-The raw 54 count contracts to **47 unique benchmark contents**.
-All 54 are uncertified and therefore have no independently checkable
-certificate. The historical 28 `evidence_checked=true` values came from
-the vacuous `Unsat(None)` structural check and are not credited here.
+The raw 58 count contracts to **51 unique benchmark contents**.
+All 58 are uncertified and therefore have no independently checkable
+certificate. The affected schema-v1 rows historically contained 28
+vacuous `evidence_checked=true` values; the schema-v2 refresh records zero
+such values in the current residual population.
 Two UFLIA paths occur in overlapping audit rows, and five cross-path exact
 duplicate groups remain after path deduplication. Mechanism prevalence below
 uses unique contents, with raw audit occurrences shown separately.
+
+## Decision-backend attribution
+
+These are the coarse backends that returned the bare UNSAT, not yet the
+specific failed certificate route or reduction step.
+
+| Decision backend | Audit occurrences | Unique paths | Unique contents |
+|---|---:|---:|---:|
+| `smtlib-string-front-door` | 31 | 31 | 26 |
+| `auto-solve` | 15 | 13 | 13 |
+| `nra-linear-abstraction` | 12 | 12 | 12 |
 
 ## Declared-logic population
 
 | Declared logic | Unique contents |
 |---|---:|
+| QF_SLIA | 15 |
 | QF_NRA | 13 |
-| QF_SLIA | 11 |
 | QF_S | 10 |
 | QF_NIA | 8 |
 | QF_AUFLIA | 2 |
@@ -51,6 +64,7 @@ uses unique contents, with raw audit occurrences shown separately.
 | `int-divmod` | 5 | 5 | Parsed IR contains integer division or modulo. |
 | `uf` | 4 | 6 | Parsed IR contains uninterpreted-function application. |
 | `int-pow2` | 4 | 4 | Parsed IR contains cvc5 `int.pow2`. |
+| `uncategorized` | 4 | 4 | No current high-level tag matched; inspect exact heads/ops. |
 | `string-code` | 3 | 4 | Source uses `str.to_code`. |
 | `string-replace` | 3 | 4 | Source uses a string replacement operator. |
 | `string-length` | 3 | 3 | Source uses string length. |
@@ -108,13 +122,21 @@ uses unique contents, with raw audit occurrences shown separately.
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2` | 2 | 2 | 233 | `string-code` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2` | 1 | 1 | 174 | `string-code` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2` | 2 | 2 | 624 | `string-concat`, `string-lex` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2` | 1 | 1 | 50 | `uncategorized` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2` | 1 | 1 | 85 | `uncategorized` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2` | 1 | 1 | 147 | `uncategorized` |
+| QF_SLIA | `corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2` | 1 | 1 | 88 | `uncategorized` |
 | QF_SLIA | `corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2` | 1 | 1 | 80 | `string-regex` |
 | QF_UFLIA | `corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2` | 1 | 2 | 4024 | `int-nonlinear`, `uf` |
 | QF_UFLIA | `corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2` | 1 | 2 | 4024 | `int-nonlinear`, `uf` |
 
 ## Research interpretation
 
-- The population is bifurcated: **25 arithmetic** and **22 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
+- The population is bifurcated: **25 arithmetic** and **26 string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.
+- Decision-backend attribution is complete for this population, but
+  `auto-solve` and `smtlib-string-front-door` each bundle several
+  certificate attempts and fallbacks. Backend prevalence selects the
+  instrumentation seam; it does not yet identify the missing proof rule.
 - Real nonlinear multiplication is the largest single structural family,
   but operator presence does not distinguish an SOS-capable refutation from
   a different nonlinear argument. The next producer must record the actual
@@ -131,6 +153,6 @@ uses unique contents, with raw audit occurrences shown separately.
 Before implementing a new proof mechanism, extend evidence production to
 record a stable route ID, source-to-lowered obligation map, checker identity,
 and the first uncertified reduction for every `bare-unsat`. Re-run this exact
-47-content population and select work only when one route appears across
+51-content population and select work only when one route appears across
 multiple independent source families. Syntax co-occurrence alone is not a
 causal mechanism.

@@ -9,7 +9,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 > so the two never edit the same lines. See
 > [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
-## Project reality check (2026-06-28)
+## Project reality check (updated 2026-07-21)
 
 **Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
 soundness holding, parity not yet reached, the road there fully mapped.** Sound
@@ -32,21 +32,23 @@ exit-criteria'd tracks we advance one increment at a time.
   parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
   remain open.
 - **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
-  decisions become 325 evidence-audit UNSAT outcomes, 271 certified + genuinely
-  independently checked outcomes, and 261 Lean-checked outcomes. The v1 audit
-  had 28 vacuous `bare-unsat` check booleans; the generated matrix normalizes
-  them and the v2 producer now gates checks on certification, records decision
-  backend, and emits explicit check mode. The full conjunction remains
-  259/327: 54 uncertified audit-row occurrences, eight reconstruction-only
-  gaps, four declared `bit-blast` trust holes, and two QF_NIA `IntPow2`
-  proof-production errors. The parser-backed census deduplicates the 54 to 52
-  paths / 47 exact contents, split 25 arithmetic / 22 string-sequence; three
-  contents terminate before the ordinary parsed-IR DAG. Coverage is substantial
-  but uneven; route-provenance P1 is now the proof-selection prerequisite, the
-  trust ledger is not zero, and tactic backend P3.7 is unbuilt.
-- **Dominance:** **23 / 35 audited rows** are fully dominant and 616/753 measured
-  decisions are dominant candidates — the real, defensible selected-fragment
-  claim.
+  decisions become 325 evidence-audit UNSAT outcomes, 267 certified + genuinely
+  independently checked outcomes, and 260 Lean-checked outcomes. The affected
+  v1 rows historically had 28 vacuous `bare-unsat` check booleans; the v2
+  refresh now records zero and attributes all 58 residual bare outcomes to a
+  decision backend. The full conjunction remains 259/327: 58 uncertified
+  audit-row occurrences, eight reconstruction-only gaps, zero declared trust
+  holes, and two QF_NIA `IntPow2` proof-production errors. Four QF_SEQ rows
+  formerly recorded as DRAT with `bit-blast` trust now stably fall back to bare
+  UNSAT without verdict changes. The parser-backed census deduplicates the 58 to
+  56 paths / 51 exact contents, split 25 arithmetic / 26 string-sequence, and
+  attributes 31/15/12 occurrences to the string front door, `auto-solve`, and
+  NRA fallback respectively. Coverage is substantial but uneven; trace the
+  QF_SEQ regression and route-provenance P1 before choosing a proof mechanism.
+- **Dominance:** **23 / 35 audited rows** are fully dominant and the current
+  mixed-vintage artifacts mark 594/753 decisions as dominant candidates. The
+  v2 proof refresh changed 22 timing-derived flags without verdict changes, so
+  paired timing cells must be refreshed before this count supports publication.
 
 **Where to continue (toward the mission) — updated 2026-07-01/02 after a heavy
 landing wave.** The two theory frontiers **advanced from planning into landed
@@ -352,6 +354,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-21 — Proof-gap population is refreshed under dominance schema v2;
+  causal tracing is next.** The eight rows containing every historical bare
+  UNSAT were rerun sequentially in release mode: 211 decided instances retain
+  zero verdict mismatches/timeouts, with only the two known QF_NIA `IntPow2`
+  evidence-production errors. The live residual is 58 occurrences / 56 paths /
+  51 exact contents, all independently unchecked and backend-attributed:
+  string front door 31, `auto-solve` 15, NRA fallback 12. Four QF_SEQ rows
+  stably changed from DRAT-with-declared-trust to bare UNSAT; trace those first,
+  then land stable attempt/boundary and obligation IDs across all four bare
+  exits. The eight reconstruction-only gaps remain an independent lane.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
@@ -6192,6 +6205,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-21 — Refreshed the complete bare-UNSAT population under audit v2.**
+  Corrected the v1 vacuous-check accounting in the artifacts themselves,
+  recorded coarse backend/check-mode attribution for every residual, and
+  regenerated the proof matrix and parser-backed shape census. The refresh
+  preserves every verdict but exposes four stable QF_SEQ DRAT-to-bare evidence
+  regressions and 22 unpaired timing-derived dominance-flag changes; both are
+  reported rather than normalized away. Current proof counts are 267 certified
+  and independently checked, 260 Lean-checked, 259 full-conjunction, 58 bare,
+  zero declared trust holes, and two proof-production errors.
 
 - **2026-07-21 — Landed the T5.4.3 directed-fuzz implementation checkpoint.**
   Pushed `3d75d407` after targeted tests and strict Clippy. The API retains

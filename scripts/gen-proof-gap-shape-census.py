@@ -74,12 +74,15 @@ def load_uncertified_occurrences() -> list[dict]:
             ):
                 occurrences.append(
                     {
+                        "audit_version": audit.get("version", 1),
                         "audit_logic": audit.get("logic") or "unknown",
                         "audit_slice": audit.get("slice")
                         or audit.get("baseline")
                         or "unknown",
                         "file": instance["file"],
                         "evidence_checked": instance.get("evidence_checked") is True,
+                        "decision_backend": instance.get("decision_backend"),
+                        "evidence_check_mode": instance.get("evidence_check_mode"),
                     }
                 )
     occurrences.sort(
@@ -87,6 +90,16 @@ def load_uncertified_occurrences() -> list[dict]:
     )
     if not occurrences:
         raise RuntimeError("no uncertified evidence-audit UNSAT instances found")
+    for row in occurrences:
+        if row["audit_version"] >= 2:
+            if not row["decision_backend"]:
+                raise RuntimeError(
+                    f"schema-v2 bare UNSAT lacks decision backend: {row['file']}"
+                )
+            if row["evidence_check_mode"] != "not-applicable-uncertified":
+                raise RuntimeError(
+                    f"schema-v2 bare UNSAT has invalid check mode: {row['file']}"
+                )
     return occurrences
 
 
@@ -223,6 +236,14 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
         canonical = min(group, key=lambda row: row["file"])
         paths = sorted(row["file"] for row in group)
         audit_occurrences = sum(occurrence_by_path[path] for path in paths)
+        backend_names = sorted(
+            {
+                occurrence["decision_backend"]
+                for path in paths
+                for occurrence in occurrence_rows_by_path[path]
+                if occurrence["decision_backend"]
+            }
+        )
         content_occurrences[digest] = audit_occurrences
         if any(row["source_heads"] != canonical["source_heads"] for row in group):
             raise RuntimeError(f"same-content source-head mismatch for {digest}")
@@ -234,6 +255,7 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
                 "canonical_file": canonical["file"],
                 "files": paths,
                 "audit_occurrences": audit_occurrences,
+                "decision_backends": backend_names,
                 "declared_logic": canonical.get("logic") or "unknown",
                 "assertions": canonical["assertions"],
                 "unique_ir_terms": canonical["unique_ir_terms"],
@@ -281,11 +303,37 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
         ),
     }
 
+    backend_occurrences = Counter(
+        row["decision_backend"] or "(unattributed-v1)" for row in occurrences
+    )
+    backend_paths: dict[str, set[str]] = defaultdict(set)
+    backend_contents: dict[str, set[str]] = defaultdict(set)
+    hash_by_path = {row["file"]: row["sha256"] for row in files}
+    for row in occurrences:
+        backend = row["decision_backend"] or "(unattributed-v1)"
+        backend_paths[backend].add(row["file"])
+        backend_contents[backend].add(hash_by_path[row["file"]])
+    decision_backends = [
+        {
+            "decision_backend": backend,
+            "audit_occurrences": count,
+            "unique_paths": len(backend_paths[backend]),
+            "unique_contents": len(backend_contents[backend]),
+        }
+        for backend, count in sorted(
+            backend_occurrences.items(), key=lambda item: (-item[1], item[0])
+        )
+    ]
+
     return {
-        "version": 1,
+        "version": 2,
         "producer": {"path": rel(PRODUCER), "sha256": sha256(PRODUCER)},
         "summary": {
             "audit_occurrences": len(occurrences),
+            "schema_v2_attributed_occurrences": sum(
+                row["audit_version"] >= 2 and bool(row["decision_backend"])
+                for row in occurrences
+            ),
             "audit_reported_check_true_occurrences": sum(
                 row["evidence_checked"] for row in occurrences
             ),
@@ -309,6 +357,7 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
             )
         ],
         "feature_families": feature_families,
+        "decision_backends": decision_backends,
         "source_head_prevalence": prevalence(
             content_rows, "source_heads", content_occurrences
         ),
@@ -340,26 +389,46 @@ def markdown(report: dict) -> str:
         "| Population | Count |",
         "|---|---:|",
         f"| Audit-row occurrences | {summary['audit_occurrences']} |",
-        f"| Historical audit `evidence_checked=true` | {summary['audit_reported_check_true_occurrences']} |",
+        f"| Schema-v2 occurrences with a decision backend | {summary['schema_v2_attributed_occurrences']} |",
+        f"| Current audit `evidence_checked=true` despite no certificate | {summary['audit_reported_check_true_occurrences']} |",
         f"| Independently checked certificate occurrences | {summary['independently_checked_occurrences']} |",
         f"| Unique normalized paths | {summary['unique_paths']} |",
         f"| Unique exact contents (SHA-256) | {summary['unique_content_sha256']} |",
         f"| Exact duplicate groups | {summary['exact_duplicate_groups']} |",
         f"| Unique contents with zero reachable parsed-IR terms | {summary['zero_ir_term_contents']} |",
         "",
-        f"The raw 54 count contracts to **{summary['unique_content_sha256']} unique benchmark contents**.",
-        "All 54 are uncertified and therefore have no independently checkable",
-        "certificate. The historical 28 `evidence_checked=true` values came from",
-        "the vacuous `Unsat(None)` structural check and are not credited here.",
+        f"The raw {summary['audit_occurrences']} count contracts to **{summary['unique_content_sha256']} unique benchmark contents**.",
+        f"All {summary['audit_occurrences']} are uncertified and therefore have no independently checkable",
+        "certificate. The affected schema-v1 rows historically contained 28",
+        "vacuous `evidence_checked=true` values; the schema-v2 refresh records zero",
+        "such values in the current residual population.",
         "Two UFLIA paths occur in overlapping audit rows, and five cross-path exact",
         "duplicate groups remain after path deduplication. Mechanism prevalence below",
         "uses unique contents, with raw audit occurrences shown separately.",
         "",
-        "## Declared-logic population",
+        "## Decision-backend attribution",
         "",
-        "| Declared logic | Unique contents |",
-        "|---|---:|",
+        "These are the coarse backends that returned the bare UNSAT, not yet the",
+        "specific failed certificate route or reduction step.",
+        "",
+        "| Decision backend | Audit occurrences | Unique paths | Unique contents |",
+        "|---|---:|---:|---:|",
     ]
+    for row in report["decision_backends"]:
+        lines.append(
+            f"| `{row['decision_backend']}` | {row['audit_occurrences']} | "
+            f"{row['unique_paths']} | {row['unique_contents']} |"
+        )
+
+    lines.extend(
+        [
+            "",
+            "## Declared-logic population",
+            "",
+            "| Declared logic | Unique contents |",
+            "|---|---:|",
+        ]
+    )
     for row in report["declared_logics"]:
         lines.append(f"| {row['logic']} | {row['unique_contents']} |")
 
@@ -401,6 +470,10 @@ def markdown(report: dict) -> str:
             "## Research interpretation",
             "",
             f"- The population is bifurcated: **{summary['arithmetic_contents']} arithmetic** and **{summary['string_sequence_contents']} string/sequence** unique contents. A single reconstruction feature cannot close the uncertified lane.",
+            "- Decision-backend attribution is complete for this population, but",
+            "  `auto-solve` and `smtlib-string-front-door` each bundle several",
+            "  certificate attempts and fallbacks. Backend prevalence selects the",
+            "  instrumentation seam; it does not yet identify the missing proof rule.",
             "- Real nonlinear multiplication is the largest single structural family,",
             "  but operator presence does not distinguish an SOS-capable refutation from",
             "  a different nonlinear argument. The next producer must record the actual",
@@ -417,7 +490,7 @@ def markdown(report: dict) -> str:
             "Before implementing a new proof mechanism, extend evidence production to",
             "record a stable route ID, source-to-lowered obligation map, checker identity,",
             "and the first uncertified reduction for every `bare-unsat`. Re-run this exact",
-            "47-content population and select work only when one route appears across",
+            f"{summary['unique_content_sha256']}-content population and select work only when one route appears across",
             "multiple independent source families. Syntax co-occurrence alone is not a",
             "causal mechanism.",
             "",

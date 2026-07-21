@@ -8,7 +8,7 @@
     {
       "category": "uncertified-and-unchecked",
       "description": "The UNSAT route is neither certified nor independently checked.",
-      "instances": 54
+      "instances": 58
     },
     {
       "category": "uncertified-but-checked",
@@ -23,12 +23,12 @@
     {
       "category": "trust-hole-and-lean-gap",
       "description": "Checked evidence retains a trust hole and has no Lean reconstruction.",
-      "instances": 3
+      "instances": 0
     },
     {
       "category": "trust-hole",
       "description": "Lean reconstruction exists, but a declared trust hole remains.",
-      "instances": 1
+      "instances": 0
     },
     {
       "category": "lean-reconstruction-gap",
@@ -43,30 +43,17 @@
   ],
   "evidence_kinds": [
     {
-      "audit_reported_checked": 28,
-      "audit_unsat": 54,
-      "baseline_unsat": 54,
+      "audit_reported_checked": 0,
+      "audit_unsat": 58,
+      "baseline_unsat": 58,
       "dominant_unsat": 0,
       "evidence_certified": 0,
       "evidence_checked": 0,
       "evidence_kind": "bare-unsat",
       "lean_checked": 1,
       "proof_errors": 0,
-      "trust_hole_free": 54,
+      "trust_hole_free": 58,
       "trust_hole_instances": 0
-    },
-    {
-      "audit_reported_checked": 4,
-      "audit_unsat": 4,
-      "baseline_unsat": 4,
-      "dominant_unsat": 0,
-      "evidence_certified": 4,
-      "evidence_checked": 4,
-      "evidence_kind": "drat-unsat",
-      "lean_checked": 1,
-      "proof_errors": 0,
-      "trust_hole_free": 0,
-      "trust_hole_instances": 4
     },
     {
       "audit_reported_checked": 12,
@@ -786,7 +773,7 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 2,
+      "audit_reported_checked": 0,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {
@@ -948,7 +935,7 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 13,
+      "audit_reported_checked": 5,
       "audit_unsat": 13,
       "baseline_unsat": 15,
       "blockers": {
@@ -984,7 +971,7 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 14,
+      "audit_reported_checked": 1,
       "audit_unsat": 14,
       "baseline_unsat": 14,
       "blockers": {
@@ -1036,24 +1023,22 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 5,
+      "audit_reported_checked": 0,
       "audit_unsat": 5,
       "baseline_unsat": 5,
       "blockers": {
-        "trust-hole": 1,
-        "trust-hole-and-lean-gap": 3,
-        "uncertified-and-unchecked": 1
+        "uncertified-and-unchecked": 5
       },
       "dominant_unsat": 0,
-      "evidence_certified": 4,
-      "evidence_checked": 4,
-      "lean_checked": 1,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
       "logic": "QF_SEQ",
       "proof_errors": 0,
       "slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
       "source": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
-      "trust_hole_free": 1,
-      "trust_hole_instances": 4
+      "trust_hole_free": 5,
+      "trust_hole_instances": 0
     },
     {
       "audit_reported_checked": 2,
@@ -1202,7 +1187,7 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 2,
+      "audit_reported_checked": 0,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {
@@ -1220,7 +1205,7 @@
       "trust_hole_instances": 0
     },
     {
-      "audit_reported_checked": 4,
+      "audit_reported_checked": 2,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "blockers": {
@@ -1285,7 +1270,7 @@
     },
     {
       "path": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "30af24c9d5dbdecc7a8e128ce3e7b933bc4a3b79d0b7db9865d05ed166faf2ee"
+      "sha256": "cc4e3bc3bee95676af93bafca5863ec896ee31b377f08ab89cb1e55ea37ca529"
     },
     {
       "path": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
@@ -1325,7 +1310,7 @@
     },
     {
       "path": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "512157393ae972b5c423a6236c1fda6afbe5a853dfa3adb6fe601b90caf2195e"
+      "sha256": "49c5baa05b29ca1c0e54acfc0d59fad937c065ebd0421ed5f56c39ec2992fc29"
     },
     {
       "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
@@ -1333,7 +1318,7 @@
     },
     {
       "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "e2bc7300017b1ef8ba8e03b1577756bbd03d902d2d2a068c8859a536d615807a"
+      "sha256": "fa84205e08c7657e3bdbd7196acc3ffc0edd71643d109836c58f96a17ddbc4da"
     },
     {
       "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
@@ -1341,15 +1326,15 @@
     },
     {
       "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "a10f36d0d2b2a5fbb02b36053bc85959e6d38cb3736abaeac4630c6ad6273a54"
+      "sha256": "072792ed9ec391b20c81185a1e58a2fa488c70d041c1d9d4f4ec191272978c66"
     },
     {
       "path": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "c0d3184bfd3c5585910bb25a0b245d9196d87169700b9d1ffae9cff9b5318ac4"
+      "sha256": "0ff43544404dbcd6465c63031a619add346efa87ddf6498f3a4ccd0b3318d945"
     },
     {
       "path": "bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "83fb629e8b5e9dcf4cd5dd1a4e4a7da712a9c7218e29bf0c4d59830bc1197276"
+      "sha256": "23cfcd1f5ca021ddfd855df062e080153dd3f01d2c084e61ec76dc7a8ba27933"
     },
     {
       "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
@@ -1385,11 +1370,11 @@
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
-      "sha256": "54b030b4528a76479757d46c880ad3abade12e4519ec780b97d7e1d2c7bee360"
+      "sha256": "9702bc4267bece393a84a2f05ca911fb040491f790fb98e828f808beb1bc0e8d"
     },
     {
       "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
-      "sha256": "1bea45c73491ab6471b85e983fc5f7b1b1e964c688357f411b7bb4e45a7fe79e"
+      "sha256": "16e392be05d81a74c81483684262135123a293f568e67cc91a80acdfe608204f"
     },
     {
       "path": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
@@ -1397,23 +1382,18 @@
     }
   ],
   "summary": {
-    "audit_reported_checked": 299,
+    "audit_reported_checked": 267,
     "audit_unsat": 325,
     "baseline_unsat": 327,
     "complete_audits": 35,
     "dominant_unsat": 259,
-    "evidence_certified": 271,
-    "evidence_checked": 271,
-    "lean_checked": 261,
+    "evidence_certified": 267,
+    "evidence_checked": 267,
+    "lean_checked": 260,
     "proof_errors": 2,
-    "trust_hole_free": 321,
-    "trust_hole_instances": 4
+    "trust_hole_free": 325,
+    "trust_hole_instances": 0
   },
-  "trust_holes": [
-    {
-      "instances": 4,
-      "trust_hole": "bit-blast"
-    }
-  ],
+  "trust_holes": [],
   "version": 1
 }
