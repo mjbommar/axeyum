@@ -334,8 +334,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   producer/registration, five protocol tests, independent-spec test, strict
   Clippy, and full package suite pass; the authenticated test remains skipped.
   Pushed `7c3960c9` preflight stops before Cargo on HEAD's sole absolute corpus
-  symlink. The corrected exact-link skip plus regular-input hash checks pass.
-  Next: commit/push, repeat archive preflight, then invoke once; no query yet.
+  symlink. Pushed correction `8d059285` requires that exact link set, omits all
+  links, and hash-checks required regular inputs. Local HEAD/tracking/remote now
+  match and the repeated refs/capture/registration/archive preflight passes.
+  Next: commit/push this zero-query gate, then invoke once; no query yet.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),

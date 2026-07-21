@@ -141,6 +141,13 @@ files. A focused test retains traversal rejection and proves that this one
 explicit link is omitted. Commit/push the correction before repeating archive
 preflight. No Cargo command or target query started; proof v1 remains unobserved.
 
+Correction `8d059285` is pushed and byte-identical at local HEAD, its tracking
+ref, and remote `main`. The repeated pre-query validation accepts the capture
+and registration, authenticates the pushed commit/tree, and safely materializes
+the archive with exactly `corpus/public` omitted. Every registered regular input
+is present and hash-matched. This successful gate ran no Cargo command or target
+query; proof v1 remains unobserved and is authorized for one official invocation.
+
 ## Rejected alternatives
 
 - **Credit ADR-0327's fixture-shaped proofs.** Rejected: they validate the

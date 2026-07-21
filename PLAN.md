@@ -498,7 +498,11 @@ session state.
 >    `corpus/public` symlink before Cargo. The corrected registered extractor
 >    requires exactly that link set, omits all links, and still hash-checks every
 >    regular producer/build input; traversal/skip tests pass. Commit/push this
->    correction, repeat preflight, then invoke exactly once. No query yet.
+>    correction was pushed as `8d059285`; local HEAD, tracking, and remote
+>    `main` match, and the repeated refs/capture/registration/archive preflight
+>    now passes with the exact link omitted and every required regular input
+>    hash-matched. Commit/push this successful zero-query gate, then invoke the
+>    official proof producer exactly once under the registered cap. No query yet.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
