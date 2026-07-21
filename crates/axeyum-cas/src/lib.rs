@@ -6624,6 +6624,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_radical_usub(expr, var),
         integrate_sqrt_power(expr, var),
         integrate_exp_quadratic_usub(expr, var),
+        integrate_power_of_inner(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7763,6 +7764,82 @@ fn integrate_exp_quadratic_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         .antiderivative
         .substitute(u, &CasExpr::var(var).pow(2));
     Some(scaled_term(Rational::new(1, 2), substituted))
+}
+
+/// If `a = k·b` as multivariate (atom) polynomials for a nonzero rational `k`,
+/// return `k`; `None` otherwise. Both are assumed in canonical form (no zero
+/// coefficients), so identical monomial support plus a shared ratio suffices.
+fn multipoly_proportion(a: &MultiPoly, b: &MultiPoly) -> Option<Rational> {
+    if a.terms.len() != b.terms.len() || b.terms.is_empty() {
+        return None;
+    }
+    let (pivot, bpv) = b.terms.iter().next()?;
+    let k = a.terms.get(pivot).copied()?.checked_div(*bpv)?;
+    if k.is_zero() {
+        return None;
+    }
+    for (mono, bc) in &b.terms {
+        if a.terms.get(mono).copied()? != k.checked_mul(*bc)? {
+            return None;
+        }
+    }
+    Some(k)
+}
+
+/// ∫ k·g′(x)·g(x)ⁿ dx = (k/(n+1))·g(x)ⁿ⁺¹ — the general reverse power rule for a
+/// factor `g(x)ⁿ` whose remaining cofactor is a constant multiple of `g′`. Covers
+/// transcendental inners the polynomial path can't expand: `∫(ln x)²/x = (ln x)³/3`,
+/// `∫eˣ(eˣ+1)² = (eˣ+1)³/3`, `∫sin x·cos³x`. Certified downstream.
+fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Split into numerator factors and an optional denominator, so `g(x)ⁿ/h(x)`
+    // (e.g. `(ln x)²/x`) is handled too — the denominator joins the cofactor.
+    let (factors, denom): (Vec<CasExpr>, Option<CasExpr>) = match expr {
+        CasExpr::Div(num, den) => (flatten_mul(num), Some(den.as_ref().clone())),
+        CasExpr::Mul(_) => (flatten_mul(expr), None),
+        other => (vec![other.clone()], None),
+    };
+    for (idx, factor) in factors.iter().enumerate() {
+        let CasExpr::Pow(base, n) = factor else {
+            continue;
+        };
+        let n = *n;
+        if n == 0 {
+            continue;
+        }
+        // The cofactor is the product of every other numerator factor, over the
+        // denominator when present.
+        let mut others: Vec<CasExpr> = factors
+            .iter()
+            .enumerate()
+            .filter(|(j, _)| *j != idx)
+            .map(|(_, e)| e.clone())
+            .collect();
+        let num_rest = match others.len() {
+            0 => CasExpr::int(1),
+            1 => others.pop().unwrap_or_else(|| CasExpr::int(1)),
+            _ => CasExpr::Mul(others),
+        };
+        let rest = match &denom {
+            Some(d) => CasExpr::Div(Box::new(num_rest), Box::new(d.clone())),
+            None => num_rest,
+        };
+        let gprime = base.differentiate(var);
+        // rest = k·g′ ⇔ rest.num·g′.den = k·(g′.num·rest.den) as atom polynomials.
+        let (Some(rr), Some(rg)) = (normalize_rational(&rest), normalize_rational(&gprime)) else {
+            continue;
+        };
+        let (Some(lhs), Some(rhs)) = (rr.num.mul(&rg.den), rg.num.mul(&rr.den)) else {
+            continue;
+        };
+        let Some(k) = multipoly_proportion(&lhs, &rhs) else {
+            continue;
+        };
+        let Some(coeff) = k.checked_div(Rational::integer(i128::from(n + 1))) else {
+            continue;
+        };
+        return Some(scaled_term(coeff, base.as_ref().clone().pow(n + 1)));
+    }
+    None
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -11278,6 +11355,24 @@ mod tests {
         // Even powers are NOT elementary — must decline, never fabricate.
         assert!(integrate(&x().pow(2).exp(), "x").is_none_or(|c| !c.is_certified()));
         assert!(integrate(&(x().pow(2) * x().pow(2).exp()), "x").is_none_or(|c| !c.is_certified()));
+    }
+
+    #[test]
+    fn power_of_inner_integrals() {
+        let x = || v("x");
+        // ∫ k·g′·gⁿ = (k/(n+1))·gⁿ⁺¹ — transcendental inners the poly path can't expand.
+        for integrand in [
+            x().ln().pow(2) / x(),                             // ∫(ln x)²/x = (ln x)³/3
+            x().ln().pow(3) / x(),                             // ∫(ln x)³/x
+            x().exp() * (x().exp() + CasExpr::int(1)).pow(2),  // ∫eˣ(eˣ+1)² = (eˣ+1)³/3
+            x().sin() * x().cos().pow(3),                      // ∫sin·cos³ = −cos⁴/4
+            x().atan().pow(2) / (x().pow(2) + CasExpr::int(1)),// ∫atan²/(x²+1) = atan³/3
+            x().cos() * (CasExpr::int(1) + x().sin()).pow(5),  // ∫cos·(1+sin)⁵
+        ] {
+            let r = integrate(&integrand, "x").expect("power-of-inner integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
     }
 
     #[test]
