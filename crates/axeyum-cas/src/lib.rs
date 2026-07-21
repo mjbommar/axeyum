@@ -1283,6 +1283,97 @@ fn atom_name(head: &str, arg: &CasExpr) -> String {
     format!("\0{head}:{}", arg.render(0))
 }
 
+/// Collect a decoding dictionary `atom_name → Unary(head, arg)` from every
+/// transcendental subexpression of `source`. Normalization ([`normalize_rational`])
+/// encodes each `Unary` head as an opaque `\0head:render` atom *variable*; this
+/// records the original head so [`deatomize`] can rebuild a clean, user-facing
+/// form after a `to_expr()` round-trip (which otherwise leaks the raw atom key).
+///
+/// For `exp`, [`normalize_exp`] additionally splits `exp(Σ termᵢ)` into per-term
+/// factors `∏ exp(termᵢ)` (sign-canonicalized), so each additive term of an
+/// `exp` argument — and its negation — is registered too.
+fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr>) {
+    match source {
+        CasExpr::Const(_) | CasExpr::Var(_) => {}
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            for item in items {
+                collect_atom_dictionary(item, dict);
+            }
+        }
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) => collect_atom_dictionary(a, dict),
+        CasExpr::Div(a, b) => {
+            collect_atom_dictionary(a, dict);
+            collect_atom_dictionary(b, dict);
+        }
+        CasExpr::Unary(func, arg) => {
+            dict.insert(
+                atom_name(func.name(), arg),
+                CasExpr::Unary(*func, arg.clone()),
+            );
+            if *func == UnaryFunc::Exp
+                && let Some(poly) = normalize(arg)
+            {
+                // `normalize_exp` splits `exp(Σ termᵢ)` into per-term factors,
+                // sign-canonicalizing each (a term with negative coefficient is
+                // stored as `1/exp(−term)`) and applying the integer-scaling law
+                // `exp(c·m) = exp(m)^c` (so `exp(2x)` keys on the primitive
+                // `exp(x)`, not `exp(2x)`). Register, for each term, both
+                // coefficient signs of the full term *and* of its coefficient-1
+                // monomial base, so every canonical key decodes. Negating the
+                // *coefficient* reproduces the same `to_expr` rendering used for keys.
+                let one = Rational::integer(1);
+                for (mono, coeff) in &poly.terms {
+                    for base_coeff in [*coeff, one] {
+                        for signed in [Some(base_coeff), base_coeff.checked_neg()] {
+                            let Some(signed) = signed else { continue };
+                            let term = MultiPoly {
+                                terms: [(mono.clone(), signed)].into_iter().collect(),
+                            }
+                            .to_expr();
+                            dict.insert(
+                                atom_name("exp", &term),
+                                CasExpr::Unary(UnaryFunc::Exp, Box::new(term)),
+                            );
+                        }
+                    }
+                }
+            }
+            collect_atom_dictionary(arg, dict);
+        }
+    }
+}
+
+/// Rebuild the transcendental heads that normalization encoded as opaque
+/// `\0head:…` atom variables, using `dict` (see [`collect_atom_dictionary`]) as
+/// the decoder. An atom absent from `dict` (should not occur for well-formed
+/// input) is left as-is rather than guessed at.
+fn deatomize(expr: &CasExpr, dict: &BTreeMap<String, CasExpr>) -> CasExpr {
+    match expr {
+        CasExpr::Var(name) if name.starts_with('\0') => {
+            dict.get(name).cloned().unwrap_or_else(|| expr.clone())
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(|e| deatomize(e, dict)).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(|e| deatomize(e, dict)).collect()),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(deatomize(a, dict))),
+        CasExpr::Pow(a, n) => CasExpr::Pow(Box::new(deatomize(a, dict)), *n),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(deatomize(a, dict)),
+            Box::new(deatomize(b, dict)),
+        ),
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(deatomize(a, dict))),
+    }
+}
+
+/// Apply [`deatomize`] using a dictionary freshly collected from `source` — the
+/// standard post-pass for the user-facing [`expand`]/[`cancel`] transforms so no
+/// internal `\0head:…` atom key ever reaches the caller.
+fn deatomize_from(result: &CasExpr, source: &CasExpr) -> CasExpr {
+    let mut dict = BTreeMap::new();
+    collect_atom_dictionary(source, &mut dict);
+    deatomize(result, &dict)
+}
+
 /// Parse a rational from the canonical rendering of a [`CasExpr::Const`] — an
 /// integer `"n"` or a fraction `"n/d"` — or `None` if `text` is not such a literal.
 /// Used to recover the radicand of a `sqrt` atom for [`MultiPoly::fold_radical`].
@@ -4648,11 +4739,12 @@ fn limit_via_series(expr: &CasExpr, var: &str, a: Rational) -> Option<CasExpr> {
 pub fn expand(expr: &CasExpr) -> Option<CasExpr> {
     let rf = normalize_rational(expr)?;
     let num = rf.num.to_expr();
-    if rf.den == MultiPoly::constant(Rational::integer(1)) {
-        Some(num)
+    let result = if rf.den == MultiPoly::constant(Rational::integer(1)) {
+        num
     } else {
-        Some(CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr())))
-    }
+        CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+    };
+    Some(deatomize_from(&result, expr))
 }
 
 /// Reduce an expression to lowest terms (the `cancel` transform): a canonical reduced
@@ -4664,11 +4756,12 @@ pub fn expand(expr: &CasExpr) -> Option<CasExpr> {
 pub fn cancel(expr: &CasExpr) -> Option<CasExpr> {
     let rf = normalize_rational(expr)?.reduced()?;
     let num = rf.num.to_expr();
-    if rf.den == MultiPoly::constant(Rational::integer(1)) {
-        Some(num)
+    let result = if rf.den == MultiPoly::constant(Rational::integer(1)) {
+        num
     } else {
-        Some(CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr())))
-    }
+        CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+    };
+    Some(deatomize_from(&result, expr))
 }
 
 /// Certify that `d/dvar (expr) = claimed`, by differentiating and deciding
@@ -5732,6 +5825,39 @@ mod tests {
             + CasExpr::int(3) * v("x")
             + CasExpr::int(1);
         assert_equal(&e, &hand);
+    }
+
+    #[test]
+    fn transforms_do_not_leak_atom_keys() {
+        // Regression: expand/cancel/simplify normalize transcendental heads to
+        // opaque `\0head:…` atoms internally; the de-atomization post-pass must
+        // rebuild clean heads so no raw atom key ever reaches the caller.
+        let x = || v("x");
+        let y = || v("y");
+        let cases = [
+            x().sin(),
+            (CasExpr::int(2) * x() + CasExpr::int(1)).sin(),
+            x().tan(),
+            x().ln() + x().sqrt() + x().atan(),
+            x().exp(),
+            (x() - y()).exp(),
+            (CasExpr::int(2) * x() - CasExpr::int(3) * y()).exp(),
+            x() * x().sin() + x().cos(),
+        ];
+        for case in cases {
+            for transformed in [expand(&case), cancel(&case), Some(simplify(&case))]
+                .into_iter()
+                .flatten()
+            {
+                let rendered = transformed.to_string();
+                assert!(
+                    !rendered.contains('\0') && !rendered.contains(':'),
+                    "atom key leaked for {case}: {rendered}",
+                );
+                // De-atomization must stay value-preserving.
+                assert_equal(&transformed, &case);
+            }
+        }
     }
 
     #[test]
