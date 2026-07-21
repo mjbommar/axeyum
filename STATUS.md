@@ -5442,6 +5442,18 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-20 — Split bit-blast/QF_BV reconstruction ownership.** The complete
+  1,956-line family now lives in `reconstruct/bitblast.rs`; all five public entry
+  points are unchanged. Five production-only parent seams serve CNF or
+  quantified-BV, and three additional parent-visible audit items preserve the
+  existing datatype-projection no-assumed-axiom test. Pointwise BVAND and
+  width-2 ripple-carry-add generated Lean modules remain byte-identical at 6,171
+  bytes / FNV-1a `6475695101939760022` and 19,619 bytes /
+  `1281267001421498970`; all 890 solver tests pass, and full-profile clippy plus
+  focused rustdoc are clean under the bounded one-job profile. The parent is now
+  7,748 lines / 346,174 bytes. Next R3 work is an arithmetic-family dependency
+  and source-stability census, not a broad unmeasured move.
+
 - **2026-07-20 — Split Tseitin CNF reconstruction ownership.** The distinct
   1,578-line gate-introduction family now lives in `reconstruct/cnf.rs`; its
   public rule entry point is unchanged. Eight shared context methods, one

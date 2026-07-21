@@ -2746,6 +2746,58 @@ fn end_to_end_bitwise_bvand_refutation_to_false() {
     assert_infers_false(&mut ctx, term);
 }
 
+/// R3 bit-blast extraction gate: both a pointwise Boolean operator and an
+/// arithmetic ripple-carry operator must keep emitting byte-identical modules.
+#[test]
+fn bitblast_family_generated_source_is_byte_stable() {
+    let mut snapshots = Vec::new();
+
+    let mut arena = TermArena::new();
+    let a = {
+        let symbol = arena.declare("a", Sort::BitVec(1)).unwrap();
+        arena.var(symbol)
+    };
+    let b = {
+        let symbol = arena.declare("b", Sort::BitVec(1)).unwrap();
+        arena.var(symbol)
+    };
+    let and = arena.bv_and(a, b).unwrap();
+    let eq = arena.eq(and, a).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    snapshots.push((source.len(), stable_source_hash(&source)));
+
+    let mut arena = TermArena::new();
+    let mk = |arena: &mut TermArena, name: &str| {
+        let symbol = arena.declare(name, Sort::BitVec(2)).unwrap();
+        arena.var(symbol)
+    };
+    let a = mk(&mut arena, "a");
+    let b = mk(&mut arena, "b");
+    let c = mk(&mut arena, "c");
+    let sum = arena.bv_add(a, b).unwrap();
+    let eq = arena.eq(sum, c).unwrap();
+    let neq = arena.not(eq).unwrap();
+    let proof = crate::prove_qf_bv_unsat_alethe(&arena, &[eq, neq]).expect("emitter");
+    let mut ctx = ReconstructCtx::new();
+    let term = reconstruct_qf_bv_proof(&mut ctx, &proof).expect("reconstructs");
+    assert_infers_false(&mut ctx, term);
+    let source = render_ctx_module(&mut ctx, term);
+    snapshots.push((source.len(), stable_source_hash(&source)));
+
+    assert_eq!(
+        snapshots,
+        [
+            (6_171, 6_475_695_101_939_760_022),
+            (19_619, 1_281_267_001_421_498_970),
+        ]
+    );
+}
+
 /// The same, width 2, with a direct `(= a b) ∧ (not (= a b))` (all-leaf predicate
 /// → the v1 direct `bitblast_equal` path, no cong/trans).
 #[test]

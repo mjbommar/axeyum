@@ -341,9 +341,16 @@ session state.
 >    consumer. The public CNF-rule entry point is unchanged; specialized n-ary
 >    `and_pos` and general `xor_neg1` generated-source snapshots remain
 >    byte-identical. All 889 tests, clippy, and rustdoc pass. The parent is now
->    9,680 lines / 433,992 bytes. Continue R3 with the bit-blast dependency and
->    source-stability census; do not manufacture an array module around one thin
->    dispatcher or combine proof families merely to minimize seam count.
+>    9,680 lines / 433,992 bytes. The 1,956-line bit-blast/QF_BV family now
+>    lives in `reconstruct/bitblast.rs`, with all five public entry points
+>    unchanged. Five production-only sibling seams serve CNF or quantified-BV;
+>    three additional parent-visible items preserve an existing datatype-
+>    projection audit test. Pointwise BVAND and ripple-carry-add generated-source
+>    snapshots remain byte-identical; all 890 tests, clippy, and rustdoc pass.
+>    The parent is now 7,748 lines / 346,174 bytes. Continue R3 with an
+>    arithmetic-family dependency/source census before deciding its boundaries;
+>    do not manufacture an array module around one thin dispatcher or combine
+>    proof families merely to minimize seam count.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
