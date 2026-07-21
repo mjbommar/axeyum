@@ -64,6 +64,21 @@ No authenticated target query, proof, countermodel, replay, scoreboard row, or
 v2 output may exist before the v2 producer and registration are committed,
 pushed, and pass their no-query archived compilation preflight.
 
+## Pre-invocation implementation state
+
+The thin wrapper delegates all runner behavior to ADR-0335 after validating the
+exact v1 registration/negative lineage, then changes only the expected schemas,
+default output, and registered lock hash. The compact v2 registration is
+SHA-256 `47ac5872...c6f4`; wrapper SHA-256 is `82d31bcb...014c` and its focused
+test SHA-256 is `9c9de094...e255`.
+
+Five v2 tests plus all five v1 producer tests pass. They validate live lineage,
+capture and registration inputs, mutation rejection, exact semantic/policy
+equality with v1, schema/output separation, parser trust/replay controls,
+identity projection, archive safety, and atomic cleanup. `proof-v2` remains
+absent. Commit and push these bytes before the archived compilation preflight;
+no authenticated target query or scoreboard row has run.
+
 ## Rejected alternatives
 
 - **Rerun v1 after committing the lock.** Rejected: its single official

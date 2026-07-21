@@ -352,6 +352,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   output, with every proof/control/solver/trust/replay/resource gate unchanged.
   A pushed archived-HEAD compilation may run only the non-authenticated
   independent-spec test before the one official invocation. No v2 bytes/query.
+  ADR commit `3492f422` is pushed. The thin wrapper/registration, five focused
+  plus five inherited tests, and live lineage/capture validation pass with no
+  v2 output. Next: commit/push exact producer bytes, then run only the frozen
+  archived-HEAD non-authenticated compilation preflight. No target query yet.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),

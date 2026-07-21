@@ -522,6 +522,10 @@ session state.
 >    schemas, fresh `proof-v2` output, and a pushed archived-HEAD compilation of
 >    only the non-authenticated independent-spec test before one official run.
 >    Commit/push this zero-result ADR before implementation. No v2 bytes/query.
+>    ADR commit `3492f422` is pushed. The thin wrapper, compact registration,
+>    five v2 plus five inherited producer tests, and live lineage/capture input
+>    validation pass; `proof-v2` remains absent. Commit/push these exact bytes
+>    before the registered archived-HEAD compilation preflight. No target query.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
