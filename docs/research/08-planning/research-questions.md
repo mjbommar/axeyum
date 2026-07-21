@@ -1047,7 +1047,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     unchanged two-root raw-module/LLVM-22 extraction/admission gates. Its thin
     outer-atomic wrapper, compact registration, eight focused plus 33 inherited
     protocol tests, local-result/inventory replay, and cache-path identity checks
-    now pass with zero builds. Commit/push precedes the one official capture-v2
+    pass pre-build. Pushed `9bff9d2e` then closes v2 before Cargo/build because
+    structural replay receives the merged capture registration without cache-
+    only `expected_lock_packages` and raises `KeyError`. Cleanup leaves no output
+    or OOM delta. A v3 ADR must freeze the one-argument correction before another
     invocation; no official build/query exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,

@@ -322,14 +322,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0333 preregisters Tock LLVM capture v2.** The thin
-  successor must pin/recompute the exact ADR-0332 cache, mount it read-only at a
-  stable virtual Cargo home, structurally replay locked-offline metadata, then
-  run ADR-0328's unchanged two-root raw-module/LLVM-22/admission gates. The
-  outer-atomic wrapper, 41 combined protocol tests, compact registration,
-  local-result/inventory replay, and physical/virtual cache-path checks pass
-  with zero builds. Next: commit/push, then invoke capture v2 once under the
-  registered cgroup; no query.
+- **2026-07-21 — ADR-0333 accepts the exact Tock capture-v2 replay negative.**
+  Pushed producer `9bff9d2e` validates all identities and twice recomputes the
+  cache inventory, then stops before Cargo/build because ADR-0332's structural
+  validator receives the merged capture registration without cache-only field
+  `expected_lock_packages`. A raw `KeyError` closes v2; outer cleanup leaves no
+  output and the resource guard reports no OOM delta. Next: preregister v3
+  changing only that replay argument to the pinned full cache registration; no
+  query.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
@@ -6050,9 +6050,16 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured | WIP — **Authenticated cache accepted; capture v2 frozen pre-build (ADR-0323--0333):** cache inventory `fd6ee33d`/active graph `da6971e4` is replayed. ADR-0333's outer-atomic wrapper, 41 combined protocol tests, and compact registration freeze the exact read-only cache mount, cache-path identity, plus unchanged two-root raw-module/LLVM-22/admission gates. Commit/push before invocation. No target module/capture/admission/query or scoreboard row exists. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
+| P5.5 | External target, measured | WIP — **Authenticated cache accepted; capture v2 closed pre-build (ADR-0323--0333):** inventory `fd6ee33d` replays twice, but pushed v2 passes a merged capture registration lacking cache-only `expected_lock_packages` to the structural validator and closes on `KeyError` before Cargo/build. No output or OOM delta survives. Preregister v3 changing only the replay argument to the pinned full cache registration. No target module/capture/admission/query or scoreboard row exists. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Accepted the exact Tock capture-v2 replay negative.** Pushed
+  producer `9bff9d2e` validates source/tools/cache and twice recomputes inventory,
+  then the structural replay raises `KeyError('expected_lock_packages')` because
+  it receives the merged capture registration rather than the full cache
+  registration. Zero builds/modules/admissions/queries and no output/OOM delta;
+  v2 is closed.
 
 - **2026-07-21 — Froze Tock LLVM capture v2 pre-build.** The thin wrapper
   removes ambient Cargo state, replays/mounts only the accepted cache read-only,

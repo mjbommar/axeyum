@@ -1,6 +1,6 @@
 # ADR-0333: Preregister Tock LLVM capture v2
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -92,16 +92,35 @@ weakened after the first official build begins.
 
 ## Result
 
-Proposed. A thin v2 wrapper removes only the ambient Cargo bind, injects the
-authenticated cache read-only, structurally replays it, rejects its physical
-path from LLVM, records the virtual-path count, and outer-atomically delegates
-to frozen capture v1. Eight focused wrapper tests plus the ten v1 capture and 23
-cache-preparation protocol tests pass. Compact registration validates four
-direct capture producer files, the complete pinned cache-producer chain, nine
-tools, local preparation-result hash, and independently recomputed inventory
-`fd6ee33d...d379`. Commit and push this checkpoint before either build. No
-official build, module, symbol, extraction, admission, query, proof, or
-scoreboard row exists.
+Accepted as a negative v2 result. Producer commit `9bff9d2e` was pushed before
+the single official invocation. Registration, source, all nine tools, local
+preparation-result hash, and the 3,077-row inventory validate. Both complete
+source roots are materialized, but the structural metadata replay stops before
+invoking Cargo because the wrapper passes the merged capture registration to
+ADR-0332's frozen cache validator:
+
+```text
+exception_type=KeyError
+stage=cache_replay
+kind=unexpected_exception
+detail='expected_lock_packages'
+```
+
+That validator requires cache-registration field `expected_lock_packages`,
+which is deliberately absent from capture v1's base registration. Zero builds
+start or complete. No module, extraction, admission, target byte, property
+query, proof, or scoreboard row exists; outer cleanup leaves no output or
+delegate/partial directory. The resource guard completes without reporting an
+OOM delta. Exact negative metadata is committed in
+`bench-results/verify-tock-log2-20260721/capture-v2-negative.json`.
+
+V2 ends here and must not be rerun. A successor may change only the replay
+call's policy object: load and validate the already pinned ADR-0332 cache
+registration, pass that complete registration to the unchanged structural
+validator, compare its result with the already pinned cache summary, and retain
+the merged capture registration for every source/build/module gate. That
+correction requires a fresh zero-result ADR and pushed producer registration
+before another official invocation.
 
 ## Rejected alternatives
 

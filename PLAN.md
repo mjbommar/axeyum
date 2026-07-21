@@ -461,8 +461,15 @@ session state.
 >    raw-module/LLVM-22/admission gates. The thin outer-atomic wrapper, eight
 >    focused plus 33 inherited protocol tests, compact registration, local-result
 >    replay, independent cache inventory, and cache-path identity checks pass
->    with zero builds. Commit/push this checkpoint, then invoke capture v2 once;
->    queries remain separately gated.
+>    with zero builds. Pushed producer `9bff9d2e` then closes v2 before Cargo or
+>    either build: it passes the merged capture registration to ADR-0332's
+>    structural validator, which requires cache-registration-only field
+>    `expected_lock_packages` and raises `KeyError`. Atomic cleanup leaves no
+>    output and no OOM-delta failure. Do not rerun v2. Next preregister a thin
+>    v3 correction that supplies the already pinned complete ADR-0332 cache
+>    registration only to structural replay while preserving the merged capture
+>    registration for all source/build/module gates. Queries remain separately
+>    gated.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

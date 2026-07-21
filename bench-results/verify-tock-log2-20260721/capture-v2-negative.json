@@ -1,0 +1,41 @@
+{
+  "attempt": {
+    "cache_inventory_replays_completed": 2,
+    "official_builds_completed": 0,
+    "official_builds_started": 0,
+    "official_invocations": 1,
+    "observed_at_utc": "2026-07-21T11:02:09Z",
+    "producer_commit": "9bff9d2e784a5ca7fb69980dc93b694c0db2479d",
+    "producer_was_pushed_before_invocation": true,
+    "structural_metadata_probes_completed": 0
+  },
+  "error": {
+    "detail": "'expected_lock_packages'",
+    "exception_type": "KeyError",
+    "kind": "unexpected_exception",
+    "stage": "cache_replay"
+  },
+  "outputs": {
+    "admissions": 0,
+    "extractions": 0,
+    "modules": 0,
+    "output_directory_exists": false,
+    "partial_directories": 0,
+    "property_queries": 0
+  },
+  "registration_sha256": "09b61b38b3552fce512a5ace05f5c8bf4f33212d423543c1d976124007ff5c16",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-capture-v2-negative.v1",
+  "status": "rejected",
+  "upstream": {
+    "active_resolution_sha256": "da6971e417c906a9c0fa81768cfd511136d0946f651a1ec891ce1f7891dbf305",
+    "cache_inventory_sha256": "fd6ee33dd536c75d654bb750a8919911dd6065f382ea59d8ac0e26464097d379",
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  }
+}
