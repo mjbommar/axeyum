@@ -1,6 +1,6 @@
 # ADR-0331: Preregister Tock cache hard-link inventory
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -69,13 +69,21 @@ be weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. A thin v4 policy wrapper reuses the complete frozen v3 producer and
-injects only the hard-link-aware inventory, result schema, compact registration,
-and output path. Four focused topology tests plus all 14 inherited preparation
-tests pass. The registration resolves and validates seven producer files, six
-tools, and the unchanged resolver/DNS/fetch/offline/resource boundary. Commit
-and push this checkpoint before DNS or fetch. No cache byte, expected hard-link
-count, inventory, offline probe, build, capture, or query exists.
+Accepted as a negative preparation-v4 result. Pushed producer `7aa5ea44` passes
+DNS and the locked fetch; its hard-link-aware inventory also completes, closing
+ADR-0331's exact mechanism. The read-only offline metadata probe then returns
+162 packages and fails the inherited `packages == 169 lock entries` assertion.
+
+That equality is invalid: Cargo's lockfile authenticates inactive alternatives
+as well as the active metadata resolution. V4 runs no build/capture/query and
+atomic cleanup leaves no cache/partial output or OOM-delta failure. Exact
+negative metadata is committed in `cache-v4-preparation-negative.json`.
+
+V4 is never rerun. A successor must retain the exact 169-entry lockfile check
+but replace numeric metadata equality with structural authentication: every
+resolved package ID must have a package row, every external name/version/source
+must map to the lockfile, every resolve node must reference known IDs, and
+`kernel` must occur exactly once. The resolved count is recorded, not expected.
 
 ## Rejected alternatives
 
@@ -92,10 +100,9 @@ count, inventory, offline probe, build, capture, or query exists.
 
 ## Consequences
 
-- Legitimate Cargo/libgit storage sharing can be authenticated without
-  weakening path or content identity.
-- The resulting inventory is portable across inode renumbering but still binds
-  the complete alias graph.
+- Hard-link-aware inventory is validated through the exact fetched cache.
+- The remaining failure is a probe invariant, not cache completeness, network,
+  or inventory fidelity.
 
 ## References
 

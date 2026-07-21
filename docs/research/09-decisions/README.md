@@ -385,4 +385,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0328](adr-0328-preregister-tock-log2-llvm-capture.md) | Preregister two-root offline LLVM-22 capture and exact admission for the selected Tock integer-log target | accepted |
 | [0329](adr-0329-preregister-tock-dedicated-cargo-cache.md) | Preregister dedicated locked Tock Cargo-cache preparation and canonical inventory before capture v2 | accepted |
 | [0330](adr-0330-preregister-tock-cache-resolver-correction.md) | Preregister minimal resolver-file bind and real DNS probe for Tock cache preparation v3 | accepted |
-| [0331](adr-0331-preregister-tock-cache-hardlink-inventory.md) | Preregister canonical in-cache hard-link owner and alias rows for Tock cache preparation v4 | proposed |
+| [0331](adr-0331-preregister-tock-cache-hardlink-inventory.md) | Preregister canonical in-cache hard-link owner and alias rows for Tock cache preparation v4 | accepted |
