@@ -2886,6 +2886,9 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         1 => parts.into_iter().next()?,
         _ => CasExpr::Add(parts),
     };
+    // Fold `factor^1 → factor` (a simple pole) and other trivial noise for a clean
+    // partial-fraction form; value-preserving, so the certificate still holds.
+    let result = fold_trivial(&result);
     match equal(&result, expr) {
         ZeroTest::Certified { equal: true, .. } => Some(result),
         _ => None,
