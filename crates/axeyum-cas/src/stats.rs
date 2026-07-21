@@ -78,6 +78,23 @@ pub fn variance(data: &[Rational]) -> Option<Rational> {
     variance_over(data, data.len())
 }
 
+/// The **population covariance** `(1/n) Σ (xᵢ − x̄)(yᵢ − ȳ)` of two equal-length
+/// data sets. `None` if the lengths differ, either is empty, or on overflow.
+#[must_use]
+pub fn covariance(xs: &[Rational], ys: &[Rational]) -> Option<Rational> {
+    if xs.len() != ys.len() || xs.is_empty() {
+        return None;
+    }
+    let mean_x = mean(xs)?;
+    let mean_y = mean(ys)?;
+    let mut sum = Rational::zero();
+    for (x, y) in xs.iter().zip(ys) {
+        let product = x.checked_sub(mean_x)?.checked_mul(y.checked_sub(mean_y)?)?;
+        sum = sum.checked_add(product)?;
+    }
+    sum.checked_div(Rational::integer(i128::try_from(xs.len()).ok()?))
+}
+
 /// The **sample** variance `(1/(n−1)) Σ (xᵢ − mean)²` (Bessel-corrected). `None`
 /// if `data` has fewer than two points or on overflow.
 #[must_use]

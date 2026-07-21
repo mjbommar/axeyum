@@ -3503,6 +3503,23 @@ pub fn standard_deviation(data: &[Rational]) -> Option<CasExpr> {
     Some(simplify_radicals(&CasExpr::Const(variance).sqrt()))
 }
 
+/// The **Pearson correlation coefficient** `ρ = cov(x,y) / (σₓ·σᵧ)` of two data
+/// sets, as an exact [`CasExpr`] with surds simplified (`ρ = ±1` for perfectly
+/// linearly related data). `None` if the lengths differ, either has zero variance,
+/// or on overflow.
+#[must_use]
+pub fn correlation(xs: &[Rational], ys: &[Rational]) -> Option<CasExpr> {
+    let cov = stats::covariance(xs, ys)?;
+    let var_x = stats::variance(xs)?;
+    let var_y = stats::variance(ys)?;
+    if var_x.is_zero() || var_y.is_zero() {
+        return None;
+    }
+    // ρ = cov / √(var_x · var_y).
+    let denom = simplify_radicals(&CasExpr::Const(var_x.checked_mul(var_y)?).sqrt());
+    Some(simplify(&(CasExpr::Const(cov) / denom)))
+}
+
 /// The **sample** standard deviation `√(sample variance)` of rational data (with
 /// Bessel's `n − 1` correction), as an exact [`CasExpr`] with any surd simplified.
 /// `None` if `data` has fewer than two points or on overflow.
@@ -6211,6 +6228,21 @@ mod tests {
         // Negative radicand is left symbolic (no real simplification).
         let neg = CasExpr::int(-3).sqrt();
         assert_equal(&simplify_radicals(&neg), &neg);
+    }
+
+    #[test]
+    fn covariance_and_correlation() {
+        let ig = Rational::integer;
+        let xs = [ig(1), ig(2), ig(3), ig(4)];
+        // Perfectly correlated: y = 2x + 1 → ρ = 1.
+        let ys_pos = [ig(3), ig(5), ig(7), ig(9)];
+        assert_equal(&correlation(&xs, &ys_pos).unwrap(), &CasExpr::int(1));
+        // Perfectly anti-correlated: y = −x → ρ = −1.
+        let ys_neg = [ig(-1), ig(-2), ig(-3), ig(-4)];
+        assert_equal(&correlation(&xs, &ys_neg).unwrap(), &CasExpr::int(-1));
+        // Covariance of x with itself is its variance (5/4 for 1..4).
+        assert_eq!(stats::covariance(&xs, &xs), stats::variance(&xs));
+        assert_eq!(stats::covariance(&xs, &xs), Some(Rational::new(5, 4)));
     }
 
     #[test]
