@@ -3,8 +3,9 @@
 use std::fmt::Write as _;
 
 use super::{
-    BinaryOpcode, BlockId, CastOpcode, CfgBlock, DirectCallArgument, GepFlag, IntPredicate,
-    Intrinsic, Operand, ScalarCfg, ScalarInstructionKind, SemanticFlag, TerminatorKind,
+    BinaryOpcode, BlockId, CallResultRange, CastOpcode, CfgBlock, DirectCallArgument, GepFlag,
+    IntPredicate, Intrinsic, Operand, ScalarCfg, ScalarInstructionKind, SemanticFlag,
+    TerminatorKind,
 };
 
 /// Render one validated scalar CFG into deterministic canonical LLVM text.
@@ -118,11 +119,38 @@ fn render_instruction(output: &mut String, instruction: &ScalarInstructionKind) 
         ),
         ScalarInstructionKind::Intrinsic {
             dest,
+            tail,
+            result_range,
             intrinsic,
             width,
             lhs,
             rhs,
-        } => render_intrinsic(output, dest, *intrinsic, *width, lhs, rhs),
+        } => render_intrinsic(
+            output,
+            dest,
+            *tail,
+            result_range.as_ref(),
+            *intrinsic,
+            *width,
+            lhs,
+            rhs,
+        ),
+        ScalarInstructionKind::CountLeadingZeros {
+            dest,
+            tail,
+            result_range,
+            width,
+            operand: source,
+            zero_is_poison,
+        } => render_ctlz(
+            output,
+            dest,
+            *tail,
+            result_range.as_ref(),
+            *width,
+            source,
+            *zero_is_poison,
+        ),
         ScalarInstructionKind::DirectCall {
             dest,
             tail,
@@ -323,6 +351,8 @@ fn render_cast(
 fn render_intrinsic(
     output: &mut String,
     dest: &str,
+    tail: bool,
+    result_range: Option<&CallResultRange>,
     intrinsic: Intrinsic,
     width: u32,
     lhs: &Operand,
@@ -330,8 +360,10 @@ fn render_intrinsic(
 ) {
     write!(
         output,
-        "%{} = call i{} @{}(i{} {}, i{} {})",
+        "%{} = {}call {}i{} @{}(i{} {}, i{} {})",
         quoted_name(dest),
+        if tail { "tail " } else { "" },
+        rendered_result_range(result_range),
         width,
         quoted_name(&format!("llvm.{}.i{width}", intrinsic_name(intrinsic))),
         width,
@@ -340,6 +372,36 @@ fn render_intrinsic(
         operand(rhs)
     )
     .expect("writing to a String cannot fail");
+}
+
+fn render_ctlz(
+    output: &mut String,
+    dest: &str,
+    tail: bool,
+    result_range: Option<&CallResultRange>,
+    width: u32,
+    source: &Operand,
+    zero_is_poison: bool,
+) {
+    write!(
+        output,
+        "%{} = {}call {}i{} @{}(i{} {}, i1 {})",
+        quoted_name(dest),
+        if tail { "tail " } else { "" },
+        rendered_result_range(result_range),
+        width,
+        quoted_name(&format!("llvm.ctlz.i{width}")),
+        width,
+        operand(source),
+        zero_is_poison,
+    )
+    .expect("writing to a String cannot fail");
+}
+
+fn rendered_result_range(result_range: Option<&CallResultRange>) -> String {
+    result_range.map_or_else(String::new, |range| {
+        format!("range(i{} {}, {}) ", range.width, range.lower, range.upper)
+    })
 }
 
 fn render_terminator(output: &mut String, block: &CfgBlock, implicit_entry_label: Option<&str>) {

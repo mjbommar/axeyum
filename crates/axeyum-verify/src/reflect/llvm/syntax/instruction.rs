@@ -124,6 +124,17 @@ pub struct DirectCallArgument {
     pub value: Operand,
 }
 
+/// One non-wrapping half-open integer range attached to a scalar call result.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CallResultRange {
+    /// Integer width carried by the `range` attribute.
+    pub width: u32,
+    /// Inclusive lower bound.
+    pub lower: u128,
+    /// Exclusive upper bound.
+    pub upper: u128,
+}
+
 /// Typed syntax for one supported scalar instruction.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScalarInstruction {
@@ -196,6 +207,10 @@ pub enum ScalarInstructionKind {
     Intrinsic {
         /// Destination SSA name.
         dest: String,
+        /// Whether the source used the semantically transparent `tail` marker.
+        tail: bool,
+        /// Optional poison-producing result range.
+        result_range: Option<CallResultRange>,
         /// Intrinsic operation.
         intrinsic: Intrinsic,
         /// Argument/result width.
@@ -204,6 +219,21 @@ pub enum ScalarInstructionKind {
         lhs: Operand,
         /// Right argument.
         rhs: Operand,
+    },
+    /// Assigned direct `llvm.ctlz.iN` intrinsic call.
+    CountLeadingZeros {
+        /// Destination SSA name.
+        dest: String,
+        /// Whether the source used the semantically transparent `tail` marker.
+        tail: bool,
+        /// Optional poison-producing result range.
+        result_range: Option<CallResultRange>,
+        /// Argument/result width.
+        width: u32,
+        /// Integer whose leading zero bits are counted.
+        operand: Operand,
+        /// Whether a zero operand makes the result poison.
+        zero_is_poison: bool,
     },
     /// Assigned direct scalar call whose body must be supplied explicitly by a
     /// checked resolver before it can receive executable semantics.
@@ -273,6 +303,7 @@ impl ScalarInstructionKind {
             | Self::Select { dest, .. }
             | Self::Cast { dest, .. }
             | Self::Intrinsic { dest, .. }
+            | Self::CountLeadingZeros { dest, .. }
             | Self::DirectCall { dest, .. }
             | Self::GetElementPtr { dest, .. }
             | Self::Load { dest, .. } => Some(dest),
@@ -602,7 +633,20 @@ fn parse_call(
     if first != "call" {
         cursor.word("call")?;
     }
+    let result_range = parse_result_range(cursor)?;
+    if result_range.is_some() && cursor.peek_word("range") {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "multiple call-result ranges are unsupported",
+        ));
+    }
     let width = cursor.int_type()?;
+    if result_range.is_some_and(|range| range.width != width) {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "call-result range and result widths differ",
+        ));
+    }
     let callee = cursor.global("direct callee")?;
     let intrinsic = if callee == format!("llvm.umin.i{width}") {
         Some(Intrinsic::UnsignedMin)
@@ -628,11 +672,57 @@ fn parse_call(
         cursor.end()?;
         return Ok(ScalarInstructionKind::Intrinsic {
             dest,
+            tail,
+            result_range,
             intrinsic,
             width,
             lhs,
             rhs,
         });
+    }
+
+    if callee == format!("llvm.ctlz.i{width}") {
+        let operand_width = cursor.int_type()?;
+        let operand = cursor.operand()?;
+        cursor.punct(',')?;
+        let flag_width = cursor.int_type()?;
+        let zero_is_poison = cursor.bool_literal("`llvm.ctlz` zero-poison flag")?;
+        cursor.punct(')')?;
+        if operand_width != width || flag_width != 1 {
+            return Err(cursor.error(
+                ParseErrorKind::MalformedInstruction,
+                "`llvm.ctlz` argument widths do not match its signature",
+            ));
+        }
+        cursor.end()?;
+        return Ok(ScalarInstructionKind::CountLeadingZeros {
+            dest,
+            tail,
+            result_range,
+            width,
+            operand,
+            zero_is_poison,
+        });
+    }
+
+    if callee.starts_with("llvm.ctlz.") {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "`llvm.ctlz` name and result width do not match",
+        ));
+    }
+    if callee.starts_with("llvm.cttz.") || callee.starts_with("llvm.ctpop.") {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            &format!("intrinsic `@{callee}` is outside the checked scalar profile"),
+        ));
+    }
+
+    if result_range.is_some() {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            "call-result range on an unsupported call is outside the checked profile",
+        ));
     }
 
     let mut args = Vec::new();
@@ -673,6 +763,40 @@ fn parse_call(
         callee,
         args,
     })
+}
+
+fn parse_result_range(cursor: &mut Cursor<'_>) -> Result<Option<CallResultRange>, ParseError> {
+    if !cursor.peek_word("range") {
+        return Ok(None);
+    }
+    cursor.word("range")?;
+    cursor.punct('(')?;
+    let width = cursor.int_type()?;
+    let lower = cursor.unsigned_integer("call-result range lower bound")?;
+    cursor.punct(',')?;
+    let upper = cursor.unsigned_integer("call-result range upper bound")?;
+    cursor.punct(')')?;
+    if !integer_fits_width(lower, width) || !integer_fits_width(upper, width) {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "call-result range bound does not fit its integer width",
+        ));
+    }
+    if lower >= upper {
+        return Err(cursor.error(
+            ParseErrorKind::UnsupportedSemantics,
+            "wrapped or empty call-result ranges are outside the checked profile",
+        ));
+    }
+    Ok(Some(CallResultRange {
+        width,
+        lower,
+        upper,
+    }))
+}
+
+fn integer_fits_width(value: u128, width: u32) -> bool {
+    width >= u128::BITS || value < (1_u128 << width)
 }
 
 fn parse_binary_opcode(word: &str) -> Option<BinaryOpcode> {
@@ -881,6 +1005,37 @@ impl Cursor<'_> {
             _ => Err(self.error(
                 ParseErrorKind::MalformedInstruction,
                 "expected scalar local or integer constant",
+            )),
+        }
+    }
+
+    fn unsigned_integer(&mut self, expected: &str) -> Result<u128, ParseError> {
+        let raw = self.any_word(expected)?;
+        if raw.starts_with('-') {
+            return Err(self.error(
+                ParseErrorKind::MalformedInstruction,
+                &format!("{expected} must be non-negative"),
+            ));
+        }
+        raw.parse::<u128>().map_err(|_| {
+            self.error(
+                ParseErrorKind::MalformedInstruction,
+                &format!("invalid {expected} `{raw}`"),
+            )
+        })
+    }
+
+    fn bool_literal(&mut self, expected: &str) -> Result<bool, ParseError> {
+        match self.next().map(|token| &token.kind) {
+            Some(TokenKind::Word(word)) if word == "true" => Ok(true),
+            Some(TokenKind::Word(word)) if word == "false" => Ok(false),
+            Some(TokenKind::LocalName(_)) => Err(self.error(
+                ParseErrorKind::UnsupportedSemantics,
+                &format!("{expected} must be a literal `true` or `false`"),
+            )),
+            _ => Err(self.error(
+                ParseErrorKind::MalformedInstruction,
+                &format!("expected {expected}"),
             )),
         }
     }

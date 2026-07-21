@@ -1889,6 +1889,9 @@ fn collect_instruction_parameters(
         ScalarInstructionKind::Cast { operand, .. } => {
             collect_parameter_operand(operand, parameters, referenced);
         }
+        ScalarInstructionKind::CountLeadingZeros { operand, .. } => {
+            collect_parameter_operand(operand, parameters, referenced);
+        }
         ScalarInstructionKind::DirectCall { args, .. } => {
             for argument in args {
                 collect_parameter_operand(&argument.value, parameters, referenced);

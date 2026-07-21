@@ -6,8 +6,9 @@ use axeyum_verify::reflect::llvm::{
     checked::{ReflectErrorKind, reflect_scalar_checked, reflect_scalar_into_checked},
     reflect_into,
     syntax::{
-        BinaryOpcode, CastOpcode, IntPredicate, Intrinsic, ParseErrorKind, ScalarInstructionKind,
-        SemanticFlag, parse_function, parse_scalar_instruction,
+        BinaryOpcode, CallResultRange, CastOpcode, IntPredicate, Intrinsic, ParseErrorKind,
+        ScalarInstructionKind, SemanticFlag, parse_function, parse_scalar_cfg,
+        parse_scalar_instruction, render_scalar_cfg,
     },
 };
 
@@ -24,6 +25,109 @@ fn typed_kinds(ll: &str) -> Vec<ScalarInstructionKind> {
         .flat_map(|block| block.instructions.iter())
         .map(|instruction| parse_scalar_instruction(instruction).unwrap().kind)
         .collect()
+}
+
+#[test]
+fn typed_ctlz_and_call_result_range_round_trip_exactly() {
+    let ll = "define i32 @f(i32 %x) {\n%r = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %x, i1 true)\nret i32 %r\n}\n";
+    let kinds = typed_kinds(ll);
+    assert!(matches!(
+        &kinds[0],
+        ScalarInstructionKind::CountLeadingZeros {
+            dest,
+            tail: true,
+            result_range: Some(CallResultRange {
+                width: 32,
+                lower: 0,
+                upper: 33,
+            }),
+            width: 32,
+            operand: axeyum_verify::reflect::llvm::syntax::Operand::Local(operand),
+            zero_is_poison: true,
+        } if dest == "r" && operand == "x"
+    ));
+
+    let cfg = parse_scalar_cfg(&parse_function(ll).unwrap()).unwrap();
+    let canonical = render_scalar_cfg(&cfg);
+    assert!(canonical.contains(
+        "%\"r\" = tail call range(i32 0, 33) i32 @\"llvm.ctlz.i32\"(i32 %\"x\", i1 true)"
+    ));
+    let reparsed = parse_scalar_cfg(&parse_function(&canonical).unwrap()).unwrap();
+    assert_eq!(canonical, render_scalar_cfg(&reparsed));
+}
+
+#[test]
+fn ctlz_and_call_result_ranges_fail_closed_at_frozen_boundaries() {
+    let cases = [
+        (
+            "%r = call range(i8 -1, 9) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call range(i8 0, 256) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call range(i8 8, 8) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+        (
+            "%r = call range(i8 9, 8) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+        (
+            "%r = call range(i16 0, 9) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call range(i8 0, 9) range(i8 0, 9) i8 @llvm.ctlz.i8(i8 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call range(i8 0, 9) i8 @ordinary(i8 %x)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i16(i8 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i8(i16 %x, i1 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i8(i8 %x, i8 false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i8(i8 %x, i1 %flag)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i8(i8 %x, i1 noundef false)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call i8 @llvm.ctlz.i8(i8 %x, i1 false, i1 true)",
+            ParseErrorKind::MalformedInstruction,
+        ),
+        (
+            "%r = call i8 @llvm.cttz.i8(i8 %x, i1 false)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+        (
+            "%r = call i8 @llvm.ctpop.i8(i8 %x)",
+            ParseErrorKind::UnsupportedSemantics,
+        ),
+    ];
+    for (instruction, expected) in cases {
+        let ll = format!("define i8 @f(i8 %x, i1 %flag) {{\n{instruction}\nret i8 %x\n}}\n");
+        let function = parse_function(&ll).unwrap();
+        let error = parse_scalar_instruction(&function.blocks[0].instructions[0]).unwrap_err();
+        assert_eq!(error.kind(), expected, "{instruction}");
+        assert_eq!(error.span().line, 2, "{instruction}");
+        assert!(error.span().start < error.span().end, "{instruction}");
+    }
 }
 
 #[test]

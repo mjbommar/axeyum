@@ -20,8 +20,9 @@ pub use cfg::{
     parse_scalar_cfg,
 };
 pub use instruction::{
-    BinaryOpcode, CastOpcode, DirectCallArgument, GepFlag, IntPredicate, Intrinsic, Operand,
-    ScalarInstruction, ScalarInstructionKind, SemanticFlag, parse_scalar_instruction,
+    BinaryOpcode, CallResultRange, CastOpcode, DirectCallArgument, GepFlag, IntPredicate,
+    Intrinsic, Operand, ScalarInstruction, ScalarInstructionKind, SemanticFlag,
+    parse_scalar_instruction,
 };
 pub use print::render_scalar_cfg;
 

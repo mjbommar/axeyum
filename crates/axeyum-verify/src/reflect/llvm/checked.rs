@@ -1449,11 +1449,27 @@ pub(super) fn lower_assignment(
         ),
         ScalarInstructionKind::Intrinsic {
             dest,
+            result_range,
             intrinsic,
             width,
             lhs,
             rhs,
-        } => lower_intrinsic_assignment(arena, env, dest, intrinsic, width, &lhs, &rhs, span),
+            ..
+        } => {
+            if result_range.is_some() {
+                return Err(ReflectError {
+                    kind: ReflectErrorKind::UnsupportedCall,
+                    span: Some(span),
+                    detail: "call-result ranges do not yet have checked semantics".to_owned(),
+                });
+            }
+            lower_intrinsic_assignment(arena, env, dest, intrinsic, width, &lhs, &rhs, span)
+        }
+        ScalarInstructionKind::CountLeadingZeros { .. } => Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedCall,
+            span: Some(span),
+            detail: "`llvm.ctlz` does not yet have checked semantics".to_owned(),
+        }),
         ScalarInstructionKind::GetElementPtr { .. }
         | ScalarInstructionKind::Load { .. }
         | ScalarInstructionKind::Store { .. } => Err(ReflectError {
