@@ -1,6 +1,6 @@
 # ADR-0337: Preregister Tock end-to-end proof v3
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -98,6 +98,38 @@ pass, zero failures, two filtered tests, and no authenticated execution.
 `proof-v3` remains absent. Exact zero-query metadata is committed in
 `bench-results/verify-tock-log2-20260721/proof-v3-preflight.json`. Commit/push
 this gate before verifying refs/output and invoking v3 exactly once.
+
+## Result
+
+Accepted as a negative v3 result. The pre-invocation gate matched local HEAD,
+tracking, and remote `main` at `47969cf0`; registered inputs validate and the
+fresh archive compiles. The Rust test itself exits successfully, which requires
+all eight end-to-end proof calls, their certificate rechecks, all six replayed
+controls, and the final scoreboard assertions to complete. The outer parser then
+rejects the result with `stage=result`, `kind=proof_count`, `detail=7`.
+
+The failure is the frozen parser seam: under `--nocapture`, Rust's test harness
+prints `test authenticated_tock_log2_scoreboard ... ` without a newline before
+the test's first output. The first `TOCK_PROOF|...` therefore appears after that
+prefix, while the parser selects only lines beginning with `TOCK_PROOF|`. This
+same prefix behavior was directly observed in the v3 non-target route smoke.
+The remaining seven proof lines begin at column zero. Atomic cleanup removes
+stdout/result bytes and leaves no output/partial directory; no scoreboard row is
+credited and the resource guard reports no OOM-delta failure.
+
+Exact negative metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v3-negative.json`. The failed path
+does not retain the archive commit in its terminal error; concurrent unrelated
+README/CAS commits advanced HEAD during the run, so the artifact records the
+confirmed pre-invocation commit and this observability boundary rather than
+inventing a runner commit. Every registered proof/build input is hash-pinned and
+unchanged across those commits.
+
+V3 ends here and must not be rerun. A successor may change only row extraction
+to recognize one marker after a test-harness prefix while continuing to reject
+duplicate/malformed markers, and should retain source identity plus stderr/stdout
+for any future negative. It must preserve every target, certificate, replay,
+policy, cap, row, and acceptance gate.
 
 ## Rejected alternatives
 

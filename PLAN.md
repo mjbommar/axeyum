@@ -558,6 +558,13 @@ session state.
 >    spec pass, two filtered tests, and no authenticated execution/output.
 >    Commit/push this zero-query metadata, then verify refs and `proof-v3`
 >    absence before the one official invocation. Never rerun after observation.
+>    The sole v3 invocation is frozen negative. The Rust test exits zero, which
+>    means eight dual-DRAT proof/recheck calls, six controls, and scoreboard
+>    assertions complete, but the outer parser sees 7 proof rows: `--nocapture`
+>    prefixes the first marker with the test name while parsing requires column
+>    zero. Zero result credit/output survives and no OOM-delta failure is
+>    reported. Never rerun v3. Commit/push the exact negative; a successor may
+>    change only prefix-aware marker extraction and negative-log/source retention.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

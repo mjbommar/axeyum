@@ -1096,6 +1096,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     a non-target route smoke, and targeted Clippy. Push before archive preflight.
     Pushed producer `c22734c3` passes that fresh locked/offline preflight with one
     independent-spec pass, two filtered tests, and no authenticated output.
+    The sole v3 run then completes its Rust test but closes negative because the
+    test harness prefixes the first proof marker and the column-zero parser sees
+    7/8 rows. No result is credited. V3 is frozen; only prefix-aware extraction
+    and failure source/log retention may change in a successor.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

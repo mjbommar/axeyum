@@ -1,0 +1,48 @@
+{
+  "attempt": {
+    "cargo_test_exit_code": 0,
+    "compilations_completed": 1,
+    "compilations_started": 1,
+    "controls_completed_in_test": 6,
+    "official_invocations": 1,
+    "observed_at_utc": "2026-07-21T12:10:11Z",
+    "property_queries_completed_in_test": 8,
+    "scoreboard_emitted_by_test": true,
+    "target_test_completed": true
+  },
+  "diagnosis": {
+    "basis": "The same --nocapture harness behavior was observed on the v3 route smoke: the first TOCK_PROOF marker follows the test-name prefix on one line, while the parser accepts only lines beginning with TOCK_PROOF.",
+    "inference": true,
+    "kind": "first_marker_prefixed_by_test_harness"
+  },
+  "error": {
+    "detail": "7",
+    "kind": "proof_count",
+    "observed_proof_rows": 7,
+    "required_proof_rows": 8,
+    "stage": "result"
+  },
+  "outputs": {
+    "output_directory_exists": false,
+    "partial_directories": 0,
+    "result_accepted": false,
+    "scoreboard_rows_credited": 0
+  },
+  "preflight_sha256": "1d7505f8654557a1a05ba02134e82c3c4cd621b1bf42c6961681c5ab4e2e5286",
+  "registration_sha256": "a458ce330969d397b74306a41b056014c4969d305e8a77cd13ac2af467227960",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-proof-v3-negative.v1",
+  "source": {
+    "archive_commit_not_retained_on_failure": true,
+    "concurrent_head_after_run": "a4666ca338a03d24ebeca98d61cae3c0190f293d",
+    "pre_invocation_commit": "47969cf024d79b132633770f72935ce8c1fce8f5",
+    "pre_invocation_remote_matched": true,
+    "registered_inputs_validated_before_compilation": true
+  },
+  "status": "rejected"
+}
