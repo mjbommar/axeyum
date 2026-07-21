@@ -444,6 +444,11 @@ session state.
 >    all 169 lock entries. No cache/partial/OOM result survives. Never rerun v4.
 >    Next preregister a structural resolved-ID-to-lock authentication gate for
 >    v5; record the count rather than expecting it and keep all other gates.
+>    ADR-0332 now freezes that rule: exact 169-entry lock input, closed unique
+>    metadata/resolve IDs and edges, exact external name/version/source/checksum,
+>    in-tree path manifests, one workspace kernel, and a canonical active digest
+>    whose count/hash are results rather than thresholds. Implement/push the thin
+>    v5 validator/tests/overlay before DNS or fetch.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

@@ -1033,6 +1033,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     that inventory, then closes on an invalid 162-resolved-versus-169-locked
     count equality. A successor must structurally authenticate every resolved
     package ID against the exact lockfile and record, not expect, the count.
+  - [ADR-0332](../09-decisions/adr-0332-preregister-tock-cache-structural-metadata.md)
+    freezes that preparation-v5 validator: closed unique package/node/edge IDs,
+    exact external lock identities and checksums, in-tree path manifests, one
+    workspace kernel, and a canonical active digest/count recorded only as
+    results. No v5 producer, DNS/fetch, or cache exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
