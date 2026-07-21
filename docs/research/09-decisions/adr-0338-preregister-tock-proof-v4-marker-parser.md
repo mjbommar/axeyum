@@ -65,6 +65,14 @@ DRAT parser mutation test pass. The Rust runner is byte-identical to v3 and its
 ordinary tests/Clippy remain the pushed v3 gate. `proof-v4` is absent. Commit and
 push these bytes before archived non-authenticated compilation.
 
+Pushed producer commit `635e7cbd` matches local HEAD, tracking, and remote
+`main`. Its fresh archived source compiles locked/offline under the cap in 37.77
+seconds and runs exactly the independent-spec test: one pass, zero failures, two
+filtered tests, and no authenticated execution. `proof-v4` remains absent.
+Exact preflight metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v4-preflight.json`. Commit/push
+this zero-query gate before refs/output verification and one official run.
+
 ## Rejected alternatives
 
 - **Credit v3 from the Rust exit code.** Rejected: the committed artifact gate

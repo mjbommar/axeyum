@@ -575,6 +575,10 @@ session state.
 >    prefix rejection; every v3 policy/input is byte-identical and `proof-v4` is
 >    absent. Commit/push these exact bytes before the archived non-authenticated
 >    compilation preflight. No target query.
+>    Producer `635e7cbd` is pushed and its fresh archived locked/offline preflight
+>    passes under the cap in 37.77 s with one independent-spec pass, two filtered
+>    tests, zero authenticated execution, and absent `proof-v4`. Commit/push this
+>    gate, then verify refs/output and invoke v4 exactly once.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

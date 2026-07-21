@@ -376,6 +376,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   tests, two ordinary Rust tests, a small non-target route smoke, and targeted
   Clippy pass under the cap; `proof-v3` is absent. Next: commit/push exact bytes,
   then run only the archived non-authenticated compilation preflight.
+  Producer `635e7cbd` is pushed. Its fresh archived locked/offline build passes
+  under the cap in 37.77 s with one independent-spec pass, two filtered tests,
+  no authenticated execution, and absent v4 output. Next: commit/push this gate,
+  verify refs/output, then invoke v4 once.
   Producer `c22734c3` is pushed and its fresh archived locked/offline preflight
   passes under the cap in 38.32 s: one independent-spec pass, two filtered tests,
   zero authenticated execution, and no v3 output. Next: commit/push this gate,
