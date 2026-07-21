@@ -390,6 +390,31 @@ pub fn motzkin(n: u32) -> Option<i128> {
     Some(prev1)
 }
 
+/// The **Narayana number** `N(n, k) = (1/n)·C(n,k)·C(n,k−1)` for `1 ≤ k ≤ n` (and
+/// `N(0,0)=1`) — e.g. the number of Dyck paths of length `2n` with exactly `k`
+/// peaks. Row `n` sums to the `n`-th Catalan number and is symmetric
+/// (`N(n,k)=N(n,n+1−k)`). `0` outside `1 ≤ k ≤ n`. `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::narayana;
+/// // Row 4: N(4,1..4) = 1, 6, 6, 1 (sum = Catalan(4) = 14).
+/// assert_eq!(narayana(4, 2), Some(6));
+/// assert_eq!(narayana(4, 4), Some(1));
+/// ```
+#[must_use]
+pub fn narayana(n: u32, k: u32) -> Option<i128> {
+    if n == 0 {
+        return Some(i128::from(k == 0));
+    }
+    if k < 1 || k > n {
+        return Some(0);
+    }
+    let n_i = i128::from(n);
+    let product = binomial(n_i, i128::from(k))?.checked_mul(binomial(n_i, i128::from(k) - 1)?)?;
+    // The division is exact: n divides C(n,k)·C(n,k−1).
+    Some(product / n_i)
+}
+
 /// The **Eulerian number** `A(n, k)` — the number of permutations of `{1,…,n}`
 /// with exactly `k` ascents — via `A(n,k) = (k+1)·A(n−1,k) + (n−k)·A(n−1,k−1)`,
 /// with `A(0,0) = 1`. Each row sums to `n!`, and the row is symmetric
@@ -575,6 +600,32 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn narayana_triangle() {
+        assert_eq!(
+            (1..=4).map(|k| narayana(4, k).unwrap()).collect::<Vec<_>>(),
+            vec![1, 6, 6, 1]
+        );
+        assert_eq!(
+            (1..=5).map(|k| narayana(5, k).unwrap()).collect::<Vec<_>>(),
+            vec![1, 10, 20, 10, 1]
+        );
+        // Row n sums to Catalan(n) and is symmetric N(n,k)=N(n,n+1−k).
+        for n in 1..=10u32 {
+            let row: Vec<i128> = (1..=n).map(|k| narayana(n, k).unwrap()).collect();
+            assert_eq!(row.iter().sum::<i128>(), catalan(n).unwrap());
+            for k in 1..=n {
+                assert_eq!(
+                    narayana(n, k).unwrap(),
+                    narayana(n, n + 1 - k).unwrap(),
+                    "symmetry n={n}"
+                );
+            }
+        }
+        assert_eq!(narayana(4, 0), Some(0));
+        assert_eq!(narayana(4, 5), Some(0));
+    }
 
     #[test]
     fn eulerian_triangle() {
