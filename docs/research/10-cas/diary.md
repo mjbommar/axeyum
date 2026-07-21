@@ -518,3 +518,22 @@ engine, trig/log identity simplification, special functions, first-order/
 inhomogeneous ODEs, integration by parts/substitution beyond the current tables,
 irrational-root integration logs (needs `RealAlgebraic::inv`). When these are
 exhausted, extend the roadmap via web research per the goal.
+
+## 2026-07-20 — Entry 12: gap-analysis essentially complete (129 tests)
+
+Since entry 11: **complex numbers completed** (`I²=−1` in the zero-test →
+certified complex arithmetic; `conjugate`/`real_part`/`imaginary_part`);
+**Pythagorean identity** in the zero-test (`cos²→1−sin²`, per argument) → trig
+identities like `sin²+cos²=1`, `cos⁴−sin⁴=cos²−sin²` now **decidable/certified**;
+**trig-square integrals** `∫sin²/cos²(ax)` (certified via that identity); **Gröbner
+bases** (`groebner.rs`, sub-agent: Buchberger → reduced basis, `reduce` normal
+form, `ideal_contains` membership over `MvPoly`); `factor` groups repeated roots
+into powers; `differentiate_n`, `degree`/`coeff`/`leading_coeff`, `poly_gcd`/
+`poly_div`. **129 tests + 18 doctests, clippy-clean, WASM-green.**
+
+This completes essentially the whole gap-analysis (G0–G18, C0–C6) plus the
+Pythagorean/complex zero-test extensions. Next: a research pass (per the goal) to
+map the *remaining* SymPy/Mathematica surface (assumptions, special functions,
+Risch transcendental integration, more ODE classes, exact eigen/Smith–Hermite,
+double-angle/sum trig, polynomial factorization over ℚ via Zassenhaus) and extend
+`gap-analysis.md`/`build-plan.md` with the next wave.
