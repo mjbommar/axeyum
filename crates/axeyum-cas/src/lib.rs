@@ -51,6 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::{Rational, poly};
 
 pub mod algebraic;
+pub mod approx;
 pub mod combinatorics;
 pub mod groebner;
 mod factor_int;
@@ -60,6 +61,7 @@ pub mod mvpoly;
 mod normalforms;
 pub mod ntheory;
 pub mod ntheory_advanced;
+pub mod ntheory_more;
 pub mod orthopoly;
 pub mod permutation;
 mod ratint;
@@ -68,6 +70,7 @@ pub mod stats;
 pub mod sturm;
 
 pub use algebraic::AlgebraicReal;
+pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
@@ -3022,6 +3025,45 @@ pub fn cross(a: &[CasExpr], b: &[CasExpr]) -> Option<[CasExpr; 3]> {
     ])
 }
 
+/// **Gram–Schmidt orthogonalization** of a list of vectors (each a `Vec<CasExpr>` of
+/// the same length): returns a mutually **orthogonal** set spanning the same space,
+/// with `uᵢ = vᵢ − Σ_{j<i} (vᵢ·uⱼ / uⱼ·uⱼ) uⱼ`. Linearly dependent inputs contribute
+/// a zero vector, which is dropped. Over rational vectors the output stays rational
+/// (no normalization/`√`), and every returned pair is certifiably orthogonal
+/// (`uᵢ·uⱼ = 0` decides via the zero-test). `None` on empty/mismatched shapes or
+/// overflow.
+#[must_use]
+pub fn gram_schmidt(vectors: &[Vec<CasExpr>]) -> Option<Vec<Vec<CasExpr>>> {
+    if vectors.is_empty() {
+        return None;
+    }
+    let dimension = vectors[0].len();
+    let mut basis: Vec<Vec<CasExpr>> = Vec::new();
+    for vector in vectors {
+        if vector.len() != dimension {
+            return None;
+        }
+        // Subtract the projection onto each existing orthogonal vector.
+        let mut residual = vector.clone();
+        for previous in &basis {
+            let numerator = dot(vector, previous)?;
+            let denominator = dot(previous, previous)?;
+            // coefficient = (vᵢ·uⱼ)/(uⱼ·uⱼ)
+            let coefficient = numerator / denominator;
+            for (component, prev_component) in residual.iter_mut().zip(previous) {
+                let updated = component.clone() - coefficient.clone() * prev_component.clone();
+                *component = simplify(&updated);
+            }
+        }
+        // Drop a vector that collapsed to zero (linearly dependent).
+        if residual.iter().all(|c| matches!(equal(c, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })) {
+            continue;
+        }
+        basis.push(residual);
+    }
+    Some(basis)
+}
+
 /// The Euclidean norm `‖v‖ = √(v · v)` of a vector, as an exact [`CasExpr`] with any
 /// surd simplified to lowest terms (`‖(3,4)‖ = 5`, `‖(1,1)‖ = √2`). `None` on
 /// overflow. For a constant vector the value is exact and certifiable via the
@@ -5299,6 +5341,30 @@ mod tests {
         assert!((evalf(&sd, &[]).unwrap() - (6.0_f64).sqrt() / 3.0).abs() < 1e-12);
         // Unbound free variable → None.
         assert!(evalf(&x(), &[]).is_none());
+    }
+
+    #[test]
+    fn gram_schmidt_orthogonalizes() {
+        let c = |n: i128| CasExpr::int(n);
+        // (1,1,0), (1,0,1), (0,1,1) → mutually orthogonal rational vectors.
+        let vectors = vec![
+            vec![c(1), c(1), c(0)],
+            vec![c(1), c(0), c(1)],
+            vec![c(0), c(1), c(1)],
+        ];
+        let basis = gram_schmidt(&vectors).unwrap();
+        assert_eq!(basis.len(), 3);
+        // Every distinct pair is orthogonal (dot = 0), certified.
+        for i in 0..basis.len() {
+            for j in (i + 1)..basis.len() {
+                assert_equal(&dot(&basis[i], &basis[j]).unwrap(), &CasExpr::zero());
+            }
+        }
+        // A linearly dependent vector is dropped: (1,0),(2,0),(0,1) → 2 orthogonal.
+        let dependent = vec![vec![c(1), c(0)], vec![c(2), c(0)], vec![c(0), c(1)]];
+        let reduced = gram_schmidt(&dependent).unwrap();
+        assert_eq!(reduced.len(), 2);
+        assert_equal(&dot(&reduced[0], &reduced[1]).unwrap(), &CasExpr::zero());
     }
 
     #[test]
