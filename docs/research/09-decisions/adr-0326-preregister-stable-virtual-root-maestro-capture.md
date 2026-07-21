@@ -1,6 +1,6 @@
 # ADR-0326: Preregister stable-virtual-root Maestro capture
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -88,14 +88,29 @@ Maestro build-route correction rather than licensing v4 normalization.
 
 ## Result
 
-Proposed. The first producer preflight invocation failed before Cargo execution
+Accepted as a negative v3 result. The first producer preflight invocation
+failed before Cargo execution
 because its initial build argv tried to create `/axeyum-vroot` after mounting a
 read-only whole-host root. It emitted no module and atomic cleanup retained no
 partial output, so no v3 build had started and no frozen evidence gate was
 observed. The registered producer now constructs its temporary namespace root
 first; a no-write test executes the exact pinned Cargo toolchain inside it.
-No virtual-root build, module, extraction, parser result, capture credit, proof,
-or scoreboard row exists.
+
+The corrected registered invocation reaches the first owning-kernel Cargo
+build, but Maestro's `build/main.rs` enables its TTY-font build from
+`default.build-config.toml`; `build/font.rs` then tries to download GNU Unifont
+from `ftp.gnu.org`. The registered `--unshare-all` namespace has no network, so
+name resolution fails and the build script exits before the kernel crate emits
+LLVM. Zero builds complete, no module exists, extraction/parser admission never
+starts, and atomic cleanup retains no partial output. The capped process emits
+no kernel OOM signal.
+
+This is a build-input reproducibility failure, not a parser or semantic result.
+Supplying a downloaded font, enabling the network, or changing upstream build
+configuration would introduce an unregistered input or weaken the isolation
+after observation. Gate 12 therefore fires: the Maestro correction route ends
+without v4, capture credit, proof, or scoreboard row. T5.5.2 remains open only
+through a newly selected external target/build route.
 
 ## Rejected alternatives
 
@@ -109,8 +124,8 @@ or scoreboard row exists.
 ## Consequences
 
 - v3 isolates path identity at process input rather than rewriting output.
-- Success yields the first authenticated external local corpus; failure ends
-  this route honestly while preserving all prior negative evidence.
+- The observed upstream network input prevents an isolated authenticated build;
+  this route ends while preserving all prior negative evidence.
 
 ## References
 

@@ -35,6 +35,15 @@ The v2 result is negative: real-root tokens fall to zero, but the modules still
 differ in size and hash, so the root-specific remap rule itself remains an
 identity input. No extraction ran and no v2 artifact survived atomic cleanup.
 
+ADR-0326's v3 producer gives both physical roots identical in-namespace source
+and target paths. Its corrected namespace reaches Cargo, but Maestro's owning
+build script unconditionally resolves the configured GNU Unifont URL while TTY
+support is enabled. Network isolation makes that unregistered external input
+fail before any kernel LLVM is emitted. The route closes negatively without a
+v4 relaxation: zero builds complete, no extraction/parser/solver stage starts,
+and no partial external byte survives. `capture-v3-result.json` records the
+metadata-only failure and its exact upstream source hashes.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 

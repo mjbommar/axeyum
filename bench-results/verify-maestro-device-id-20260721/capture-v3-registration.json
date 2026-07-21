@@ -141,7 +141,7 @@
   "producer_files": [
     {
       "path": "docs/research/09-decisions/adr-0326-preregister-stable-virtual-root-maestro-capture.md",
-      "sha256": "c263612f1d97ba2dda86e3b635ab48e43f271f018e5dc15dafca5ab9b8d1df4e"
+      "sha256": "6065b55ea802be7082b69e5bbc8d04e6b0d2ed288b1bb9748be8d2a190f62e57"
     },
     {
       "path": "scripts/capture-maestro-device-id-v3.py",
@@ -149,7 +149,7 @@
     },
     {
       "path": "scripts/tests/test_capture_maestro_device_id_v3.py",
-      "sha256": "baed186b73e6b0ac3f851176a1990e7d22a816d1388304fc55c18ec23d123a67"
+      "sha256": "d755e8653f24c4e92d8ccd8055295613f4667220d29bcad798b8f550fec0a3a7"
     }
   ],
   "result_path": "bench-results/verify-maestro-device-id-20260721/capture-v3-result.json",

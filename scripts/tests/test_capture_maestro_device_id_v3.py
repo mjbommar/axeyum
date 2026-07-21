@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import sys
@@ -28,6 +29,34 @@ def test_committed_registration_and_registered_bwrap_probe_validate() -> None:
     assert base["upstream"]["commit"] == "650a3f62c386d113b4cbbc11645d945d57620cbb"
     assert report["sha256"] == value["bwrap"]["sha256"]
     assert report["version"] == "bubblewrap 0.11.1"
+
+
+def test_committed_negative_result_recomputes_and_has_no_partial_credit() -> None:
+    path = (
+        ROOT
+        / "bench-results/verify-maestro-device-id-20260721/capture-v3-result.json"
+    )
+    result = json.loads(path.read_text(encoding="utf-8"))
+    expected = result.pop("identity_sha256")
+    actual = hashlib.sha256(
+        (json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n").encode()
+    ).hexdigest()
+    assert actual == expected
+    assert result["registration_sha256"] == MODULE.CAPTURE.sha256_file(
+        MODULE.DEFAULT_REGISTRATION
+    )
+    assert result["status"] == "rejected"
+    assert result["capture_credit"] is False
+    assert result["summary"] == {
+        "accepted": 0,
+        "builds_completed": 0,
+        "builds_started": 1,
+        "dropped": 3,
+        "extraction_started": False,
+        "parser_admission_started": False,
+        "solver_queries": 0,
+        "targets": 3,
+    }
 
 
 @pytest.mark.parametrize(

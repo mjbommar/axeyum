@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0326 closes the Maestro capture route negative.** The
+  corrected stable-root namespace reaches the first Cargo build, but upstream
+  `build/font.rs` tries to fetch the configured GNU Unifont URL. The frozen
+  network-isolated namespace fails name resolution before LLVM emission: 0/1
+  builds complete, no extraction/parser/solver work starts, atomic output is
+  absent, and the kernel OOM audit is clean. Do not add a v4 network/font-cache
+  exception. Next: preregister replacement external-target/build-route
+  selection for T5.5.2; keep proofs blocked until authenticated capture passes.
+
 - **2026-07-21 — ADR-0326 preregisters stable-virtual-root Maestro capture.**
   V3 gives two independent physical source/target trees identical visible
   `/axeyum-vroot/source` and `/axeyum-vroot/target` paths through registered
@@ -5972,9 +5981,17 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured (selected: Maestro device-number encoding) | WIP — **T5.5.1 DONE; ADR-0323/0325 negative; ADR-0324 diagnosis; ADR-0326 v3 proposed:** distinct physical trees will build at identical virtual paths with no remap flags; raw equality still gates extraction. Proofs remain blocked. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
+| P5.5 | External target, measured | WIP — **first selection/route closed negative (Maestro, ADR-0323--0326):** the stable virtual-root build reaches Cargo but requires an upstream network font input and emits no LLVM under frozen isolation. Replacement external-target/build-route selection is next; no v4 exception, capture credit, parser result, or proof exists. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Closed the Maestro external-capture route negative
+  (ADR-0326).** The corrected Bubblewrap root executes the pinned Cargo
+  toolchain and starts the owning build, but Maestro's enabled TTY-font build
+  downloads GNU Unifont. Network isolation makes that unregistered input fail
+  before LLVM emission. Zero builds complete; no extraction, parser, solver,
+  OOM, partial artifact, capture credit, or proof exists. T5.5.2 returns to a
+  fresh replacement-target/build-route decision rather than a v4 relaxation.
 
 - **2026-07-21 — Preregistered stable-virtual-root Maestro capture
   (ADR-0326).** The zero-result v3 route registers unprivileged Bubblewrap,

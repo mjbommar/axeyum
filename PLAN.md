@@ -374,6 +374,14 @@ session state.
 >    no remap flags, zero host-path tokens, and raw full-module equality before
 >    extraction. Implement/run this final bounded build-route correction next;
 >    no proof query is authorized.
+>    ADR-0326 closes that final route negative before LLVM emission. The
+>    corrected constructed-root namespace reaches Cargo, but Maestro's owning
+>    build unconditionally downloads the configured GNU Unifont input; the
+>    registered network-isolated namespace fails name resolution. Zero builds
+>    complete, no module/extraction/parser/solver stage exists, and no OOM or
+>    partial output occurs. Do not add a v4 font cache, network exception, or
+>    output normalization after observation. T5.5.2 now returns to replacement
+>    external-target/build-route selection under a fresh zero-row decision.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
@@ -773,6 +781,9 @@ session state.
 > [`glaurung-feedback-reconciliation-2026-07-20.md`](docs/research/08-planning/glaurung-feedback-reconciliation-2026-07-20.md).
 > The user-provided July 16 copy and current Glaurung reviewer checklist were
 > rechecked on 2026-07-21; the evidence-based dispositions did not change.
+> In particular, A0 remains completed reproducibility infrastructure whose
+> five-policy sweep found no validated coverage delta; it is not the active
+> research lane, and ADR-0326's external-target result does not reopen it.
 
 > **WASM-safe speed: do not invest in SIMD (reviewed 2026-07-20).** A reported
 > scratch prototype explored portable SIMD against the WASM constraint, but its

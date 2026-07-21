@@ -380,4 +380,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0323](adr-0323-preregister-maestro-device-id-llvm-capture.md) | Reject the first Maestro owning-kernel LLVM capture at the frozen two-root full-module byte-identity gate | accepted |
 | [0324](adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md) | Diagnose Maestro's broad two-root LLVM drift as a dependency-wide source-path remapping gap; grant no capture credit | accepted |
 | [0325](adr-0325-preregister-dependency-wide-maestro-path-remap.md) | Reject dependency-wide path remapping after zero root-token leakage but continued raw full-module drift | accepted |
-| [0326](adr-0326-preregister-stable-virtual-root-maestro-capture.md) | Preregister two independent Maestro builds at identical unprivileged virtual source/target paths | proposed |
+| [0326](adr-0326-preregister-stable-virtual-root-maestro-capture.md) | Reject isolated Maestro capture when its owning build requires an unregistered network font input | accepted |

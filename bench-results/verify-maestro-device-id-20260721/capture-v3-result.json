@@ -1,0 +1,63 @@
+{
+  "artifacts": {
+    "external_bytes_committed": 0,
+    "local_partial_retained": false
+  },
+  "build": {
+    "attempted": 1,
+    "completed": 0,
+    "module_emitted": false,
+    "resource_scope": {
+      "jobs": 1,
+      "memory_high_bytes": 2621440000,
+      "memory_max_bytes": 4294967296,
+      "memory_swap_max_bytes": 536870912
+    }
+  },
+  "capture_credit": false,
+  "failure": {
+    "cause": "upstream_build_script_network_input",
+    "detail": "font download failed: failed to lookup address information: Temporary failure in name resolution",
+    "kind": "cargo_rustc_v3",
+    "stage": "build"
+  },
+  "identity_sha256": "b30b8e9ca8d4b24f200cdd351f81c1ea6d6bf486323dd370b7b5f67ebb045537",
+  "oom_audit": {
+    "kernel_messages_observed": 0,
+    "window": "capture execution through result recording"
+  },
+  "registration_sha256": "e90d30e92f421340f8ee115fd616acc34445b12c6f8bfa2506b6453a85b7333f",
+  "runner_commit": "94dcd5cf81969c970c9b06dcebe0a015ff191423",
+  "schema": "axeyum.maestro-device-id-capture-v3-result.v1",
+  "source_cause": {
+    "build_main": {
+      "path": "kernel/build/main.rs",
+      "sha256": "7af88a7669843dbd0e519cada58961b41fc2989b97aa93d367b8b841f8705a43"
+    },
+    "configuration": {
+      "font_url": "https://ftp.gnu.org/pub/gnu/unifont/unifont-17.0.04/unifont_all-17.0.04.hex.gz",
+      "path": "kernel/default.build-config.toml",
+      "sha256": "203f4a10e925a3a79857465afabfc2156e9e5e2ead4dc0f7816d8182ddb93838"
+    },
+    "font_resolver": {
+      "path": "kernel/build/font.rs",
+      "sha256": "1b9c8c3b8c1c3c5f23db0063e52ffd418bd15bef84b25f2ae2ea2a7c3c3db8b4"
+    }
+  },
+  "status": "rejected",
+  "summary": {
+    "accepted": 0,
+    "builds_completed": 0,
+    "builds_started": 1,
+    "dropped": 3,
+    "extraction_started": false,
+    "parser_admission_started": false,
+    "solver_queries": 0,
+    "targets": 3
+  },
+  "upstream": {
+    "commit": "650a3f62c386d113b4cbbc11645d945d57620cbb",
+    "repository": "https://github.com/maestro-os/maestro.git",
+    "tree": "6a51753d1f7b80117979db4f35146f55f5e248b4"
+  }
+}
