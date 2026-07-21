@@ -143,6 +143,34 @@ pub fn sigma_k(k: u32, n: i128) -> Option<i128> {
     Some(result)
 }
 
+/// **Jordan's totient** `Jₖ(n) = nᵏ·∏_{p|n}(1 − p^{−k})` — the number of `k`-tuples
+/// from `{1,…,n}` that, together with `n`, are setwise coprime. Generalizes Euler's
+/// totient (`J₁ = euler_phi`); `Jₖ(1) = 1`. Computed exactly over the prime
+/// factorization as `∏ (pᵉᵏ − p^{(e−1)k})`. `None` for `n ≤ 0`, `k = 0`, or overflow.
+///
+/// ```
+/// use axeyum_cas::ntheory_more::jordan_totient;
+/// use axeyum_cas::ntheory::euler_phi;
+/// // J₁ = Euler's φ.
+/// assert_eq!(jordan_totient(1, 10), Some(euler_phi(10)));
+/// // J₂(3) = 3² − 1 = 8.
+/// assert_eq!(jordan_totient(2, 3), Some(8));
+/// ```
+#[must_use]
+pub fn jordan_totient(k: u32, n: i128) -> Option<i128> {
+    if n <= 0 || k == 0 {
+        return None;
+    }
+    let mut result: i128 = 1;
+    for (prime, exponent) in factorize(n) {
+        // Factor contribution p^{(e−1)k}·(p^k − 1) = p^{ek} − p^{(e−1)k}.
+        let high = prime.checked_pow(exponent.checked_mul(k)?)?;
+        let low = prime.checked_pow(exponent.checked_sub(1)?.checked_mul(k)?)?;
+        result = result.checked_mul(high.checked_sub(low)?)?;
+    }
+    Some(result)
+}
+
 /// Whether `n` is a perfect number (`sigma_1(n) == 2 * n`).
 ///
 /// A positive integer equal to the sum of its proper divisors. Non-positive `n`
@@ -612,6 +640,23 @@ mod tests {
         for squareful in [4i128, 8, 9, 18, 12, 50, 500] {
             assert_eq!(mobius(squareful), 0, "mu({squareful})");
         }
+    }
+
+    #[test]
+    fn jordan_totient_generalizes_phi() {
+        use crate::ntheory::euler_phi;
+        // J₁ = Euler's φ.
+        for n in 1..=40i128 {
+            assert_eq!(jordan_totient(1, n), Some(euler_phi(n)), "J1({n})");
+        }
+        // Known values and multiplicativity J₂(6)=J₂(2)·J₂(3)=3·8=24.
+        assert_eq!(jordan_totient(2, 3), Some(8));
+        assert_eq!(jordan_totient(2, 2), Some(3));
+        assert_eq!(jordan_totient(2, 6), Some(24));
+        assert_eq!(jordan_totient(3, 2), Some(7));
+        assert_eq!(jordan_totient(2, 1), Some(1));
+        assert_eq!(jordan_totient(0, 5), None);
+        assert_eq!(jordan_totient(2, 0), None);
     }
 
     #[test]
