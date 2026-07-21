@@ -25,7 +25,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::ntheory::{divisors, euler_phi, factorize, gcd, mod_pow};
+use crate::ntheory::{divisors, euler_phi, factorize, gcd, is_prime, mod_pow};
 
 // ---------------------------------------------------------------------------
 // Internal overflow-safe helpers
@@ -221,6 +221,84 @@ pub fn jacobi_symbol(a: i128, n: i128) -> i32 {
 /// ```
 pub fn is_quadratic_residue(a: i128, p: i128) -> bool {
     legendre_symbol(a, p) != -1
+}
+
+/// A **modular square root** of `a` modulo an **odd prime** `p` — the smaller `x`
+/// in `[0, p)` with `x² ≡ a (mod p)` (the other root is `p − x`), by the
+/// **Tonelli–Shanks** algorithm. `None` if `p` is not an odd prime or `a` is a
+/// quadratic **non**-residue (no root exists); `x = 0` when `a ≡ 0`.
+///
+/// The result re-checks trivially: `sqrt_mod(a,p)²  ≡ a (mod p)`.
+///
+/// # Examples
+///
+/// ```
+/// use axeyum_cas::ntheory_advanced::sqrt_mod;
+/// // 4² = 16 ≡ 2 (mod 7); the smaller root of x² ≡ 2 is 3 (3²=9≡2).
+/// assert_eq!(sqrt_mod(2, 7), Some(3));
+/// // 2 is a non-residue mod 5 — no square root.
+/// assert_eq!(sqrt_mod(2, 5), None);
+/// ```
+#[must_use]
+pub fn sqrt_mod(a: i128, p: i128) -> Option<i128> {
+    if p < 3 || !is_prime(p) {
+        return None; // require an odd prime modulus
+    }
+    let a = a.rem_euclid(p);
+    if a == 0 {
+        return Some(0);
+    }
+    if legendre_symbol(a, p) != 1 {
+        return None; // non-residue — no square root
+    }
+    // Exact modular multiply `x·y mod p` (checked against i128 overflow).
+    let mul_mod = |x: i128, y: i128| -> Option<i128> { Some(x.checked_mul(y)?.rem_euclid(p)) };
+    // Fast path p ≡ 3 (mod 4): x = a^{(p+1)/4}.
+    if p % 4 == 3 {
+        let root = mod_pow(a, u128::try_from((p + 1) / 4).ok()?, p)?;
+        return Some(root.min(p - root));
+    }
+    // Write p − 1 = odd_part·2^{two_adic} with odd_part odd.
+    let mut odd_part = p - 1;
+    let mut two_adic = 0u32;
+    while odd_part % 2 == 0 {
+        odd_part /= 2;
+        two_adic += 1;
+    }
+    // A quadratic non-residue, used to walk down the 2-power subgroup.
+    let mut nonresidue = 2;
+    while legendre_symbol(nonresidue, p) != -1 {
+        nonresidue += 1;
+    }
+    let odd_exp = u128::try_from(odd_part).ok()?;
+    let mut level = two_adic;
+    let mut generator = mod_pow(nonresidue, odd_exp, p)?;
+    let mut remainder = mod_pow(a, odd_exp, p)?;
+    let mut root = mod_pow(a, u128::try_from((odd_part + 1) / 2).ok()?, p)?;
+    loop {
+        if remainder == 1 {
+            return Some(root.min(p - root));
+        }
+        // Least order in (0, level) with remainder^{2^order} ≡ 1.
+        let mut order = 0u32;
+        let mut square = remainder;
+        while square != 1 {
+            square = mul_mod(square, square)?;
+            order += 1;
+            if order == level {
+                return None; // should not happen for a genuine residue
+            }
+        }
+        // factor = generator^{2^{level−order−1}}.
+        let mut factor = generator;
+        for _ in 0..(level - order - 1) {
+            factor = mul_mod(factor, factor)?;
+        }
+        level = order;
+        generator = mul_mod(factor, factor)?;
+        remainder = mul_mod(remainder, generator)?;
+        root = mul_mod(root, factor)?;
+    }
 }
 
 /// Multiplicative order of `a` modulo `n`: the least `k > 0` with `a^k ≡ 1`.
@@ -570,6 +648,34 @@ mod tests {
                 assert_eq!(is_quadratic_residue(a, p), brute_is_qr, "QR({a}, {p})");
             }
         }
+    }
+
+    #[test]
+    fn tonelli_shanks_square_roots() {
+        // For every prime (both p≡3 and p≡1 mod 4) and every residue, the returned
+        // root squares back, and non-residues decline.
+        for &p in &[3i128, 5, 7, 11, 13, 17, 41, 97, 101] {
+            for a in 0..p {
+                match sqrt_mod(a, p) {
+                    Some(x) => {
+                        assert!(x >= 0 && x < p);
+                        assert_eq!(mod_pow(x, 2, p), Some(a.rem_euclid(p)), "√{a} mod {p}");
+                        // The returned root is the smaller of the pair.
+                        if x != 0 {
+                            assert!(x <= p - x);
+                        }
+                    }
+                    None => assert!(a.rem_euclid(p) != 0 && !is_quadratic_residue(a, p)),
+                }
+            }
+        }
+        // A composite / even modulus is rejected.
+        assert_eq!(sqrt_mod(4, 15), None);
+        assert_eq!(sqrt_mod(1, 2), None);
+        // A large prime (p ≡ 3 mod 4).
+        let big = 1_000_000_007i128;
+        let root = sqrt_mod(2, big).unwrap();
+        assert_eq!(mod_pow(root, 2, big), Some(2));
     }
 
     #[test]
