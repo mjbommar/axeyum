@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 379 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 383 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -20,11 +20,11 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation (definite) | `definite_sum` (Σ over bounds), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
-| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd power), `∫tan`, `∫atan`, `∫p·ln`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd power), `∫tan`, `∫atan`, `∫p·ln`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`), `series`/`series_at`/`laurent_series` (incl. `tan`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
-| Transforms | `laplace_transform` + `inverse_laplace` (simple poles, round-trip-certified) | ✓ |
+| Transforms | `laplace_transform` + `inverse_laplace`, `z_transform` + `inverse_z_transform` (discrete; simple poles, round-trip-certified) | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
-| Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable** | values compute; identities ✓ |
+| Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable**; trig-equation solving via `solve` (`2sin x−1⇒π/6,5π/6`, principal in [0,2π)) | values compute; identities ✓ |
 | Complex | `imaginary_unit` (`I²=−1`), `conjugate`, `real_part`, `imaginary_part`, `modulus`, `roots_of_unity` | ✓ |
 | Linear algebra | `Matrix`: +/−/×, determinant (+ Bareiss), RREF, solve, inverse, `adjugate`/`cofactor`, `pow`, `hadamard`/`kronecker`, `null_space`, `lu`, `rank`, `trace`, char-poly, `eigenvalues`/`eigenvectors`, `minimal_polynomial`, `diagonalize` (P·D·P⁻¹), `jordan_form` (P·J·P⁻¹, **defective** via generalized eigenvectors), `matrix_exp` (e^{At}, rational spectrum incl. defective), `linear_ode_system` (x′=Ax), Hermite/Smith, `gram_schmidt`; `solve_linear_system`, `least_squares_polynomial` | det/solve/eigvec/diag/jordan/matexp/ODE ✓; A·P=P·J ✓ |
 | Logic / sets | `boolean::BoolExpr` (truth tables, tautology/SAT, DNF/CNF, Quine–McCluskey); `sets::RealSet` (interval unions, set algebra, measure); `interval_arith::Interval` (rigorous enclosures) | truth-table / exact ✓ |
@@ -35,7 +35,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Geometry | `geometry`: `Point`/`Line`/`Circle` — distance, midpoint, slope, collinear, triangle area, line ops, circumcircle | exact |
 | Vector calculus | `gradient`, `jacobian`, `divergence`, `curl`, `hessian`, `laplacian` (certified partials); `dot`, `cross`, `norm` | ✓ |
 | Special polys | `orthopoly`: `chebyshev_t`/`chebyshev_u`/`legendre`/`hermite`/`laguerre` (three-term recurrences) | ✓ (vs closed forms) |
-| Combinatorics | `combinatorics`: `bernoulli`, `euler_number`, `stirling_first`/`second`, `bell`, `partition_count`, `catalan`, `fibonacci`/`lucas`, `harmonic`/`generalized_harmonic`; `bernoulli_polynomial`/`euler_polynomial`; `finite_product` (∏) | exact |
+| Combinatorics | `combinatorics`: `bernoulli`, `euler_number`, `stirling_first`/`second`, `bell`, `partition_count`, `catalan`, `fibonacci`/`lucas`, `harmonic`/`generalized_harmonic`, `derangements`, `double_factorial`, `multinomial`; `bernoulli_polynomial`/`euler_polynomial`; `finite_product` (∏) | exact |
 | Logs / abs | `expand_log`, `logcombine` (product/quotient/power rules), `Abs` head (`|·|`, `√(x²)→|x|`) | compute / exact |
 | Statistics | `stats`: mean/median/mode/variance/covariance; `standard_deviation`, `correlation` (surd-simplified) | exact |
 | Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
