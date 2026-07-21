@@ -1866,11 +1866,10 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
                 return None; // more than one transcendental term — unsupported
             }
             head = Some(matched);
-        } else if let Some(c) = constant_term(term) {
-            // A var-free constant term (`5`, `−8`, `3/2`, …).
-            constant = constant.checked_add(c)?;
         } else {
-            return None; // a var-dependent, non-transcendental term — unsupported
+            // Otherwise a var-free constant term (`5`, `−8`, `3/2`, …); a
+            // var-dependent non-transcendental term declines the whole match.
+            constant = constant.checked_add(constant_term(term)?)?;
         }
     }
     let (func, big_a, a, b) = head?;
@@ -8924,6 +8923,34 @@ mod tests {
         for r in &solve(&h, "x").unwrap() {
             assert_equal(&h.substitute("x", r), &CasExpr::zero());
         }
+    }
+
+    #[test]
+    fn solve_elementary_transcendental_equations() {
+        let x = || v("x");
+        // eˣ − 5 = 0 ⇒ ln 5 (certified: e^{ln 5} = 5 via the exp tower).
+        let roots = solve(&(x().exp() - CasExpr::int(5)), "x").expect("solvable");
+        assert_eq!(roots.len(), 1);
+        assert_equal(&roots[0], &CasExpr::int(5).ln());
+        // 2·e^{3x} − 8 = 0 ⇒ ln 4 / 3.
+        let r2 = solve(
+            &(CasExpr::int(2) * (CasExpr::int(3) * x()).exp() - CasExpr::int(8)),
+            "x",
+        )
+        .expect("solvable");
+        assert_equal(&r2[0], &(CasExpr::int(4).ln() / CasExpr::int(3)));
+        // e^{x−1} − 1 = 0 ⇒ x = 1 (ln 1 folds to 0).
+        let r3 = solve(&((x() - CasExpr::int(1)).exp() - CasExpr::int(1)), "x").expect("solvable");
+        assert_equal(&r3[0], &CasExpr::int(1));
+        // eˣ + 1 = 0 has no real root (exp > 0) — declined.
+        assert!(solve(&(x().exp() + CasExpr::int(1)), "x").is_none());
+        // ln roots (`ln x − 2`) are not yet certifiable (ln∘exp unreduced) — declined.
+        assert!(solve(&(x().ln() - CasExpr::int(2)), "x").is_none());
+        // A polynomial still routes to the polynomial solver.
+        assert_eq!(
+            solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
+            2
+        );
     }
 
     #[test]
