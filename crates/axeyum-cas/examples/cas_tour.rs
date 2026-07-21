@@ -5,8 +5,10 @@
 //! decidable zero-test / differentiate-and-check), not merely computed it.
 
 use axeyum_cas::{
-    CasExpr, LimitPoint, Matrix, apart, cancel, dsolve_homogeneous, expand, factor, integrate,
-    limit, ntheory, series, solve, sum_polynomial,
+    CasExpr, LimitPoint, Matrix, apart, cancel, definite_integrate, discriminant,
+    dsolve_homogeneous, eigenvectors, equal, expand, factor, factor_expr, gradient, integrate,
+    limit, minimal_polynomial, ntheory, ntheory_advanced, resultant, series_at, simplify_radicals,
+    series, solve, standard_deviation, stats, sum_polynomial, ZeroTest,
 };
 use axeyum_ir::Rational;
 
@@ -54,17 +56,43 @@ fn main() {
     println!("dsolve(y'' + y = 0) = {}   [CERTIFIED]", ode.unwrap());
 
     println!("\n-- linear algebra --");
-    let m = Matrix::from_rows(vec![
-        vec![i(1), i(2)],
-        vec![i(3), i(4)],
-    ])
-    .unwrap();
-    println!("det([[1,2],[3,4]]) = {}", m.determinant().unwrap());
+    let m = Matrix::from_rows(vec![vec![i(2), i(0)], vec![i(0), i(3)]]).unwrap();
+    println!("det([[2,0],[0,3]]) = {}", m.determinant().unwrap());
+    for (lambda, basis) in eigenvectors(&m, "L").unwrap() {
+        let vecs: Vec<String> = basis.iter().map(|v| v.to_string().replace('\n', "")).collect();
+        println!("eigenvalue {lambda} → eigenvector(s) {}   [A·v=λ·v]", vecs.join(", "));
+    }
+    println!("minimal_polynomial([[2,0],[0,3]]) = {}   [m(A)=0]", minimal_polynomial(&m, "L").unwrap());
+
+    println!("\n-- more calculus --");
+    println!(
+        "∫_0^1 3x^2 dx = {}   [CERTIFIED by FTC]",
+        definite_integrate(&(i(3) * x().pow(2)), "x", &i(0), &i(1)).unwrap().value
+    );
+    println!("Taylor(ln(x), about x=1, order 3) = {}", series_at(&x().ln(), "x", &i(1), 3).unwrap());
+    let grad = gradient(&(x().pow(2) * CasExpr::var("y")), &["x", "y"]);
+    println!("∇(x²y) = ({}, {})", grad[0], grad[1]);
+
+    println!("\n-- factoring, resultants, radicals --");
+    println!("factor_expr(x^4 - 1) = {}   [CERTIFIED]", factor_expr(&(x().pow(4) - i(1)), "x").unwrap());
+    println!("discriminant(x^2 - 5x + 6) = {}", discriminant(&(x().pow(2) - i(5) * x() + i(6)), "x").unwrap());
+    println!("resultant(x^2-1, x-1) = {}   [0 ⇒ common root]", resultant(&(x().pow(2) - i(1)), &(x() - i(1)), "x").unwrap());
+    println!("simplify_radicals(√12) = {}", simplify_radicals(&i(12).sqrt()));
+    let radical_id = equal(&(i(2).sqrt() * i(2).sqrt()), &i(2));
+    println!("√2·√2 = 2 ? {}", matches!(radical_id, ZeroTest::Certified { equal: true, .. }));
+
+    println!("\n-- statistics --");
+    let data: Vec<Rational> = [2, 4, 4, 4, 5, 5, 7, 9].into_iter().map(Rational::integer).collect();
+    println!("mean = {}, median = {}", stats::mean(&data).unwrap(), stats::median(&data).unwrap());
+    println!("population variance = {}, stddev = {}", stats::variance(&data).unwrap(), standard_deviation(&data).unwrap());
 
     println!("\n-- number theory --");
     println!("is_prime(2^31 - 1) = {}", ntheory::is_prime(2_147_483_647));
     println!("factorize(360) = {:?}", ntheory::factorize(360));
-    println!("euler_phi(36) = {}", ntheory::euler_phi(36));
+    println!("legendre(3, 7) = {}   (3 is a non-residue mod 7)", ntheory_advanced::legendre_symbol(3, 7));
+    println!("primitive_root(7) = {:?}", ntheory_advanced::primitive_root(7));
+    println!("discrete_log(2, 3, 5) = {:?}   (2^3 = 8 ≡ 3 mod 5)", ntheory_advanced::discrete_log(2, 3, 5));
+    println!("Pell x²-61y²=1 fundamental solution = {:?}", ntheory_advanced::pell_fundamental_solution(61));
 
     println!("\nEvery result is exact; the CERTIFIED ones carry a machine-checked proof.");
 }

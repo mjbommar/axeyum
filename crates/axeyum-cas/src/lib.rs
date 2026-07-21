@@ -1913,7 +1913,12 @@ fn minimal_polynomial_expr(coeffs: &[Rational], var: &str) -> CasExpr {
 /// derivative (via [`CasExpr::differentiate`], exact on the algebraic fragment).
 #[must_use]
 pub fn gradient(expr: &CasExpr, vars: &[&str]) -> Vec<CasExpr> {
-    vars.iter().map(|var| expr.differentiate(var)).collect()
+    vars.iter()
+        .map(|var| {
+            let partial = expr.differentiate(var);
+            expand(&partial).unwrap_or(partial)
+        })
+        .collect()
 }
 
 /// The Jacobian matrix `J[i][j] = ∂fᵢ/∂xⱼ` of a vector of scalar fields `exprs`
@@ -1924,7 +1929,14 @@ pub fn gradient(expr: &CasExpr, vars: &[&str]) -> Vec<CasExpr> {
 pub fn jacobian(exprs: &[CasExpr], vars: &[&str]) -> Option<Matrix> {
     let rows: Vec<Vec<CasExpr>> = exprs
         .iter()
-        .map(|f| vars.iter().map(|var| f.differentiate(var)).collect())
+        .map(|f| {
+            vars.iter()
+                .map(|var| {
+                    let partial = f.differentiate(var);
+                    expand(&partial).unwrap_or(partial)
+                })
+                .collect()
+        })
         .collect();
     Matrix::from_rows(rows)
 }
