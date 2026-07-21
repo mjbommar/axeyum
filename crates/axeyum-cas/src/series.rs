@@ -303,7 +303,7 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         UnaryFunc::Sqrt => {
             require_unit(argument, constant_term).and_then(|inner| compose(&inner, binomial_half))
         }
-        UnaryFunc::Tan => None,
+        UnaryFunc::Tan | UnaryFunc::Abs => None,
     }
 }
 

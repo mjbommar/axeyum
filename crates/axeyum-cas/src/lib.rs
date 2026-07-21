@@ -115,6 +115,8 @@ pub enum UnaryFunc {
     Atan,
     /// Principal square root `sqrt`.
     Sqrt,
+    /// Absolute value `abs`.
+    Abs,
 }
 
 impl UnaryFunc {
@@ -129,6 +131,7 @@ impl UnaryFunc {
             UnaryFunc::Tan => "tan",
             UnaryFunc::Atan => "atan",
             UnaryFunc::Sqrt => "sqrt",
+            UnaryFunc::Abs => "abs",
         }
     }
 
@@ -156,6 +159,8 @@ impl UnaryFunc {
             UnaryFunc::Sqrt => {
                 CasExpr::int(1) / (CasExpr::int(2) * CasExpr::Unary(UnaryFunc::Sqrt, Box::new(u())))
             }
+            // d/du |u| = u/|u| (the sign of u; valid away from u = 0)
+            UnaryFunc::Abs => u() / CasExpr::Unary(UnaryFunc::Abs, Box::new(u())),
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -242,6 +247,22 @@ impl CasExpr {
     #[must_use]
     pub fn sqrt(self) -> Self {
         CasExpr::Unary(UnaryFunc::Sqrt, Box::new(self))
+    }
+
+    /// The absolute value `|self|`. A constant argument folds to its magnitude
+    /// immediately (`|−3| = 3`); otherwise it is the symbolic `abs` head.
+    #[must_use]
+    pub fn abs(self) -> Self {
+        if let CasExpr::Const(value) = self {
+            // Denominators are normalized positive, so the sign is the numerator's.
+            if value.numerator() >= 0 {
+                return CasExpr::Const(value);
+            }
+            if let Some(magnitude) = value.checked_neg() {
+                return CasExpr::Const(magnitude);
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Abs, Box::new(self))
     }
 
     /// The imaginary unit `I`. It is a reserved symbol: the zero-test ([`equal`])
@@ -2284,6 +2305,18 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
             {
                 return simplified;
             }
+            // √(b^{2k}) = |b^k| (always non-negative), a sound identity.
+            if let CasExpr::Pow(base, exponent) = &inner
+                && exponent % 2 == 0
+            {
+                let half = exponent / 2;
+                let root = if half == 1 {
+                    (**base).clone()
+                } else {
+                    CasExpr::Pow(base.clone(), half)
+                };
+                return root.abs();
+            }
             inner.sqrt()
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(simplify_radicals(arg))),
@@ -2539,6 +2572,7 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Tan => value.tan(),
                 UnaryFunc::Atan => value.atan(),
                 UnaryFunc::Sqrt => value.sqrt(),
+                UnaryFunc::Abs => value.abs(),
             })
         }
     }
@@ -4102,6 +4136,27 @@ mod tests {
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
         assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn absolute_value_head() {
+        let x = || v("x");
+        // Constant folds: |−3| = 3, |5| = 5, |−1/2| = 1/2.
+        assert_equal(&CasExpr::int(-3).abs(), &CasExpr::int(3));
+        assert_equal(&CasExpr::int(5).abs(), &CasExpr::int(5));
+        assert_equal(&CasExpr::rat(-1, 2).abs(), &CasExpr::rat(1, 2));
+        // Symbolic |x| renders and round-trips through the zero-test.
+        assert_eq!(x().abs().to_string(), "abs(x)");
+        assert_equal(&x().abs(), &x().abs());
+        // evalf(|−4|) = 4; evalf(|x|) at x = −2 is 2.
+        assert!((evalf(&CasExpr::int(-4).abs(), &[]).unwrap() - 4.0).abs() < 1e-12);
+        assert!((evalf(&x().abs(), &[("x", -2.0)]).unwrap() - 2.0).abs() < 1e-12);
+        // d/dx |x| = x/|x|.
+        assert_equal(&x().abs().differentiate("x"), &(x() / x().abs()));
+        // √(x²) = |x| (sound identity via simplify_radicals).
+        assert_equal(&simplify_radicals(&x().pow(2).sqrt()), &x().abs());
+        // √(x⁴) = |x²| = x² … as |x²|; check it equals abs(x²).
+        assert_equal(&simplify_radicals(&x().pow(4).sqrt()), &x().pow(2).abs());
     }
 
     #[test]
