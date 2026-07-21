@@ -3193,6 +3193,84 @@ pub fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
     Some((p, d))
 }
 
+/// The **matrix exponential** `exp(A·t)` of a square rational matrix `A` that is
+/// **diagonalizable over ℚ**, as a matrix of [`CasExpr`] in the symbol `t`.
+///
+/// With `A = P·D·P⁻¹` (from [`diagonalize`]), `exp(A·t) = P·diag(e^{dᵢ·t})·P⁻¹`.
+/// The result is **certified** by the defining initial-value problem: every entry
+/// of `d/dt M(t) − A·M(t)` is proven zero by [`equal`] (the exp-tower differentiates
+/// `e^{dᵢt}`) and `M(0) = I`, which uniquely characterizes `exp(A·t)`. Returns
+/// `None` if `A` is not square, is not diagonalizable over ℚ (e.g. a defective or
+/// irrational-eigenvalue matrix — Jordan-form territory), or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, Matrix, matrix_exp, equal, ZeroTest};
+/// // exp(diag(1,2)·t) = diag(e^t, e^{2t}).
+/// let a = Matrix::from_rows(vec![
+///     vec![CasExpr::int(1), CasExpr::zero()],
+///     vec![CasExpr::zero(), CasExpr::int(2)],
+/// ]).unwrap();
+/// let m = matrix_exp(&a, "t").unwrap();
+/// let t = CasExpr::var("t");
+/// assert!(matches!(equal(m.get(0, 0).unwrap(), &t.clone().exp()), ZeroTest::Certified { equal: true, .. }));
+/// assert!(matches!(equal(m.get(1, 1).unwrap(), &(CasExpr::int(2) * t).exp()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn matrix_exp(matrix: &Matrix, t: &str) -> Option<Matrix> {
+    let n = matrix.rows();
+    if n == 0 || n != matrix.cols() {
+        return None;
+    }
+    // A = P·D·P⁻¹ with D diagonal (rational eigenvalues). Use a reserved spectral
+    // variable so it cannot collide with `t` or any entry symbol.
+    let (p, d) = diagonalize(matrix, "\0mexp:lambda")?;
+    let p_inv = p.solve(&Matrix::identity(n))?;
+    // exp(D·t) = diag(e^{dᵢ·t}).
+    let t_expr = CasExpr::var(t);
+    let mut exp_d_rows = vec![vec![CasExpr::zero(); n]; n];
+    for (i, row) in exp_d_rows.iter_mut().enumerate() {
+        let d_ii = d.get(i, i)?.clone();
+        row[i] = (d_ii * t_expr.clone()).exp();
+    }
+    let exp_d = Matrix::from_rows(exp_d_rows)?;
+    let product = p.mul(&exp_d)?.mul(&p_inv)?;
+    // Simplify entries for a clean, readable result.
+    let mut simplified_rows = Vec::with_capacity(n);
+    for i in 0..n {
+        let mut row = Vec::with_capacity(n);
+        for j in 0..n {
+            row.push(simplify(product.get(i, j)?));
+        }
+        simplified_rows.push(row);
+    }
+    let result = Matrix::from_rows(simplified_rows)?;
+
+    // Certificate: M(0) = I and d/dt M(t) = A·M(t) entrywise.
+    let a_times_m = matrix.mul(&result)?;
+    for i in 0..n {
+        for j in 0..n {
+            let entry = result.get(i, j)?;
+            // M(0) = I.
+            let at_zero = entry.substitute(t, &CasExpr::zero());
+            let expected0 = if i == j { CasExpr::one() } else { CasExpr::zero() };
+            if !matches!(
+                equal(&at_zero, &expected0),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+            // d/dt M = A·M.
+            if !matches!(
+                equal(&entry.differentiate(t), a_times_m.get(i, j)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    Some(result)
+}
+
 /// A square rational-constant matrix as an exact rational grid, or `None` if any
 /// entry is not a bare [`CasExpr::Const`].
 fn matrix_to_rationals(matrix: &Matrix) -> Option<Vec<Vec<Rational>>> {
@@ -6806,6 +6884,39 @@ mod tests {
                 &(CasExpr::int(3) * v.get(i, 0).unwrap().clone()),
             );
         }
+    }
+
+    #[test]
+    fn matrix_exp_solves_the_defining_ivp() {
+        let t = || v("t");
+        // A companion-like matrix [[0,1],[-2,-3]] (eigenvalues -1, -2).
+        let a = Matrix::from_rows(vec![
+            vec![CasExpr::int(0), CasExpr::int(1)],
+            vec![CasExpr::int(-2), CasExpr::int(-3)],
+        ])
+        .unwrap();
+        let m = matrix_exp(&a, "t").expect("diagonalizable → matrix exp");
+        // M(0) = I and d/dt M = A·M (the values `matrix_exp` certifies internally).
+        let am = a.mul(&m).unwrap();
+        for i in 0..2 {
+            for j in 0..2 {
+                let entry = m.get(i, j).unwrap();
+                let at_zero = entry.substitute("t", &CasExpr::zero());
+                let expected0 = if i == j { CasExpr::int(1) } else { CasExpr::int(0) };
+                assert_equal(&at_zero, &expected0);
+                assert_equal(&entry.differentiate("t"), am.get(i, j).unwrap());
+            }
+        }
+        // M(0,0) = 2e^{-t} − e^{-2t}.
+        let expected00 = CasExpr::int(2) * (-t()).exp() - (CasExpr::int(-2) * t()).exp();
+        assert_equal(m.get(0, 0).unwrap(), &expected00);
+        // A defective matrix is declined (Jordan-form territory).
+        let shear = Matrix::from_rows(vec![
+            vec![CasExpr::int(3), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        assert!(matrix_exp(&shear, "t").is_none());
     }
 
     #[test]
