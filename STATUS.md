@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — Post-I4 census authorizes only I5.** The independent affine-
+  growth family is a contiguous 456-line ADR-0097/0105 seam with seven cohesive
+  items, two outward paths, and nine focused controls including a 64-seed Z3
+  positive/near-miss sweep. Capture `repair-const-nterm`’s Lean identity, then
+  move it privately to `int_reconstruct/affine_growth.rs` with explicit imports
+  and unchanged matching/order/caps/paths. It may reuse the existing private
+  prefix helper but must remain separate from Euclidean residue and from the
+  closed-universal/nested-XOR shared-helper region.
+
 - **2026-07-21 — I4 privately extracts Euclidean-residue reconstruction.** The
   four-item ADR-0095/0104 family now lives in the 354-line
   `int_reconstruct/euclidean_residue.rs` child with explicit imports, unchanged
@@ -5743,6 +5752,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Preregistered the affine-growth module seam.** Authorized only
+  the seven-item, 456-line ADR-0097/0105 family with a proof-byte gate and all
+  nine focused controls; residue and shared closed-quantifier helpers stay
+  separate.
 
 - **2026-07-21 — Extracted Euclidean-residue reconstruction.** Moved the exact
   344-line parent family into a private 354-line child, preserving the clock

@@ -35,6 +35,7 @@ not repeat completed namespace/configuration sweeps.
 | Quantified counterexample-cover reconstruction | 1,465 lines / 58,079 bytes | Private child; one crate router and one public re-export |
 | Single-pivot equality-partition reconstruction | 1,200 lines / 50,231 bytes | Private child; one crate router and one public re-export |
 | Euclidean-residue reconstruction | 354 lines / 13,361 bytes | Private child; one crate router, one public re-export, one private parent helper |
+| Affine-growth reconstruction | 456 parent lines / 16,998 bytes | Seven cohesive items; one crate router and one public entry point |
 | `nra_real_root.rs` | 7,503 lines / 329,731 bytes; 6,944 production lines | N1a--N1c share rational mechanics behind explicit policy; algebraic lifting remains distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -163,11 +164,22 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    The committed `clock-3` control preserves the pre-move 16,025-byte Lean
    module at FNV-1a `4e97fa307a29d1d0`. All six focused controls, all 895
    library tests, strict Clippy, and both rustdoc profiles pass.
+9. **I5 -- extract affine-growth reconstruction (next).** The ADR-0097/0105
+   family is one contiguous 456-line / 16,998-byte block with seven top-level
+   items. Its only outward paths are the crate-visible router and historical
+   public reconstructor; the private body owns its proposition bundle,
+   parameter lowering, proof construction, decline route, and universal
+   instantiation. Move it to private `int_reconstruct/affine_growth.rs` with
+   explicit imports and unchanged re-exports. Preserve certificate matching,
+   binder/parameter order, exact branch proof, cap, public visibility, and
+   generated Lean bytes. Add pre/post identity for `repair-const-nterm`. The
+   focused gate is all four reconstruction/routing controls and all five
+   evidence/termination/differential controls, including the 64-seed Z3 sweep.
 
 ## Post-I4 residual posture
 
-1. I4 is complete. Remeasure the remaining family boundaries before authorizing
-   a successor; affine growth is still an independent candidate, not implied.
+1. I5 is the next and only authorized slice. It has a narrow seven-item semantic
+   boundary, dedicated tests, and no dependency on the residue child.
 2. Keep closed-universal and nested-XOR reconstruction in the parent. Their two
    entry points share a large kernel-helper region, and a combined move would
    hide two distinct proof families behind one cosmetic module.
