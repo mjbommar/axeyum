@@ -2781,6 +2781,41 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     }
 }
 
+/// Solve a **separable first-order ODE** `dy/dx = f(x)·g(y)` by separation of
+/// variables, returning the **implicit** general solution `G(y) − F(x) − C0 = 0`
+/// (`= 0`), where `F = ∫ f dx` and `G = ∫ dy/g(y)`.
+///
+/// `f` is a function of `xvar` and `g` a function of `yvar`; `C0` is the reserved
+/// integration constant. **Certified** in the sense that both antiderivatives are
+/// differentiate-and-check certified (so `F′ = f` and `G′ = 1/g`), whence
+/// `d/dx[G(y)−F(x)] = (1/g)·y′ − f = 0` exactly along `y′ = f·g`. E.g. `y′ = y`
+/// gives `ln y − x − C0`; `y′ = x/y` gives `y²/2 − x²/2 − C0`. `None` if either
+/// integral is not found/certified or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_separable};
+/// // y′ = y  ⇒  ln y − x − C0 = 0.
+/// let sol = dsolve_separable(&CasExpr::int(1), &CasExpr::var("y"), "x", "y").unwrap();
+/// // dsolve is implicit; check dependence on both variables is present.
+/// assert!(sol.to_string().contains("ln(y)"));
+/// ```
+#[must_use]
+pub fn dsolve_separable(f: &CasExpr, g: &CasExpr, xvar: &str, yvar: &str) -> Option<CasExpr> {
+    // F = ∫ f dx (certified).
+    let big_f = integrate(f, xvar)?;
+    if !big_f.is_certified() {
+        return None;
+    }
+    // G = ∫ 1/g dy (certified).
+    let reciprocal = CasExpr::int(1) / g.clone();
+    let big_g = integrate(&reciprocal, yvar)?;
+    if !big_g.is_certified() {
+        return None;
+    }
+    // Implicit general solution G(y) − F(x) − C0 = 0.
+    Some(big_g.antiderivative - big_f.antiderivative - CasExpr::var("C0"))
+}
+
 /// Solve a **constant-coefficient linear recurrence** `aₙ = c₁·aₙ₋₁ + … + c_d·aₙ₋d`
 /// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
 /// returning a closed form `a(var)` for the general term.
@@ -7523,6 +7558,26 @@ mod tests {
         let sol3 =
             dsolve_first_order_linear(&CasExpr::int(-1), &x().pow(2), "x").expect("solvable");
         assert_equal(&(sol3.differentiate("x") - sol3.clone()), &x().pow(2));
+    }
+
+    #[test]
+    fn dsolve_separable_first_order() {
+        let x = || v("x");
+        let y = || v("y");
+        // For the implicit solution S(x,y) = G(y) − F(x) − C0, verify the defining
+        // antiderivative identities: ∂S/∂y = 1/g and −∂S/∂x = f, so along y′=f·g
+        // the total derivative d/dx S = (1/g)·y′ − f = 0.
+        let check = |f: CasExpr, g: CasExpr| {
+            let s = dsolve_separable(&f, &g, "x", "y").expect("separable");
+            // ∂S/∂y = 1/g(y).
+            assert_equal(&s.differentiate("y"), &(CasExpr::int(1) / g.clone()));
+            // ∂S/∂x = −f(x).
+            assert_equal(&s.differentiate("x"), &(-f));
+        };
+        check(CasExpr::int(1), y()); // y′ = y → ln y − x − C0
+        check(x(), y()); // y′ = xy
+        check(x(), CasExpr::int(1) / y()); // y′ = x/y → y²/2 − x²/2 − C0
+        check(CasExpr::int(1), y().pow(2)); // y′ = y²
     }
 
     #[test]
