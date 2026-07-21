@@ -4700,6 +4700,8 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_poly_times_exp(expr, var),
         integrate_poly_times_log(expr, var),
         integrate_poly_times_sinusoid(expr, var),
+        integrate_exp_times_sinusoid(expr, var),
+        integrate_trig_monomial(expr, var),
         integrate_trig_square(expr, var),
     ]
     .into_iter()
@@ -4975,6 +4977,230 @@ fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     ]))
 }
 
+/// Flatten a (possibly left-nested) product into its multiplicative factors.
+/// The `*` operator builds binary `Mul` nodes, so `x·eˣ·sin x` parses as
+/// `Mul([Mul([x, eˣ]), sin x])`; the finders below need the flat factor list
+/// `[x, eˣ, sin x]`. A non-product expression yields a one-element vector.
+fn flatten_mul(expr: &CasExpr) -> Vec<CasExpr> {
+    match expr {
+        CasExpr::Mul(factors) => factors.iter().flat_map(flatten_mul).collect(),
+        other => vec![other.clone()],
+    }
+}
+
+/// Integrate `p(x)·e^{a·x+c}·trig(b·x+d)` (`trig ∈ {sin, cos}`) for a polynomial
+/// `p` and linear exponent/argument. The antiderivative has the form
+/// `e^{ax+c}·(A(x)·cos(bx+d) + B(x)·sin(bx+d))`, whose polynomial coefficients
+/// `A, B` solve one coupled exact-rational linear system (matching, after
+/// differentiation, the `cos` and `sin` parts of the integrand). Covers
+/// `∫ eˣ·sin x = ½eˣ(sin x − cos x)`, `∫ e^{2x}cos x`, `∫ x·eˣ·sin x`, etc.
+/// `None` outside this shape; certified downstream by differentiate-and-check.
+fn integrate_exp_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    if !matches!(expr, CasExpr::Mul(_)) {
+        return None;
+    }
+    let factors = flatten_mul(expr);
+    let mut exp_arg: Option<CasExpr> = None;
+    let mut trig: Option<(UnaryFunc, CasExpr)> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in &factors {
+        match factor {
+            CasExpr::Unary(UnaryFunc::Exp, arg) if exp_arg.is_none() => {
+                exp_arg = Some((**arg).clone());
+            }
+            CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos), arg) if trig.is_none() => {
+                trig = Some((*f, (**arg).clone()));
+            }
+            CasExpr::Unary(UnaryFunc::Exp | UnaryFunc::Sin | UnaryFunc::Cos, _) => return None,
+            other => rest.push(other.clone()),
+        }
+    }
+    let exp_arg = exp_arg?;
+    let (which, trig_arg) = trig?;
+    // Both the exponent and the trig argument must be linear in `var`.
+    let exp_poly = normalize(&exp_arg)?.to_univariate(var)?;
+    let trig_poly = normalize(&trig_arg)?.to_univariate(var)?;
+    if poly::rat_degree(&exp_poly)? != 1 || poly::rat_degree(&trig_poly)? != 1 {
+        return None;
+    }
+    let a = exp_poly[1]; // exponential rate
+    let b = trig_poly[1]; // angular frequency
+    let p = normalize(&CasExpr::Mul(rest))?.to_univariate(var)?;
+    let degree = poly::rat_degree(&p)?;
+    let block = degree + 1; // coefficients per polynomial A, B
+    let size = 2 * block;
+    // Unknowns [A₀..A_d, B₀..B_d]. Differentiating F = e^{ax+c}(A cos + B sin)
+    // gives e^{ax+c}[(aA + A′ + bB) cos + (aB + B′ − bA) sin]. Equation block 1
+    // (rows 0..block) matches the cos coefficient, block 2 (rows block..size) the
+    // sin coefficient. `cols[column][row]`.
+    let mut cols: Vec<Vec<Rational>> = vec![vec![Rational::zero(); size]; size];
+    for j in 0..block {
+        let jr = Rational::integer(i128::try_from(j).ok()?);
+        // A_j column (index j): aA (row j, block 1), A′ (row j−1, block 1),
+        // −bA (row block+j, block 2).
+        cols[j][j] = a;
+        if j >= 1 {
+            cols[j][j - 1] = jr;
+        }
+        cols[j][block + j] = b.checked_neg()?;
+        // B_j column (index block+j): bB (row j, block 1), aB (row block+j,
+        // block 2), B′ (row block+j−1, block 2).
+        cols[block + j][j] = b;
+        cols[block + j][block + j] = a;
+        if j >= 1 {
+            cols[block + j][block + j - 1] = jr;
+        }
+    }
+    // rhs: cos integrand ⇒ p in block 1; sin integrand ⇒ p in block 2.
+    let mut rhs = vec![Rational::zero(); size];
+    let target = match which {
+        UnaryFunc::Cos => 0,
+        _ => block,
+    };
+    for (i, coeff) in p.iter().enumerate() {
+        rhs[target + i] = *coeff;
+    }
+    let solution = ratint::solve_linear(&cols, &rhs)?;
+    let a_expr = MultiPoly::from_univariate(var, &solution[0..block]).to_expr();
+    let b_expr = MultiPoly::from_univariate(var, &solution[block..size]).to_expr();
+    let exp_expr = MultiPoly::from_univariate(var, &exp_poly).to_expr().exp();
+    let trig_expr = MultiPoly::from_univariate(var, &trig_poly).to_expr();
+    Some(CasExpr::Mul(vec![
+        exp_expr,
+        CasExpr::Add(vec![
+            CasExpr::Mul(vec![a_expr, trig_expr.clone().cos()]),
+            CasExpr::Mul(vec![b_expr, trig_expr.sin()]),
+        ]),
+    ]))
+}
+
+/// Integrate a **trigonometric monomial** `k·sin(u)^m·cos(u)^n` with a common
+/// linear argument `u = a·x + b`, when at least one of `m, n` is odd. The odd
+/// factor supplies the differential for a substitution (`w = cos u` when `m` is
+/// odd, `w = sin u` when `n` is odd), reducing the integral to that of a
+/// polynomial in `w` via the Pythagorean identity. Covers `∫ sin x·cos x`,
+/// `∫ sin³x`, `∫ sin²x·cos x`, etc. Returns `None` when both powers are even
+/// (a later power-reduction slice) or outside this shape; certified downstream.
+fn integrate_trig_monomial(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let factors: Vec<CasExpr> = match expr {
+        CasExpr::Mul(_) => flatten_mul(expr),
+        CasExpr::Neg(a) => vec![CasExpr::int(-1), (**a).clone()],
+        other @ (CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _) | CasExpr::Pow(_, _)) => {
+            vec![other.clone()]
+        }
+        _ => return None,
+    };
+    let mut coeff = Rational::integer(1);
+    let mut sin_pow = 0u32;
+    let mut cos_pow = 0u32;
+    let mut arg: Option<CasExpr> = None;
+    // Record and cross-check the shared trig argument.
+    let mut set_arg = |a: &CasExpr| -> Option<()> {
+        match &arg {
+            Some(existing) if existing == a => Some(()),
+            Some(_) => None, // differing arguments — unsupported
+            None => {
+                arg = Some(a.clone());
+                Some(())
+            }
+        }
+    };
+    for factor in &factors {
+        match factor {
+            CasExpr::Const(c) => coeff = coeff.checked_mul(*c)?,
+            CasExpr::Unary(UnaryFunc::Sin, a) => {
+                set_arg(a)?;
+                sin_pow = sin_pow.checked_add(1)?;
+            }
+            CasExpr::Unary(UnaryFunc::Cos, a) => {
+                set_arg(a)?;
+                cos_pow = cos_pow.checked_add(1)?;
+            }
+            CasExpr::Pow(base, exp) => match base.as_ref() {
+                CasExpr::Unary(UnaryFunc::Sin, a) => {
+                    set_arg(a)?;
+                    sin_pow = sin_pow.checked_add(*exp)?;
+                }
+                CasExpr::Unary(UnaryFunc::Cos, a) => {
+                    set_arg(a)?;
+                    cos_pow = cos_pow.checked_add(*exp)?;
+                }
+                _ => return None,
+            },
+            _ => return None,
+        }
+    }
+    let arg = arg?;
+    let arg_poly = normalize(&arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let a = arg_poly[1];
+    let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    // Build the polynomial P(w) so that the integrand equals P(trig)·(d/dx of the
+    // substituted variable)/const, then integrate P and substitute back.
+    //   m odd: w = cos u, integrand = k·sin·(1−w²)^{(m−1)/2}·wⁿ, ∫ = −(k/a)·∫P(w)dw
+    //   n odd: w = sin u, integrand = k·cos·(1−w²)^{(n−1)/2}·wᵐ, ∫ = +(k/a)·∫P(w)dw
+    let (base_pow, other_half, sign, substituted) = if sin_pow % 2 == 1 {
+        (cos_pow, (sin_pow - 1) / 2, Rational::integer(-1), arg_expr.cos())
+    } else if cos_pow % 2 == 1 {
+        (sin_pow, (cos_pow - 1) / 2, Rational::integer(1), arg_expr.sin())
+    } else {
+        return None; // both even — not handled here
+    };
+    // P(w) = w^{base_pow} · (1 − w²)^{other_half}, as a dense coefficient vector.
+    let one_minus_w2 = vec![Rational::integer(1), Rational::zero(), Rational::integer(-1)];
+    let mut poly_w = vec![Rational::integer(1)];
+    for _ in 0..other_half {
+        poly_w = poly::ratpoly_mul(&poly_w, &one_minus_w2)?;
+    }
+    // Multiply by w^{base_pow} (shift up by base_pow).
+    let base_shift = usize::try_from(base_pow).ok()?;
+    let mut shifted = vec![Rational::zero(); base_shift];
+    shifted.extend_from_slice(&poly_w);
+    // Integrate term-by-term: ∫ Σ cᵢ wⁱ dw = Σ cᵢ/(i+1) w^{i+1}.
+    let integrated = poly_antiderivative(&shifted)?;
+    // Evaluate the antiderivative polynomial at w = substituted trig expression.
+    let poly_in_w = eval_poly_at(&integrated, &substituted);
+    let scale = coeff.checked_mul(sign)?.checked_div(a)?;
+    Some(scaled_term(scale, poly_in_w))
+}
+
+/// The antiderivative of a dense univariate polynomial (`∫ Σ cᵢ xⁱ = Σ
+/// cᵢ/(i+1) x^{i+1}`), as coefficients least-significant-first. `None` on overflow.
+fn poly_antiderivative(coeffs: &[Rational]) -> Option<Vec<Rational>> {
+    let mut out = vec![Rational::zero(); coeffs.len() + 1];
+    for (i, &c) in coeffs.iter().enumerate() {
+        let denom = Rational::integer(i128::try_from(i + 1).ok()?);
+        out[i + 1] = c.checked_div(denom)?;
+    }
+    Some(out)
+}
+
+/// Evaluate a dense polynomial (coefficients least-significant-first) at a
+/// [`CasExpr`] point, emitting a clean sum `Σ cᵢ·pointⁱ` that skips zero
+/// coefficients (so no `0·point` noise reaches the output).
+fn eval_poly_at(coeffs: &[Rational], point: &CasExpr) -> CasExpr {
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (i, &c) in coeffs.iter().enumerate() {
+        if c.is_zero() {
+            continue;
+        }
+        let power = match u32::try_from(i) {
+            Ok(0) => CasExpr::Const(c),
+            Ok(1) => scaled_term(c, point.clone()),
+            Ok(p) => scaled_term(c, point.clone().pow(p)),
+            Err(_) => continue,
+        };
+        terms.push(power);
+    }
+    match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.pop().unwrap_or_else(CasExpr::zero),
+        _ => CasExpr::Add(terms),
+    }
+}
+
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
 /// standard elementary function and the argument is linear in `var`. Returns the
 /// antiderivative or `None` outside the supported shapes; certified downstream.
@@ -5025,7 +5251,10 @@ fn integrate_elementary(expr: &CasExpr, var: &str) -> Option<CasExpr> {
                 - CasExpr::rat(1, 2) * (CasExpr::int(1) + arg_expr.pow(2)).ln();
             Some(scaled_term(k, body))
         }
-        // tan / sqrt closed forms are later slices.
+        // ∫ tan(u) = -(1/a) ln(cos u) is correct, but the zero-test cannot yet
+        // certify it (it does not fold `tan` into `sin/cos`), so — honoring the
+        // proof-carrying contract — it is declined rather than returned uncertified.
+        // sqrt closed forms are also later slices.
         _ => None,
     }
 }
@@ -7698,6 +7927,42 @@ mod tests {
             (CasExpr::int(2) * x()).sin().pow(2),
         ] {
             let result = integrate(&integrand, "x").expect("trig-square integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_exponential_times_sinusoid() {
+        let x = || v("x");
+        // ∫ eˣ·sin x, ∫ e^{2x}·cos x, ∫ x·eˣ·sin x, ∫ eˣ·cos(2x) — each recovered
+        // by the coupled linear system and certified by differentiation.
+        for integrand in [
+            x().exp() * x().sin(),
+            (CasExpr::int(2) * x()).exp() * x().cos(),
+            x() * x().exp() * x().sin(),
+            x().exp() * (CasExpr::int(2) * x()).cos(),
+        ] {
+            let result = integrate(&integrand, "x").expect("exp·trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_trig_monomial_odd_power() {
+        let x = || v("x");
+        // ∫ sin x·cos x, ∫ sin³x, ∫ cos³x, ∫ sin²x·cos x, ∫ sin x·cos²x — the
+        // odd-power substitution reduces each to a polynomial; certified by
+        // differentiation.
+        for integrand in [
+            x().sin() * x().cos(),
+            x().sin().pow(3),
+            x().cos().pow(3),
+            x().sin().pow(2) * x().cos(),
+            x().sin() * x().cos().pow(2),
+        ] {
+            let result = integrate(&integrand, "x").expect("trig-monomial integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
