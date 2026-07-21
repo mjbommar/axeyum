@@ -1,0 +1,92 @@
+{
+  "adr": "ADR-0323",
+  "build": {
+    "cargo_version": "cargo 1.89.0-nightly (7918c7eb5 2025-04-27)",
+    "rustc_commit": "dcecb99176edf2eec51613730937d21cdd5c8f6e",
+    "rustc_llvm": "20.1.4",
+    "source_date_epoch": "1783984251",
+    "toolchain": "nightly-2025-05-10"
+  },
+  "critical_files": [
+    {
+      "path": "kernel/.cargo/config.toml",
+      "sha256": "fce475e4de67895dbef63eb511d03b6840014340614f694b3627bf4dea45bfe2"
+    },
+    {
+      "path": "kernel/Cargo.lock",
+      "sha256": "23154f5d592ba682018737ee09d890754eeac0fcda7cd2a07d729b410a31a61d"
+    },
+    {
+      "path": "kernel/Cargo.toml",
+      "sha256": "6391c1b640b5b0aa565215a55f92947fcad63b2e913d63f490e4dd6f4561b0ec"
+    },
+    {
+      "path": "kernel/arch/x86_64/x86_64.json",
+      "sha256": "f8f9aab0ff28cb2c8c3a5aa7d544711278bf97dee9dcc24d1b9a0151e5e94539"
+    },
+    {
+      "path": "kernel/src/device/id.rs",
+      "sha256": "9da62c538cf9decb14dae949306ba5d73fb5ec5229109ffe9ddf7ee4742a40df"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "f25aa01d7f83c31506438cdbc0ab86bf5799db7fc1018dd477b5856ff86e9d01"
+    }
+  ],
+  "local_output": "target/maestro-device-id-20260721/capture",
+  "producer_files": [
+    {
+      "path": "crates/axeyum-verify/src/bin/axeyum-llvm-scalar-admit.rs",
+      "sha256": "743c7d4542ae181d1decd751c9eb02a1611c60aa15ed719e500f68562288be64"
+    },
+    {
+      "path": "docs/research/09-decisions/adr-0323-preregister-maestro-device-id-llvm-capture.md",
+      "sha256": "263afeca9e14d1b3e83c179b9907551ef8de4df2fb67323db345cc082743f4a7"
+    },
+    {
+      "path": "scripts/capture-maestro-device-id.py",
+      "sha256": "a0d34a7ebe6fbbf52d107948a9f00701fb8c702f3b2f00c4ad36df90191bbd0b"
+    },
+    {
+      "path": "scripts/tests/test_capture_maestro_device_id.py",
+      "sha256": "98a8eca1c65d3fd44fe385d0694b634c06cac6300abc49e13a446a418fbd1eeb"
+    }
+  ],
+  "result_path": "bench-results/verify-maestro-device-id-20260721/capture-result.json",
+  "schema": "axeyum.maestro-device-id-capture-registration.v1",
+  "targets": [
+    {
+      "name": "major",
+      "parameter_widths": [64],
+      "return_width": 32,
+      "symbol": "_ZN6kernel6device2id5major17h6277e663e5046b6eE"
+    },
+    {
+      "name": "minor",
+      "parameter_widths": [64],
+      "return_width": 32,
+      "symbol": "_ZN6kernel6device2id5minor17ha1a9fa0579be1b4dE"
+    },
+    {
+      "name": "makedev",
+      "parameter_widths": [32, 32],
+      "return_width": 64,
+      "symbol": "_ZN6kernel6device2id7makedev17h17016c0268a8943fE"
+    }
+  ],
+  "tools": {
+    "llvm_as": {
+      "path": "/usr/bin/llvm-as-21",
+      "sha256": "50526d303ae33ed44002023d8d9611186e916f4b8eaf70a608bdbf1d81122784"
+    },
+    "llvm_extract": {
+      "path": "/usr/bin/llvm-extract-21",
+      "sha256": "7c02041b5306536670c74f16c463f5026776f819f66a63effe11d88d352c069a"
+    }
+  },
+  "upstream": {
+    "commit": "650a3f62c386d113b4cbbc11645d945d57620cbb",
+    "repository": "https://github.com/maestro-os/maestro.git",
+    "tree": "6a51753d1f7b80117979db4f35146f55f5e248b4"
+  }
+}
