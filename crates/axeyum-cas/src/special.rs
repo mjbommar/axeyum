@@ -193,6 +193,35 @@ pub fn dirichlet_eta(s: i64) -> Option<CasExpr> {
     Some(CasExpr::Const(factor) * zeta_value)
 }
 
+/// The **Dirichlet lambda function** `λ(s) = Σ 1/(2k+1)ˢ = (1 − 2^{−s})·ζ(s)`
+/// (the odd-integer zeta), at an integer `s`, wherever [`zeta`] has a closed form.
+/// For **positive even** `s`: a rational multiple of `π`-power (`λ(2) = π²/8`,
+/// `λ(4) = π⁴/96`). `λ(s) = (ζ(s) + η(s))/2`. `None` where `ζ` has no closed form.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, special::dirichlet_lambda, equal, ZeroTest};
+/// // λ(2) = π²/8.
+/// let value = dirichlet_lambda(2).unwrap();
+/// let expected = CasExpr::rat(1, 8) * CasExpr::var("pi").pow(2);
+/// assert!(matches!(equal(&value, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn dirichlet_lambda(s: i64) -> Option<CasExpr> {
+    if s == 1 {
+        return None; // λ(1) diverges
+    }
+    let zeta_value = zeta(s)?;
+    // factor = 1 − 2^{−s}. For s ≥ 0, 2^{−s} = 1/2^s; for s < 0, 2^{−s} = 2^{|s|}.
+    let factor = if s >= 0 {
+        let power = u32::try_from(s).ok()?;
+        Rational::integer(1).checked_sub(Rational::checked_new(1, 2i128.checked_pow(power)?)?)?
+    } else {
+        let power = u32::try_from(-s).ok()?;
+        Rational::integer(1).checked_sub(Rational::integer(2i128.checked_pow(power)?))?
+    };
+    Some(CasExpr::Const(factor) * zeta_value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,6 +294,21 @@ mod tests {
             &beta(Rational::new(1, 2), Rational::new(1, 2)).unwrap(),
             &(sqrt_pi() * sqrt_pi()),
         );
+    }
+
+    #[test]
+    fn dirichlet_lambda_closed_forms() {
+        let pi = || CasExpr::var("pi");
+        // λ(2)=π²/8, λ(4)=π⁴/96; and the identity λ(s) = (ζ(s)+η(s))/2 for s=2,4,6.
+        assert_equal(&dirichlet_lambda(2).unwrap(), &(CasExpr::rat(1, 8) * pi().pow(2)));
+        assert_equal(&dirichlet_lambda(4).unwrap(), &(CasExpr::rat(1, 96) * pi().pow(4)));
+        for s in [2i64, 4, 6] {
+            let lambda = dirichlet_lambda(s).unwrap();
+            let half_sum = CasExpr::rat(1, 2) * (zeta(s).unwrap() + dirichlet_eta(s).unwrap());
+            assert_equal(&lambda, &half_sum);
+        }
+        assert!(dirichlet_lambda(1).is_none());
+        assert!(dirichlet_lambda(3).is_none());
     }
 
     #[test]
