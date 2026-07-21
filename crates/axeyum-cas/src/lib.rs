@@ -2746,6 +2746,62 @@ pub fn eigenvectors(matrix: &Matrix, var: &str) -> Option<Vec<(CasExpr, Vec<Matr
     Some(result)
 }
 
+/// **Diagonalize** a square rational-constant matrix `A` (with a full set of
+/// rational eigenvectors): return `(P, D)` with `A = P·D·P⁻¹`, i.e. `A·P = P·D`,
+/// where `D` is the diagonal matrix of eigenvalues and `P` has the corresponding
+/// eigenvectors as columns. **Certified** by the identity `A·P = P·D` (re-multiply
+/// and zero-test). Returns `None` if `A` is not square/constant, or is **not
+/// diagonalizable over ℚ** (fewer than `n` independent rational eigenvectors — e.g.
+/// a defective matrix or irrational/complex eigenvalues).
+#[must_use]
+pub fn diagonalize(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
+    let n = matrix.rows();
+    if n == 0 || n != matrix.cols() {
+        return None;
+    }
+    // Collect (eigenvalue, eigenvector) pairs across all rational eigenspaces.
+    let mut eigenvalues: Vec<CasExpr> = Vec::new();
+    let mut columns: Vec<Vec<CasExpr>> = Vec::new();
+    for (lambda, basis) in eigenvectors(matrix, var)? {
+        for vector in basis {
+            let column: Vec<CasExpr> = (0..n).map(|i| vector.get(i, 0).cloned()).collect::<Option<_>>()?;
+            columns.push(column);
+            eigenvalues.push(lambda.clone());
+        }
+    }
+    if columns.len() != n {
+        return None; // not enough independent eigenvectors → not diagonalizable over ℚ
+    }
+    // P has the eigenvectors as columns; D is diag(eigenvalues).
+    let p_rows: Vec<Vec<CasExpr>> = (0..n)
+        .map(|i| columns.iter().map(|col| col[i].clone()).collect())
+        .collect();
+    let p = Matrix::from_rows(p_rows)?;
+    let d_rows: Vec<Vec<CasExpr>> = (0..n)
+        .map(|i| {
+            (0..n)
+                .map(|j| if i == j { eigenvalues[i].clone() } else { CasExpr::zero() })
+                .collect()
+        })
+        .collect();
+    let d = Matrix::from_rows(d_rows)?;
+
+    // Certificate: A·P = P·D.
+    let left = matrix.mul(&p)?;
+    let right = p.mul(&d)?;
+    for i in 0..n {
+        for j in 0..n {
+            if !matches!(
+                equal(left.get(i, j)?, right.get(i, j)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    Some((p, d))
+}
+
 /// A square rational-constant matrix as an exact rational grid, or `None` if any
 /// entry is not a bare [`CasExpr::Const`].
 fn matrix_to_rationals(matrix: &Matrix) -> Option<Vec<Vec<Rational>>> {
@@ -5288,6 +5344,34 @@ mod tests {
             &(v("L").pow(2) + CasExpr::int(1)),
         );
         assert_eq!(eigenvalues(&rot, "L").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn diagonalization_certifies() {
+        // [[1,1],[0,2]]: eigenvalues 1,2 (distinct → diagonalizable). A = P·D·P⁻¹.
+        let a = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(2)],
+        ])
+        .unwrap();
+        let (p, d) = diagonalize(&a, "L").unwrap();
+        // D is diagonal; A·P = P·D (the certificate, re-checked here).
+        assert!(d.is_diagonal());
+        let left = a.mul(&p).unwrap();
+        let right = p.mul(&d).unwrap();
+        for i in 0..2 {
+            for j in 0..2 {
+                assert_equal(left.get(i, j).unwrap(), right.get(i, j).unwrap());
+            }
+        }
+        // A defective matrix ([[3,1],[0,3]], repeated eigenvalue, 1-D eigenspace) is
+        // NOT diagonalizable over ℚ → None.
+        let defective = Matrix::from_rows(vec![
+            vec![CasExpr::int(3), CasExpr::int(1)],
+            vec![CasExpr::zero(), CasExpr::int(3)],
+        ])
+        .unwrap();
+        assert!(diagonalize(&defective, "L").is_none());
     }
 
     #[test]
