@@ -992,11 +992,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
 - [ ] Can Axeyum reproducibly capture and verify Tock's full-width integer-log
   helpers from the exact owning LLVM 22 kernel build?
   - [ADR-0327](../09-decisions/adr-0327-preregister-tock-log2-reflection.md)
-    selects the two source-used `u32`/`u64` helpers and preregisters the one
-    bounded frontend prerequisite: typed non-wrapping call-result `range`
+    accepts the one bounded frontend prerequisite for the two selected
+    source-used `u32`/`u64` helpers: typed non-wrapping call-result `range`
     poison plus scalar `llvm.ctlz` zero-poison semantics, canonical syntax,
-    independent proofs, and exhaustive/deterministic fuzz. It adds no IR
-    operator and authorizes no external capture until that gate is accepted.
+    independent 32/64-bit proofs, exhaustive widths 1--8, deterministic wide
+    rows, and replayed mutations. It adds no IR operator. The next step is a
+    separately preregistered authenticated external capture; no target bytes,
+    proof, or scoreboard row exist yet.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

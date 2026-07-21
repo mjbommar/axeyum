@@ -31,8 +31,8 @@ Validation alone (without those mutation/evidence suites) is:
 python3 scripts/check-reflection-semantics-gate.py
 ```
 
-The validation report is deterministic JSON. At ADR-0295 acceptance the source
-inventory contains 12 enums and 63 variants, owned by 15 evidence groups.
+The validation report is deterministic JSON. The current source inventory
+contains 13 enums and 82 variants, owned by 18 evidence groups.
 
 ## What the gate executes
 
@@ -43,6 +43,9 @@ is:
   plus exhaustive concrete checks for every LLVM scalar opcode, predicate,
   cast, intrinsic, semantic flag, `select`, and every checked MIR scalar binary
   opcode;
+- `llvm_ctlz`: typed/canonical `range` and `ctlz` boundaries, exhaustive
+  widths 1--8, deterministic 32/64-bit rows, independent threshold-partition
+  proofs, selected-arm poison behavior, and replayed semantic mutations;
 - `cross_ir_equivalence`: all 11 ordinary admitted MIR/LLVM pairs under
   deterministic `DiffFuzz`, plus the exact defined domain of the
   hypothesis-bounded `lut3`/`unreachable` pair;
@@ -115,6 +118,7 @@ checksum route only after independent checked-body relation and panic-freedom
 proofs. Loop havoc, annotations, general MIR calls, recursion, memory effects,
 and external calls remain outside the profile. ADR-0315 adds one exact
 input-dependent MIR callee-panic summary, normal-return relation guarding, and
-complete `u8` replay without adding syntax variants. The ten owned binaries
-currently contain 117 tests and the manifest owns 81 variants in 17 evidence
-groups.
+complete `u8` replay without adding syntax variants. ADR-0327 adds one typed
+LLVM `CountLeadingZeros` variant plus call-result range definedness. The 12
+owned binaries currently contain 129 tests and the manifest owns 82 variants
+in 18 evidence groups.

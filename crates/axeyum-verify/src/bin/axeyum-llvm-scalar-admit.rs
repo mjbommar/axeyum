@@ -142,7 +142,7 @@ fn main() -> ExitCode {
 mod tests {
     use super::*;
 
-    const MAJOR_SHAPE: &str = r#"
+    const MAJOR_SHAPE: &str = r"
 define hidden noundef i32 @major(i64 noundef %dev) {
 start:
   %high = lshr i64 %dev, 32
@@ -150,7 +150,7 @@ start:
   %out = trunc nuw i64 %masked to i32
   ret i32 %out
 }
-"#;
+";
 
     #[test]
     fn admits_scalar_shape_and_reaches_a_canonical_fixpoint() {

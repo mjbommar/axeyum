@@ -1,6 +1,6 @@
 # ADR-0327: Preregister Tock log2 reflection prerequisite
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -88,8 +88,43 @@ shaped fixture.
 
 ## Result
 
-Proposed. No checked range or `ctlz` syntax, semantic variant, external Tock
-capture, parser admission, proof, or scoreboard row exists.
+Accepted. The typed LLVM boundary now retains one non-wrapping result range and
+a distinct `CountLeadingZeros` instruction, including the exact `tail` marker,
+intrinsic name/signature, widths, operand, and literal zero-poison flag.
+Malformed, negative, out-of-width, wrapped, empty, duplicated, mismatched, or
+unsupported forms fail with located stable parser classes. Ordinary direct
+calls remain outside this range profile.
+
+Checked lowering constructs the exact count from existing extraction,
+equality, and ITE terms. Operand poison propagates; zero poison and the
+half-open result range affect definedness rather than constraining the value.
+The selected-arm definedness rule proves the Tock-shaped zero guard does not
+eagerly observe the poison-producing `ctlz(0, true)` arm. Existing `umin` and
+`umax` calls receive the same range-definedness rule.
+
+The accepted evidence includes:
+
+- exhaustive native-oracle agreement for widths 1--8 across both poison flags
+  and full/restrictive accepted ranges;
+- deterministic 32/64-bit zero, power-of-two, adjacent, all-ones, and 128
+  seeded rows;
+- solver proofs that the 32/64-bit values equal an independently built
+  threshold-partition specification and that the guarded Tock-shaped function
+  is universally defined; and
+- replayed countermodels for wrong zero handling, one count constant, the
+  admitted range bound, and the high-bit partition.
+
+The standing semantics inventory passes at 82 variants / 18 groups / 12 test
+binaries / 129 tests. The checker owns 34 proof tests, 26 fuzz/replay tests,
+and 18 refutation tests. Complete all-feature `axeyum-verify` tests/doctests,
+strict package Clippy/rustdoc, the registered gate and its ten checker
+mutations, foundational resources, documentation links, and targeted rustfmt
+pass in the one-job 4 GiB scope. Workspace-wide `cargo fmt --all --check`
+remains pre-existing red only on clean `axeyum-cas` sources outside this ADR;
+no such file is included here. No external Tock byte, capture result, target
+proof, or scoreboard row exists. Acceptance authorizes only a new zero-row
+capture ADR with the roots/cache/offline/LLVM-22/atomic-output conditions in
+gate 11.
 
 ## Rejected alternatives
 

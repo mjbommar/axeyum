@@ -389,6 +389,15 @@ session state.
 >    `range` poison and `llvm.ctlz` zero-poison semantics. Implement only that
 >    typed/canonical/proved/fuzzed prerequisite over existing BV terms next;
 >    it adds no IR operator and external capture remains separately gated.
+>    ADR-0327 now accepts that prerequisite. Typed syntax preserves the exact
+>    range/signature/tail/flag, checked lowering keeps zero/range poison in
+>    definedness, exhaustive widths 1--8 and deterministic 32/64-bit rows agree
+>    with independent oracles, threshold-partition proofs pass, and four
+>    mutation classes replay. The standing gate is 82 variants / 18 groups /
+>    12 binaries / 129 tests. Next preregister the zero-row authenticated Tock
+>    capture with stable virtual roots, validated locked cache, offline raw-
+>    module equality, LLVM-22 extraction, exact admission, and atomic output;
+>    do not retain target bytes or construct proof obligations before it.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

@@ -657,52 +657,11 @@ fn parse_call(
     };
     cursor.punct('(')?;
     if let Some(intrinsic) = intrinsic {
-        let left_width = cursor.int_type()?;
-        let lhs = cursor.operand()?;
-        cursor.punct(',')?;
-        let right_width = cursor.int_type()?;
-        let rhs = cursor.operand()?;
-        cursor.punct(')')?;
-        if left_width != width || right_width != width {
-            return Err(cursor.error(
-                ParseErrorKind::MalformedInstruction,
-                "intrinsic argument and result widths differ",
-            ));
-        }
-        cursor.end()?;
-        return Ok(ScalarInstructionKind::Intrinsic {
-            dest,
-            tail,
-            result_range,
-            intrinsic,
-            width,
-            lhs,
-            rhs,
-        });
+        return parse_minmax_call(cursor, dest, tail, result_range, intrinsic, width);
     }
 
     if callee == format!("llvm.ctlz.i{width}") {
-        let operand_width = cursor.int_type()?;
-        let operand = cursor.operand()?;
-        cursor.punct(',')?;
-        let flag_width = cursor.int_type()?;
-        let zero_is_poison = cursor.bool_literal("`llvm.ctlz` zero-poison flag")?;
-        cursor.punct(')')?;
-        if operand_width != width || flag_width != 1 {
-            return Err(cursor.error(
-                ParseErrorKind::MalformedInstruction,
-                "`llvm.ctlz` argument widths do not match its signature",
-            ));
-        }
-        cursor.end()?;
-        return Ok(ScalarInstructionKind::CountLeadingZeros {
-            dest,
-            tail,
-            result_range,
-            width,
-            operand,
-            zero_is_poison,
-        });
+        return parse_ctlz_call(cursor, dest, tail, result_range, width);
     }
 
     if callee.starts_with("llvm.ctlz.") {
@@ -725,6 +684,78 @@ fn parse_call(
         ));
     }
 
+    parse_direct_call(cursor, dest, tail, width, callee)
+}
+
+fn parse_minmax_call(
+    cursor: &mut Cursor<'_>,
+    dest: String,
+    tail: bool,
+    result_range: Option<CallResultRange>,
+    intrinsic: Intrinsic,
+    width: u32,
+) -> Result<ScalarInstructionKind, ParseError> {
+    let left_width = cursor.int_type()?;
+    let lhs = cursor.operand()?;
+    cursor.punct(',')?;
+    let right_width = cursor.int_type()?;
+    let rhs = cursor.operand()?;
+    cursor.punct(')')?;
+    if left_width != width || right_width != width {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "intrinsic argument and result widths differ",
+        ));
+    }
+    cursor.end()?;
+    Ok(ScalarInstructionKind::Intrinsic {
+        dest,
+        tail,
+        result_range,
+        intrinsic,
+        width,
+        lhs,
+        rhs,
+    })
+}
+
+fn parse_ctlz_call(
+    cursor: &mut Cursor<'_>,
+    dest: String,
+    tail: bool,
+    result_range: Option<CallResultRange>,
+    width: u32,
+) -> Result<ScalarInstructionKind, ParseError> {
+    let operand_width = cursor.int_type()?;
+    let operand = cursor.operand()?;
+    cursor.punct(',')?;
+    let flag_width = cursor.int_type()?;
+    let zero_is_poison = cursor.bool_literal("`llvm.ctlz` zero-poison flag")?;
+    cursor.punct(')')?;
+    if operand_width != width || flag_width != 1 {
+        return Err(cursor.error(
+            ParseErrorKind::MalformedInstruction,
+            "`llvm.ctlz` argument widths do not match its signature",
+        ));
+    }
+    cursor.end()?;
+    Ok(ScalarInstructionKind::CountLeadingZeros {
+        dest,
+        tail,
+        result_range,
+        width,
+        operand,
+        zero_is_poison,
+    })
+}
+
+fn parse_direct_call(
+    cursor: &mut Cursor<'_>,
+    dest: String,
+    tail: bool,
+    result_width: u32,
+    callee: String,
+) -> Result<ScalarInstructionKind, ParseError> {
     let mut args = Vec::new();
     while !cursor.peek_punct(')') {
         let arg_width = cursor.int_type()?;
@@ -759,7 +790,7 @@ fn parse_call(
     Ok(ScalarInstructionKind::DirectCall {
         dest,
         tail,
-        result_width: width,
+        result_width,
         callee,
         args,
     })

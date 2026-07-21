@@ -7,9 +7,9 @@ use std::fmt;
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
 
 use super::syntax::{
-    BinaryOpcode, BlockId, CastOpcode, Function, GepFlag, IntPredicate, Intrinsic, Operand,
-    ParseError, ScalarCfg, ScalarInstructionKind, SemanticFlag, SourceSpan, TerminatorKind,
-    parse_function, parse_scalar_cfg, parse_scalar_instruction,
+    BinaryOpcode, BlockId, CallResultRange, CastOpcode, Function, GepFlag, IntPredicate, Intrinsic,
+    Operand, ParseError, ScalarCfg, ScalarInstructionKind, SemanticFlag, SourceSpan,
+    TerminatorKind, parse_function, parse_scalar_cfg, parse_scalar_instruction,
 };
 
 const MAX_ACYCLIC_BLOCK_EXECUTIONS: usize = 4_096;
@@ -1455,21 +1455,34 @@ pub(super) fn lower_assignment(
             lhs,
             rhs,
             ..
-        } => {
-            if result_range.is_some() {
-                return Err(ReflectError {
-                    kind: ReflectErrorKind::UnsupportedCall,
-                    span: Some(span),
-                    detail: "call-result ranges do not yet have checked semantics".to_owned(),
-                });
-            }
-            lower_intrinsic_assignment(arena, env, dest, intrinsic, width, &lhs, &rhs, span)
-        }
-        ScalarInstructionKind::CountLeadingZeros { .. } => Err(ReflectError {
-            kind: ReflectErrorKind::UnsupportedCall,
-            span: Some(span),
-            detail: "`llvm.ctlz` does not yet have checked semantics".to_owned(),
-        }),
+        } => lower_intrinsic_assignment(
+            arena,
+            env,
+            dest,
+            result_range,
+            intrinsic,
+            width,
+            &lhs,
+            &rhs,
+            span,
+        ),
+        ScalarInstructionKind::CountLeadingZeros {
+            dest,
+            result_range,
+            width,
+            operand,
+            zero_is_poison,
+            ..
+        } => lower_ctlz_assignment(
+            arena,
+            env,
+            dest,
+            result_range,
+            width,
+            &operand,
+            zero_is_poison,
+            span,
+        ),
         ScalarInstructionKind::GetElementPtr { .. }
         | ScalarInstructionKind::Load { .. }
         | ScalarInstructionKind::Store { .. } => Err(ReflectError {
@@ -1639,6 +1652,7 @@ fn lower_intrinsic_assignment(
     arena: &mut TermArena,
     env: &HashMap<String, DefinedValue>,
     dest: String,
+    result_range: Option<CallResultRange>,
     intrinsic: Intrinsic,
     width: u32,
     lhs: &Operand,
@@ -1655,7 +1669,9 @@ fn lower_intrinsic_assignment(
     let value = arena
         .ite(condition, lhs.value, rhs.value)
         .map_err(|error| ir_error(span, &error.to_string()))?;
-    let defined = bool_and(arena, lhs.defined, rhs.defined, span)?;
+    let operands_defined = bool_and(arena, lhs.defined, rhs.defined, span)?;
+    let range_defined = result_range_defined(arena, value, result_range, span)?;
+    let defined = bool_and(arena, operands_defined, range_defined, span)?;
     Ok((
         dest,
         DefinedValue {
@@ -1665,6 +1681,135 @@ fn lower_intrinsic_assignment(
         },
         arena.bool_const(true),
     ))
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "typed ctlz fields are explicit parser output"
+)]
+fn lower_ctlz_assignment(
+    arena: &mut TermArena,
+    env: &HashMap<String, DefinedValue>,
+    dest: String,
+    result_range: Option<CallResultRange>,
+    width: u32,
+    operand: &Operand,
+    zero_is_poison: bool,
+    span: SourceSpan,
+) -> Result<(String, DefinedValue, TermId), ReflectError> {
+    let operand = resolve(arena, env, operand, width, span)?;
+    let value = ctlz_value(arena, operand.value, width, span)?;
+    let zero_free = if zero_is_poison {
+        let is_zero = integer_is_zero(arena, operand.value, width, span)?;
+        arena
+            .not(is_zero)
+            .map_err(|error| ir_error(span, &error.to_string()))?
+    } else {
+        arena.bool_const(true)
+    };
+    let range_defined = result_range_defined(arena, value, result_range, span)?;
+    let intrinsic_defined = bool_and(arena, zero_free, range_defined, span)?;
+    let defined = bool_and(arena, operand.defined, intrinsic_defined, span)?;
+    Ok((
+        dest,
+        DefinedValue {
+            value,
+            defined,
+            width,
+        },
+        arena.bool_const(true),
+    ))
+}
+
+fn ctlz_value(
+    arena: &mut TermArena,
+    operand: TermId,
+    width: u32,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    if width == 1 {
+        return arena
+            .not(operand)
+            .map_err(|error| ir_error(span, &error.to_string()));
+    }
+    if width > 128 {
+        return Err(ReflectError {
+            kind: ReflectErrorKind::UnsupportedWidth,
+            span: Some(span),
+            detail: format!("checked `llvm.ctlz` wider than 128 bits is unsupported: i{width}"),
+        });
+    }
+
+    let mut count = arena
+        .bv_const(width, u128::from(width))
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let one_bit = arena
+        .bv_const(1, 1)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    for bit_index in 0..width {
+        let bit = arena
+            .extract(bit_index, bit_index, operand)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        let is_set = arena
+            .eq(bit, one_bit)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        let leading_zeros = arena
+            .bv_const(width, u128::from(width - 1 - bit_index))
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+        count = arena
+            .ite(is_set, leading_zeros, count)
+            .map_err(|error| ir_error(span, &error.to_string()))?;
+    }
+    Ok(count)
+}
+
+fn integer_is_zero(
+    arena: &mut TermArena,
+    value: TermId,
+    width: u32,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    if width == 1 {
+        return arena
+            .not(value)
+            .map_err(|error| ir_error(span, &error.to_string()));
+    }
+    let zero = arena
+        .bv_const(width, 0)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    arena
+        .eq(value, zero)
+        .map_err(|error| ir_error(span, &error.to_string()))
+}
+
+fn result_range_defined(
+    arena: &mut TermArena,
+    value: TermId,
+    result_range: Option<CallResultRange>,
+    span: SourceSpan,
+) -> Result<TermId, ReflectError> {
+    let Some(range) = result_range else {
+        return Ok(arena.bool_const(true));
+    };
+    if range.width == 1 {
+        // The parser's non-wrapping/nonempty rule leaves exactly [0, 1).
+        return arena
+            .not(value)
+            .map_err(|error| ir_error(span, &error.to_string()));
+    }
+    let lower = arena
+        .bv_const(range.width, range.lower)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let upper = arena
+        .bv_const(range.width, range.upper)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let at_or_above_lower = arena
+        .bv_uge(value, lower)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    let below_upper = arena
+        .bv_ult(value, upper)
+        .map_err(|error| ir_error(span, &error.to_string()))?;
+    bool_and(arena, at_or_above_lower, below_upper, span)
 }
 
 pub(super) fn resolve(

@@ -348,6 +348,10 @@ fn render_cast(
     .expect("writing to a String cannot fail");
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "typed intrinsic fields are rendered explicitly"
+)]
 fn render_intrinsic(
     output: &mut String,
     dest: &str,

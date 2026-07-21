@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CHECKER = ROOT / "scripts" / "check-reflection-semantics-gate.py"
 BINARIES = [
     "reflection_semantics_gate",
+    "llvm_ctlz",
     "cross_ir_equivalence",
     "cross_ir_refutation",
     "llvm_checked_cfg",

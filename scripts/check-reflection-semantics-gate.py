@@ -17,6 +17,7 @@ REPORT_SCHEMA = "axeyum.reflection-semantics-gate-validation.v1"
 DEFAULT_MANIFEST = Path("docs/consumer-track/verify/reflection-semantics-gate.json")
 EXPECTED_TEST_BINARIES = [
     "reflection_semantics_gate",
+    "llvm_ctlz",
     "cross_ir_equivalence",
     "cross_ir_refutation",
     "llvm_checked_cfg",

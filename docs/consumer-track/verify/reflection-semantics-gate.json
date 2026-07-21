@@ -153,6 +153,24 @@
       ]
     },
     {
+      "id": "llvm-scalar-ctlz-range",
+      "members": [
+        "llvm.instruction::CountLeadingZeros"
+      ],
+      "proof_tests": [
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::thirty_two_and_sixty_four_bit_values_prove_against_threshold_partitions",
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::poison_from_zero_is_not_eager_across_select"
+      ],
+      "fuzz_tests": [
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::widths_one_through_eight_match_an_independent_native_oracle_exhaustively",
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::deterministic_wide_rows_cover_boundaries_and_seeded_values",
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::result_range_also_applies_to_existing_minmax_intrinsics"
+      ],
+      "refutation_tests": [
+        "crates/axeyum-verify/tests/llvm_ctlz.rs::zero_index_range_and_high_partition_mutations_replay"
+      ]
+    },
+    {
       "id": "llvm-direct-call",
       "members": [
         "llvm.instruction::DirectCall"
@@ -396,6 +414,7 @@
   ],
   "test_binaries": [
     "reflection_semantics_gate",
+    "llvm_ctlz",
     "cross_ir_equivalence",
     "cross_ir_refutation",
     "llvm_checked_cfg",
