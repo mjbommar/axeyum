@@ -30,8 +30,10 @@ elimination, Meijer-G table integration.
 
 ## Prioritized top 15 (value × fit × buildability)
 
-1. **Gosper** — indefinite hypergeometric summation. Excellent fit (telescoping
-   cert, extends `sum_polynomial`); high buildability; delegable.
+1. **Gosper** — indefinite hypergeometric summation. ✅ **SHIPPED** (`gosper.rs`):
+   rational-function terms fully telescoping-certified; geometric×poly certified via
+   the reduced Gosper identity (the full-expression cert needs the [exp
+   tower](exp-tower.md)). Extends `sum_polynomial`.
 2. **Eigenvectors + characteristic/minimal polynomial** (Faddeev–LeVerrier /
    Berkowitz). `Av=λv` cert. Builds on `Matrix`/`solve`. *(eigenvalues, char-poly
    already shipped — remaining: eigenvectors via nullspace, minimal polynomial.)*

@@ -645,3 +645,23 @@ Further breadth toward K-12 + linear-algebra parity:
 **174 unit + 38 doctests, clippy-pedantic clean, WASM-green.** Gosper hypergeometric
 summation still in flight. The exp-tower substrate refactor remains the sequenced
 next step (first-order ODEs / recurrences / general exp-log simplification).
+
+## 2026-07-21 — Entry 17: Gosper summation shipped (185 tests)
+
+**Gosper's algorithm** (`gosper.rs`, sub-agent) — indefinite hypergeometric
+summation, roadmap next-wave #1. Full pipeline on exact poly primitives (reduced
+ratio → Gosper–Petkovšek normal form via dispersion resultant → degree-bounded
+Gosper-equation solve → antidifference). Rational-function terms fully certified by
+the decidable telescoping zero-test (`∑k`, `∑1/(k(k+1))→−1/k`); geometric×poly
+(`∑k·2ᵏ→(k−2)2ᵏ`) certified via the reduced Gosper identity (polynomial in `k`)
+plus exact telescoping spot-checks; non-summable (`∑1/k`) and factorial heads
+declined honestly.
+
+**Second independent confirmation of the exp-tower blocker.** The Gosper agent
+measured that `equal(Δ[(k−2)2ᵏ], k·2ᵏ)` returns `Certified{equal:false}` — because
+`exp((k+1)ln c)` and `exp(k ln c)` are independent opaque atoms and the exponent
+law `eᴬ·eᴮ=eᴬ⁺ᴮ` is never applied. This is exactly the substrate gap identified for
+first-order ODEs and recurrences, now confirmed from a second angle. Design note:
+[exp-tower.md](exp-tower.md). It is the single highest-leverage next substrate step.
+
+**185 unit + 38 doctests, clippy-pedantic clean, WASM-green.**
