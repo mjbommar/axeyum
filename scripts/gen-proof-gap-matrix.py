@@ -185,6 +185,24 @@ def build_report(audits: list[dict]) -> dict:
                     }
                 )
     proof_errors.sort(key=lambda row: (row["logic"], row["file"]))
+    lean_reconstruction_gaps = []
+    for audit in audits:
+        for instance in audit.get("instances", []):
+            if (
+                instance.get("baseline_outcome") == "unsat"
+                and proof_category(instance) == "lean-reconstruction-gap"
+            ):
+                lean_reconstruction_gaps.append(
+                    {
+                        "logic": audit.get("logic") or "unknown",
+                        "file": instance.get("file") or "unknown",
+                        "evidence_kind": instance.get("evidence_kind") or "unknown",
+                        "lean_error": instance.get("lean_error") or "unknown",
+                    }
+                )
+    lean_reconstruction_gaps.sort(
+        key=lambda row: (row["logic"], row["evidence_kind"], row["file"])
+    )
     rows.sort(key=lambda row: (row["logic"], row["slice"], row["source"]))
 
     return {
@@ -207,6 +225,7 @@ def build_report(audits: list[dict]) -> dict:
             for hole, count in sorted(trust_holes.items(), key=lambda item: (-item[1], item[0]))
         ],
         "proof_errors": proof_errors,
+        "lean_reconstruction_gaps": lean_reconstruction_gaps,
         "rows": rows,
         "sources": [
             {"path": audit["_source"], "sha256": audit["_sha256"]}
@@ -328,6 +347,27 @@ def markdown(report: dict) -> str:
             error = row["error"].replace("|", "\\|")
             lines.append(
                 f"| {row['logic']} | `{row['file']}` | `{row['phase']}` | {error} |"
+            )
+    else:
+        lines.append("None.")
+
+    lines.extend(["", "## Lean reconstruction gaps", ""])
+    if report["lean_reconstruction_gaps"]:
+        lines.extend(
+            [
+                "These outcomes already have certified, independently checked,",
+                "trust-free evidence. They are a reconstruction queue, not a solver",
+                "correctness or certificate-production queue.",
+                "",
+                "| Logic | File | Evidence kind | Reconstruction error |",
+                "|---|---|---|---|",
+            ]
+        )
+        for row in report["lean_reconstruction_gaps"]:
+            error = row["lean_error"].replace("|", "\\|")
+            lines.append(
+                f"| {row['logic']} | `{row['file']}` | "
+                f"`{row['evidence_kind']}` | {error} |"
             )
     else:
         lines.append("None.")

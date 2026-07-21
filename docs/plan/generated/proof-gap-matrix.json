@@ -641,6 +641,56 @@
       "trust_hole_instances": 0
     }
   ],
+  "lean_reconstruction_gaps": [
+    {
+      "evidence_kind": "bv-alternation-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-alternation-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-conjunctive-universal-instance-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-paired-existential-transfer-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "closed-universal-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    }
+  ],
   "proof_errors": [
     {
       "error": "backend failure: int-blast failed: integer bit-blast does not support operator IntPow2",

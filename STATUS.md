@@ -368,7 +368,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `source-side-channel-not-serialized` trace case, then land stable attempt/
   boundary and obligation IDs across all four bare exits only after proposed
   ADR-0341's invariance/mutation gates are reviewed. The eight
-  reconstruction-only gaps remain an independent lane.
+  reconstruction-only gaps remain an independent lane: five quantified-BV
+  selected certificates and three QF_NIA Alethe proofs should be consumed
+  directly by a bounded Lean prototype before any new theorem family is added.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public

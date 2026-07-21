@@ -145,6 +145,23 @@ None.
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2` | `produce-evidence` | backend failure: int-blast failed: integer bit-blast does not support operator IntPow2 |
 | QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-7.smt2` | `produce-evidence` | backend failure: int-blast failed: integer bit-blast does not support operator IntPow2 |
 
+## Lean reconstruction gaps
+
+These outcomes already have certified, independently checked,
+trust-free evidence. They are a reconstruction queue, not a solver
+correctness or certificate-production queue.
+
+| Logic | File | Evidence kind | Reconstruction error |
+|---|---|---|---|
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2` | `bv-alternation-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2` | `bv-alternation-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2` | `bv-conjunctive-universal-instance-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
+| BV | `corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2` | `bv-paired-existential-transfer-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
+| BV | `corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2` | `closed-universal-counterexample-unsat` | malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+| QF_NIA | `corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2` | `alethe-unsat` | malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint |
+
 ## Evidence-driven priority
 
 1. Replace the 58 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.

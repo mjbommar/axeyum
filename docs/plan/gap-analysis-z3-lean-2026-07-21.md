@@ -243,6 +243,16 @@ returns bare UNSAT because that DRAT does not certify source-level sequence
 semantics. Their verdicts remain unchanged, but the honest refresh enlarges the
 uncertified denominator. `just parity-docs` rejects stale generated outputs.
 
+The generated matrix also lists the eight reconstruction-only rows explicitly.
+They split into two implementation mechanisms: five quantified-BV rows already
+carry checked closed-universal, alternation, conjunctive-instance, or paired-
+existential certificates, but the query-only Lean facade re-searches and
+declines; three QF_NIA rows carry checked Alethe evidence, while query-only
+reconstruction selects `la_generic` and rejects their non-conjunctive shape.
+Prototype reconstruction from the selected `Evidence` object before writing any
+new theorem family. This is a measured plumbing/re-derivation hypothesis, not
+yet a claim that all eight will close.
+
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
 is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
 not filenames. It contracts 58 audit occurrences to 56 paths and 51 unique
@@ -365,8 +375,10 @@ reported as parity before it climbs the measured and certifying rungs.
    attempt IDs, source-to-lowered obligation maps, checker identity, and first
    uncertified reduction before selecting a shared proof mechanism. Investigate
    the four stale QF_SEQ source-invalid DRAT credits as the first bounded
-   `source-side-channel-not-serialized` case;
-   handle the eight reconstruction-only gaps independently.
+   `source-side-channel-not-serialized` case. Independently prototype direct
+   Lean reconstruction from the selected evidence on the five quantified-BV
+   rows, then the three QF_NIA Alethe rows; add no theorem family unless that
+   reuse path demonstrably declines.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.
