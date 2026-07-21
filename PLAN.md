@@ -447,8 +447,10 @@ session state.
 >    ADR-0332 now freezes that rule: exact 169-entry lock input, closed unique
 >    metadata/resolve IDs and edges, exact external name/version/source/checksum,
 >    in-tree path manifests, one workspace kernel, and a canonical active digest
->    whose count/hash are results rather than thresholds. Implement/push the thin
->    v5 validator/tests/overlay before DNS or fetch.
+>    whose count/hash are results rather than thresholds. The thin v5 wrapper,
+>    five focused plus 18 inherited tests, and compact overlay now validate nine
+>    producer files with no active count/digest or DNS/fetch observation. Commit/
+>    push this checkpoint, then invoke v5 once under its registered cgroup.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

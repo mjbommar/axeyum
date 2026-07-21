@@ -82,7 +82,11 @@ be weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. No v5 producer, registration, DNS probe, fetch, cache, structural
+Proposed. A thin v5 wrapper injects only the structural offline validator,
+result schema, output version, and compact overlay into frozen v4. Five focused
+graph/lock/path tests plus all 18 inherited preparation tests pass. Registration
+validates nine producer files and six tools without storing any active count or
+digest. Commit and push this checkpoint before DNS/fetch. No cache, structural
 metadata result, active count/digest, build, capture, or query exists.
 
 ## Rejected alternatives

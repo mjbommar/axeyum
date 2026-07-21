@@ -1037,7 +1037,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     freezes that preparation-v5 validator: closed unique package/node/edge IDs,
     exact external lock identities and checksums, in-tree path manifests, one
     workspace kernel, and a canonical active digest/count recorded only as
-    results. No v5 producer, DNS/fetch, or cache exists.
+    results. The thin wrapper, 23 combined tests, and compact overlay validate
+    pre-fetch without an expected active count. Push before invocation; no
+    cache or active digest exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
