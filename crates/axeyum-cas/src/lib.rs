@@ -1099,6 +1099,89 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     Some(roots)
 }
 
+/// Solve a **constant-coefficient linear homogeneous ODE**
+/// `Σₖ cₖ·y⁽ᵏ⁾ = 0` given the coefficients `char_coeffs = [c₀, c₁, …, cₙ]` (which
+/// are exactly the characteristic polynomial `Σ cₖ rᵏ`). Returns the general
+/// solution with symbolic constants `C0, C1, …`, built from the characteristic
+/// roots: real rational root `r` (multiplicity `m`) → `Cᵢ·xᵏ·e^(rx)` for
+/// `k < m`; a complex pair `α ± βi` (rational `β`) → `e^(αx)(Cᵢ·cos βx + Cⱼ·sin βx)`.
+/// **Certified** by applying the ODE operator to the solution and zero-testing.
+/// `None` if a root is real-irrational or the remainder is unhandled.
+#[must_use]
+pub fn dsolve_homogeneous(char_coeffs: &[Rational], var: &str) -> Option<CasExpr> {
+    let mut remaining = poly::rat_trim(char_coeffs.to_vec());
+    poly::rat_degree(&remaining)?; // reject the zero polynomial
+    let x = || CasExpr::var(var);
+    let mut terms: Vec<CasExpr> = Vec::new();
+    let mut c_index = 0usize;
+    // Real rational roots, with multiplicity.
+    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
+        let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
+            break;
+        };
+        let divisor = [root.checked_neg()?, Rational::integer(1)];
+        let mut multiplicity = 0u32;
+        while poly::rat_degree(&remaining).unwrap_or(0) >= 1
+            && poly::eval_rat_poly(&remaining, root)?.is_zero()
+        {
+            remaining = poly::rat_exact_div(&remaining, &divisor)?;
+            multiplicity += 1;
+        }
+        for k in 0..multiplicity {
+            let mut factors = vec![CasExpr::var(&format!("C{c_index}"))];
+            c_index += 1;
+            if k >= 1 {
+                factors.push(x().pow(k));
+            }
+            factors.push(scaled_term(root, x()).exp()); // e^(root·x)
+            terms.push(CasExpr::Mul(factors));
+        }
+    }
+    // A leftover irreducible quadratic → a complex-conjugate pair α ± βi.
+    match poly::rat_degree(&remaining) {
+        Some(0) => {}
+        Some(2) => {
+            let (a, b, c) = (remaining[2], remaining[1], remaining[0]);
+            let two_a = Rational::integer(2).checked_mul(a)?;
+            let alpha = b.checked_neg()?.checked_div(two_a)?;
+            let disc = b
+                .checked_mul(b)?
+                .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(c)?)?;
+            if disc.numerator() >= 0 {
+                return None; // real irrational roots — not handled here
+            }
+            let beta_sq = Rational::zero()
+                .checked_sub(disc)?
+                .checked_div(two_a.checked_mul(two_a)?)?;
+            let beta = rational_sqrt(beta_sq)?;
+            let cos_c = CasExpr::var(&format!("C{c_index}"));
+            let sin_c = CasExpr::var(&format!("C{}", c_index + 1));
+            let bx = scaled_term(beta, x());
+            let inner = cos_c * bx.clone().cos() + sin_c * bx.sin();
+            terms.push(CasExpr::Mul(vec![scaled_term(alpha, x()).exp(), inner]));
+        }
+        _ => return None, // higher-degree irreducible / irrational — not handled
+    }
+    if terms.is_empty() {
+        return None;
+    }
+    let solution = match terms.len() {
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    };
+    // Certify: Σₖ cₖ·y⁽ᵏ⁾ ≡ 0.
+    let mut operator = CasExpr::zero();
+    let mut derivative = solution.clone();
+    for coeff in char_coeffs {
+        operator = operator + CasExpr::Const(*coeff) * derivative.clone();
+        derivative = derivative.differentiate(var);
+    }
+    match equal(&operator, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(solution),
+        _ => None,
+    }
+}
+
 /// The binomial coefficient `C(n, k)` as an exact rational, or `None` on overflow.
 fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
     if k > n {
@@ -2200,6 +2283,21 @@ mod tests {
             format!("{}", CasExpr::rat(1, 5) * v("x").pow(5)),
             "(1/5)*x^5"
         );
+    }
+
+    #[test]
+    fn dsolve_constant_coefficient_odes() {
+        let ig = Rational::integer;
+        // y″ − y = 0  → C0·eˣ + C1·e⁻ˣ ; verify y″ − y = 0.
+        let y = dsolve_homogeneous(&[ig(-1), ig(0), ig(1)], "x").expect("solvable");
+        let ypp = y.differentiate("x").differentiate("x");
+        assert_equal(&(ypp - y.clone()), &CasExpr::zero());
+        // y″ − 3y′ + 2y = 0  (roots 1, 2)
+        assert!(dsolve_homogeneous(&[ig(2), ig(-3), ig(1)], "x").is_some());
+        // y″ + y = 0  → C0·cos x + C1·sin x (complex roots ±i); verify y″ + y = 0.
+        let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
+        let hpp = h.differentiate("x").differentiate("x");
+        assert_equal(&(hpp + h.clone()), &CasExpr::zero());
     }
 
     #[test]
