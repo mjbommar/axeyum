@@ -1166,16 +1166,58 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
 /// fragment. The *scaling* law `exp(2x) = exp(x)²` is **not** captured (per-term
 /// keys keep the coefficient), which is the remaining
 /// [exp-tower](../../../docs/research/10-cas/exp-tower.md) work.
-fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
-    let Some(arg_poly) = normalize(arg) else {
-        return Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("exp", arg))));
+/// The value `vᵏ` when a single exp-argument term `coeff · monomial` is exactly
+/// `k · ln(v)` for a **positive rational** `v` and integer `k = coeff` — i.e. the
+/// exp/ln inverse `exp(k·ln v) = vᵏ`. `None` when the term is not of that shape
+/// (sound only for `v > 0`, where `ln v` is real). Debug-logs nothing; pure.
+fn exp_ln_inverse(monomial: &Monomial, coeff: Rational) -> Option<Rational> {
+    if coeff.denominator() != 1 || monomial.powers.len() != 1 {
+        return None;
+    }
+    let (atom, &power) = monomial.powers.iter().next()?;
+    if power != 1 {
+        return None;
+    }
+    let base = atom.strip_prefix("\0ln:").and_then(parse_rational_render)?;
+    if base.numerator() <= 0 {
+        return None;
+    }
+    let exponent = coeff.numerator();
+    let unit = if exponent < 0 {
+        Rational::integer(1).checked_div(base)?
+    } else {
+        base
     };
+    let mut value = Rational::integer(1);
+    for _ in 0..exponent.unsigned_abs() {
+        value = value.checked_mul(unit)?;
+    }
+    Some(value)
+}
+
+fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
+    let opaque = || Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name("exp", arg))));
+    // Use the rational-function normal form so transcendental atoms (e.g. `ln`) in the
+    // argument are handled; the argument must reduce to a polynomial (denominator 1)
+    // to decompose it term-by-term — a genuine fraction like `exp(1/x)` stays opaque.
+    let Some(ratio) = normalize_rational(arg) else {
+        return opaque();
+    };
+    if ratio.den != MultiPoly::constant(Rational::integer(1)) {
+        return opaque();
+    }
+    let arg_poly = ratio.num;
     if arg_poly.is_zero() {
         return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)))); // exp(0) = 1
     }
     let one = || RatFunc::from_poly(MultiPoly::constant(Rational::integer(1)));
     let mut result = one();
     for (monomial, coeff) in &arg_poly.terms {
+        // exp/ln inverse: exp(k·ln v) = vᵏ for a positive rational v and integer k.
+        if let Some(value) = exp_ln_inverse(monomial, *coeff) {
+            result = result.mul(&RatFunc::from_poly(MultiPoly::constant(value)))?;
+            continue;
+        }
         let negative = coeff.numerator() < 0;
         // The primitive atom and the power to raise it to. When the coefficient is a
         // (nonzero) **integer** `c`, key on `exp(monomial)` and use `exp(c·m) =
@@ -4731,6 +4773,10 @@ mod tests {
         assert_equal(&(x().exp() * (CasExpr::int(2) * x()).exp()), &(CasExpr::int(3) * x()).exp());
         // exp(2) = exp(1)² (constant argument, integer scaling).
         assert_equal(&CasExpr::int(2).exp(), &CasExpr::int(1).exp().pow(2));
+        // exp/ln inverse: exp(ln 5) = 5, exp(2·ln 3) = 9, exp(−ln 2) = 1/2.
+        assert_equal(&CasExpr::int(5).ln().exp(), &CasExpr::int(5));
+        assert_equal(&(CasExpr::int(2) * CasExpr::int(3).ln()).exp(), &CasExpr::int(9));
+        assert_equal(&(-CasExpr::int(2).ln()).exp(), &CasExpr::rat(1, 2));
         // Sanity: the general non-cancelling product stays honest — exp(x)·exp(y) is
         // not equal to exp(x) alone.
         assert_not_equal(&(x().exp() * y().exp()), &x().exp());
