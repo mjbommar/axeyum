@@ -489,8 +489,12 @@ session state.
 >    inverted-zero/high-partition controls with reflected plus native-oracle
 >    replay, proof-producing pure-Rust QF_BV with only certified trust steps,
 >    exact limits, archive-of-pushed-HEAD isolation from the dirty worktree, and
->    atomic two-function scoreboard. Commit/push this zero-row ADR before adding
->    the runner/producer/registration; no query yet.
+>    atomic two-function scoreboard. The ignored runner, producer, compact
+>    registration, five producer protocol tests, independent-spec unit test,
+>    strict target Clippy, and full `axeyum-verify` package suite now pass; that
+>    suite explicitly skips the authenticated test. Commit/push this complete
+>    zero-row checkpoint, validate its pushed-HEAD archive, then invoke exactly
+>    once under the registered cgroup. No query yet.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

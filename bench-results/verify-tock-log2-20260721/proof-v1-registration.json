@@ -1,0 +1,141 @@
+{
+  "canonical": [
+    {
+      "bytes": 331,
+      "file": "log_base_two.ll",
+      "instructions": 4,
+      "name": "log_base_two",
+      "return_width": 32,
+      "sha256": "5063d99b01d07bf04ab25567ba1be2fe563983d3d4344e2265b66b6a70e4d51c",
+      "width": 32
+    },
+    {
+      "bytes": 374,
+      "file": "log_base_two_u64.ll",
+      "instructions": 5,
+      "name": "log_base_two_u64",
+      "return_width": 32,
+      "sha256": "f8e23452acf6d8112d653e9d0d8cd56b7f9972129646d0bc5bb373311206a4e3",
+      "width": 64
+    }
+  ],
+  "capture": {
+    "committed_result": {
+      "path": "bench-results/verify-tock-log2-20260721/capture-v3-result.json",
+      "sha256": "29e01e9eac94cd718d347150762da7234394d062ecbfbf71f1f405cc0e76ba01"
+    },
+    "identity_sha256": "9ec0a0c3d0c4779b09b4b26ec56ea75153b0fab05a61b9b9b68a8bb709084b9d",
+    "local_result_sha256": "96a987b1cbb8d84fa200001f56b3d2be068359ef8bbc7ec6c261814a4cba3aa9",
+    "module_sha256": "f9a1e1558d154b8238deae2f38f06ff251f6438ead8e109e4407b0e3998c76fd"
+  },
+  "command": [
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "axeyum-verify",
+    "--test",
+    "tock_log2_external",
+    "authenticated_tock_log2_scoreboard",
+    "--",
+    "--ignored",
+    "--exact",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "expected_rows": {
+    "controls": 6,
+    "disagree": 0,
+    "functions": 2,
+    "proofs": 8,
+    "unknown": 0
+  },
+  "producer_files": [
+    {
+      "path": "crates/axeyum-verify/tests/tock_log2_external.rs",
+      "sha256": "9af12692f95e3d8b463e6b0344e4ba8db8ccab5bbabd03016733a4f52a77072c"
+    },
+    {
+      "path": "scripts/prove-tock-log2.py",
+      "sha256": "79378e5580af13ef6253aa104dea18836f243ccbc27c72fea7dc506a49282cde"
+    },
+    {
+      "path": "scripts/tests/test_prove_tock_log2.py",
+      "sha256": "93049faeb3216b0b46c285c7e885675e6a78d3353f3b66370149d2542ef16249"
+    }
+  ],
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-proof-v1-registration.v1",
+  "solver": {
+    "backend": "pure-rust-qfbv",
+    "cnf_clause_budget": 5000000,
+    "cnf_variable_budget": 1000000,
+    "memory_limit_mb": 2048,
+    "node_budget": 250000,
+    "policy_toggles": {
+      "bit_lowering_mode": "eager",
+      "cnf_inprocessing": false,
+      "cnf_vivify": false,
+      "lazy_bv": false,
+      "lazy_bv_abstract_ite": false,
+      "native_cdcl": false,
+      "preprocess": false,
+      "xor_cdcl_fallback": false
+    },
+    "prove_unsat": true,
+    "resource_limit": 5000000,
+    "timeout_seconds": 30
+  },
+  "source_files": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "004d144146ac59fa022f84c413c9c8840f5d1df754644c3f705dc9adc302d552"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "edc8276652557dd61a60d08010d2f2fd42d7314f3b376c380aaa25c76b6aba61"
+    },
+    {
+      "path": "crates/axeyum-verify/Cargo.toml",
+      "sha256": "3720953e934ee043fb3b157269e218270c3d45d13cf91f7f4e3c7bbb610d10ec"
+    }
+  ],
+  "tools": {
+    "cargo": {
+      "path": "/home/mjbommar/.rustup/toolchains/nightly-2026-04-21-x86_64-unknown-linux-gnu/bin/cargo",
+      "sha256": "be8f7c32513ac5ffa743d86c9d54d728ba192af70eeadbaa7fdf006767532a65",
+      "version": "cargo 1.97.0-nightly (7ecf0285e 2026-04-18)",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "git": {
+      "path": "/usr/bin/git",
+      "sha256": "5516c9f362c29376ab9a499a33082f9f611941d8c75930c880e30ad109e39c9a",
+      "version": "git version 2.53.0",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "gnu_time": {
+      "path": "/usr/bin/time",
+      "sha256": "34ba90f8199989d88f2f02d40ddcee60be27a7f361db9fb7c100578cc8d7bf1e",
+      "version": "time (GNU Time) UNKNOWN",
+      "version_args": [
+        "--version"
+      ]
+    },
+    "rustc": {
+      "path": "/home/mjbommar/.rustup/toolchains/nightly-2026-04-21-x86_64-unknown-linux-gnu/bin/rustc",
+      "sha256": "19c6e2266c608b018eba2f2a06e6e1258b828d63ef6d327f3d2d71e5c1d27bd6",
+      "version": "rustc 1.97.0-nightly (66da6cae1 2026-04-20)",
+      "version_args": [
+        "-Vv"
+      ]
+    }
+  }
+}

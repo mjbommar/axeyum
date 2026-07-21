@@ -68,8 +68,10 @@ the target oracle.
 1. Run every proof with the pure-Rust QF_BV backend, `prove_unsat=true`, a
    30-second per-query timeout, 5,000,000 deterministic resource units,
    2,048 MiB solver memory, 250,000 term nodes, 1,000,000 CNF variables, and
-   5,000,000 CNF clauses. The outer producer retains one Cargo job and the
-   standing 2.5 GiB high / 4 GiB hard / 512 MiB swap cgroup.
+   5,000,000 CNF clauses. Disable preprocessing/inprocessing/vivification/lazy/
+   XOR/native-CDCL policy toggles explicitly so the measured route is the direct
+   eager baseline. The outer producer retains one Cargo job and the standing
+   2.5 GiB high / 4 GiB hard / 512 MiB swap cgroup.
 2. A proof row receives credit only for `ProofOutcome::Proved` whose provenance
    records the exact limits and `prove_unsat=true`, whose returned evidence was
    rechecked by `prove`, and whose per-result trust ledger contains no
@@ -112,7 +114,20 @@ the target oracle.
 
 ## Result
 
-Proposed. No proof producer, integration test, registration, property query,
+Proposed. The ignored Rust integration runner now implements the eight frozen
+goals, six exact mutations, fully certified evidence/provenance gate, and
+reflected-plus-native witness replay. The Python producer validates the capture,
+canonicals, tools, pushed-HEAD archive, exact solver/command/resource policy,
+structured row set, stable identity, and atomic output. Its compact registration
+pins three producer files, three HEAD source manifests, four tools, both
+canonical hashes, and capture identity `9ec0a0c3...84b9`.
+
+Five focused producer tests pass, including malformed trust/replay rows,
+identity projection, archive traversal, and atomic cleanup. The non-authenticated
+independent-spec Rust test, strict target Clippy, and the full `axeyum-verify`
+package test/doctest suite pass under the capped one-job environment; the suite
+reports the authenticated scoreboard test as ignored. Commit and push this
+checkpoint before its single official invocation. No target property query,
 proof, countermodel, replay, scoreboard row, or measured T5.5.3 result exists.
 
 ## Rejected alternatives

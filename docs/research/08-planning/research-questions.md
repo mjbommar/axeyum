@@ -1065,7 +1065,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     proof rows with checked pure-Rust QF_BV evidence, six wrong-index/
     inverted-zero/high-partition controls replayed against reflection and a
     native oracle, exact limits, pushed-HEAD isolation, and an atomic two-target
-    scoreboard. No query or row exists before producer push.
+    scoreboard. The ignored runner/producer/registration, five focused producer
+    tests, independent-spec test, strict Clippy, and full package suite pass with
+    the authenticated test skipped. No query or row exists before producer push.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
