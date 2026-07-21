@@ -549,10 +549,16 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   30-second bound. The next boundary is evidence-aware production dispatch plus
   mechanism-specific profiling under the existing hard cap, not a new theorem
   family or a larger memory allowance.
-- **Newly scoped categorical engines** (the honest remaining gap vs Z3): CHC/Horn
-  PDR ([P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md)),
-  Craig interpolation ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md)),
-  synthesis/abduction ([P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)).
+- **Categorical-engine depth, not green-field breadth:** the
+  [source-backed audit](../../../docs/plan/categorical-engine-depth-audit-2026-07-21.md)
+  confirms 125/125 focused tests across six interpolation families, a substantial
+  direct CHC/Horn engine, and bounded verified abduction. These are seeded
+  capabilities, not absent engines. Advance textual conformance, representative
+  Z3/cvc5/Spacer corpora, Horn theory/nonlinear depth, and portable certification
+  ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md),
+  [P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md),
+  [P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)). General
+  SyGuS remains absent and separately demand-gated.
 
 Entering any horizon item gets its own ADR with prerequisites and exit
 criteria; none may begin while it would starve a foundation phase.

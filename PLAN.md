@@ -56,6 +56,18 @@ session state.
 > choosing a production evidence-aware dispatch boundary; do not add a theorem
 > family or raise the memory cap.
 
+> **Categorical-engine depth reset (2026-07-21).** A source/API/decline audit
+> plus 125/125 focused tests under a hard 4 GiB cap confirms that six
+> interpolation families, a substantial multi-predicate CHC/Horn direct API,
+> and bounded verified abduction are implemented. They are seeded or decide
+> selected fragments; they are not absent engines. The remaining Z3-class work
+> is textual `get-interpolant` / `declare-rel`+`rule`+`query` / `get-abduct`,
+> representative Z3/cvc5/Spacer corpora, Horn Int/array/mixed/nonlinear depth,
+> portable certification, and production hardening. General `synth-fun`/SyGuS
+> remains absent and separately demand-gated. Use the
+> [categorical-engine depth audit](docs/plan/categorical-engine-depth-audit-2026-07-21.md);
+> do not schedule another interpolation/Horn/abduction seed.
+
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
 > validated policy difference, no residual coverage gap, symbolic memory not
@@ -8308,9 +8320,11 @@ label-based reachability/safety query wrappers over the existing checked PC
 queries. P4.2 still needs richer byte-level/binary frontend work,
 unbounded/certified safety, and eventual warm lazy theory reuse.
 
-> **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
-> below) and the NRA CAD decision side complete, the three categorically-missing
-> engines are now *addressed*. So the dominant gap is no longer "what can't we
+> **Reframe (2026-06-22; audited 2026-07-21).** With selected-fragment
+> interpolation done, CHC/abduction seeded (item 3 below), and the NRA CAD
+> decision side complete, the three historical categorical gaps are addressed
+> at different maturity rungs; general SyGuS remains absent. So the dominant gap
+> is no longer "what can't we
 > decide." It is **(A) architecture maturity** — chiefly *online* multi-theory
 > combination, still eager Ackermann today (the e-graph keystone and the EUF lazy
 > DPLL(T) loop already exist; cross-theory propagation does not) — and **(B) the
@@ -8347,33 +8361,42 @@ depth ladders are already planned; this audit only sharpens their exit criteria:
   glue/LBD retention, SCC/equiv-lit substitution, probing, and word-level BV
   abstraction. The hard-QF_BV tail (~9 instances) remains mostly search-bound.
 
-**3. ~3 categorically-absent engines** — **ALL THREE now addressed (2026-06-22),
-each verify-guarded (untrusted search, trusted small checking); depth/fuller
-versions remain:**
+**3. Historically categorical gaps** — **interpolation, CHC, and abduction now
+have verify-guarded direct implementations; general SyGuS remains absent;
+depth/interfaces/corpora remain:**
 - **CHC / Horn (PDR/Spacer)** — *unbounded* invariant discovery, the step beyond
-  today's bounded BMC + inductive k-induction. The single biggest categorical hole
-  vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
+  today's bounded BMC + inductive k-induction. Historically the single biggest
+  categorical hole vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
   (ADR-0048):** verify-guarded single-predicate **IC3/PDR over QF_BV**
   (`prove_safety_pdr`) discovers invariants where k-induction is inconclusive —
   `Safe` only when the discovered invariant passes the 3 implication checks; **MBP
   for LRA** (P2.6-T2.6.6) **landed** as the Spacer predecessor primitive; an **IMC**
-  (interpolation-based model checking) consumer of the interpolation API is the next
-  slice. Depth: LRA-theory PDR, online LRA solver, multi-predicate Horn core.
+  (interpolation-based model checking) consumer of the interpolation API has
+  since landed. The current direct API also supports Real and Bool/BV state,
+  stratified multi-predicate systems, compatible mutual SCCs, and lower-stratum
+  nonlinear folding with source-clause reverification. Depth: textual CHC,
+  representative Spacer measurement, Int/arrays/mixed state, genuine nonlinear
+  recursion, incompatible SCC signatures, and a portable certificate bundle.
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
   the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
-  **ENGINE DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
+  **SELECTED DIRECT-API FRAGMENTS DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
   **QF_LRA** (Farkas), **QF_UF** (congruence-explanation), **propositional/SAT**
   (McMillan over the LRAT resolution proof), **QF_BV** (joint bit-blast + lifted
   propositional interpolant), and **QF_UFLRA** (Ackermannize → LRA interpolant →
   translate) — every phase-exit fragment, each **verify-before-return** (declines
-  rather than emitting anything unverified). Only the SMT-LIB `(get-interpolant)`
-  parse surface remains (coordinate `axeyum-smtlib`).
+  rather than emitting anything unverified). LIA/UFLIA families and certificate-
+  bearing variants have since joined the public namespace. SMT-LIB
+  `(get-interpolant)`, broader mixed/proof-shape coverage, representative
+  comparison, and complete Lean/export accounting remain.
 - **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
   generator. [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
   **OPENED (ADR-0049):** `abduct(axioms, conjecture)` — bounded enumeration of
   shared-vocab atoms, each candidate returned only when `check_auto` confirms
-  consistency + sufficiency + vocabulary. Depth: SyGuS grammar synthesizing *new*
-  atoms, CEGIS, minimality, `(get-abduct)` surface.
+  consistency + sufficiency + vocabulary; it now synthesizes new shared
+  equalities and arithmetic comparisons and tries bounded two-literal
+  conjunctions. Depth: textual `(get-abduct)`, minimality/weakest guarantees,
+  richer user grammar, general CEGIS, and independently measured corpora.
+  General `synth-fun`/SyGuS remains absent and must be reported separately.
 - Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,
   finite fields, co-datatypes, rec-fun) kept *counted*, not forgotten:
   [P2.10](docs/plan/track-2-theories/P2.10-breadth-backlog.md).

@@ -18,8 +18,8 @@ remains around it.
 | [P4.2](P4.2-symexec-cfg.md) | Symbolic-execution CFG frontend (angr/unicorn-class) | XL | P4.1 | binary lift + CFG + memory model |
 | [P4.3](P4.3-optimization.md) | Optimization: OMT lexicographic/Pareto + MILP hardening | M | — | constrained program optimization |
 | [P4.4](P4.4-smtlib-surface.md) | SMT-LIB command-surface completeness | M | — | declare-sort, reset, get-proof, set-option |
-| [P4.6](P4.6-chc-horn.md) | CHC / Horn solving (PDR/Spacer unbounded reachability) | XL | P3.8, P1.5, P2.6 | **biggest categorical gap vs Z3**; the *unbounded* verification engine above BMC/k-induction |
-| [P4.7](P4.7-synthesis.md) | Synthesis & abduction (SyGuS, `get-abduct`) | L | P2.6, P3.8, P1.5 | turns the checker into a generator; lower priority, mostly integration |
+| [P4.6](P4.6-chc-horn.md) | CHC / Horn solving (PDR/Spacer unbounded reachability) | XL | P3.8, P1.5, P2.6 | substantial verify-guarded direct API; textual surface, theory/nonlinear depth, certification bundle, and Spacer corpus remain |
+| [P4.7](P4.7-synthesis.md) | Synthesis & abduction (SyGuS, `get-abduct`) | L | P2.6, P3.8, P1.5 | bounded verified abduction exists; general SyGuS and textual surface remain |
 
 ## Order
 **P4.5 immediately** (nothing in Track 1 is "done" without the measured Z3
@@ -28,13 +28,15 @@ keystones + lazy arrays (P2.2) land — it makes memory BMC/k-induction/symexec
 warm. P4.2 (the angr/unicorn-class frontend) is the multi-month capstone of the
 symbolic-execution use case, built on P4.1.
 
-**P4.6 (CHC/Horn)** is the highest-value *new* engine in this track: it is the
-single biggest categorical capability Z3 has that axeyum lacks (Spacer-style
-*unbounded* invariant discovery, the step beyond today's bounded BMC + inductive
-k-induction). It waits on interpolation ([P3.8](../track-3-proof-lean/P3.8-interpolation.md),
-its lemma engine) and the CDCL(T) loop, so it is mid/late, but it is what makes
-axeyum a real program-verification backend. **P4.7 (synthesis)** is lower
-priority and mostly integrates machinery built for P2.6/P3.8/P4.6.
+**P4.6 (CHC/Horn)** is now a substantial verify-guarded direct-API seed: Real
+and Bool/BV PDR/IMC, stratified multi-predicate systems, and compatible mutual
+SCCs exist. The high-value work is to measure and deepen that engine—textual
+CHC input, Int/arrays/mixed state, genuine nonlinear recursion, portable
+certificates, and a committed Spacer comparison—not to add another seed.
+**P4.7** must split bounded verified abduction, which exists, from general
+SyGuS, which does not. The source-backed classification and focused 125-test
+result are recorded in the
+[categorical-engine depth audit](../categorical-engine-depth-audit-2026-07-21.md).
 
 Reference reading: [`../references/axeyum-current-state.md`](../references/axeyum-current-state.md)
 (performance numbers, symexec status), and the project's existing

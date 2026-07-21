@@ -136,6 +136,17 @@ search work, but it does not support a “Z3 sweeps; Axeyum cannot solve” fram
 | Lean workflow integration | Fail-closed tactic/import path that discharges real Lean goals and reports axioms/trust | Not shipped; out-of-band modules exist |
 | Full Lean-system parity | Parser, macros, elaborator, unification, tactics, compiler, modules, language server, ecosystem | Out of scope as a solver milestone |
 
+### Categorical-engine correction
+
+The [source- and test-backed categorical-engine audit](categorical-engine-depth-audit-2026-07-21.md)
+rejects another monolithic gap claim. Six interpolation families, a substantial
+multi-predicate CHC/Horn direct API, and bounded verified abduction already
+exist; 125/125 focused tests pass under a hard 4 GiB cap. Their correct maturity
+labels are selected-fragment `decides` or `seeded`, not `absent`. The open work
+is textual conformance, representative Z3/cvc5/Spacer measurement, Horn
+theory/nonlinear depth, portable certification, and production hardening.
+General `synth-fun`/SyGuS remains absent and must not inherit abduction's credit.
+
 ## Ranked gap program
 
 ### G0 — Stop documentation from overruling measurements
@@ -342,6 +353,12 @@ corpus replace the ambiguous phrase “Lean parity.”
 Theory engines are only one part of a Z3-class replacement. Remaining command,
 option, recursive-definition, model/value/proof, incremental, optimization, and
 error-semantics differences need an explicit conformance suite.
+
+The categorical-engine audit supplies three high-value negative controls:
+`get-interpolant`, `declare-rel`/`rule`/`query`, and `get-abduct` are not parser
+capabilities merely because their direct Rust engines exist. Conversely, their
+missing textual commands must not be reported as missing engines. Full SyGuS is
+the separate absent surface.
 
 **Exit:** a generated SMT-LIB/API matrix distinguishes parsed, semantically
 implemented, round-tripped, incrementally correct, and deliberately unsupported

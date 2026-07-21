@@ -356,6 +356,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — Categorical-engine roadmap drift is corrected; depth is the
+  gap.** Source/public-API/decline inspection plus a hard-4-GiB sequential run
+  passes 125/125 focused tests: 94 interpolation, 22 CHC/Horn, and nine
+  abduction. Six interpolation families have canonical direct APIs; Horn handles
+  Real and Bool/BV state, stratified multi-predicate systems, compatible mutual
+  SCCs, and lower-stratum nonlinear folding with source-clause reverification;
+  abduction performs bounded synthesized shared-vocabulary search with mandatory
+  consistency/sufficiency/vocabulary checks. These are seeded or selected-
+  fragment implementations, not absent engines. Next work is textual
+  conformance, representative Z3/cvc5/Spacer corpora, Horn theory/nonlinear
+  depth, and portable certification. General SyGuS remains absent and separately
+  demand-gated. The durable audit is
+  `docs/plan/categorical-engine-depth-audit-2026-07-21.md`.
+
 - **2026-07-21 — Proof-gap population is refreshed under dominance schema v2;
   causal tracing is next.** The eight rows containing every historical bare
   UNSAT were rerun sequentially in release mode: 211 decided instances retain
@@ -6228,6 +6242,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-21 — Reclassified the Z3-class categorical-engine gaps.** The
+  source-backed audit and 125/125 focused test run replace stale “new/absent”
+  roadmap wording. Interpolation, substantial direct CHC/Horn, and bounded
+  verified abduction are existing seeds; textual commands, representative
+  corpora, Horn depth, portable certification, and production hardening remain.
+  General SyGuS is the separately absent engine. P3.8/P4.6/P4.7 and the Track 4
+  index now preserve those distinctions.
 
 - **2026-07-21 — Classified the three quantified-BV Lean export costs.** Opt-in
   phase telemetry leaves proof semantics and default output unchanged. Under a

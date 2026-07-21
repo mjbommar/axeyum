@@ -3,9 +3,11 @@
 
 This is intentionally a narrow guard, not a natural-language fact checker.  It
 owns the claims that have already rotted repeatedly: the generated division
-totals, exact dominance-audit denominators, and the paired 20-second p4dfa
-control.  New guarded claims should be added only when they have one canonical,
-machine-readable artifact.
+totals, exact dominance-audit denominators, the paired 20-second p4dfa control,
+and the source/test-backed categorical-engine maturity classification. New
+guarded numerical claims should be added only when they have one canonical,
+machine-readable artifact; the categorical markers guard the dated audit and
+the live roadmap language that points to it.
 """
 
 from __future__ import annotations
@@ -21,6 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
 GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
+CATEGORICAL_AUDIT = (
+    ROOT / "docs" / "plan" / "categorical-engine-depth-audit-2026-07-21.md"
+)
 CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 AXEYUM_P4DFA = (
     ROOT
@@ -51,6 +56,13 @@ LIVE_DOCS = (
     ROOT / "docs" / "plan" / "README.md",
     ROOT / "docs" / "user-guide" / "benchmarks.md",
     GAP_DOC,
+    CATEGORICAL_AUDIT,
+    ROOT / "docs" / "plan" / "01-dependency-dag.md",
+    ROOT / "docs" / "plan" / "track-3-proof-lean" / "P3.8-interpolation.md",
+    ROOT / "docs" / "plan" / "track-4-usecases-frontend" / "README.md",
+    ROOT / "docs" / "plan" / "track-4-usecases-frontend" / "P4.6-chc-horn.md",
+    ROOT / "docs" / "plan" / "track-4-usecases-frontend" / "P4.7-synthesis.md",
+    ROOT / "docs" / "research" / "08-planning" / "roadmap.md",
 )
 
 STALE_PATTERNS = (
@@ -61,6 +73,10 @@ STALE_PATTERNS = (
     re.compile(r"\b19/35 decide-strong\b"),
     re.compile(r"\b23 fragments\b"),
     re.compile(r"\b~73%\b"),
+    re.compile(r"new categorical engines", re.IGNORECASE),
+    re.compile(r"biggest categorical gap", re.IGNORECASE),
+    re.compile(r"categorically-missing", re.IGNORECASE),
+    re.compile(r"T3\.8\.5 façade — DONE"),
 )
 
 
@@ -236,6 +252,22 @@ def main() -> int:
     for marker in required_gap_markers:
         if marker not in gap_text:
             failures.append(f"{GAP_DOC.relative_to(ROOT)}: missing measured marker {marker!r}")
+
+    categorical_text = CATEGORICAL_AUDIT.read_text(encoding="utf-8")
+    for marker in (
+        "125 / 125 passed",
+        "94 tests",
+        "Horn 22",
+        "abduction nine",
+        "General SyGuS",
+        "No SMT-LIB `get-interpolant`",
+        "No SMT-LIB `declare-rel`/`rule`/`query`",
+        "No SMT-LIB `get-abduct`",
+    ):
+        if marker not in categorical_text:
+            failures.append(
+                f"{CATEGORICAL_AUDIT.relative_to(ROOT)}: missing categorical marker {marker!r}"
+            )
 
     ci_text = CI_WORKFLOW.read_text(encoding="utf-8")
     for marker in (

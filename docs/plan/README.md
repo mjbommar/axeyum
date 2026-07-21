@@ -35,6 +35,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   (including all three QF_NIA Alethe proofs through EUF) and three distinct
   quantified-BV kernel-closure, compact-spooling, and CPS-reconstruction cost
   cases measured under hard wall/memory bounds.
+- [`categorical-engine-depth-audit-2026-07-21.md`](categorical-engine-depth-audit-2026-07-21.md) —
+  source/API/decline/test audit correcting interpolation, CHC/Horn, and abduction
+  from “absent” to measured seed/selected-fragment status while keeping general
+  SyGuS, textual conformance, production depth, corpora, and certification open.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map
