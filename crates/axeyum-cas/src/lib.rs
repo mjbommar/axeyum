@@ -300,6 +300,17 @@ impl CasExpr {
         }
     }
 
+    /// The `n`-th derivative with respect to `var` (`differentiate` applied `n`
+    /// times; `n = 0` returns a clone).
+    #[must_use]
+    pub fn differentiate_n(&self, var: &str, n: usize) -> CasExpr {
+        let mut result = self.clone();
+        for _ in 0..n {
+            result = result.differentiate(var);
+        }
+        result
+    }
+
     /// Substitute every occurrence of `var` with `replacement` (a `subs`-style
     /// substitution).
     ///
@@ -1086,14 +1097,25 @@ pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     }
     let mut remaining = coeffs;
     let mut factors: Vec<CasExpr> = Vec::new();
-    // Peel one rational-root linear factor per step (multiplicity re-found).
+    // Peel each rational-root linear factor with its multiplicity: (x − r)^m.
     while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
         let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
             break;
         };
-        let divisor = vec![root.checked_neg()?, Rational::integer(1)]; // x − root
-        remaining = poly::rat_exact_div(&remaining, &divisor)?;
-        factors.push(CasExpr::var(var) - CasExpr::Const(root));
+        let divisor = [root.checked_neg()?, Rational::integer(1)]; // x − root
+        let mut multiplicity = 0u32;
+        while poly::rat_degree(&remaining).unwrap_or(0) >= 1
+            && poly::eval_rat_poly(&remaining, root)?.is_zero()
+        {
+            remaining = poly::rat_exact_div(&remaining, &divisor)?;
+            multiplicity += 1;
+        }
+        let linear = CasExpr::var(var) - CasExpr::Const(root);
+        factors.push(if multiplicity == 1 {
+            linear
+        } else {
+            linear.pow(multiplicity)
+        });
     }
     // A non-unit remaining factor (leading constant or an irreducible ≥2).
     if remaining != vec![Rational::integer(1)] {
@@ -2511,6 +2533,11 @@ mod tests {
         // 2x² − 6x + 4 = 2·(x−1)(x−2) (non-monic leading constant preserved)
         let g = CasExpr::int(2) * x().pow(2) - CasExpr::int(6) * x() + CasExpr::int(4);
         assert_equal(&factor(&g, "x").expect("factorable"), &g);
+        // x² − 2x + 1 = (x−1)² (repeated root grouped into a power)
+        let h = x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1);
+        assert_equal(&factor(&h, "x").expect("factorable"), &(x() - CasExpr::int(1)).pow(2));
+        // 4th derivative of x⁴ is 24
+        assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
     }
 
     #[test]
