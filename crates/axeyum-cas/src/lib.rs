@@ -54,6 +54,7 @@ pub mod algebraic;
 pub mod approx;
 pub mod boolean;
 pub mod combinatorics;
+pub mod geometry;
 pub mod groebner;
 mod factor_int;
 mod gosper;
@@ -74,6 +75,7 @@ pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
 pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
+pub use geometry::{Circle, Line, Point};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
@@ -3708,6 +3710,112 @@ fn limit_rational(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExp
     }
 }
 
+/// The coefficient `c` if `arg` is `c·var` (a rational multiple of a single
+/// variable), `Some(0)` for the constant `0`; `None` otherwise.
+fn linear_var_coefficient(arg: &CasExpr, var: &str) -> Option<Rational> {
+    let poly = normalize(arg)?;
+    if poly.terms.is_empty() {
+        return Some(Rational::zero());
+    }
+    if poly.terms.len() != 1 {
+        return None;
+    }
+    let (monomial, coeff) = poly.terms.iter().next()?;
+    if monomial.powers.len() == 1 && monomial.powers.get(var) == Some(&1) {
+        Some(*coeff)
+    } else {
+        None
+    }
+}
+
+/// The Laplace transform `L{g}(s)` of a single elementary "base" `g` in `t`
+/// (`1`, `e^{a·t}`, `sin(b·t)`, `cos(b·t)`), returned in the variable `s`. `None`
+/// outside that table.
+fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
+    let s_var = CasExpr::var(s);
+    match g {
+        CasExpr::Const(c) if *c == Rational::integer(1) => Some(CasExpr::int(1) / s_var), // L{1}=1/s
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            let a = linear_var_coefficient(arg, t)?; // e^{a·t} → 1/(s−a)
+            Some(CasExpr::int(1) / (s_var - CasExpr::Const(a)))
+        }
+        CasExpr::Unary(UnaryFunc::Sin, arg) => {
+            let b = linear_var_coefficient(arg, t)?; // sin(b·t) → b/(s²+b²)
+            Some(CasExpr::Const(b) / (s_var.pow(2) + CasExpr::Const(b.checked_mul(b)?)))
+        }
+        CasExpr::Unary(UnaryFunc::Cos, arg) => {
+            let b = linear_var_coefficient(arg, t)?; // cos(b·t) → s/(s²+b²)
+            Some(s_var.clone() / (s_var.pow(2) + CasExpr::Const(b.checked_mul(b)?)))
+        }
+        _ => None,
+    }
+}
+
+/// The Laplace transform `L{f}(s) = ∫₀^∞ f(t)·e^{−st} dt` of an elementary function
+/// `f` in `t`, returned in the variable `s`. Handles linear combinations of
+/// `tᵏ·e^{a·t}`, `tᵏ·sin(b·t)`, `tᵏ·cos(b·t)`, and polynomials (via `L{tᵏ·g} =
+/// (−1)ᵏ dᵏ/dsᵏ L{g}` and the `1, e^{at}, sin, cos` table). `None` outside that
+/// fragment or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, laplace_transform, equal, ZeroTest};
+/// let t = CasExpr::var("t");
+/// // L{t} = 1/s².
+/// let f = laplace_transform(&t, "t", "s").unwrap();
+/// let expected = CasExpr::int(1) / CasExpr::var("s").pow(2);
+/// assert!(matches!(equal(&f, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
+    // Linearity: transform each additive term and sum.
+    if let CasExpr::Add(terms) = f {
+        let mut total = CasExpr::zero();
+        for term in terms {
+            total = total + laplace_transform(term, t, s)?;
+        }
+        return Some(expand(&total).unwrap_or(total));
+    }
+
+    // Decompose the term into constant `c`, power `t^power`, and a transcendental
+    // base `g ∈ {1, e^{at}, sin, cos}`.
+    let factors: Vec<CasExpr> = match f {
+        CasExpr::Mul(factors) => factors.clone(),
+        other => vec![other.clone()],
+    };
+    let mut coefficient = Rational::integer(1);
+    let mut power = 0u32;
+    let mut base = CasExpr::int(1);
+    let mut base_seen = false;
+    for factor in &factors {
+        match factor {
+            CasExpr::Const(c) => coefficient = coefficient.checked_mul(*c)?,
+            CasExpr::Var(name) if name == t => power = power.checked_add(1)?,
+            CasExpr::Pow(inner, exp) if matches!(&**inner, CasExpr::Var(n) if n == t) => {
+                power = power.checked_add(*exp)?;
+            }
+            CasExpr::Unary(UnaryFunc::Exp | UnaryFunc::Sin | UnaryFunc::Cos, _) => {
+                if base_seen {
+                    return None; // more than one transcendental factor — unsupported
+                }
+                base = factor.clone();
+                base_seen = true;
+            }
+            _ => return None, // outside the supported fragment
+        }
+    }
+
+    // L{g}(s), then L{t^power · g} = (−1)^power d^power/ds^power L{g}.
+    let mut transform = laplace_base(&base, t, s)?;
+    transform = transform.differentiate_n(s, power as usize);
+    let sign = if power.is_multiple_of(2) {
+        coefficient
+    } else {
+        coefficient.checked_neg()?
+    };
+    let result = CasExpr::Const(sign) * transform;
+    Some(simplify(&result))
+}
+
 /// The Maclaurin coefficients of `f` about `0` to `order`, or `None` outside the
 /// series-expandable fragment.
 fn series_coefficients(f: &CasExpr, var: &str, order: usize) -> Option<Vec<Rational>> {
@@ -4989,6 +5097,31 @@ mod tests {
         let s = simplify(&f);
         assert_equal(&s, &(x() + CasExpr::int(1)));
         assert_equal(&s, &f);
+    }
+
+    #[test]
+    fn laplace_transforms() {
+        let t = || v("t");
+        let s = || v("s");
+        let holds = |f: CasExpr, expected: CasExpr| {
+            assert_equal(&laplace_transform(&f, "t", "s").unwrap(), &expected);
+        };
+        // L{1} = 1/s, L{t} = 1/s², L{t²} = 2/s³.
+        holds(CasExpr::int(1), CasExpr::int(1) / s());
+        holds(t(), CasExpr::int(1) / s().pow(2));
+        holds(t().pow(2), CasExpr::int(2) / s().pow(3));
+        // L{e^{3t}} = 1/(s−3).
+        holds((CasExpr::int(3) * t()).exp(), CasExpr::int(1) / (s() - CasExpr::int(3)));
+        // L{sin(2t)} = 2/(s²+4); L{cos(2t)} = s/(s²+4).
+        holds((CasExpr::int(2) * t()).sin(), CasExpr::int(2) / (s().pow(2) + CasExpr::int(4)));
+        holds((CasExpr::int(2) * t()).cos(), s() / (s().pow(2) + CasExpr::int(4)));
+        // L{t·e^{2t}} = 1/(s−2)² (frequency-shift via differentiation).
+        holds(t() * (CasExpr::int(2) * t()).exp(), CasExpr::int(1) / (s() - CasExpr::int(2)).pow(2));
+        // Linearity: L{3t + 2e^{t}} = 3/s² + 2/(s−1).
+        holds(
+            CasExpr::int(3) * t() + CasExpr::int(2) * t().exp(),
+            CasExpr::int(3) / s().pow(2) + CasExpr::int(2) / (s() - CasExpr::int(1)),
+        );
     }
 
     #[test]
