@@ -570,6 +570,11 @@ session state.
 >    exact authenticated-test harness prefix, then reuse every v3 row/certificate/
 >    replay/scoreboard gate unchanged. Commit/push this zero-result ADR before
 >    implementation. No v4 query/output exists.
+>    ADR commit `c9fa897e` is pushed. The thin v4 wrapper/registration pass six
+>    focused plus one inherited parser test, including wrong/duplicate/non-proof
+>    prefix rejection; every v3 policy/input is byte-identical and `proof-v4` is
+>    absent. Commit/push these exact bytes before the archived non-authenticated
+>    compilation preflight. No target query.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

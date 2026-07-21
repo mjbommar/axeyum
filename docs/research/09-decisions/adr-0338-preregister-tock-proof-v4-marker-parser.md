@@ -51,6 +51,20 @@ trust, replay, and scoreboard validators.
 7. Any official v4 failure closes v4. Never tune a proof/control limit, weaken a
    certificate/recheck condition, or rerun after observation.
 
+## Pre-invocation implementation state
+
+The thin v4 wrapper validates exact v3 registration/preflight/negative lineage,
+normalizes only one proof marker after the exact authenticated harness prefix,
+and delegates to v3's unchanged dual-DRAT metadata/recheck, control replay, exact
+count, and scoreboard parser. It rejects wrong prefixes, multiple markers on a
+line, prefixed control/scoreboard markers, and absent prefixed proof markers.
+
+Registration SHA-256 is `caa05643...7f1a`; wrapper and focused-test hashes are
+`e5439f31...de5a` and `2ed1be93...73a2`. Six focused v4 tests plus v3's dual-
+DRAT parser mutation test pass. The Rust runner is byte-identical to v3 and its
+ordinary tests/Clippy remain the pushed v3 gate. `proof-v4` is absent. Commit and
+push these bytes before archived non-authenticated compilation.
+
 ## Rejected alternatives
 
 - **Credit v3 from the Rust exit code.** Rejected: the committed artifact gate

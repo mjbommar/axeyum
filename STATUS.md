@@ -390,6 +390,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   recognize one first proof marker after the exact authenticated-test harness
   prefix and feed normalized output to every unchanged v3 validator. Commit/push
   the zero-result ADR before implementation. No v4 query/output exists.
+  ADR commit `c9fa897e` is pushed. The thin wrapper/registration pass seven
+  parser/lineage tests, reject wrong/duplicate/non-proof prefixes, preserve all
+  v3 inputs/policies, and leave `proof-v4` absent. Next: commit/push exact bytes,
+  then run only the archived non-authenticated compilation preflight.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
