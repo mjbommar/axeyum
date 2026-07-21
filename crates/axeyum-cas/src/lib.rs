@@ -3075,6 +3075,64 @@ pub fn backward_difference(f: &CasExpr, var: &str) -> CasExpr {
     expand(&difference).unwrap_or(difference)
 }
 
+/// The **least-squares** best-fit polynomial of the given `degree` through the data
+/// `points` `(xᵢ, yᵢ)`, computed exactly by solving the normal equations
+/// `AᵀA·c = Aᵀy` over ℚ (where `A` is the `[1, x, …, x^degree]` design matrix).
+/// Returns the fit polynomial in `var`. With `degree ≥ points.len() − 1` this
+/// reproduces the interpolant exactly; with fewer degrees of freedom it is the exact
+/// rational least-squares fit. `None` if there are too few points, the normal matrix
+/// is singular, or on overflow.
+#[must_use]
+pub fn least_squares_polynomial(
+    points: &[(Rational, Rational)],
+    degree: usize,
+    var: &str,
+) -> Option<CasExpr> {
+    if points.len() < degree + 1 {
+        return None;
+    }
+    let width = degree + 1;
+    // Powers x^0..x^{2·degree} summed over the data drive the normal matrix.
+    let power_sum = |exp: usize| -> Option<Rational> {
+        let mut total = Rational::zero();
+        for (x, _) in points {
+            let mut term = Rational::integer(1);
+            for _ in 0..exp {
+                term = term.checked_mul(*x)?;
+            }
+            total = total.checked_add(term)?;
+        }
+        Some(total)
+    };
+    // Normal matrix M[j][k] = Σ xᵢ^{j+k}; RHS b[j] = Σ yᵢ·xᵢ^j.
+    let mut normal_rows: Vec<Vec<CasExpr>> = Vec::with_capacity(width);
+    let mut rhs_rows: Vec<Vec<CasExpr>> = Vec::with_capacity(width);
+    for j in 0..width {
+        let mut row = Vec::with_capacity(width);
+        for k in 0..width {
+            row.push(CasExpr::Const(power_sum(j + k)?));
+        }
+        normal_rows.push(row);
+        let mut b = Rational::zero();
+        for (x, y) in points {
+            let mut term = *y;
+            for _ in 0..j {
+                term = term.checked_mul(*x)?;
+            }
+            b = b.checked_add(term)?;
+        }
+        rhs_rows.push(vec![CasExpr::Const(b)]);
+    }
+    let solution = Matrix::from_rows(normal_rows)?.solve(&Matrix::from_rows(rhs_rows)?)?;
+    let coeffs: Vec<Rational> = (0..width)
+        .map(|j| match solution.get(j, 0)? {
+            CasExpr::Const(c) => Some(*c),
+            _ => None,
+        })
+        .collect::<Option<_>>()?;
+    Some(MultiPoly::from_univariate(var, &coeffs).to_expr())
+}
+
 /// The Hessian matrix `H[i][j] = ∂²f/∂xᵢ∂xⱼ` of a scalar field `f` over `vars` — the
 /// symmetric matrix of second partial derivatives, each entry expanded to canonical
 /// form and certified (a second partial of the certified `differentiate`). `None`
@@ -6037,6 +6095,29 @@ mod tests {
         // Δ of a constant is 0; falling_factorial(x, 0) = 1.
         assert_equal(&forward_difference(&CasExpr::int(5), "x"), &CasExpr::zero());
         assert_equal(&falling_factorial(&x(), 0), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn least_squares_fitting() {
+        let x = || v("x");
+        let ig = Rational::integer;
+        // Exact line through collinear points: (0,1),(1,3),(2,5) → 2x + 1.
+        let line = least_squares_polynomial(&[(ig(0), ig(1)), (ig(1), ig(3)), (ig(2), ig(5))], 1, "x").unwrap();
+        assert_equal(&line, &(CasExpr::int(2) * x() + CasExpr::int(1)));
+        // Overdetermined least squares: fit a line to (0,0),(1,0),(2,2),(3,2) — the
+        // exact rational best fit is y = (2/3)x − 1/5? Compute and re-check via the
+        // symmetric-data slope: points symmetric about (1.5, 1) with slope 2/3.
+        let fit = least_squares_polynomial(
+            &[(ig(0), ig(0)), (ig(1), ig(0)), (ig(2), ig(2)), (ig(3), ig(2))],
+            1,
+            "x",
+        )
+        .unwrap();
+        // The fit passes through the centroid (3/2, 1): evaluating at x = 3/2 gives 1.
+        assert_equal(&fit.substitute("x", &CasExpr::rat(3, 2)), &CasExpr::int(1));
+        // Exact quadratic through 3 points: (0,0),(1,1),(2,4) → x².
+        let quad = least_squares_polynomial(&[(ig(0), ig(0)), (ig(1), ig(1)), (ig(2), ig(4))], 2, "x").unwrap();
+        assert_equal(&quad, &x().pow(2));
     }
 
     #[test]
