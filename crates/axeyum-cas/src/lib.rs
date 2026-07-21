@@ -4037,12 +4037,24 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(simplify_radicals(arg))),
         CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(simplify_radicals).collect()),
-        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(simplify_radicals).collect()),
+        CasExpr::Mul(factors) => {
+            fold_trivial(&CasExpr::Mul(factors.iter().map(simplify_radicals).collect()))
+        }
         CasExpr::Neg(inner) => CasExpr::Neg(Box::new(simplify_radicals(inner))),
-        CasExpr::Div(numerator, denominator) => CasExpr::Div(
-            Box::new(simplify_radicals(numerator)),
-            Box::new(simplify_radicals(denominator)),
-        ),
+        CasExpr::Div(numerator, denominator) => {
+            let num = simplify_radicals(numerator);
+            let den = simplify_radicals(denominator);
+            // A constant denominator folds into the numerator's rational content
+            // (`(2√2)/2 → √2`): fold_trivial combines the constants after flattening.
+            if let CasExpr::Const(d) = den
+                && !d.is_zero()
+                && let Some(inv) = Rational::integer(1).checked_div(d)
+            {
+                fold_trivial(&CasExpr::Mul(vec![CasExpr::Const(inv), num]))
+            } else {
+                CasExpr::Div(Box::new(num), Box::new(den))
+            }
+        }
         CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(simplify_radicals(base)), *exponent),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
@@ -7516,6 +7528,20 @@ mod tests {
         // Negative radicand is left symbolic (no real simplification).
         let neg = CasExpr::int(-3).sqrt();
         assert_equal(&simplify_radicals(&neg), &neg);
+        // A constant denominator cancels the extracted surd coefficient:
+        // √8/2 → √2, √18/3 → √2, √12/2 → √3.
+        assert_equal(
+            &simplify_radicals(&(CasExpr::int(8).sqrt() / CasExpr::int(2))),
+            &CasExpr::int(2).sqrt(),
+        );
+        assert_equal(
+            &simplify_radicals(&(CasExpr::int(18).sqrt() / CasExpr::int(3))),
+            &CasExpr::int(2).sqrt(),
+        );
+        assert_equal(
+            &simplify_radicals(&(CasExpr::int(12).sqrt() / CasExpr::int(2))),
+            &CasExpr::int(3).sqrt(),
+        );
     }
 
     #[test]
