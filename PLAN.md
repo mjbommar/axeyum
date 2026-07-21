@@ -411,6 +411,12 @@ session state.
 >    Next preregister a dedicated checksum-validated cache preparation and
 >    inventory as v2 before any networked preparation or successor build;
 >    LLVM 21, text slicing, feasibility seeding, and early queries stay barred.
+>    ADR-0329 now freezes that input-only phase: a fresh dedicated Cargo home,
+>    one exact locked fetch under a registered network namespace, a second
+>    network-isolated read-only full-workspace metadata probe, whole-tree
+>    canonical inventory, cgroup/OOM accounting, and atomic local retention.
+>    Implement and push its producer/tests/registration before the first fetch.
+>    Preparation cannot compile, capture, admit, query, or authorize v1 rerun.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

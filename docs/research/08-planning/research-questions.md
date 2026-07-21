@@ -1009,6 +1009,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     0.4.4`. Zero builds or target bytes exist. Do not refill the ambient cache
     and rerun v1; a successor must first preregister a dedicated checksum-
     validated cache preparation and inventory.
+  - [ADR-0329](../09-decisions/adr-0329-preregister-tock-dedicated-cargo-cache.md)
+    preregisters that input-only successor: one fresh dedicated Cargo home,
+    exact locked fetch, network-isolated read-only replay of the v1 metadata
+    gate, canonical whole-tree inventory, and no compilation/capture/query.
+    Its producer/tests/registration must be pushed before any networked fetch;
+    no cache byte or expected inventory exists yet.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
