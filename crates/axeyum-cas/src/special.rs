@@ -38,10 +38,14 @@ pub fn gamma(x: Rational) -> Option<CasExpr> {
         return Some(CasExpr::Const(Rational::integer(factorial)));
     }
     if den == 2 {
-        // Reduced half-integer x = num/2 (num odd). Γ has a closed form for the
-        // positive half-integers n + 1/2 = (2n+1)/2, i.e. num ≥ 1.
+        // Reduced half-integer x = num/2 (num odd).
         if num < 1 {
-            return None;
+            // Negative half-integer: raise via Γ(x) = Γ(x+1)/x until positive.
+            // Γ(−1/2) = −2√π, Γ(−3/2) = (4/3)√π, …
+            let x_value = Rational::checked_new(num, 2)?;
+            let inverse_x = Rational::integer(1).checked_div(x_value)?;
+            let gamma_shifted = gamma(Rational::checked_new(num + 2, 2)?)?; // Γ(x+1)
+            return Some(CasExpr::Const(inverse_x) * gamma_shifted);
         }
         let n = (num - 1) / 2; // n ≥ 0
         // Γ(n+1/2) = (2n)! / (4ⁿ · n!) · √π.
@@ -150,6 +154,23 @@ mod tests {
         assert_eq!(gamma(Rational::integer(6)), Some(CasExpr::int(120)));
         assert!(gamma(Rational::integer(0)).is_none()); // pole
         assert!(gamma(Rational::integer(-2)).is_none());
+    }
+
+    #[test]
+    fn gamma_at_negative_half_integers() {
+        // Γ(−1/2) = −2√π, Γ(−3/2) = (4/3)√π, Γ(−5/2) = −(8/15)√π (via the recurrence).
+        assert_equal(
+            &gamma(Rational::new(-1, 2)).unwrap(),
+            &(CasExpr::int(-2) * sqrt_pi()),
+        );
+        assert_equal(
+            &gamma(Rational::new(-3, 2)).unwrap(),
+            &(CasExpr::rat(4, 3) * sqrt_pi()),
+        );
+        assert_equal(
+            &gamma(Rational::new(-5, 2)).unwrap(),
+            &(CasExpr::rat(-8, 15) * sqrt_pi()),
+        );
     }
 
     #[test]
