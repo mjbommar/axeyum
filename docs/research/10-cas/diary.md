@@ -868,3 +868,35 @@ overflow-safe) — adequate for all in-fragment inputs.
 
 **371 unit + 102 doctests, clippy-pedantic clean, WASM-green.** Frontier: Jordan form
 (defective), Zeilberger, Gruntz, multivariate factorization, arbitrary-precision N[].
+
+## 2026-07-21 — Entry 26: Jordan form, systems, transcendental solve (379 tests)
+
+Frontier linear-algebra + solving wave, all in-lib. Since entry 25 (371 → 379):
+
+**Jordan canonical form** (`jordan_form`, `jordan_decomposition`): P·J·P⁻¹ for any
+rational-spectrum matrix, **including defective** ones — generalized-eigenvector
+chains from the nullities of (A−λI)^k (new chain tops = ker(B^ℓ) vectors independent
+of ker(B^{ℓ−1}) + descending images, rank-tested). Certified A·P=P·J. This
+**generalized `matrix_exp`** to defective matrices: exp(A·t)=P·exp(J·t)·P⁻¹ with the
+per-block e^{λt}·t^d/d! super-diagonals (so exp([[2,1],[0,2]]t)=e^{2t}[[1,t],[0,1]]).
+
+**`solve_polynomial_system`**: two bivariate polynomials via the Sylvester resultant
+(a CasExpr-entry determinant, retaining x-coefficients), solve R(x)=0, back-substitute,
+return pairs satisfying both (certified). Circle∩hyperbola⇒(±4,±3). Irrational-coordinate
+solutions honestly dropped.
+
+**Transcendental `solve`**: A·exp(ax+b)+C=0 ⇒ ln-root, certified by a two-part check
+(head reduces `exp(ln v)=v`; root links back — sidesteps the tower's rational-arg gap).
+**Exponential-dominance limits** at ±∞ (x²/eˣ→0). **`series(tan)`** (sin/cos quotient).
+
+**Exact special values/polynomials**: `zeta` (ζ(2k)=c·π^{2k}, ζ(−m) via Bernoulli),
+`bernoulli_polynomial`/`euler_polynomial`, `harmonic`/`generalized_harmonic`,
+`finite_product` (∏ over concrete bounds). **Numerics note**: `evalf` is still f64 —
+arbitrary-precision `N[expr,d]` remains a deliberate (bignum-dependency) fork.
+
+**Infra**: a home-dir disk-quota exhaustion mid-session broke rustdoc linking + the shell's
+output capture; fixed by pruning stale dated nightly toolchains and routing rustdoc temp to
+the `/nas4` volume via `TMPDIR` (see `axeyum-cas-worktree` memory).
+
+**379 unit + 109 doctests, clippy-pedantic clean, WASM-green.** Frontier: Zeilberger,
+Gruntz (general), multivariate factorization, Puiseux, arbitrary-precision N[].
