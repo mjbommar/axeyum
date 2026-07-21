@@ -303,6 +303,13 @@ session state.
 >    than credited as a semantic delta. This closes bounded T5.3.2 v1 only;
 >    continue P5.3 with FSM refinement and the obligation catalog, not a real-
 >    MMU claim or an unpreregistered memory-model expansion.
+>    ADR-0321 now preregisters the next P5.3 cell: a new independent call-free
+>    scalar fixture, four per-event identity-refinement proofs from compiled
+>    Rust to the shipped handshake spec, equality of the complete transition
+>    relations, PDR safety on both spec and implementation systems, a replayed
+>    blind-injection control, and exactly 2,048 exhaustive rows. It authorizes
+>    no production FSM/refinement abstraction and makes no liveness or real-
+>    protocol claim.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

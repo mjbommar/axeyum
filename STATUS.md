@@ -322,6 +322,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0321 preregisters compiler-reflected handshake refinement.**
+  The existing call-free scalar profile accepts a temporary two-`u8`/`u8`
+  compiler probe without contracts or new semantics. The frozen cell uses a
+  new independent fixture, four event-specific identity-refinement proofs,
+  complete transition-relation equality, PDR safety for both declarative spec
+  and reflected implementation systems, a PDR/BMC/source-replayed blind-
+  injection control, and exactly 2,048 exhaustive reflection/spec/Rust rows.
+  It authorizes no production abstraction or general protocol/liveness claim.
+
 - **2026-07-21 — ADR-0320 closes bounded T5.3.2 v1 with authenticated evidence.**
   Four fresh owning-Cargo captures are byte-identical to one committed
   8,218-byte raw module with root-independent provenance and two typed
