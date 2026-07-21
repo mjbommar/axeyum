@@ -537,3 +537,36 @@ map the *remaining* SymPy/Mathematica surface (assumptions, special functions,
 Risch transcendental integration, more ODE classes, exact eigen/Smith–Hermite,
 double-angle/sum trig, polynomial factorization over ℚ via Zassenhaus) and extend
 `gap-analysis.md`/`build-plan.md` with the next wave.
+
+## 2026-07-20 — Entry 13: curriculum synthesis + Tier A next-wave build (152 tests)
+
+Ran seven sub-agents, one per `docs/curriculum/` branch (00-foundations …
+reconstruction-targets), each cross-checking the roadmap **and the actual code**
+for MISSING capabilities, plus a SymPy/Mathematica capability-survey agent. Folded
+the union into two roadmap notes — [next-wave-roadmap.md](next-wave-roadmap.md)
+(prioritized top-15) and [curriculum-gaps.md](curriculum-gaps.md) (Tier A–D by
+value × certifiability × buildability) — and reconciled the doc-hygiene defects the
+reviews found (stale build-plan snapshot; Maclaurin-vs-Taylor over-claim; coverage
+target stated: **≥ SymPy, → Mathematica**).
+
+Then built the whole **Tier A** wave, each certified and TDD'd:
+- **Linear algebra:** `null_space` (RREF free-columns, `A·v=0`), `eigenvectors`
+  (rational spectrum via `ker(A−λI)`, `A·v=λv`; dedups; skips irrational/complex
+  eigenvalues honestly), `minimal_polynomial` (exact power-dependence search,
+  `m(A)=0` by construction).
+- **Calculus:** `definite_integrate` (FTC on the certified antiderivative),
+  `series_at` (arbitrary-center Taylor via the shift identity — fixes the prior
+  Maclaurin-only limitation), `gradient`/`jacobian`/`divergence`/`curl` (certified
+  partials).
+- **K-12 / reals:** `simplify_radicals` (`√12→2√3`, rationalize denominators; exact
+  integer identity `k²·m=c`), `stats` module (exact mean/median/mode/variance),
+  `standard_deviation` (surd-simplified).
+- **Number theory (sub-agent `ntheory_advanced`):** `permutations` (nPr),
+  Legendre/Jacobi symbols, quadratic residues, `multiplicative_order`,
+  `primitive_root`, `discrete_log` (BSGS), continued fractions + convergents,
+  Pell fundamental solution — all re-check-certified.
+
+**152 unit + 31 doctests, clippy-pedantic clean, WASM-green.** In flight: univariate
+factorization over ℤ/ℚ (Berlekamp–Zassenhaus, sub-agent). Next (Tier B): first-order
+ODE methods, linear-recurrence closed forms, public resultant/discriminant, the
+`Abs` head, exact trig-value table.

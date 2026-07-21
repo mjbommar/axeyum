@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 120+ tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 150+ tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -16,12 +16,15 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `simplify`, `normalize`, `equal` (zero-test w/ witness) | equal ✓ |
 | Rational | `cancel` (uni+multivariate), `apart`, `factor`, `poly_gcd`, `poly_div`, `degree`/`coeff`/`leading_coeff` | factor/apart ✓ |
 | Equations | `solve` (rational, real-quadratic, **complex** roots) | rational ✓ |
-| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos` | ✓ (differentiate-and-check) |
-| Analysis | `limit`, `series` (Maclaurin, about `x=0`; arbitrary-center Taylor in progress), `sum_polynomial` | limit/sum ✓ |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
+| Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial` | limit/sum ✓ |
 | ODEs | `dsolve_homogeneous` (constant-coeff linear) | ✓ (ODE operator) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
-| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse | det/solve ✓ |
-| Number theory | `ntheory`: gcd, mod-pow/inverse, `is_prime`, `factorize`, divisors, φ, CRT, binomial | — |
+| Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial` | det/solve/null/eigvec ✓ |
+| Vector calculus | `gradient`, `jacobian`, `divergence`, `curl` (certified partials) | ✓ |
+| Statistics | `stats`: mean/median/mode/variance/sample_variance; `standard_deviation` (surd-simplified) | exact |
+| Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
+| Number theory | `ntheory`: gcd, mod-pow/inverse, `is_prime`, `factorize`, divisors, φ, CRT, binomial; `ntheory_advanced`: `permutations` (nPr), Legendre/Jacobi, quadratic residues, `multiplicative_order`, `primitive_root`, `discrete_log` (BSGS), continued fractions, Pell | re-check ✓ |
 | Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
 
 Heads: `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`). Progress log:
