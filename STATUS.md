@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0317 preregisters the authenticated annotation-to-MIR
+  seam.** The source and modular halves are now individually accepted, but a
+  hand-built contract plus embedded MIR does not bind them. The zero-row next
+  cell uses one total annotated `u8::wrapping_add` function: translate its typed
+  `ContractProgram` into the existing relational `ScalarCallContract`, require
+  exact equality with a hand-built declaration, and independently verify both
+  against checked MIR captured from the same registered source through its
+  explicit Cargo build. A typed `axeyum-mir-build` scalar profile preserves the
+  existing memory default and owns capture provenance. The full 256-input caller
+  differential is frozen before code. Nontrivial `requires`, source panic
+  summaries, broader syntax, effects, LLVM generation, performance, and the
+  still-missing second machine remain out of scope.
+
 - **2026-07-21 — ADR-0316 accepts the first source contract surface.** Outer
   `#[verify]` now consumes typed `#[requires(expr)]` and
   `#[ensures(|result| expr)]` markers for one straight-line scalar body. A
@@ -331,8 +344,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   return and replays by calling the original function and evaluating its source
   closure, never by pretending it panicked. Postcondition-expression panics are
   separate totality obligations and a reachable one fails closed as an invalid
-  contract. The safe increment verifies, the
-  unguarded body keeps its `x = 255` overflow witness, the mutation returns
+  contract. The safe increment verifies, the unguarded body keeps its `x = 255`
+  overflow witness, the mutation returns
   normally and replays false, and a reachable division panic stays a panic.
   Lowered-term evaluation over all 256 `u8` rows yields exactly 255 admitted,
   zero safe violations, 255 mutated violations, zero evaluation errors, and no
@@ -340,9 +353,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   the complete package/doctests, strict Clippy/rustdoc, and the unchanged
   81-variant / 17-group / ten-binary / 117-test reflection gate pass under the
   one-job 4 GiB cap. Direct `dmesg` is host-denied; the July 21 kernel journal
-  has no new OOM kill. Next: preregister an authenticated source-contract to
-  checked-MIR summary bridge, with compiler/body identity and a differential
-  against the accepted hand-built summary; do not widen syntax or effects.
+  has no new OOM kill. ADR-0317 now freezes the authenticated total-function
+  continuation; it does not widen syntax or effects.
 
 - **2026-07-21 — ADR-0315 accepts modular MIR panic propagation before
   annotations.** The remaining cross-machine evidence row still requires a
@@ -5819,12 +5831,19 @@ plan is built and committed on the current branch:
 | P5.1 | Reflection front end (crate-ify the MIR+LLVM reflectors, full `.ll` parser, MIR extraction pipeline, loops→`TransitionSystem`, memory beyond byte arrays) | WIP — **T5.1.1 DONE (`cc695925`, ADR-0057)**: the reflectors are now the real library module `axeyum_verify::reflect` (`src/reflect/{mod,mir,llvm}.rs`, submodules `reflect::mir`/`reflect::llvm`), no longer per-test scaffolding — 8 test binaries (62 tests) rewired to `use axeyum_verify::reflect::…` and green, `missing_docs`+`implicit_hasher` API-hardened, clippy/rustdoc `-D warnings` clean; the crate split is deferred (one consumer today). The prototyped *capability* (rounds Q–U, design log `docs/consumer-track/verify/reflect-common-abstraction.md`): CFG symbolic executors for both IRs over one shared op vocabulary; 16 cross-IR equivalence proofs (MIR≡LLVM per function, LLVM O0≡O2, if-conversion/strength-reduction/umin-idiom validated, hypothesis-gated `unreachable`); 5-shape wrong-transform refutation corpus with replay-checked countermodels; exact panic specs from rustc's own checks (overflow, division `b==0` / signed `∨ (a==MIN ∧ b==-1)`, array bounds over all 2^64 indices) with `catch_unwind` witness replay; checksum micro-module end-to-end on both platforms. **T5.1.2 WIP (ADR-0279--0284/0295):** accepted slices provide a non-panicking LLVM function boundary, typed scalar instructions including opt-in exact direct-body calls, explicit value+definedness, typed PHIs/terminators, bounded checked acyclic execution, and canonical render/reparse. **T5.1.3/T5.1.5 WIP (ADR-0286--0289):** exact direct-rustc capture/replay and explicit locked Cargo manifest/package/target selection now feed the named located checked path; two Cargo runs reproduce 1,438 bytes and typed/term JSON, while LLVM/direct MIR/Cargo MIR carry the same initialized four-byte store/load contract with explicit safety, final-memory joins, and source replay. **T5.1.4 WIP (ADR-0291/0292/0295/0299 accepted):** the canonical scalar LLVM self-loop, first single-latch natural loop, two exact PAC loops with a supplied checked `leaf` body, and the exact modular MIR checksum call route to checked semantics. Exact compiler identity, deterministic PHI/parameter/path/call state, selected-edge/call/poison/UB/panic semantics, unbounded/bounded safety exercise, independent formulas, differential rows, precise rejection boundaries, and source-replayed witnesses pass. Existing solver BMC supplies bounded unrolling for accepted relations; measured broader rejected-loop routing remains open. **T5.1.6 DONE (ADR-0290, expanded by ADR-0295--0299/0315):** all 81 source-derived semantic variants retain exact proof+fuzz ownership; 96 scalar goals / 11,248 rows, 11 cross-IR pairs / 110,000 tuples, five base refutations plus direct-call/contract/requirement/havoc/panic-summary mutations, checker mutations, and the expanded ten-binary/117-test gate pass. Remaining T5.1.3–5: general MIR places and wide/aliased memory, `stable_mir`, and broader rejected-loop routing. Individual proofs are milliseconds — the suites already run as ordinary per-commit tests |
 | ↳ P5.1 measured gate | Glaurung LLVM loop-shape demand census | DONE — **ADR-0293 accepted:** exact result reproduces 12 loops / 12 functions: 11 existing self-loop structural rows plus one under-diverse early-exit row; no new implementation selected |
 | ↳ P5.1 measured gate | Glaurung LLVM loop semantic census | DONE — **ADR-0294 accepted:** disclosed first-artifact rejection followed by exact corrected reproduction; 0/12 reach loop reflection, and diverse first causes select a T5.1.2 audit lane but no code |
-| P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. Phase exit still requires authenticated source annotations to feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
+| P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | WIP — **T5.3.1 (branch leakage) DONE (`ac7494f0`)**: `reflect::hyper::control_flow_ct_goal` proves **constant-time** by self-composition — the MIR reflector records `switchInt` scrutinees as control-flow leakage (`reflect_mir_params_with_leaks`), and two runs (shared-public / distinct-secret) must leak identical branch decisions. `constant_time.rs` (4 tests): public-predicated PROVED CT while its output is refuted secret-independent (the crisp distinction), secret-predicated REFUTED with a replay-checked witness, branch-free trivially CT. Residual: memory-index (cache-timing) + LLVM-side leakage; page-table math waits on P5.1 memory (T5.1.5); FSM refinement (T5.3.3) unblocked next. 2026-07-08 provable-security scout adds a future crypto micro-suite demand signal here (constant-time kernels + transcript/protocol examples), after current P5.3/P5.4 obligations stabilize |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Preregistered the authenticated source-contract/MIR bridge
+  (ADR-0317).** The zero-row proposal freezes one total wrapping function,
+  typed source-AST reuse, exact hand-built-summary equality, owning-Cargo-build
+  MIR provenance, independent resolver verification/body discard, and a
+  complete 256-input modular/inlined differential. Broader annotation and panic
+  semantics remain separate.
 
 - **2026-07-21 — Accepted typed straight-line scalar source contracts
   (ADR-0316).** `#[verify]` now consumes paired typed `requires`/`ensures`

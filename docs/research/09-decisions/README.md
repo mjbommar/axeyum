@@ -371,3 +371,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0314](adr-0314-typed-bit-lowering-mode.md) | Replace mutually exclusive demand-lowering fields with one typed bit-lowering mode while preserving benchmark identity | accepted |
 | [0315](adr-0315-preregister-modular-mir-panic-contracts.md) | Accept exact checked-MIR callee-panic propagation, normal-return result guarding, and exhaustive replay before source annotations | accepted |
 | [0316](adr-0316-preregister-source-contract-annotations.md) | Accept straight-line scalar source contracts with retained results and distinct replayed postcondition violations | accepted |
+| [0317](adr-0317-preregister-authenticated-source-contract-mir-bridge.md) | Preregister an authenticated total source-contract to checked-MIR summary bridge | proposed |

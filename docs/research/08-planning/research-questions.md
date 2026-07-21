@@ -912,6 +912,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     zero safe violations, and 255 mutated-postcondition violations with zero
     evaluation errors or dropped rows. Branches, loops, calls, modular summary
     emission, and source-to-MIR identity remain separate questions.
+  - [ADR-0317](../09-decisions/adr-0317-preregister-authenticated-source-contract-mir-bridge.md)
+    preregisters the smallest identity bridge for the next question: one total
+    annotated `u8::wrapping_add` function must lower into the existing
+    `ScalarCallContract`, match a hand-built declaration exactly, and verify
+    independently against checked MIR captured from the same registered source
+    through its owning Cargo build. This is a zero-row proposal; nontrivial
+    `requires`, panic-summary authoring, broader source syntax, and source-to-
+    LLVM generation remain separate.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
