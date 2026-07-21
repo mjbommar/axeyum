@@ -2928,6 +2928,76 @@ fn decide_strict_cad_two_var(
     None
 }
 
+/// Project one variable from a two-variable polynomial set and return the
+/// sorted, deduplicated critical values on the retained axis. The projection
+/// contains each leading coefficient and discriminant in `elim`, every pairwise
+/// resultant, and each polynomial that is constant in `elim` but varies in
+/// `keep`. A vanished discriminant/resultant or any incomplete exact operation
+/// declines.
+///
+/// This helper deliberately owns neither deadline policy nor cell sampling.
+/// [`strict_cad_along`] retains its explicit entry poll, while the non-strict
+/// caller retains its existing polling behavior; their open/section coverage
+/// also remains separate.
+fn two_var_critical_roots(
+    polys: &[&MultiPoly],
+    elim: SymbolId,
+    keep: SymbolId,
+) -> Option<Vec<Root>> {
+    let mut proj: Vec<Vec<i128>> = Vec::new();
+    for p in polys {
+        if degree_in(p, elim) == 0 {
+            // An elim-independent zero is still a critical locus on `keep`.
+            let ipoly = p.to_single_var_integer_poly(keep)?;
+            if ipoly.len() > 1 {
+                proj.push(ipoly);
+            }
+            continue;
+        }
+
+        let pc = poly_in_elim_over_keep(p, elim, keep)?;
+        let lead = pc.last()?;
+        let ip = rat_coeffs_to_integer(lead)?;
+        if ip.len() > 1 {
+            proj.push(ip);
+        }
+
+        let dp = derivative_in(p, elim)?;
+        if degree_in(&dp, elim) != 0 {
+            let disc = resultant_univariate(p, &dp, elim, keep)?;
+            if disc.len() > 1 {
+                proj.push(disc);
+            } else if disc.first().copied().unwrap_or(0) == 0 {
+                return None;
+            }
+        }
+    }
+
+    for i in 0..polys.len() {
+        for j in (i + 1)..polys.len() {
+            if degree_in(polys[i], elim) == 0 || degree_in(polys[j], elim) == 0 {
+                continue;
+            }
+            let res = resultant_univariate(polys[i], polys[j], elim, keep)?;
+            if res.len() > 1 {
+                proj.push(res);
+            } else if res.first().copied().unwrap_or(0) == 0 {
+                return None;
+            }
+        }
+    }
+
+    let mut roots: Vec<Root> = Vec::new();
+    for pp in &proj {
+        roots.extend(isolate_roots(pp)?);
+    }
+    let crit = dedup_sorted_roots(&roots)?;
+    if crit.len() > MAX_CAD_CELLS {
+        return None;
+    }
+    Some(crit)
+}
+
 /// One orientation of [`decide_strict_cad_two_var`]: eliminate `elim`, sample the
 /// open `keep`-cells, decide each cell's univariate-in-`elim` strict system.
 /// `None` declines this orientation (the caller tries the other / falls through).
@@ -2940,89 +3010,9 @@ fn strict_cad_along(
     if isolate_deadline_reached() {
         return None; // #85: bail the two-var CAD projection/lift on timeout
     }
-    // 2a. PROJECTION onto `keep`: the sign-invariant set of univariate-in-`keep`
-    //     polynomials. For each `p`: leading coeff in `elim`, discriminant in
-    //     `elim`; for each pair: their resultant in `elim`. Every `p` MUST have
-    //     positive degree in `elim` (else its sign as a function of `elim` is not
-    //     captured by an `elim`-resultant ⇒ the projection would miss its critical
-    //     `keep`-values; decline this orientation).
-    let mut proj: Vec<Vec<i128>> = Vec::new();
-    for p in polys {
-        if degree_in(p, elim) == 0 {
-            // `p` is constant in `elim`: its sign depends only on `keep`. Its real
-            // zeros in `keep` ARE critical `keep`-values (the strict atom can flip
-            // there), and they are not produced by any `elim`-resultant. We could
-            // add them directly (p is already univariate in `keep`), so do so —
-            // this keeps the projection complete rather than declining.
-            let ipoly = p.to_single_var_integer_poly(keep)?;
-            if ipoly.len() > 1 {
-                proj.push(ipoly);
-            }
-            // A constant-in-both `p` contributes no critical value (it never flips).
-            continue;
-        }
-        // Leading coefficient of `p` in `elim`, as a univariate integer poly in
-        // `keep`: its zeros are where deg_{elim}(p) drops (a delineability boundary).
-        let pc = poly_in_elim_over_keep(p, elim, keep)?;
-        let lead = pc.last()?; // Vec<Rational> in `keep`
-        let ip = rat_coeffs_to_integer(lead)?;
-        if ip.len() > 1 {
-            proj.push(ip);
-        }
-        // Discriminant of `p` in `elim` = Res_{elim}(p, ∂p/∂elim).
-        let dp = derivative_in(p, elim)?;
-        if degree_in(&dp, elim) == 0 {
-            // ∂p/∂elim constant in `elim` ⇒ p is linear in `elim`; no discriminant
-            // boundary (its single `elim`-root never collides). Nothing to add.
-        } else {
-            let disc = resultant_univariate(p, &dp, elim, keep)?;
-            if disc.len() > 1 {
-                proj.push(disc);
-            } else if disc.first().copied().unwrap_or(0) == 0 {
-                // A vanishing discriminant means p has a repeated `elim`-root for
-                // ALL `keep` (a non-isolated boundary) ⇒ this orientation cannot
-                // guarantee sign-invariance via finitely many critical points.
-                return None;
-            }
-            // A nonzero-constant discriminant ⇒ no critical `keep`-value from it.
-        }
-    }
-    // Pairwise resultants Res_{elim}(p, q).
-    for i in 0..polys.len() {
-        for j in (i + 1)..polys.len() {
-            if degree_in(polys[i], elim) == 0 || degree_in(polys[j], elim) == 0 {
-                continue; // a constant-in-elim factor shares no elim-root to track
-            }
-            let res = resultant_univariate(polys[i], polys[j], elim, keep)?;
-            if res.len() > 1 {
-                proj.push(res);
-            } else if res.first().copied().unwrap_or(0) == 0 {
-                // Identically-zero resultant: p and q share a common `elim`-factor
-                // for all `keep` ⇒ a non-isolated coincidence ⇒ cannot delineate.
-                return None;
-            }
-        }
-    }
-
-    // 2b. ISOLATE all real roots of every projection polynomial; merge + sort the
-    //     distinct critical `keep`-values. `isolate_roots` is complete-or-None.
-    let mut roots: Vec<Root> = Vec::new();
-    for pp in &proj {
-        roots.extend(isolate_roots(pp)?);
-    }
-    let ordered = sort_roots(&roots, None)?;
-    // Deduplicate equal critical values (a shared root from two projection polys)
-    // so the cell samples land in genuinely distinct open cells.
-    let mut crit: Vec<Root> = Vec::new();
-    for r in ordered {
-        match crit.last() {
-            Some(prev) if compare_roots(prev, &r)? == Ordering::Equal => {}
-            _ => crit.push(r),
-        }
-    }
-    if crit.len() > MAX_CAD_CELLS {
-        return None; // bounded — never OOM / hang
-    }
+    // 2a/2b. Project onto `keep`, isolate every projection root, and obtain the
+    // sorted/deduplicated critical values. Sampling remains strict-only below.
+    let crit = two_var_critical_roots(polys, elim, keep)?;
 
     // 2c. RATIONAL sample, one interior point per open `keep`-cell (below the
     //     least critical value, between each consecutive pair, above the greatest;
@@ -3262,65 +3252,10 @@ fn nonstrict_cad_along(
     elim: SymbolId,
     keep: SymbolId,
 ) -> Option<TwoVarVerdict> {
-    // PROJECTION onto `keep` — IDENTICAL to the strict path (`strict_cad_along`):
-    // leading coeff in `elim`, discriminant in `elim`, pairwise resultants, and any
-    // `p` constant in `elim` contributed as itself. A degenerate/non-isolable
-    // boundary (vanishing discriminant / resultant) ⇒ decline.
-    let mut proj: Vec<Vec<i128>> = Vec::new();
-    for p in polys {
-        if degree_in(p, elim) == 0 {
-            // `p` constant in `elim`: its real zeros in `keep` ARE critical
-            // `keep`-values (a non-strict atom can hold exactly there). It is
-            // already univariate in `keep`; add it directly.
-            let ipoly = p.to_single_var_integer_poly(keep)?;
-            if ipoly.len() > 1 {
-                proj.push(ipoly);
-            }
-            // constant-in-both ⇒ no critical value.
-            continue;
-        }
-        let pc = poly_in_elim_over_keep(p, elim, keep)?;
-        let lead = pc.last()?;
-        let ip = rat_coeffs_to_integer(lead)?;
-        if ip.len() > 1 {
-            proj.push(ip);
-        }
-        let dp = derivative_in(p, elim)?;
-        if degree_in(&dp, elim) == 0 {
-            // p linear in `elim`: no discriminant boundary.
-        } else {
-            let disc = resultant_univariate(p, &dp, elim, keep)?;
-            if disc.len() > 1 {
-                proj.push(disc);
-            } else if disc.first().copied().unwrap_or(0) == 0 {
-                return None; // repeated `elim`-root for all `keep` ⇒ cannot delineate
-            }
-        }
-    }
-    for i in 0..polys.len() {
-        for j in (i + 1)..polys.len() {
-            if degree_in(polys[i], elim) == 0 || degree_in(polys[j], elim) == 0 {
-                continue;
-            }
-            let res = resultant_univariate(polys[i], polys[j], elim, keep)?;
-            if res.len() > 1 {
-                proj.push(res);
-            } else if res.first().copied().unwrap_or(0) == 0 {
-                return None; // shared `elim`-factor for all `keep` ⇒ cannot delineate
-            }
-        }
-    }
-
-    // ISOLATE all real roots of every projection polynomial; merge, sort, dedup the
-    // distinct critical `keep`-values. `isolate_roots` is complete-or-None.
-    let mut roots: Vec<Root> = Vec::new();
-    for pp in &proj {
-        roots.extend(isolate_roots(pp)?);
-    }
-    let crit = dedup_sorted_roots(&roots)?;
-    if crit.len() > MAX_CAD_CELLS {
-        return None; // bounded — never OOM / hang
-    }
+    // Project onto `keep`, isolate every projection root, and obtain the
+    // sorted/deduplicated critical values. Non-strict cell selection remains
+    // entirely below this shared mechanical step.
+    let crit = two_var_critical_roots(polys, elim, keep)?;
 
     // The critical `keep`-values come in two flavors. The RATIONAL 0-cells are
     // decided by substituting `keep := q` and running the existing rational cell
@@ -7484,6 +7419,35 @@ mod tests {
             once.len(),
             "split is idempotent on a coprime set"
         );
+    }
+
+    #[test]
+    fn two_var_projection_roots_are_exact_and_ordered() {
+        let (x_symbol, y_symbol, _) = three_syms();
+        // p = y² - x and q = y - 1, eliminating y. The discriminant of p
+        // contributes x=0 and Res_y(p,q) contributes x=1.
+        let parabola = MultiPoly::var(y_symbol)
+            .mul(&MultiPoly::var(y_symbol))
+            .unwrap()
+            .sub(&MultiPoly::var(x_symbol))
+            .unwrap();
+        let horizontal = MultiPoly::var(y_symbol)
+            .sub(&MultiPoly::constant(Rational::integer(1)))
+            .unwrap();
+        let roots = two_var_critical_roots(&[&parabola, &horizontal], y_symbol, x_symbol)
+            .expect("projection decides");
+        assert_eq!(roots.len(), 2);
+        assert!(matches!(roots[0], Root::Rational(value) if value == Rational::zero()));
+        assert!(matches!(roots[1], Root::Rational(value) if value == Rational::integer(1)));
+    }
+
+    #[test]
+    fn strict_two_var_entry_poll_precedes_projection() {
+        let (x, y, _) = three_syms();
+        let _guard = IsolateDeadlineGuard::set(Some(Instant::now()));
+        // Empty synthetic inputs isolate the caller's entry policy: without the
+        // explicit poll this would reach the empty residual cell and report Sat.
+        assert!(strict_cad_along(&[], &[], y, x).is_none());
     }
 
     #[test]

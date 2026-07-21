@@ -32,7 +32,7 @@ not repeat completed namespace/configuration sweeps.
 | ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
 | `int_reconstruct.rs` | 7,683 lines / 316,411 bytes | Shared integer kernel context plus the remaining proof families |
 | Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
-| `nra_real_root.rs` | 7,521 lines / 332,505 bytes | N1a shares rational cell decision; strict, non-strict, and algebraic CAD retain distinct coverage machinery |
+| `nra_real_root.rs` | 7,485 lines / 330,162 bytes | N1a/N1b share rational cell decision and 2-var projection; coverage/lifting remain distinct |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
 Raw size is not the only ranking signal. ABV has 28 public or crate-visible
@@ -91,7 +91,7 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    UFLIA interpolant tests, 10 namespace controls, all 891 library tests, strict
    Clippy, and both rustdoc profiles pass. The parent is now 7,683 lines, down
    13.4% from 8,876.
-5. **N1 -- parameterize CAD only under the frozen semantic gate (N1a done).** The
+5. **N1 -- parameterize CAD only under the frozen semantic gate (N1a/N1b done).** The
    [census and preregistered gate](cad-parameterization-gate.md) rejects a single
    strict/non-strict/algebraic engine: the algebraic traversal has a different
    value domain, boundary derivation, and preparation path. N1a is authorized
@@ -100,8 +100,10 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    sampling, budgets, timeout polls, algebraic fallback, and public paths remain
    unchanged. That helper is now landed behind both named wrappers, with exact
    models pinned at `(1,1)` and `(1,0)` and the 2,000-seed Z3 differential gate
-   at `DISAGREEMENTS: 0`. The file is 7,521 lines, down 23. N1b/N1c require
-   later checkpoints; algebraic genericization is deferred.
+   at `DISAGREEMENTS: 0`. N1b now shares only two-variable projection/root
+   preparation; exact roots `[0,1]` and a poll-removal mutation control pin its
+   semantics. The file is 7,485 lines, down 59 across both slices. N1c remains
+   optional; algebraic genericization is deferred.
 
 ## Standing gate
 

@@ -1,6 +1,6 @@
 # CAD parameterization gate
 
-Status: N1a accepted; N1b/N1c remain staged
+Status: N1a/N1b accepted; N1c remains staged
 Date: 2026-07-20
 Baseline: Axeyum `12f85d19`
 
@@ -142,7 +142,7 @@ mutations become mandatory when N1b/N1c reaches the corresponding mechanism.
 ### Repository gates
 
 - focused NRA integration tests and the 2,000-seed differential fuzzer;
-- all 891 all-feature `axeyum-solver` library tests;
+- all current all-feature `axeyum-solver` library tests;
 - strict all-target Clippy;
 - warning-denied full and minimal-`qfbv` rustdoc;
 - formatting and documentation-link checks; and
@@ -185,3 +185,31 @@ checks, and the kernel OOM audit pass under the bounded profile.
 This evidence accepts N1a only. N1b still needs a pre-change review of the
 strict-only entry poll and an exact projection-result seam; it must not become a
 sampling refactor. N1c and algebraic genericization remain unauthorized.
+
+## N1b result
+
+N1b also landed within the gate. One private `two_var_critical_roots` helper now
+owns the two-variable leading-coefficient/discriminant/resultant projection,
+root isolation, exact sort/deduplication, and cell-cap check. It owns no timeout
+poll and performs no sampling. `strict_cad_along` retains its explicit entry
+poll; `nonstrict_cad_along` retains its previous absence of that caller-level
+poll. Both retain their distinct cell enumeration and lifting bodies.
+
+An exact unit control projects `p = y² - x` and `q = y - 1` along `y` and pins
+the ordered critical roots to `[0, 1]`. A temporary mutation removing the strict
+entry poll makes `strict_two_var_entry_poll_precedes_projection` fail; restoring
+the poll makes it pass. The two N1a exact models remain unchanged.
+
+All 86 focused NRA tests pass. The fixed 2,000-seed Z3 sweep reproduces N1a's
+entire tally exactly: 1,807 joint decisions and agreements, 191 structural
+`Unknown`s, two diagnostic outer timeouts, 1,293 independently replayed SAT
+models, 75 algebraic replay declines adjudicated by Z3, zero Z3 skips, and
+`DISAGREEMENTS: 0`. All 893 all-feature solver-library tests, strict all-target
+Clippy, both warning-denied rustdoc profiles, touched-file formatting, and the
+kernel OOM audit pass under the bounded profile.
+
+The file is now 7,485 lines / 330,162 bytes, down 36 lines from N1a and 59 lines
+across N1a--N1b. N1c remains optional: parameterizing the two roughly 90-line
+rational N-variable visitors is justified only if an explicit cell-selection
+policy is easier to audit than the present duplication. Algebraic traversal
+remains outside that decision.

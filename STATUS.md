@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — N1b shares two-variable projection without sharing CAD
+  policy.** `two_var_critical_roots` now owns only leading/discriminant/resultant
+  projection, isolation, ordering/deduplication, and the cell cap. Strict keeps
+  its entry poll; non-strict keeps its caller behavior; sampling and lifting
+  remain separate. An exact `[0,1]` projection control and a poll-removal
+  mutation pin the seam. The 2,000-seed tally is exactly unchanged from N1a,
+  all 86 focused NRA and 893 library tests pass, and strict lint/doc/OOM gates
+  are green. `nra_real_root.rs` is 7,485 lines, down 59 across N1a--N1b. Next:
+  decide whether N1c's explicit rational cell-selection policy is genuinely
+  easier to audit than the two remaining 90-line visitors; algebraic traversal
+  remains separate.
+
 - **2026-07-20 — N1a shares only the rational CAD cell mechanism.** One private
   `decide_rational_cell` now owns rational substitution, constant folding, and
   univariate decision behind the unchanged strict/non-strict wrappers. Exact
@@ -5659,6 +5671,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — N1b shares two-variable CAD projection/root preparation.**
+  Caller-specific deadlines and strict/non-strict sampling remain outside the
+  helper. Exact-root and poll-removal mutation controls, focused NRA, the
+  unchanged 2,000-seed tally, 893-library, lint/doc, and OOM gates pass.
 
 - **2026-07-20 — N1a deduplicates rational CAD cell decision.** Strict and
   non-strict coverage remain in their named wrappers while one private helper

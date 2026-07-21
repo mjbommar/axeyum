@@ -522,9 +522,17 @@ session state.
 >    NRA tests, the 2,000-seed Z3 differential sweep (1,807/1,807 joint
 >    agreements, 1,293 replayed SAT, `DISAGREEMENTS: 0`), all 891 library tests,
 >    strict Clippy, both rustdoc profiles, links, and the OOM audit pass. The
->    file falls 7,544→7,521 lines. N1b/N1c remain gated candidates, not implied
->    follow-ons; review the strict-only deadline poll before any projection
->    extraction. Revisit the 4,531-line ABV replay/repair residual only
+>    file falls 7,544→7,521 lines. N1b is now complete as a second independent
+>    checkpoint: `two_var_critical_roots` owns only projection, isolation,
+>    ordering/deduplication, and the cap. Strict retains its explicit entry poll;
+>    non-strict retains its caller behavior; sampling/lifting remain separate.
+>    Exact critical roots `[0,1]` are pinned, removing the strict poll makes its
+>    mutation control fail, the 2,000-seed tally is exactly unchanged, and all
+>    893 library tests plus strict lint/doc/OOM gates pass. The file is 7,485
+>    lines, down 59 across N1a--N1b. N1c remains optional, not implied: proceed
+>    only if an explicit rational cell-selection policy is easier to audit than
+>    the two roughly 90-line visitors. Algebraic traversal stays separate.
+>    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
 >
