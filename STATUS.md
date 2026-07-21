@@ -32,14 +32,18 @@ exit-criteria'd tracks we advance one increment at a time.
   parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
   remain open.
 - **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
-  decisions become 325 evidence-audit UNSAT outcomes and 261 Lean-checked
-  outcomes. The generated proof-gap matrix tightens the full conjunction to
+  decisions become 325 evidence-audit UNSAT outcomes, 271 certified + genuinely
+  independently checked outcomes, and 261 Lean-checked outcomes. The v1 audit
+  had 28 vacuous `bare-unsat` check booleans; the generated matrix normalizes
+  them and the v2 producer now gates checks on certification, records decision
+  backend, and emits explicit check mode. The full conjunction remains
   259/327: 54 uncertified audit-row occurrences, eight reconstruction-only
   gaps, four declared `bit-blast` trust holes, and two QF_NIA `IntPow2`
   proof-production errors. The parser-backed census deduplicates the 54 to 52
   paths / 47 exact contents, split 25 arithmetic / 22 string-sequence; three
   contents terminate before the ordinary parsed-IR DAG. Coverage is substantial
-  but uneven, the trust ledger is not zero, and tactic backend P3.7 is unbuilt.
+  but uneven; route-provenance P1 is now the proof-selection prerequisite, the
+  trust ledger is not zero, and tactic backend P3.7 is unbuilt.
 - **Dominance:** **23 / 35 audited rows** are fully dominant and 616/753 measured
   decisions are dominant candidates — the real, defensible selected-fragment
   claim.

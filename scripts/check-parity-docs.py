@@ -107,6 +107,13 @@ def measured_snapshot() -> dict[str, int]:
     qfbv_division = qfbv["divisions"]["QF_BV"]
     qfbv_solvers = qfbv_division["solvers"]
 
+    baseline_unsat_instances = [
+        instance
+        for audit in audits
+        for instance in audit["instances"]
+        if instance.get("baseline_outcome") == "unsat"
+    ]
+
     scoreboard_ids = []
     scoreboard_aggregate_only = 0
     for row in rows:
@@ -144,6 +151,19 @@ def measured_snapshot() -> dict[str, int]:
         ),
         "lean_checked_unsat": sum(
             audit["summary"]["lean_checked_unsat"] for audit in audits
+        ),
+        "certified_unsat": sum(
+            instance.get("evidence_certified") is True
+            for instance in baseline_unsat_instances
+        ),
+        "audit_reported_checked_unsat": sum(
+            instance.get("evidence_checked") is True
+            for instance in baseline_unsat_instances
+        ),
+        "independently_checked_unsat": sum(
+            instance.get("evidence_certified") is True
+            and instance.get("evidence_checked") is True
+            for instance in baseline_unsat_instances
         ),
         # The historical summary field counts baseline UNSAT decisions, including
         # proof-production failures. Keep both denominators explicit so a failed
@@ -196,6 +216,9 @@ def main() -> int:
         f"{snapshot['dominant_decisions']} / {snapshot['audited_decisions']} decisions",
         f"{snapshot['baseline_unsat']} baseline `unsat` decisions",
         f"{snapshot['audit_reproduced_unsat']} evidence-audit `unsat` outcomes",
+        f"{snapshot['certified_unsat']} certified outcomes",
+        f"{snapshot['independently_checked_unsat']} independently checked outcomes",
+        f"{snapshot['audit_reported_checked_unsat'] - snapshot['independently_checked_unsat']} vacuous `bare-unsat` check results",
         f"{snapshot['lean_checked_unsat']} Lean-checked outcomes",
         f"{snapshot['p4dfa_axeyum_20s']} / 113",
         f"{snapshot['p4dfa_z3_20s']} / 113",

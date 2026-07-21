@@ -13,14 +13,17 @@ implement a proof rule.
 | Population | Count |
 |---|---:|
 | Audit-row occurrences | 54 |
-| Evidence-checked occurrences | 28 |
-| Evidence-unchecked occurrences | 26 |
+| Historical audit `evidence_checked=true` | 28 |
+| Independently checked certificate occurrences | 0 |
 | Unique normalized paths | 52 |
 | Unique exact contents (SHA-256) | 47 |
 | Exact duplicate groups | 5 |
 | Unique contents with zero reachable parsed-IR terms | 3 |
 
 The raw 54 count contracts to **47 unique benchmark contents**.
+All 54 are uncertified and therefore have no independently checkable
+certificate. The historical 28 `evidence_checked=true` values came from
+the vacuous `Unsat(None)` structural check and are not credited here.
 Two UFLIA paths occur in overlapping audit rows, and five cross-path exact
 duplicate groups remain after path deduplication. Mechanism prevalence below
 uses unique contents, with raw audit occurrences shown separately.

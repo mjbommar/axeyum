@@ -286,12 +286,13 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
         "producer": {"path": rel(PRODUCER), "sha256": sha256(PRODUCER)},
         "summary": {
             "audit_occurrences": len(occurrences),
-            "evidence_checked_occurrences": sum(
+            "audit_reported_check_true_occurrences": sum(
                 row["evidence_checked"] for row in occurrences
             ),
-            "evidence_unchecked_occurrences": sum(
-                not row["evidence_checked"] for row in occurrences
-            ),
+            # Every row in this census is uncertified by construction. A true
+            # historical `evidence_checked` field is the vacuous `Unsat(None)`
+            # structural check, not an independent certificate replay.
+            "independently_checked_occurrences": 0,
             "unique_paths": len(files),
             "unique_content_sha256": len(content_rows),
             "exact_duplicate_groups": sum(len(group) > 1 for group in by_hash.values()),
@@ -339,14 +340,17 @@ def markdown(report: dict) -> str:
         "| Population | Count |",
         "|---|---:|",
         f"| Audit-row occurrences | {summary['audit_occurrences']} |",
-        f"| Evidence-checked occurrences | {summary['evidence_checked_occurrences']} |",
-        f"| Evidence-unchecked occurrences | {summary['evidence_unchecked_occurrences']} |",
+        f"| Historical audit `evidence_checked=true` | {summary['audit_reported_check_true_occurrences']} |",
+        f"| Independently checked certificate occurrences | {summary['independently_checked_occurrences']} |",
         f"| Unique normalized paths | {summary['unique_paths']} |",
         f"| Unique exact contents (SHA-256) | {summary['unique_content_sha256']} |",
         f"| Exact duplicate groups | {summary['exact_duplicate_groups']} |",
         f"| Unique contents with zero reachable parsed-IR terms | {summary['zero_ir_term_contents']} |",
         "",
         f"The raw 54 count contracts to **{summary['unique_content_sha256']} unique benchmark contents**.",
+        "All 54 are uncertified and therefore have no independently checkable",
+        "certificate. The historical 28 `evidence_checked=true` values came from",
+        "the vacuous `Unsat(None)` structural check and are not credited here.",
         "Two UFLIA paths occur in overlapping audit rows, and five cross-path exact",
         "duplicate groups remain after path deduplication. Mechanism prevalence below",
         "uses unique contents, with raw audit occurrences shown separately.",

@@ -14,23 +14,28 @@ instances only; SAT model replay is outside this report.
 | Baseline UNSAT | 327 | 100.0% |
 | Evidence audit reproduced UNSAT | 325 | 99.4% |
 | Evidence marked certified | 271 | 82.9% |
-| Evidence independently checked | 299 | 91.4% |
+| Evidence independently checked | 271 | 82.9% |
 | Audit UNSAT with no declared trust hole | 321 | 98.2% |
 | Lean reconstruction checked | 261 | 79.8% |
 | All dominance conditions | 259 | 79.2% |
 
-The stages are not a monotone funnel: one `bare-unsat` row is Lean-checked
-but remains uncertified, and one Lean-checked DRAT row retains a declared
+The stages are not a monotone funnel: one `bare-unsat` row has an
+independent Lean reconstruction but remains uncertified, and one
+Lean-checked DRAT row retains a declared
 `bit-blast` trust hole. The final row is therefore the conjunction, not the
-minimum of the preceding totals.
+minimum of the preceding totals. Historical audit JSON reports
+`evidence_checked=true` for 28 uncertified `bare-unsat` rows because the
+no-certificate
+`Evidence::check` path returns structural `Ok(true)`; this generator
+normalizes those rows to independently unchecked.
 
 ## Exclusive outcome categories
 
 | Category | Instances | Meaning |
 |---|---:|---|
 | `proof-production-error` | 2 | Evidence production did not reproduce UNSAT. |
-| `uncertified-and-unchecked` | 26 | The UNSAT route is neither certified nor independently checked. |
-| `uncertified-but-checked` | 28 | A checker ran, but the route is still marked uncertified. |
+| `uncertified-and-unchecked` | 54 | The UNSAT route is neither certified nor independently checked. |
+| `uncertified-but-checked` | 0 | Reserved invalid combination; normalized into uncertified-and-unchecked. |
 | `evidence-check-gap` | 0 | Certified evidence exists but did not pass its independent checker. |
 | `trust-hole-and-lean-gap` | 3 | Checked evidence retains a trust hole and has no Lean reconstruction. |
 | `trust-hole` | 1 | Lean reconstruction exists, but a declared trust hole remains. |
@@ -44,7 +49,7 @@ mechanisms that should drive reconstruction work.
 
 | Evidence kind | Baseline UNSAT | Certified | Checked | Lean | Trust holes | Dominant | Gap |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| `bare-unsat` | 54 | 0 | 28 | 1 | 0 | 0 | 54 |
+| `bare-unsat` | 54 | 0 | 0 | 1 | 0 | 0 | 54 |
 | `drat-unsat` | 4 | 4 | 4 | 1 | 4 | 0 | 4 |
 | `alethe-unsat` | 12 | 12 | 12 | 9 | 0 | 9 | 3 |
 | `(none)` | 2 | 0 | 0 | 0 | 0 | 0 | 2 |
@@ -103,7 +108,7 @@ mechanisms that should drive reconstruction work.
 | QF_ALIA | `qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 5 | 5 | 5 | 0 | 5 | 0 | - |
 | QF_AUFBV | `qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 20 | 20 | 20 | 20 | 20 | 0 | 20 | 0 | - |
 | QF_AUFBV | `qf-aufbv-cvc5-regress-clean-solver-vs-z3-10s.json` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - |
-| QF_AUFLIA | `qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | `uncertified-but-checked`=2 |
+| QF_AUFLIA | `qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=2 |
 | QF_AX | `qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 5 | 5 | 5 | 0 | 5 | 0 | - |
 | QF_BV | `qf-bv-curated-bvred-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
 | QF_BVFP | `qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
@@ -113,12 +118,12 @@ mechanisms that should drive reconstruction work.
 | QF_LIA | `qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json` | 4 | 4 | 4 | 4 | 4 | 0 | 4 | 0 | - |
 | QF_LRA | `qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json` | 3 | 3 | 3 | 3 | 3 | 0 | 3 | 0 | - |
 | QF_NIA | `qf-nia-curated-iand-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 13 | 5 | 13 | 2 | 0 | 2 | 2 | `uncertified-but-checked`=8, `lean-reconstruction-gap`=3, `proof-production-error`=2 |
+| QF_NIA | `qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json` | 15 | 13 | 5 | 5 | 2 | 0 | 2 | 2 | `uncertified-and-unchecked`=8, `lean-reconstruction-gap`=3, `proof-production-error`=2 |
 | QF_NIA | `qf-nia-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
-| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 1 | 14 | 2 | 0 | 1 | 0 | `uncertified-but-checked`=13 |
+| QF_NRA | `qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json` | 14 | 14 | 1 | 1 | 2 | 0 | 1 | 0 | `uncertified-and-unchecked`=13 |
 | QF_NRA | `qf-nra-synthetic-graduated-vs-z3.json` | 16 | 16 | 16 | 16 | 16 | 0 | 16 | 0 | - |
 | QF_S | `qf-s-cvc5-regress-clean-solver-vs-z3-10s.json` | 28 | 28 | 8 | 8 | 8 | 0 | 8 | 0 | `uncertified-and-unchecked`=20 |
-| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 4 | 5 | 1 | 4 | 0 | 0 | `trust-hole-and-lean-gap`=3, `trust-hole`=1, `uncertified-but-checked`=1 |
+| QF_SEQ | `qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json` | 5 | 5 | 4 | 4 | 1 | 4 | 0 | 0 | `trust-hole-and-lean-gap`=3, `trust-hole`=1, `uncertified-and-unchecked`=1 |
 | QF_SLIA | `qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json` | 8 | 8 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=6 |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
 | QF_UF | `qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json` | 15 | 15 | 15 | 15 | 15 | 0 | 15 | 0 | - |
@@ -128,8 +133,8 @@ mechanisms that should drive reconstruction work.
 | QF_UFFF | `qf-ufff-cvc5-regress-clean-solver-vs-z3-10s.json` | 6 | 6 | 6 | 6 | 6 | 0 | 6 | 0 | - |
 | QF_UFLIA | `qf-uflia-curated-named-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
 | QF_UFLIA | `qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json` | 2 | 2 | 2 | 2 | 2 | 0 | 2 | 0 | - |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json` | 2 | 2 | 0 | 2 | 0 | 0 | 0 | 0 | `uncertified-but-checked`=2 |
-| QF_UFLIA | `qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 4 | 4 | 2 | 4 | 2 | 0 | 2 | 0 | `uncertified-but-checked`=2 |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json` | 2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | `uncertified-and-unchecked`=2 |
+| QF_UFLIA | `qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json` | 4 | 4 | 2 | 2 | 2 | 0 | 2 | 0 | `uncertified-and-unchecked`=2 |
 | UF | `uf-cvc5-regress-clean-quantified-solver-vs-z3-10s.json` | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | - |
 
 ## Declared trust holes

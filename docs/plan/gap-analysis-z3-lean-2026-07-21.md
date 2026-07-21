@@ -45,10 +45,15 @@ The division scoreboard contains 35 rows across 24 logic labels:
   dominant under the registered row definition; **616 / 753 decisions** are
   dominant candidates.
 - The rows contain **327 baseline `unsat` decisions**. The evidence audit
-  reproduces **325 evidence-audit `unsat` outcomes** and Lean reconstruction
-  checks **261 Lean-checked outcomes**. The two-case difference is explicit:
-  QF_NIA proof production rejects `IntPow2` before producing evidence. This is
-  substantial but uneven coverage, not 261 fully audited outcomes out of 327:
+  reproduces **325 evidence-audit `unsat` outcomes**; **271 certified outcomes**
+  have **271 independently checked outcomes**, and Lean reconstruction checks
+  **261 Lean-checked outcomes**. Existing v1 JSON contains
+  **28 vacuous `bare-unsat` check results** recorded as
+  `evidence_checked=true`; the generated
+  matrix normalizes them because no certificate exists, and the v2 producer now
+  gates checking on certification. The two-case 327→325 difference is explicit:
+  QF_NIA proof production rejects `IntPow2` before producing evidence. Coverage
+  is substantial but uneven, not 261 fully audited outcomes out of 327:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
 - The generated [proof-gap matrix](generated/proof-gap-matrix.md) applies the
@@ -211,11 +216,12 @@ an adversarial differential gate; rejected mechanisms remain documented.
 
 ### G5 — Make proof coverage a first-class denominator
 
-The dominance audits provide three necessary denominators: 327 baseline UNSAT
-decisions, 325 evidence-audit UNSAT outcomes, and 261 Lean-checked outcomes.
-The two QF_NIA proof-production errors must remain visible rather than being
-folded into a nominal audit denominator. Remaining holes cluster by reduction
-and theory.
+The dominance audits provide five necessary denominators: 327 baseline UNSAT
+decisions, 325 evidence-audit UNSAT outcomes, 271 certified and independently
+checked outcomes, and 261 Lean-checked outcomes. The v1 audit's 28 vacuous bare-
+UNSAT check results and the two QF_NIA proof-production errors must remain
+visible rather than being folded into nominal audit denominators. Remaining
+holes cluster by reduction and theory.
 
 **Research:** generate an operator/reduction trust matrix per unsat; separate
 missing evidence, evidence-check failure, Lean reconstruction absence, external-
@@ -225,8 +231,9 @@ not bespoke one-row proof modules.
 **Prototype landed:** `scripts/gen-proof-gap-matrix.py` deterministically emits
 the checked [Markdown matrix](generated/proof-gap-matrix.md) and its
 [machine-readable JSON](generated/proof-gap-matrix.json). It shows that the
-largest gap is not Lean kernel expressiveness: 54 routes remain uncertified,
-primarily `bare-unsat`. Eight instances already have certified, checked,
+largest gap is not Lean kernel expressiveness: 54 audit-row occurrences remain
+uncertified and independently unchecked, all `bare-unsat`. Eight instances
+already have certified, checked,
 trust-free evidence and are direct reconstruction work; four QF_SEQ DRAT rows
 retain a `bit-blast` trust hole; two QF_NIA `IntPow2` rows fail evidence
 production. `just parity-docs` rejects stale generated outputs.
@@ -242,6 +249,14 @@ IR terms because front-end handling discharges them before the ordinary
 assertion DAG. This rejects a single “add Lean reconstruction” response: the
 next prerequisite is stable route/reduction provenance at evidence production,
 including the early-fold seam.
+
+Direct code tracing is captured in the
+[evidence-route provenance design](evidence-route-provenance-design-2026-07-21.md).
+It identifies four distinct bare-UNSAT exits and lands dominance-audit schema v2:
+certification-gated checking, existing decision-backend attribution, and an
+explicit check mode. The next causal prototype is a non-breaking explained
+evidence API with stable attempt dispositions and obligation fingerprints;
+syntax prevalence alone does not authorize proof work.
 
 **Exit:** every definitive result in a claimed dominant fragment has a serialized
 certificate, independent recheck, zero implicit reductions, and a recorded
@@ -335,10 +350,11 @@ reported as parity before it climbs the measured and certifying rungs.
    schema while preserving separate scores.
 5. Observe and archive the required representative official-Lean solver-proof
    CI result; size the scheduled exhaustive tier from that measurement.
-6. Instrument every uncertified result with a stable route ID,
-   source-to-lowered obligation map, checker identity, and first uncertified
-   reduction; re-run the exact 47-content census before selecting a shared
-   proof mechanism. Handle the eight reconstruction-only gaps independently.
+6. Rerun the exact 47-content population with dominance schema v2 for corrected
+   check semantics and coarse backend attribution. Then instrument every bare
+   result with stable attempt IDs, source-to-lowered obligation maps, checker
+   identity, and first uncertified reduction before selecting a shared proof
+   mechanism. Handle the eight reconstruction-only gaps independently.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.

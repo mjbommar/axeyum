@@ -4115,9 +4115,9 @@
   "summary": {
     "arithmetic_contents": 25,
     "audit_occurrences": 54,
-    "evidence_checked_occurrences": 28,
-    "evidence_unchecked_occurrences": 26,
+    "audit_reported_check_true_occurrences": 28,
     "exact_duplicate_groups": 5,
+    "independently_checked_occurrences": 0,
     "string_sequence_contents": 22,
     "unique_content_sha256": 47,
     "unique_paths": 52,

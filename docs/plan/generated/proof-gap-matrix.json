@@ -8,12 +8,12 @@
     {
       "category": "uncertified-and-unchecked",
       "description": "The UNSAT route is neither certified nor independently checked.",
-      "instances": 26
+      "instances": 54
     },
     {
       "category": "uncertified-but-checked",
-      "description": "A checker ran, but the route is still marked uncertified.",
-      "instances": 28
+      "description": "Reserved invalid combination; normalized into uncertified-and-unchecked.",
+      "instances": 0
     },
     {
       "category": "evidence-check-gap",
@@ -43,11 +43,12 @@
   ],
   "evidence_kinds": [
     {
+      "audit_reported_checked": 28,
       "audit_unsat": 54,
       "baseline_unsat": 54,
       "dominant_unsat": 0,
       "evidence_certified": 0,
-      "evidence_checked": 28,
+      "evidence_checked": 0,
       "evidence_kind": "bare-unsat",
       "lean_checked": 1,
       "proof_errors": 0,
@@ -55,6 +56,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "dominant_unsat": 0,
@@ -67,6 +69,7 @@
       "trust_hole_instances": 4
     },
     {
+      "audit_reported_checked": 12,
       "audit_unsat": 12,
       "baseline_unsat": 12,
       "dominant_unsat": 9,
@@ -79,6 +82,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 0,
       "audit_unsat": 0,
       "baseline_unsat": 2,
       "dominant_unsat": 0,
@@ -91,6 +95,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 0,
@@ -103,6 +108,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 1,
@@ -115,6 +121,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 0,
@@ -127,6 +134,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 0,
@@ -139,6 +147,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 86,
       "audit_unsat": 86,
       "baseline_unsat": 86,
       "dominant_unsat": 86,
@@ -151,6 +160,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 20,
       "audit_unsat": 20,
       "baseline_unsat": 20,
       "dominant_unsat": 20,
@@ -163,6 +173,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 14,
       "audit_unsat": 14,
       "baseline_unsat": 14,
       "dominant_unsat": 14,
@@ -175,6 +186,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 10,
       "audit_unsat": 10,
       "baseline_unsat": 10,
       "dominant_unsat": 10,
@@ -187,6 +199,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 9,
       "audit_unsat": 9,
       "baseline_unsat": 9,
       "dominant_unsat": 9,
@@ -199,6 +212,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 8,
       "audit_unsat": 8,
       "baseline_unsat": 8,
       "dominant_unsat": 8,
@@ -211,6 +225,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 8,
       "audit_unsat": 8,
       "baseline_unsat": 8,
       "dominant_unsat": 8,
@@ -223,6 +238,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "dominant_unsat": 7,
@@ -235,6 +251,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "dominant_unsat": 7,
@@ -247,6 +264,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "dominant_unsat": 7,
@@ -259,6 +277,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "dominant_unsat": 7,
@@ -271,6 +290,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 6,
       "audit_unsat": 6,
       "baseline_unsat": 6,
       "dominant_unsat": 6,
@@ -283,6 +303,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 6,
       "audit_unsat": 6,
       "baseline_unsat": 6,
       "dominant_unsat": 6,
@@ -295,6 +316,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 5,
       "audit_unsat": 5,
       "baseline_unsat": 5,
       "dominant_unsat": 5,
@@ -307,6 +329,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "dominant_unsat": 4,
@@ -319,6 +342,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "dominant_unsat": 4,
@@ -331,6 +355,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "dominant_unsat": 4,
@@ -343,6 +368,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "dominant_unsat": 4,
@@ -355,6 +381,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "dominant_unsat": 3,
@@ -367,6 +394,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "dominant_unsat": 3,
@@ -379,6 +407,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "dominant_unsat": 3,
@@ -391,6 +420,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "dominant_unsat": 3,
@@ -403,6 +433,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 2,
@@ -415,6 +446,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 2,
@@ -427,6 +459,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 2,
@@ -439,6 +472,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "dominant_unsat": 2,
@@ -451,6 +485,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -463,6 +498,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -475,6 +511,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -487,6 +524,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -499,6 +537,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -511,6 +550,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -523,6 +563,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -535,6 +576,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -547,6 +589,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -559,6 +602,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -571,6 +615,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -583,6 +628,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -595,6 +641,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "dominant_unsat": 1,
@@ -623,6 +670,7 @@
   ],
   "rows": [
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "blockers": {
@@ -640,6 +688,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 18,
       "audit_unsat": 18,
       "baseline_unsat": 18,
       "blockers": {
@@ -657,6 +706,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 0,
       "audit_unsat": 0,
       "baseline_unsat": 0,
       "blockers": {},
@@ -672,6 +722,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 85,
       "audit_unsat": 85,
       "baseline_unsat": 85,
       "blockers": {},
@@ -687,6 +738,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 5,
       "audit_unsat": 5,
       "baseline_unsat": 5,
       "blockers": {},
@@ -702,6 +754,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 20,
       "audit_unsat": 20,
       "baseline_unsat": 20,
       "blockers": {},
@@ -717,6 +770,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 0,
       "audit_unsat": 0,
       "baseline_unsat": 0,
       "blockers": {},
@@ -732,14 +786,15 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {
-        "uncertified-but-checked": 2
+        "uncertified-and-unchecked": 2
       },
       "dominant_unsat": 0,
       "evidence_certified": 0,
-      "evidence_checked": 2,
+      "evidence_checked": 0,
       "lean_checked": 0,
       "logic": "QF_AUFLIA",
       "proof_errors": 0,
@@ -749,6 +804,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 5,
       "audit_unsat": 5,
       "baseline_unsat": 5,
       "blockers": {},
@@ -764,6 +820,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {},
@@ -779,6 +836,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "blockers": {},
@@ -794,6 +852,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "blockers": {},
@@ -809,6 +868,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 10,
       "audit_unsat": 10,
       "baseline_unsat": 10,
       "blockers": {},
@@ -824,6 +884,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 7,
       "audit_unsat": 7,
       "baseline_unsat": 7,
       "blockers": {},
@@ -839,6 +900,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "blockers": {},
@@ -854,6 +916,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "blockers": {},
@@ -869,6 +932,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {},
@@ -884,16 +948,17 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 13,
       "audit_unsat": 13,
       "baseline_unsat": 15,
       "blockers": {
         "lean-reconstruction-gap": 3,
         "proof-production-error": 2,
-        "uncertified-but-checked": 8
+        "uncertified-and-unchecked": 8
       },
       "dominant_unsat": 2,
       "evidence_certified": 5,
-      "evidence_checked": 13,
+      "evidence_checked": 5,
       "lean_checked": 2,
       "logic": "QF_NIA",
       "proof_errors": 2,
@@ -903,6 +968,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 16,
       "audit_unsat": 16,
       "baseline_unsat": 16,
       "blockers": {},
@@ -918,14 +984,15 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 14,
       "audit_unsat": 14,
       "baseline_unsat": 14,
       "blockers": {
-        "uncertified-but-checked": 13
+        "uncertified-and-unchecked": 13
       },
       "dominant_unsat": 1,
       "evidence_certified": 1,
-      "evidence_checked": 14,
+      "evidence_checked": 1,
       "lean_checked": 2,
       "logic": "QF_NRA",
       "proof_errors": 0,
@@ -935,6 +1002,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 16,
       "audit_unsat": 16,
       "baseline_unsat": 16,
       "blockers": {},
@@ -950,6 +1018,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 8,
       "audit_unsat": 28,
       "baseline_unsat": 28,
       "blockers": {
@@ -967,16 +1036,17 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 5,
       "audit_unsat": 5,
       "baseline_unsat": 5,
       "blockers": {
         "trust-hole": 1,
         "trust-hole-and-lean-gap": 3,
-        "uncertified-but-checked": 1
+        "uncertified-and-unchecked": 1
       },
       "dominant_unsat": 0,
       "evidence_certified": 4,
-      "evidence_checked": 5,
+      "evidence_checked": 4,
       "lean_checked": 1,
       "logic": "QF_SEQ",
       "proof_errors": 0,
@@ -986,6 +1056,7 @@
       "trust_hole_instances": 4
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 8,
       "baseline_unsat": 8,
       "blockers": {
@@ -1003,6 +1074,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 15,
       "audit_unsat": 15,
       "baseline_unsat": 15,
       "blockers": {},
@@ -1018,6 +1090,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 15,
       "audit_unsat": 15,
       "baseline_unsat": 15,
       "blockers": {},
@@ -1033,6 +1106,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 3,
       "audit_unsat": 3,
       "baseline_unsat": 3,
       "blockers": {},
@@ -1048,6 +1122,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 1,
       "audit_unsat": 1,
       "baseline_unsat": 1,
       "blockers": {},
@@ -1063,6 +1138,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {},
@@ -1078,6 +1154,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 6,
       "audit_unsat": 6,
       "baseline_unsat": 6,
       "blockers": {},
@@ -1093,6 +1170,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {},
@@ -1108,6 +1186,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {},
@@ -1123,14 +1202,15 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 2,
       "audit_unsat": 2,
       "baseline_unsat": 2,
       "blockers": {
-        "uncertified-but-checked": 2
+        "uncertified-and-unchecked": 2
       },
       "dominant_unsat": 0,
       "evidence_certified": 0,
-      "evidence_checked": 2,
+      "evidence_checked": 0,
       "lean_checked": 0,
       "logic": "QF_UFLIA",
       "proof_errors": 0,
@@ -1140,14 +1220,15 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 4,
       "audit_unsat": 4,
       "baseline_unsat": 4,
       "blockers": {
-        "uncertified-but-checked": 2
+        "uncertified-and-unchecked": 2
       },
       "dominant_unsat": 2,
       "evidence_certified": 2,
-      "evidence_checked": 4,
+      "evidence_checked": 2,
       "lean_checked": 2,
       "logic": "QF_UFLIA",
       "proof_errors": 0,
@@ -1157,6 +1238,7 @@
       "trust_hole_instances": 0
     },
     {
+      "audit_reported_checked": 0,
       "audit_unsat": 0,
       "baseline_unsat": 0,
       "blockers": {},
@@ -1315,12 +1397,13 @@
     }
   ],
   "summary": {
+    "audit_reported_checked": 299,
     "audit_unsat": 325,
     "baseline_unsat": 327,
     "complete_audits": 35,
     "dominant_unsat": 259,
     "evidence_certified": 271,
-    "evidence_checked": 299,
+    "evidence_checked": 271,
     "lean_checked": 261,
     "proof_errors": 2,
     "trust_hole_free": 321,

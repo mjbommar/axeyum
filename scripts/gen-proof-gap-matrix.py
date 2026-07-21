@@ -41,7 +41,7 @@ CATEGORY_ORDER = (
 CATEGORY_DESCRIPTIONS = {
     "proof-production-error": "Evidence production did not reproduce UNSAT.",
     "uncertified-and-unchecked": "The UNSAT route is neither certified nor independently checked.",
-    "uncertified-but-checked": "A checker ran, but the route is still marked uncertified.",
+    "uncertified-but-checked": "Reserved invalid combination; normalized into uncertified-and-unchecked.",
     "evidence-check-gap": "Certified evidence exists but did not pass its independent checker.",
     "trust-hole-and-lean-gap": "Checked evidence retains a trust hole and has no Lean reconstruction.",
     "trust-hole": "Lean reconstruction exists, but a declared trust hole remains.",
@@ -72,7 +72,10 @@ def proof_category(instance: dict) -> str:
     if instance.get("audit_outcome") != "unsat":
         return "proof-production-error"
     certified = instance.get("evidence_certified") is True
-    checked = instance.get("evidence_checked") is True
+    # Historical audit artifacts called `Evidence::check` even for
+    # `Unsat(None)`, whose no-certificate behavior is structural `Ok(true)`.
+    # A real independent check requires a certified artifact first.
+    checked = certified and instance.get("evidence_checked") is True
     lean = instance.get("lean_checked") is True
     holes = bool(instance.get("trust_holes"))
     if not certified and not checked:
@@ -97,7 +100,14 @@ def stage_counts(instances: list[dict]) -> dict[str, int]:
         "evidence_certified": sum(
             i.get("evidence_certified") is True for i in instances
         ),
-        "evidence_checked": sum(i.get("evidence_checked") is True for i in instances),
+        "audit_reported_checked": sum(
+            i.get("evidence_checked") is True for i in instances
+        ),
+        "evidence_checked": sum(
+            i.get("evidence_certified") is True
+            and i.get("evidence_checked") is True
+            for i in instances
+        ),
         "trust_hole_free": sum(
             i.get("audit_outcome") == "unsat" and not i.get("trust_holes")
             for i in instances
@@ -244,10 +254,15 @@ def markdown(report: dict) -> str:
     lines.extend(
         [
             "",
-            "The stages are not a monotone funnel: one `bare-unsat` row is Lean-checked",
-            "but remains uncertified, and one Lean-checked DRAT row retains a declared",
+            "The stages are not a monotone funnel: one `bare-unsat` row has an",
+            "independent Lean reconstruction but remains uncertified, and one",
+            "Lean-checked DRAT row retains a declared",
             "`bit-blast` trust hole. The final row is therefore the conjunction, not the",
-            "minimum of the preceding totals.",
+            "minimum of the preceding totals. Historical audit JSON reports",
+            f"`evidence_checked=true` for {summary['audit_reported_checked'] - summary['evidence_checked']} uncertified `bare-unsat` rows because the",
+            "no-certificate",
+            "`Evidence::check` path returns structural `Ok(true)`; this generator",
+            "normalizes those rows to independently unchecked.",
             "",
             "## Exclusive outcome categories",
             "",
