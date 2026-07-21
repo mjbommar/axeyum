@@ -338,6 +338,35 @@ pub fn lucas(n: u32) -> Option<i128> {
     Some(previous)
 }
 
+/// The **Motzkin number** `Mₙ` — the number of ways to draw non-crossing chords
+/// between `n` points on a circle (equivalently, lattice paths with steps
+/// `↗ → ↘` staying ≥ 0): `1, 1, 2, 4, 9, 21, 51, …`, via the recurrence
+/// `(n+2)Mₙ = (2n+1)Mₙ₋₁ + 3(n−1)Mₙ₋₂`. Exact; `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::motzkin;
+/// assert_eq!(motzkin(4), Some(9));
+/// assert_eq!(motzkin(6), Some(51));
+/// ```
+#[must_use]
+pub fn motzkin(n: u32) -> Option<i128> {
+    if n == 0 {
+        return Some(1);
+    }
+    let mut prev2: i128 = 1; // M_0
+    let mut prev1: i128 = 1; // M_1
+    for k in 2..=i128::from(n) {
+        // (k+2)·M_k = (2k+1)·M_{k−1} + 3(k−1)·M_{k−2}.
+        let numerator = (2 * k + 1)
+            .checked_mul(prev1)?
+            .checked_add((3 * (k - 1)).checked_mul(prev2)?)?;
+        let current = numerator.checked_div(k + 2)?;
+        prev2 = prev1;
+        prev1 = current;
+    }
+    Some(prev1)
+}
+
 /// The **Pell number** `Pₙ` (with `P₀ = 0`, `P₁ = 1`, `Pₙ = 2Pₙ₋₁ + Pₙ₋₂`):
 /// `0, 1, 2, 5, 12, 29, 70, …` — the numerators/denominators of the continued-
 /// fraction convergents to `√2`. `None` on `i128` overflow.
@@ -484,6 +513,14 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn motzkin_sequence() {
+        let expected = [1i128, 1, 2, 4, 9, 21, 51, 127, 323, 835, 2188];
+        for (n, &want) in expected.iter().enumerate() {
+            assert_eq!(motzkin(u32::try_from(n).unwrap()), Some(want), "M_{n}");
+        }
+    }
 
     #[test]
     fn pell_and_jacobsthal_sequences() {
