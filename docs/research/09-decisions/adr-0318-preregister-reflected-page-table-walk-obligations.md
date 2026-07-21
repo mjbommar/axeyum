@@ -1,7 +1,9 @@
 # ADR-0318: Preregister reflected page-table walk obligations
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
+
+Result state: rejected before fixture/capture admission
 
 ## Context
 
@@ -101,6 +103,33 @@ Implementation is admitted only when all gates pass.
 No gate may be weakened after observing the first fixture change, committed
 capture, solver result, or replay population.
 
+## Result
+
+The candidate is rejected at frozen gate 4 before any raw artifact, proof, or
+replay population is admitted. Adding the exact preregistered functions to the
+excluded Cargo fixture and selecting `walk_permissions` through
+`axeyum-mir-build` reached the strict MIR parser, which returned:
+
+```text
+mir_syntax / UnsupportedStatement:
+unsupported function-level MIR `scope 1 {` at 118:5
+```
+
+The registered compiler emits nested `scope` metadata for the named local
+bindings (`level1`, `parent`, and `level2`). The zero-row probe reviewed the
+operations and block terminators but incorrectly classified this function-level
+debug-scope syntax as already admitted. The capture command failed before raw
+MIR retention, removed its partial target directory, and produced no credited
+artifact. Fixture source was restored byte-for-byte; no production code,
+parser, test expectation, lockfile, or committed fixture changed.
+
+Per the frozen no-weakening rule, the functions are not rewritten into an
+unnatural scope-free expression and the parser is not widened under this ADR.
+The result selects only a separate audit of compiler `scope` metadata. Any
+retry of the page-table obligation requires a new preregistration that owns
+the exact nested-scope grammar, proves it semantically inert, and preserves
+located rejection of everything else.
+
 ## Rejected alternatives
 
 - **Add a general page-table memory model first.** Rejected: the compiler probe
@@ -117,9 +146,8 @@ capture, solver result, or replay population.
 
 ## Consequences
 
-- A positive result closes T5.3.2 only as a bounded reflected obligation cell.
-- A negative result records the exact parser/semantic/proof boundary and may
-  select a later ADR; it does not authorize reactive widening.
+- This negative result records the exact compiler-scope parser boundary and
+  selects at most a later ADR; it does not authorize reactive widening.
 - T5.3.1's branch-only constant-time residual and T5.3.3 FSM refinement remain
   independent work.
 

@@ -275,15 +275,14 @@ session state.
 >    unsupported nontrivial-`requires` boundary and adds no panic-summary
 >    authoring. Do not widen branches, calls, effects, or unwind cleanup to make
 >    the bridge useful.
->    ADR-0318 now preregisters the next roadmap-owned P5.3 boundary after a
->    zero-row exact-rustc audit. A two-level four-byte page-table-shaped walk
->    compiles entirely into ADR-0288's existing `Shr`/`BitAnd`/cast/checked-read
->    surface, so no new memory model or IR operator is authorized. The frozen
->    cell requires owning-Cargo byte reproduction, universal reflected proofs
->    of panic-free masked indices, aligned frame tokens, and parent/leaf
->    permission monotonicity, plus replayed unmasked-index, unaligned-frame, and
->    permission-escalation controls. Treat it as a bounded obligation shape,
->    not an MMU, performance, or external-target result.
+>    ADR-0318 rejects the first roadmap-owned P5.3 page-table cell before any
+>    capture or proof. Its operation/block audit fit ADR-0288, but the real
+>    owning-Cargo path strictly rejected compiler-emitted nested `scope`
+>    metadata for the named walk locals at `scope 1 {`. No raw artifact was
+>    retained, the exact fixture source was restored, and no parser/test/code
+>    change survives. Do not rewrite the source to dodge this result or widen
+>    the parser retroactively; audit and preregister the exact semantically
+>    inert scope grammar separately before retrying the bounded obligation.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

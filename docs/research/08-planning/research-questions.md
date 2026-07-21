@@ -926,12 +926,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
 - [ ] Can the accepted checked-MIR byte-region surface discharge a complete
   page-table-shaped obligation family without adding a new memory model?
   - [ADR-0318](../09-decisions/adr-0318-preregister-reflected-page-table-walk-obligations.md)
-    preregisters one two-level four-entry byte-table cell after an exact
-    registered-rustc probe stayed inside the accepted shift/mask/cast/read
-    fragment. Owning-Cargo capture, universal panic/alignment/permission
-    proofs, three replayed broken controls, deterministic concrete differential
-    rows, and wall-time accounting are required before T5.3.2 may close. This
-    is a bounded obligation shape, not an MMU or external-target claim.
+    rejects the first two-level four-entry byte-table cell before capture or
+    proof. The operation/block probe fit the accepted fragment, but the real
+    owning-Cargo path exposed unowned nested compiler `scope` metadata and
+    failed strictly at `scope 1 {`. No artifact was retained and the fixture
+    was restored. A separate metadata-grammar decision is required before the
+    bounded obligation may be retried.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
