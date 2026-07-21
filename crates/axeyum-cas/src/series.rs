@@ -312,7 +312,14 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         }
         // `abs`, `erf`, and the Si/Ci/Ei integrals are outside the
         // rational-coefficient series fragment (√π factors / logarithmic terms).
-        UnaryFunc::Abs | UnaryFunc::Erf | UnaryFunc::Si | UnaryFunc::Ci | UnaryFunc::Ei => None,
+        UnaryFunc::Abs
+        | UnaryFunc::Erf
+        | UnaryFunc::Si
+        | UnaryFunc::Ci
+        | UnaryFunc::Ei
+        | UnaryFunc::Li
+        | UnaryFunc::Shi
+        | UnaryFunc::Chi => None,
     }
 }
 

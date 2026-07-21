@@ -152,6 +152,12 @@ pub enum UnaryFunc {
     Ci,
     /// The **exponential integral** `Ei(x)` (with `Ei′(x) = eˣ / x`).
     Ei,
+    /// The **logarithmic integral** `li(x) = ∫₀ˣ dt/ln t` (with `li′(x) = 1/ln x`).
+    Li,
+    /// The **hyperbolic sine integral** `Shi(x) = ∫₀ˣ sinh t / t dt` (`Shi′ = sinh x / x`).
+    Shi,
+    /// The **hyperbolic cosine integral** `Chi(x)` (with `Chi′(x) = cosh x / x`).
+    Chi,
 }
 
 impl UnaryFunc {
@@ -171,6 +177,9 @@ impl UnaryFunc {
             UnaryFunc::Si => "Si",
             UnaryFunc::Ci => "Ci",
             UnaryFunc::Ei => "Ei",
+            UnaryFunc::Li => "li",
+            UnaryFunc::Shi => "Shi",
+            UnaryFunc::Chi => "Chi",
         }
     }
 
@@ -209,6 +218,19 @@ impl UnaryFunc {
             UnaryFunc::Si => CasExpr::Unary(UnaryFunc::Sin, Box::new(u())) / u(),
             UnaryFunc::Ci => CasExpr::Unary(UnaryFunc::Cos, Box::new(u())) / u(),
             UnaryFunc::Ei => CasExpr::Unary(UnaryFunc::Exp, Box::new(u())) / u(),
+            // d/du li(u) = 1/ln u.
+            UnaryFunc::Li => CasExpr::int(1) / CasExpr::Unary(UnaryFunc::Ln, Box::new(u())),
+            // d/du Shi(u) = sinh u / u = (eᵘ − e^{−u})/(2u); Chi(u) = cosh u / u.
+            UnaryFunc::Shi => {
+                let exp_u = CasExpr::Unary(UnaryFunc::Exp, Box::new(u()));
+                let exp_neg = CasExpr::Neg(Box::new(u())).exp();
+                (exp_u - exp_neg) / (CasExpr::int(2) * u())
+            }
+            UnaryFunc::Chi => {
+                let exp_u = CasExpr::Unary(UnaryFunc::Exp, Box::new(u()));
+                let exp_neg = CasExpr::Neg(Box::new(u())).exp();
+                (exp_u + exp_neg) / (CasExpr::int(2) * u())
+            }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -319,6 +341,12 @@ impl CasExpr {
     #[must_use]
     pub fn ei(self) -> Self {
         CasExpr::Unary(UnaryFunc::Ei, Box::new(self))
+    }
+
+    /// The **logarithmic integral** `li(self)` as a symbolic head.
+    #[must_use]
+    pub fn li(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Li, Box::new(self))
     }
 
     /// The absolute value `|self|`. A constant argument folds to its magnitude
@@ -5562,6 +5590,20 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Si => sine_integral_f64(value),
                 UnaryFunc::Ci => cosine_integral_f64(value),
                 UnaryFunc::Ei => exponential_integral_f64(value),
+                // li(x) = Ei(ln x) for x > 0; Shi = (Ei(x)−Ei(−x))/2; Chi = (…+…)/2.
+                UnaryFunc::Li => {
+                    if value > 0.0 {
+                        exponential_integral_f64(value.ln())
+                    } else {
+                        f64::NAN
+                    }
+                }
+                UnaryFunc::Shi => {
+                    (exponential_integral_f64(value) - exponential_integral_f64(-value)) / 2.0
+                }
+                UnaryFunc::Chi => {
+                    f64::midpoint(exponential_integral_f64(value), exponential_integral_f64(-value))
+                }
             })
         }
     }
@@ -6455,6 +6497,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
+        integrate_split_fraction(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -6858,13 +6901,40 @@ fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 fn split_constant_factor(expr: &CasExpr) -> Option<(Rational, CasExpr)> {
     match expr {
         CasExpr::Div(a, b) => {
-            let CasExpr::Const(c) = b.as_ref() else {
-                return None;
-            };
-            if c.is_zero() {
-                return None;
+            // A negated numerator: `(−a)/b → (−1)·(a/b)`.
+            if let CasExpr::Neg(inner) = a.as_ref() {
+                return Some((
+                    Rational::integer(-1),
+                    CasExpr::Div(inner.clone(), b.clone()),
+                ));
             }
-            Some((Rational::integer(1).checked_div(*c)?, (**a).clone()))
+            // Denominator is a bare constant: `a/c → (1/c)·a`.
+            if let CasExpr::Const(c) = b.as_ref() {
+                if c.is_zero() {
+                    return None;
+                }
+                return Some((Rational::integer(1).checked_div(*c)?, (**a).clone()));
+            }
+            // Denominator carries a constant factor: `a/(c·rest) → (1/c)·(a/rest)`.
+            if matches!(b.as_ref(), CasExpr::Mul(_)) {
+                let mut constant = Rational::integer(1);
+                let mut rest: Vec<CasExpr> = Vec::new();
+                for factor in flatten_mul(b) {
+                    match factor {
+                        CasExpr::Const(c) => constant = constant.checked_mul(c)?,
+                        other => rest.push(other),
+                    }
+                }
+                if constant != Rational::integer(1) && !rest.is_empty() {
+                    let new_den = match rest.len() {
+                        1 => rest.into_iter().next()?,
+                        _ => CasExpr::Mul(rest),
+                    };
+                    let inverse = Rational::integer(1).checked_div(constant)?;
+                    return Some((inverse, CasExpr::Div(a.clone(), Box::new(new_den))));
+                }
+            }
+            None
         }
         CasExpr::Neg(a) => Some((Rational::integer(-1), (**a).clone())),
         CasExpr::Mul(_) => {
@@ -7262,6 +7332,14 @@ fn integrate_special_integral(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Div(numerator, denominator) = expr else {
         return None;
     };
+    // ∫ 1/ln(x) dx = li(x) (argument must be exactly `x`).
+    if matches!(numerator.as_ref(), CasExpr::Const(c) if *c == Rational::integer(1))
+        && let CasExpr::Unary(UnaryFunc::Ln, arg) = denominator.as_ref()
+        && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+    {
+        return Some(CasExpr::Unary(UnaryFunc::Li, arg.clone()));
+    }
+    // ∫ f(a·x)/x dx = {Si, Ci, Ei}(a·x).
     if !matches!(denominator.as_ref(), CasExpr::Var(v) if v == var) {
         return None;
     }
@@ -7280,6 +7358,44 @@ fn integrate_special_integral(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return None;
     }
     Some(CasExpr::Unary(head, arg.clone()))
+}
+
+/// Distribute integration over a fraction whose numerator is a sum:
+/// `∫ (f + g)/h dx = ∫ f/h dx + ∫ g/h dx`, so e.g. `∫ (eˣ − e^{−x})/(2x) dx =
+/// Shi(x)` composes from the `Ei` pieces. Certified downstream. `None` unless the
+/// integrand is `Div(Add(…), h)` and every split term integrates.
+fn integrate_split_fraction(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (numerator, denominator) = flatten_fraction(expr);
+    let CasExpr::Add(terms) = &numerator else {
+        return None;
+    };
+    let mut total = CasExpr::zero();
+    for term in terms {
+        let piece = CasExpr::Div(Box::new(term.clone()), Box::new(denominator.clone()));
+        let integrated = integrate(&piece, var)?;
+        if !integrated.is_certified() {
+            return None;
+        }
+        total = total + integrated.antiderivative;
+    }
+    Some(fold_trivial(&total))
+}
+
+/// Collapse nested divisions into a single `(numerator, denominator)` pair:
+/// `(a/b)/(c/d) = (a·d)/(b·c)`. Non-fraction input returns `(expr, 1)`. Lets the
+/// integrator see `sinh(x)/x = (eˣ−e^{−x})/(2x)` as one `Add`-over-`2x` fraction.
+fn flatten_fraction(expr: &CasExpr) -> (CasExpr, CasExpr) {
+    match expr {
+        CasExpr::Div(a, b) => {
+            let (a_num, a_den) = flatten_fraction(a);
+            let (b_num, b_den) = flatten_fraction(b);
+            (
+                fold_trivial(&(a_num * b_den)),
+                fold_trivial(&(a_den * b_num)),
+            )
+        }
+        other => (other.clone(), CasExpr::one()),
+    }
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -10711,6 +10827,28 @@ mod tests {
             let result = integrate(&integrand, "x").expect("trig-square integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn special_integrals_li_and_split_fractions() {
+        let x = || v("x");
+        // ∫1/ln(x) = li(x); li′(x)=1/ln x.
+        assert_equal(&x().li().differentiate("x"), &(CasExpr::int(1) / x().ln()));
+        let li = integrate(&(CasExpr::int(1) / x().ln()), "x").expect("li");
+        assert!(li.is_certified());
+        assert_equal(&li.antiderivative, &x().li());
+        // Split-fraction: ∫(f+g)/h = ∫f/h + ∫g/h, unlocking sinh/cosh over x (→ Shi/Chi
+        // as Ei combinations) and a denominator constant.
+        for integrand in [
+            hyperbolic::sinh(&v("x")) / x(),         // (eˣ−e^{−x})/(2x)
+            hyperbolic::cosh(&v("x")) / x(),         // (eˣ+e^{−x})/(2x)
+            (x().exp() + CasExpr::int(1)) / x(),     // eˣ/x + 1/x → Ei(x)+ln x
+            x().exp() / (CasExpr::int(2) * x()),     // (1/2)Ei(x)
+        ] {
+            let r = integrate(&integrand, "x").expect("split-fraction integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
     }
 
