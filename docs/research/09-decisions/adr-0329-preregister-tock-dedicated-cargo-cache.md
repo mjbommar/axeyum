@@ -37,8 +37,9 @@ frontend, or run a property query.
    not the sparse checkout.
 3. The output is exactly ignored
    `target/tock-log2-20260721/cache-v2`. It and its sibling partial path must not
-   exist before the one official preparation. Populate the partial path and
-   rename atomically only after every gate passes.
+   exist before the one official preparation. The envelope contains only the
+   dedicated `cargo-home/` payload and `preparation-result.json`; populate the
+   partial envelope and rename atomically only after every gate passes.
 4. Use a fresh constructed Bubblewrap root. Bind `/usr`, `/etc`, Rustup, and the
    exact source read-only; bind only the partial dedicated Cargo home writable.
    Clear the environment and reject ambient Cargo/Rust flags, proxy overrides,
@@ -66,7 +67,7 @@ frontend, or run a property query.
    Require the Tock workspace root, `kernel` package, 169 lock packages, and no
    network or cache write. Failure is the preparation result.
 8. Inventory every retained directory, regular file, and symlink beneath the
-   cache. Reject sockets/devices/FIFOs, absolute or escaping symlinks, hard-link
+   `cargo-home/` payload. Reject sockets/devices/FIFOs, absolute or escaping symlinks, hard-link
    aliasing, and path traversal. The exact Cargo zero-byte package-lock
    sentinels and global-cache database are ordinary inventoried files; reject
    any leftover temporary/download-part path. Canonical rows bind
@@ -96,9 +97,12 @@ after the networked fetch begins.
 
 ## Result
 
-Proposed. No preparation producer, registration, networked fetch, dedicated
-cache byte, inventory, successor build, target artifact, or property result
-exists.
+Proposed. The separate preparation producer, nine focused mutation/cleanup
+tests, exact support/source/tool/environment/namespace/command/resource
+registration, and live no-op network/offline namespace probes are frozen with
+zero networked fetches. Commit and push this checkpoint before the one official
+preparation invocation. No dedicated cache byte, inventory, successor build,
+target artifact, or property result exists.
 
 ## Rejected alternatives
 

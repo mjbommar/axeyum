@@ -415,8 +415,11 @@ session state.
 >    one exact locked fetch under a registered network namespace, a second
 >    network-isolated read-only full-workspace metadata probe, whole-tree
 >    canonical inventory, cgroup/OOM accounting, and atomic local retention.
->    Implement and push its producer/tests/registration before the first fetch.
->    Preparation cannot compile, capture, admit, query, or authorize v1 rerun.
+>    Its separate producer, nine mutation/cleanup tests, exact registration,
+>    and live no-op namespaces are now frozen with zero fetches. Commit/push
+>    this checkpoint, then invoke the preparation once under its registered
+>    cgroup. Preparation cannot compile, capture, admit, query, or authorize v1
+>    rerun.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

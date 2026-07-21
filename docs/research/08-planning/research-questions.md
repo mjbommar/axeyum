@@ -1013,8 +1013,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     preregisters that input-only successor: one fresh dedicated Cargo home,
     exact locked fetch, network-isolated read-only replay of the v1 metadata
     gate, canonical whole-tree inventory, and no compilation/capture/query.
-    Its producer/tests/registration must be pushed before any networked fetch;
-    no cache byte or expected inventory exists yet.
+    Its separate producer, nine mutation/cleanup tests, exact registration, and
+    live no-op namespaces are frozen with zero fetches. Push that checkpoint
+    before the one preparation invocation; no cache byte or expected inventory
+    exists yet.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
