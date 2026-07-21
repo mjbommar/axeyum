@@ -6691,6 +6691,10 @@ fn integrate_trig_monomial(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     }
     let a = arg_poly[1];
     let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
+    // Both powers even: reduce to a `cos(k·u)` sum via Euler (a separate path).
+    if sin_pow.is_multiple_of(2) && cos_pow.is_multiple_of(2) && (sin_pow + cos_pow) >= 2 {
+        return integrate_trig_even_power(sin_pow, cos_pow, coeff, a, &arg_expr, var);
+    }
     // Build the polynomial P(w) so that the integrand equals P(trig)·(d/dx of the
     // substituted variable)/const, then integrate P and substitute back.
     //   m odd: w = cos u, integrand = k·sin·(1−w²)^{(m−1)/2}·wⁿ, ∫ = −(k/a)·∫P(w)dw
@@ -6700,7 +6704,7 @@ fn integrate_trig_monomial(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     } else if cos_pow % 2 == 1 {
         (sin_pow, (cos_pow - 1) / 2, Rational::integer(1), arg_expr.sin())
     } else {
-        return None; // both even — not handled here
+        return None; // both even but total degree 0 (a constant) — not this path
     };
     // P(w) = w^{base_pow} · (1 − w²)^{other_half}, as a dense coefficient vector.
     let one_minus_w2 = vec![Rational::integer(1), Rational::zero(), Rational::integer(-1)];
@@ -6718,6 +6722,78 @@ fn integrate_trig_monomial(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let poly_in_w = eval_poly_at(&integrated, &substituted);
     let scale = coeff.checked_mul(sign)?.checked_div(a)?;
     Some(scaled_term(scale, poly_in_w))
+}
+
+/// Integrate `k·sin^m(u)·cos^n(u)` with `m, n` **both even** and `u = a·x+b` linear,
+/// by Euler power-reduction. Writing `E = e^{iu}`, `cos u = (E+E⁻¹)/2` and
+/// `sin u = (E−E⁻¹)/(2i)`, the product is a *palindromic* Laurent polynomial in
+/// `E` with rational coefficients (real, since `m` is even), i.e. a real linear
+/// combination `c₀ + Σ_{j>0} 2c_j·cos(j·u)`. Its antiderivative is
+/// `k·(c₀·x + Σ 2c_j·sin(j·u)/(j·a))`. Certified downstream by differentiation.
+fn integrate_trig_even_power(
+    sin_pow: u32,
+    cos_pow: u32,
+    coeff: Rational,
+    a: Rational,
+    arg_expr: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    // (E+E⁻¹)^n = Σ_k C(n,k) E^{n−2k}; (E−E⁻¹)^m = Σ_k C(m,k)(−1)^k E^{m−2k}.
+    // Represent a Laurent polynomial as exponent → integer coefficient.
+    let binom_expansion = |power: u32, alternating: bool| -> Option<BTreeMap<i128, i128>> {
+        let mut out: BTreeMap<i128, i128> = BTreeMap::new();
+        for k in 0..=power {
+            let mut c = ntheory::binomial(i128::from(power), i128::from(k))?;
+            if alternating && k % 2 == 1 {
+                c = c.checked_neg()?;
+            }
+            let exponent = i128::from(power) - 2 * i128::from(k);
+            *out.entry(exponent).or_insert(0) += c;
+        }
+        Some(out)
+    };
+    let cosine_part = binom_expansion(cos_pow, false)?;
+    let sine_part = binom_expansion(sin_pow, true)?;
+    // Convolve the two Laurent polynomials.
+    let mut product: BTreeMap<i128, i128> = BTreeMap::new();
+    for (&ec, &cc) in &cosine_part {
+        for (&es, &cs) in &sine_part {
+            let term = cc.checked_mul(cs)?;
+            let entry = product.entry(ec + es).or_insert(0);
+            *entry = entry.checked_add(term)?;
+        }
+    }
+    // Overall scale: 1/(2^{n+m}·i^m). For even m, i^m = (−1)^{m/2}, so
+    // scale = (−1)^{m/2}/2^{n+m}. Fold the leading constant `coeff` in too.
+    let two_pow = 2i128.checked_pow(sin_pow.checked_add(cos_pow)?)?;
+    let sign = if (sin_pow / 2).is_multiple_of(2) { 1 } else { -1 };
+    let scale = coeff.checked_mul(Rational::checked_new(sign, two_pow)?)?;
+
+    // Assemble c₀·x + Σ_{j>0} 2c_j·sin(j·u)/(j·a), using palindromy c_j = c_{−j}.
+    let mut terms: Vec<CasExpr> = Vec::new();
+    // Constant term (exponent 0) integrates to c₀·x.
+    if let Some(&c0) = product.get(&0) {
+        let coeff0 = scale.checked_mul(Rational::integer(c0))?;
+        if !coeff0.is_zero() {
+            terms.push(scaled_term(coeff0, CasExpr::var(var)));
+        }
+    }
+    for (&exponent, &c_j) in &product {
+        if exponent <= 0 || c_j == 0 {
+            continue; // use only j > 0 (palindromic partner supplies the −j term)
+        }
+        // ∫ 2c_j·cos(j·u) dx = 2c_j·sin(j·u)/(j·a).
+        let amplitude = scale
+            .checked_mul(Rational::integer(2 * c_j))?
+            .checked_div(Rational::integer(exponent).checked_mul(a)?)?;
+        let angle = scaled_term(Rational::integer(exponent), arg_expr.clone());
+        terms.push(scaled_term(amplitude, angle.sin()));
+    }
+    Some(match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    })
 }
 
 /// The antiderivative of a dense univariate polynomial (`∫ Σ cᵢ xⁱ = Σ
@@ -10197,6 +10273,30 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn integrate_trig_monomial_even_power() {
+        let x = || v("x");
+        // Both-even powers via Euler power-reduction to a cos(k·u) sum: ∫cos⁴x,
+        // ∫sin⁴x, ∫sin²x·cos²x, ∫sin²x·cos⁴x, ∫cos²(3x) — certified by differentiation.
+        for integrand in [
+            x().cos().pow(4),
+            x().sin().pow(4),
+            x().sin().pow(2) * x().cos().pow(2),
+            x().sin().pow(2) * x().cos().pow(4),
+            (CasExpr::int(3) * x()).cos().pow(2),
+        ] {
+            let result = integrate(&integrand, "x").expect("even-power trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+        // Known value: ∫cos⁴x = 3x/8 + sin(2x)/4 + sin(4x)/32.
+        let c4 = integrate(&x().cos().pow(4), "x").unwrap().antiderivative;
+        let expected = CasExpr::rat(3, 8) * x()
+            + CasExpr::rat(1, 4) * (CasExpr::int(2) * x()).sin()
+            + CasExpr::rat(1, 32) * (CasExpr::int(4) * x()).sin();
+        assert_equal(&c4, &expected);
     }
 
     #[test]
