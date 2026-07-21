@@ -391,7 +391,18 @@ session state.
 >    records the boundary. The three review-requested facades are now measured;
 >    next census the remaining cross-cutting root domains independently before
 >    deciding on another facade. Do not turn `theories` into a catch-all or mix
->    this artifact-readiness lane with solver/concretization behavior.
+>    this artifact-readiness lane with solver/concretization behavior. R4d now
+>    accepts the first independent cross-cutting boundary: 66 existing BMC/
+>    k-induction, Horn, IMC, PDR, symbolic-execution, and tiny-BV reference-VM
+>    contracts live under six full-only `verification` submodules. The
+>    all-feature documented root falls 276→211, the subtree contains 72 entries
+>    including its grouping modules, and minimal `qfbv` remains 26 with no
+>    verification surface. Historical paths remain callable and type-identical;
+>    all 891 solver-library tests, strict clippy, compatibility gates, and both
+>    warning-denied rustdoc profiles pass under the bounded profile. ADR-0308
+>    records the boundary. Continue with separate censuses for optimization,
+>    SMT-LIB, interpolation, and general refutation utilities; do not create a
+>    miscellaneous catch-all or change solver behavior.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

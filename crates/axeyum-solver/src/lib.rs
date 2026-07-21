@@ -509,6 +509,68 @@ pub mod theories {
     }
 }
 
+/// Verification, reachability, and symbolic-execution APIs.
+///
+/// This full-profile facade groups transition-system and application-facing
+/// analysis contracts without treating them as solver theories or proof-format
+/// APIs. Historical crate-root paths remain source-compatible aliases hidden
+/// from root rustdoc.
+#[cfg(feature = "full")]
+pub mod verification {
+    /// Bounded model checking and k-induction over transition systems.
+    pub mod transition_systems {
+        pub use crate::bmc::{
+            BmcOutcome, CertifiedSafetyOutcome, SafetyCertificate, SafetyOutcome, TransitionSystem,
+            bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
+            prove_safety_k_induction, prove_safety_k_induction_with_memory,
+        };
+    }
+
+    /// Constrained-Horn-clause systems and solving.
+    pub mod horn {
+        pub use crate::horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
+    }
+
+    /// Interpolation-based model checking.
+    pub mod imc {
+        pub use crate::imc::{ImcOutcome, prove_safety_imc};
+        pub use crate::imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
+        pub use crate::imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
+    }
+
+    /// Property-directed reachability and checked safety certificates.
+    pub mod pdr {
+        pub use crate::pdr::{
+            CertifiedPdrOutcome, ChcSafetyCertificate, PdrOutcome, prove_safety_pdr,
+            prove_safety_pdr_certified,
+        };
+        pub use crate::pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
+        pub use crate::pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
+    }
+
+    /// Path exploration and symbolic-memory contracts.
+    pub mod symbolic_execution {
+        pub use crate::symexec::{
+            Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
+            CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,
+            SymbolicMemoryWrite,
+        };
+    }
+
+    /// Tiny-BV reference VM, reachability, coverage, and witness reports.
+    pub mod toy_bv_vm {
+        pub use crate::toy_bv_vm::{
+            TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome,
+            TinyBvConcreteStep, TinyBvConcreteTrace, TinyBvCoverageReport,
+            TinyBvEdgeCoverageReport, TinyBvEdgeTestGenerationReport, TinyBvExploreOutcome,
+            TinyBvInsn, TinyBvProgram, TinyBvReachabilityReport, TinyBvReachabilityStatus,
+            TinyBvSafetyReport, TinyBvSafetyStatus, TinyBvState, TinyBvTestCase,
+            TinyBvTestGenerationReport, TinyBvTraceBlockStep, TinyBvTraceEdgeStep,
+            TinyBvTraceReport, TinyBvTraceSourceStep, TinyBvWitness,
+        };
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -603,6 +665,7 @@ macro_rules! full_exports {
             certify_bitblast_by_miter_within, certify_qf_bv_unsat_end_to_end,
             certify_qf_bv_unsat_end_to_end_within,
         };
+        #[doc(hidden)]
         pub use bmc::{
             BmcOutcome, CertifiedSafetyOutcome, SafetyCertificate, SafetyOutcome, TransitionSystem,
             bounded_model_check, bounded_model_check_with_memory, certify_safety_k_induction,
@@ -694,9 +757,13 @@ macro_rules! full_exports {
         #[doc(hidden)]
         pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
         pub use fp::FloatFormat;
+        #[doc(hidden)]
         pub use horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
+        #[doc(hidden)]
         pub use imc::{ImcOutcome, prove_safety_imc};
+        #[doc(hidden)]
         pub use imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
+        #[doc(hidden)]
         pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
         #[doc(hidden)]
         pub use int_reconstruct::{
@@ -765,11 +832,14 @@ macro_rules! full_exports {
         };
         pub use pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};
         pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
+        #[doc(hidden)]
         pub use pdr::{
             CertifiedPdrOutcome, ChcSafetyCertificate, PdrOutcome, prove_safety_pdr,
             prove_safety_pdr_certified,
         };
+        #[doc(hidden)]
         pub use pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
+        #[doc(hidden)]
         pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
         pub use preprocess::check_with_preprocessing;
         #[doc(hidden)]
@@ -934,6 +1004,7 @@ macro_rules! full_exports {
         pub use string_theory::{
             check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
         };
+        #[doc(hidden)]
         pub use symexec::{
             Branch, CfgCheckedOutcome, CfgCheckedReached, CfgConcreteMismatch, CfgExploreConfig,
             CfgExploreOutcome, CfgReached, CfgStep, PathStatus, SymbolicExecutor, SymbolicMemory,
@@ -947,6 +1018,7 @@ macro_rules! full_exports {
             InterfaceStatus, classify_interface_equalities, combination_conflict, interface_th_eqs,
             propose_interface_equalities, shared_terms,
         };
+        #[doc(hidden)]
         pub use toy_bv_vm::{
             TinyBvBasicBlock, TinyBvCfgEdge, TinyBvCfgEdgeKind, TinyBvConcreteOutcome,
             TinyBvConcreteStep, TinyBvConcreteTrace, TinyBvCoverageReport,

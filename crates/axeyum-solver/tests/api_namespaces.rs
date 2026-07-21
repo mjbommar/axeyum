@@ -1,4 +1,4 @@
-//! Public proof-namespace compatibility gates.
+//! Public namespace compatibility gates.
 //!
 //! The grouped paths are the canonical documentation surface. Historical root
 //! paths remain source-compatible aliases while downstream consumers migrate.
@@ -196,4 +196,29 @@ fn theory_namespaces_preserve_root_aliases() {
         combination::check_qf_ufbv_online_cdclt,
         axeyum_solver::check_qf_ufbv_online_cdclt
     );
+}
+
+#[cfg(feature = "full")]
+#[test]
+fn verification_namespaces_preserve_root_aliases() {
+    use axeyum_solver::verification::{
+        horn, imc, pdr, symbolic_execution, toy_bv_vm, transition_systems,
+    };
+
+    assert_same_type::<transition_systems::BmcOutcome, axeyum_solver::BmcOutcome>();
+    assert_same_type::<
+        transition_systems::CertifiedSafetyOutcome,
+        axeyum_solver::CertifiedSafetyOutcome,
+    >();
+    assert_same_type::<horn::HornSystem, axeyum_solver::HornSystem>();
+    assert_same_type::<imc::ImcOutcome, axeyum_solver::ImcOutcome>();
+    assert_same_type::<imc::ImcLiaOutcome, axeyum_solver::ImcLiaOutcome>();
+    assert_same_type::<pdr::PdrOutcome, axeyum_solver::PdrOutcome>();
+    assert_same_type::<pdr::CertifiedPdrOutcome, axeyum_solver::CertifiedPdrOutcome>();
+    assert_same_type::<symbolic_execution::SymbolicExecutor, axeyum_solver::SymbolicExecutor>();
+    assert_same_type::<symbolic_execution::SymbolicMemory, axeyum_solver::SymbolicMemory>();
+    assert_same_type::<toy_bv_vm::TinyBvProgram, axeyum_solver::TinyBvProgram>();
+    assert_same_type::<toy_bv_vm::TinyBvExploreOutcome, axeyum_solver::TinyBvExploreOutcome>();
+
+    assert_same_function!(horn::solve_horn, axeyum_solver::solve_horn);
 }

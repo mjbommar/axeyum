@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4d separates verification/application APIs from the solver
+  root.** The full-only `verification` facade groups 66 existing BMC/
+  k-induction, Horn, IMC, PDR, symbolic-execution, and tiny-BV reference-VM
+  contracts under six semantic submodules. These APIs consume theories and
+  proof artifacts but are neither theories nor proof formats. The all-feature
+  documented root falls 276→211 items; the subtree contains 72 entries including
+  its grouping modules, while minimal `qfbv` stays at 26 with no verification
+  module. Historical aliases remain callable and type-identical. Dedicated
+  compatibility gates, all 891 solver-library tests, strict all-target clippy,
+  and both warning-denied rustdoc profiles pass inside the one-job 4 GiB
+  profile. Next: census optimization, SMT-LIB, interpolation, and general
+  refutation utilities independently; do not create a miscellaneous facade or
+  mix API organization with solver behavior.
+
 - **2026-07-20 — R4c gives direct theory APIs semantic homes without absorbing
   cross-cutting front doors.** The full-only `theories` facade groups 63 direct
   contracts/procedures under arrays, arithmetic, datatypes, quantifiers,
@@ -5482,6 +5496,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0308 accepts the verification API namespace.** Sixty-six
+  public transition-system/BMC, Horn, IMC, PDR, symbolic-execution, and tiny-BV
+  reference-VM entries now have canonical paths under six full-only
+  `verification` submodules. Root imports remain compatible and full-profile
+  consumers are not migrated in the same change. Warning-denied rustdoc
+  measures 276→211 root items and 72 verification-subtree entries; minimal
+  `qfbv` remains at 26 with only `proofs` exposed. Representative compatibility
+  tests cover all six submodules, all 891 solver-library tests pass, and strict
+  all-target clippy is clean under the bounded profile. Next R4 work must keep
+  optimization, SMT-LIB, interpolation, and refutation utilities separate.
 
 - **2026-07-20 — ADR-0307 accepts the direct-theory namespace.** Sixty-three
   existing public contracts and procedures now have canonical homes under the
