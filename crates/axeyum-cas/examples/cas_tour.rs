@@ -51,9 +51,9 @@ fn main() {
     println!("apart(1/(x^2-1)) = {}", apart(&(i(1) / (x().pow(2) - i(1))), "x").unwrap());
     println!("sum_(k=0)^(n-1) k = {}", sum_polynomial(&CasExpr::var("n"), "n").unwrap());
     // Gosper: indefinite hypergeometric summation.
-    let k = || CasExpr::var("k");
-    if let Some(s) = gosper_sum(&(CasExpr::int(1) / (k() * (k() + i(1)))), "k") {
-        println!("gosper: sum 1/(k(k+1)) = {s}   [CERTIFIED telescoping]");
+    let kvar = || CasExpr::var("k");
+    if let Some(sum) = gosper_sum(&(CasExpr::int(1) / (kvar() * (kvar() + i(1)))), "k") {
+        println!("gosper: sum 1/(k(k+1)) = {sum}   [CERTIFIED telescoping]");
     }
 
     println!("\n-- roots & inequalities --");
