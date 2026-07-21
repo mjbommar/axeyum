@@ -114,6 +114,15 @@ fn inspect(path: &Path) -> Result<Value, String> {
         "logic": script.logic,
         "assertions": script.assertions.len(),
         "source_assertions": bodies.len(),
+        "uses_bounded_strings": script.uses_bounded_strings,
+        "word_only_fallback": script.word_only_fallback.is_some(),
+        "word_problem": script.word_problem.is_some(),
+        "word_skeleton_terms": script.word_skeleton.len(),
+        "membership_problem": script.membership_problem.is_some(),
+        "length_skeleton_terms": script.length_skeleton.len(),
+        "len_abstraction_map_entries": script.len_abstraction_map.len(),
+        "len_abstraction_fact_terms": script.len_abstraction_facts.len(),
+        "len_abstraction_bound_terms": script.len_abstraction_bounds.len(),
         "source_heads": map_value(source_heads),
         "unique_ir_terms": unique_terms,
         "ir_ops": map_value(ir_ops),
@@ -132,7 +141,7 @@ fn main() -> Result<(), String> {
     }
     println!(
         "{}",
-        serde_json::to_string_pretty(&json!({"version": 1, "instances": instances}))
+        serde_json::to_string_pretty(&json!({"version": 2, "instances": instances}))
             .map_err(|error| error.to_string())?
     );
     Ok(())

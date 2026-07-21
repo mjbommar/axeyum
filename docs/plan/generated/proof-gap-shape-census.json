@@ -18,6 +18,11 @@
         "Eq",
         "Store"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "93fab1c36a8546706899f50cb5d1bc34b5ff2120ad7df1dc9480d8c16c5f8adb",
       "source_heads": [
         "=",
@@ -31,7 +36,11 @@
         "arrays",
         "uf"
       ],
-      "unique_ir_terms": 21
+      "unique_ir_terms": 21,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -51,6 +60,11 @@
         "Select",
         "Store"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "a028621397a8410e0e8fd1063ddacf029dad9899bd084acd5db4df597fdf198e",
       "source_heads": [
         "=",
@@ -89,7 +103,11 @@
         "arrays",
         "uf"
       ],
-      "unique_ir_terms": 90
+      "unique_ir_terms": 90,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -109,6 +127,11 @@
         "IntMod",
         "IntMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "99c1453b3e6716596cb1dfe96c6cd8afe63a651ec6cd18e1e0158a4e822d7542",
       "source_heads": [
         "*",
@@ -121,7 +144,11 @@
         "int-divmod",
         "int-nonlinear"
       ],
-      "unique_ir_terms": 10
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -140,6 +167,11 @@
         "IntLt",
         "IntPow2"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "7204396e13cf9ea99c9b98217353e8e56572abfd75728b45071af37bb91af9ad",
       "source_heads": [
         "<",
@@ -150,7 +182,11 @@
       "tags": [
         "int-pow2"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -168,6 +204,11 @@
         "IntLe",
         "IntPow2"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "942844c4147d54567eecb8cb3a7c3bdb970ec6298031ca2af38eabd5175f1772",
       "source_heads": [
         "<=",
@@ -177,7 +218,11 @@
       "tags": [
         "int-pow2"
       ],
-      "unique_ir_terms": 5
+      "unique_ir_terms": 5,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -196,6 +241,11 @@
         "IntMod",
         "IntPow2"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "c92ce743342584064b70e334b0a92527afafecdf7efbc1a5f99d925860dd302a",
       "source_heads": [
         "<",
@@ -207,7 +257,11 @@
         "int-divmod",
         "int-pow2"
       ],
-      "unique_ir_terms": 7
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -227,6 +281,11 @@
         "IntLe",
         "IntPow2"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "422851e353fc365bc4ab1d49349071704dc660b28d332e5e9819e00e591b0f3f",
       "source_heads": [
         "<=",
@@ -238,7 +297,11 @@
         "int-divmod",
         "int-pow2"
       ],
-      "unique_ir_terms": 7
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -257,6 +320,11 @@
         "IntGt",
         "IntLt"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "d67c531f0875234685a9142e496d008cafdce247fa5723556a5e0e47303355ee",
       "source_heads": [
         "<",
@@ -267,7 +335,11 @@
       "tags": [
         "int-divmod"
       ],
-      "unique_ir_terms": 8
+      "unique_ir_terms": 8,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -286,6 +358,11 @@
         "IntGt",
         "IntMod"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "fff049ef54aba3fadbe7838236421365c4537a716d878ecb5bda6c337b857757",
       "source_heads": [
         ">",
@@ -295,7 +372,11 @@
       "tags": [
         "int-divmod"
       ],
-      "unique_ir_terms": 6
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -315,6 +396,11 @@
         "IntGt",
         "IntMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "9d80f6c9e2e708c98dc37b2f3274fc6da7e1dfd6a3411a791509861177fff1d0",
       "source_heads": [
         "*",
@@ -326,7 +412,11 @@
       "tags": [
         "int-nonlinear"
       ],
-      "unique_ir_terms": 27
+      "unique_ir_terms": 27,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 5,
@@ -345,6 +435,11 @@
         "RealGe",
         "RealLe"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "16c1a680ede546f3de5b899ef2c5814af2bbae7b13d1f85b78ad277566eb2e3c",
       "source_heads": [
         "/",
@@ -355,7 +450,11 @@
       "tags": [
         "real-division"
       ],
-      "unique_ir_terms": 12
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 5,
@@ -375,6 +474,11 @@
         "RealLe",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "8b631207b659ec4384db6da20f68309d05a3113a77f2bd236c22a64c2a4139be",
       "source_heads": [
         "*",
@@ -386,7 +490,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 10
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -405,6 +513,11 @@
         "Eq",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "628e27d5bb91f32cd4908314f7d28cb759d11725560bba772e08119225844b81",
       "source_heads": [
         "*",
@@ -415,7 +528,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 19
+      "unique_ir_terms": 19,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -434,6 +551,11 @@
         "IntToReal",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "61646e31c5018b683e4c81c1e3efca536f7f39dafc1bbb79c4b861914520557a",
       "source_heads": [
         "*",
@@ -443,7 +565,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 6
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -464,6 +590,11 @@
         "RealMul",
         "RealNeg"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "26ca249d6ca2f212b2c9397b7978627dc3944a4e5088c1f99530592d6bf22d13",
       "source_heads": [
         "*",
@@ -476,7 +607,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 29
+      "unique_ir_terms": 29,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -495,6 +630,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "02a341c9f9148ccf4e5f65948c47202b68fe8607d4807566d6089fe15bfd40cb",
       "source_heads": [
         "*",
@@ -505,7 +645,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 12
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -524,6 +668,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "568ac40854ce8b7ce2d0abf01543097b78cecd0c0487a96b48ee3afcc82a2ecf",
       "source_heads": [
         "*",
@@ -534,7 +683,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 13
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -552,6 +705,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "b77b0462646b4055aea92942da971c93788bda7dae74c2e5fe5bc791fc557f8c",
       "source_heads": [
         "*",
@@ -561,7 +719,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 6,
@@ -581,6 +743,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "7446153df8fae9712ab6a154f3f3c9dce84c342e0e59e01310ed5de5de01fdf2",
       "source_heads": [
         "*",
@@ -592,7 +759,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 20
+      "unique_ir_terms": 20,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -612,6 +783,11 @@
         "Eq",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "77828f4b61370473c2f8c08f2ababaa11e50524794a59127311b692f7614213d",
       "source_heads": [
         "*",
@@ -623,7 +799,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 15
+      "unique_ir_terms": 15,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -643,6 +823,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "d3ab75dcfd6558e7646dffdbce4309643c3df0d8bfdf1ae4aa701fa79113d9d8",
       "source_heads": [
         "*",
@@ -654,7 +839,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 17
+      "unique_ir_terms": 17,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -672,6 +861,11 @@
         "RealLt",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "8453b0d84d5654fba624037c7b708b94d6e8159f05b3da0f65419a3337152061",
       "source_heads": [
         "*",
@@ -681,7 +875,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -699,6 +897,11 @@
         "Eq",
         "RealMul"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "24d82ec76a44211fb6f01c3a52d940d746b7fd0579c106a1e7196d6b19a6de7e",
       "source_heads": [
         "*",
@@ -708,7 +911,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 13
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -732,6 +939,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "77f238b673f0a0b4894380b7806158630df1df05e79bbe8f75d69f9f576e8b04",
       "source_heads": [
         "not",
@@ -740,7 +952,11 @@
       "tags": [
         "string-contains"
       ],
-      "unique_ir_terms": 382
+      "unique_ir_terms": 382,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 7,
@@ -768,6 +984,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "ed891aecf9f701ba5bed404d217cd3e414ad78673e0e8ac604efb120521e7625",
       "source_heads": [
         "=",
@@ -776,7 +997,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 343
+      "unique_ir_terms": 343,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 1
     },
     {
       "assertions": 9,
@@ -805,6 +1030,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "2e82f58936b9878f981a2103b1cecaf1827a40efac8e83ef53c2acf2c654382a",
       "source_heads": [
         "=",
@@ -814,7 +1044,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 469
+      "unique_ir_terms": 469,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 3
     },
     {
       "assertions": 8,
@@ -837,6 +1071,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 2,
+      "membership_problem": false,
       "sha256": "8a6bacd88bd9084aac83d56a189ba330a159ba0ed5a7335c46241ff21545f9cd",
       "source_heads": [
         "=",
@@ -846,7 +1085,11 @@
       "tags": [
         "string-length"
       ],
-      "unique_ir_terms": 274
+      "unique_ir_terms": 274,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -868,6 +1111,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "27ead957948d3fb90e3e7cbb43a4a2aec0337f25bf46c678665423a496508b82",
       "source_heads": [
         "=",
@@ -881,7 +1129,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 398
+      "unique_ir_terms": 398,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 0,
@@ -895,6 +1147,11 @@
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2"
       ],
       "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "eb04bf9f4fabc8397e0709b20e610a08b59beb98222185a817e500b7b6de797a",
       "source_heads": [
         "=",
@@ -906,7 +1163,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 5,
@@ -934,6 +1195,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "39f746a5fa70e910dec462383a98b0e2636d91e208a92b7c21a0a0e1be6ddda0",
       "source_heads": [
         "=",
@@ -943,7 +1209,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 196
+      "unique_ir_terms": 196,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 3
     },
     {
       "assertions": 3,
@@ -964,6 +1234,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": true,
       "sha256": "c46116db9ceeb81aa9fb04ad431825fab27ef29131b4de9968e90e8294487d39",
       "source_heads": [
         "=",
@@ -974,7 +1249,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 14425
+      "unique_ir_terms": 14425,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 2,
@@ -995,6 +1274,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "6ccb49fe0554b0e138130754169ee432e66de9d8741f2c5b29a2dd0fd39e5759",
       "source_heads": [
         "=",
@@ -1003,7 +1287,11 @@
       "tags": [
         "string-replace"
       ],
-      "unique_ir_terms": 56
+      "unique_ir_terms": 56,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -1020,6 +1308,11 @@
         "BoolNot",
         "Eq"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "2ed8ab2d4c75b8df32685a542ed4d4343a537a2341d72e16559134af19e682a1",
       "source_heads": [
         "=",
@@ -1031,7 +1324,11 @@
         "string-regex",
         "string-replace"
       ],
-      "unique_ir_terms": 3
+      "unique_ir_terms": 3,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -1056,6 +1353,11 @@
         "IntSub",
         "Ite"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "1908e43fbc1e6f5abbd063bab4594063058c05e02ab23d4356d4cfaa5b50e9f0",
       "source_heads": [
         "=",
@@ -1066,7 +1368,11 @@
         "int-nonlinear",
         "sequence-index"
       ],
-      "unique_ir_terms": 97
+      "unique_ir_terms": 97,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -1096,6 +1402,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
       "source_heads": [
         "not",
@@ -1107,7 +1418,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 1058
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 0,
@@ -1121,6 +1436,11 @@
         "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2"
       ],
       "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "51afd1c76c25613dfd618281f0fef0d890fe45bafdeea1a077c297d79a515374",
       "source_heads": [
         "not",
@@ -1136,7 +1456,11 @@
         "string-concat",
         "string-regex"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 18
     },
     {
       "assertions": 3,
@@ -1158,6 +1482,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "4b5b64e23de09b6d1d895261e44c8bd087240fc7442285925ac9c6cc5cbed4e7",
       "source_heads": [
         "not",
@@ -1169,7 +1498,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 250
+      "unique_ir_terms": 250,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 0,
@@ -1184,6 +1517,11 @@
         "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2"
       ],
       "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
       "source_heads": [
         "=",
@@ -1195,7 +1533,11 @@
         "string-concat",
         "string-replace"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
     },
     {
       "assertions": 8,
@@ -1226,6 +1568,11 @@
         "IntGt",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 2,
+      "membership_problem": false,
       "sha256": "52df9cd70d506b79133d75c114624352160a9083a13b19d66ad6fe042ef9caac",
       "source_heads": [
         "=",
@@ -1237,7 +1584,11 @@
         "string-concat",
         "string-length"
       ],
-      "unique_ir_terms": 439
+      "unique_ir_terms": 439,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 7,
@@ -1259,6 +1610,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
       "source_heads": [
         "=",
@@ -1271,7 +1627,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 588
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
     },
     {
       "assertions": 3,
@@ -1296,6 +1656,11 @@
         "IntLt",
         "Ite"
       ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "7e6f16ba2fd3bf26db7bb54bbe534c85c88d872c6d6cb1c6403faa52b1a92fb5",
       "source_heads": [
         "<",
@@ -1309,7 +1674,11 @@
         "string-code",
         "string-length"
       ],
-      "unique_ir_terms": 64
+      "unique_ir_terms": 64,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 12,
@@ -1337,6 +1706,11 @@
         "IntLe",
         "Ite"
       ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
       "source_heads": [
         "+",
@@ -1349,7 +1723,11 @@
       "tags": [
         "string-code"
       ],
-      "unique_ir_terms": 233
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 12,
@@ -1376,6 +1754,11 @@
         "IntLe",
         "Ite"
       ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 9,
+      "len_abstraction_map_entries": 6,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "c9352865a0d9ed25bec15bfa9a1b38569317c74643c51ceb294e3eafd9c71f45",
       "source_heads": [
         "+",
@@ -1388,7 +1771,11 @@
       "tags": [
         "string-code"
       ],
-      "unique_ir_terms": 174
+      "unique_ir_terms": 174,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 9,
@@ -1418,6 +1805,11 @@
         "Extract",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
       "source_heads": [
         "=",
@@ -1428,7 +1820,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 624
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -1449,6 +1845,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
       "source_heads": [
         "=",
@@ -1459,7 +1860,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 50
+      "unique_ir_terms": 50,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -1489,6 +1894,11 @@
         "Ite",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
       "source_heads": [
         "=",
@@ -1499,7 +1909,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 85
+      "unique_ir_terms": 85,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -1529,6 +1943,11 @@
         "Ite",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
       "source_heads": [
         "=",
@@ -1539,7 +1958,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 147
+      "unique_ir_terms": 147,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -1569,6 +1992,11 @@
         "Ite",
         "ZeroExt"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
       "source_heads": [
         "=",
@@ -1579,7 +2007,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 88
+      "unique_ir_terms": 88,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -1599,6 +2031,11 @@
         "Eq",
         "Extract"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": true,
       "sha256": "dd6f81b2c3889224cc1741fe6b0cc8863bd3f59ec2d3db2e41172c7d5e55c709",
       "source_heads": [
         "str.in_re",
@@ -1607,7 +2044,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 80
+      "unique_ir_terms": 80,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 1248,
@@ -1632,6 +2073,11 @@
         "IntMul",
         "IntNeg"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "0db37c05949d282129258208eae99e5a1f7d0e18dabf7eb50efaf1faf43f9e49",
       "source_heads": [
         "*",
@@ -1651,7 +2097,11 @@
         "int-nonlinear",
         "uf"
       ],
-      "unique_ir_terms": 4024
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1248,
@@ -1676,6 +2126,11 @@
         "IntMul",
         "IntNeg"
       ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
       "sha256": "bed85dc60a05b5cac4b5ae7c1894cdee8369c6af7c5e11b58a1652da875c7f57",
       "source_heads": [
         "*",
@@ -1695,7 +2150,11 @@
         "int-nonlinear",
         "uf"
       ],
-      "unique_ir_terms": 4024
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     }
   ],
   "decision_backends": [
@@ -1873,7 +2332,12 @@
         "Bool": 9,
         "Int": 8
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_AUFLIA",
+      "membership_problem": false,
       "sha256": "93fab1c36a8546706899f50cb5d1bc34b5ff2120ad7df1dc9480d8c16c5f8adb",
       "source_assertions": 1,
       "source_heads": {
@@ -1888,7 +2352,11 @@
         "arrays",
         "uf"
       ],
-      "unique_ir_terms": 21
+      "unique_ir_terms": 21,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -1916,7 +2384,12 @@
         "Bool": 2,
         "Int": 47
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_AUFLIA",
+      "membership_problem": false,
       "sha256": "a028621397a8410e0e8fd1063ddacf029dad9899bd084acd5db4df597fdf198e",
       "source_assertions": 1,
       "source_heads": {
@@ -1956,7 +2429,11 @@
         "arrays",
         "uf"
       ],
-      "unique_ir_terms": 90
+      "unique_ir_terms": 90,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -1983,7 +2460,12 @@
         "Bool": 2,
         "Int": 8
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "99c1453b3e6716596cb1dfe96c6cd8afe63a651ec6cd18e1e0158a4e822d7542",
       "source_assertions": 1,
       "source_heads": {
@@ -1997,7 +2479,11 @@
         "int-divmod",
         "int-nonlinear"
       ],
-      "unique_ir_terms": 10
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -2023,7 +2509,12 @@
         "Bool": 4,
         "Int": 5
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "7204396e13cf9ea99c9b98217353e8e56572abfd75728b45071af37bb91af9ad",
       "source_assertions": 4,
       "source_heads": {
@@ -2035,7 +2526,11 @@
       "tags": [
         "int-pow2"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2060,7 +2555,12 @@
         "Bool": 2,
         "Int": 3
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "942844c4147d54567eecb8cb3a7c3bdb970ec6298031ca2af38eabd5175f1772",
       "source_assertions": 2,
       "source_heads": {
@@ -2071,7 +2571,11 @@
       "tags": [
         "int-pow2"
       ],
-      "unique_ir_terms": 5
+      "unique_ir_terms": 5,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2097,7 +2601,12 @@
         "Bool": 2,
         "Int": 5
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "c92ce743342584064b70e334b0a92527afafecdf7efbc1a5f99d925860dd302a",
       "source_assertions": 2,
       "source_heads": {
@@ -2110,7 +2619,11 @@
         "int-divmod",
         "int-pow2"
       ],
-      "unique_ir_terms": 7
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2137,7 +2650,12 @@
         "Bool": 3,
         "Int": 4
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "422851e353fc365bc4ab1d49349071704dc660b28d332e5e9819e00e591b0f3f",
       "source_assertions": 2,
       "source_heads": {
@@ -2150,7 +2668,11 @@
         "int-divmod",
         "int-pow2"
       ],
-      "unique_ir_terms": 7
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -2176,7 +2698,12 @@
         "Bool": 3,
         "Int": 5
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "d67c531f0875234685a9142e496d008cafdce247fa5723556a5e0e47303355ee",
       "source_assertions": 3,
       "source_heads": {
@@ -2188,7 +2715,11 @@
       "tags": [
         "int-divmod"
       ],
-      "unique_ir_terms": 8
+      "unique_ir_terms": 8,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2214,7 +2745,12 @@
         "Bool": 3,
         "Int": 3
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "fff049ef54aba3fadbe7838236421365c4537a716d878ecb5bda6c337b857757",
       "source_assertions": 2,
       "source_heads": {
@@ -2225,7 +2761,11 @@
       "tags": [
         "int-divmod"
       ],
-      "unique_ir_terms": 6
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -2252,7 +2792,12 @@
         "Bool": 12,
         "Int": 15
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NIA",
+      "membership_problem": false,
       "sha256": "9d80f6c9e2e708c98dc37b2f3274fc6da7e1dfd6a3411a791509861177fff1d0",
       "source_assertions": 4,
       "source_heads": {
@@ -2265,7 +2810,11 @@
       "tags": [
         "int-nonlinear"
       ],
-      "unique_ir_terms": 27
+      "unique_ir_terms": 27,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 5,
@@ -2291,7 +2840,12 @@
         "Bool": 5,
         "Real": 7
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "16c1a680ede546f3de5b899ef2c5814af2bbae7b13d1f85b78ad277566eb2e3c",
       "source_assertions": 5,
       "source_heads": {
@@ -2303,7 +2857,11 @@
       "tags": [
         "real-division"
       ],
-      "unique_ir_terms": 12
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 5,
@@ -2330,7 +2888,12 @@
         "Bool": 6,
         "Real": 4
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "8b631207b659ec4384db6da20f68309d05a3113a77f2bd236c22a64c2a4139be",
       "source_assertions": 5,
       "source_heads": {
@@ -2343,7 +2906,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 10
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2369,7 +2936,12 @@
         "Bool": 5,
         "Real": 14
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "628e27d5bb91f32cd4908314f7d28cb759d11725560bba772e08119225844b81",
       "source_assertions": 2,
       "source_heads": {
@@ -2381,7 +2953,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 19
+      "unique_ir_terms": 19,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -2408,7 +2984,12 @@
         "Int": 2,
         "Real": 3
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "61646e31c5018b683e4c81c1e3efca536f7f39dafc1bbb79c4b861914520557a",
       "source_assertions": 1,
       "source_heads": {
@@ -2419,7 +3000,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 6
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -2447,7 +3032,12 @@
         "Bool": 7,
         "Real": 22
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "26ca249d6ca2f212b2c9397b7978627dc3944a4e5088c1f99530592d6bf22d13",
       "source_assertions": 3,
       "source_heads": {
@@ -2461,7 +3051,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 29
+      "unique_ir_terms": 29,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -2487,7 +3081,12 @@
         "Bool": 4,
         "Real": 8
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "02a341c9f9148ccf4e5f65948c47202b68fe8607d4807566d6089fe15bfd40cb",
       "source_assertions": 4,
       "source_heads": {
@@ -2499,7 +3098,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 12
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -2525,7 +3128,12 @@
         "Bool": 4,
         "Real": 9
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "568ac40854ce8b7ce2d0abf01543097b78cecd0c0487a96b48ee3afcc82a2ecf",
       "source_assertions": 4,
       "source_heads": {
@@ -2537,7 +3145,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 13
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -2562,7 +3174,12 @@
         "Bool": 3,
         "Real": 6
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "b77b0462646b4055aea92942da971c93788bda7dae74c2e5fe5bc791fc557f8c",
       "source_assertions": 3,
       "source_heads": {
@@ -2573,7 +3190,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 6,
@@ -2600,7 +3221,12 @@
         "Bool": 12,
         "Real": 8
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "7446153df8fae9712ab6a154f3f3c9dce84c342e0e59e01310ed5de5de01fdf2",
       "source_assertions": 6,
       "source_heads": {
@@ -2613,7 +3239,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 20
+      "unique_ir_terms": 20,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2640,7 +3270,12 @@
         "Bool": 7,
         "Real": 8
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "77828f4b61370473c2f8c08f2ababaa11e50524794a59127311b692f7614213d",
       "source_assertions": 2,
       "source_heads": {
@@ -2653,7 +3288,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 15
+      "unique_ir_terms": 15,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -2680,7 +3319,12 @@
         "Bool": 6,
         "Real": 11
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "d3ab75dcfd6558e7646dffdbce4309643c3df0d8bfdf1ae4aa701fa79113d9d8",
       "source_assertions": 4,
       "source_heads": {
@@ -2693,7 +3337,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 17
+      "unique_ir_terms": 17,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -2718,7 +3366,12 @@
         "Bool": 3,
         "Real": 6
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "8453b0d84d5654fba624037c7b708b94d6e8159f05b3da0f65419a3337152061",
       "source_assertions": 3,
       "source_heads": {
@@ -2729,7 +3382,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 9
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -2754,7 +3411,12 @@
         "Bool": 3,
         "Real": 10
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_NRA",
+      "membership_problem": false,
       "sha256": "24d82ec76a44211fb6f01c3a52d940d746b7fd0579c106a1e7196d6b19a6de7e",
       "source_assertions": 2,
       "source_heads": {
@@ -2765,7 +3427,11 @@
       "tags": [
         "real-nonlinear"
       ],
-      "unique_ir_terms": 13
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -2801,7 +3467,12 @@
         "BitVec": 298,
         "Bool": 760
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
       "source_assertions": 1,
       "source_heads": {
@@ -2814,7 +3485,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 1058
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 0,
@@ -2832,7 +3507,12 @@
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
       "ir_ops": {},
       "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "51afd1c76c25613dfd618281f0fef0d890fe45bafdeea1a077c297d79a515374",
       "source_assertions": 10,
       "source_heads": {
@@ -2849,7 +3529,11 @@
         "string-concat",
         "string-regex"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 18
     },
     {
       "assertions": 3,
@@ -2878,7 +3562,12 @@
         "BitVec": 33,
         "Bool": 217
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "4b5b64e23de09b6d1d895261e44c8bd087240fc7442285925ac9c6cc5cbed4e7",
       "source_assertions": 2,
       "source_heads": {
@@ -2891,7 +3580,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 250
+      "unique_ir_terms": 250,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 0,
@@ -2909,7 +3602,12 @@
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
       "ir_ops": {},
       "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
       "source_assertions": 1,
       "source_heads": {
@@ -2922,7 +3620,11 @@
         "string-concat",
         "string-replace"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
     },
     {
       "assertions": 8,
@@ -2961,7 +3663,12 @@
         "Bool": 280,
         "Int": 2
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 2,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "52df9cd70d506b79133d75c114624352160a9083a13b19d66ad6fe042ef9caac",
       "source_assertions": 2,
       "source_heads": {
@@ -2974,7 +3681,11 @@
         "string-concat",
         "string-length"
       ],
-      "unique_ir_terms": 439
+      "unique_ir_terms": 439,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 3,
@@ -3005,7 +3716,12 @@
         "BitVec": 67,
         "Bool": 315
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "77f238b673f0a0b4894380b7806158630df1df05e79bbe8f75d69f9f576e8b04",
       "source_assertions": 2,
       "source_heads": {
@@ -3015,7 +3731,11 @@
       "tags": [
         "string-contains"
       ],
-      "unique_ir_terms": 382
+      "unique_ir_terms": 382,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 7,
@@ -3050,7 +3770,12 @@
         "BitVec": 144,
         "Bool": 199
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "ed891aecf9f701ba5bed404d217cd3e414ad78673e0e8ac604efb120521e7625",
       "source_assertions": 1,
       "source_heads": {
@@ -3060,7 +3785,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 343
+      "unique_ir_terms": 343,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 1
     },
     {
       "assertions": 9,
@@ -3096,7 +3825,12 @@
         "BitVec": 187,
         "Bool": 282
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "2e82f58936b9878f981a2103b1cecaf1827a40efac8e83ef53c2acf2c654382a",
       "source_assertions": 3,
       "source_heads": {
@@ -3107,7 +3841,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 469
+      "unique_ir_terms": 469,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 3
     },
     {
       "assertions": 8,
@@ -3138,7 +3876,12 @@
         "Bool": 201,
         "Int": 2
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 2,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "8a6bacd88bd9084aac83d56a189ba330a159ba0ed5a7335c46241ff21545f9cd",
       "source_assertions": 2,
       "source_heads": {
@@ -3149,7 +3892,11 @@
       "tags": [
         "string-length"
       ],
-      "unique_ir_terms": 274
+      "unique_ir_terms": 274,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 7,
@@ -3177,7 +3924,12 @@
         "BitVec": 42,
         "Bool": 546
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
       "source_assertions": 4,
       "source_heads": {
@@ -3191,7 +3943,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 588
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
     },
     {
       "assertions": 3,
@@ -3224,7 +3980,12 @@
         "Bool": 37,
         "Int": 7
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "7e6f16ba2fd3bf26db7bb54bbe534c85c88d872c6d6cb1c6403faa52b1a92fb5",
       "source_assertions": 2,
       "source_heads": {
@@ -3239,7 +4000,11 @@
         "string-code",
         "string-length"
       ],
-      "unique_ir_terms": 64
+      "unique_ir_terms": 64,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 12,
@@ -3274,7 +4039,12 @@
         "Bool": 172,
         "Int": 17
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
       "source_assertions": 9,
       "source_heads": {
@@ -3288,7 +4058,11 @@
       "tags": [
         "string-code"
       ],
-      "unique_ir_terms": 233
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 12,
@@ -3323,7 +4097,12 @@
         "Bool": 118,
         "Int": 16
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 9,
+      "len_abstraction_map_entries": 6,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "c9352865a0d9ed25bec15bfa9a1b38569317c74643c51ceb294e3eafd9c71f45",
       "source_assertions": 9,
       "source_heads": {
@@ -3337,7 +4116,11 @@
       "tags": [
         "string-code"
       ],
-      "unique_ir_terms": 174
+      "unique_ir_terms": 174,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 9,
@@ -3373,7 +4156,12 @@
         "BitVec": 167,
         "Bool": 457
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
       "source_assertions": 4,
       "source_heads": {
@@ -3385,7 +4173,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 624
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -3414,7 +4206,12 @@
         "BitVec": 33,
         "Bool": 365
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "27ead957948d3fb90e3e7cbb43a4a2aec0337f25bf46c678665423a496508b82",
       "source_assertions": 2,
       "source_heads": {
@@ -3429,7 +4226,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 398
+      "unique_ir_terms": 398,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 0,
@@ -3447,7 +4248,12 @@
       "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
       "ir_ops": {},
       "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "eb04bf9f4fabc8397e0709b20e610a08b59beb98222185a817e500b7b6de797a",
       "source_assertions": 2,
       "source_heads": {
@@ -3460,7 +4266,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 5,
@@ -3495,7 +4305,12 @@
         "BitVec": 126,
         "Bool": 70
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "39f746a5fa70e910dec462383a98b0e2636d91e208a92b7c21a0a0e1be6ddda0",
       "source_assertions": 3,
       "source_heads": {
@@ -3506,7 +4321,11 @@
       "tags": [
         "string-concat"
       ],
-      "unique_ir_terms": 196
+      "unique_ir_terms": 196,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 3
     },
     {
       "assertions": 3,
@@ -3534,7 +4353,12 @@
         "BitVec": 276,
         "Bool": 14149
       },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": true,
       "sha256": "c46116db9ceeb81aa9fb04ad431825fab27ef29131b4de9968e90e8294487d39",
       "source_assertions": 2,
       "source_heads": {
@@ -3546,7 +4370,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 14425
+      "unique_ir_terms": 14425,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 2,
@@ -3574,7 +4402,12 @@
         "BitVec": 22,
         "Bool": 34
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "6ccb49fe0554b0e138130754169ee432e66de9d8741f2c5b29a2dd0fd39e5759",
       "source_assertions": 1,
       "source_heads": {
@@ -3584,7 +4417,11 @@
       "tags": [
         "string-replace"
       ],
-      "unique_ir_terms": 56
+      "unique_ir_terms": 56,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -3608,7 +4445,12 @@
         "BitVec": 1,
         "Bool": 2
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
       "logic": "QF_S",
+      "membership_problem": false,
       "sha256": "2ed8ab2d4c75b8df32685a542ed4d4343a537a2341d72e16559134af19e682a1",
       "source_assertions": 1,
       "source_heads": {
@@ -3621,7 +4463,11 @@
         "string-regex",
         "string-replace"
       ],
-      "unique_ir_terms": 3
+      "unique_ir_terms": 3,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 4,
@@ -3654,7 +4500,12 @@
         "Bool": 54,
         "Int": 15
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
       "logic": "QF_SEQ",
+      "membership_problem": false,
       "sha256": "1908e43fbc1e6f5abbd063bab4594063058c05e02ab23d4356d4cfaa5b50e9f0",
       "source_assertions": 3,
       "source_heads": {
@@ -3666,7 +4517,11 @@
         "int-nonlinear",
         "sequence-index"
       ],
-      "unique_ir_terms": 97
+      "unique_ir_terms": 97,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -3694,7 +4549,12 @@
         "BitVec": 20,
         "Bool": 30
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
       "source_assertions": 1,
       "source_heads": {
@@ -3706,7 +4566,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 50
+      "unique_ir_terms": 50,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -3743,7 +4607,12 @@
         "BitVec": 52,
         "Bool": 33
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
       "source_assertions": 1,
       "source_heads": {
@@ -3755,7 +4624,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 85
+      "unique_ir_terms": 85,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -3792,7 +4665,12 @@
         "BitVec": 113,
         "Bool": 34
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
       "source_assertions": 1,
       "source_heads": {
@@ -3804,7 +4682,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 147
+      "unique_ir_terms": 147,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 2,
@@ -3841,7 +4723,12 @@
         "BitVec": 54,
         "Bool": 34
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
       "source_assertions": 1,
       "source_heads": {
@@ -3853,7 +4740,11 @@
       "tags": [
         "uncategorized"
       ],
-      "unique_ir_terms": 88
+      "unique_ir_terms": 88,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1,
@@ -3880,7 +4771,12 @@
         "BitVec": 20,
         "Bool": 60
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": true,
       "sha256": "dd6f81b2c3889224cc1741fe6b0cc8863bd3f59ec2d3db2e41172c7d5e55c709",
       "source_assertions": 1,
       "source_heads": {
@@ -3890,7 +4786,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 80
+      "unique_ir_terms": 80,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
     },
     {
       "assertions": 3,
@@ -3926,7 +4826,12 @@
         "BitVec": 298,
         "Bool": 760
       },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
       "source_assertions": 1,
       "source_heads": {
@@ -3939,7 +4844,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 1058
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 0,
@@ -3957,7 +4866,12 @@
       "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2",
       "ir_ops": {},
       "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
       "source_assertions": 1,
       "source_heads": {
@@ -3970,7 +4884,11 @@
         "string-concat",
         "string-replace"
       ],
-      "unique_ir_terms": 0
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
     },
     {
       "assertions": 7,
@@ -3998,7 +4916,12 @@
         "BitVec": 42,
         "Bool": 546
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
       "source_assertions": 4,
       "source_heads": {
@@ -4012,7 +4935,11 @@
       "tags": [
         "string-regex"
       ],
-      "unique_ir_terms": 588
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
     },
     {
       "assertions": 12,
@@ -4047,7 +4974,12 @@
         "Bool": 172,
         "Int": 17
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
       "source_assertions": 9,
       "source_heads": {
@@ -4061,7 +4993,11 @@
       "tags": [
         "string-code"
       ],
-      "unique_ir_terms": 233
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 9,
@@ -4097,7 +5033,12 @@
         "BitVec": 167,
         "Bool": 457
       },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
       "logic": "QF_SLIA",
+      "membership_problem": false,
       "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
       "source_assertions": 4,
       "source_heads": {
@@ -4109,7 +5050,11 @@
         "string-concat",
         "string-lex"
       ],
-      "unique_ir_terms": 624
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1248,
@@ -4150,7 +5095,12 @@
         "Bool": 3791,
         "Int": 233
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_UFLIA",
+      "membership_problem": false,
       "sha256": "0db37c05949d282129258208eae99e5a1f7d0e18dabf7eb50efaf1faf43f9e49",
       "source_assertions": 1248,
       "source_heads": {
@@ -4171,7 +5121,11 @@
         "int-nonlinear",
         "uf"
       ],
-      "unique_ir_terms": 4024
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     },
     {
       "assertions": 1248,
@@ -4212,7 +5166,12 @@
         "Bool": 3791,
         "Int": 233
       },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
       "logic": "QF_UFLIA",
+      "membership_problem": false,
       "sha256": "bed85dc60a05b5cac4b5ae7c1894cdee8369c6af7c5e11b58a1652da875c7f57",
       "source_assertions": 1248,
       "source_heads": {
@@ -4233,7 +5192,11 @@
         "int-nonlinear",
         "uf"
       ],
-      "unique_ir_terms": 4024
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
     }
   ],
   "ir_op_prevalence": [
@@ -4440,7 +5403,7 @@
   ],
   "producer": {
     "path": "crates/axeyum-smtlib/examples/proof_gap_shape_census.rs",
-    "sha256": "3c9d488dfb39ee9fce1117c8dea49db9e2a5ee7a5d67283dacb6571c9630d640"
+    "sha256": "139b691b589cd8fc1a727bf25ea2dc154cfdfdef4034bbaa52c50863ccc72a48"
   },
   "source_head_prevalence": [
     {
@@ -4813,12 +5776,14 @@
     "arithmetic_contents": 25,
     "audit_occurrences": 58,
     "audit_reported_check_true_occurrences": 0,
+    "bounded_string_contents": 26,
     "exact_duplicate_groups": 5,
     "independently_checked_occurrences": 0,
     "schema_v2_attributed_occurrences": 58,
     "string_sequence_contents": 26,
     "unique_content_sha256": 51,
     "unique_paths": 56,
+    "word_only_fallback_contents": 3,
     "zero_ir_term_contents": 3
   },
   "version": 2

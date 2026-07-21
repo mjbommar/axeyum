@@ -236,9 +236,11 @@ uncertified and independently unchecked, all `bare-unsat`. Eight instances
 already have certified, checked,
 trust-free evidence and are direct reconstruction work; zero current rows retain
 declared trust holes; two QF_NIA `IntPow2` rows fail evidence production. The
-schema-v2 refresh exposed a current QF_SEQ regression: four rows formerly
-reported as certified DRAT with a declared `bit-blast` trust hole now fall back
-to bare UNSAT. Their verdicts remain unchanged, but they correctly enlarge the
+schema-v2 refresh corrected a stale QF_SEQ artifact: four rows created before
+the string evidence soundness fix formerly reported DRAT over the bounded/flat
+lowering with a declared `bit-blast` trust hole. The sound text front door now
+returns bare UNSAT because that DRAT does not certify source-level sequence
+semantics. Their verdicts remain unchanged, but the honest refresh enlarges the
 uncertified denominator. `just parity-docs` rejects stale generated outputs.
 
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
@@ -248,7 +250,10 @@ contents (five exact duplicate groups), split into 25 arithmetic and 26
 string/sequence contents. Decision-backend attribution is complete: 31
 occurrences return through `smtlib-string-front-door`, 15 through `auto-solve`,
 and 12 through `nra-linear-abstraction`. These are coarse seams, not yet causal
-certificate failures. The leading non-exclusive structural families are
+certificate failures. All 26 string/sequence contents use bounded lowering and
+three use word-only fallback, so a proof over the flat lowered arena alone does
+not certify their source-level semantics. The leading non-exclusive structural
+families are
 real nonlinear multiplication (12 contents), string concatenation (nine), and
 string regex (seven). Three unique string contents have zero reachable parsed-
 IR terms because front-end handling discharges them before the ordinary
@@ -359,7 +364,8 @@ reported as parity before it climbs the measured and certifying rungs.
 6. Instrument the now-refreshed 51-content bare-UNSAT population with stable
    attempt IDs, source-to-lowered obligation maps, checker identity, and first
    uncertified reduction before selecting a shared proof mechanism. Investigate
-   the four current QF_SEQ DRAT-to-bare regressions as the first bounded case;
+   the four stale QF_SEQ source-invalid DRAT credits as the first bounded
+   `source-side-channel-not-serialized` case;
    handle the eight reconstruction-only gaps independently.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.

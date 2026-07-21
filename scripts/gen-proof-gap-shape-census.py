@@ -126,7 +126,7 @@ def run_producer(paths: list[str]) -> list[dict]:
         stdout=subprocess.PIPE,
     )
     data = json.loads(result.stdout)
-    if data.get("version") != 1 or not isinstance(data.get("instances"), list):
+    if data.get("version") != 2 or not isinstance(data.get("instances"), list):
         raise RuntimeError("unexpected proof_gap_shape_census output schema")
     return data["instances"]
 
@@ -249,6 +249,22 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
             raise RuntimeError(f"same-content source-head mismatch for {digest}")
         if any(row["ir_ops"] != canonical["ir_ops"] for row in group):
             raise RuntimeError(f"same-content IR-op mismatch for {digest}")
+        obligation_fields = (
+            "uses_bounded_strings",
+            "word_only_fallback",
+            "word_problem",
+            "word_skeleton_terms",
+            "membership_problem",
+            "length_skeleton_terms",
+            "len_abstraction_map_entries",
+            "len_abstraction_fact_terms",
+            "len_abstraction_bound_terms",
+        )
+        if any(
+            any(row[field] != canonical[field] for field in obligation_fields)
+            for row in group
+        ):
+            raise RuntimeError(f"same-content obligation-view mismatch for {digest}")
         content_rows.append(
             {
                 "sha256": digest,
@@ -259,6 +275,7 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
                 "declared_logic": canonical.get("logic") or "unknown",
                 "assertions": canonical["assertions"],
                 "unique_ir_terms": canonical["unique_ir_terms"],
+                **{field: canonical[field] for field in obligation_fields},
                 "tags": canonical["tags"],
                 "source_heads": sorted(canonical["source_heads"]),
                 "ir_ops": sorted(canonical["ir_ops"]),
@@ -349,6 +366,12 @@ def build_report(occurrences: list[dict], raw_files: list[dict]) -> dict:
             ),
             "arithmetic_contents": source_domains["arithmetic"],
             "string_sequence_contents": source_domains["string_sequence"],
+            "bounded_string_contents": sum(
+                row["uses_bounded_strings"] for row in content_rows
+            ),
+            "word_only_fallback_contents": sum(
+                row["word_only_fallback"] for row in content_rows
+            ),
         },
         "declared_logics": [
             {"logic": logic, "unique_contents": count}
@@ -396,6 +419,8 @@ def markdown(report: dict) -> str:
         f"| Unique exact contents (SHA-256) | {summary['unique_content_sha256']} |",
         f"| Exact duplicate groups | {summary['exact_duplicate_groups']} |",
         f"| Unique contents with zero reachable parsed-IR terms | {summary['zero_ir_term_contents']} |",
+        f"| Unique contents using bounded string/sequence lowering | {summary['bounded_string_contents']} |",
+        f"| Unique contents using word-only fallback | {summary['word_only_fallback_contents']} |",
         "",
         f"The raw {summary['audit_occurrences']} count contracts to **{summary['unique_content_sha256']} unique benchmark contents**.",
         f"All {summary['audit_occurrences']} are uncertified and therefore have no independently checkable",
@@ -479,6 +504,7 @@ def markdown(report: dict) -> str:
             "  a different nonlinear argument. The next producer must record the actual",
             "  refuter/reduction identity and premises.",
             f"- **{summary['zero_ir_term_contents']} unique contents have zero reachable parsed-IR terms** because front-end handling discharges them before the ordinary assertion DAG. Certificate provenance must begin at that early-fold seam.",
+            f"- **{summary['bounded_string_contents']} unique contents use bounded string/sequence lowering** and **{summary['word_only_fallback_contents']} use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.",
             "- String lowering frequently becomes BV structure in parsed IR. Source heads",
             "  and lowered IR operators are therefore both retained; neither alone is an",
             "  adequate proof taxonomy.",

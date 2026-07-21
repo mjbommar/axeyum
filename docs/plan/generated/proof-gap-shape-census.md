@@ -20,6 +20,8 @@ implement a proof rule.
 | Unique exact contents (SHA-256) | 51 |
 | Exact duplicate groups | 5 |
 | Unique contents with zero reachable parsed-IR terms | 3 |
+| Unique contents using bounded string/sequence lowering | 26 |
+| Unique contents using word-only fallback | 3 |
 
 The raw 58 count contracts to **51 unique benchmark contents**.
 All 58 are uncertified and therefore have no independently checkable
@@ -142,6 +144,7 @@ specific failed certificate route or reduction step.
   a different nonlinear argument. The next producer must record the actual
   refuter/reduction identity and premises.
 - **3 unique contents have zero reachable parsed-IR terms** because front-end handling discharges them before the ordinary assertion DAG. Certificate provenance must begin at that early-fold seam.
+- **26 unique contents use bounded string/sequence lowering** and **3 use the word-only fallback**. A DRAT over the flat lowered arena is therefore not, by itself, a certificate for the source-level sequence obligation.
 - String lowering frequently becomes BV structure in parsed IR. Source heads
   and lowered IR operators are therefore both retained; neither alone is an
   adequate proof taxonomy.

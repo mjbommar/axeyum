@@ -23,7 +23,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`generated/proof-gap-shape-census.md`](generated/proof-gap-shape-census.md) —
   source-hash-bound, parser-backed, exact-content-deduplicated census of the
   uncertified UNSAT population. It retains source syntax and reachable parsed
-  IR while refusing to infer a proof mechanism from operator presence alone.
+  IR plus bounded/string side-channel presence while refusing to infer a proof
+  mechanism from operator presence alone.
 - [`evidence-route-provenance-design-2026-07-21.md`](evidence-route-provenance-design-2026-07-21.md) —
   causal instrumentation design for the four bare-UNSAT exits, including the
   completed dominance-v2 population refresh and vacuous-check correction,

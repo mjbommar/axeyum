@@ -38,13 +38,14 @@ exit-criteria'd tracks we advance one increment at a time.
   refresh now records zero and attributes all 58 residual bare outcomes to a
   decision backend. The full conjunction remains 259/327: 58 uncertified
   audit-row occurrences, eight reconstruction-only gaps, zero declared trust
-  holes, and two QF_NIA `IntPow2` proof-production errors. Four QF_SEQ rows
-  formerly recorded as DRAT with `bit-blast` trust now stably fall back to bare
-  UNSAT without verdict changes. The parser-backed census deduplicates the 58 to
+  holes, and two QF_NIA `IntPow2` proof-production errors. Four stale QF_SEQ rows
+  created before the string evidence soundness fix lose source-invalid DRAT
+  credit without verdict changes. The parser-backed census deduplicates the 58 to
   56 paths / 51 exact contents, split 25 arithmetic / 26 string-sequence, and
   attributes 31/15/12 occurrences to the string front door, `auto-solve`, and
   NRA fallback respectively. Coverage is substantial but uneven; trace the
-  QF_SEQ regression and route-provenance P1 before choosing a proof mechanism.
+  QF_SEQ source-to-lowered boundary and route-provenance P1 before choosing a
+  proof mechanism.
 - **Dominance:** **23 / 35 audited rows** are fully dominant and the current
   mixed-vintage artifacts mark 594/753 decisions as dominant candidates. The
   v2 proof refresh changed 22 timing-derived flags without verdict changes, so
@@ -361,10 +362,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   zero verdict mismatches/timeouts, with only the two known QF_NIA `IntPow2`
   evidence-production errors. The live residual is 58 occurrences / 56 paths /
   51 exact contents, all independently unchecked and backend-attributed:
-  string front door 31, `auto-solve` 15, NRA fallback 12. Four QF_SEQ rows
-  stably changed from DRAT-with-declared-trust to bare UNSAT; trace those first,
-  then land stable attempt/boundary and obligation IDs across all four bare
-  exits. The eight reconstruction-only gaps remain an independent lane.
+  string front door 31, `auto-solve` 15, NRA fallback 12. Four stale QF_SEQ rows
+  created before the string evidence soundness fix lose DRAT credit because the
+  old proof covered only the bounded/flat lowering. Use those as the first
+  `source-side-channel-not-serialized` trace case, then land stable attempt/
+  boundary and obligation IDs across all four bare exits. The eight
+  reconstruction-only gaps remain an independent lane.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
@@ -6210,8 +6213,8 @@ plan is built and committed on the current branch:
   Corrected the v1 vacuous-check accounting in the artifacts themselves,
   recorded coarse backend/check-mode attribution for every residual, and
   regenerated the proof matrix and parser-backed shape census. The refresh
-  preserves every verdict but exposes four stable QF_SEQ DRAT-to-bare evidence
-  regressions and 22 unpaired timing-derived dominance-flag changes; both are
+  preserves every verdict but removes four stale QF_SEQ source-invalid DRAT
+  credits and changes 22 unpaired timing-derived dominance flags; both are
   reported rather than normalized away. Current proof counts are 267 certified
   and independently checked, 260 Lean-checked, 259 full-conjunction, 58 bare,
   zero declared trust holes, and two proof-production errors.

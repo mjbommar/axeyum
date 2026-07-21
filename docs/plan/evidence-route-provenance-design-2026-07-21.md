@@ -47,8 +47,8 @@ The generated proof-gap reports originally normalized the v1 artifacts to
 rows have now been rerun under v2: current artifacts report **267** certified
 and independently checked outcomes, zero uncertified rows with
 `evidence_checked=true`, and complete backend attribution for all 58 bare-UNSAT
-occurrences. The reduction from 271 is not an accounting change: four QF_SEQ
-rows now stably fall back from DRAT-with-`bit-blast`-trust to bare UNSAT.
+occurrences. The reduction from 271 is not an accounting change: refreshing a
+stale pre-soundness-fix QF_SEQ artifact removes four source-invalid DRAT credits.
 
 A focused three-instance v2 smoke confirms the coarse seam without claiming
 population prevalence:
@@ -84,6 +84,34 @@ changed 22 timing-derived `dominant_candidate` flags, mostly in QF_SEQ, because
 the audit recomputes one-shot timing against historical baseline cells. Verdict
 and evidence denominators, rather than those unpaired timing flags, are the
 appropriate evidence for this refresh.
+
+### QF_SEQ lineage: stale evidence credit, not a solver regression
+
+The four apparent DRAT-to-bare changes have a precise history:
+
+1. `9d12953c` created the QF_SEQ audit through the arena-level evidence API.
+2. Twenty-three minutes later, `f719c27d` established that this API cannot
+   certify source-level string/sequence semantics: it sees only the bounded/flat
+   lowering and had produced seven wrong but locally checked string verdicts.
+3. `64238437` moved the audit harness to the sound text front door and reran
+   QF_S/QF_SLIA, but did not refresh QF_SEQ.
+4. The v2 population refresh is therefore the first QF_SEQ audit after that
+   soundness correction.
+
+The old four records carried DRAT plus certified Tseitin/SAT-refutation steps
+and an uncertified `bit-blast` step. The new parser-backed diagnostic confirms
+that all four use bounded string/sequence lowering, none uses word-only
+fallback, and none has a word, regex-membership, or length-skeleton certificate
+lane. `string_unsat_evidence` therefore correctly reaches its bare fallback.
+The DRAT proved the lowered bounded obligation, not the source-level `seq.rev`,
+`seq.update`, or `seq.replace_all` semantics. This is an assurance correction
+with unchanged solver verdicts.
+
+The first causal boundary for these four can already be named
+`source-side-channel-not-serialized`; what remains is to emit that identifier
+automatically and record the exact source-to-lowered obligation relation. The
+specific bound-independent decision subroute inside `solve_smtlib` is still not
+recorded and must not be inferred from the final bare evidence variant.
 
 ## Proposed diagnostic schema
 
@@ -252,8 +280,8 @@ A proof mechanism is authorized only when:
 
 The next proof task is **not** “implement the largest syntax family.” It is:
 
-1. investigate the four stable QF_SEQ DRAT-to-bare regressions as a bounded
-   trace case;
+1. use the four stale QF_SEQ source-invalid DRAT credits as the bounded first
+   `source-side-channel-not-serialized` trace case;
 2. implement P1 tracing at the four bare exits;
 3. regenerate the 51-content causal matrix; then
 4. choose between NRA certificate work, string side-channel serialization, or a
