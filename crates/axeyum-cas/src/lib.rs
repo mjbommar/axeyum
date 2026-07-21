@@ -6172,6 +6172,31 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
             certificate,
         });
     }
+    // Additive linearity: ∫(f + g) = ∫f + ∫g, so a sum integrates if every term
+    // does. Certified as usual by differentiate-and-check on the assembled sum.
+    if let CasExpr::Add(terms) = expr {
+        let mut total = CasExpr::zero();
+        let mut all_ok = true;
+        for term in terms {
+            match integrate(term, var) {
+                Some(part) if part.is_certified() => total = total + part.antiderivative,
+                _ => {
+                    all_ok = false;
+                    break;
+                }
+            }
+        }
+        if all_ok {
+            let antiderivative = fold_trivial(&total);
+            let certificate = prove_derivative(&antiderivative, var, expr);
+            if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+                return Some(CertifiedIntegral {
+                    antiderivative,
+                    certificate,
+                });
+            }
+        }
+    }
     // Try each finder (univariate rational via Horowitz; elementary-function
     // table). Every candidate is certified by differentiate-and-check, so a
     // finder shortfall or out-of-fragment case declines to `None` rather than
@@ -6185,6 +6210,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_times_sinusoid(expr, var),
         integrate_trig_monomial(expr, var),
         integrate_trig_square(expr, var),
+        integrate_log_substitution(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -6727,6 +6753,31 @@ fn eval_poly_at(coeffs: &[Rational], point: &CasExpr) -> CasExpr {
         1 => terms.pop().unwrap_or_else(CasExpr::zero),
         _ => CasExpr::Add(terms),
     }
+}
+
+/// Logarithmic substitutions with `u = ln(var)`, `du = dx/var`:
+/// `∫ ln(x)/x dx = ½·(ln x)²`, and `∫ 1/(x·ln x) dx = ln(ln x)`. Returns the
+/// antiderivative or `None` outside these two shapes; certified downstream.
+fn integrate_log_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    let ln_x = x.clone().ln();
+    // Normalize the integrand as a rational function over the `ln(x)` and `x`
+    // atoms so `ln(x)/x` and `1/(x·ln(x))` are each recognizable.
+    // ∫ ln(x)/x = (ln x)²/2.
+    if matches!(
+        equal(expr, &(ln_x.clone() / x.clone())),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Some(CasExpr::rat(1, 2) * ln_x.pow(2));
+    }
+    // ∫ 1/(x·ln x) = ln(ln x).
+    if matches!(
+        equal(expr, &(CasExpr::int(1) / (x.clone() * ln_x.clone()))),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return Some(ln_x.ln());
+    }
+    None
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -10039,6 +10090,29 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn integrate_additive_linearity_and_log_substitution() {
+        let x = || v("x");
+        // ∫(f+g+…) integrates termwise across mixed classes (poly + exp + rational).
+        for integrand in [
+            x().exp() + (CasExpr::int(-1) * x()).exp(), // eˣ + e^{−x}
+            x().sin() + x().cos() + x().pow(2),
+            x() + x().exp() + CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)),
+            x().exp() * x().sin() + x(), // exp×trig + poly
+        ] {
+            let result = integrate(&integrand, "x").expect("sum integrates termwise");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+        // Logarithmic substitutions: ∫ln(x)/x = ½(ln x)², ∫1/(x·ln x) = ln(ln x).
+        let a = integrate(&(x().ln() / x()), "x").unwrap();
+        assert!(a.is_certified());
+        assert_equal(&a.antiderivative, &(CasExpr::rat(1, 2) * x().ln().pow(2)));
+        let b = integrate(&(CasExpr::int(1) / (x() * x().ln())), "x").unwrap();
+        assert!(b.is_certified());
+        assert_equal(&b.antiderivative, &x().ln().ln());
     }
 
     #[test]
