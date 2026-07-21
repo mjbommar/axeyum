@@ -329,6 +329,12 @@ session state.
 >    whole-module capture, deterministic extraction, source replay, failure
 >    taxonomy, and the GPL-derived-artifact no-vendoring boundary before any
 >    target bytes or proof result are retained.
+>    ADR-0323 now preregisters that capture without running it: two isolated
+>    roots must produce byte-identical complete kernel LLVM modules; the exact
+>    three symbols must extract, assemble, and pass the existing checked scalar
+>    parser; only `llvm-extract`'s known input-path `ModuleID` line is excluded
+>    from extracted identity. Third-party bytes stay local. Implement and run
+>    this T5.5.2 gate next; no inverse-property query is authorized yet.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

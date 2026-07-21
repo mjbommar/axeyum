@@ -963,6 +963,13 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     goal, admitted fragment, evidence route, worked example, reproduction,
     control, and residuals. The catalog explicitly retains T5.3.1's weaker
     MIR-text provenance and the bounded teaching-model scope of T5.3.2/3.
+- [ ] Can Axeyum reproducibly capture and admit the complete full-width Maestro
+  device-number bijection from the exact external project's owning LLVM build?
+  - [ADR-0323](../09-decisions/adr-0323-preregister-maestro-device-id-llvm-capture.md)
+    freezes exact upstream/source/toolchain identities, two root-independent
+    complete kernel builds, deterministic three-symbol extraction, current-
+    parser admission, local-only third-party bytes, and fail-closed provenance
+    before any inverse-property query or scoreboard row is observed.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
