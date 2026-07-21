@@ -2319,6 +2319,133 @@ pub fn sample_standard_deviation(data: &[Rational]) -> Option<CasExpr> {
     Some(simplify_radicals(&CasExpr::Const(variance).sqrt()))
 }
 
+/// The constant value of a [`MultiPoly`] (the empty polynomial is `0`), or `None`
+/// if it is not constant.
+fn multipoly_as_constant(poly: &MultiPoly) -> Option<Rational> {
+    if poly.terms.is_empty() {
+        return Some(Rational::zero());
+    }
+    if poly.terms.len() == 1 {
+        let (monomial, coeff) = poly.terms.iter().next()?;
+        if monomial.powers.is_empty() {
+            return Some(*coeff);
+        }
+    }
+    None
+}
+
+/// If `arg` is a rational multiple of the reserved constant `pi` (the variable
+/// named `"pi"`), return that rational coefficient `c` (so `arg = c·π`); `Some(0)`
+/// for the constant `0`. Handles a constant denominator (e.g. `π/6`). `None` for
+/// any other shape.
+fn pi_coefficient(arg: &CasExpr) -> Option<Rational> {
+    let ratio = normalize_rational(arg)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    if ratio.num.terms.is_empty() {
+        return Some(Rational::zero());
+    }
+    if ratio.num.terms.len() != 1 {
+        return None;
+    }
+    let (monomial, coeff) = ratio.num.terms.iter().next()?;
+    if monomial.powers.len() == 1 && monomial.powers.get("pi") == Some(&1) {
+        coeff.checked_div(denominator)
+    } else {
+        None
+    }
+}
+
+/// The exact value of `sin(k · 15°)` = `sin(k·π/12)` for `k` reduced mod 24 — the
+/// unit-circle table at every multiple of `π/12`, with surds in lowest terms.
+fn sine_at_twelfth(k: usize) -> CasExpr {
+    let half = || CasExpr::rat(1, 2);
+    let root = |n| CasExpr::int(n).sqrt();
+    let root2_2 = || CasExpr::rat(1, 2) * root(2); // √2/2
+    let root3_2 = || CasExpr::rat(1, 2) * root(3); // √3/2
+    let s15 = || CasExpr::rat(1, 4) * root(6) - CasExpr::rat(1, 4) * root(2); // (√6−√2)/4
+    let s75 = || CasExpr::rat(1, 4) * root(6) + CasExpr::rat(1, 4) * root(2); // (√6+√2)/4
+    match k % 24 {
+        1 | 11 => s15(),
+        2 | 10 => half(),
+        3 | 9 => root2_2(),
+        4 | 8 => root3_2(),
+        5 | 7 => s75(),
+        6 => CasExpr::one(),
+        13 | 23 => -s15(),
+        14 | 22 => -half(),
+        15 | 21 => -root2_2(),
+        16 | 20 => -root3_2(),
+        17 | 19 => -s75(),
+        18 => CasExpr::int(-1),
+        _ => CasExpr::zero(), // 0 and 12 (and, unreachably, anything ≥ 24)
+    }
+}
+
+/// The exact value of a trig head at a rational multiple of `π`, or `None` if the
+/// argument is not `c·π` with `12c` an integer (a multiple of `π/12`), or if the
+/// value is a pole (`tan` at `π/2 + kπ`).
+fn trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
+    let coeff = pi_coefficient(arg)?;
+    // Index in twelfths of a half-turn: k = 12·c, reduced mod 24.
+    let scaled = coeff.checked_mul(Rational::integer(12))?;
+    if scaled.denominator() != 1 {
+        return None;
+    }
+    let k = usize::try_from(scaled.numerator().rem_euclid(24)).ok()?;
+    match func {
+        UnaryFunc::Sin => Some(sine_at_twelfth(k)),
+        UnaryFunc::Cos => Some(sine_at_twelfth(k + 6)), // cos θ = sin(θ + π/2)
+        UnaryFunc::Tan => {
+            let cosine = sine_at_twelfth(k + 6);
+            if matches!(equal(&cosine, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
+                None // pole at π/2 + kπ
+            } else {
+                let value = simplify(&(sine_at_twelfth(k) / cosine));
+                Some(simplify_radicals(&value))
+            }
+        }
+        _ => None,
+    }
+}
+
+/// Evaluate the trigonometric heads `sin`, `cos`, `tan` at rational multiples of
+/// the reserved constant `pi` to their **exact** values (`sin(π/6) = 1/2`,
+/// `cos(π/4) = √2/2`, `tan(π/3) = √3`), throughout an expression. Every multiple of
+/// `π/12` is tabulated (with surds in lowest terms); `tan` poles and non-special
+/// angles are left unevaluated. Other subexpressions are recursed into
+/// structurally.
+///
+/// This is a **compute** operation — the returned values come from the exact
+/// unit-circle table, definitionally, not from a zero-test certificate. The
+/// constant `π` is the variable named `"pi"`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, evaluate_trig, equal, ZeroTest};
+/// let pi = CasExpr::var("pi");
+/// // sin(π/6) = 1/2.
+/// let value = evaluate_trig(&(pi / CasExpr::int(6)).sin());
+/// assert!(matches!(equal(&value, &CasExpr::rat(1, 2)), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) => {
+            let inner = evaluate_trig(arg);
+            trig_special_value(*func, &inner).unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(evaluate_trig(arg))),
+        CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(evaluate_trig).collect()),
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(evaluate_trig).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(evaluate_trig(inner))),
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(evaluate_trig(numerator)),
+            Box::new(evaluate_trig(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(evaluate_trig(base)), *exponent),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// Numerically approximate an expression as an `f64`, given `bindings` for its free
 /// variables (each `(name, value)`). Rational constants are exact-to-`f64`; the
 /// transcendental heads map to the corresponding `f64` functions.
@@ -3894,6 +4021,40 @@ mod tests {
         );
         // Sample variance of {1,2,3} = 1 → sample stddev 1.
         assert_equal(&sample_standard_deviation(&small).unwrap(), &CasExpr::int(1));
+    }
+
+    #[test]
+    fn exact_trig_values() {
+        let pi = || v("pi");
+        let sin = |c: CasExpr| evaluate_trig(&c.sin());
+        let cos = |c: CasExpr| evaluate_trig(&c.cos());
+        let tan = |c: CasExpr| evaluate_trig(&c.tan());
+        // Standard unit-circle values.
+        assert_equal(&sin(pi() / CasExpr::int(6)), &CasExpr::rat(1, 2));
+        assert_equal(&cos(pi() / CasExpr::int(3)), &CasExpr::rat(1, 2));
+        assert_equal(&sin(pi() / CasExpr::int(4)), &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()));
+        assert_equal(&cos(pi() / CasExpr::int(6)), &(CasExpr::rat(1, 2) * CasExpr::int(3).sqrt()));
+        assert_equal(&tan(pi() / CasExpr::int(4)), &CasExpr::int(1));
+        assert_equal(&tan(pi() / CasExpr::int(3)), &CasExpr::int(3).sqrt());
+        // sin(0) = 0, cos(0) = 1, sin(π/2) = 1, cos(π/2) = 0, sin(π) = 0.
+        assert_equal(&sin(CasExpr::int(0) * pi()), &CasExpr::zero());
+        assert_equal(&cos(CasExpr::int(0) * pi()), &CasExpr::int(1));
+        assert_equal(&sin(pi() / CasExpr::int(2)), &CasExpr::int(1));
+        assert_equal(&cos(pi() / CasExpr::int(2)), &CasExpr::zero());
+        assert_equal(&sin(pi()), &CasExpr::zero());
+        // 15° = π/12 = (√6 − √2)/4 — the fine-grained table entry.
+        assert_equal(
+            &sin(pi() / CasExpr::int(12)),
+            &(CasExpr::rat(1, 4) * CasExpr::int(6).sqrt() - CasExpr::rat(1, 4) * CasExpr::int(2).sqrt()),
+        );
+        // Pythagorean check on the exact values: sin²(π/5? no) — use π/6: (1/2)²+(√3/2)²=1.
+        let s = sin(pi() / CasExpr::int(6));
+        let c = cos(pi() / CasExpr::int(6));
+        assert_equal(&(s.pow(2) + c.pow(2)), &CasExpr::int(1));
+        // tan(π/2) is a pole → left unevaluated.
+        assert!(matches!(tan(pi() / CasExpr::int(2)), CasExpr::Unary(UnaryFunc::Tan, _)));
+        // A non-special angle (π/5) is left unevaluated.
+        assert!(matches!(sin(pi() / CasExpr::int(5)), CasExpr::Unary(UnaryFunc::Sin, _)));
     }
 
     #[test]
