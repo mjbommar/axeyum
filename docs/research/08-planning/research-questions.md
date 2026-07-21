@@ -1082,6 +1082,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     Pushed producer `07b22549` passes that fresh locked/offline preflight with
     one independent-spec test, the authenticated test filtered out, and no v2
     output. Commit/push the zero-query gate before the single official run.
+    That sole run is now frozen negative: the first target query returns
+    `Proved`, but BitBlast is uncertified while Tseitin and SatRefutation are
+    certified. The all-certified gate credits no row and cleanup leaves no
+    output. Audit existing lowering evidence before proposing new proof work.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

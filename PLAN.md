@@ -531,6 +531,14 @@ session state.
 >    the authenticated test filtered out, and `proof-v2` absent. Commit/push the
 >    exact zero-query preflight metadata, then verify refs/output absence and
 >    invoke v2 exactly once. Do not rerun after any target observation.
+>    The sole v2 invocation is now frozen negative. Fresh archived compilation
+>    succeeds and the first target query (`log_base_two`/32/`defined`) returns
+>    `Proved`, but its ledger is BitBlast=uncertified, Tseitin=certified,
+>    SatRefutation=certified. The all-certified gate rejects it before row credit;
+>    zero controls/later proofs run, cleanup leaves no output, and no OOM-delta
+>    failure is reported. Never rerun or weaken v2. Commit/push the exact
+>    negative, then inspect the existing evidence/checker path read-only before
+>    deciding whether certified bit-blast lifting merits a new ADR.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

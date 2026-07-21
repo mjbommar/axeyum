@@ -1,0 +1,58 @@
+{
+  "attempt": {
+    "compilations_completed": 1,
+    "compilations_started": 1,
+    "official_invocations": 1,
+    "observed_at_utc": "2026-07-21T11:54:37Z",
+    "property_queries_completed": 1,
+    "property_queries_started": 1,
+    "runner_commit": "076ee11810722f71bba8e9652ed4089dc96c7b50",
+    "runner_tree": "a97f33f10fcf7bb35437e844112c33a20408bbeb",
+    "runner_was_pushed_before_invocation": true
+  },
+  "error": {
+    "detail": "every target proof trust step must be certified: [TrustStep { id: BitBlast, certified: false }, TrustStep { id: Tseitin, certified: true }, TrustStep { id: SatRefutation, certified: true }]",
+    "exit_code": 1,
+    "kind": "cargo_test",
+    "source_line": "crates/axeyum-verify/tests/tock_log2_external.rs:204",
+    "stage": "runner"
+  },
+  "first_query": {
+    "accepted_for_credit": false,
+    "property": "defined",
+    "raw_outcome": "Proved",
+    "target": "log_base_two",
+    "trust_steps": [
+      {
+        "certified": false,
+        "id": "BitBlast"
+      },
+      {
+        "certified": true,
+        "id": "Tseitin"
+      },
+      {
+        "certified": true,
+        "id": "SatRefutation"
+      }
+    ],
+    "width": 32
+  },
+  "outputs": {
+    "controls": 0,
+    "output_directory_exists": false,
+    "partial_directories": 0,
+    "proofs_credited": 0,
+    "scoreboard_rows": 0
+  },
+  "preflight_sha256": "9222aa62416e5c02589ae2726415d70b7f49cf9292977cd484ade74ab983663f",
+  "registration_sha256": "47ac58722b2d21e6175506c67741372dc2970a8e3419df21a7ccdc7c3089c6f4",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-proof-v2-negative.v1",
+  "status": "rejected"
+}

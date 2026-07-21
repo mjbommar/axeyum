@@ -1,6 +1,6 @@
 # ADR-0336: Preregister Tock log2 proof v2 lock correction
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -88,6 +88,35 @@ for the fresh build. `proof-v2` remains absent; zero target property queries or
 scoreboard rows exist. Exact preflight metadata is committed in
 `bench-results/verify-tock-log2-20260721/proof-v2-preflight.json`. Commit/push
 this successful gate before the one official invocation.
+
+## Result
+
+Accepted as a negative v2 result. Runner commit `076ee118` matched local HEAD,
+its tracking ref, and remote `main` before the single official invocation. The
+corrected lock resolves and the fresh archived source compiles. The first target
+query, `log_base_two` width-32 `defined`, returns `ProofOutcome::Proved`, but its
+trust ledger is:
+
+```text
+BitBlast: uncertified
+Tseitin: certified
+SatRefutation: certified
+```
+
+The frozen all-certified gate rejects that result before printing or crediting
+a proof row. No control or later proof runs. Atomic cleanup leaves no output or
+partial directory, and the resource guard reports no OOM-delta failure. Exact
+negative metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v2-negative.json`.
+
+V2 ends here and must not be rerun. This is no longer a packaging defect: it is
+the reviewer-relevant evidence boundary the protocol was designed to expose.
+The SAT refutation and Tseitin encoding are checked, but the target's bit-vector
+lowering is not certified in the returned evidence ledger. Do not weaken the
+gate or relabel the result. Before another target run, separately determine
+whether an existing checker can certify the exact lowering map; otherwise treat
+checked bit-blast lifting as the next proof-infrastructure gap and preregister
+any implementation independently.
 
 ## Rejected alternatives
 
