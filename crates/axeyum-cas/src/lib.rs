@@ -6600,6 +6600,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_special_integral(expr, var),
         integrate_fresnel(expr, var),
         integrate_inverse_radical(expr, var),
+        integrate_radical_usub(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7561,6 +7562,44 @@ fn integrate_inverse_radical(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         }
     }
     None
+}
+
+/// ∫ k·f′(x)/√(f(x)) dx = 2k·√(f(x)) — recognize a numerator proportional to the
+/// derivative of the radicand under a square root (e.g. `∫x/√(1−x²) = −√(1−x²)`).
+/// Certified downstream by differentiate-and-check.
+fn integrate_radical_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    let CasExpr::Unary(UnaryFunc::Sqrt, radicand) = denominator.as_ref() else {
+        return None;
+    };
+    let num_poly = normalize(numerator)?.to_univariate(var)?;
+    let rad = normalize(radicand)?;
+    let deriv_poly = normalize(&rad.to_expr().differentiate(var))?.to_univariate(var)?;
+    // numerator must be a nonzero rational multiple k of (d/dx radicand).
+    let k = poly_proportion(&num_poly, &deriv_poly)?;
+    let two_k = k.checked_mul(Rational::integer(2))?;
+    Some(scaled_term(two_k, radicand.as_ref().clone().sqrt()))
+}
+
+/// If `a = k·b` as polynomials for a single nonzero rational `k`, return `k`.
+/// Returns `None` when `b` is zero or the two are not proportional.
+fn poly_proportion(a: &[Rational], b: &[Rational]) -> Option<Rational> {
+    let pivot = b.iter().position(|c| !c.is_zero())?;
+    let k = a.get(pivot).copied()?.checked_div(b[pivot])?;
+    if k.is_zero() {
+        return None;
+    }
+    let len = a.len().max(b.len());
+    for i in 0..len {
+        let ai = a.get(i).copied().unwrap_or_else(Rational::zero);
+        let bi = b.get(i).copied().unwrap_or_else(Rational::zero);
+        if ai != k.checked_mul(bi)? {
+            return None;
+        }
+    }
+    Some(k)
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -11020,7 +11059,26 @@ mod tests {
             ZeroTest::Certified { equal: true, .. }
         ));
         // Numeric: asin(1/2)=π/6≈0.5236, acosh(2)≈1.3170.
-        assert!((evalf(&CasExpr::Unary(UnaryFunc::Asin, Box::new(CasExpr::rat(1, 2))), &[]).unwrap() - 0.523_599).abs() < 1e-5);
+        assert!((evalf(&CasExpr::Unary(UnaryFunc::Asin, Box::new(CasExpr::rat(1, 2))), &[]).unwrap() - std::f64::consts::FRAC_PI_6).abs() < 1e-5);
+    }
+
+    #[test]
+    fn radical_usub_integrals() {
+        // ∫ k·f′/√f = 2k·√f — numerator proportional to the radicand's derivative.
+        let x = || v("x");
+        for (integrand, anti) in [
+            // ∫x/√(1−x²) = −√(1−x²)
+            (x() / (CasExpr::int(1) - x().pow(2)).sqrt(), CasExpr::int(-1) * (CasExpr::int(1) - x().pow(2)).sqrt()),
+            // ∫x/√(x²+1) = √(x²+1)
+            (x() / (x().pow(2) + CasExpr::int(1)).sqrt(), (x().pow(2) + CasExpr::int(1)).sqrt()),
+            // ∫(2x+1)/√(x²+x) = 2√(x²+x)  (general f′, not just a monomial)
+            ((CasExpr::int(2) * x() + CasExpr::int(1)) / (x().pow(2) + x()).sqrt(), CasExpr::int(2) * (x().pow(2) + x()).sqrt()),
+        ] {
+            let r = integrate(&integrand, "x").expect("radical u-sub integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+            assert_equal(&r.antiderivative, &anti);
+        }
     }
 
     #[test]
