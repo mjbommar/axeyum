@@ -338,7 +338,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   relation is disproved, and source/body/intrinsic/resource mutations fail
   closed. The complete package/doctests, strict Clippy, pinned capture replay,
   and expanded 81-variant / 17-group / eleven-binary / 123-test semantics gate
-  pass under the one-job 4 GiB policy. Nontrivial `requires`, source panic
+  pass under the one-job 4 GiB policy. This closes the bounded P5.2 v1 phase
+  exit criteria alongside the already accepted dual-IR checksum and panic
+  composition cells. Nontrivial `requires`, source panic
   summaries, broader syntax, effects, LLVM generation, performance, and the
   still-missing second machine remain out of scope.
 

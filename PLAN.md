@@ -268,7 +268,10 @@ session state.
 >    256 inputs at 256 normal/zero panic; removing the relation and source/body/
 >    intrinsic/resource mutations fail closed. The root-independent scalar
 >    summary reproduces under the pinned nightly, and the 123-test standing
->    semantics gate passes. This deliberately avoids the current MIR route's
+>    semantics gate passes. This closes the bounded P5.2 v1 exit criteria:
+>    additive source annotations, modular checksum composition on both checked
+>    IRs, authenticated total source-to-MIR summary binding, and a committed
+>    modular-vs-inlined differential. It deliberately avoids the MIR route's
 >    unsupported nontrivial-`requires` boundary and adds no panic-summary
 >    authoring. Do not widen branches, calls, effects, or unwind cleanup to make
 >    the bridge useful.
