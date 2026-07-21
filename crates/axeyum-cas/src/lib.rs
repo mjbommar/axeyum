@@ -6626,6 +6626,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_quadratic_usub(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
+        integrate_log_power(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7856,6 +7857,59 @@ fn integrate_log_derivative(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let rhs = rg.num.mul(&rn.den)?;
     let k = multipoly_proportion(&lhs, &rhs)?;
     Some(scaled_term(k, den.as_ref().clone().ln()))
+}
+
+/// ∫ P(x)·(ln x)ᵐ dx by repeated integration by parts (`u = lnᵐ`, `dv = P dx`):
+/// `= Q·lnᵐ − m·∫ (Q/x)·lnᵐ⁻¹`, where `Q = ∫P` has zero constant term, so `Q/x`
+/// is again a polynomial. Recurses on `m` (base case `m = 0` is `Q`). `None` on
+/// overflow. Certified downstream.
+fn integrate_poly_log_power(p: &[Rational], m: u32, var: &str) -> Option<CasExpr> {
+    // Q = ∫P: q[0] = 0, q[i] = p[i−1]/i.
+    let mut q = vec![Rational::zero()];
+    for (i, pc) in p.iter().enumerate() {
+        let idx = u32::try_from(i + 1).ok()?;
+        q.push(pc.checked_div(Rational::integer(i128::from(idx)))?);
+    }
+    let q_expr = MultiPoly::from_univariate(var, &q).to_expr();
+    if m == 0 {
+        return Some(q_expr);
+    }
+    let ln_m = CasExpr::var(var).ln().pow(m);
+    let first = CasExpr::Mul(vec![q_expr, ln_m]);
+    let q_over_x: Vec<Rational> = q.into_iter().skip(1).collect();
+    let rec = integrate_poly_log_power(&q_over_x, m - 1, var)?;
+    Some(first - scaled_term(Rational::integer(i128::from(m)), rec))
+}
+
+/// ∫ P(x)·(ln x)ᵐ dx for `m ≥ 2` — the power-of-log companion to
+/// `integrate_poly_times_log` (which is the `m = 1` case). Covers `∫(ln x)² =
+/// x ln²x − 2x ln x + 2x`, `∫x·(ln x)²`, `∫x²(ln x)³`. Certified downstream.
+fn integrate_log_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let factors = flatten_mul(expr);
+    let mut m: Option<u32> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for f in factors {
+        if let CasExpr::Pow(base, e) = &f
+            && let CasExpr::Unary(UnaryFunc::Ln, arg) = base.as_ref()
+            && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+            && *e >= 2
+        {
+            if m.is_some() {
+                return None;
+            }
+            m = Some(*e);
+            continue;
+        }
+        rest.push(f);
+    }
+    let m = m?;
+    let rest_expr = match rest.len() {
+        0 => CasExpr::int(1),
+        1 => rest.into_iter().next()?,
+        _ => CasExpr::Mul(rest),
+    };
+    let p = normalize(&rest_expr)?.to_univariate(var)?;
+    integrate_poly_log_power(&p, m, var)
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -11414,6 +11468,30 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
         }
+    }
+
+    #[test]
+    fn poly_log_power_integrals() {
+        let x = || v("x");
+        // ∫P(x)·(ln x)ᵐ by repeated by-parts. Certified by differentiate-and-check.
+        for integrand in [
+            x().ln().pow(2),                          // ∫ln²x = x ln²x − 2x ln x + 2x
+            x() * x().ln().pow(2),                     // ∫x·ln²x
+            x().pow(2) * x().ln().pow(2),              // ∫x²·ln²x
+            x().ln().pow(3),                           // ∫ln³x
+            (x().pow(2) + CasExpr::int(1)) * x().ln().pow(2),
+        ] {
+            let r = integrate(&integrand, "x").expect("poly·logᵐ integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫ln²x at the closed form x ln²x − 2x ln x + 2x.
+        let closed = x() * x().ln().pow(2) - CasExpr::int(2) * x() * x().ln()
+            + CasExpr::int(2) * x();
+        assert!(matches!(
+            equal(&integrate(&x().ln().pow(2), "x").unwrap().antiderivative, &closed),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
