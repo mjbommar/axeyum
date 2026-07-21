@@ -52,6 +52,7 @@ use axeyum_ir::{Rational, poly};
 
 pub mod algebraic;
 pub mod approx;
+pub mod boolean;
 pub mod combinatorics;
 pub mod groebner;
 mod factor_int;
@@ -71,6 +72,7 @@ pub mod sturm;
 
 pub use algebraic::AlgebraicReal;
 pub use approx::{lagrange_interpolation, newton_divided_differences, pade, pade_fraction};
+pub use boolean::BoolExpr;
 pub use factor_int::{factor_expr, factor_univariate_over_q};
 pub use gosper::{geometric_power, gosper_sum};
 pub use groebner::{groebner_basis, ideal_contains, reduce};
