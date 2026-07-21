@@ -338,6 +338,66 @@ pub fn lucas(n: u32) -> Option<i128> {
     Some(previous)
 }
 
+/// The **derangement** count `!n` (permutations of `n` elements with no fixed
+/// point): `!n = n·!(n−1) + (−1)ⁿ`, with `!0 = 1`, `!1 = 0`, `!2 = 1`, `!3 = 2`,
+/// `!4 = 9`. `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::derangements;
+/// assert_eq!(derangements(4), Some(9));
+/// ```
+#[must_use]
+pub fn derangements(n: u32) -> Option<i128> {
+    let mut value: i128 = 1; // !0
+    for k in 1..=n {
+        let sign = if k % 2 == 0 { 1 } else { -1 };
+        value = i128::from(k).checked_mul(value)?.checked_add(sign)?;
+    }
+    Some(value)
+}
+
+/// The **double factorial** `n!!` = product of the integers from `n` down to 1 (or
+/// 2) with the same parity: `5!! = 5·3·1 = 15`, `6!! = 6·4·2 = 48`, `0!! = 1!! = 1`.
+/// `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::double_factorial;
+/// assert_eq!(double_factorial(5), Some(15));
+/// assert_eq!(double_factorial(6), Some(48));
+/// ```
+#[must_use]
+pub fn double_factorial(n: u32) -> Option<i128> {
+    let mut value: i128 = 1;
+    let mut k = i128::from(n);
+    while k > 1 {
+        value = value.checked_mul(k)?;
+        k -= 2;
+    }
+    Some(value)
+}
+
+/// The **multinomial coefficient** `(k₁+…+k_m)! / (k₁!·…·k_m!)` — the number of
+/// ways to partition `Σ kᵢ` items into labelled groups of the given sizes.
+/// `multinomial(&[2,1,1]) = 4!/(2!·1!·1!) = 12`. Computed by an exact telescoping
+/// product (no large intermediate factorial). `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::multinomial;
+/// assert_eq!(multinomial(&[2, 1, 1]), Some(12));
+/// assert_eq!(multinomial(&[1, 1, 1]), Some(6)); // = 3!
+/// ```
+#[must_use]
+pub fn multinomial(groups: &[u32]) -> Option<i128> {
+    // ∏ over groups of C(running_total, kᵢ): builds the multinomial exactly.
+    let mut total: i128 = 0;
+    let mut result: i128 = 1;
+    for &group in groups {
+        total = total.checked_add(i128::from(group))?;
+        result = result.checked_mul(binomial(total, i128::from(group))?)?;
+    }
+    Some(result)
+}
+
 /// The **harmonic number** `Hₙ = Σ_{k=1}^{n} 1/k`, exact ([`Rational`]).
 /// `H₀ = 0`, `H₁ = 1`, `H₂ = 3/2`, `H₃ = 11/6`, `H₄ = 25/12`. `None` on `i128`
 /// overflow of the running numerator/denominator (the denominators grow as
@@ -384,6 +444,25 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn derangements_double_factorial_multinomial() {
+        // Derangements: !0..!5 = 1, 0, 1, 2, 9, 44.
+        let expected = [1, 0, 1, 2, 9, 44];
+        for (n, &want) in expected.iter().enumerate() {
+            assert_eq!(derangements(u32::try_from(n).unwrap()), Some(want), "!{n}");
+        }
+        // Double factorial: 0!!..7!! = 1,1,2,3,8,15,48,105.
+        let df = [1, 1, 2, 3, 8, 15, 48, 105];
+        for (n, &want) in df.iter().enumerate() {
+            assert_eq!(double_factorial(u32::try_from(n).unwrap()), Some(want), "{n}!!");
+        }
+        // Multinomial: 4!/(2!1!1!) = 12, 3! = 6, and C(5,2) as a two-group case = 10.
+        assert_eq!(multinomial(&[2, 1, 1]), Some(12));
+        assert_eq!(multinomial(&[1, 1, 1]), Some(6));
+        assert_eq!(multinomial(&[3, 2]), Some(10));
+        assert_eq!(multinomial(&[]), Some(1)); // empty product
+    }
 
     #[test]
     fn harmonic_numbers_exact() {
