@@ -7326,11 +7326,13 @@ fn integrate_log_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     None
 }
 
-/// Integrate a **Gaussian** `e^{−a·x²}` (`a > 0` rational, no linear/constant term
-/// in the exponent) to `(√π / (2·√a))·erf(√a·x)` — the definitional antiderivative
-/// of the error function. Certified downstream by differentiate-and-check: the
-/// derivative is `(√π/(2√a))·(2/√π)·e^{−(√a x)²}·√a = e^{−a x²}` (the `√π` and `√a`
-/// cancel in the zero-test). Returns `None` outside this shape.
+/// Integrate a **Gaussian** `e^{c₂·x² + c₁·x + c₀}` (`c₂ < 0`, `−c₂` a perfect
+/// rational square) by completing the square to `e^{k}·(√π/(2√a))·erf(√a·(x+d))`.
+/// Certified downstream by differentiate-and-check (the `√π`/`√a` cancel and the
+/// exp-tower recombines the constant `e^{k}` factor). Handles `∫e^{−x²}=(√π/2)erf(x)`,
+/// `∫e^{−x²−2x}=e·(√π/2)erf(x+1)`, etc. Returns `None` outside this shape — or when
+/// the constant `e^{k}` does not cancel in the zero-test (an honest decline, since
+/// the finder's candidate is only returned once the FTC certificate passes).
 fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Unary(UnaryFunc::Exp, arg) = expr else {
         return None;
@@ -7339,31 +7341,38 @@ fn integrate_gaussian(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     if poly::rat_degree(&coeffs)? != 2 {
         return None;
     }
-    // Exponent must be exactly `−a·x²` (no constant or linear part).
-    if !coeffs[0].is_zero() || !coeffs.get(1).copied().unwrap_or_else(Rational::zero).is_zero() {
-        return None;
+    // Exponent `c₂·x² + c₁·x + c₀` with `c₂ < 0`. Complete the square:
+    // `c₂·x² + c₁·x + c₀ = c₂·(x + d)² + k`, `d = c₁/(2c₂)`, `k = c₀ − c₁²/(4c₂)`.
+    let c2 = coeffs[2];
+    if c2.numerator() >= 0 {
+        return None; // need a downward (convergent-shaped) Gaussian
     }
-    let quadratic = coeffs[2];
-    if quadratic.numerator() >= 0 {
-        return None; // need −a with a > 0 for a real (convergent-shaped) Gaussian
-    }
-    let a = quadratic.checked_neg()?;
-    // Require √a to be **rational** (a a perfect rational square): a surd `√a` in
-    // erf's argument leaves `(√a·x)²` unfolded inside the exp atom key, so the
-    // differentiate-and-check cert would not recognize it as `a·x²` — declined
-    // honestly rather than returned uncertified.
+    let c1 = coeffs.get(1).copied().unwrap_or_else(Rational::zero);
+    let c0 = coeffs[0];
+    let a = c2.checked_neg()?; // a > 0
+    // Require √a rational (perfect-square a): a surd `√a` leaves `(√a·(x+d))²`
+    // unfolded inside the exp atom key, so the cert would not recognize it.
     let CasExpr::Const(_) = simplify_radicals(&CasExpr::Const(a).sqrt()) else {
         return None;
     };
     let sqrt_a = simplify_radicals(&CasExpr::Const(a).sqrt());
+    let shift = c1.checked_div(Rational::integer(2).checked_mul(c2)?)?; // d
+    let constant = c0.checked_sub(
+        c1.checked_mul(c1)?
+            .checked_div(Rational::integer(4).checked_mul(c2)?)?,
+    )?; // k
     let sqrt_pi = CasExpr::var("pi").sqrt();
-    // erf(√a·x).
-    let erf_argument = fold_trivial(&(sqrt_a.clone() * CasExpr::var(var)));
-    let erf_term = erf_argument.erf();
-    // Coefficient √π / (2·√a). Keep the √π/√a atoms un-combined (do NOT rationalize
-    // the denominator) so they cancel cleanly against erf's derivative in the cert.
+    // erf(√a·(x + d)).
+    let shifted = fold_trivial(&(CasExpr::var(var) + CasExpr::Const(shift)));
+    let erf_term = fold_trivial(&(sqrt_a.clone() * shifted)).erf();
+    // Result: e^{k}·(√π/(2√a))·erf(√a·(x+d)). The e^{k} factor (a constant when
+    // k ≠ 0) rides along; the exp-tower recombines it in the cert.
     let coefficient = sqrt_pi / (CasExpr::int(2) * sqrt_a);
-    Some(fold_trivial(&(coefficient * erf_term)))
+    let mut result = coefficient * erf_term;
+    if !constant.is_zero() {
+        result = CasExpr::Const(constant).exp() * result;
+    }
+    Some(fold_trivial(&result))
 }
 
 /// Integrate the defining forms of the special integrals: `∫ sin(a·x)/x dx =
@@ -10988,7 +10997,12 @@ mod tests {
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
             assert_equal(&result.antiderivative, &expected);
         }
-        // Surd a (∫e^{−2x²}) and a linear term are honestly declined.
+        // Completing the square handles a linear term when the constant eᵏ cancels:
+        // ∫e^{−x²−2x} = e·(√π/2)·erf(x+1) (since −x²−2x = −(x+1)²+1), certified.
+        let cs = integrate(&(-x().pow(2) - CasExpr::int(2) * x()).exp(), "x").unwrap();
+        assert!(cs.is_certified());
+        assert_equal(&cs.antiderivative.differentiate("x"), &(-x().pow(2) - CasExpr::int(2) * x()).exp());
+        // Surd a (∫e^{−2x²}) is honestly declined.
         assert!(integrate(&(CasExpr::int(-2) * x().pow(2)).exp(), "x").is_none());
         // erf(0) = 0 (folded); numeric erf(1) ≈ 0.8427.
         assert_eq!(
