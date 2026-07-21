@@ -1409,6 +1409,195 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     Some(roots)
 }
 
+/// A comparison operator for polynomial inequality solving.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InequalityOp {
+    /// `> 0`
+    Greater,
+    /// `≥ 0`
+    GreaterEqual,
+    /// `< 0`
+    Less,
+    /// `≤ 0`
+    LessEqual,
+}
+
+/// A real interval with rational (or infinite) endpoints and open/closed bounds,
+/// as returned by [`solve_polynomial_inequality`]. `None` endpoints are `∓∞`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RealInterval {
+    /// Lower endpoint (`None` = `−∞`).
+    pub lower: Option<Rational>,
+    /// Whether the lower endpoint is included.
+    pub lower_closed: bool,
+    /// Upper endpoint (`None` = `+∞`).
+    pub upper: Option<Rational>,
+    /// Whether the upper endpoint is included.
+    pub upper_closed: bool,
+}
+
+/// Solve a polynomial inequality `p(var) ⋈ 0` (with `⋈` from [`InequalityOp`]) over
+/// the reals, returning the solution as a union of disjoint [`RealInterval`]s
+/// (ascending). Implemented by a **sign chart**: the real roots partition ℝ into
+/// regions of constant sign, each tested at an interior sample point.
+///
+/// Requires all real roots to be **rational** (so the interval endpoints are exact
+/// rationals — the common textbook case); returns `None` if any real root is
+/// irrational (endpoints would not be exactly representable), if `p` is not a
+/// univariate polynomial in `var`, or on overflow. An empty vector means no real
+/// number satisfies the inequality.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, solve_polynomial_inequality, InequalityOp};
+/// let x = CasExpr::var("x");
+/// // x² − 5x + 6 > 0  ⇒  (−∞, 2) ∪ (3, ∞).
+/// let p = x.clone().pow(2) - CasExpr::int(5) * x + CasExpr::int(6);
+/// let solution = solve_polynomial_inequality(&p, "x", InequalityOp::Greater).unwrap();
+/// assert_eq!(solution.len(), 2);
+/// ```
+#[must_use]
+pub fn solve_polynomial_inequality(
+    expr: &CasExpr,
+    var: &str,
+    op: InequalityOp,
+) -> Option<Vec<RealInterval>> {
+    let coeffs = univariate_coeffs(expr, var)?;
+    poly::rat_degree(&coeffs)?; // reject the zero polynomial
+    // Distinct rational roots, sorted. If the polynomial has any irrational real
+    // root, its rational-endpoint interval form is not exact → decline.
+    let mut roots: Vec<Rational> = Vec::new();
+    for root in solve(expr, var)? {
+        if let CasExpr::Const(value) = root
+            && !roots.contains(&value)
+        {
+            roots.push(value);
+        }
+    }
+    roots.sort_unstable();
+    // Every rational root must be accounted for: if the count of real roots
+    // (Sturm) exceeds the rational roots found, an irrational real root exists.
+    let total_real = sturm::count_real_roots_in(
+        &coeffs,
+        roots.first().copied().unwrap_or(Rational::zero()).checked_sub(root_span(&coeffs)?)?,
+        roots.last().copied().unwrap_or(Rational::zero()).checked_add(root_span(&coeffs)?)?,
+    )?;
+    if total_real != roots.len() {
+        return None; // an irrational real root is present
+    }
+    let strict = matches!(op, InequalityOp::Greater | InequalityOp::Less);
+    let want_positive = matches!(op, InequalityOp::Greater | InequalityOp::GreaterEqual);
+
+    // Sample the sign in each region delimited by the sorted roots.
+    let sign_at = |x: Rational| -> Option<i32> {
+        Some(poly::eval_rat_poly(&coeffs, x)?.numerator().signum().try_into().unwrap_or(0))
+    };
+    let want_sign = if want_positive { 1 } else { -1 };
+    let step = Rational::integer(1);
+
+    // Region sample points: below the first root, between consecutive roots, above
+    // the last. With no roots, one sample at 0 decides all of ℝ.
+    let mut selected: Vec<RealInterval> = Vec::new();
+    if roots.is_empty() {
+        if sign_at(Rational::zero())? == want_sign {
+            selected.push(RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false });
+        }
+        return Some(selected);
+    }
+    for index in 0..=roots.len() {
+        let sample = if index == 0 {
+            roots[0].checked_sub(step)?
+        } else if index == roots.len() {
+            roots[roots.len() - 1].checked_add(step)?
+        } else {
+            roots[index - 1].checked_add(roots[index])?.checked_div(Rational::integer(2))?
+        };
+        if sign_at(sample)? == want_sign {
+            let lower = if index == 0 { None } else { Some(roots[index - 1]) };
+            let upper = if index == roots.len() { None } else { Some(roots[index]) };
+            selected.push(RealInterval {
+                lower,
+                lower_closed: false,
+                upper,
+                upper_closed: false,
+            });
+        }
+    }
+    // For non-strict operators the roots themselves satisfy `p = 0`; include them
+    // (closing adjacent interval endpoints and adding isolated points), then merge.
+    if strict {
+        Some(selected)
+    } else {
+        // Non-strict: the roots satisfy `p = 0`, so include them and merge.
+        Some(merge_with_roots(selected, &roots))
+    }
+}
+
+/// A span wide enough to bracket all real roots (twice the Cauchy-style bound),
+/// used to frame the Sturm real-root count.
+fn root_span(coeffs: &[Rational]) -> Option<Rational> {
+    let degree = poly::rat_degree(coeffs)?;
+    let leading = coeffs[degree];
+    let mut bound = Rational::integer(1);
+    for coeff in &coeffs[..degree] {
+        let ratio = coeff.checked_div(leading)?;
+        let magnitude = if ratio.numerator() < 0 { ratio.checked_neg()? } else { ratio };
+        bound = bound.checked_add(magnitude)?;
+    }
+    bound.checked_add(Rational::integer(1))
+}
+
+/// Close endpoints at the roots (which satisfy `p = 0` for non-strict operators),
+/// add isolated root points, and merge intervals that now touch at an included root.
+fn merge_with_roots(strict_intervals: Vec<RealInterval>, roots: &[Rational]) -> Vec<RealInterval> {
+    let mut intervals = strict_intervals;
+    // Close any endpoint that coincides with a root.
+    for interval in &mut intervals {
+        if interval.lower.is_some() {
+            interval.lower_closed = true;
+        }
+        if interval.upper.is_some() {
+            interval.upper_closed = true;
+        }
+    }
+    // Add each root not already covered as an isolated closed point.
+    for &root in roots {
+        let covered = intervals.iter().any(|i| {
+            (i.lower == Some(root) && i.lower_closed) || (i.upper == Some(root) && i.upper_closed)
+        });
+        if !covered {
+            intervals.push(RealInterval {
+                lower: Some(root),
+                lower_closed: true,
+                upper: Some(root),
+                upper_closed: true,
+            });
+        }
+    }
+    // Sort by lower endpoint (−∞ first) and merge touching/overlapping intervals.
+    intervals.sort_by(|a, b| match (a.lower, b.lower) {
+        (None, None) => core::cmp::Ordering::Equal,
+        (None, _) => core::cmp::Ordering::Less,
+        (_, None) => core::cmp::Ordering::Greater,
+        (Some(x), Some(y)) => x.checked_cmp(&y).unwrap_or(core::cmp::Ordering::Equal),
+    });
+    let mut merged: Vec<RealInterval> = Vec::new();
+    for interval in intervals {
+        match merged.last_mut() {
+            Some(last)
+                if last.upper.is_some()
+                    && last.upper == interval.lower
+                    && (last.upper_closed || interval.lower_closed) =>
+            {
+                // They meet at a shared, included endpoint → merge.
+                last.upper = interval.upper;
+                last.upper_closed = interval.upper_closed;
+            }
+            _ => merged.push(interval),
+        }
+    }
+    merged
+}
+
 /// Isolate the real roots of a univariate polynomial `expr` in `var`: disjoint
 /// half-open intervals (ascending), each **Sturm-certified** to contain exactly one
 /// real root (multiplicity collapsed). `Some(vec![])` if there are no real roots;
@@ -4361,6 +4550,32 @@ mod tests {
             &((sqrt3.clone() - CasExpr::int(1)) * (sqrt3 + CasExpr::int(1))),
             &CasExpr::int(2),
         );
+    }
+
+    #[test]
+    fn polynomial_inequalities() {
+        let x = || v("x");
+        let ig = Rational::integer;
+        // x² − 5x + 6 > 0  ⇒  (−∞, 2) ∪ (3, ∞).
+        let p = x().pow(2) - CasExpr::int(5) * x() + CasExpr::int(6);
+        let gt = solve_polynomial_inequality(&p, "x", InequalityOp::Greater).unwrap();
+        assert_eq!(gt.len(), 2);
+        assert_eq!(gt[0], RealInterval { lower: None, lower_closed: false, upper: Some(ig(2)), upper_closed: false });
+        assert_eq!(gt[1], RealInterval { lower: Some(ig(3)), lower_closed: false, upper: None, upper_closed: false });
+        // x² − 5x + 6 ≤ 0  ⇒  [2, 3].
+        let le = solve_polynomial_inequality(&p, "x", InequalityOp::LessEqual).unwrap();
+        assert_eq!(le, vec![RealInterval { lower: Some(ig(2)), lower_closed: true, upper: Some(ig(3)), upper_closed: true }]);
+        // x² + 1 > 0  ⇒  all reals (no real roots, positive everywhere).
+        let all = solve_polynomial_inequality(&(x().pow(2) + CasExpr::int(1)), "x", InequalityOp::Greater).unwrap();
+        assert_eq!(all, vec![RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false }]);
+        // x² + 1 < 0  ⇒  empty.
+        assert!(solve_polynomial_inequality(&(x().pow(2) + CasExpr::int(1)), "x", InequalityOp::Less).unwrap().is_empty());
+        // (x−1)² ≥ 0  ⇒  all reals (double root included, both sides positive).
+        let sq = x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1);
+        let ge = solve_polynomial_inequality(&sq, "x", InequalityOp::GreaterEqual).unwrap();
+        assert_eq!(ge, vec![RealInterval { lower: None, lower_closed: false, upper: None, upper_closed: false }]);
+        // An irrational-root polynomial (x² − 2 > 0) declines (endpoints ±√2).
+        assert!(solve_polynomial_inequality(&(x().pow(2) - CasExpr::int(2)), "x", InequalityOp::Greater).is_none());
     }
 
     #[test]
