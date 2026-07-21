@@ -3641,6 +3641,215 @@ pub fn linear_ode_system(matrix: &Matrix, initial: &Matrix, t: &str) -> Option<M
     Matrix::from_rows(rows)
 }
 
+/// The **Jordan canonical form** of a square rational matrix all of whose
+/// eigenvalues are rational: returns `(P, J)` with `J` block-diagonal in Jordan
+/// blocks (eigenvalue on the diagonal, `1`s on the super-diagonal) and `A = P·J·P⁻¹`.
+///
+/// **Certified** by re-multiplication: every entry of `A·P − P·J` is proven zero
+/// by the zero-test. Handles **defective** matrices (fewer eigenvectors than the
+/// algebraic multiplicity) via generalized-eigenvector chains built from the
+/// nullities of `(A−λI)^k`. Returns `None` if `A` is not square, has any
+/// irrational/complex eigenvalue (Jordan over ℚ requires a fully rational
+/// spectrum), or on overflow — never an uncertified result.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, Matrix, jordan_form, equal, ZeroTest};
+/// // A defective shear [[3,1],[0,3]] is its own Jordan form (one 2×2 block).
+/// let a = Matrix::from_rows(vec![
+///     vec![CasExpr::int(3), CasExpr::int(1)],
+///     vec![CasExpr::zero(), CasExpr::int(3)],
+/// ]).unwrap();
+/// let (_p, j) = jordan_form(&a, "L").unwrap();
+/// // J[0][1] = 1 (the super-diagonal of the single Jordan block).
+/// assert!(matches!(equal(j.get(0, 1).unwrap(), &CasExpr::int(1)), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn jordan_form(matrix: &Matrix, var: &str) -> Option<(Matrix, Matrix)> {
+    let n = matrix.rows();
+    if n == 0 || n != matrix.cols() {
+        return None;
+    }
+    let eigenvalues = rational_eigenvalues_with_multiplicity(matrix, var)?;
+    let total: usize = eigenvalues.iter().map(|(_, m)| *m).sum();
+    if total != n {
+        return None; // some eigenvalue is irrational/complex — no ℚ Jordan form
+    }
+    let mut columns: Vec<Matrix> = Vec::new(); // P columns, eigenvector-first per block
+    let mut blocks: Vec<(Rational, usize)> = Vec::new(); // (eigenvalue, block size)
+    for (lambda, alg_mult) in eigenvalues {
+        let shift = scalar_matrix(lambda, n)?; // λ·I
+        let bmat = matrix.sub(&shift)?; // B = A − λI
+        // Null-space bases `nulls[k]` = ker(B^k), until nullity reaches alg_mult.
+        let mut nulls: Vec<Vec<Matrix>> = vec![Vec::new()]; // ker(B^0) = {0}
+        let mut power = 1u32;
+        loop {
+            let basis = bmat.pow(power)?.null_space()?;
+            let nullity = basis.len();
+            nulls.push(basis);
+            if nullity >= alg_mult {
+                break;
+            }
+            power += 1;
+            if power as usize > n {
+                return None; // safety: nullity failed to reach the algebraic multiplicity
+            }
+        }
+        let top_level = nulls.len() - 1; // largest null level
+        let mut chains: Vec<Vec<Matrix>> = Vec::new(); // each chain: [top, B·top, …, eigenvector]
+        for ell in (1..=top_level).rev() {
+            // Spanning set S = ker(B^{ℓ−1}) ∪ {descending images of longer chains at
+            // null-level ℓ}. New chain tops are the ker(B^ℓ) vectors independent of S.
+            let mut spanning: Vec<Matrix> = nulls[ell - 1].clone();
+            for chain in &chains {
+                if chain.len() > ell {
+                    spanning.push(chain[chain.len() - ell].clone()); // B^{L−ℓ}·top, null-level ℓ
+                }
+            }
+            for candidate in &nulls[ell] {
+                if columns_independent(&spanning, candidate)? {
+                    // Build the chain top → eigenvector: [v, Bv, …, B^{ℓ−1}v].
+                    let mut chain = Vec::with_capacity(ell);
+                    let mut current = candidate.clone();
+                    for _ in 0..ell {
+                        chain.push(current.clone());
+                        current = bmat.mul(&current)?;
+                    }
+                    spanning.push(candidate.clone());
+                    chains.push(chain);
+                }
+            }
+        }
+        for chain in chains {
+            let size = chain.len();
+            for vector in chain.iter().rev() {
+                columns.push(vector.clone());
+            }
+            blocks.push((lambda, size));
+        }
+    }
+    if columns.len() != n {
+        return None;
+    }
+    let p = matrix_from_columns(&columns)?;
+    let j = jordan_block_matrix(&blocks, n)?;
+    // Certificate: A·P = P·J.
+    let left = matrix.mul(&p)?;
+    let right = p.mul(&j)?;
+    for i in 0..n {
+        for col in 0..n {
+            if !matches!(
+                equal(left.get(i, col)?, right.get(i, col)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    Some((p, j))
+}
+
+/// The rational eigenvalues of a square rational matrix, each with its algebraic
+/// multiplicity (its multiplicity as a root of the characteristic polynomial),
+/// found by peeling rational linear factors. `None` if the characteristic
+/// polynomial is unavailable or on overflow.
+fn rational_eigenvalues_with_multiplicity(
+    matrix: &Matrix,
+    var: &str,
+) -> Option<Vec<(Rational, usize)>> {
+    let char_poly = characteristic_polynomial(matrix, var)?;
+    let mut remaining = poly::rat_trim(normalize(&char_poly)?.to_univariate(var)?);
+    let mut out: Vec<(Rational, usize)> = Vec::new();
+    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
+        let Some(&root) = ratint::rational_roots(&remaining)?.first() else {
+            break; // remaining factor has no rational root
+        };
+        let divisor = [root.checked_neg()?, Rational::integer(1)]; // x − root
+        let mut multiplicity = 0usize;
+        while poly::rat_degree(&remaining).unwrap_or(0) >= 1
+            && poly::eval_rat_poly(&remaining, root)?.is_zero()
+        {
+            remaining = poly::rat_exact_div(&remaining, &divisor)?;
+            multiplicity += 1;
+        }
+        out.push((root, multiplicity));
+    }
+    Some(out)
+}
+
+/// The scalar matrix `c·Iₙ` as a rational-constant [`Matrix`].
+fn scalar_matrix(c: Rational, n: usize) -> Option<Matrix> {
+    let rows: Vec<Vec<CasExpr>> = (0..n)
+        .map(|i| {
+            (0..n)
+                .map(|j| {
+                    if i == j {
+                        CasExpr::Const(c)
+                    } else {
+                        CasExpr::zero()
+                    }
+                })
+                .collect()
+        })
+        .collect();
+    Matrix::from_rows(rows)
+}
+
+/// Assemble a matrix from its column vectors (each a `dim × 1` [`Matrix`]). The
+/// row dimension is the vectors' length, **not** the number of columns.
+fn matrix_from_columns(columns: &[Matrix]) -> Option<Matrix> {
+    let dim = columns.first()?.rows();
+    let rows: Vec<Vec<CasExpr>> = (0..dim)
+        .map(|i| {
+            columns
+                .iter()
+                .map(|col| col.get(i, 0).cloned())
+                .collect::<Option<_>>()
+        })
+        .collect::<Option<_>>()?;
+    Matrix::from_rows(rows)
+}
+
+/// The block-diagonal Jordan matrix from a list of `(eigenvalue, block size)`
+/// blocks (in column order): each block has the eigenvalue on the diagonal and
+/// `1`s on the super-diagonal.
+fn jordan_block_matrix(blocks: &[(Rational, usize)], n: usize) -> Option<Matrix> {
+    let mut data = vec![vec![CasExpr::zero(); n]; n];
+    let mut offset = 0;
+    for &(lambda, size) in blocks {
+        for i in 0..size {
+            data[offset + i][offset + i] = CasExpr::Const(lambda);
+            if i + 1 < size {
+                data[offset + i][offset + i + 1] = CasExpr::one();
+            }
+        }
+        offset += size;
+    }
+    if offset != n {
+        return None;
+    }
+    Matrix::from_rows(data)
+}
+
+/// Whether the column vector `candidate` is linearly independent of the columns in
+/// `spanning` (all `n × 1` rational-constant [`Matrix`] vectors): true iff adding
+/// it raises the rank. `None` on a non-constant entry or overflow.
+fn columns_independent(spanning: &[Matrix], candidate: &Matrix) -> Option<bool> {
+    let n = candidate.rows();
+    let with: Vec<Matrix> = spanning
+        .iter()
+        .cloned()
+        .chain(std::iter::once(candidate.clone()))
+        .collect();
+    let rank_without = if spanning.is_empty() {
+        0
+    } else {
+        matrix_rank(&matrix_from_columns(spanning)?)?
+    };
+    let _ = n;
+    let rank_with = matrix_rank(&matrix_from_columns(&with)?)?;
+    Some(rank_with > rank_without)
+}
+
 /// A square rational-constant matrix as an exact rational grid, or `None` if any
 /// entry is not a bare [`CasExpr::Const`].
 fn matrix_to_rationals(matrix: &Matrix) -> Option<Vec<Vec<Rational>>> {
@@ -7619,6 +7828,46 @@ mod tests {
                 &(CasExpr::int(3) * v.get(i, 0).unwrap().clone()),
             );
         }
+    }
+
+    #[test]
+    fn jordan_form_of_defective_and_diagonalizable_matrices() {
+        let int_matrix =
+            |rows: &[&[i128]]| Matrix::from_rows(
+                rows.iter()
+                    .map(|r| r.iter().map(|&x| CasExpr::int(x)).collect())
+                    .collect(),
+            )
+            .unwrap();
+        // Every case is validated by the defining similarity A·P = P·J.
+        let check = |a: &Matrix, expect_super: &[(usize, usize)]| {
+            let (p, j) = jordan_form(a, "L").expect("rational spectrum");
+            let n = a.rows();
+            let ap = a.mul(&p).unwrap();
+            let pj = p.mul(&j).unwrap();
+            for i in 0..n {
+                for c in 0..n {
+                    assert_equal(ap.get(i, c).unwrap(), pj.get(i, c).unwrap());
+                }
+            }
+            // The expected super-diagonal 1s (Jordan block couplings).
+            for &(i, jc) in expect_super {
+                assert_equal(j.get(i, jc).unwrap(), &CasExpr::int(1));
+            }
+        };
+        // Defective shear: one 2×2 block (super-diagonal 1 at (0,1)).
+        check(&int_matrix(&[&[3, 1], &[0, 3]]), &[(0, 1)]);
+        // Diagonalizable: no super-diagonal 1s.
+        check(&int_matrix(&[&[2, 0], &[0, 3]]), &[]);
+        // 3×3 single Jordan block (super-diagonal 1s at (0,1),(1,2)).
+        check(&int_matrix(&[&[2, 1, 0], &[0, 2, 1], &[0, 0, 2]]), &[(0, 1), (1, 2)]);
+        // Defective with two 2×2 blocks for eigenvalue 2.
+        check(
+            &int_matrix(&[&[2, 1, 0, 0], &[0, 2, 0, 0], &[0, 0, 2, 1], &[0, 0, 0, 2]]),
+            &[(0, 1), (2, 3)],
+        );
+        // An irrational-spectrum matrix ([[0,1],[-1,0]], eigenvalues ±i) is declined.
+        assert!(jordan_form(&int_matrix(&[&[0, 1], &[-1, 0]]), "L").is_none());
     }
 
     #[test]
