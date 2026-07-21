@@ -1388,6 +1388,50 @@ pub fn poly_gcd(a: &CasExpr, b: &CasExpr, var: &str) -> Option<CasExpr> {
     Some(MultiPoly::from_univariate(var, &g).to_expr())
 }
 
+/// The monic least common multiple `lcm(a, b) = a·b / gcd(a, b)` of two univariate
+/// polynomials in `var`. `None` if either is not a univariate polynomial, either is
+/// zero, or on overflow.
+#[must_use]
+pub fn poly_lcm(a: &CasExpr, b: &CasExpr, var: &str) -> Option<CasExpr> {
+    let ca = normalize(a)?.to_univariate(var)?;
+    let cb = normalize(b)?.to_univariate(var)?;
+    if ratint::is_zero(&ca) || ratint::is_zero(&cb) {
+        return None;
+    }
+    let bound = ca.len() + cb.len() + 4;
+    let gcd = poly::rat_gcd(&ca, &cb, bound)?;
+    let product = poly::ratpoly_mul(&ca, &cb)?;
+    let lcm = poly::rat_exact_div(&product, &gcd)?;
+    // Make monic.
+    let degree = poly::rat_degree(&lcm)?;
+    let leading = lcm[degree];
+    let monic: Vec<Rational> = lcm
+        .iter()
+        .map(|c| c.checked_div(leading))
+        .collect::<Option<_>>()?;
+    Some(MultiPoly::from_univariate(var, &monic).to_expr())
+}
+
+/// Whether a univariate polynomial `expr` in `var` is **irreducible over ℚ** (degree
+/// ≥ 1 and not a product of two non-constant rational polynomials). `None` if `expr`
+/// is not a univariate polynomial in `var` or on overflow.
+#[must_use]
+pub fn is_irreducible(expr: &CasExpr, var: &str) -> Option<bool> {
+    let coeffs = univariate_coeffs(expr, var)?;
+    let degree = poly::rat_degree(&coeffs)?;
+    if degree == 0 {
+        return Some(false); // a nonzero constant is a unit, not irreducible
+    }
+    // Irreducible iff its factorization over ℚ is a single degree-`degree` factor.
+    let factors = factor_univariate_over_q(&coeffs)?;
+    let total_multiplicity: u32 = factors
+        .iter()
+        .filter(|(f, _)| poly::rat_degree(f).unwrap_or(0) >= 1)
+        .map(|(_, m)| *m)
+        .sum();
+    Some(total_multiplicity == 1)
+}
+
 /// Polynomial division of univariate polynomials: returns `(quotient, remainder)`
 /// with `a = quotient·b + remainder` and `deg remainder < deg b`. `None` if either
 /// side is not a univariate polynomial in `var`, `b = 0`, or on overflow.
@@ -5776,6 +5820,26 @@ mod tests {
         assert_equal(&coeff(&p, "x", 1).unwrap(), &CasExpr::int(-5));
         assert_equal(&coeff(&p, "x", 0).unwrap(), &CasExpr::int(7));
         assert_equal(&coeff(&p, "x", 5).unwrap(), &CasExpr::zero());
+    }
+
+    #[test]
+    fn polynomial_lcm_and_irreducibility() {
+        let x = || v("x");
+        // lcm(x²−1, x²−2x+1) = (x−1)(x+1)(x−1)/gcd... = (x−1)²(x+1)/(x−1) monic
+        // Actually lcm((x-1)(x+1), (x-1)²) = (x-1)²(x+1) = x³−x²−x+1.
+        assert_equal(
+            &poly_lcm(&(x().pow(2) - CasExpr::int(1)), &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)), "x").unwrap(),
+            &(x().pow(3) - x().pow(2) - x() + CasExpr::int(1)),
+        );
+        // Irreducibility over ℚ: x²+1 and x²−2 irreducible; x²−1 reducible.
+        assert_eq!(is_irreducible(&(x().pow(2) + CasExpr::int(1)), "x"), Some(true));
+        assert_eq!(is_irreducible(&(x().pow(2) - CasExpr::int(2)), "x"), Some(true));
+        assert_eq!(is_irreducible(&(x().pow(2) - CasExpr::int(1)), "x"), Some(false));
+        // Swinnerton–Dyer quartic x⁴−10x²+1 is irreducible over ℚ.
+        assert_eq!(
+            is_irreducible(&(x().pow(4) - CasExpr::int(10) * x().pow(2) + CasExpr::int(1)), "x"),
+            Some(true),
+        );
     }
 
     #[test]
