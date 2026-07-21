@@ -260,12 +260,17 @@ all three QF_NIA Alethe proofs as 2,916--8,082-byte modules through the existing
 EUF consumer. The QF_NIA proofs contain only congruence and resolution rules and
 finish in about 0.10 seconds each below 9.5 MiB peak RSS; source-syntax routing
 had incorrectly selected `la_generic`. Both BV alternation rows enter existing
-reconstruction and build 8,524/13,824-command tails but miss a 30-second outer
-bound before a final module; the conjunctive row also times out without a
-completed stage. The measured split is therefore five dispatch/plumbing wins
-and three quantified-BV proof-size/export-cost cases, not eight missing Lean
-fragments. The dominance denominator remains unchanged until a production
-evidence-aware path and the required official-Lean tier consume these artifacts.
+reconstruction and build 8,524/13,824-command tails, but phase telemetry
+separates their failures: `bug802` exceeds a hard 4 GiB cap during scoped kernel
+closure, whereas `small-pipeline-fixpoint-3` closes in 7.744 seconds below
+600 MiB and then misses the 30-second bound before module spooling. The
+conjunctive row emits a 15,705-command residual by 2.607 seconds but does not
+finish CPS tail reconstruction inside 30 seconds, below 525 MiB RSS. The
+measured split is therefore five dispatch/plumbing wins and three
+mechanism-specific quantified-BV export-cost cases, not eight missing Lean
+fragments or one common renderer defect. The dominance denominator remains
+unchanged until a production evidence-aware path and the required official-Lean
+tier consume these artifacts.
 
 The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
 is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
@@ -391,10 +396,11 @@ reported as parity before it climbs the measured and certifying rungs.
    the four stale QF_SEQ source-invalid DRAT credits as the first bounded
    `source-side-channel-not-serialized` case. Independently prototype direct
    Lean reconstruction from selected evidence. The prototype already routes
-   five of eight rows through existing consumers; measure the remaining three
-   quantified-BV cost cases before choosing a production evidence-aware
-   dispatch boundary. Add no theorem family unless selected-certificate reuse
-   demonstrably declines.
+   five of eight rows through existing consumers. Treat the remaining three as
+   separate kernel-closure, compact-spooling, and CPS-reconstruction cost lanes
+   under the existing 4 GiB/30-second bounds before choosing a production
+   evidence-aware dispatch boundary. Add no theorem family unless selected-
+   certificate reuse demonstrably declines.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.

@@ -543,9 +543,12 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
 - Proof-assistant interop: Alethe→Lean reconstruction is the
   [Track 3 capstone](../../../docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md).
   The bounded selected-evidence prototype now routes five of eight measured
-  reconstruction-only rows through existing consumers; the next boundary is
-  evidence-aware production dispatch plus bounded cost/external-Lean telemetry
-  for the three remaining quantified-BV rows, not a new theorem family.
+  reconstruction-only rows through existing consumers. The remaining three are
+  measured as separate scoped-kernel-closure (>4 GiB), post-closure compact-
+  spooling (<600 MiB), and CPS-tail-reconstruction (<525 MiB) cost lanes under a
+  30-second bound. The next boundary is evidence-aware production dispatch plus
+  mechanism-specific profiling under the existing hard cap, not a new theorem
+  family or a larger memory allowance.
 - **Newly scoped categorical engines** (the honest remaining gap vs Z3): CHC/Horn
   PDR ([P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md)),
   Craig interpolation ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md)),

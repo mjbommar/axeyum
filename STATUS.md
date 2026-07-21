@@ -372,16 +372,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   selected certificates and three QF_NIA Alethe proofs should be consumed
   directly by a bounded Lean prototype before any new theorem family is added.
   The first selected-evidence prototype now closes two BV rows directly (15 KB
-  closed-universal and 18.5 MB paired-existential modules); two alternation rows
-  build 8,524/13,824-command tails but miss a 30-second outer bound, and the
-  conjunctive row times out without a completed stage. The three QF_NIA proof
+  closed-universal and 18.5 MB paired-existential modules). Phase telemetry now
+  separates the three remaining BV rows: `bug802` exceeds a hard 4 GiB cap in
+  scoped kernel closure after its 8,524-command tail; `small-pipeline-fixpoint-3`
+  closes the kernel in 7.744 seconds below 600 MiB, then misses 30 seconds before
+  module spooling; and `cond-var-elim-binary` emits a 15,705-command residual by
+  2.607 seconds below 525 MiB, then misses 30 seconds in CPS tail reconstruction.
+  The three QF_NIA proof
   objects now also reconstruct directly through the existing EUF consumer:
   6/15-command congruence+resolution proofs produce 2,916/8,082-byte modules in
   about 0.10 seconds below 9.5 MiB RSS. Their prior `la_generic` failures were
   source-syntax route misclassification, not missing arithmetic proof theory.
-  Five of eight diagnostic rows are existing-consumer plumbing wins; measure
-  proof-size/RSS/kernel-term/external-Lean cost on the remaining three BV cases
-  before selecting a production evidence-aware dispatch boundary.
+  Five of eight diagnostic rows are existing-consumer plumbing wins. Profile
+  the three distinct kernel-closure, compact-spooling, and CPS-reconstruction
+  mechanisms under the existing 4 GiB/30-second bounds before selecting a
+  production evidence-aware dispatch boundary; do not raise the cap or add a
+  theorem family.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
@@ -6223,6 +6229,16 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-21 — Classified the three quantified-BV Lean export costs.** Opt-in
+  phase telemetry leaves proof semantics and default output unchanged. Under a
+  30-second wall bound, `bug802` builds its 8,524-command tail and then exceeds
+  a hard 4 GiB cap in scoped kernel closure; `small-pipeline-fixpoint-3` closes
+  its 13,824-command proof in 7.744 seconds below 600 MiB but does not spool a
+  module; and `cond-var-elim-binary` emits 15,705 commands by 2.607 seconds below
+  525 MiB but does not finish CPS reconstruction. This rejects a single renderer
+  fix and preserves the production denominator pending mechanism-specific work,
+  evidence-aware dispatch, and official-Lean checking.
+
 - **2026-07-21 — Prototyped Lean reconstruction from selected evidence.** The
   exact eight reconstruction gaps split into five existing-consumer plumbing
   wins and three bounded quantified-BV cost cases. Two quantified-BV selected
@@ -6231,9 +6247,9 @@ plan is built and committed on the current branch:
   the existing EUF reconstructor, producing 2.9--8.1 KB modules in about 0.10 s
   below 9.5 MiB RSS; query-only source classification had incorrectly selected
   `la_generic`. Two BV alternation rows and one conjunctive row remain bounded
-  size/render diagnostics. The durable probe and result note preserve the
-  30-second per-row protocol; production credit still requires evidence-aware
-  dispatch plus the official-Lean tier.
+  mechanism-specific cost diagnostics. The durable probe and result note
+  preserve the 30-second per-row protocol; production credit still requires
+  evidence-aware dispatch plus the official-Lean tier.
 
 - **2026-07-21 — Refreshed the complete bare-UNSAT population under audit v2.**
   Corrected the v1 vacuous-check accounting in the artifacts themselves,

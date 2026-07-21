@@ -32,8 +32,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   fingerprints, and the gate for selecting actual proof mechanisms.
 - [`lean-selected-evidence-prototype-2026-07-21.md`](lean-selected-evidence-prototype-2026-07-21.md) —
   bounded eight-row prototype showing five direct existing-consumer successes
-  (including all three QF_NIA Alethe proofs through EUF) and three remaining
-  quantified-BV large-module/timeout cases.
+  (including all three QF_NIA Alethe proofs through EUF) and three distinct
+  quantified-BV kernel-closure, compact-spooling, and CPS-reconstruction cost
+  cases measured under hard wall/memory bounds.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map

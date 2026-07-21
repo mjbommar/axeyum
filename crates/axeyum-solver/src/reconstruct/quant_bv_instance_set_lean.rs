@@ -111,6 +111,25 @@ fn decline(detail: impl Into<String>) -> ReconstructError {
     }
 }
 
+fn trace_reconstruction(
+    route: &str,
+    stage: &str,
+    started: std::time::Instant,
+    count: Option<usize>,
+) {
+    if std::env::var_os("AXEYUM_LEAN_RECON_TRACE").is_none() {
+        return;
+    }
+    let elapsed_ms = started.elapsed().as_secs_f64() * 1_000.0;
+    if let Some(count) = count {
+        eprintln!(
+            "AXEYUM_LEAN_RECON_TRACE|route={route}|stage={stage}|elapsed_ms={elapsed_ms:.3}|count={count}"
+        );
+    } else {
+        eprintln!("AXEYUM_LEAN_RECON_TRACE|route={route}|stage={stage}|elapsed_ms={elapsed_ms:.3}");
+    }
+}
+
 fn c(name: impl Into<String>) -> AletheTerm {
     AletheTerm::Const(name.into())
 }
@@ -1410,6 +1429,7 @@ fn refute_alternation_exists_suffix(
     antecedent: TermId,
     consequent: TermId,
     outer_bindings: &[(SymbolId, Value)],
+    started: std::time::Instant,
     scoped_binders: &mut Vec<(ExprId, u64)>,
     index: usize,
     major: ExprId,
@@ -1429,10 +1449,19 @@ fn refute_alternation_exists_suffix(
                 .ok_or_else(|| decline("alternation residual emitter declined"))?;
         ctx.bridge = Some(gate_defs);
         ctx.gate_memo.clear();
-        eprintln!("alternation tail start {} commands", commands.len());
-        let started = std::time::Instant::now();
+        trace_reconstruction(
+            "bv-alternation",
+            "tail-reconstruct-start",
+            started,
+            Some(commands.len()),
+        );
         let proof = reconstruct_gate_tail_with_local_lets(ctx, &commands, &[consequent_proof]);
-        eprintln!("alternation tail end {:?}", started.elapsed());
+        trace_reconstruction(
+            "bv-alternation",
+            "tail-reconstruct-end",
+            started,
+            Some(commands.len()),
+        );
         return proof;
     };
     let binder = layer.binder;
@@ -1466,6 +1495,7 @@ fn refute_alternation_exists_suffix(
         antecedent,
         consequent,
         outer_bindings,
+        started,
         scoped_binders,
         index + 1,
         hypothesis,
@@ -3216,11 +3246,13 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
     certificate: &BvAlternationCounterexampleCertificate,
 ) -> Result<String, ReconstructError> {
     let started = std::time::Instant::now();
+    trace_reconstruction("bv-alternation", "start", started, None);
     if !check_bv_alternation_counterexample(arena, assertions, certificate)
         .map_err(|error| decline(format!("certificate replay failed: {error}")))?
     {
         return Err(decline("invalid ADR-0124/0125 certificate"));
     }
+    trace_reconstruction("bv-alternation", "certificate-checked", started, None);
     let admitted = crate::quant_bv_alternation_cert::admitted_alternation(
         arena,
         certificate.assertion,
@@ -3259,7 +3291,7 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         *antecedent,
         *consequent,
     )?;
-    eprintln!("alternation stage source {:?}", started.elapsed());
+    trace_reconstruction("bv-alternation", "source-built", started, None);
     let source = fresh_axiom(&mut ctx, proposition, "bv-alternation-source")?;
     let mut instantiated = source;
     for (&binder, (carried, value)) in admitted.outer.iter().zip(&certificate.outer_bindings) {
@@ -3291,6 +3323,7 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
         *antecedent,
         *consequent,
         &certificate.outer_bindings,
+        started,
         &mut scoped_binders,
         0,
         instantiated,
@@ -3310,7 +3343,7 @@ fn reconstruct_bv_alternation_counterexample_to_lean_module_impl(
             detail: "scoped reconstruction did not infer to False".to_owned(),
         });
     }
-    eprintln!("alternation stage reconstruct {:?}", started.elapsed());
+    trace_reconstruction("bv-alternation", "kernel-closed", started, None);
     finish_bv_alternation_module(ctx, proof, started)
 }
 
@@ -3330,14 +3363,17 @@ fn finish_bv_alternation_module(
     inductives.push(ctx.prelude.bool_);
 
     let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
-    eprintln!("alternation stage spool {:?}", started.elapsed());
+    let spool_bytes = std::fs::metadata(&spool.path)
+        .ok()
+        .and_then(|metadata| usize::try_from(metadata.len()).ok());
+    trace_reconstruction("bv-alternation", "module-spooled", started, spool_bytes);
 
     ctx.kernel.release_transient_tables_for_export();
     drop(ctx);
     let module = spool
         .read_to_string()
         .map_err(|error| decline(format!("failed to read Lean module spool: {error}")))?;
-    eprintln!("alternation stage render {:?}", started.elapsed());
+    trace_reconstruction("bv-alternation", "module-read", started, Some(module.len()));
     Ok(module)
 }
 
@@ -3559,11 +3595,14 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
     assertions: &[TermId],
     certificate: &BvConjunctiveUniversalInstanceCertificate,
 ) -> Result<String, ReconstructError> {
+    let started = std::time::Instant::now();
+    trace_reconstruction("bv-conjunctive", "start", started, None);
     if !check_bv_conjunctive_universal_instance(arena, assertions, certificate)
         .map_err(|error| decline(format!("certificate replay failed: {error}")))?
     {
         return Err(decline("invalid ADR-0127 certificate"));
     }
+    trace_reconstruction("bv-conjunctive", "certificate-checked", started, None);
     let admitted = crate::quant_bv_conjunctive_cert::admitted_conjunctive_universal(
         arena,
         certificate.assertion,
@@ -3590,6 +3629,7 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
     else {
         return Err(decline("certificate does not rebuild"));
     };
+    trace_reconstruction("bv-conjunctive", "residual-rebuilt", started, None);
 
     let mut ctx = ReconstructCtx::new();
     ctx.bridge = Some(BTreeMap::new());
@@ -3610,6 +3650,12 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
         &source,
         &mut source_assumptions,
     )?;
+    trace_reconstruction(
+        "bv-conjunctive",
+        "source-assumptions-built",
+        started,
+        Some(source_assumptions.len()),
+    );
 
     let mut assumptions = Vec::with_capacity(source_assumptions.len());
     let mut tail_terms = Vec::with_capacity(source_assumptions.len());
@@ -3636,16 +3682,29 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
     let (commands, gate_defs) =
         crate::qfbv_alethe::prove_bit_gate_unsat_alethe(&formulas, definitions)
             .ok_or_else(|| decline("propositional residual emitter declined"))?;
+    trace_reconstruction(
+        "bv-conjunctive",
+        "tail-emitted",
+        started,
+        Some(commands.len()),
+    );
     ctx.bridge = Some(gate_defs);
     ctx.gate_memo.clear();
     ctx.defer_open_step_checks = true;
     ctx.closed_aliases.cps_clauses = true;
     ctx.begin_global_gate_prop_aliases();
     let proof = reconstruct_bitwise_cps_tail(&mut ctx, &commands, &assumptions)?;
+    trace_reconstruction(
+        "bv-conjunctive",
+        "tail-reconstructed",
+        started,
+        Some(commands.len()),
+    );
     ctx.finish_global_gate_prop_aliases()?;
     ctx.closed_aliases.cps_clauses = false;
     ctx.defer_open_step_checks = false;
     require_infers_false(&mut ctx, proof)?;
+    trace_reconstruction("bv-conjunctive", "kernel-closed", started, None);
 
     let false_ = ctx.kernel.const_(ctx.prelude.false_, vec![]);
     let mut inductives = ctx
@@ -3655,11 +3714,17 @@ fn reconstruct_bv_conjunctive_universal_instance_to_lean_module_impl(
         .collect::<Vec<_>>();
     inductives.push(ctx.prelude.bool_);
     let spool = spool_compact_lean_module(&ctx, false_, proof, &inductives)?;
+    let spool_bytes = std::fs::metadata(&spool.path)
+        .ok()
+        .and_then(|metadata| usize::try_from(metadata.len()).ok());
+    trace_reconstruction("bv-conjunctive", "module-spooled", started, spool_bytes);
     ctx.kernel.release_transient_tables_for_export();
     drop(ctx);
-    spool.read_to_string().map_err(|error| {
+    let module = spool.read_to_string().map_err(|error| {
         decline(format!(
             "failed to read conjunctive-instance Lean module spool: {error}"
         ))
-    })
+    })?;
+    trace_reconstruction("bv-conjunctive", "module-read", started, Some(module.len()));
+    Ok(module)
 }
