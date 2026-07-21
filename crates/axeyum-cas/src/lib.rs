@@ -3281,6 +3281,59 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Rewrite trigonometric heads via **Euler's formula** into complex exponentials:
+/// `cos(u) → (e^{iu} + e^{−iu})/2`, `sin(u) → (e^{iu} − e^{−iu})/(2i)`,
+/// `tan(u) → sin/cos`, throughout an expression (`i` is the reserved imaginary
+/// unit). Combined with the exp tower and the `i² = −1` fold in the zero-test, this
+/// turns **all polynomial trigonometric identities decidable**: comparing the
+/// exponential rewrites of two sides via [`equal`] certifies double-angle,
+/// sum/difference, product-to-sum, and power-reduction identities.
+///
+/// This is a sound, denotation-preserving rewrite (Euler's formula is an identity).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, rewrite_exp, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // cos(2x) = 2cos²x − 1, decided after the Euler rewrite.
+/// let lhs = rewrite_exp(&(CasExpr::int(2) * x.clone()).cos());
+/// let rhs = rewrite_exp(&(CasExpr::int(2) * x.clone().cos().pow(2) - CasExpr::int(1)));
+/// assert!(matches!(equal(&lhs, &rhs), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn rewrite_exp(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Cos, arg) => {
+            let u = rewrite_exp(arg);
+            let i = CasExpr::imaginary_unit();
+            let plus = (i.clone() * u.clone()).exp();
+            let minus = (-(i * u)).exp();
+            (plus + minus) / CasExpr::int(2)
+        }
+        CasExpr::Unary(UnaryFunc::Sin, arg) => {
+            let u = rewrite_exp(arg);
+            let i = CasExpr::imaginary_unit();
+            let plus = (i.clone() * u.clone()).exp();
+            let minus = (-(i.clone() * u)).exp();
+            (plus - minus) / (CasExpr::int(2) * i)
+        }
+        CasExpr::Unary(UnaryFunc::Tan, arg) => {
+            let sin = rewrite_exp(&CasExpr::Unary(UnaryFunc::Sin, arg.clone()));
+            let cos = rewrite_exp(&CasExpr::Unary(UnaryFunc::Cos, arg.clone()));
+            sin / cos
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(rewrite_exp(arg))),
+        CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(rewrite_exp).collect()),
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(rewrite_exp).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(rewrite_exp(inner))),
+        CasExpr::Div(numerator, denominator) => CasExpr::Div(
+            Box::new(rewrite_exp(numerator)),
+            Box::new(rewrite_exp(denominator)),
+        ),
+        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(rewrite_exp(base)), *exponent),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// Expand logarithms by the product/quotient/power rules: `ln(a·b) → ln a + ln b`,
 /// `ln(a/b) → ln a − ln b`, `ln(aⁿ) → n·ln a`, applied recursively throughout an
 /// expression (and inside the arguments of other heads).
@@ -5106,6 +5159,43 @@ mod tests {
         );
         // A bare ln is untouched.
         assert_equal(&expand_log(&x().ln()), &x().ln());
+    }
+
+    #[test]
+    fn trig_identities_via_euler() {
+        let x = || v("x");
+        let y = || v("y");
+        // Compare the Euler rewrites of the two sides; the exp tower + I²=−1 decide.
+        let holds = |a: CasExpr, b: CasExpr| {
+            matches!(
+                equal(&rewrite_exp(&a), &rewrite_exp(&b)),
+                ZeroTest::Certified { equal: true, .. }
+            )
+        };
+        // Double angle: cos(2x) = 2cos²x − 1 = 1 − 2sin²x.
+        assert!(holds((CasExpr::int(2) * x()).cos(), CasExpr::int(2) * x().cos().pow(2) - CasExpr::int(1)));
+        assert!(holds((CasExpr::int(2) * x()).cos(), CasExpr::int(1) - CasExpr::int(2) * x().sin().pow(2)));
+        // sin(2x) = 2 sin x cos x.
+        assert!(holds((CasExpr::int(2) * x()).sin(), CasExpr::int(2) * x().sin() * x().cos()));
+        // Pythagorean (already known, but via Euler too): sin²x + cos²x = 1.
+        assert!(holds(x().sin().pow(2) + x().cos().pow(2), CasExpr::int(1)));
+        // Angle-sum: cos(x+y) = cos x cos y − sin x sin y.
+        assert!(holds(
+            (x() + y()).cos(),
+            x().cos() * y().cos() - x().sin() * y().sin(),
+        ));
+        // sin(x+y) = sin x cos y + cos x sin y.
+        assert!(holds(
+            (x() + y()).sin(),
+            x().sin() * y().cos() + x().cos() * y().sin(),
+        ));
+        // Power reduction: sin²x = (1 − cos 2x)/2.
+        assert!(holds(
+            x().sin().pow(2),
+            (CasExpr::int(1) - (CasExpr::int(2) * x()).cos()) / CasExpr::int(2),
+        ));
+        // A NON-identity is not falsely certified: cos(2x) ≠ 2cos²x.
+        assert!(!holds((CasExpr::int(2) * x()).cos(), CasExpr::int(2) * x().cos().pow(2)));
     }
 
     #[test]
