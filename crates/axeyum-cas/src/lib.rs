@@ -1349,8 +1349,48 @@ impl ZeroTest {
 /// `witness` is the cross-multiplied numerator `a·d − c·b` in canonical form,
 /// which is re-checkable independently. Overflow of exact `i128` rational
 /// arithmetic yields [`ZeroTest::Unknown`], never a wrong answer.
+///
+/// # Trigonometric soundness (Euler fallback)
+///
+/// The core test treats each transcendental head (`sin x`, `cos x`, `tan x`,
+/// `cos 2x`, …) as an **independent** atom. That is sound for *asserting
+/// equality* (a zero witness means the identity holds for any values of the
+/// atoms), but it would be **unsound for asserting inequality** when the atoms
+/// are secretly related — `tan x = sin x / cos x`, `cos 2x = 2cos²x − 1`, etc.
+/// A naïve nonzero witness in those atoms does not prove `≠`.
+///
+/// So a *non-equal* core result is only trusted after re-checking on the
+/// [`rewrite_exp`] (Euler) canonical form, where every `sin/cos/tan` becomes a
+/// complex exponential and the exp-tower reduces distinct atoms to genuinely
+/// independent ones (ℚ-linearly-independent exponents ⇒ algebraically
+/// independent). `rewrite_exp` is denotation-preserving and the identity on
+/// trig-free input, so trig-free results are unchanged. If the Euler re-check
+/// cannot decide, a bare (possibly relation-blind) inequality is downgraded to
+/// [`ZeroTest::Unknown`] rather than reported as a false certificate.
 #[must_use]
 pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
+    let direct = equal_core(a, b);
+    // A certified equality is already sound (zero witness ⇒ identity holds).
+    if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
+        return direct;
+    }
+    // Otherwise re-check on the Euler canonical form so hidden trig relations
+    // are resolved before we would assert `≠`.
+    match equal_core(&rewrite_exp(a), &rewrite_exp(b)) {
+        certified @ ZeroTest::Certified { .. } => certified,
+        // The Euler form could not decide. Never surface a relation-blind
+        // inequality: downgrade a core `≠` to `Unknown`, else keep `Unknown`.
+        ZeroTest::Unknown => match direct {
+            ZeroTest::Certified { equal: false, .. } => ZeroTest::Unknown,
+            other => other,
+        },
+    }
+}
+
+/// The core cross-multiplication zero-test (no Euler canonicalization). Treats
+/// transcendental heads as independent atoms; see [`equal`] for why the public
+/// entry point re-checks a non-equal result on the [`rewrite_exp`] form.
+fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let (Some(ra), Some(rb)) = (normalize_rational(a), normalize_rational(b)) else {
         return ZeroTest::Unknown;
     };
@@ -5251,10 +5291,11 @@ fn integrate_elementary(expr: &CasExpr, var: &str) -> Option<CasExpr> {
                 - CasExpr::rat(1, 2) * (CasExpr::int(1) + arg_expr.pow(2)).ln();
             Some(scaled_term(k, body))
         }
-        // ∫ tan(u) = -(1/a) ln(cos u) is correct, but the zero-test cannot yet
-        // certify it (it does not fold `tan` into `sin/cos`), so — honoring the
-        // proof-carrying contract — it is declined rather than returned uncertified.
-        // sqrt closed forms are also later slices.
+        // ∫ tan(u) = -(1/a) ln(cos u); certified via the Euler fallback in
+        // `equal` (which folds `tan` into `sin/cos`). The CAS `ln` stands for
+        // the real `ln|·|` on the integrand's domain.
+        UnaryFunc::Tan => build(Rational::integer(-1), arg_expr.cos().ln()),
+        // sqrt closed forms are a later slice.
         _ => None,
     }
 }
@@ -7946,6 +7987,54 @@ mod tests {
             let result = integrate(&integrand, "x").expect("exp·trig integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn integrate_tangent() {
+        let x = || v("x");
+        // ∫ tan x = -ln(cos x); ∫ tan(3x) = -(1/3)ln(cos 3x). Certified via the
+        // Euler fallback in `equal` (which folds tan into sin/cos).
+        for integrand in [x().tan(), (CasExpr::int(3) * x()).tan()] {
+            let result = integrate(&integrand, "x").expect("tangent integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
+    fn equal_is_sound_for_related_trig_atoms() {
+        let x = || v("x");
+        // Regression: the core atom test would report these TRUE identities as
+        // `Certified{equal:false}` (a false proof) because it treats tan/sin/cos
+        // and multiple angles as independent atoms. The Euler fallback fixes it.
+        let identities = [
+            (x().tan(), x().sin() / x().cos()),
+            (
+                (CasExpr::int(2) * x()).cos(),
+                CasExpr::int(2) * x().cos().pow(2) - CasExpr::int(1),
+            ),
+            (
+                (CasExpr::int(2) * x()).sin(),
+                CasExpr::int(2) * x().sin() * x().cos(),
+            ),
+        ];
+        for (a, b) in identities {
+            assert!(
+                matches!(equal(&a, &b), ZeroTest::Certified { equal: true, .. }),
+                "identity not certified equal: {a} = {b}",
+            );
+        }
+        // Genuinely unequal trig expressions must NOT be reported equal (and are
+        // still soundly certified unequal, not silently downgraded).
+        for (a, b) in [
+            (x().tan(), x().sin()),
+            ((CasExpr::int(2) * x()).cos(), x().cos()),
+        ] {
+            assert!(
+                matches!(equal(&a, &b), ZeroTest::Certified { equal: false, .. }),
+                "unequal pair not certified unequal: {a} vs {b}",
+            );
         }
     }
 
