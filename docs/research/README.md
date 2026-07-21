@@ -20,14 +20,15 @@ losing context.
 3. [Automated reasoning foundations](01-foundations/automated-reasoning.md)
 4. [C and C++ solver ecosystem](02-ecosystems/cpp-solver-stack.md)
 5. [Rust ecosystem](02-ecosystems/rust-ecosystem.md)
-6. [System architecture](03-architecture/system-architecture.md)
-7. [Crate boundaries](03-architecture/crate-boundaries.md)
-8. [Foundational logic and math DAG](08-planning/foundational-dag.md)
-9. [Roadmap](08-planning/roadmap.md)
-10. [Phase 3 exit audit](08-planning/phase3-exit-audit.md)
-11. [Phase 4 exit audit](08-planning/phase4-exit-audit.md)
-12. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
-13. [Decision records](09-decisions/README.md)
+6. [Agentic binary-security positioning](02-ecosystems/agentic-binary-security-positioning.md)
+7. [System architecture](03-architecture/system-architecture.md)
+8. [Crate boundaries](03-architecture/crate-boundaries.md)
+9. [Foundational logic and math DAG](08-planning/foundational-dag.md)
+10. [Roadmap](08-planning/roadmap.md)
+11. [Phase 3 exit audit](08-planning/phase3-exit-audit.md)
+12. [Phase 4 exit audit](08-planning/phase4-exit-audit.md)
+13. [Benchmarking and performance methodology](08-planning/benchmarking-and-performance-methodology.md)
+14. [Decision records](09-decisions/README.md)
 
 ## Folder Map
 

@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — PLAN item 10's Axeyum artifact/code blocker is closed.** The
+  closure audit confirms the minimal profile, semantic API facades, typed
+  lowering configuration, direct-reconstruction/term-walker de-duplication,
+  bounded rational CAD sharing, and measured module splits are complete.
+  `reconstruct.rs` is 2,793 lines, `int_reconstruct.rs` is 3,489, and the
+  documented all-feature root is 66 entries. ABV replay/repair remains in place
+  because its ROW ownership and 16 test-private consumers make a move cosmetic
+  or visibility-widening. A new ecosystem note positions the work against
+  Veritas and Microsoft codename MDASH and separates six attacker-control
+  predicates. This does not close publication generality, cross-machine
+  reproducibility, broader recall, proof prevalence, or performance work.
+
 - **2026-07-21 — I6 privately extracts Diophantine reconstruction and closes
   the integer structural lane.** The original ADR-0042 family now lives in the
   767-line `int_reconstruct/diophantine.rs` child with both public paths
@@ -5774,6 +5786,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-21 — Closed artifact-readiness item 10 and added agentic related
+  work.** The measured closure audit stops deferred cosmetic refactors and
+  positions Axeyum/Glaurung against Veritas and Microsoft codename MDASH with
+  explicit attacker-control semantics and claim boundaries.
 
 - **2026-07-21 — Extracted Diophantine reconstruction.** Moved only the
   corrected family-specific body into a private 767-line child, preserving

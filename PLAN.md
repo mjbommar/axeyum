@@ -287,7 +287,7 @@ session state.
 >    Glaurung engine cache experimental/cold-policy-specific. Report only the
 >    per-driver intervals in the committed result, never a pooled headline. The
 >    first ADR-0303 campaign remains rejected and contributes no timing claim.
-> 10. [AXEYUM] **WIP.** Staged artifact cleanup (split `reconstruct.rs` 18.5k,
+> 10. [AXEYUM] **DONE.** Staged artifact cleanup (split `reconstruct.rs` 18.5k,
 >    namespace the ~567-item public API, dedup repeated term walkers, and model
 >    config as types), plus related-work positioning vs Veritas,
 >    attacker-control, and the MS agentic system. The first bounded cleanup
@@ -609,6 +609,17 @@ session state.
 >    Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
+>    The final closure audit is recorded in the completed
+>    [`artifact-readiness-refactor-inventory.md`](docs/research/08-planning/artifact-readiness-refactor-inventory.md).
+>    Related-work positioning against Veritas and Microsoft codename MDASH, plus
+>    the explicit separation of attacker provenance, region ownership,
+>    concretization choice, reachability, violation, and exploitability, now
+>    lives in
+>    [`agentic-binary-security-positioning.md`](docs/research/02-ecosystems/agentic-binary-security-positioning.md).
+>    This closes the bounded Axeyum artifact/code blocker, not the paper's open
+>    cross-machine reproducibility, broader recall/generality, proof-prevalence,
+>    or performance questions. Any structural successor needs new consumer
+>    evidence; raw file size does not reopen item 10.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

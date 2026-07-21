@@ -1,6 +1,6 @@
 # Artifact-readiness refactor inventory
 
-Status: active
+Status: complete
 Date: 2026-07-21
 Baseline: Axeyum `06ed4b78`
 
@@ -236,3 +236,30 @@ behavior. Run the complete all-feature solver library, relevant focused
 integration tests, strict all-target Clippy, full/minimal warning-denied rustdoc,
 format/link checks, and the bounded OOM audit before acceptance. Keep each slice
 in its own add/commit/push checkpoint.
+
+## Closure audit
+
+The Axeyum artifact-readiness/code-architecture portion of reviewer item 10 is
+closed after I6:
+
+- ADR-0216 makes `qfbv` the default and keeps full/native dependencies explicit;
+- R1--R3 reduce `reconstruct.rs` from 18,517 to 2,793 lines and consolidate the
+  direct reconstruction variants behind measured common machinery;
+- R4 reduces the documented all-feature root from roughly 567 entries to 66
+  through semantic compatibility facades;
+- ADR-0314 makes the one measured invalid lowering configuration
+  unrepresentable without grouping unrelated options;
+- A1--A3 reduce the visible ABV wall 28.6% and stop at the first seam that would
+  require test/privacy widening;
+- I1--I6 reduce `int_reconstruct.rs` from 8,876 to 3,489 lines and leave only
+  the shared kernel context plus deliberately coupled proof code;
+- N1 shares only semantics-identical rational CAD mechanics and preserves the
+  algebraic boundary; and
+- the remaining related-work/attacker-control positioning is recorded in
+  [agentic binary-security
+  positioning](../02-ecosystems/agentic-binary-security-positioning.md).
+
+This closes a bounded artifact blocker, not the paper's open generality,
+cross-machine reproducibility, broader recall, proof-prevalence, or performance
+questions. Reopening any deferred structural residual requires new consumer or
+reviewer evidence, not raw line count.
