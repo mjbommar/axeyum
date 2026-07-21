@@ -86,22 +86,28 @@ computes their decidable shadow and labels the rest. The reviews confirmed the
 roadmap is honest about these; adding them as "compute targets" would violate the
 no-false-certification rule. They belong to the P3.6/P3.7 Lean track (via item 39).
 
-## 4b. Build status (2026-07-20)
+## 4b. Build status (2026-07-21) — 192 tests
 
-**Tier A — shipped, certified, TDD'd** (166 unit + 33 doctests, clippy-clean,
-WASM-green): eigenvectors (1), null space (2), minimal polynomial (3), definite
-integration (4), arbitrary-center Taylor (5), radical simplification (6), the
-number-theory bundle (7 — `ntheory_advanced`), statistics + `standard_deviation`
-(8), gradient/jacobian/divergence/curl (9), univariate factorization over ℤ/ℚ
-(10 — `factor_int`, Berlekamp–Zassenhaus).
+**Tier A — all shipped, certified, TDD'd:** eigenvectors (1), null space (2),
+minimal polynomial (3), definite integration (4), arbitrary-center Taylor (5),
+radical simplification (6), the number-theory bundle (7 — `ntheory_advanced`),
+statistics + `standard_deviation` (8), gradient/jacobian/divergence/curl (9),
+univariate factorization over ℤ/ℚ (10 — `factor_int`, Berlekamp–Zassenhaus).
 
-**Tier B — partially shipped:** public `resultant`/`discriminant` (14) done;
-`solve` now factors degree-≥3 leftovers over ℚ and solves quadratic factors;
-**new sound fold `sqrt(c)²→c`** added to the zero-test (certifies radical
-arithmetic and irrational quadratic roots); **`evalf`** (16) done (numeric
-approximation, exact→decimal). Remaining Tier B (first-order ODEs 12, linear
-recurrences 11, exact trig-value table 19, `Abs` head 13, inequality solving 18,
-log rules 20, `RealAlgebraic` wiring 17) still open.
+**Tier B/C — largely shipped:** `resultant`/`discriminant` (14); `solve` factors
+degree-≥3 over ℚ; the sound `sqrt(c)²→c` zero-test fold (radical arithmetic +
+irrational roots); `evalf` (16); **inhomogeneous linear ODEs** with polynomial
+forcing (undetermined coefficients — the exp-free part of 12); **cyclotomic
+polynomials**; **exact trig values** at multiples of π/12 (19); **LU** decomposition;
+`expand_log` (20); the **`Abs` head** (13) + `√(x²)→|x|`; **vector** dot/cross/norm;
+**Gosper** indefinite hypergeometric summation (next-wave #1); **Sturm real-root
+isolation** + numeric approximation (next-wave #8); **polynomial inequality solving**
+(18). Hermite/Smith normal form (9) is delegated (in flight).
+
+**Still open:** first-order ODEs (12) and linear recurrences (11) — both blocked on
+the [exp-tower substrate](exp-tower.md); full `RealAlgebraic`/RootOf wiring (17);
+Zeilberger (needs the exp tower for the geometric fragment); Lazard–Rioboo–Trager
+(needs RootOf, now unblocked by Sturm); assumptions engine (34); special functions.
 
 **Newly identified substrate blocker.** First-order linear ODEs (12) and linear
 recurrences (11) both need the zero-test to know `e^A·e^B = e^{A+B}`. The
