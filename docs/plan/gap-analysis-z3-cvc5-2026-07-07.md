@@ -1,6 +1,13 @@
 # Z3/cvc5 gap analysis (2026-07-07)
 
-Status: current audit — supersedes
+> **Historical / superseded.** The current scoped evidence map is
+> [gap-analysis-z3-lean-2026-07-21.md](gap-analysis-z3-lean-2026-07-21.md).
+> This document's original p4dfa premise was corrected by ADR-0059: the
+> registered 20-second controls decide 8/113 for Axeyum and 8/113 for the Z3
+> crate on different sets, rather than a Z3 sweep. Retain this file for the
+> historical leverage analysis, not current parity numbers.
+
+Status: historical audit — supersedes
 [`gap-analysis-z3-cvc5-2026-06-22.md`](gap-analysis-z3-cvc5-2026-06-22.md) as
 the priority map (the 06-22 doc remains the historical baseline).
 Scope: top-down, practical delta between axeyum's measured state and the public

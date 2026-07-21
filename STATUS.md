@@ -20,24 +20,40 @@ exit-criteria'd tracks we advance one increment at a time.
   oracle-compared count lives in the generated scoreboard) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
   + fixed this session.)
 - **Decide-rate (the central gap):** see the generated
-  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (~73% as of
-  2026-07-07 — the scoreboard is authoritative; this line links rather than
-  hand-copies because hand-copied totals rotted twice), 0–100% across
-  divisions, **19/35 decide-strong**. Z3/cvc5 decide more on most fragments.
+  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (authoritative; this line
+  intentionally does not hand-copy the aggregate), 0–100% across divisions;
+  **25 / 35 rows** are decide-strong. The missing piece is representative depth
+  and coverage, not another unpartitioned global percentage.
 - **Performance:** the **first committed PAR-2 head-to-head exists**
   (`582ecba8`, public QF_BV p4dfa, lazy-vs-eager at 3s/20s, DISAGREE=0): lazy
-  weakly dominates (7>4 decided at 20s) but `lazy_ops_total=0` everywhere —
-  the edge is inherited word-level preprocessing, not CEGAR, and Z3 still
-  decides all 113 in ≤1s. Parity remains open; the measured lever is
-  reduction depth. No parity claim without these numbers widening.
-- **Lean:** narrow (~15/35 rows audit-eligible; trusted-reduction ledger ≠ 0;
-  tactic backend P3.7 unbuilt).
-- **Dominance:** **23 fragments** with audited `dominant%` — the real, defensible
+  weakly dominates (7>4 decided at 20s) but `lazy_ops_total=0` everywhere. The
+  later paired controls correct the old Z3 premise: Axeyum and the Z3 crate each
+  decide 8/113 at 20s on different sets (Z3 CLI 9/113). This is bounded corpus
+  parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
+  remain open.
+- **Lean:** all 35 rows have complete audits; 261/327 measured UNSAT decisions
+  are Lean-checked. Coverage is substantial but uneven, the trusted-reduction
+  ledger is not zero, and tactic backend P3.7 is unbuilt.
+- **Dominance:** **23 / 35 audited rows** are fully dominant and 616/753 measured
+  decisions are dominant candidates — the real, defensible selected-fragment
   claim.
 
 **Where to continue (toward the mission) — updated 2026-07-01/02 after a heavy
 landing wave.** The two theory frontiers **advanced from planning into landed
 increments**:
+
+**Parity-gap research update (2026-07-21).** The current evidence and research
+queue now live in
+[`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+It separates selected-fragment decision parity, production Z3 replacement,
+certified-result coverage, Lean-kernel compatibility, and Lean workflow
+integration. The first prototype, `scripts/check-parity-docs.py`, derives the
+live scoreboard/dominance/p4dfa denominators from committed artifacts and is in
+`just check`; it caught and corrected the stale universal-sweep Z3 premise plus
+stale decide/proof denominators in PLAN, STATUS, and SCOREBOARD. Next research
+is the provenance/deduplication-weighted 35-row parity matrix, then the required
+representative official-Lean solver-proof CI tier.
+
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
   `Sort::Seq` + seq ops), and **A.2 landed (ADR-0052)**: the `bv2nat`-linear→BV
   equivalence blast + a parser-built **unbounded length abstraction** + the

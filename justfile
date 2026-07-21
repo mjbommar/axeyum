@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code parity-docs links
 
 fmt:
     cargo fmt --all --check
@@ -96,6 +96,12 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py families --text adjacent --require-any
     python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
     git diff --exit-code docs/rules-as-code/generated
+
+# Guard live parity prose against the committed scoreboard, dominance audits,
+# and paired p4dfa controls. This is intentionally much cheaper than rerunning
+# the measurements it checks.
+parity-docs:
+    python3 scripts/check-parity-docs.py
 
 deny:
     cargo deny check

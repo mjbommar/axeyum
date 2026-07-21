@@ -1,5 +1,10 @@
 # Parity Status & Path — top-down (2026-06-24)
 
+> **Superseded status snapshot.** Keep this file as the 2026-06-24 historical
+> top-down view. Current scoped status, corrected p4dfa controls, proof
+> denominators, and ranked research gaps live in
+> [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](plan/gap-analysis-z3-lean-2026-07-21.md).
+
 A from-scratch reader's map: **what axeyum is, where it actually stands against
 Z3/cvc5/Lean (measured, not asserted), and the exact remaining path to parity.**
 This complements — does not replace — [`PLAN.md`](../PLAN.md) (the engineering

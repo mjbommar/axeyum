@@ -12,6 +12,17 @@ session state.
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
 
+> **Parity terminology reset (2026-07-21).** “Z3 + Lean parity” is the north
+> star, not one scalar status. The current operational map is
+> [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](docs/plan/gap-analysis-z3-lean-2026-07-21.md):
+> report fragment decision/performance depth, production solver replacement,
+> certified-result coverage, Lean-kernel compatibility, and Lean workflow
+> integration separately. The committed p4dfa 20-second control is 8/113 for
+> Axeyum and 8/113 for the Z3 crate on different decided sets; it is bounded
+> corpus parity, not a universal performance claim. `just parity-docs` now
+> rejects the stale p4dfa and proof-denominator claims that had survived in live
+> prose after their correcting measurements landed.
+
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
 > validated policy difference, no residual coverage gap, symbolic memory not
@@ -21,7 +32,7 @@ session state.
 > self-owned IOCTL-census stack (Windows + Linux census -> glaurung/ioctlance ->
 > axeyum, with 22-CVE ground truth and an LLM-ranked handler worklist) and a
 > candidate LLVM-IR Linux frontend. Ranked next actions, balanced across the
-> solver lane (STATUS current focus: decide-rate ~73%, reduction-depth
+> solver lane (STATUS current focus: generated decide-rate frontier, SAT-search
 > performance, proofs) and the integration lane (open: broader labeled recall,
 > reproducibility, and frontend breadth; the neutral baseline and this exact
 > timeout tier are closed):
@@ -3043,10 +3054,10 @@ relentlessly. Scored against [the north-star definition of done](docs/plan/00-no
 |---|---|---|
 | **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
-| **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; ~73% as of 2026-07-07 — do not hand-copy the integers, they rotted repeatedly), decide-rate **0%–100%** across divisions. Arithmetic now decide-strong (QF_NIA-cvc5 85%, QF_NRA-cvc5 84%); the dominant remaining wired-fragment gap is strings (QF_SLIA 36%, QF_S 58%). Z3/cvc5 still cover more divisions than the ~35 measured. |
-| **Measured performance (PAR-2 head-to-head)** | **Weak — but now measured where it matters most** | The north star says *no parity claim without this number*. The first committed head-to-head exists (`582ecba8`, 2026-07-03, public QF_BV p4dfa lazy-vs-eager at 3s/20s, DISAGREE=0): lazy weakly dominates (7>4 at 20s) but `lazy_ops_total=0` on all 113 — the edge is inherited word-level preprocessing, not CEGAR, and Z3 decides all 113 in ≤1s. Not competitive at scale; the measured lever is reduction depth. |
-| **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
-| **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
+| **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; do not hand-copy it), with decide-rate **0%–100%** across divisions. Arithmetic is decide-strong on the measured rows; the dominant wired-fragment gaps include QF_SLIA and bounded/general UF. Z3/cvc5 still cover more divisions and much deeper corpora than the measured set. |
+| **Measured performance (PAR-2 head-to-head)** | **Regime-dependent; broad production parity open** | The registered p4dfa 20-second controls decide 8/113 for Axeyum and 8/113 for the Z3 crate on different sets; the Z3 CLI control decides 9/113. That is bounded hard-corpus parity, not a universal lead. The neutral Glaurung six-cell study has Axeyum ahead of warm Z3 on three drivers and behind on Dptf, while warm Bitwuzla wins all four. Widen matched corpora, budgets, decision-set overlap, RSS, and warm/cold controls before a broad claim. |
+| **Lean certificate coverage** | **Substantial but uneven** | All 35 measured rows have complete dominance audits: 261/327 measured UNSAT decisions are Lean-checked, while nonlinear, strings/sequences, AUFLIA, and selected UFLIA rows retain large gaps. The trusted-reduction ledger is **not yet zero**, and the Lean tactic backend (P3.7) is unbuilt. |
+| **Pareto-dominance on selected rows** | **Strong selected-fragment result** | 23/35 audited rows are fully dominant; 616/753 measured decisions are dominant candidates ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is the defensible current claim. |
 
 **Full parity across all of Z3/cvc5/Lean is not yet reached — and it is the
 destination we are actively building toward, not a wish.** The identity is:
@@ -8403,15 +8414,17 @@ checklist:
 |---|---|---|
 | **Seeded** | sound, verify-guarded first slice (often conjunctive / bounded / single-predicate) | **most newer engines** — CHC/PDR, abduction, interpolation, online combination |
 | **Decides** | complete on the decidable fragment; honest `unknown` outside | QF_BV, QF_UF, QF_LRA; NRA CAD decision side |
-| **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | **QF_BV only** (p4dfa 113, parity, both hard-capped) |
+| **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | selected rows plus bounded controls; p4dfa is 8/113 vs 8/113 at 20s on different sets, and Glaurung is workload-dependent |
 | **Certifying** | every `unsat` carries a Lean-checkable certificate | QF_BV (DRAT), QF_LRA (Farkas), QF_UF, degree-2 SOS — **ahead of Z3** |
 | **Production** | tuned, scalable, robust across the division's *full* benchmark suite | **none yet** — Z3/cvc5 are here across all divisions |
 
 **The honest position:** axeyum has **breadth of seeds + a leading *certifying*
-story + one measured division.** It is *not* at Z3/cvc5 parity, and the distance
-is dominated by two things the ledger does not show — **production depth** (the
-bulk of Z3's ~688k LoC) and **measurement debt** (only QF_BV is measured; every
-other "parity" is a feature-ledger assertion, not a number).
+story + 35 measured rows across 24 logic labels.** It is not a general
+production Z3/cvc5 replacement. The remaining distance is dominated by
+**production depth**, corpus representativeness/difficulty, unsupported and
+timeout residuals, proof gaps outside the dominant rows, and compatibility
+surface. Use the scoped 2026-07-21 gap map rather than turning the aggregate
+row count into a global parity percentage.
 
 **The phase pivot.** Breadth acquisition is essentially done — the ledger has a
 seed for nearly everything. **The standing rule now inverts: stop adding new engine

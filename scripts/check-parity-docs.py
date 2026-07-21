@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Fail when live parity documentation contradicts committed measurements.
+
+This is intentionally a narrow guard, not a natural-language fact checker.  It
+owns the claims that have already rotted repeatedly: the generated division
+totals, exact dominance-audit denominators, and the paired 20-second p4dfa
+control.  New guarded claims should be added only when they have one canonical,
+machine-readable artifact.
+"""
+
+from __future__ import annotations
+
+import glob
+import importlib.util
+import json
+import re
+import sys
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+GEN_SCOREBOARD = ROOT / "scripts" / "gen-scoreboard.py"
+GAP_DOC = ROOT / "docs" / "plan" / "gap-analysis-z3-lean-2026-07-21.md"
+AXEYUM_P4DFA = (
+    ROOT
+    / "bench-results"
+    / "baselines"
+    / "qf-bv-p4dfa-axeyum-vs-z3-20s-authoritative.json"
+)
+Z3_P4DFA = (
+    ROOT
+    / "bench-results"
+    / "baselines"
+    / "qf-bv-p4dfa-z3-standalone-20s.json"
+)
+
+LIVE_DOCS = (
+    ROOT / "PLAN.md",
+    ROOT / "STATUS.md",
+    ROOT / "bench-results" / "SCOREBOARD.md",
+    ROOT / "docs" / "plan" / "README.md",
+    ROOT / "docs" / "user-guide" / "benchmarks.md",
+    GAP_DOC,
+)
+
+STALE_PATTERNS = (
+    re.compile(r"Z3 (?:still )?decides all 113", re.IGNORECASE),
+    re.compile(r"Z3\s+113/113", re.IGNORECASE),
+    re.compile(r"p4dfa 113, parity, both hard-capped", re.IGNORECASE),
+    re.compile(r"~15/35 rows"),
+    re.compile(r"\b19/35 decide-strong\b"),
+    re.compile(r"\b23 fragments\b"),
+    re.compile(r"\b~73%\b"),
+)
+
+
+def load_scoreboard_module():
+    spec = importlib.util.spec_from_file_location("axeyum_gen_scoreboard", GEN_SCOREBOARD)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot import {GEN_SCOREBOARD}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_json(path: Path) -> dict:
+    with path.open(encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def decided(summary: dict) -> int:
+    return int(summary.get("sat", 0)) + int(summary.get("unsat", 0))
+
+
+def measured_snapshot() -> dict[str, int]:
+    scoreboard = load_scoreboard_module()
+    rows = scoreboard.load_division_baselines() + scoreboard.load_synthetic_baselines()
+
+    audits = []
+    for path in sorted(glob.glob(str(ROOT / "bench-results" / "dominance" / "*.json"))):
+        audit = load_json(Path(path))
+        if audit.get("complete_audit"):
+            audits.append(audit["summary"])
+
+    axeyum = load_json(AXEYUM_P4DFA)
+    z3 = load_json(Z3_P4DFA)
+    for artifact in (axeyum, z3):
+        config = artifact["config"]
+        summary = artifact["summary"]
+        if config["timeout_ms"] != 20_000 or summary["files"] != 113:
+            raise RuntimeError("p4dfa control is no longer the registered 113-file/20-second cell")
+    if axeyum["config"]["corpus_hash"] != z3["config"]["corpus_hash"]:
+        raise RuntimeError("p4dfa Axeyum/Z3 controls do not bind the same corpus hash")
+
+    return {
+        "rows": len(rows),
+        "logics": len({row["logic"] for row in rows}),
+        "files": sum(row["files"] for row in rows),
+        "decided": sum(row["decided"] for row in rows),
+        "compared": sum(row["compared"] for row in rows),
+        "disagree": sum(row["disagree"] for row in rows),
+        "decide_strong_rows": sum(row["decide_pct"] >= 80.0 for row in rows),
+        "complete_audits": len(audits),
+        "fully_dominant_rows": sum(
+            summary.get("dominant_pct_audited") == 100.0 for summary in audits
+        ),
+        "dominant_decisions": sum(summary["dominant_candidates"] for summary in audits),
+        "audited_decisions": sum(summary["audited_decided"] for summary in audits),
+        "lean_checked_unsat": sum(summary["lean_checked_unsat"] for summary in audits),
+        "audited_unsat": sum(summary["audited_unsat"] for summary in audits),
+        "p4dfa_axeyum_20s": decided(axeyum["summary"]),
+        "p4dfa_z3_20s": decided(z3["summary"]),
+    }
+
+
+def main() -> int:
+    snapshot = measured_snapshot()
+    failures: list[str] = []
+
+    for path in LIVE_DOCS:
+        text = path.read_text(encoding="utf-8")
+        for pattern in STALE_PATTERNS:
+            if match := pattern.search(text):
+                line = text.count("\n", 0, match.start()) + 1
+                failures.append(f"{path.relative_to(ROOT)}:{line}: stale parity claim: {match.group(0)!r}")
+
+    required_gap_markers = (
+        f"{snapshot['decided']} / {snapshot['files']}",
+        f"{snapshot['compared']} oracle-compared",
+        f"{snapshot['decide_strong_rows']} / {snapshot['rows']} rows",
+        f"{snapshot['fully_dominant_rows']} / {snapshot['complete_audits']} audited rows",
+        f"{snapshot['dominant_decisions']} / {snapshot['audited_decisions']} decisions",
+        f"{snapshot['lean_checked_unsat']} / {snapshot['audited_unsat']} measured `unsat`",
+        f"{snapshot['p4dfa_axeyum_20s']} / 113",
+        f"{snapshot['p4dfa_z3_20s']} / 113",
+    )
+    gap_text = GAP_DOC.read_text(encoding="utf-8")
+    for marker in required_gap_markers:
+        if marker not in gap_text:
+            failures.append(f"{GAP_DOC.relative_to(ROOT)}: missing measured marker {marker!r}")
+
+    line = "|".join(f"{key}={value}" for key, value in snapshot.items())
+    print(f"PARITY_DOCS|{line}")
+    if failures:
+        for failure in failures:
+            print(f"ERROR: {failure}", file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

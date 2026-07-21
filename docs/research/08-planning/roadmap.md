@@ -11,8 +11,9 @@ Last updated: 2026-07-21
 > (Track 1 engine/perf · Track 2 theories · Track 3 proofs/Lean · Track 4
 > use-cases · Track 5 verified systems / IR reflection —
 > [ADR-0056](../09-decisions/adr-0056-verified-systems-track.md)), with the
-> current honest gap analysis in PLAN.md's
-> "the gap to Z3/cvc5, itemized" section. Live per-session state is in
+> current scoped gap analysis in
+> [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+> Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
 

@@ -12,11 +12,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   and Lean parity; the sizing and status legends used everywhere.
 - [`01-dependency-dag.md`](01-dependency-dag.md) — the cross-track dependency DAG,
   the two keystones, the critical paths, and the recommended execution order.
+- [`gap-analysis-z3-lean-2026-07-21.md`](gap-analysis-z3-lean-2026-07-21.md) —
+  **current** scoped evidence map and ranked research program. It separates
+  fragment decision parity, production Z3 replacement, certified-result
+  coverage, Lean-kernel compatibility, and Lean workflow integration.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
-  **current** practical gap analysis against Z3/cvc5 with the ROI-ordered
-  leverage list toward 100% Pareto dominance
+  historical pre-neutral-baseline leverage analysis; its p4dfa premise and
+  scoreboard totals are superseded by the 2026-07-21 map
   ([`gap-analysis-z3-cvc5-2026-06-22.md`](gap-analysis-z3-cvc5-2026-06-22.md)
-  is the historical baseline it supersedes).
+  is the still-earlier baseline).
 - [`provable-security-integration.md`](provable-security-integration.md) — how
   provable-security/game-based cryptography ideas should feed Track 5,
   proof-cookbook work, scenario corpora, and finite-field demand without
