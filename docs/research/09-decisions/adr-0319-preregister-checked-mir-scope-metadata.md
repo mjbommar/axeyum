@@ -1,6 +1,6 @@
 # ADR-0319: Preregister checked MIR lexical-scope metadata
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -25,7 +25,7 @@ locals and ignores recognized `debug` declarations, yet owns no nested scope
 grammar. Ignoring the whole block would drop types; treating it as execution
 would fabricate semantics.
 
-## Proposed decision
+## Decision
 
 Extend only `reflect::mir::syntax` function-body metadata parsing. Admit a
 bare `scope <decimal> {` header, balanced nesting, recognized `debug` lines,
@@ -86,6 +86,28 @@ select one named function and ignores unrelated unsupported functions.
 - A positive result owns one compiler metadata grammar and unblocks a fresh,
   separately gated ADR-0318 successor.
 - It does not itself admit or prove the page-table obligation.
+
+## Result
+
+Accepted. `reflect::mir::syntax` now owns exactly the preregistered bare
+decimal scope grammar, recursively flattens admitted local declarations into
+the existing ordered inventory, and caps nesting at 64. Scope IDs and debug
+names remain parser metadata and do not enter checked execution.
+
+Four focused tests freeze nested flattening and semantic identity, the 64/65
+depth boundary, malformed and executable-content rejection, existing
+duplicate/type error classes, and 1,000 deterministic structured-noise cases.
+The exact owning-Cargo selection of the ADR-0318 `walk_permissions` fixture now
+passes the existing checked-memory profile from an 8,218-byte live compiler
+capture containing `scope 1 {`; the checked projection has four parameter
+bytes, four basic blocks, a four-byte region, and an eight-bit result. No raw
+page-table artifact is committed and no page-table invariant is claimed.
+
+The complete `axeyum-verify` package and doctests, strict Clippy/rustdoc,
+reflection semantics gate, formatting, links, and the one-job 4 GiB OOM audit
+pass. The standing executable-semantics inventory remains 81 variants because
+this change adds metadata syntax only. Any page-table retry requires a fresh,
+separately preregistered decision.
 
 ## References
 

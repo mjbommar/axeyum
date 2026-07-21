@@ -322,15 +322,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0319 preregisters the exact compiler-scope prerequisite.**
-  The selected `scope 1 {` boundary contains real local declarations plus
-  debug-only lexical metadata. The proposed parser change accepts only bare
-  decimal scopes containing admitted `let` declarations, debug declarations,
-  and nested scopes; it flattens locals into the existing inventory and gives
-  the scope itself no execution semantics. The frozen gate caps nesting at 64
-  and rejects malformed braces/IDs/headers, executable content, blocks,
-  duplicate locals, and unsupported types before the page-table fixture may be
-  retried. No executable semantic variant or page-table result is admitted.
+- **2026-07-21 — ADR-0319 accepts exact compiler lexical-scope metadata.**
+  Bare decimal nested `scope N {}` blocks now flatten only admitted `let`
+  declarations into the existing ordered local inventory; debug names and
+  scope IDs have no checked semantics. Four focused tests cover semantic
+  identity, the 64/65 depth boundary, malformed/executable content, preserved
+  duplicate/type classes, and 1,000 deterministic structured-noise cases. The
+  exact owning-Cargo selection of `walk_permissions` now reaches the existing
+  checked-memory profile from an 8,218-byte live capture containing
+  `scope 1 {`. No executable semantic variant, committed raw walk artifact, or
+  page-table result is admitted; a retry requires a fresh preregistered ADR.
 
 - **2026-07-21 — ADR-0318 rejects the first P5.3 page-table cell before
   capture.** The operation/block probe fit the accepted checked-MIR fragment,

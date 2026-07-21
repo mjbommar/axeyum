@@ -362,6 +362,42 @@ fn scalar_profile_reproduces_the_committed_root_independent_capture() {
 }
 
 #[test]
+fn compiler_scope_metadata_reaches_the_checked_memory_profile() {
+    let Some((cargo, rustc)) = exact_tools_or_skip() else {
+        return;
+    };
+    let scratch = Scratch::new("scope-metadata");
+    let captured = scratch.path("walk_permissions.mir");
+    let output = run(
+        &Selection {
+            package: PACKAGE,
+            target: TargetSelection::Lib,
+            function: "walk_permissions",
+        },
+        &cargo,
+        &rustc,
+        &scratch.path("cargo-target"),
+        &captured,
+    );
+    assert!(
+        output.status.success(),
+        "scope-bearing capture failed:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let summary = String::from_utf8(output.stdout).unwrap();
+    assert!(summary.contains("\"function\":\"walk_permissions\""));
+    assert!(summary.contains("\"parameter_types\":[\"[u8;4]\",\"u8\"]"));
+    assert!(summary.contains("\"blocks\":4"));
+    let mir = fs::read_to_string(captured).unwrap();
+    assert!(mir.contains("scope 1 {"));
+    let reflected =
+        reflect_bounded_memory_checked(&mir, &MirMemoryConfig::new("walk_permissions", 64))
+            .expect("captured scope-bearing walk must remain checked");
+    assert_eq!(reflected.region.input.len(), 4);
+    assert_eq!(reflected.result.width, 8);
+}
+
+#[test]
 fn argument_compiler_and_existing_output_fail_without_partial_state() {
     let no_args = Command::new(BIN).output().unwrap();
     assert_class(&no_args, "missing_argument");

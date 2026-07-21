@@ -4,6 +4,8 @@ use std::collections::BTreeSet;
 use std::error::Error;
 use std::fmt;
 
+const MAX_SCOPE_DEPTH: usize = 64;
+
 /// Half-open byte range plus one-based source coordinates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SourceSpan {
@@ -555,6 +557,89 @@ fn parse_local_decl(line: Line<'_>) -> Result<LocalDecl, ParseError> {
     })
 }
 
+fn push_local(
+    locals: &mut Vec<LocalDecl>,
+    local_numbers: &mut BTreeSet<u32>,
+    local: LocalDecl,
+) -> Result<(), ParseError> {
+    if !local_numbers.insert(local.local) {
+        return Err(error(
+            ParseErrorKind::DuplicateLocal,
+            local.span,
+            format!("local _{} is declared more than once", local.local),
+        ));
+    }
+    locals.push(local);
+    Ok(())
+}
+
+fn parse_scope_header(line: Line<'_>) -> Result<(), ParseError> {
+    let span = line.span();
+    let id = line
+        .trimmed()
+        .strip_prefix("scope ")
+        .and_then(|text| text.strip_suffix(" {"))
+        .filter(|text| !text.is_empty() && text.chars().all(|character| character.is_ascii_digit()))
+        .ok_or_else(|| {
+            error(
+                ParseErrorKind::MalformedStatement,
+                span,
+                "expected exact `scope N {` metadata header",
+            )
+        })?;
+    let _ = id;
+    Ok(())
+}
+
+fn parse_scope_metadata(
+    lines: &[Line<'_>],
+    start: usize,
+    depth: usize,
+    locals: &mut Vec<LocalDecl>,
+    local_numbers: &mut BTreeSet<u32>,
+) -> Result<usize, ParseError> {
+    let header = lines[start];
+    parse_scope_header(header)?;
+    if depth > MAX_SCOPE_DEPTH {
+        return Err(error(
+            ParseErrorKind::MalformedStatement,
+            header.span(),
+            format!("MIR lexical scope nesting exceeds {MAX_SCOPE_DEPTH}"),
+        ));
+    }
+    let mut index = start + 1;
+    while index < lines.len() {
+        let line = lines[index];
+        let text = line.trimmed();
+        if text == "}" {
+            return Ok(index + 1);
+        }
+        if text.is_empty() || text.starts_with("debug ") {
+            index += 1;
+            continue;
+        }
+        if text.starts_with("let ") {
+            push_local(locals, local_numbers, parse_local_decl(line)?)?;
+            index += 1;
+            continue;
+        }
+        if text.starts_with("scope ") {
+            index = parse_scope_metadata(lines, index, depth + 1, locals, local_numbers)?;
+            continue;
+        }
+        return Err(error(
+            ParseErrorKind::UnsupportedStatement,
+            line.span(),
+            format!("unsupported lexical-scope MIR `{text}`"),
+        ));
+    }
+    Err(error(
+        ParseErrorKind::MalformedStatement,
+        header.span(),
+        "MIR lexical scope is not closed",
+    ))
+}
+
 fn parse_operand(raw: &str, span: SourceSpan) -> Result<Operand, ParseError> {
     let raw = raw.trim();
     if raw == "const true" {
@@ -1087,16 +1172,12 @@ pub fn parse_function(input: &str, selected: &str) -> Result<Function, ParseErro
             continue;
         }
         if text.starts_with("let ") {
-            let local = parse_local_decl(line)?;
-            if !local_numbers.insert(local.local) {
-                return Err(error(
-                    ParseErrorKind::DuplicateLocal,
-                    local.span,
-                    format!("local _{} is declared more than once", local.local),
-                ));
-            }
-            locals.push(local);
+            push_local(&mut locals, &mut local_numbers, parse_local_decl(line)?)?;
             index += 1;
+            continue;
+        }
+        if text.starts_with("scope ") {
+            index = parse_scope_metadata(body, index, 1, &mut locals, &mut local_numbers)?;
             continue;
         }
         if text.ends_with(": {") {
