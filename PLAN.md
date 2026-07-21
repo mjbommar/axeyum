@@ -499,8 +499,17 @@ session state.
 >    clean 446-line lazy-ext CEGAR orchestration/refinement unit now lives in
 >    `abv/lazy_ext.rs` with ten private items and exactly one `pub(super)` parent
 >    entry point; no test seam or public path changed. `abv.rs` is 10,675 lines,
->    down 28.6% across A1--A3. Next take I1's 1,196-line integer-inequality
->    reconstruction tail. Revisit the 4,531-line ABV replay/repair residual only
+>    down 28.6% across A1--A3. I1 is now complete: the 1,196-line
+>    integer-inequality body lives in the private 1,201-line
+>    `int_reconstruct/inequality.rs` child; its three public functions retain
+>    exact paths and only `lt_lit_lit` crosses back as a `pub(super)` helper for
+>    six earlier proof sites. A representative rendered Lean module is
+>    byte-identical before/after (SHA-256 `27edf9b0...205de`), all 14 focused
+>    interval tests including three real-Lean checks pass, and the UFLIA,
+>    namespace, 891-library-test, Clippy, and rustdoc gates remain green.
+>    `int_reconstruct.rs` is 7,683 lines, down 13.4%. Next census N1's CAD
+>    repetition and preregister its semantic differential gate before changing
+>    solver code. Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
 >

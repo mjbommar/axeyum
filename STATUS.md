@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — I1 gives integer-inequality reconstruction a private semantic
+  module with byte-stable Lean output.** The 1,196-line body now lives in the
+  1,201-line `int_reconstruct/inequality.rs` child. Its three public entry
+  points retain exact paths; only `lt_lit_lit` is `pub(super)` for six earlier
+  proof sites, with 15 explicit private parent imports. The representative
+  `3*x` interval module keeps SHA-256 `27edf9b0...205de` before/after. All 14
+  focused interval tests (including three real-Lean checks), 12 UFLIA
+  interpolant tests, 10 namespace controls, and all 891 library tests pass;
+  strict Clippy and both rustdoc profiles are green. `int_reconstruct.rs` is
+  7,683 lines, down 13.4%. Next: census N1's CAD duplication and freeze a
+  semantic differential gate before any behavior-bearing parameterization.
+
 - **2026-07-20 — ABV A3 extracts the actual lazy-ext orchestration seam and
   rejects a cosmetic whole-lane move.** The census found 13 historical-lane
   items used by earlier ROW/projection code and 16 residual private items
@@ -5625,6 +5637,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — artifact-readiness I1 isolates integer-inequality proof
+  reconstruction.** Three public paths and representative generated Lean bytes
+  are unchanged; one shared kernel helper is the only parent seam. Focused
+  real-Lean/UFLIA/namespace gates and the complete 891-test library pass.
 
 - **2026-07-20 — artifact-readiness A3 isolates lazy-ext CEGAR orchestration.**
   The new 446-line child has one parent-visible entry point and leaves the

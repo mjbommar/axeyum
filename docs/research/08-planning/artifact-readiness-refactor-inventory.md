@@ -30,8 +30,8 @@ not repeat completed namespace/configuration sweeps.
 | ABV lazy-ext CEGAR orchestrator | 446 lines / 17,014 bytes | Named child module; ten items; one parent entry point |
 | ABV replay/repair residual | 4,531 parent lines (6,137--10,667) | Shared by ROW and extensional replay; 16 private items directly test-reached |
 | ABV eager array-elimination certificate | 340 child-module lines | Independent trust/evidence unit; two private parent helper dependencies |
-| `int_reconstruct.rs` | 8,876 lines / 371,286 bytes | Shared integer kernel context plus several proof families |
-| Integer-inequality tail | 1,196 lines (7,681--8,876) | Cohesive reconstruction family after the shared context |
+| `int_reconstruct.rs` | 7,683 lines / 316,411 bytes | Shared integer kernel context plus the remaining proof families |
+| Integer-inequality reconstruction | 1,201 lines / 55,224 bytes | Private child; three public re-exports; one parent helper seam |
 | `nra_real_root.rs` | 7,544 lines / 333,529 bytes | 7,077 production lines; strict, non-strict, and algebraic CAD share correctness-sensitive machinery |
 | `reconstruct.rs` | 2,793 lines / 122,834 bytes | R1--R3 target is no longer a top residual |
 
@@ -80,11 +80,18 @@ much cleaner boundary: ten top-level items, no direct test imports, and only
    five lazy-ROW controls, differential fuzz, all 891 library tests, strict
    Clippy, and both rustdoc profiles pass under the bounded profile. `abv.rs`
    is now 10,675 lines, down 28.6% from the initial 14,953.
-4. **I1 -- extract integer-inequality reconstruction (next).** The 1,196-line tail is
-   the clearest `int_reconstruct.rs` family, but it depends on the shared kernel
-   context. Record its exact entry/helper seam, then apply the established
-   module-move gate without changing generated Lean bytes.
-5. **N1 -- parameterize CAD only under a semantic gate.** Strict/non-strict/
+4. **I1 -- extract integer-inequality reconstruction (done).** The 1,196-line
+   body now forms the private 1,201-line `int_reconstruct/inequality.rs` child.
+   All three public functions are re-exported at their exact historical paths;
+   the only parent-facing internal seam is `lt_lit_lit`, used by six earlier
+   proof sites. Fifteen explicit parent dependencies remain imports, not wider
+   visibility. A representative generated Lean module keeps exact SHA-256
+   `27edf9b04f41ce7ca537798fd17f486bb43336dfdaf06e3ad9f15f95c93205de` before
+   and after. All 14 interval tests (including three real-Lean executions), 12
+   UFLIA interpolant tests, 10 namespace controls, all 891 library tests, strict
+   Clippy, and both rustdoc profiles pass. The parent is now 7,683 lines, down
+   13.4% from 8,876.
+5. **N1 -- census, then parameterize CAD only under a semantic gate (next).** Strict/non-strict/
    algebraic repetition remains a valid duplication target, but any shared
    engine must preserve boundary sampling, algebraic decline, exact replay, and
    timeout behavior under focused oracle/differential tests. It is not the next
