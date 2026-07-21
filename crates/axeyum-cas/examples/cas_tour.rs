@@ -5,10 +5,11 @@
 //! decidable zero-test / differentiate-and-check), not merely computed it.
 
 use axeyum_cas::{
-    CasExpr, LimitPoint, Matrix, apart, cancel, definite_integrate, discriminant,
-    dsolve_homogeneous, eigenvectors, equal, expand, factor, factor_expr, gradient, integrate,
-    limit, minimal_polynomial, ntheory, ntheory_advanced, resultant, series_at, simplify_radicals,
-    series, solve, standard_deviation, stats, sum_polynomial, ZeroTest,
+    CasExpr, InequalityOp, LimitPoint, Matrix, apart, cancel, definite_integrate, discriminant,
+    dsolve_homogeneous, dsolve_inhomogeneous, eigenvectors, equal, evaluate_trig, expand, factor,
+    factor_expr, gosper_sum, gradient, integrate, limit, minimal_polynomial, ntheory,
+    ntheory_advanced, real_root_intervals, resultant, series_at, simplify_radicals, series, solve,
+    solve_polynomial_inequality, standard_deviation, stats, sum_polynomial, ZeroTest,
 };
 use axeyum_ir::Rational;
 
@@ -49,11 +50,34 @@ fn main() {
     println!("cancel((x^2-1)/(x-1)) = {}", cancel(&((x().pow(2) - i(1)) / (x() - i(1)))).unwrap());
     println!("apart(1/(x^2-1)) = {}", apart(&(i(1) / (x().pow(2) - i(1))), "x").unwrap());
     println!("sum_(k=0)^(n-1) k = {}", sum_polynomial(&CasExpr::var("n"), "n").unwrap());
+    // Gosper: indefinite hypergeometric summation.
+    let k = || CasExpr::var("k");
+    if let Some(s) = gosper_sum(&(CasExpr::int(1) / (k() * (k() + i(1)))), "k") {
+        println!("gosper: sum 1/(k(k+1)) = {s}   [CERTIFIED telescoping]");
+    }
+
+    println!("\n-- roots & inequalities --");
+    // Real-root isolation (Sturm) for an irrational-root polynomial.
+    let quintic = x().pow(2) - i(2); // roots ±√2
+    println!(
+        "real_root_intervals(x^2 - 2) = {:?}   [Sturm-certified: one root each]",
+        real_root_intervals(&quintic, "x").unwrap()
+    );
+    // Polynomial inequality via a sign chart.
+    let ineq = x().pow(2) - i(5) * x() + i(6);
+    let solution = solve_polynomial_inequality(&ineq, "x", InequalityOp::Greater).unwrap();
+    println!("solve(x^2 - 5x + 6 > 0): {} interval(s) (-inf,2) U (3,inf)", solution.len());
+    // Exact trig.
+    let pi = CasExpr::var("pi");
+    println!("sin(pi/6) = {}", evaluate_trig(&(pi.clone() / i(6)).sin()));
 
     println!("\n-- differential equations --");
     // y'' + y = 0  (characteristic r^2 + 1)
     let ode = dsolve_homogeneous(&[Rational::integer(1), Rational::zero(), Rational::integer(1)], "x");
     println!("dsolve(y'' + y = 0) = {}   [CERTIFIED]", ode.unwrap());
+    // Inhomogeneous: y' + y = x → (x - 1) + C0 e^{-x}.
+    let inhom = dsolve_inhomogeneous(&[Rational::integer(1), Rational::integer(1)], &x(), "x");
+    println!("dsolve(y' + y = x) = {}   [CERTIFIED]", inhom.unwrap());
 
     println!("\n-- linear algebra --");
     let m = Matrix::from_rows(vec![vec![i(2), i(0)], vec![i(0), i(3)]]).unwrap();
