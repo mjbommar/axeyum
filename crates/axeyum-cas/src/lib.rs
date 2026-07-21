@@ -55,6 +55,7 @@ pub mod approx;
 pub mod boolean;
 pub mod combinatorics;
 pub mod geometry;
+pub mod gfp;
 pub mod groebner;
 pub mod hyperbolic;
 mod factor_int;
