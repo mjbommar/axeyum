@@ -1,6 +1,6 @@
 # ADR-0328: Preregister authenticated Tock log2 LLVM capture
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -109,11 +109,31 @@ No gate may be weakened after the first official build starts.
 
 ## Result
 
-Proposed. The producer, ten focused mutation/cleanup tests, exact LLVM-22 and
-support-tool identities, admission binary/source identity, and source/namespace/
-resource registration are frozen with zero official builds. No retained target
-byte, extracted official symbol, admission result, proof, or scoreboard row
-exists. Commit and push this checkpoint before the first official build.
+Accepted as a negative v1 result. Producer commit `a2051514` was pushed before
+the first official invocation. The producer accepted every frozen source,
+producer, tool, namespace, and resource identity, materialized no target output,
+then stopped at the pre-build locked-offline metadata probe:
+
+```text
+stage=cache
+kind=offline_metadata
+detail=error: failed to download `ghash v0.4.4`
+
+Caused by:
+  attempting to make an HTTP request, but --offline was specified
+```
+
+Zero official builds start or complete. No module, extraction, admission, target
+byte, property query, proof, or scoreboard row exists; atomic cleanup leaves no
+output or partial directory. The exact negative metadata is committed in
+`bench-results/verify-tock-log2-20260721/capture-v1-negative.json`. The capped
+producer reports the cache failure rather than an OOM-delta failure.
+
+Populating the ambient Cargo cache after observing this miss and rerunning v1
+would change an authenticated input after observation. V1 therefore ends here.
+Tock remains eligible only through a fresh zero-result decision that freezes a
+separate checksum-validated cache-preparation and inventory protocol before any
+networked preparation or successor official build.
 
 ## Rejected alternatives
 
@@ -132,10 +152,11 @@ exists. Commit and push this checkpoint before the first official build.
 
 - Tool-version fidelity becomes part of capture correctness rather than a
   best-effort postprocessing detail.
-- The build remains network-free even though one exact disabled optional Git
-  dependency must already exist in the validated cache.
-- A positive result still proves no Tock property; it only establishes the
-  authenticated input to the separately gated measurement.
+- V1 demonstrates that the ambient cache is incomplete even before Cargo
+  execution; the missing locked crate is an input-reproducibility failure, not
+  a frontend or semantic result.
+- A successor may prepare a dedicated cache only after separately freezing its
+  network/checksum/inventory boundary. V1 itself is never rerun.
 
 ## References
 

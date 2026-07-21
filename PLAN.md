@@ -403,10 +403,14 @@ session state.
 >    locked cache, no network, raw full LLVM-module identity, compiler-matched
 >    hash-pinned LLVM 22 extraction, exact two-function checked admission, and
 >    atomic local-only output under the 4 GiB cap. The producer, ten focused
->    mutation/cleanup tests, and hash-pinned registration are now frozen with
->    zero official builds and zero target bytes. Commit/push this producer
->    checkpoint, then run it once under the registered cgroup scope; LLVM 21,
->    text slicing, feasibility-hash seeding, and early proof queries are barred.
+>    mutation/cleanup tests, and hash-pinned registration were pushed before
+>    the official invocation. ADR-0328 now accepts the exact negative: the
+>    offline metadata preflight cannot find cached `ghash 0.4.4`, so zero builds
+>    start, no target/partial output exists, and no OOM-delta failure is
+>    reported. Never refill the ambient cache and rerun v1 after observation.
+>    Next preregister a dedicated checksum-validated cache preparation and
+>    inventory as v2 before any networked preparation or successor build;
+>    LLVM 21, text slicing, feasibility seeding, and early queries stay barred.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

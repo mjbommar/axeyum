@@ -322,16 +322,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-21 — ADR-0328 producer and registration are frozen, pre-build.**
-  The zero-row gate requires two independent complete Git archives at identical
-  virtual roots, a validated read-only locked cache, network isolation, raw
-  full-module equality, hash-pinned compiler-matched LLVM 22 extraction, exact
-  two-function checked admission, atomic local output, and the 4 GiB scope.
-  The executable producer, ten mutation/cleanup tests, and exact source/tool/
-  namespace/resource registration validate locally. Zero official builds and
-  zero target bytes exist. Next: commit/push this frozen checkpoint, then run
-  the official two-root capture once under its registered cgroup scope. LLVM
-  21/text slicing, feasibility-hash seeding, and early queries remain forbidden.
+- **2026-07-21 — ADR-0328 accepts the exact Tock capture v1 cache negative.**
+  Pushed producer `a2051514` accepts every frozen identity but the official
+  locked-offline metadata preflight cannot find cached `ghash 0.4.4`. Zero
+  builds start, no module/extraction/admission/query or target/partial output
+  exists, and no OOM-delta failure is reported. V1 must not be rerun after
+  refilling the observed ambient cache. Next: preregister a v2 dedicated,
+  checksum-validated cache-preparation and inventory protocol before any
+  networked preparation or successor official build.
 
 - **2026-07-21 — ADR-0327 accepts checked Tock `range`/`ctlz` semantics.** The
   frontend now types and canonically retains one non-wrapping call-result range
@@ -6012,9 +6010,17 @@ plan is built and committed on the current branch:
 | P5.2 | Contracts & modular verification (`#[requires]`/`#[ensures]`, calls as composition) | WIP — ADR-0295 accepts the checked direct-body/inlined baseline. **ADR-0296 accepts the first actual composition rule:** one exact scalar `leaf` contract is checked against its body once and the body is discarded. **ADR-0297 accepts nontrivial requirements without silent pruning:** `trans` assumes the requirement only after its exact reached complement becomes a replayable, source-attributed `bad` state. **ADR-0298 accepts the LLVM checksum continuation:** a fresh straight-line result plus a separate verified relation, weak-contract havoc teeth, and 100,000 valid plus 100,000 violating choices. **ADR-0299 accepts the MIR counterpart** with independent checked-body postcondition and panic-freedom proofs before body discard, separate havoc, and the same 200,000-choice gate. **ADR-0315 accepts input-dependent MIR panic composition:** the exact callee predicate joins caller panic and guards the normal-result relation, matching an inlined specification on all 256 `u8` inputs. **ADR-0316 accepts the source-local annotation surface:** typed pre/post terms retain the scalar result and distinguish normal postcondition replay from panic replay across all 256 `u8` rows. **ADR-0317 proposes the authenticated first join:** a total annotated wrapping function must produce the existing typed summary and independently verify against exact owning-build MIR. Phase exit still requires that proposed bridge to pass before authenticated source annotations feed checked modular summaries; DISAGREE=0 holds on every accepted modular/inlined population. |
 | P5.3 | Kernel obligations: bounded memory/page-table math, 2-safety/constant-time via self-composition, protocol-FSM refinement | **DONE (bounded v1, ADR-0322)** — **T5.3.1 branch leakage (`ac7494f0`)** proves public-predicated and branch-free controls and refutes a secret-predicated witness from committed MIR text; memory-index/LLVM leakage and compiler authentication remain. **T5.3.2 (ADR-0320)** authenticates an 8,218-byte compiler MIR module with seven universal claims, three replayed controls, and 4,096 exact rows; it is not an MMU. **T5.3.3 (ADR-0321)** authenticates a 2,691-byte compiler MIR module with eight per-event groups, complete relation equality, two PDR-safe systems, a replayed buggy control, and 2,048 exact rows. **T5.3.4 (ADR-0322)** publishes the bounded obligation catalog and comparison index. Named residuals remain future evidence-gated work. |
 | P5.4 | Fuzz-oracle loop (reflections as differential oracles, countermodels as seed corpora + generated `#[test]`s, honest `unknown`→directed-fuzz handoff) | WIP — **T5.4.1 DONE (`2423eaeb`)**: `reflect::oracle::DiffFuzz` is the reusable differential-fuzz harness (both shapes: reflection≡reflection via `check_agree`, reflection≡real-fn via `check_against`; deterministic LCG+corners; `FuzzReport`/`assert_agreed` for DISAGREE=0). Two suites collapsed onto it (cross-IR differential fuzz, checksum module oracle). Remaining: convert the `llvm_reflection` buffer/mixed-width loops (T5.4.1 residual); countermodels→seed corpora + generated `#[test]`s (T5.4.2); `unknown`→directed-fuzz handoff (T5.4.3); coverage accounting (T5.4.4) |
-| P5.5 | External target, measured | WIP — **Maestro closed negative; Tock prerequisite accepted; capture producer frozen pre-build (ADR-0323--0328):** ADR-0327 accepts typed `range`/`ctlz` semantics; ADR-0328 now has a hash-pinned producer, ten mutation/cleanup tests, and exact two-root offline registration. Run only after this checkpoint is committed/pushed. No official Tock build, v4 Maestro exception, capture credit, target proof, or scoreboard row exists. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
+| P5.5 | External target, measured | WIP — **Maestro closed negative; Tock prerequisite accepted; capture v1 closes at cache preflight (ADR-0323--0328):** ADR-0327 accepts typed `range`/`ctlz`; pushed ADR-0328 producer `a2051514` stops before any build because locked-offline metadata lacks cached `ghash 0.4.4`. No target/partial bytes, capture credit, proof, or scoreboard row exists. V1 is closed; next preregister a dedicated checksum-validated cache-preparation/inventory v2 before network or builds. Phase exit still requires authenticated capture plus a separately preregistered measured scoreboard result, DISAGREE=0, replay, and wall-times. |
 
 ## Changelog
+
+- **2026-07-21 — Accepted ADR-0328 as a negative cache-preflight result.**
+  After producer commit `a2051514` was pushed, the first official capped
+  invocation stopped before Cargo execution: locked-offline metadata requires
+  uncached `ghash 0.4.4`. Zero builds/modules/extractions/admissions/queries and
+  no output/partial directory exist; no OOM-delta failure was reported. Exact
+  negative metadata is committed. V1 cannot be rerun after an observed cache
+  refill; only a separately preregistered dedicated-cache v2 may continue.
 
 - **2026-07-21 — Froze the ADR-0328 Tock capture producer before execution.**
   The producer enforces complete traversal-safe Git archives, distinct roots,

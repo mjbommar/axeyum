@@ -1004,9 +1004,11 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     complete trees at identical virtual roots, validated locked offline cache,
     raw full-module identity, hash-pinned LLVM 22 extraction/assembly, exact
     two-symbol checked admission, atomic local output, and no property query.
-    Its producer, ten mutation/cleanup tests, and exact source/tool/namespace/
-    resource registration are now frozen before execution. The earlier
-    feasibility module supplies no expected result; no official build exists.
+    Its pushed producer and exact registration now close v1 negatively at the
+    pre-build cache gate: locked-offline metadata cannot find cached `ghash
+    0.4.4`. Zero builds or target bytes exist. Do not refill the ambient cache
+    and rerun v1; a successor must first preregister a dedicated checksum-
+    validated cache preparation and inventory.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

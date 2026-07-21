@@ -1,0 +1,36 @@
+{
+  "attempt": {
+    "official_builds_completed": 0,
+    "official_builds_started": 0,
+    "official_invocations": 1,
+    "observed_at_utc": "2026-07-21T10:07:56Z",
+    "producer_commit": "a2051514a5be2f857625d6373e9dd032b90db733",
+    "producer_was_pushed_before_invocation": true
+  },
+  "error": {
+    "detail": "error: failed to download `ghash v0.4.4`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified",
+    "kind": "offline_metadata",
+    "stage": "cache"
+  },
+  "outputs": {
+    "admissions": 0,
+    "extractions": 0,
+    "modules": 0,
+    "output_directory_exists": false,
+    "partial_directories": 0,
+    "property_queries": 0
+  },
+  "registration_sha256": "051a031073ce2343198a21fb6839897ce2f0a16a2045749d5188d0ab2669169a",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_delta_failure_reported": false,
+    "swap_max_bytes": 536870912
+  },
+  "schema": "axeyum.tock-log2-capture-v1-negative.v1",
+  "status": "rejected",
+  "upstream": {
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  }
+}
