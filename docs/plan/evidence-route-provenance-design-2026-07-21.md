@@ -2,6 +2,9 @@
 
 Status: **causal-instrumentation prototype; implementation gate for proof work**
 
+Implementation is preregistered, not yet authorized, by proposed
+[ADR-0341](../research/09-decisions/adr-0341-preregister-source-bound-evidence-route-telemetry.md).
+
 This note turns the generated
 [uncertified shape census](generated/proof-gap-shape-census.md) into an
 instrumentation plan. Operator presence identifies populations; it does not say
@@ -114,6 +117,13 @@ specific bound-independent decision subroute inside `solve_smtlib` is still not
 recorded and must not be inferred from the final bare evidence variant.
 
 ## Proposed diagnostic schema
+
+ADR-0050's existing `RouteTrace` supplies the correct optional-recorder and
+verdict-invariance pattern, but not the required data model. It traces decision
+dispatch on an arena after parsing/lowering; it cannot identify source text,
+parser side channels, evidence attempts, transformations, or checkers. P1 must
+therefore use a distinct `EvidenceTrace`, while reusing the single-control-flow
+recorder discipline rather than overloading `RouteTrace`.
 
 Do not add loose strings directly to the public `EvidenceReport` or enlarge the
 existing `Provenance` struct ad hoc. Add a versioned diagnostic companion returned

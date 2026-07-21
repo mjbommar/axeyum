@@ -467,6 +467,15 @@ Out of scope:
     model or an `unsat` DIMACS+DRAT certificate) and self-checks via
     `Evidence::check` (model replay / `check_drat` re-run). Versioned provenance
     fields are the remaining extension.
+- [ ] How should evidence production expose the decisive route, ordered
+      certificate attempts, source-to-lowered obligation identity, checker, and
+      first uncertified boundary without conflating them with the arena-level
+      auto-solver `RouteTrace`?
+  - Proposed answer: a distinct, versioned `EvidenceTrace` threaded as an
+    optional recorder through the same evidence-production control flow, with
+    existing APIs as recorder-free wrappers and exact report/trace invariance
+    gates; see
+    [ADR-0341](../09-decisions/adr-0341-preregister-source-bound-evidence-route-telemetry.md).
 
 ### Incrementality And API
 

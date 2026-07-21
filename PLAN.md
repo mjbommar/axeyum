@@ -33,8 +33,10 @@ session state.
 > before the string evidence soundness fix lose source-invalid DRAT credit and
 > now honestly report bare UNSAT. Resume by using those four as the bounded
 > `source-side-channel-not-serialized` P1 case, then add stable attempt/boundary and obligation IDs across
-> the 51 unique residual contents. Do not select a proof mechanism from syntax
-> counts or turn the 22 unpaired timing-flag changes into a performance claim.
+> the 51 unique residual contents under proposed ADR-0341. Do not implement the
+> telemetry before its exact invariance/mutation gates are reviewed. Do not
+> select a proof mechanism from syntax counts or turn the 22 unpaired timing-
+> flag changes into a performance claim.
 
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no

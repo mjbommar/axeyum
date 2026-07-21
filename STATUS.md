@@ -366,7 +366,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   created before the string evidence soundness fix lose DRAT credit because the
   old proof covered only the bounded/flat lowering. Use those as the first
   `source-side-channel-not-serialized` trace case, then land stable attempt/
-  boundary and obligation IDs across all four bare exits. The eight
+  boundary and obligation IDs across all four bare exits only after proposed
+  ADR-0341's invariance/mutation gates are reviewed. The eight
   reconstruction-only gaps remain an independent lane.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
