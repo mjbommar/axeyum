@@ -1,6 +1,28 @@
 # Design note: the exponential-tower substrate (`eᴬ·eᴮ = eᴬ⁺ᴮ` in the zero-test)
 
-Status: design (2026-07-21)
+Status: **largely implemented** (2026-07-21). The core laws are shipped in
+`normalize_exp` **without** the Monomial redesign this note originally proposed — a
+lower-risk per-term decomposition turned out to suffice:
+
+- **Addition** `exp(A+B)=exp(A)·exp(B)` — decompose `exp(Σ termᵢ)` into a product of
+  primitive per-term factors `∏ exp(termᵢ)`; the two spellings reach one normal form.
+- **Integer scaling** `exp(c·m)=exp(m)^c` — key each integer-coefficient term on its
+  primitive monomial raised to the coefficient, so `exp(2x)=exp(x)²`,
+  `exp(x)·exp(2x)=exp(3x)`.
+- **exp/ln inverse** `exp(k·ln v)=vᵏ` for positive rational `v`, integer `k`.
+- **Reciprocal/identity** `exp(0)=1`, `exp(−A)=1/exp(A)` (via rational normalization).
+
+All sound (`exp` is a `+→×` homomorphism; `ln`-inverse gated on `v>0`), all with zero
+regressions. This certified **first-order linear ODEs** (`dsolve_first_order_linear`)
+and **linear recurrences** (`solve_recurrence`, rational roots). **Still open:**
+rational-coefficient scaling `exp(x/2)=exp(x)^{1/2}` (non-integer power — needs the
+`RealAlgebraic`/RootOf layer) and the general `exp(k·ln v)` for non-constant `v`
+(needs a parseable/structured `ln` argument). The original Monomial-redesign plan
+below is retained for that residual scaling work.
+
+---
+
+Original design (Status: design, 2026-07-21):
 
 ## The problem
 

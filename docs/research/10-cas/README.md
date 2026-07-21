@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 206 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 209 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -19,7 +19,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric) | ✓ |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`; `definite_integrate` (FTC) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit`, `series` (Maclaurin), `series_at` (arbitrary-center Taylor), `sum_polynomial`, `evalf` (numeric approx) | limit/sum ✓ |
-| ODEs | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing, undetermined coeffs) | ✓ (ODE operator) |
+| ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `solve_recurrence` (rational-root closed forms) | ✓ (substitute-and-check) |
 | Trig | `evaluate_trig` (exact values at multiples of π/12), Pythagorean identity in the zero-test | compute (values certify) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
 | Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial`; `hermite_normal_form`/`smith_normal_form` (integer) | det/solve/null/eigvec ✓; U·A(·V)=D ✓ |
@@ -31,8 +31,11 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Number theory | `ntheory`: gcd, mod-pow/inverse, `is_prime`, `factorize`, divisors, φ, CRT, binomial; `ntheory_advanced`: `permutations` (nPr), Legendre/Jacobi, quadratic residues, `multiplicative_order`, `primitive_root`, `discrete_log` (BSGS), continued fractions, Pell | re-check ✓ |
 | Multivariate | `mvpoly::MvPoly`: ring ops, division, **GCD** (primitive PRS), square-free | — |
 
-Heads: `exp, sin, cos, tan, ln, atan, sqrt` (extensible `Unary`). Progress log:
-[diary.md](diary.md).
+Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs` (extensible `Unary`). The zero-test
+carries sound folds — `I²=−1`, Pythagorean `sin²+cos²=1`, `sqrt(c)²=c`, and the
+**exp tower** (`exp(A+B)=exp(A)exp(B)`, `exp(2x)=exp(x)²`, `exp(k·ln v)=vᵏ`) — which
+is what makes complex arithmetic, radical arithmetic, first-order ODEs, and
+recurrences certify. Progress log: [diary.md](diary.md).
 
 **Coverage target.** At least SymPy's compute surface, aiming at Mathematica's —
 the yardstick is the 23-node [curriculum](../../curriculum/) plus its K-12 layer.

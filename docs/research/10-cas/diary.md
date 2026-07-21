@@ -702,3 +702,23 @@ Tier A–C (Gosper, Sturm, factorization, normal forms, ODE methods, exact trig,
 statistics, vector calculus, number theory, radicals, …). Remaining headline gaps:
 the full exp tower (unlocks first-order ODEs / recurrences / general exp-log), RootOf
 (unblocked by Sturm — next), Zeilberger, assumptions engine, Risch.
+
+## 2026-07-21 — Entry 20: the exp tower + its payoffs (209 tests)
+
+Built the **exp-tower substrate** — the highest-leverage remaining item — via a
+lower-risk per-term decomposition in `normalize_exp` (no Monomial redesign needed):
+addition (`exp(A+B)=exp(A)exp(B)`), integer scaling (`exp(2x)=exp(x)²`,
+`exp(x)·exp(2x)=exp(3x)`), the exp/ln inverse (`exp(k·ln v)=vᵏ`, v>0 rational), and
+reciprocals (`exp(0)=1`, `exp(−A)=1/exp(A)`). All sound; **zero regressions** across
+integration/series/ODE tests. Then shipped the two capabilities it unlocks:
+- **`dsolve_first_order_linear`** — integrating-factor method, certified by the
+  `e^{−P}·e^P=1` cancellation the tower now provides.
+- **`solve_recurrence`** — rational-root linear recurrence closed forms
+  (`aₙ=5aₙ₋₁−6aₙ₋₂ → 3ⁿ−2ⁿ`, `rⁿ=exp(n·ln r)`), certified by the recurrence residual;
+  Fibonacci (irrational roots) declines honestly.
+
+Also this stretch: **partial fractions with repeated linear factors** (`apart` via
+undetermined coefficients), **Hermite/Smith normal forms**, **permutations**,
+**polynomial inequalities**. **209 unit + 43 doctests, clippy-clean, WASM-green.**
+Remaining exp-tower tail (rational-coefficient scaling, non-constant `exp/ln`) is
+documented in [exp-tower.md](exp-tower.md); it needs the RootOf/RealAlgebraic layer.
