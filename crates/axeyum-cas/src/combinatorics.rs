@@ -338,6 +338,29 @@ pub fn lucas(n: u32) -> Option<i128> {
     Some(previous)
 }
 
+/// The **Tribonacci number** `Tₙ` (with `T₀ = 0`, `T₁ = T₂ = 1`, and
+/// `Tₙ = Tₙ₋₁ + Tₙ₋₂ + Tₙ₋₃`): `0, 1, 1, 2, 4, 7, 13, 24, 44, 81, …`. Exact;
+/// `None` on `i128` overflow.
+///
+/// ```
+/// use axeyum_cas::combinatorics::tribonacci;
+/// assert_eq!(tribonacci(8), Some(44));
+/// ```
+#[must_use]
+pub fn tribonacci(n: u32) -> Option<i128> {
+    let (mut a, mut b, mut c) = (0i128, 1i128, 1i128); // T_0, T_1, T_2
+    if n == 0 {
+        return Some(0);
+    }
+    for _ in 1..n {
+        let next = a.checked_add(b)?.checked_add(c)?;
+        a = b;
+        b = c;
+        c = next;
+    }
+    Some(b)
+}
+
 /// The **Motzkin number** `Mₙ` — the number of ways to draw non-crossing chords
 /// between `n` points on a circle (equivalently, lattice paths with steps
 /// `↗ → ↘` staying ≥ 0): `1, 1, 2, 4, 9, 21, 51, …`, via the recurrence
@@ -513,6 +536,14 @@ pub fn generalized_harmonic(n: u32, r: u32) -> Option<Rational> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tribonacci_sequence() {
+        let expected = [0i128, 1, 1, 2, 4, 7, 13, 24, 44, 81, 149];
+        for (n, &want) in expected.iter().enumerate() {
+            assert_eq!(tribonacci(u32::try_from(n).unwrap()), Some(want), "T_{n}");
+        }
+    }
 
     #[test]
     fn motzkin_sequence() {
