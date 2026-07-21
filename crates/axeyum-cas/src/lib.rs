@@ -59,6 +59,7 @@ pub mod mvpoly;
 mod normalforms;
 pub mod ntheory;
 pub mod ntheory_advanced;
+pub mod orthopoly;
 pub mod permutation;
 mod ratint;
 mod series;
@@ -73,6 +74,7 @@ pub use matrix::Matrix;
 pub use normalforms::{hermite_normal_form, smith_normal_form};
 pub use permutation::Permutation;
 pub use mvpoly::MvPoly;
+pub use orthopoly::{chebyshev_t, chebyshev_u, hermite, laguerre, legendre};
 pub use series::{series, series_at};
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
@@ -2348,37 +2350,20 @@ pub fn sum_polynomial(f: &CasExpr, var: &str) -> Option<CasExpr> {
 /// The distinct rational roots of `den` with their multiplicities, or `None` if
 /// `den` does not split completely into rational **linear** factors (an irreducible
 /// quadratic-or-higher factor remains).
-fn linear_factor_multiplicities(den: &[Rational]) -> Option<Vec<(Rational, u32)>> {
-    let mut remaining = poly::rat_trim(den.to_vec());
-    let mut result: Vec<(Rational, u32)> = Vec::new();
-    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
-        let root = *ratint::rational_roots(&remaining)?.first()?; // none ⇒ non-linear ⇒ decline
-        let factor = [root.checked_neg()?, Rational::integer(1)]; // (x − root)
-        let mut multiplicity = 0u32;
-        while poly::rat_degree(&remaining).unwrap_or(0) >= 1
-            && poly::eval_rat_poly(&remaining, root)?.is_zero()
-        {
-            remaining = poly::rat_exact_div(&remaining, &factor)?;
-            multiplicity += 1;
-        }
-        result.push((root, multiplicity));
-    }
-    Some(result)
-}
-
-/// Partial-fraction decomposition of a univariate rational function whose
-/// denominator splits into rational linear factors (**distinct or repeated**):
-/// `p/q = (polynomial part) + Σᵢ Σⱼ Aᵢⱼ / (x − rᵢ)ʲ`, with the residues `Aᵢⱼ` found
-/// by undetermined coefficients (one exact linear solve). Returns the
-/// decomposition **certified** equal to the input (the re-combination zero-test),
-/// or `None` if the denominator has a non-rational (e.g. irreducible-quadratic)
-/// factor, or `expr` is not a univariate rational function.
+/// Full partial-fraction decomposition of a univariate rational function over ℚ:
+/// `p/q = (polynomial part) + Σ_f Σ_{j=1}^{k_f} N_{f,j}(x) / f(x)ʲ`, where `f` ranges
+/// over the **irreducible factors** of the denominator (linear, irreducible
+/// quadratic, or higher) with multiplicity `k_f`, and each numerator `N_{f,j}` has
+/// degree `< deg f`. The numerators are found by undetermined coefficients (one
+/// exact linear solve). Returns the decomposition **certified** equal to the input
+/// (the re-combination zero-test), or `None` if `expr` is not a univariate rational
+/// function or on overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, apart, equal, ZeroTest};
 /// let x = CasExpr::var("x");
-/// // x/(x−1)² = 1/(x−1) + 1/(x−1)² (a repeated factor).
-/// let f = x.clone() / (x - CasExpr::int(1)).pow(2);
+/// // x/((x−1)(x²+1)) splits with an irreducible-quadratic factor.
+/// let f = x.clone() / ((x.clone() - CasExpr::int(1)) * (x.pow(2) + CasExpr::int(1)));
 /// let decomposed = apart(&f, "x").unwrap();
 /// assert!(matches!(equal(&decomposed, &f), ZeroTest::Certified { equal: true, .. }));
 /// ```
@@ -2392,38 +2377,64 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return expand(expr); // no denominator — just the polynomial
     }
     let (quotient, remainder) = ratint::divrem(&num, &den)?;
-    let factors = linear_factor_multiplicities(&den)?;
+    let factors = factor_univariate_over_q(&den)?;
 
-    // Undetermined coefficients: one unknown Aᵢⱼ per `(root rᵢ, power j)`, with the
-    // basis polynomial `den / (x − rᵢ)ʲ`. The system `Σ Aᵢⱼ · basisᵢⱼ = remainder`
-    // is square (Σ multiplicities = deg den).
-    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(deg_den);
-    let mut term_data: Vec<(Rational, u32)> = Vec::with_capacity(deg_den);
-    for &(root, multiplicity) in &factors {
-        let factor = [root.checked_neg()?, Rational::integer(1)];
-        let mut power = vec![Rational::integer(1)];
-        for exponent in 1..=multiplicity {
-            power = poly::ratpoly_mul(&power, &factor)?; // (x − root)^exponent
-            let mut basis = poly::rat_exact_div(&den, &power)?;
-            basis.resize(deg_den, Rational::zero());
-            columns.push(basis);
-            term_data.push((root, exponent));
+    // Undetermined coefficients: for each irreducible factor `f` (degree `d`) with
+    // multiplicity `k`, and each power `j = 1..k`, the numerator `N_{f,j}` (degree
+    // `< d`) contributes `d` unknowns; the basis for its `xˡ` coefficient is
+    // `xˡ·(den / fʲ)`. The system `Σ (unknown)·basis = remainder` is square
+    // (`Σ d·k = deg den`).
+    let mut columns: Vec<Vec<Rational>> = Vec::new();
+    let mut meta: Vec<(usize, u32, usize)> = Vec::new(); // (factor index, power j, coeff l)
+    let mut factor_polys: Vec<Vec<Rational>> = Vec::new();
+    for (factor, multiplicity) in &factors {
+        let degree = poly::rat_degree(factor).unwrap_or(0);
+        if degree == 0 {
+            continue; // a constant (content) factor contributes no partial fraction
+        }
+        factor_polys.push(factor.clone());
+        let factor_index = factor_polys.len() - 1;
+        let mut factor_power = vec![Rational::integer(1)];
+        for power in 1..=*multiplicity {
+            factor_power = poly::ratpoly_mul(&factor_power, factor)?; // fʲ
+            let basis = poly::rat_exact_div(&den, &factor_power)?; // den / fʲ
+            for shift in 0..degree {
+                let mut column = vec![Rational::zero(); shift]; // xˢʰⁱᶠᵗ · basis
+                column.extend_from_slice(&basis);
+                column.resize(deg_den, Rational::zero());
+                columns.push(column);
+                meta.push((factor_index, power, shift));
+            }
         }
     }
     let mut rhs = remainder;
     rhs.resize(deg_den, Rational::zero());
-    let residues = ratint::solve_linear(&columns, &rhs)?;
+    if columns.len() != rhs.len() {
+        return None; // shape guard (should hold: Σ d·k = deg den)
+    }
+    let coefficients = ratint::solve_linear(&columns, &rhs)?;
+
+    // Group the solved coefficients into a numerator polynomial per (factor, power).
+    let mut numerators: BTreeMap<(usize, u32), Vec<Rational>> = BTreeMap::new();
+    for (coeff, &(factor_index, power, shift)) in coefficients.iter().zip(&meta) {
+        let degree = poly::rat_degree(&factor_polys[factor_index]).unwrap_or(0);
+        let numerator = numerators
+            .entry((factor_index, power))
+            .or_insert_with(|| vec![Rational::zero(); degree]);
+        numerator[shift] = *coeff;
+    }
 
     let mut parts: Vec<CasExpr> = Vec::new();
     if !ratint::is_zero(&quotient) {
         parts.push(MultiPoly::from_univariate(var, &quotient).to_expr());
     }
-    for (residue, &(root, power)) in residues.iter().zip(&term_data) {
-        if residue.is_zero() {
+    for ((factor_index, power), numerator) in &numerators {
+        if numerator.iter().all(|c| c.is_zero()) {
             continue;
         }
-        let denom = (CasExpr::var(var) - CasExpr::Const(root)).pow(power);
-        parts.push(CasExpr::Const(*residue) / denom);
+        let numerator_expr = MultiPoly::from_univariate(var, numerator).to_expr();
+        let factor_expr = MultiPoly::from_univariate(var, &factor_polys[*factor_index]).to_expr();
+        parts.push(numerator_expr / factor_expr.pow(*power));
     }
     let result = match parts.len() {
         0 => CasExpr::zero(),
@@ -4570,8 +4581,15 @@ mod tests {
         // Improper (numerator degree ≥ denominator): (x³)/(x−1)² has a polynomial part.
         let improper = x().pow(3) / (x() - CasExpr::int(1)).pow(2);
         assert_equal(&apart(&improper, "x").expect("improper"), &improper);
-        // Irreducible quadratic factor is declined honestly (not linear over ℚ).
-        assert!(apart(&(CasExpr::int(1) / (x().pow(2) + CasExpr::int(1))), "x").is_none());
+        // Irreducible quadratic factor: 1/(x²+1) is already partial → itself.
+        let irr = CasExpr::int(1) / (x().pow(2) + CasExpr::int(1));
+        assert_equal(&apart(&irr, "x").expect("irreducible quadratic"), &irr);
+        // Mixed linear + irreducible quadratic: x/((x−1)(x²+1)).
+        let mixed_q = x() / ((x() - CasExpr::int(1)) * (x().pow(2) + CasExpr::int(1)));
+        assert_equal(&apart(&mixed_q, "x").expect("linear + quadratic"), &mixed_q);
+        // Repeated irreducible quadratic: 1/(x²+1)².
+        let rep_q = CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(2);
+        assert_equal(&apart(&rep_q, "x").expect("repeated quadratic"), &rep_q);
     }
 
     #[test]
