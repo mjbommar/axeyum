@@ -55,8 +55,10 @@ The division scoreboard contains 35 rows across 24 logic labels:
   full conjunction rather than treating Lean acceptance as sufficient:
   **259 / 327 baseline UNSATs** are certified, independently checked,
   trust-hole-free, and Lean-reconstructed. The residual is 54 uncertified
-  routes, eight trust-free Lean-reconstruction gaps, four declared `bit-blast`
-  trust holes, and two proof-production errors.
+  audit-row occurrences, eight trust-free Lean-reconstruction gaps, four
+  declared `bit-blast` trust holes, and two proof-production errors. The 54
+  occurrences reduce to **52 paths / 47 unique exact contents** after
+  provenance deduplication.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
   come from overlapping row variants. The two synthetic rows contribute
@@ -229,6 +231,18 @@ trust-free evidence and are direct reconstruction work; four QF_SEQ DRAT rows
 retain a `bit-blast` trust hole; two QF_NIA `IntPow2` rows fail evidence
 production. `just parity-docs` rejects stale generated outputs.
 
+The follow-on [uncertified shape census](generated/proof-gap-shape-census.md)
+is produced from source hashes plus Axeyum's exact SMT-LIB parser/reachable IR,
+not filenames. It contracts 54 audit occurrences to 52 paths and 47 unique
+contents (five exact duplicate groups), split into 25 arithmetic and 22
+string/sequence contents. The leading non-exclusive structural families are
+real nonlinear multiplication (12 contents), string concatenation (nine), and
+string regex (seven). Three unique string contents have zero reachable parsed-
+IR terms because front-end handling discharges them before the ordinary
+assertion DAG. This rejects a single “add Lean reconstruction” response: the
+next prerequisite is stable route/reduction provenance at evidence production,
+including the early-fold seam.
+
 **Exit:** every definitive result in a claimed dominant fragment has a serialized
 certificate, independent recheck, zero implicit reductions, and a recorded
 second-pass cost.
@@ -321,9 +335,10 @@ reported as parity before it climbs the measured and certifying rungs.
    schema while preserving separate scores.
 5. Observe and archive the required representative official-Lean solver-proof
    CI result; size the scheduled exhaustive tier from that measurement.
-6. Derive an exact residual-shape census for the 54 uncertified routes before
-   selecting a shared proof mechanism; handle the eight reconstruction-only
-   gaps independently.
+6. Instrument every uncertified result with a stable route ID,
+   source-to-lowered obligation map, checker identity, and first uncertified
+   reduction; re-run the exact 47-content census before selecting a shared
+   proof mechanism. Handle the eight reconstruction-only gaps independently.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.

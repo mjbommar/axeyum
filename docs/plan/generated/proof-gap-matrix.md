@@ -147,7 +147,7 @@ mechanisms that should drive reconstruction work.
 
 ## Evidence-driven priority
 
-1. Replace the 54 uncertified routes with serialized, certified evidence and independently check every route.
+1. Replace the 54 uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.
 2. Add Lean reconstruction for the 8 already certified, checked, trust-free instances.
 3. Eliminate the 4 declared trust-hole instances rather than counting Lean module acceptance alone.
 4. Fix the 2 proof-production errors and rerun their exact committed rows.

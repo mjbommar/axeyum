@@ -20,6 +20,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean
   reconstruction, and the exact residual blockers.
+- [`generated/proof-gap-shape-census.md`](generated/proof-gap-shape-census.md) —
+  source-hash-bound, parser-backed, exact-content-deduplicated census of the
+  uncertified UNSAT population. It retains source syntax and reachable parsed
+  IR while refusing to infer a proof mechanism from operator presence alone.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map

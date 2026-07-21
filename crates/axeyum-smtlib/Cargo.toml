@@ -16,5 +16,9 @@ axeyum-fp.workspace = true
 axeyum-ir.workspace = true
 axeyum-strings.workspace = true
 
+[dev-dependencies]
+serde_json = "1"
+sha2 = "0.11"
+
 [lints]
 workspace = true

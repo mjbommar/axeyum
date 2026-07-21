@@ -325,7 +325,7 @@ def markdown(report: dict) -> str:
             "",
             "## Evidence-driven priority",
             "",
-            f"1. Replace the {categories['uncertified-and-unchecked'] + categories['uncertified-but-checked']} uncertified routes with serialized, certified evidence and independently check every route.",
+            f"1. Replace the {categories['uncertified-and-unchecked'] + categories['uncertified-but-checked']} uncertified audit-row occurrences with serialized, certified evidence and independently check every route. Use the [deduplicated shape census](proof-gap-shape-census.md) for mechanism prevalence.",
             f"2. Add Lean reconstruction for the {categories['lean-reconstruction-gap']} already certified, checked, trust-free instances.",
             f"3. Eliminate the {categories['trust-hole-and-lean-gap'] + categories['trust-hole']} declared trust-hole instances rather than counting Lean module acceptance alone.",
             f"4. Fix the {categories['proof-production-error']} proof-production errors and rerun their exact committed rows.",

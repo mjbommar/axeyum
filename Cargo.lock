@@ -171,6 +171,8 @@ dependencies = [
  "axeyum-fp",
  "axeyum-ir",
  "axeyum-strings",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]
