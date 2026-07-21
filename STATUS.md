@@ -322,6 +322,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — ADR-0339 preregisters deterministic replay-checked witness
+  corpora (T5.4.2).** After bounded P5.5 closes, the next unblocked Track 5 cell
+  composes existing typed counterexamples and reproduction renderers without
+  changing solver semantics. Three real classes—panic, normally returning
+  postcondition violation, and raw equivalence refutation—must replay before a
+  lexically ordered canonical JSON corpus and generated Rust tests exist. The
+  generated source must be committed, included, compiled, executed, and
+  byte-reproduced. The preimplementation audit also finds signed width-128
+  witnesses currently lose their sign; exact `i128::MIN` scalar/array replay is
+  a prerequisite. Commit/push this zero-result ADR before production code.
+  T5.4.3/4, symbolic memory, performance, and automatic filesystem/git writes
+  remain out of scope.
+
 - **2026-07-21 — ADR-0334 accepts authenticated Tock capture v3.** Pushed
   producer `b2ad2641` corrects v2's merged-registration replay error, then
   produces two raw-identical 2,651,673-byte

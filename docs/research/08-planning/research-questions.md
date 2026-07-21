@@ -741,6 +741,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     remain open. Any continuation must preregister a real workload and measure
     proof prevalence, nontrivial traces, and requested second-pass cost;
     ordinary pruning cost and whole-CFG proof coverage remain separate.
+- [ ] Can replay-checked solver countermodels become deterministic fuzz-seed
+  corpora and compiled regression tests without relabeling `Unknown`, trusting
+  raw models, or losing full-width Rust values?
+  - [ADR-0339](../09-decisions/adr-0339-preregister-deterministic-witness-seed-corpus.md)
+    freezes one typed solver-to-corpus path over panic, postcondition, and
+    equivalence countermodels; replay must pass before canonical JSON or test
+    source exists, and the known signed-128 renderer boundary must be corrected.
+    T5.4.3/4 directed-unknown handoff and coverage accounting remain separate.
 - [ ] Can one structured LLVM syntax/semantics front end feed both Axeyum term
   reflection and a hardened Glaurung LLIR lowerer without coupling either
   consumer to the other's execution policy?

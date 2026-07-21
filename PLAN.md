@@ -589,6 +589,12 @@ session state.
 >    universal coverage, trust, artifact boundaries, and measured 50.745 s /
 >    1.20 GiB cost; it records that no Tock bug was found. Bounded P5.5 v1 is
 >    DONE. Do not rerun, tune, or convert this into a speed or whole-kernel claim.
+>    The next unblocked Track 5 increment is P5.4/T5.4.2. ADR-0339 now
+>    preregisters a deterministic replay-checked witness corpus: panic,
+>    postcondition, and equivalence countermodels must replay before canonical
+>    JSON or generated compiled tests exist. It also freezes correction of the
+>    discovered signed-128 witness-rendering defect. Commit/push this zero-result
+>    gate before implementation; T5.4.3/4 remain separate.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
