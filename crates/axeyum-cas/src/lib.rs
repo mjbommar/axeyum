@@ -5069,6 +5069,40 @@ mod tests {
     }
 
     #[test]
+    fn adjugate_power_and_symmetry() {
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(3), CasExpr::int(4)],
+        ])
+        .unwrap();
+        // Adjugate certificate: M·adj(M) = det(M)·I. det = −2.
+        let adj = m.adjugate().unwrap();
+        let product = m.mul(&adj).unwrap();
+        let det = m.determinant().unwrap();
+        for i in 0..2 {
+            for j in 0..2 {
+                let expected = if i == j { det.clone() } else { CasExpr::zero() };
+                assert_equal(product.get(i, j).unwrap(), &expected);
+            }
+        }
+        // M² = [[7,10],[15,22]].
+        let square = m.pow(2).unwrap();
+        assert_equal(square.get(0, 0).unwrap(), &CasExpr::int(7));
+        assert_equal(square.get(1, 1).unwrap(), &CasExpr::int(22));
+        // M⁰ = I.
+        assert_equal(m.pow(0).unwrap().get(0, 0).unwrap(), &CasExpr::int(1));
+        assert_equal(m.pow(0).unwrap().get(0, 1).unwrap(), &CasExpr::zero());
+        // Symmetry predicate.
+        assert!(!m.is_symmetric());
+        let sym = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(2), CasExpr::int(5)],
+        ])
+        .unwrap();
+        assert!(sym.is_symmetric());
+    }
+
+    #[test]
     fn lu_decomposition_reconstructs() {
         // A matrix needing a pivot swap (zero in the (0,0) position).
         let a = Matrix::from_rows(vec![

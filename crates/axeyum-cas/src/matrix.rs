@@ -323,6 +323,93 @@ impl Matrix {
         Some(simplify_entry(raw))
     }
 
+    /// The `(i, j)` cofactor `(−1)^{i+j}·M_{ij}` where `M_{ij}` is the minor
+    /// determinant (delete row `i`, column `j`). Valid for arbitrary symbolic
+    /// entries. `None` if the matrix is not square or smaller than `1×1`.
+    #[must_use]
+    pub fn cofactor(&self, row: usize, col: usize) -> Option<CasExpr> {
+        if self.rows != self.cols || self.rows == 0 || row >= self.rows || col >= self.cols {
+            return None;
+        }
+        let grid = self.to_grid();
+        // Submatrix with `row` and `col` removed.
+        let sub: Vec<Vec<CasExpr>> = grid
+            .iter()
+            .enumerate()
+            .filter(|(r, _)| *r != row)
+            .map(|(_, source)| {
+                source
+                    .iter()
+                    .enumerate()
+                    .filter(|(c, _)| *c != col)
+                    .map(|(_, entry)| entry.clone())
+                    .collect()
+            })
+            .collect();
+        let minor_det = cofactor_det(&sub);
+        let signed = if (row + col).is_multiple_of(2) {
+            minor_det
+        } else {
+            -minor_det
+        };
+        Some(simplify_entry(signed))
+    }
+
+    /// The **adjugate** (classical adjoint) — the transpose of the cofactor matrix,
+    /// satisfying `M·adj(M) = det(M)·I`. Valid for arbitrary symbolic square
+    /// matrices. `None` if not square.
+    #[must_use]
+    pub fn adjugate(&self) -> Option<Matrix> {
+        if self.rows != self.cols {
+            return None;
+        }
+        let n = self.rows;
+        let mut rows: Vec<Vec<CasExpr>> = Vec::with_capacity(n);
+        for i in 0..n {
+            let mut row = Vec::with_capacity(n);
+            for j in 0..n {
+                // adj[i][j] = cofactor(j, i) (transpose).
+                row.push(self.cofactor(j, i)?);
+            }
+            rows.push(row);
+        }
+        Matrix::from_rows(rows)
+    }
+
+    /// The matrix power `Mᵏ` (with `M⁰ = I`) of a square matrix, by repeated
+    /// multiplication. `None` if the matrix is not square.
+    #[must_use]
+    pub fn pow(&self, exponent: u32) -> Option<Matrix> {
+        if self.rows != self.cols {
+            return None;
+        }
+        let mut result = Matrix::identity(self.rows);
+        for _ in 0..exponent {
+            result = result.mul(self)?;
+        }
+        Some(result)
+    }
+
+    /// Whether the matrix equals its transpose (entrywise, up to certified
+    /// value-equality). `false` if not square.
+    #[must_use]
+    pub fn is_symmetric(&self) -> bool {
+        if self.rows != self.cols {
+            return false;
+        }
+        for i in 0..self.rows {
+            for j in (i + 1)..self.cols {
+                if !matches!(
+                    crate::equal(self.at(i, j), self.at(j, i)),
+                    crate::ZeroTest::Certified { equal: true, .. }
+                ) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
     /// This matrix as a nested row grid of cloned `CasExpr` entries.
     fn to_grid(&self) -> Vec<Vec<CasExpr>> {
         (0..self.rows)
