@@ -1,0 +1,21 @@
+{
+  "capture_v2_negative": {
+    "path": "bench-results/verify-tock-log2-20260721/capture-v2-negative.json",
+    "sha256": "2d640758eb00a003ab456953b867830fd6a88bfee702c325774803815822c91d"
+  },
+  "capture_v2_registration": {
+    "path": "bench-results/verify-tock-log2-20260721/capture-v2-registration.json",
+    "sha256": "09b61b38b3552fce512a5ace05f5c8bf4f33212d423543c1d976124007ff5c16"
+  },
+  "producer_files": [
+    {
+      "path": "scripts/capture-tock-log2-v3.py",
+      "sha256": "d629b895933f1d4e5342bca29d66976baef5db5b31f890536adbfb29baea4205"
+    },
+    {
+      "path": "scripts/tests/test_capture_tock_log2_v3.py",
+      "sha256": "7682e64b4155953ce19f9a3bdad2bacfab137eb242d0748d76bd09c6b5edf2a7"
+    }
+  ],
+  "schema": "axeyum.tock-log2-capture-v3-registration.v1"
+}

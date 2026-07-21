@@ -473,9 +473,13 @@ session state.
 >    ADR-0334 now freezes exactly that v3 seam: pin v2 registration/negative,
 >    validate and pass the complete already-pinned ADR-0332 cache registration
 >    only to unchanged structural replay, compare the same accepted summary,
->    and inherit every v2 build/identity/atomicity/no-query gate. Commit/push
->    this zero-result ADR before implementing the thin wrapper/tests/registration;
->    do not build early.
+>    and inherit every v2 build/identity/atomicity/no-query gate. Commit/push of
+>    the zero-result ADR precedes implementation. The thin wrapper, compact
+>    registration, five focused plus 41 inherited tests, six-producer/nine-tool
+>    validation, full 169-lock registration, local result, and independent
+>    3,077-row inventory now pass with no invocation/build. Commit/push this
+>    producer checkpoint, then invoke v3 once under the registered cgroup; do
+>    not query early.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

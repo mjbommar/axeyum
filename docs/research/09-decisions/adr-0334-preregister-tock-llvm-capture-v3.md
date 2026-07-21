@@ -72,8 +72,15 @@ weakened after the first official invocation begins.
 
 ## Result
 
-Proposed. No v3 producer, registration, official invocation, build, module,
-symbol, extraction, admission, property query, proof, or scoreboard row exists.
+Proposed. The thin v3 wrapper changes only structural replay's policy object,
+adds exact v2 registration/negative lineage to stable identity, and restores
+all patched v2 policy globals after delegation. Five focused plus 41 inherited
+protocol tests pass. Compact registration validates six direct capture
+producer files, nine tools, the full 169-lock-package cache registration, local
+result, and independently recomputed 3,077-row inventory. Commit and push this
+checkpoint before the single official invocation. No v3 invocation, build,
+module, symbol, extraction, admission, property query, proof, or scoreboard row
+exists.
 
 ## Rejected alternatives
 
