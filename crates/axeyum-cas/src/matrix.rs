@@ -473,6 +473,69 @@ impl Matrix {
         }
         Some(basis)
     }
+
+    /// The LU decomposition of a **square, invertible, rational-constant** matrix
+    /// with partial pivoting: returns `(P, L, U)` with `P·A = L·U`, where `P` is a
+    /// permutation matrix, `L` is unit-lower-triangular, and `U` is
+    /// upper-triangular. Exact Doolittle elimination over [`Rational`].
+    ///
+    /// The identity `P·A = L·U` is the certificate — re-multiply and compare with
+    /// the certified matrix product. Returns `None` if the matrix is not square, is
+    /// non-constant, is singular (no nonzero pivot in some column), or on overflow.
+    #[must_use]
+    pub fn lu(&self) -> Option<(Matrix, Matrix, Matrix)> {
+        if self.rows != self.cols {
+            return None;
+        }
+        let n = self.rows;
+        let mut upper = self.to_rational_grid()?;
+        let mut lower = vec![vec![Rational::zero(); n]; n];
+        let mut permutation: Vec<usize> = (0..n).collect();
+
+        for pivot_col in 0..n {
+            // Partial pivot: a nonzero entry at or below the diagonal.
+            let pivot_row = (pivot_col..n).find(|&row| !upper[row][pivot_col].is_zero())?;
+            if pivot_row != pivot_col {
+                upper.swap(pivot_col, pivot_row);
+                lower.swap(pivot_col, pivot_row);
+                permutation.swap(pivot_col, pivot_row);
+            }
+            lower[pivot_col][pivot_col] = Rational::integer(1);
+            let pivot_snapshot = upper[pivot_col].clone();
+            let pivot_value = pivot_snapshot[pivot_col];
+            for row in (pivot_col + 1)..n {
+                let factor = upper[row][pivot_col].checked_div(pivot_value)?;
+                lower[row][pivot_col] = factor;
+                for (col, target) in upper[row].iter_mut().enumerate().skip(pivot_col) {
+                    let scaled = factor.checked_mul(pivot_snapshot[col])?;
+                    *target = target.checked_sub(scaled)?;
+                }
+            }
+        }
+
+        let from_grid = |grid: &[Vec<Rational>]| -> Matrix {
+            let data = grid
+                .iter()
+                .flat_map(|row| row.iter().map(|value| CasExpr::Const(*value)))
+                .collect();
+            Matrix {
+                rows: n,
+                cols: n,
+                data,
+            }
+        };
+        // Permutation matrix: row i selects original row permutation[i].
+        let mut perm_data = vec![CasExpr::zero(); n * n];
+        for (row, &source) in permutation.iter().enumerate() {
+            perm_data[row * n + source] = CasExpr::one();
+        }
+        let permutation_matrix = Matrix {
+            rows: n,
+            cols: n,
+            data: perm_data,
+        };
+        Some((permutation_matrix, from_grid(&lower), from_grid(&upper)))
+    }
 }
 
 impl std::fmt::Display for Matrix {

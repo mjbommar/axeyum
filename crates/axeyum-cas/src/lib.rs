@@ -3849,6 +3849,38 @@ mod tests {
     }
 
     #[test]
+    fn lu_decomposition_reconstructs() {
+        // A matrix needing a pivot swap (zero in the (0,0) position).
+        let a = Matrix::from_rows(vec![
+            vec![CasExpr::zero(), CasExpr::int(2), CasExpr::int(1)],
+            vec![CasExpr::int(1), CasExpr::int(1), CasExpr::int(1)],
+            vec![CasExpr::int(2), CasExpr::int(1), CasExpr::int(3)],
+        ])
+        .unwrap();
+        let (p, l, u) = a.lu().expect("invertible");
+        // Certificate: P·A = L·U.
+        let left = p.mul(&a).unwrap();
+        let right = l.mul(&u).unwrap();
+        for i in 0..3 {
+            for j in 0..3 {
+                assert_equal(left.get(i, j).unwrap(), right.get(i, j).unwrap());
+                // L is unit-lower-triangular; U is upper-triangular.
+                match i.cmp(&j) {
+                    std::cmp::Ordering::Less => {
+                        assert_equal(l.get(i, j).unwrap(), &CasExpr::zero());
+                    }
+                    std::cmp::Ordering::Greater => {
+                        assert_equal(u.get(i, j).unwrap(), &CasExpr::zero());
+                    }
+                    std::cmp::Ordering::Equal => {
+                        assert_equal(l.get(i, i).unwrap(), &CasExpr::int(1));
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
     fn null_space_basis_is_certified() {
         // [[1,2],[2,4]] has null space spanned by (−2,1): A·(−2,1)ᵀ = 0.
         let m = Matrix::from_rows(vec![
