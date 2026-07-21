@@ -1,0 +1,132 @@
+{
+  "track": "single_query",
+  "wall_limit_s": 10.0,
+  "cores": 4,
+  "n_benchmarks": 24,
+  "n_removed_disagreements": 0,
+  "removed_disagreements": [],
+  "divisions": {
+    "QF_BV": {
+      "n_benchmarks": 24,
+      "competitive": true,
+      "sound_solvers": [
+        "axeyum",
+        "bitwuzla",
+        "cvc5"
+      ],
+      "ranking_par2": [
+        "bitwuzla",
+        "cvc5",
+        "axeyum"
+      ],
+      "biggest_lead_correctness_rank": 1.0,
+      "solvers": {
+        "axeyum": {
+          "parallel": {
+            "e": 0,
+            "n": 19,
+            "wall": 6.121,
+            "cpu": 6.105,
+            "aw": 51.166,
+            "ac": 51.143
+          },
+          "par2": {
+            "e": 0,
+            "n": 19,
+            "wall": 106.121,
+            "cpu": 406.105,
+            "aw": 51.166,
+            "ac": 51.143
+          },
+          "sequential": {
+            "e": 0,
+            "n": 19,
+            "wall": 0.0,
+            "cpu": 6.105,
+            "aw": 0.0,
+            "ac": 51.143
+          }
+        },
+        "cvc5": {
+          "parallel": {
+            "e": 0,
+            "n": 19,
+            "wall": 3.598,
+            "cpu": 3.583,
+            "aw": 53.675,
+            "ac": 53.653
+          },
+          "par2": {
+            "e": 0,
+            "n": 19,
+            "wall": 103.598,
+            "cpu": 403.583,
+            "aw": 53.675,
+            "ac": 53.653
+          },
+          "sequential": {
+            "e": 0,
+            "n": 19,
+            "wall": 0.0,
+            "cpu": 3.583,
+            "aw": 0.0,
+            "ac": 53.653
+          }
+        },
+        "bitwuzla": {
+          "parallel": {
+            "e": 0,
+            "n": 19,
+            "wall": 2.985,
+            "cpu": 2.971,
+            "aw": 53.052,
+            "ac": 53.03
+          },
+          "par2": {
+            "e": 0,
+            "n": 19,
+            "wall": 102.985,
+            "cpu": 402.971,
+            "aw": 53.052,
+            "ac": 53.03
+          },
+          "sequential": {
+            "e": 0,
+            "n": 19,
+            "wall": 0.0,
+            "cpu": 2.971,
+            "aw": 0.0,
+            "ac": 53.03
+          }
+        }
+      },
+      "largest_contribution": {
+        "axeyum": {
+          "n": 0.0,
+          "c": 3.2226727880169115e-05,
+          "w": 3.184817312940069e-05
+        },
+        "cvc5": {
+          "n": 0.0,
+          "c": 0.0,
+          "w": 0.0
+        },
+        "bitwuzla": {
+          "n": 0.0,
+          "c": 5.881601253521218e-05,
+          "w": 5.887872913246106e-05
+        }
+      }
+    }
+  },
+  "best_overall_score": {
+    "axeyum": 0.8650282261421696,
+    "cvc5": 0.8650282261421696,
+    "bitwuzla": 0.8650282261421696
+  },
+  "best_overall_ranking": [
+    "axeyum",
+    "cvc5",
+    "bitwuzla"
+  ]
+}
