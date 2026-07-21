@@ -2177,6 +2177,52 @@ pub fn discriminant(p: &CasExpr, var: &str) -> Option<CasExpr> {
     signed.checked_div(leading).map(CasExpr::Const)
 }
 
+/// The LSB-first rational coefficient vector of the `n`-th cyclotomic polynomial
+/// `Φₙ`, computed from the defining product `∏_{d∣n} Φ_d(x) = xⁿ − 1` by dividing
+/// `xⁿ − 1` by every `Φ_d` with `d ∣ n`, `d < n` (recursively). `None` for `n = 0`
+/// or on overflow.
+fn cyclotomic_coeffs(n: u64) -> Option<Vec<Rational>> {
+    if n == 0 {
+        return None;
+    }
+    let size = usize::try_from(n).ok()?;
+    // Start from xⁿ − 1.
+    let mut quotient = vec![Rational::zero(); size + 1];
+    quotient[0] = Rational::integer(-1);
+    quotient[size] = Rational::integer(1);
+    // Divide out Φ_d for every proper divisor d of n.
+    for divisor in ntheory::divisors(i128::from(n)) {
+        let divisor = u64::try_from(divisor).ok()?;
+        if divisor < n {
+            let phi_d = cyclotomic_coeffs(divisor)?;
+            quotient = poly::rat_exact_div(&quotient, &phi_d)?;
+        }
+    }
+    Some(poly::rat_trim(quotient))
+}
+
+/// The `n`-th cyclotomic polynomial `Φₙ(var)` — the minimal polynomial over ℚ of a
+/// primitive `n`-th root of unity — as an (expanded) [`CasExpr`]. For example
+/// `Φ₁ = x−1`, `Φ₂ = x+1`, `Φ₄ = x²+1`, `Φ₆ = x²−x+1`.
+///
+/// Built from the identity `∏_{d∣n} Φ_d(x) = xⁿ − 1`, which is also its
+/// certificate (the product of `Φ_d` over all divisors re-multiplies to `xⁿ − 1`,
+/// checkable by [`equal`]). Returns `None` for `n = 0` or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, cyclotomic_polynomial, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // Φ₆(x) = x² − x + 1.
+/// let phi6 = cyclotomic_polynomial(6, "x").unwrap();
+/// let expected = x.clone().pow(2) - x + CasExpr::int(1);
+/// assert!(matches!(equal(&phi6, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn cyclotomic_polynomial(n: u64, var: &str) -> Option<CasExpr> {
+    let coeffs = cyclotomic_coeffs(n)?;
+    Some(MultiPoly::from_univariate(var, &coeffs).to_expr())
+}
+
 /// Factor a non-negative integer `n` as `s²·m` with `m` square-free, returning
 /// `(s, m)` — the data needed to pull the largest perfect square out of a radical.
 /// `None` on overflow.
@@ -3885,6 +3931,34 @@ mod tests {
             &((sqrt3.clone() - CasExpr::int(1)) * (sqrt3 + CasExpr::int(1))),
             &CasExpr::int(2),
         );
+    }
+
+    #[test]
+    fn cyclotomic_polynomials() {
+        let x = || v("x");
+        // Known small cases.
+        assert_equal(&cyclotomic_polynomial(1, "x").unwrap(), &(x() - CasExpr::int(1)));
+        assert_equal(&cyclotomic_polynomial(2, "x").unwrap(), &(x() + CasExpr::int(1)));
+        assert_equal(
+            &cyclotomic_polynomial(3, "x").unwrap(),
+            &(x().pow(2) + x() + CasExpr::int(1)),
+        );
+        assert_equal(&cyclotomic_polynomial(4, "x").unwrap(), &(x().pow(2) + CasExpr::int(1)));
+        assert_equal(
+            &cyclotomic_polynomial(6, "x").unwrap(),
+            &(x().pow(2) - x() + CasExpr::int(1)),
+        );
+        // Φ₁₂ = x⁴ − x² + 1.
+        assert_equal(
+            &cyclotomic_polynomial(12, "x").unwrap(),
+            &(x().pow(4) - x().pow(2) + CasExpr::int(1)),
+        );
+        // Certificate: ∏_{d|6} Φ_d = Φ₁·Φ₂·Φ₃·Φ₆ = x⁶ − 1.
+        let product = cyclotomic_polynomial(1, "x").unwrap()
+            * cyclotomic_polynomial(2, "x").unwrap()
+            * cyclotomic_polynomial(3, "x").unwrap()
+            * cyclotomic_polynomial(6, "x").unwrap();
+        assert_equal(&product, &(x().pow(6) - CasExpr::int(1)));
     }
 
     #[test]
