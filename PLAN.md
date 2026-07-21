@@ -594,10 +594,15 @@ session state.
 >    and raw QF_BV equivalence countermodels replay before admission to a
 >    canonical 1,404-byte JSON corpus and exact 712-byte generated Rust suite.
 >    The committed suite compiles, executes, reverse-order reproduces, and has
->    mutation teeth. The next unblocked Track 5 cell is T5.4.3: preregister an
->    honest `Unknown` -> directed-fuzz handoff before implementation. Do not
->    conflate that fuzz-only route with T5.4.2's decided countermodels or
->    T5.4.4's later proof/refutation/fuzz coverage accounting.
+>    mutation teeth. The next unblocked Track 5 cell is T5.4.3. ADR-0340 now
+>    preregisters a reason-preserving `Unknown` -> directed-fuzz handoff:
+>    checked proof and replayed-refutation outcomes remain distinct, while only
+>    a genuine `ProofOutcome::Unknown` may emit a bounded guarded QF_BV target
+>    and sampled `fuzzed-only` report. Commit/push this zero-result gate before
+>    production code or fixture observation. Do not flatten errors/replay
+>    failures/dropped samples, treat no sampled violation as proof, wire
+>    Glaurung's current unit-Unknown seam, or conflate this with T5.4.4 coverage
+>    accounting.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

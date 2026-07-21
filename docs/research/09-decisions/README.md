@@ -394,3 +394,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0337](adr-0337-preregister-tock-end-to-end-proof-v3.md) | Preregister the dual-DRAT route; accept v3 as a completed-test/first-row parser negative | accepted |
 | [0338](adr-0338-preregister-tock-proof-v4-marker-parser.md) | Accept eight dual-DRAT Tock proofs and six replayed controls after exact first-row parser correction | accepted |
 | [0339](adr-0339-preregister-deterministic-witness-seed-corpus.md) | Accept deterministic replay-checked solver witness corpora and generated regression tests | accepted |
+| [0340](adr-0340-preregister-reason-preserving-directed-fuzz-handoff.md) | Preregister a reason-preserving Unknown-to-directed-fuzz handoff | proposed |

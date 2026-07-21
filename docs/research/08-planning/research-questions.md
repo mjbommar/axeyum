@@ -751,6 +751,14 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     the committed 1,404-byte JSON plus 712-byte Rust source reproduce
     byte-for-byte, compile, and execute. T5.4.3/4 directed-unknown handoff and
     coverage accounting remain separate.
+- [ ] Can a structured solver `Unknown` become deterministic guarded fuzz work
+  without relabeling errors, replay failures, samples, or dropped work as proof?
+  - [ADR-0340](../09-decisions/adr-0340-preregister-reason-preserving-directed-fuzz-handoff.md)
+    freezes a QF_BV-only hybrid outcome: checked proofs and replayed solver
+    refutations remain decided branches; only `ProofOutcome::Unknown` emits an
+    exact reason-preserving target plus a source-oracle-checked `fuzzed-only`
+    report. T5.4.4 still owns coverage accounting, and Glaurung must first stop
+    flattening `UnknownReason` before consuming this route.
 - [ ] Can one structured LLVM syntax/semantics front end feed both Axeyum term
   reflection and a hardened Glaurung LLIR lowerer without coupling either
   consumer to the other's execution policy?
