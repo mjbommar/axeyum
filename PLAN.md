@@ -447,7 +447,19 @@ session state.
 >    the bounded profile. ADR-0312 records the boundary. Perform one final
 >    residual query-construction/core-helper census, preserving the compact
 >    solver front door and stopping R4 if no independent non-catch-all boundary
->    is justified.
+>    is justified. R4i identifies exactly one final independent family: 12
+>    existing `distinct`, cardinality, and pseudo-Boolean term constructors now
+>    live under a 14-entry full-only `constraints` subtree. The all-feature
+>    documented root falls 77→66, while minimal `qfbv` remains 26 with no
+>    constraints module. Abduction, model-based projection, model replay,
+>    backends, incremental state, strategies, and solver front doors stay at the
+>    root. Historical paths remain callable and type-identical; all 891
+>    solver-library tests, strict clippy, compatibility gates, and both
+>    warning-denied rustdoc profiles pass under the bounded profile. ADR-0313
+>    records the boundary and closes R4. Further namespace work requires new
+>    consumer evidence. Continue item 10 with the separate typed-configuration
+>    audit; do not combine behavior-bearing configuration changes with this
+>    documentation-only series.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

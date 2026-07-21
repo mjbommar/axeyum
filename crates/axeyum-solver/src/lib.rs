@@ -190,6 +190,28 @@ macro_rules! full_modules {
 #[cfg(feature = "full")]
 full_modules!();
 
+/// Boolean, cardinality, and pseudo-Boolean constraint builders.
+///
+/// This full-profile facade groups existing query-construction helpers without
+/// absorbing solver, theory, or optimization entry points. Historical
+/// crate-root paths remain source-compatible aliases hidden from root rustdoc.
+#[cfg(feature = "full")]
+pub mod constraints {
+    pub use crate::distinct::distinct;
+
+    /// Boolean cardinality constraints over a term collection.
+    pub mod cardinality {
+        pub use crate::cardinality::{
+            at_least, at_most, at_most_one, between, exactly, exactly_one,
+        };
+    }
+
+    /// Pseudo-Boolean comparison constraints.
+    pub mod pseudo_boolean {
+        pub use crate::pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};
+    }
+}
+
 /// Checkable proof, evidence, and reconstruction APIs.
 ///
 /// This namespace is the canonical documentation home for proof-producing and
@@ -853,6 +875,7 @@ macro_rules! full_exports {
             BvUfLocalDerivedEquality, BvUfLocalRefutationCertificate, BvUfLocalRefutationKind,
             bv_uf_local_refutation,
         };
+        #[doc(hidden)]
         pub use cardinality::{at_least, at_most, at_most_one, between, exactly, exactly_one};
         #[doc(hidden)]
         pub use certify::{
@@ -884,6 +907,7 @@ macro_rules! full_exports {
         pub use datatype_elim::check_with_datatype_elimination;
         #[doc(hidden)]
         pub use datatype_native::check_with_datatype_native;
+        #[doc(hidden)]
         pub use distinct::distinct;
         #[doc(hidden)]
         pub use dpll_lia::{
@@ -1011,6 +1035,7 @@ macro_rules! full_exports {
             optimize_lia_lexicographic, optimize_lia_lexicographic_with_config,
             optimize_lia_pareto, optimize_lia_pareto_with_config,
         };
+        #[doc(hidden)]
         pub use pb::{pb_eq, pb_ge, pb_gt, pb_le, pb_lt};
         pub use pbls::{LocalSearchOutcome, PblsBackend, solve_local_search};
         #[doc(hidden)]

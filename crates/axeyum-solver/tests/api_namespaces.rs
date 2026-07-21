@@ -231,6 +231,21 @@ fn general_refutation_namespaces_preserve_root_aliases() {
 
 #[cfg(feature = "full")]
 #[test]
+fn constraint_namespaces_preserve_root_aliases() {
+    use axeyum_solver::constraints::{cardinality, pseudo_boolean};
+
+    assert_same_function!(
+        axeyum_solver::constraints::distinct,
+        axeyum_solver::distinct
+    );
+    assert_same_function!(cardinality::at_least, axeyum_solver::at_least);
+    assert_same_function!(cardinality::exactly_one, axeyum_solver::exactly_one);
+    assert_same_function!(pseudo_boolean::pb_eq, axeyum_solver::pb_eq);
+    assert_same_function!(pseudo_boolean::pb_lt, axeyum_solver::pb_lt);
+}
+
+#[cfg(feature = "full")]
+#[test]
 fn theory_namespaces_preserve_root_aliases() {
     use axeyum_solver::theories::{
         arithmetic, arrays, combination, datatypes, quantifiers, strings, uninterpreted_functions,

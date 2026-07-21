@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4a--R4h namespaces complete
+Status: R1, R2, R3, and R4 complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -42,17 +42,18 @@ The post-R3 rustdoc root was measured before selecting a namespace. Counts are
 from warning-denied rustdoc in both supported solver profiles, not from source
 text or the older approximate review number.
 
-| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d | After R4e | After R4f | After R4g | After R4h |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 | 172 | 148 | 128 | 77 |
-| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 | 26 | 26 | 26 | 26 |
-| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 | 115 | 115 | 115 | 116 |
-| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 | 105 | 105 | 105 | 160 |
-| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 | 70 | 70 | 70 | 70 |
-| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 | 72 | 72 | 72 | 72 |
-| entries organized in the `optimization` subtree | 0 | 0 | 0 | 0 | 0 | 43 | 43 | 43 | 43 |
-| entries organized in the `smtlib` module | 0 | 0 | 0 | 0 | 0 | 0 | 25 | 25 | 25 |
-| entries organized in the `interpolation` subtree | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 27 | 27 |
+| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d | After R4e | After R4f | After R4g | After R4h | After R4i |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 | 172 | 148 | 128 | 77 | 66 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 | 26 | 26 | 26 | 26 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 | 115 | 115 | 115 | 116 | 116 |
+| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 | 105 | 105 | 105 | 160 | 160 |
+| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 | 70 | 70 | 70 | 70 | 70 |
+| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 | 72 | 72 | 72 | 72 | 72 |
+| entries organized in the `optimization` subtree | 0 | 0 | 0 | 0 | 0 | 43 | 43 | 43 | 43 | 43 |
+| entries organized in the `smtlib` module | 0 | 0 | 0 | 0 | 0 | 0 | 25 | 25 | 25 | 25 |
+| entries organized in the `interpolation` subtree | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 27 | 27 | 27 |
+| entries organized in the `constraints` subtree | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 14 |
 
 ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
 export plus full-profile Alethe, end-to-end certification, evidence,
@@ -89,6 +90,11 @@ ADR-0312 completes the checked-refutation catalog with 51 arithmetic,
 finite-domain, structural, and UF entries, while the missed QF_UF Alethe emitter
 joins `proofs::alethe`. General solvers, model replay, and backends remain at the
 root.
+
+ADR-0313 closes R4 by grouping the final independent helper family: 12 existing
+`distinct`, cardinality, and pseudo-Boolean constraint builders live under a
+14-entry `constraints` subtree. The remaining root is intentionally the compact
+solver/backend/model surface rather than a target for further count reduction.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -328,7 +334,17 @@ before/after byte comparisons for their affected fixtures.
    tests, strict all-target clippy, compatibility gates, and both warning-denied
    rustdoc profiles pass. ADR-0312 owns the boundary. Next, perform one final
    residual query-construction/core-helper census and stop R4 if no independent
-   non-catch-all boundary is justified.
+   non-catch-all boundary is justified. R4i identifies exactly one such family:
+   12 existing `distinct`, cardinality, and pseudo-Boolean term constructors now
+   live under a 14-entry full-only `constraints` subtree. The all-feature root
+   falls from 77 to 66 items, while minimal `qfbv` remains 26 with no constraints
+   module. Abduction, model-based projection, model replay, backends,
+   incremental state, strategies, and solver front doors remain outside the
+   facade. Historical paths stay callable and type-identical. All 891 library
+   tests, strict all-target clippy, compatibility gates, and both warning-denied
+   rustdoc profiles pass. ADR-0313 owns the boundary and closes R4. Further
+   namespace work requires new consumer evidence; artifact readiness proceeds
+   to the separate typed-configuration audit.
 
 Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any

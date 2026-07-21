@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4i gives constraint builders one final bounded namespace and
+  closes R4.** The full-only `constraints` facade groups 12 existing `distinct`,
+  cardinality, and pseudo-Boolean term constructors under a 14-entry subtree.
+  Abduction, model-based projection, model replay, backends, incremental state,
+  strategies, and solver front doors remain at the root. The all-feature
+  documented root falls 77→66 items, while minimal `qfbv` stays at 26 with no
+  constraints module. Historical aliases remain callable and type-identical.
+  Dedicated compatibility gates, all 891 solver-library tests, strict
+  all-target clippy, and both warning-denied rustdoc profiles pass inside the
+  one-job 4 GiB profile. Further namespace work now requires new consumer
+  evidence. Next: continue artifact-readiness item 10 with a separate
+  typed-configuration/illegal-state census, without mixing behavioral policy
+  changes into R4's documentation-only commits.
+
 - **2026-07-20 — R4h completes the checked-refutation certificate catalog.**
   Four new full-only `certificates` submodules organize 51 existing arithmetic,
   finite-domain, structural, and UF refutation contracts. General decision
@@ -5550,6 +5564,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0313 accepts the constraint-builder namespace and closes
+  R4.** Twelve existing `distinct`, cardinality, and pseudo-Boolean builders now
+  have canonical paths under a full-only `constraints` facade. Derived
+  reasoning, model replay, backends, and solver front doors remain outside the
+  boundary. Warning-denied rustdoc measures 77→66 root items and 14
+  constraint-subtree entries; minimal `qfbv` remains at 26 with only `proofs`
+  exposed. Representative compatibility tests cover all three ownership groups,
+  all 891 solver-library tests pass, and strict all-target clippy is clean under
+  the bounded profile. Artifact-readiness work moves to the separate
+  typed-configuration audit.
 
 - **2026-07-20 — ADR-0312 accepts the general refutation certificate
   namespaces.** Fifty-one existing checked refutation entries now have canonical
