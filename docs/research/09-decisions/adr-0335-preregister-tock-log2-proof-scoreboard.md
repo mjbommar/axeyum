@@ -130,6 +130,17 @@ reports the authenticated scoreboard test as ignored. Commit and push this
 checkpoint before its single official invocation. No target property query,
 proof, countermodel, replay, scoreboard row, or measured T5.5.3 result exists.
 
+Pushed checkpoint `7c3960c9` then passes local/tracking/remote identity and
+registration/capture validation, but its pre-query HEAD materialization stops
+because Python's safe tar filter rejects the repository's sole Git symlink,
+`corpus/public`, whose committed target is absolute. The proof workspace does
+not consume `corpus/`. The corrected zero-row producer now requires the archive
+link set to equal exactly `[corpus/public]`, skips every link byte, and still
+requires all registered producer/build inputs to extract as regular hash-matched
+files. A focused test retains traversal rejection and proves that this one
+explicit link is omitted. Commit/push the correction before repeating archive
+preflight. No Cargo command or target query started; proof v1 remains unobserved.
+
 ## Rejected alternatives
 
 - **Credit ADR-0327's fixture-shaped proofs.** Rejected: they validate the

@@ -1067,7 +1067,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     native oracle, exact limits, pushed-HEAD isolation, and an atomic two-target
     scoreboard. The ignored runner/producer/registration, five focused producer
     tests, independent-spec test, strict Clippy, and full package suite pass with
-    the authenticated test skipped. No query or row exists before producer push.
+    the authenticated test skipped. Pushed preflight rejects HEAD's unrelated
+    sole absolute corpus symlink before Cargo; the corrected registered policy
+    skips exactly that link while hash-checking all required regular inputs. No
+    query or row exists before correction push and repeated preflight.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

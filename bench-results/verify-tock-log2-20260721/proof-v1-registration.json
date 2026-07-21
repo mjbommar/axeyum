@@ -1,4 +1,9 @@
 {
+  "archive_policy": {
+    "skip_links": [
+      "corpus/public"
+    ]
+  },
   "canonical": [
     {
       "bytes": 331,
@@ -57,11 +62,11 @@
     },
     {
       "path": "scripts/prove-tock-log2.py",
-      "sha256": "79378e5580af13ef6253aa104dea18836f243ccbc27c72fea7dc506a49282cde"
+      "sha256": "b8cb727e90e2bbb6d352e3bab4141ce269b705dba7ff9d018c7dd5eb489c4a1c"
     },
     {
       "path": "scripts/tests/test_prove_tock_log2.py",
-      "sha256": "93049faeb3216b0b46c285c7e885675e6a78d3353f3b66370149d2542ef16249"
+      "sha256": "f204210f798e22508f66a773334f48b90394e48c5c7deb6b4913605b8a9244a9"
     }
   ],
   "resource_scope": {

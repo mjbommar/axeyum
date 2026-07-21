@@ -333,7 +333,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   pushed-HEAD archive isolation, and an atomic scoreboard. The ignored runner,
   producer/registration, five protocol tests, independent-spec test, strict
   Clippy, and full package suite pass; the authenticated test remains skipped.
-  Next: commit/push, validate the pushed archive, then invoke once; no query yet.
+  Pushed `7c3960c9` preflight stops before Cargo on HEAD's sole absolute corpus
+  symlink. The corrected exact-link skip plus regular-input hash checks pass.
+  Next: commit/push, repeat archive preflight, then invoke once; no query yet.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
@@ -6057,6 +6059,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | WIP — **Authenticated Tock capture/parser admission DONE; proof scoreboard frozen pre-query (ADR-0323--0335):** v3's two raw-identical modules admit both helpers. The ignored runner/producer/registration and full package gate pass with the authenticated test skipped; they freeze eight certified proofs plus six reflected/native-replayed controls, limits, pushed-HEAD isolation, and atomic scoreboard. Commit/push before one invocation. No query/proof/replay/row exists; phase exit still requires the measured result with DISAGREE=0. |
 
 ## Changelog
+
+- **2026-07-21 — Corrected proof-runner HEAD archive link policy pre-query.**
+  Pushed `7c3960c9` validates refs/capture but safe extraction rejects sole
+  absolute symlink `corpus/public`. The registered correction requires exactly
+  that link set, skips links, and hash-checks all required regular inputs. No
+  Cargo command/query/output exists.
 
 - **2026-07-21 — Froze Tock proof scoreboard pre-query.** The ignored runner,
   hash-pinned producer/registration, five producer tests, independent-spec test,

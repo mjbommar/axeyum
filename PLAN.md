@@ -493,8 +493,12 @@ session state.
 >    registration, five producer protocol tests, independent-spec unit test,
 >    strict target Clippy, and full `axeyum-verify` package suite now pass; that
 >    suite explicitly skips the authenticated test. Commit/push this complete
->    zero-row checkpoint, validate its pushed-HEAD archive, then invoke exactly
->    once under the registered cgroup. No query yet.
+>    zero-row checkpoint before archive validation. Pushed `7c3960c9` validates
+>    refs/capture/registration but preflight rejects HEAD's sole absolute
+>    `corpus/public` symlink before Cargo. The corrected registered extractor
+>    requires exactly that link set, omits all links, and still hash-checks every
+>    regular producer/build input; traversal/skip tests pass. Commit/push this
+>    correction, repeat preflight, then invoke exactly once. No query yet.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

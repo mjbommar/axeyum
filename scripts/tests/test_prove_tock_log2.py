@@ -114,9 +114,23 @@ class ProveTockLog2Tests(unittest.TestCase):
                 info.size = len(payload)
                 stream.addfile(info, io.BytesIO(payload))
             self.assertEqual(
-                capture_error(lambda: PRODUCER.safe_extract(archive, root / "out")),
+                capture_error(lambda: PRODUCER.safe_extract(archive, root / "out", [])),
                 ("source", "archive_path"),
             )
+            safe_archive = root / "safe.tar"
+            with tarfile.open(safe_archive, "w") as stream:
+                regular = tarfile.TarInfo("regular")
+                payload = b"regular"
+                regular.size = len(payload)
+                stream.addfile(regular, io.BytesIO(payload))
+                link = tarfile.TarInfo("corpus/public")
+                link.type = tarfile.SYMTYPE
+                link.linkname = "/unregistered/absolute/path"
+                stream.addfile(link)
+            destination = root / "safe-out"
+            PRODUCER.safe_extract(safe_archive, destination, ["corpus/public"])
+            self.assertEqual((destination / "regular").read_bytes(), b"regular")
+            self.assertFalse((destination / "corpus/public").exists())
 
     def test_runner_failure_removes_partial_output(self):
         target_parent = ROOT / "target/tock-log2-20260721"

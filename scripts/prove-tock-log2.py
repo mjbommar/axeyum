@@ -86,6 +86,7 @@ EXPECTED_ROWS = {
     "unknown": 0,
     "disagree": 0,
 }
+EXPECTED_ARCHIVE_POLICY = {"skip_links": ["corpus/public"]}
 EXPECTED_PROPERTIES = {
     (target, property_name)
     for target in ("log_base_two", "log_base_two_u64")
@@ -125,6 +126,7 @@ def read_registration(path: Path) -> dict[str, Any]:
         "solver",
         "expected_rows",
         "resource_scope",
+        "archive_policy",
     }
     require(
         set(registration) == required,
@@ -161,6 +163,12 @@ def read_registration(path: Path) -> dict[str, Any]:
         "registration",
         "resource_scope",
         str(registration.get("resource_scope")),
+    )
+    require(
+        registration.get("archive_policy") == EXPECTED_ARCHIVE_POLICY,
+        "registration",
+        "archive_policy",
+        str(registration.get("archive_policy")),
     )
     for field in ("producer_files", "source_files"):
         rows = registration.get(field)
@@ -311,9 +319,14 @@ def validate_pushed_head(
     return {"commit": head, "tree": tree, "tracking": tracking}
 
 
-def safe_extract(archive: Path, destination: Path) -> None:
+def safe_extract(
+    archive: Path, destination: Path, allowed_links: Sequence[str]
+) -> None:
     with tarfile.open(archive, mode="r:") as stream:
         members = stream.getmembers()
+        links = sorted(member.name for member in members if member.issym() or member.islnk())
+        require(links == sorted(allowed_links), "source", "archive_links", str(links))
+        regular_members = []
         for member in members:
             path = PurePosixPath(member.name)
             require(
@@ -322,7 +335,9 @@ def safe_extract(archive: Path, destination: Path) -> None:
                 "archive_path",
                 member.name,
             )
-        stream.extractall(destination, members=members, filter="data")
+            if not member.issym() and not member.islnk():
+                regular_members.append(member)
+        stream.extractall(destination, members=regular_members, filter="data")
 
 
 def materialize_head(registration: dict[str, Any], destination: Path) -> None:
@@ -342,7 +357,7 @@ def materialize_head(registration: dict[str, Any], destination: Path) -> None:
         )
     require(result.returncode == 0, "source", "archive", result.stderr.decode(errors="replace"))
     destination.mkdir()
-    safe_extract(archive, destination)
+    safe_extract(archive, destination, registration["archive_policy"]["skip_links"])
     for field in ("producer_files", "source_files"):
         for row in registration[field]:
             SUPPORT.validate_file(
