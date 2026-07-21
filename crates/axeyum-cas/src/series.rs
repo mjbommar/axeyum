@@ -23,14 +23,14 @@
 //!
 //! - polynomials (via the canonical [`normalize`] form, then truncation);
 //! - rational functions `p / q` with `q(0) != 0` (power-series division);
-//! - the elementary heads `exp`, `sin`, `cos`, `atan` of an argument that
-//!   vanishes at the origin, and `ln`, `sqrt` of an argument equal to `1` at the
-//!   origin (e.g. `ln(1 + a*x)`, `sqrt(1 + x)`), computed from their exact
-//!   `Maclaurin` coefficients;
+//! - the elementary heads `exp`, `sin`, `cos`, `atan`, `tan` of an argument that
+//!   vanishes at the origin (`tan` via the `sin/cos` power-series quotient), and
+//!   `ln`, `sqrt` of an argument equal to `1` at the origin (e.g. `ln(1 + a*x)`,
+//!   `sqrt(1 + x)`), computed from their exact `Maclaurin` coefficients;
 //! - sums, products (truncated `Cauchy` product), powers, and quotients built
 //!   from the above.
 //!
-//! Anything else — a bare foreign variable, `tan`, an elementary head whose
+//! Anything else — a bare foreign variable, `abs`, an elementary head whose
 //! argument does not meet the expansion-point condition, or arithmetic overflow —
 //! declines to `None`.
 
@@ -302,7 +302,15 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         UnaryFunc::Sqrt => {
             require_unit(argument, constant_term).and_then(|inner| compose(&inner, binomial_half))
         }
-        UnaryFunc::Tan | UnaryFunc::Abs => None,
+        // tan(u) = sin(u)/cos(u); cos(u) has constant term 1 at a vanishing `u`,
+        // so the power-series division is well-defined.
+        UnaryFunc::Tan => {
+            let inner = require_vanishing(&argument, constant_term)?;
+            let sin = compose(&inner, sine_coeff)?;
+            let cos = compose(&inner, cosine_coeff)?;
+            sin.div(&cos)
+        }
+        UnaryFunc::Abs => None,
     }
 }
 
@@ -639,9 +647,29 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_tangent_returns_none() {
-        // tan has no coefficient table here.
-        assert!(series(&var().tan(), "x", 4).is_none());
+    fn tangent_via_sine_over_cosine() {
+        // tan x = x + x³/3 + 2x⁵/15 + … (from the power-series quotient sin/cos).
+        assert_eq!(
+            coeffs(&var().tan(), 5),
+            vec![
+                Rational::zero(),
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(1, 3),
+                Rational::zero(),
+                Rational::new(2, 15),
+            ]
+        );
+        // tan(2x) = 2x + 8x³/3 + … (linear-argument scaling).
+        assert_eq!(
+            coeffs(&(CasExpr::int(2) * var()).tan(), 3),
+            vec![
+                Rational::zero(),
+                Rational::integer(2),
+                Rational::zero(),
+                Rational::new(8, 3),
+            ]
+        );
     }
 
     #[test]
