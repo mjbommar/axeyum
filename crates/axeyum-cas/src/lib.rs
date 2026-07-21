@@ -1548,6 +1548,60 @@ pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     }
 }
 
+/// Solve a **square system of linear equations** `equationsᵢ = 0` (each linear in
+/// `vars`) for the variables `vars`, by exact Gaussian elimination on the coefficient
+/// matrix `A·x = b` (`Aᵢⱼ = ∂eqᵢ/∂varⱼ`, `bᵢ = −eqᵢ(0)`). Returns the assignment
+/// `(name, value)` per variable. Requires `equations.len() == vars.len()`, all
+/// equations affine in `vars` with rational-constant coefficients, and a unique
+/// solution; `None` otherwise.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, solve_linear_system};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // x + y = 3, x − y = 1  ⇒  x = 2, y = 1.
+/// let sol = solve_linear_system(
+///     &[x.clone() + y.clone() - CasExpr::int(3), x - y - CasExpr::int(1)],
+///     &["x", "y"],
+/// )
+/// .unwrap();
+/// assert_eq!(sol, vec![("x".to_string(), CasExpr::int(2)), ("y".to_string(), CasExpr::int(1))]);
+/// ```
+#[must_use]
+pub fn solve_linear_system(
+    equations: &[CasExpr],
+    vars: &[&str],
+) -> Option<Vec<(String, CasExpr)>> {
+    let n = vars.len();
+    if n == 0 || equations.len() != n {
+        return None;
+    }
+    let mut a_rows: Vec<Vec<CasExpr>> = Vec::with_capacity(n);
+    let mut b_rows: Vec<Vec<CasExpr>> = Vec::with_capacity(n);
+    for equation in equations {
+        // Coefficient of each variable = ∂/∂var (constant iff the equation is affine).
+        let mut row = Vec::with_capacity(n);
+        for var in vars {
+            let coeff = equation.differentiate(var);
+            row.push(expand(&coeff)?);
+        }
+        a_rows.push(row);
+        // Constant term = the equation with every variable set to 0; b = −constant.
+        let mut constant = equation.clone();
+        for var in vars {
+            constant = constant.substitute(var, &CasExpr::zero());
+        }
+        let negated = expand(&(-constant))?;
+        b_rows.push(vec![negated]);
+    }
+    let solution = Matrix::from_rows(a_rows)?.solve(&Matrix::from_rows(b_rows)?)?;
+    let mut result = Vec::with_capacity(n);
+    for (i, var) in vars.iter().enumerate() {
+        result.push(((*var).to_owned(), solution.get(i, 0)?.clone()));
+    }
+    Some(result)
+}
+
 /// Solve `expr = 0` for `var` over a univariate polynomial: returns the distinct
 /// real roots. Rational roots are exact; a leftover real quadratic is solved by
 /// the quadratic formula (rational when the discriminant is a perfect square,
@@ -6815,6 +6869,36 @@ mod tests {
             strs(x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(5)),
             vec!["-1 + 2*I", "-1 - 2*I"]
         );
+    }
+
+    #[test]
+    fn linear_system_solving() {
+        let x = || v("x");
+        let y = || v("y");
+        let z = || v("z");
+        // x + y = 3, x − y = 1 ⇒ x=2, y=1.
+        let sol = solve_linear_system(
+            &[x() + y() - CasExpr::int(3), x() - y() - CasExpr::int(1)],
+            &["x", "y"],
+        )
+        .unwrap();
+        assert_equal(&sol[0].1, &CasExpr::int(2));
+        assert_equal(&sol[1].1, &CasExpr::int(1));
+        // 3×3: x+y+z=6, 2y+z=... solve x+y+z=6, x−y=−1, y−z=−1 ⇒ x=1,y=2,z=3.
+        let sol3 = solve_linear_system(
+            &[
+                x() + y() + z() - CasExpr::int(6),
+                x() - y() + CasExpr::int(1),
+                y() - z() + CasExpr::int(1),
+            ],
+            &["x", "y", "z"],
+        )
+        .unwrap();
+        assert_equal(&sol3[0].1, &CasExpr::int(1));
+        assert_equal(&sol3[1].1, &CasExpr::int(2));
+        assert_equal(&sol3[2].1, &CasExpr::int(3));
+        // Singular system (no unique solution) declines.
+        assert!(solve_linear_system(&[x() + y(), CasExpr::int(2) * x() + CasExpr::int(2) * y()], &["x", "y"]).is_none());
     }
 
     #[test]
