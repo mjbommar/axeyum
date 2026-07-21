@@ -5941,6 +5941,50 @@ pub fn definite_integrate(
     })
 }
 
+/// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
+/// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
+/// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
+/// infinite bound routes through [`limit`] (so exponential-decay integrands
+/// converge — `∫₀^∞ e^{−x} = 1`, `∫₀^∞ x·e^{−x} = 1`). Returns `None` when no
+/// antiderivative is found or a boundary limit **diverges** (the integral does not
+/// converge) — an honest decline, never a wrong value. The caller is responsible
+/// for continuity of the integrand on the (open) interval, as for [`definite_integrate`].
+///
+/// ```
+/// use axeyum_cas::{CasExpr, LimitPoint, improper_integrate};
+/// use axeyum_ir::Rational;
+/// // ∫₀^∞ e^{−x} dx = 1.
+/// let f = (CasExpr::int(-1) * CasExpr::var("x")).exp();
+/// let r = improper_integrate(&f, "x", LimitPoint::Finite(Rational::zero()), LimitPoint::PosInfinity).unwrap();
+/// assert_eq!(r.value, CasExpr::int(1));
+/// ```
+#[must_use]
+pub fn improper_integrate(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let indefinite = integrate(expr, var)?;
+    let antiderivative = &indefinite.antiderivative;
+    let boundary = |point: LimitPoint| -> Option<CasExpr> {
+        match point {
+            LimitPoint::Finite(a) => Some(simplify(&fold_elementary_constants(
+                &antiderivative.substitute(var, &CasExpr::Const(a)),
+            ))),
+            infinity => limit(antiderivative, var, infinity),
+        }
+    };
+    let at_upper = boundary(upper)?;
+    let at_lower = boundary(lower)?;
+    let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: indefinite.antiderivative,
+        certificate: indefinite.certificate,
+    })
+}
+
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
@@ -8209,6 +8253,36 @@ mod tests {
         )
         .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn improper_integrals_converge_or_decline() {
+        let x = || v("x");
+        let zero = || LimitPoint::Finite(Rational::zero());
+        // ∫₀^∞ e^{−x} = 1; ∫₀^∞ x·e^{−x} = 1; ∫₀^∞ x²·e^{−x} = 2 (= Γ(3)).
+        let e_neg_x = (CasExpr::int(-1) * x()).exp();
+        let r1 = improper_integrate(&e_neg_x, "x", zero(), LimitPoint::PosInfinity).unwrap();
+        assert!(r1.is_certified());
+        assert_equal(&r1.value, &CasExpr::int(1));
+        let r2 = improper_integrate(&(x() * e_neg_x.clone()), "x", zero(), LimitPoint::PosInfinity)
+            .unwrap();
+        assert_equal(&r2.value, &CasExpr::int(1));
+        let r3 =
+            improper_integrate(&(x().pow(2) * e_neg_x), "x", zero(), LimitPoint::PosInfinity)
+                .unwrap();
+        assert_equal(&r3.value, &CasExpr::int(2));
+        // ∫₁^∞ 1/x² = 1; ∫_{−∞}^0 eˣ = 1.
+        let one = || LimitPoint::Finite(Rational::integer(1));
+        let r4 = improper_integrate(&(CasExpr::int(1) / x().pow(2)), "x", one(), LimitPoint::PosInfinity)
+            .unwrap();
+        assert_equal(&r4.value, &CasExpr::int(1));
+        let r5 = improper_integrate(&x().exp(), "x", LimitPoint::NegInfinity, zero()).unwrap();
+        assert_equal(&r5.value, &CasExpr::int(1));
+        // ∫₁^∞ 1/x diverges (ln x → ∞) — declined, not a wrong finite value.
+        assert!(
+            improper_integrate(&(CasExpr::int(1) / x()), "x", one(), LimitPoint::PosInfinity)
+                .is_none()
+        );
     }
 
     #[test]
