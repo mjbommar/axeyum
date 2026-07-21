@@ -1,0 +1,18 @@
+{
+  "base_registration": {
+    "path": "bench-results/verify-tock-log2-20260721/cache-v3-preparation-registration.json",
+    "sha256": "ff19ef30f865d1ee34fb252d665a79a74c5e697cd560cd23552d571002fa59fb"
+  },
+  "inventory_schema": "axeyum.cargo-cache-hardlink-inventory.v1",
+  "producer_files": [
+    {
+      "path": "scripts/prepare-tock-log2-cache-v4.py",
+      "sha256": "1bdf22e5af9c7b6951417e218181eef2aa80248f8534f4da825b0e7e7dda1002"
+    },
+    {
+      "path": "scripts/tests/test_prepare_tock_log2_cache_v4.py",
+      "sha256": "20e3e6d5cb8383d0376785a1b279f8b9e1a5443700b72cbe71e98c8965eebcef"
+    }
+  ],
+  "schema": "axeyum.tock-log2-cache-v4-preparation-registration.v1"
+}

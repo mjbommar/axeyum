@@ -437,8 +437,10 @@ session state.
 >    ADR-0331 now freezes that inventory correction: inode numbers stay local;
 >    canonical rows bind one lexicographic owner plus every alias path and the
 >    shared mode/size/hash/link count; any link outside the cache is rejected.
->    Implement/push a thin v4 producer and focused topology tests before DNS or
->    fetch. Do not copy links, ignore topology, or patch/rerun v3.
+>    A thin v4 policy wrapper, four focused topology plus 14 inherited tests,
+>    and compact registration now validate with zero DNS/fetch observations.
+>    Commit/push this checkpoint, then invoke v4 once under its cgroup. Do not
+>    copy links, ignore topology, or patch/rerun v3.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

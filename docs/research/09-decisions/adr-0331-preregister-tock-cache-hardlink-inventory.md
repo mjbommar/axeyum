@@ -69,8 +69,13 @@ be weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. No v4 producer, registration, DNS probe, fetch, cache, hard-link row,
-inventory, offline probe, build, capture, or query exists.
+Proposed. A thin v4 policy wrapper reuses the complete frozen v3 producer and
+injects only the hard-link-aware inventory, result schema, compact registration,
+and output path. Four focused topology tests plus all 14 inherited preparation
+tests pass. The registration resolves and validates seven producer files, six
+tools, and the unchanged resolver/DNS/fetch/offline/resource boundary. Commit
+and push this checkpoint before DNS or fetch. No cache byte, expected hard-link
+count, inventory, offline probe, build, capture, or query exists.
 
 ## Rejected alternatives
 
