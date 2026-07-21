@@ -1075,6 +1075,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     HEAD's stale committed `Cargo.lock` fails `--locked --offline` before
     compilation. Zero queries or rows run and no output survives. V2 may change
     only to a committed matching lock snapshot and a new output path.
+  - [ADR-0336](../09-decisions/adr-0336-preregister-tock-log2-proof-v2.md)
+    freezes that successor: corrected committed lock hash, otherwise identical
+    proof/control/solver/trust/replay/resource policy, versioned schemas, new
+    output, and a pushed-HEAD non-authenticated build preflight before one run.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

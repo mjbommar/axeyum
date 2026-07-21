@@ -347,6 +347,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   workspace lock bytes (`e9da054b...181f`); commit/push that isolated sync next.
   Full metadata subsequently lacks cached `wasip2`, so the successor retains a
   separate exact targeted locked-offline preflight before any query.
+  Lock commit `3903223c` is pushed. ADR-0336 now freezes v2's only permitted
+  correction: the matching committed lock hash plus versioned schemas/new
+  output, with every proof/control/solver/trust/replay/resource gate unchanged.
+  A pushed archived-HEAD compilation may run only the non-authenticated
+  independent-spec test before the one official invocation. No v2 bytes/query.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
