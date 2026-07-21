@@ -6468,6 +6468,28 @@ pub fn average_value(
     })
 }
 
+/// The **root-mean-square** of `f` over `[lower, upper]`,
+/// `√( (1/(upper−lower))·∫_lower^upper f² dx )` — the RMS value, returned as an
+/// exact [`CasExpr`] with any surd simplified. `None` if the integral of `f²` is
+/// unavailable, the interval has zero width, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, root_mean_square, equal, ZeroTest};
+/// // RMS of x on [0, 3] = √( (1/3)·∫₀³ x² ) = √3.
+/// let rms = root_mean_square(&CasExpr::var("x"), "x", &CasExpr::int(0), &CasExpr::int(3)).unwrap();
+/// assert!(matches!(equal(&rms, &CasExpr::int(3).sqrt()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn root_mean_square(
+    f: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    let mean_square = average_value(&f.clone().pow(2), var, lower, upper)?;
+    Some(simplify_radicals(&mean_square.value.sqrt()))
+}
+
 /// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
 /// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
 /// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
@@ -9058,6 +9080,26 @@ mod tests {
         )
         .unwrap();
         assert_equal(&d3.value, &CasExpr::int(-8));
+    }
+
+    #[test]
+    fn root_mean_square_of_functions() {
+        let x = || v("x");
+        // RMS of x on [0,3] = √3; of a constant 1 on [0,5] = 1.
+        assert_equal(
+            &root_mean_square(&x(), "x", &CasExpr::int(0), &CasExpr::int(3)).unwrap(),
+            &CasExpr::int(3).sqrt(),
+        );
+        assert_equal(
+            &root_mean_square(&CasExpr::int(1), "x", &CasExpr::int(0), &CasExpr::int(5)).unwrap(),
+            &CasExpr::int(1),
+        );
+        // RMS of x on [0,1] = √3/3 = (1/3)√3.
+        assert_equal(
+            &root_mean_square(&x(), "x", &CasExpr::int(0), &CasExpr::int(1)).unwrap(),
+            &(CasExpr::rat(1, 3) * CasExpr::int(3).sqrt()),
+        );
+        assert!(root_mean_square(&x(), "x", &CasExpr::int(2), &CasExpr::int(2)).is_none());
     }
 
     #[test]
