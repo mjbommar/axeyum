@@ -922,3 +922,27 @@ factorial, multinomial.
 home-quota exhaustion is worked around via `TMPDIR=/nas4/...` for rustdoc; see the
 `axeyum-cas-worktree` memory.) Frontier: Zeilberger, general Gruntz, multivariate
 factorization, Puiseux, new special-function heads (erf/Si/Ci/Ei), arbitrary-precision N[].
+
+## 2026-07-21 — Entry 28: integration completeness + number theory (391 tests)
+
+Integration-engine completion + number-theory/special-function fills. Since entry 27
+(386 → 391):
+
+**`integrate` structural rules**: additive linearity `∫(f+g)=∫f+∫g` (was missing — so
+`eˣ+e^{−x}` had declined) and the constant-multiple rule `∫c·f=c·∫f` (`split_constant_
+factor` peels a Div-by-const / Neg / Mul-with-const). Together these compose with the
+finders to integrate **hyperbolics** (sinh/cosh via their exp form), `−sin x`, mixed
+sums (`x+eˣ+1/(x²+1)`), etc. **Both-even trig** (`∫cos⁴x`, `∫sin²cos²`) via Euler
+power-reduction to a `cos(k·u)` sum — completing trig-monomial integration. **Log
+substitutions** `∫ln x/x=½(ln x)²`, `∫1/(x ln x)=ln(ln x)`.
+
+**Number theory / special**: `sqrt_mod` (Tonelli–Shanks modular square root, cert by
+squaring); `gamma` extended to **negative half-integers** (Γ(−1/2)=−2√π via the
+recurrence).
+
+**391 unit + 118 doctests, clippy-pedantic clean, WASM-green.** The integration engine
+now covers: polynomials, full rational (Rothstein–Trager), elementary tables, poly×{exp,
+log,sin,cos}, exp×trig, trig monomials (odd+even), ∫tan, log-substitution, additive/
+constant linearity, definite (FTC + constant folding), improper (±∞). Frontier: general
+substitution/by-parts, Risch; Zeilberger; Gruntz; multivariate factorization; Puiseux;
+erf/Si/Ci/Ei heads; arbitrary-precision N[].

@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 390 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 391 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
