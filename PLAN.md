@@ -342,6 +342,12 @@ session state.
 >    bytes. Next preregister a non-crediting byte/line root-drift diagnostic;
 >    do not retroactively normalize, extract only the selected functions, or
 >    run an inverse-property query.
+>    ADR-0324 now preregisters that diagnostic without rerunning the builds. It
+>    must retain the two modules locally, classify every complete-diff line,
+>    detect absolute roots and symbol drift, and compare all three extracted
+>    checked typed projections. Even exact selected-function equality cannot
+>    revise ADR-0323 or accept T5.5.2; it may select only a later independently
+>    specified canonical-identity proposal.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

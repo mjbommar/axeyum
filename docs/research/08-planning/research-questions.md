@@ -972,6 +972,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     parser admission never run. A separately preregistered root-drift
     diagnostic is required before any canonical identity, inverse-property
     query, or scoreboard row.
+  - [ADR-0324](../09-decisions/adr-0324-preregister-maestro-llvm-root-drift-diagnostic.md)
+    preregisters that non-crediting diagnostic: reproduce and retain both local
+    modules, classify every changed diff line, discover and compare the three
+    selected definitions and checked typed projections, and select at most a
+    later canonical-identity proposal. It cannot revise ADR-0323 or accept
+    T5.5.2 by selected-function equality alone.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
