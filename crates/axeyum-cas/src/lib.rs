@@ -51,11 +51,13 @@ use std::collections::{BTreeMap, BTreeSet};
 use axeyum_ir::{Rational, poly};
 
 mod matrix;
+pub mod mvpoly;
 pub mod ntheory;
 mod ratint;
 mod series;
 
 pub use matrix::Matrix;
+pub use mvpoly::MvPoly;
 pub use series::series;
 
 /// A symbolic expression over the polynomial fragment (Phase C0).
