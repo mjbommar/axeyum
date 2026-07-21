@@ -163,4 +163,3 @@ bytes remains an explicit user action.
 - [P5.4 fuzz-oracle loop](../../plan/track-5-verified-systems/P5.4-fuzz-oracle.md).
 - [Glaurung feedback reconciliation](../08-planning/glaurung-feedback-reconciliation-2026-07-20.md).
 - [ADR-0056 verified-systems track](adr-0056-verified-systems-track.md).
-
