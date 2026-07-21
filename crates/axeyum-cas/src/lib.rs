@@ -3904,16 +3904,49 @@ pub fn logcombine(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Recover the "nicest" exact rational approximating an `f64` `x` whose denominator
+/// does not exceed `max_denominator`, via the continued-fraction convergents (each
+/// convergent is the best rational approximation for its denominator size). For
+/// example `rationalize(0.5, 100) = 1/2`, `rationalize(0.3333…, 100) = 1/3`, and
+/// `rationalize(π, 1000) = 355/113`. `None` on overflow or a non-finite input.
+#[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_precision_loss)] // CF on f64
+pub fn rationalize(x: f64, max_denominator: i128) -> Option<Rational> {
+    if !x.is_finite() || max_denominator < 1 {
+        return None;
+    }
+    let negative = x < 0.0;
+    let mut value = x.abs();
+    // Convergent recurrence hₙ = aₙhₙ₋₁ + hₙ₋₂, kₙ likewise.
+    let (mut h_prev, mut h_curr) = (0i128, 1i128);
+    let (mut k_prev, mut k_curr) = (1i128, 0i128);
+    for _ in 0..64 {
+        let a = value.floor() as i128;
+        let h_next = a.checked_mul(h_curr)?.checked_add(h_prev)?;
+        let k_next = a.checked_mul(k_curr)?.checked_add(k_prev)?;
+        if k_next > max_denominator {
+            break;
+        }
+        (h_prev, h_curr) = (h_curr, h_next);
+        (k_prev, k_curr) = (k_curr, k_next);
+        let fraction = value - a as f64;
+        if fraction.abs() < 1e-12 {
+            break;
+        }
+        value = 1.0 / fraction;
+    }
+    if k_curr == 0 {
+        return None;
+    }
+    let numerator = if negative { h_curr.checked_neg()? } else { h_curr };
+    Rational::checked_new(numerator, k_curr)
+}
+
 /// Numerically approximate an expression as an `f64`, given `bindings` for its free
-/// variables (each `(name, value)`). Rational constants are exact-to-`f64`; the
-/// transcendental heads map to the corresponding `f64` functions.
-///
-/// This is a **compute** operation — the returned float is an approximation, not a
-/// certified value — so it is the bridge from an exact symbolic result to a decimal
-/// (e.g. `evalf(√2) ≈ 1.4142…`). Returns `None` for an unbound free variable (the
-/// reserved imaginary unit `I` included — the result would be complex) or a domain
-/// error is not checked (e.g. `ln` of a negative yields a `NaN`/`f64` per the std
-/// library). Closed expressions need no bindings.
+/// variables. Rational constants are exact-to-`f64`; the transcendental heads map to
+/// the corresponding `f64` functions; the reserved constant `pi` defaults to π. A
+/// **compute** operation — the bridge from an exact symbolic result to a decimal
+/// (`evalf(√2) ≈ 1.4142`). `None` for an unbound free variable (including `I`).
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, evalf};
@@ -6476,6 +6509,19 @@ mod tests {
         assert!(matches!(tan(pi() / CasExpr::int(2)), CasExpr::Unary(UnaryFunc::Tan, _)));
         // A non-special angle (π/5) is left unevaluated.
         assert!(matches!(sin(pi() / CasExpr::int(5)), CasExpr::Unary(UnaryFunc::Sin, _)));
+    }
+
+    #[test]
+    fn rationalize_recovers_nice_fractions() {
+        assert_eq!(rationalize(0.5, 100), Some(Rational::new(1, 2)));
+        assert_eq!(rationalize(0.25, 100), Some(Rational::new(1, 4)));
+        assert_eq!(rationalize(1.0 / 3.0, 100), Some(Rational::new(1, 3)));
+        assert_eq!(rationalize(-2.0 / 7.0, 100), Some(Rational::new(-2, 7)));
+        // π ≈ 3.14159 → 355/113 (the famous convergent) with denominator ≤ 1000.
+        assert_eq!(rationalize(std::f64::consts::PI, 1000), Some(Rational::new(355, 113)));
+        // An exact integer.
+        assert_eq!(rationalize(5.0, 100), Some(Rational::integer(5)));
+        assert!(rationalize(f64::NAN, 100).is_none());
     }
 
     #[test]
