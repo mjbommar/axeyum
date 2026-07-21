@@ -243,3 +243,27 @@ fn optimization_namespaces_preserve_root_aliases() {
         axeyum_solver::optimize_lia_pareto
     );
 }
+
+#[cfg(feature = "full")]
+#[test]
+fn smtlib_namespace_preserves_root_aliases() {
+    assert_same_type::<axeyum_solver::smtlib::SmtLibOutcome, axeyum_solver::SmtLibOutcome>();
+    assert_same_type::<axeyum_solver::smtlib::SmtLibModel, axeyum_solver::SmtLibModel>();
+
+    assert_same_function!(
+        axeyum_solver::smtlib::solve_smtlib,
+        axeyum_solver::solve_smtlib
+    );
+    assert_same_function!(
+        axeyum_solver::smtlib::optimize_smtlib,
+        axeyum_solver::optimize_smtlib
+    );
+    assert_same_function!(
+        axeyum_solver::smtlib::solve_smtlib_incremental,
+        axeyum_solver::solve_smtlib_incremental
+    );
+    assert_same_function!(
+        axeyum_solver::smtlib::word_route_verdict,
+        axeyum_solver::word_route_verdict
+    );
+}

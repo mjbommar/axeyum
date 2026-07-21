@@ -161,7 +161,7 @@ macro_rules! full_modules {
         mod set_cardinality;
         mod simplex;
         mod skolem_alethe;
-        mod smtlib;
+        pub mod smtlib;
         mod solver;
         mod strategy;
         mod string_theory;
@@ -1030,6 +1030,7 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
+        #[doc(hidden)]
         pub use smtlib::{
             SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, decide_word_only_script,
             length_lia_verdict, lex_order_verdict, membership_unsat_certificate,

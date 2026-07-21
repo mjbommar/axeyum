@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4f exposes the exact SMT-LIB text-front-door module.** The
+  existing full-only `smtlib.rs` has exactly the same 25 public contracts as the
+  historical root export, with no public helper or internal state outside that
+  set. It is now the canonical `axeyum_solver::smtlib` namespace; duplicate root
+  aliases remain callable and type-identical but are hidden from rustdoc. The
+  all-feature documented root falls 172→148 items, while minimal `qfbv` stays at
+  26 with no SMT-LIB module. Dedicated compatibility gates, all 891
+  solver-library tests, strict all-target clippy, and both warning-denied
+  rustdoc profiles pass inside the one-job 4 GiB profile. Next: census
+  interpolation independently, followed by the remaining general refutation
+  utilities; do not fold either into the text namespace.
+
 - **2026-07-20 — R4e gives objective optimization a bounded canonical surface.**
   The full-only `optimization::{models,maxsat,objectives}` facade groups 40
   existing replay-checked model-minimization, MaxSAT, and scalar/multi-objective
@@ -5510,6 +5522,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0310 accepts the exact SMT-LIB module boundary.** The
+  existing full-only implementation module contains precisely the 25 structures
+  and command/route functions already supported at the crate root, so it is now
+  public directly rather than duplicated behind an artificial facade name.
+  Private helpers remain private and root imports remain compatible.
+  Warning-denied rustdoc measures 172→148 root items and 25 entries in
+  `smtlib`; minimal `qfbv` remains at 26 with only `proofs` exposed.
+  Representative compatibility tests cover solve, optimize, incremental, model,
+  and string-route contracts; all 891 solver-library tests and strict all-target
+  clippy pass under the bounded profile. Next R4 work is the independent
+  interpolation census.
 
 - **2026-07-20 — ADR-0309 accepts the objective-optimization namespace.** Forty
   public model-minimization, MaxSAT, and scalar/multi-objective entries now have

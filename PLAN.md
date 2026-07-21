@@ -413,7 +413,16 @@ session state.
 >    tests, strict clippy, compatibility gates, and both warning-denied rustdoc
 >    profiles pass under the bounded profile. ADR-0309 records the boundary.
 >    Next census SMT-LIB independently, followed by interpolation and general
->    refutation utilities; continue to keep API cleanup behavior-neutral.
+>    refutation utilities; continue to keep API cleanup behavior-neutral. R4f
+>    now exposes the existing full-only `smtlib` module after confirming its
+>    exact 25 public items equal the complete root-exported text-front-door
+>    surface with no public helper leakage. Duplicate root aliases remain
+>    callable and type-identical but are hidden from rustdoc. The all-feature
+>    documented root falls 172→148; minimal `qfbv` remains 26 and has no SMT-LIB
+>    module. All 891 solver-library tests, strict clippy, compatibility gates,
+>    and both warning-denied rustdoc profiles pass under the bounded profile.
+>    ADR-0310 records the boundary. Next census interpolation independently,
+>    followed by the remaining general refutation utilities.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
