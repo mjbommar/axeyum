@@ -3919,6 +3919,53 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     Some(simplify(&result))
 }
 
+/// The **Laurent series** of a univariate rational function `f` about `var = 0`, up
+/// to and including degree `order` (which may include a finite principal part of
+/// negative powers when `f` has a pole at `0`). Returns the truncated Laurent
+/// polynomial as a [`CasExpr`] (e.g. `1/(x(1−x)) = x⁻¹ + 1 + x + x² + …`); the
+/// coefficient of `x⁻¹` is the residue at `0`. `None` if `f` is not a univariate
+/// rational function in `var`, is identically zero, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, laurent_series, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // 1/(x(1−x)) = 1/x + 1 + x + x² (to order 2).
+/// let f = CasExpr::int(1) / (x.clone() * (CasExpr::int(1) - x.clone()));
+/// let laurent = laurent_series(&f, "x", 2).unwrap();
+/// let expected = CasExpr::int(1) / x.clone() + CasExpr::int(1) + x.clone() + x.pow(2);
+/// assert!(matches!(equal(&laurent, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
+    let rf = normalize_rational(f)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    // Valuation (order of the lowest nonzero term) of numerator and denominator.
+    let num_val = num.iter().position(|c| !c.is_zero())?; // None ⇒ f ≡ 0
+    let den_val = den.iter().position(|c| !c.is_zero())?;
+    // Strip the `x^val` factors so the reduced parts are nonzero at 0.
+    let num_reduced = num[num_val..].to_vec();
+    let den_reduced = den[den_val..].to_vec();
+    let shift = isize::try_from(num_val).ok()? - isize::try_from(den_val).ok()?;
+
+    // The reduced quotient is analytic at 0 (denominator constant term ≠ 0).
+    let reduced = MultiPoly::from_univariate(var, &num_reduced).to_expr()
+        / MultiPoly::from_univariate(var, &den_reduced).to_expr();
+    let taylor_order = usize::try_from((isize::try_from(order).ok()? - shift).max(0)).ok()?;
+    let taylor = series(&reduced, var, taylor_order)?;
+
+    // Multiply by `x^shift` (a positive power, or a division for a pole).
+    let x = CasExpr::var(var);
+    let result = if shift >= 0 {
+        let power = u32::try_from(shift).ok()?;
+        taylor * x.pow(power)
+    } else {
+        let power = u32::try_from(-shift).ok()?;
+        taylor / x.pow(power)
+    };
+    Some(result)
+}
+
 /// The **inverse Laplace transform** `L⁻¹{F}(t)` of a proper rational function `F(s)`
 /// with **simple real rational poles**: `F = Σ Rᵢ/(s−aᵢ)` gives `Σ Rᵢ·e^{aᵢt}`,
 /// where each residue `Rᵢ = Res_{s=aᵢ} F`. **Certified** by the round trip
@@ -5286,6 +5333,32 @@ mod tests {
             )
             .unwrap(),
             &(-t().exp() + (CasExpr::int(2) * t()).exp()),
+        );
+    }
+
+    #[test]
+    fn laurent_series_with_principal_part() {
+        let x = || v("x");
+        // 1/(x(1−x)) = 1/x + 1 + x + x².
+        let f = CasExpr::int(1) / (x() * (CasExpr::int(1) - x()));
+        assert_equal(
+            &laurent_series(&f, "x", 2).unwrap(),
+            &(CasExpr::int(1) / x() + CasExpr::int(1) + x() + x().pow(2)),
+        );
+        // 1/x² is its own Laurent series.
+        assert_equal(&laurent_series(&(CasExpr::int(1) / x().pow(2)), "x", 1).unwrap(), &(CasExpr::int(1) / x().pow(2)));
+        // (x+1)/x = 1/x + 1.
+        assert_equal(
+            &laurent_series(&((x() + CasExpr::int(1)) / x()), "x", 0).unwrap(),
+            &(CasExpr::int(1) / x() + CasExpr::int(1)),
+        );
+        // The x⁻¹ coefficient is the residue at 0: for 1/(x(1−x)) it is 1.
+        assert_equal(&residue(&f, "x", Rational::zero()).unwrap(), &CasExpr::int(1));
+        // An analytic function's Laurent series is its Taylor series (no principal
+        // part): 1/(1−x) = 1 + x + x².
+        assert_equal(
+            &laurent_series(&(CasExpr::int(1) / (CasExpr::int(1) - x())), "x", 2).unwrap(),
+            &(CasExpr::int(1) + x() + x().pow(2)),
         );
     }
 
