@@ -458,3 +458,30 @@ Elementary rational-function integration is now essentially complete (rational +
 log + atan). Working continuously toward SymPy/Mathematica parity — next:
 elementary function heads (exp/sin/cos/sqrt) with certified differentiation, then
 factorization, linear algebra (sub-agent building `matrix.rs`), series, summation.
+
+## 2026-07-20 — Entry 10: breadth sweep toward parity (committing continuously)
+
+Grinding through the CAS surface, committing + pushing each capability. New since
+entry 9 (all certified/oracle-free/WASM-safe unless noted; `main` is shared with
+the other agent, I stage only my paths):
+
+- **Elementary functions** — refactored `Ln`/`Atan` into an extensible
+  `Unary(UnaryFunc,..)` head; added exp/sin/cos/tan/sqrt. Certified chain-rule
+  differentiation of any elementary expression; transcendental heads are opaque
+  atoms in the zero-test. Elementary **integration** table `∫k·f(ax+b)` for
+  exp/sin/cos + `∫ln` by parts.
+- **`factor`** (rational linear factors, certified by re-multiplication),
+  **`solve`** (rational roots + quadratic formula), **`limit`** (rational: continuous,
+  0/0-cancellation, ±∞), **`apart`** (partial fractions via residues, certified),
+  **`simplify`** (smallest value-equal form), **`sum_polynomial`** (discrete
+  antiderivative, certified by the telescoping identity).
+- **Symbolic linear algebra** (`matrix.rs`, sub-agent, reviewed + integrated):
+  `Matrix` with transpose/add/sub/mul, cofactor determinant over symbolic entries,
+  exact rational RREF / solve / inverse; `det(AB)=det(A)det(B)` certified.
+- **In flight (sub-agents):** number theory (`ntheory.rs`), power series
+  (`series.rs`).
+
+**Public `axeyum-cas` surface now:** differentiate, substitute, normalize, equal,
+expand, cancel, factor, solve, apart, simplify, limit, sum_polynomial, integrate
+(poly/rational/log/atan/elementary), + `Matrix`; heads exp/sin/cos/tan/ln/atan/sqrt.
+**67 tests + 2 doctests + 23 matrix tests, clippy-clean, WASM-green.**
