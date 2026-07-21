@@ -485,3 +485,36 @@ the other agent, I stage only my paths):
 expand, cancel, factor, solve, apart, simplify, limit, sum_polynomial, integrate
 (poly/rational/log/atan/elementary), + `Matrix`; heads exp/sin/cos/tan/ln/atan/sqrt.
 **67 tests + 2 doctests + 23 matrix tests, clippy-clean, WASM-green.**
+
+## 2026-07-20 — Entry 11: comprehensive-core checkpoint (117 tests)
+
+The proof-carrying CAS now covers most of SymPy's core, all committed/pushed to
+`main` and validated against SymPy where checked. **117 unit tests + 18 doctests,
+clippy-clean, WASM-green.** Two runnable demos (`certified_calculus`, `cas_tour`).
+
+**Public surface (`crates/axeyum-cas`):**
+- *Core algebra:* `CasExpr` (+ `Display`, ops, 7 transcendental heads via `Unary`),
+  `differentiate` (full chain rule), `substitute`, `normalize`/`equal` (decidable
+  polynomial zero-test with witness; transcendental heads as sound opaque atoms),
+  `expand`, `cancel` (**uni- and multivariate** via `mvpoly` GCD), `factor`,
+  `solve` (rational + real-quadratic + **complex** roots), `apart`, `simplify`,
+  `poly_gcd`, `poly_div`.
+- *Calculus:* `integrate` → `CertifiedIntegral` (polynomials; full univariate
+  rational via Horowitz + Rothstein–Trager + `atan`; `∫k·f(ax+b)`, `∫p·eˣ`,
+  `∫p·sin|cos`); `limit`; `series`; `sum_polynomial` (telescoping-certified);
+  `dsolve_homogeneous` (constant-coeff ODEs, operator-certified).
+- *Modules:* `Matrix` (symbolic linear algebra), `ntheory` (primality/factor/CRT/…),
+  `mvpoly` (multivariate polynomials + GCD + square-free), `series`, `ratint`.
+
+**Certification everywhere it's decidable:** integration & derivative claims by
+differentiate-and-check; factor/apart/summation/ODE by their respective exact
+zero-tests; the certificate doubles as a correctness backstop (out-of-fragment →
+`None`, never wrong). Sub-agents (sonnet/opus) built `matrix`, `series`, `ntheory`,
+`mvpoly`; each reviewed before integration.
+
+**Plan status:** G0–G4, C0–C6 (incl. log/atan), G17 (complex roots), G18 (const-coeff
+ODEs) done or substantially done. **Remaining long tail:** Gröbner (G6), assumptions
+engine, trig/log identity simplification, special functions, first-order/
+inhomogeneous ODEs, integration by parts/substitution beyond the current tables,
+irrational-root integration logs (needs `RealAlgebraic::inv`). When these are
+exhausted, extend the roadmap via web research per the goal.
