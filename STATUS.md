@@ -386,6 +386,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   status line. No result/output is credited and no OOM-delta failure is reported.
   Never rerun v3. Next: commit/push the exact negative; any successor changes
   only prefix-aware extraction plus failure-source/log retention.
+  Negative commit `6c0e550c` is pushed. ADR-0338 freezes v4 as parser-only:
+  recognize one first proof marker after the exact authenticated-test harness
+  prefix and feed normalized output to every unchanged v3 validator. Commit/push
+  the zero-result ADR before implementation. No v4 query/output exists.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),

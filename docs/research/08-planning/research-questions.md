@@ -1100,6 +1100,9 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     test harness prefixes the first proof marker and the column-zero parser sees
     7/8 rows. No result is credited. V3 is frozen; only prefix-aware extraction
     and failure source/log retention may change in a successor.
+  - [ADR-0338](../09-decisions/adr-0338-preregister-tock-proof-v4-marker-parser.md)
+    freezes that successor as exact parser-only normalization of one proof marker
+    after the authenticated test-harness prefix; every v3 gate remains unchanged.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

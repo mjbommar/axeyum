@@ -392,3 +392,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0335](adr-0335-preregister-tock-log2-proof-scoreboard.md) | Preregister authenticated Tock log2 proofs, replayed controls, and measured scoreboard; accept v1 as a pre-query stale-lock negative | accepted |
 | [0336](adr-0336-preregister-tock-log2-proof-v2.md) | Preregister proof v2 with the corrected lock; accept the first target proof as rejected because bit-blast trust is uncertified | accepted |
 | [0337](adr-0337-preregister-tock-end-to-end-proof-v3.md) | Preregister the dual-DRAT route; accept v3 as a completed-test/first-row parser negative | accepted |
+| [0338](adr-0338-preregister-tock-proof-v4-marker-parser.md) | Preregister proof v4 changing only exact harness-prefixed first-row extraction | proposed |
