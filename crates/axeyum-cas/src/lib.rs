@@ -7703,30 +7703,32 @@ fn integrate_sqrt_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     Some(scaled_term(coeff, body))
 }
 
-/// ∫ x·S(x²)·e^(c·x²) dx = ½·[∫ S(u)·e^(c·u) du]_{u=x²} — the `u = x²` chain-rule
-/// reversal for an odd polynomial times a Gaussian-exponent `exp`. Covers
-/// `∫x·e^(x²) = ½e^(x²)`, `∫x³·e^(x²) = ½(x²−1)e^(x²)`, etc. The inner integral is
-/// delegated to the poly×exp machinery; certified downstream by differentiate-and-check.
+/// ∫ x·S(x²)·f(c·x²) dx = ½·[∫ S(u)·f(c·u) du]_{u=x²} for `f ∈ {exp, sin, cos}` —
+/// the `u = x²` chain-rule reversal for an odd polynomial times a transcendental
+/// with a pure-quadratic argument. Covers `∫x·e^(x²) = ½e^(x²)`,
+/// `∫x·sin(x²) = −½cos(x²)`, `∫x³·cos(x²)`, etc. The inner integral is delegated to
+/// the poly×{exp,sinusoid} machinery; certified downstream by differentiate-and-check.
 fn integrate_exp_quadratic_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let factors: Vec<CasExpr> = match expr {
         CasExpr::Mul(fs) => fs.clone(),
         other => vec![other.clone()],
     };
-    let mut exp_arg: Option<CasExpr> = None;
+    // Find the single transcendental factor with a quadratic argument.
+    let mut head_arg: Option<(UnaryFunc, CasExpr)> = None;
     let mut rest: Vec<CasExpr> = Vec::new();
     for f in factors {
-        if let CasExpr::Unary(UnaryFunc::Exp, a) = &f {
-            if exp_arg.is_some() {
+        if let CasExpr::Unary(head @ (UnaryFunc::Exp | UnaryFunc::Sin | UnaryFunc::Cos), a) = &f {
+            if head_arg.is_some() {
                 return None;
             }
-            exp_arg = Some(a.as_ref().clone());
+            head_arg = Some((*head, a.as_ref().clone()));
         } else {
             rest.push(f);
         }
     }
-    let exp_arg = exp_arg?;
-    // The exp argument must be a pure quadratic monomial c·x² (no linear/constant).
-    let arg_poly = normalize(&exp_arg)?.to_univariate(var)?;
+    let (head, head_arg) = head_arg?;
+    // The argument must be a pure quadratic monomial c·x² (no linear/constant term).
+    let arg_poly = normalize(&head_arg)?.to_univariate(var)?;
     if arg_poly.len() != 3 || arg_poly[2].is_zero() || !arg_poly[0].is_zero() || !arg_poly[1].is_zero() {
         return None;
     }
@@ -7750,10 +7752,9 @@ fn integrate_exp_quadratic_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     // Fresh substitution variable that cannot clash with `var`.
     let u = if var == "u" { "w" } else { "u" };
     let s_expr = MultiPoly::from_univariate(u, &s_coeffs).to_expr();
-    let inner = CasExpr::Mul(vec![
-        s_expr,
-        CasExpr::Mul(vec![CasExpr::Const(c), CasExpr::var(u)]).exp(),
-    ]);
+    let cu = CasExpr::Mul(vec![CasExpr::Const(c), CasExpr::var(u)]);
+    let transcendental = CasExpr::Unary(head, Box::new(cu));
+    let inner = CasExpr::Mul(vec![s_expr, transcendental]);
     let anti_u = integrate(&inner, u)?;
     if !anti_u.is_certified() {
         return None;
@@ -9815,10 +9816,12 @@ mod tests {
         // Odd polynomial over [−1,1].
         sym(-1, 1, x().pow(3) - x());
         // KEY: odd integrands `integrate` cannot handle (antiderivative-free) still
-        // give 0 by symmetry — here x·sin(x²), whose antiderivative is non-elementary.
-        assert!(integrate(&(x() * x().pow(2).sin()), "x").is_none());
-        sym(-2, 2, x() * x().pow(2).sin()); // x·sin(x²) — via symmetry
+        // give 0 by symmetry — here x·e^(x⁴), whose antiderivative reduces to the
+        // non-elementary ½∫e^(u²)du under u = x².
+        assert!(integrate(&(x() * x().pow(4).exp()), "x").is_none());
+        sym(-2, 2, x() * x().pow(4).exp()); // x·e^(x⁴) — via symmetry
         sym(-1, 1, x() * x().pow(2).exp()); // x·e^{x²} — now via FTC (½e^{x²})
+        sym(-2, 2, x() * x().pow(2).sin()); // x·sin(x²) — now via FTC (−½cos x²)
         // Even integrand over a symmetric interval is NOT shortcut to 0.
         let even = definite_integrate(&x().pow(2), "x", &CasExpr::int(-2), &CasExpr::int(2))
             .unwrap();
@@ -11264,6 +11267,9 @@ mod tests {
             x().pow(3) * x().pow(2).exp(),                       // ∫x³·e^(x²) = ½(x²−1)e^(x²)
             x() * (CasExpr::int(2) * x().pow(2)).exp(),          // scaled exponent
             x() * (-x().pow(2)).exp(),                           // ∫x·e^(−x²)
+            x() * x().pow(2).sin(),                              // ∫x·sin(x²) = −½cos(x²)
+            x() * x().pow(2).cos(),                              // ∫x·cos(x²) = ½sin(x²)
+            x().pow(3) * x().pow(2).cos(),                       // odd poly × cos(x²)
         ] {
             let r = integrate(&integrand, "x").expect("exp-quadratic u-sub");
             assert!(r.is_certified(), "not certified: ∫{integrand}");
