@@ -1993,12 +1993,43 @@ pub fn sum_polynomial(f: &CasExpr, var: &str) -> Option<CasExpr> {
     }
 }
 
+/// The distinct rational roots of `den` with their multiplicities, or `None` if
+/// `den` does not split completely into rational **linear** factors (an irreducible
+/// quadratic-or-higher factor remains).
+fn linear_factor_multiplicities(den: &[Rational]) -> Option<Vec<(Rational, u32)>> {
+    let mut remaining = poly::rat_trim(den.to_vec());
+    let mut result: Vec<(Rational, u32)> = Vec::new();
+    while poly::rat_degree(&remaining).unwrap_or(0) >= 1 {
+        let root = *ratint::rational_roots(&remaining)?.first()?; // none ⇒ non-linear ⇒ decline
+        let factor = [root.checked_neg()?, Rational::integer(1)]; // (x − root)
+        let mut multiplicity = 0u32;
+        while poly::rat_degree(&remaining).unwrap_or(0) >= 1
+            && poly::eval_rat_poly(&remaining, root)?.is_zero()
+        {
+            remaining = poly::rat_exact_div(&remaining, &factor)?;
+            multiplicity += 1;
+        }
+        result.push((root, multiplicity));
+    }
+    Some(result)
+}
+
 /// Partial-fraction decomposition of a univariate rational function whose
-/// denominator splits into **distinct** rational linear factors: `p/q =
-/// (polynomial part) + Σ Aᵢ/(x − rᵢ)` with residues `Aᵢ = rem(rᵢ)/q′(rᵢ)`. Returns
-/// the decomposition, **certified** equal to the input (re-combination zero-test),
-/// or `None` if the denominator has a repeated or non-rational root, or `expr` is
-/// not a univariate rational function.
+/// denominator splits into rational linear factors (**distinct or repeated**):
+/// `p/q = (polynomial part) + Σᵢ Σⱼ Aᵢⱼ / (x − rᵢ)ʲ`, with the residues `Aᵢⱼ` found
+/// by undetermined coefficients (one exact linear solve). Returns the
+/// decomposition **certified** equal to the input (the re-combination zero-test),
+/// or `None` if the denominator has a non-rational (e.g. irreducible-quadratic)
+/// factor, or `expr` is not a univariate rational function.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, apart, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// // x/(x−1)² = 1/(x−1) + 1/(x−1)² (a repeated factor).
+/// let f = x.clone() / (x - CasExpr::int(1)).pow(2);
+/// let decomposed = apart(&f, "x").unwrap();
+/// assert!(matches!(equal(&decomposed, &f), ZeroTest::Certified { equal: true, .. }));
+/// ```
 #[must_use]
 pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let rf = normalize_rational(expr)?;
@@ -2009,21 +2040,38 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return expand(expr); // no denominator — just the polynomial
     }
     let (quotient, remainder) = ratint::divrem(&num, &den)?;
-    let roots = ratint::rational_roots(&den)?;
-    if roots.len() != deg_den {
-        return None; // repeated or non-rational roots — not distinct linear
+    let factors = linear_factor_multiplicities(&den)?;
+
+    // Undetermined coefficients: one unknown Aᵢⱼ per `(root rᵢ, power j)`, with the
+    // basis polynomial `den / (x − rᵢ)ʲ`. The system `Σ Aᵢⱼ · basisᵢⱼ = remainder`
+    // is square (Σ multiplicities = deg den).
+    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(deg_den);
+    let mut term_data: Vec<(Rational, u32)> = Vec::with_capacity(deg_den);
+    for &(root, multiplicity) in &factors {
+        let factor = [root.checked_neg()?, Rational::integer(1)];
+        let mut power = vec![Rational::integer(1)];
+        for exponent in 1..=multiplicity {
+            power = poly::ratpoly_mul(&power, &factor)?; // (x − root)^exponent
+            let mut basis = poly::rat_exact_div(&den, &power)?;
+            basis.resize(deg_den, Rational::zero());
+            columns.push(basis);
+            term_data.push((root, exponent));
+        }
     }
-    let den_deriv = poly::rat_derivative(&den)?;
+    let mut rhs = remainder;
+    rhs.resize(deg_den, Rational::zero());
+    let residues = ratint::solve_linear(&columns, &rhs)?;
+
     let mut parts: Vec<CasExpr> = Vec::new();
     if !ratint::is_zero(&quotient) {
         parts.push(MultiPoly::from_univariate(var, &quotient).to_expr());
     }
-    for root in roots {
-        let residue = poly::eval_rat_poly(&remainder, root)?
-            .checked_div(poly::eval_rat_poly(&den_deriv, root)?)?;
-        // Aᵢ / (x − rᵢ)
-        let denom = CasExpr::var(var) - CasExpr::Const(root);
-        parts.push(CasExpr::Const(residue) / denom);
+    for (residue, &(root, power)) in residues.iter().zip(&term_data) {
+        if residue.is_zero() {
+            continue;
+        }
+        let denom = (CasExpr::var(var) - CasExpr::Const(root)).pow(power);
+        parts.push(CasExpr::Const(*residue) / denom);
     }
     let result = match parts.len() {
         0 => CasExpr::zero(),
@@ -4092,6 +4140,18 @@ mod tests {
         // x/((x−1)(x−2)) = −1/(x−1) + 2/(x−2)
         let g = x() / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)));
         assert_equal(&apart(&g, "x").expect("distinct linear factors"), &g);
+        // Repeated factor: x/(x−1)² = 1/(x−1) + 1/(x−1)² — each certified equal.
+        let repeated = x() / (x() - CasExpr::int(1)).pow(2);
+        assert_equal(&apart(&repeated, "x").expect("repeated linear factor"), &repeated);
+        // Mixed distinct + repeated: 1/((x−1)(x−2)²).
+        let mixed = CasExpr::int(1)
+            / ((x() - CasExpr::int(1)) * (x() - CasExpr::int(2)).pow(2));
+        assert_equal(&apart(&mixed, "x").expect("mixed factors"), &mixed);
+        // Improper (numerator degree ≥ denominator): (x³)/(x−1)² has a polynomial part.
+        let improper = x().pow(3) / (x() - CasExpr::int(1)).pow(2);
+        assert_equal(&apart(&improper, "x").expect("improper"), &improper);
+        // Irreducible quadratic factor is declined honestly (not linear over ℚ).
+        assert!(apart(&(CasExpr::int(1) / (x().pow(2) + CasExpr::int(1))), "x").is_none());
     }
 
     #[test]
