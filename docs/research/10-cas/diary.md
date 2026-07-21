@@ -629,3 +629,19 @@ Kept building certifiable breadth without waiting on the exp-tower substrate:
 hypergeometric summation is in flight (sub-agent, telescoping-certified). The
 exp-combination/differential-tower refactor remains the sequenced next substrate
 step (unlocks first-order ODEs, recurrences, general exp/log simplification).
+
+## 2026-07-20 — Entry 16: log rules, absolute value, vector ops (174 tests)
+
+Further breadth toward K-12 + linear-algebra parity:
+- **`expand_log`** — product/quotient/power log rules (`ln(a·b)→ln a+ln b`, etc.),
+  honestly labelled compute (valid for positive reals; the certifying assumptions
+  engine is future work).
+- **`Abs` head** — a new `UnaryFunc::Abs` with a constant-folding constructor
+  (`|−3|=3`), `d/dx|x|=x/|x|`, `evalf`, and the sound `√(b^{2k})→|bᵏ|` rewrite in
+  `simplify_radicals` (so `√(x²)=|x|`).
+- **Vector ops** — `dot`, `cross`, `norm` (√(v·v), surd-simplified); dot/cross
+  certified by the zero-test, norm exact via the `sqrt(c)²→c` fold.
+
+**174 unit + 38 doctests, clippy-pedantic clean, WASM-green.** Gosper hypergeometric
+summation still in flight. The exp-tower substrate refactor remains the sequenced
+next step (first-order ODEs / recurrences / general exp-log simplification).

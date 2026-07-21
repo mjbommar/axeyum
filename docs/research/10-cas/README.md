@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-20
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 171 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 174 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -22,7 +22,8 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Trig | `evaluate_trig` (exact values at multiples of π/12), Pythagorean identity in the zero-test | compute (values certify) |
 | Complex | `imaginary_unit` (`I²=−1` in the zero-test), `conjugate`, `real_part`, `imaginary_part` | ✓ |
 | Linear algebra | `Matrix`: transpose, +/−/×, determinant, RREF, solve, inverse, `null_space`, `lu`; `matrix_rank`, `trace`, `characteristic_polynomial`, `eigenvalues`, `eigenvectors`, `minimal_polynomial` | det/solve/null/eigvec ✓ |
-| Vector calculus | `gradient`, `jacobian`, `divergence`, `curl` (certified partials) | ✓ |
+| Vector calculus | `gradient`, `jacobian`, `divergence`, `curl` (certified partials); `dot`, `cross`, `norm` | ✓ |
+| Logs / abs | `expand_log` (product/quotient/power rules), `Abs` head (`|·|`, `√(x²)→|x|`) | compute / exact |
 | Statistics | `stats`: mean/median/mode/variance/sample_variance; `standard_deviation` (surd-simplified) | exact |
 | Radicals | `simplify_radicals` (`√12→2√3`, rationalize denominators) | exact (`k²·m=c`) |
 | Number theory | `ntheory`: gcd, mod-pow/inverse, `is_prime`, `factorize`, divisors, φ, CRT, binomial; `ntheory_advanced`: `permutations` (nPr), Legendre/Jacobi, quadratic residues, `multiplicative_order`, `primitive_root`, `discrete_log` (BSGS), continued fractions, Pell | re-check ✓ |
