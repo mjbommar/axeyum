@@ -526,6 +526,11 @@ session state.
 >    five v2 plus five inherited producer tests, and live lineage/capture input
 >    validation pass; `proof-v2` remains absent. Commit/push these exact bytes
 >    before the registered archived-HEAD compilation preflight. No target query.
+>    Producer commit `07b22549` is pushed and its archived-HEAD preflight passes:
+>    fresh locked/offline compilation under the cap, one independent-spec pass,
+>    the authenticated test filtered out, and `proof-v2` absent. Commit/push the
+>    exact zero-query preflight metadata, then verify refs/output absence and
+>    invoke v2 exactly once. Do not rerun after any target observation.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

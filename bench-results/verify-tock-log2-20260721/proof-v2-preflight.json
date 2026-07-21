@@ -1,0 +1,42 @@
+{
+  "command": [
+    "cargo",
+    "test",
+    "--locked",
+    "--offline",
+    "-p",
+    "axeyum-verify",
+    "--test",
+    "tock_log2_external",
+    "independent_floor_log_spec_matches_native_small_rows",
+    "--",
+    "--exact",
+    "--test-threads=1"
+  ],
+  "observed_at_utc": "2026-07-21T11:52:18Z",
+  "outputs": {
+    "authenticated_tests_run": 0,
+    "failed": 0,
+    "filtered_out": 1,
+    "official_output_directory_exists": false,
+    "passed": 1,
+    "property_queries": 0,
+    "scoreboard_rows": 0
+  },
+  "registration_sha256": "47ac58722b2d21e6175506c67741372dc2970a8e3419df21a7ccdc7c3089c6f4",
+  "resource_scope": {
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "scope_exit_code": 0,
+    "swap_max_bytes": 536870912
+  },
+  "runner": {
+    "cargo_reported_build_seconds": 38.08,
+    "commit": "07b225499b7300584b07acabacee40e4a3e90987",
+    "remote_matched_before_preflight": true,
+    "tracking": "07b225499b7300584b07acabacee40e4a3e90987",
+    "tree": "a76675c26e84b2a8ef1bafdd88648f573109bf58"
+  },
+  "schema": "axeyum.tock-log2-proof-v2-preflight.v1",
+  "status": "accepted"
+}

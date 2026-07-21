@@ -79,6 +79,16 @@ identity projection, archive safety, and atomic cleanup. `proof-v2` remains
 absent. Commit and push these bytes before the archived compilation preflight;
 no authenticated target query or scoreboard row has run.
 
+Pushed producer commit `07b22549` matches its tracking ref and remote `main`.
+The frozen archive preflight materializes that exact tree, resolves the corrected
+lock under `--locked --offline`, compiles into a fresh capped target, and runs
+exactly `independent_floor_log_spec_matches_native_small_rows`: one pass, zero
+failures, and the authenticated test filtered out. Cargo reports 38.08 seconds
+for the fresh build. `proof-v2` remains absent; zero target property queries or
+scoreboard rows exist. Exact preflight metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v2-preflight.json`. Commit/push
+this successful gate before the one official invocation.
+
 ## Rejected alternatives
 
 - **Rerun v1 after committing the lock.** Rejected: its single official
