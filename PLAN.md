@@ -449,8 +449,12 @@ session state.
 >    in-tree path manifests, one workspace kernel, and a canonical active digest
 >    whose count/hash are results rather than thresholds. The thin v5 wrapper,
 >    five focused plus 18 inherited tests, and compact overlay now validate nine
->    producer files with no active count/digest or DNS/fetch observation. Commit/
->    push this checkpoint, then invoke v5 once under its registered cgroup.
+>    producer files with no expected active count/digest. ADR-0332 now accepts
+>    the positive preparation: inventory `fd6ee33d` covers 3,077 rows / 41.18 MB
+>    distinct bytes / four hard links; structural digest `da6971e4` authenticates
+>    162 active nodes and 814 edges against 169 lock entries; independent
+>    inventory replay and zero OOM deltas pass. No build/query exists. Next
+>    preregister capture v2 pinning this exact cache read-only before any build.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

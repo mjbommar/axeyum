@@ -1,6 +1,6 @@
 # ADR-0332: Preregister Tock cache structural metadata authentication
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -82,12 +82,32 @@ be weakened after the DNS probe begins.
 
 ## Result
 
-Proposed. A thin v5 wrapper injects only the structural offline validator,
-result schema, output version, and compact overlay into frozen v4. Five focused
-graph/lock/path tests plus all 18 inherited preparation tests pass. Registration
-validates nine producer files and six tools without storing any active count or
-digest. Commit and push this checkpoint before DNS/fetch. No cache, structural
-metadata result, active count/digest, build, capture, or query exists.
+Accepted. Pushed producer `020f079c` completes one DNS probe and locked fetch,
+then passes hard-link-aware inventory, the structural read-only/offline metadata
+gate, unchanged post-probe inventory, and zero OOM deltas. The retained local
+Cargo home has identity:
+
+- 3,077 rows: 565 directories, 2,508 distinct files, four hard-link aliases in
+  four groups, zero symlinks;
+- 41,179,781 distinct file bytes / 57,245,401 path bytes;
+- 36 registry package directories and two Git checkouts; and
+- inventory SHA-256
+  `fd6ee33dd536c75d654bb750a8919911dd6065f382ea59d8ac0e26464097d379`.
+
+The structural probe authenticates 162 active packages/nodes and 814 dependency
+edges against all 169 lock entries: 129 path packages, 32 registry packages,
+one Git package, exactly one workspace `kernel`, 129 workspace/default members,
+and active-resolution SHA-256
+`da6971e417c906a9c0fa81768cfd511136d0946f651a1ec891ce1f7891dbf305`.
+Those populations are results, not expected thresholds.
+
+An independent post-run recomputation matches the inventory byte-for-byte.
+Fetch observation is 7,799 ms / 84,308 KiB peak RSS; every cgroup OOM delta is
+zero. No build, target capture, admission, property query, proof, or scoreboard
+row exists. Cache bytes remain ignored local data; committed summary identity is
+`3c926909d28380f95da23ef3170f069b46cd2642d23e712b660074c61068fb06`.
+This positive input-preparation result authorizes only a separately
+preregistered capture-v2 protocol pinning the exact retained inventory read-only.
 
 ## Rejected alternatives
 
@@ -102,10 +122,10 @@ metadata result, active count/digest, build, capture, or query exists.
 
 ## Consequences
 
-- Cache completeness is expressed as graph/source authentication rather than an
-  accidental population size.
-- The active count remains reportable and reproducible without becoming a
-  post-observation acceptance threshold.
+- The dedicated cache is now an authenticated local input rather than ambient
+  mutable state.
+- Official target builds remain unauthorized until a fresh capture-v2 ADR and
+  registration pin this exact inventory and build protocol.
 
 ## References
 

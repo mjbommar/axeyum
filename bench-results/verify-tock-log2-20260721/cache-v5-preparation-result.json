@@ -1,0 +1,63 @@
+{
+  "identity_sha256": "3c926909d28380f95da23ef3170f069b46cd2642d23e712b660074c61068fb06",
+  "inventory": {
+    "bytes": 41179781,
+    "directories": 565,
+    "files": 2508,
+    "git_checkouts": 2,
+    "hardlink_groups": 4,
+    "hardlinks": 4,
+    "path_bytes": 57245401,
+    "registry_packages": 36,
+    "rows": 3077,
+    "schema": "axeyum.cargo-cache-hardlink-inventory.v1",
+    "sha256": "fd6ee33dd536c75d654bb750a8919911dd6065f382ea59d8ac0e26464097d379",
+    "symlinks": 0
+  },
+  "local_result_sha256": "49f9b0dd723283e760041dea1de13fc944187d46aca6df58ad69671b26d59f97",
+  "observations": {
+    "dns_addresses": [
+      "140.82.114.3"
+    ],
+    "fetch_peak_rss_kib": 84308,
+    "fetch_wall_ms": 7799,
+    "memory_high_bytes": 2621440000,
+    "memory_max_bytes": 4294967296,
+    "oom_deltas": {
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0
+    },
+    "swap_max_bytes": 536870912
+  },
+  "probe": {
+    "active_resolution_sha256": "da6971e417c906a9c0fa81768cfd511136d0946f651a1ec891ce1f7891dbf305",
+    "default_members": 129,
+    "edges": 814,
+    "external": 33,
+    "git": 1,
+    "kernel_packages": 1,
+    "lock_packages": 169,
+    "nodes": 162,
+    "packages": 162,
+    "path": 129,
+    "registry": 32,
+    "schema": "axeyum.cargo-metadata-lock-authentication.v1",
+    "workspace_members": 129
+  },
+  "producer_commit": "020f079cee3902265e3002c69f574dd379817b20",
+  "registration_sha256": "80ea7f09efc6a6983eb9924978695795451546dde36dd4324ca1195a2781faf7",
+  "schema": "axeyum.tock-log2-cache-v5-preparation-committed-summary.v1",
+  "status": "accepted",
+  "summary": {
+    "builds": 0,
+    "captures": 0,
+    "dns_probes": 1,
+    "fetches": 1,
+    "property_queries": 0
+  },
+  "upstream": {
+    "commit": "ac5d597d22fbf3b03ef2169a577bac246ef65ffb",
+    "tree": "5243357a7034d3a5fa68487ea839a25e573a25ef"
+  }
+}
