@@ -1440,6 +1440,16 @@ pub fn count_real_roots(
     sturm::count_real_roots_in(&univariate_coeffs(expr, var)?, lower, upper)
 }
 
+/// Rational approximations (to within `width`) of **every** real root of a
+/// univariate polynomial `expr` in `var`, ascending — each root Sturm-isolated then
+/// bisected to precision. This gives decimal(-izable) roots for polynomials whose
+/// roots are irrational or of degree ≥ 5 (beyond closed-form radicals). `None` if
+/// `expr` is not a univariate polynomial, `width ≤ 0`, or on overflow.
+#[must_use]
+pub fn approximate_real_roots(expr: &CasExpr, var: &str, width: Rational) -> Option<Vec<Rational>> {
+    sturm::approximate_real_roots(&univariate_coeffs(expr, var)?, width)
+}
+
 /// The (up to two) roots of `a·x² + b·x + c` as [`CasExpr`] values: rational when
 /// the discriminant is a perfect square, a symbolic real `√` when the discriminant
 /// is positive non-square, and a complex-conjugate pair (via `I`) when it is

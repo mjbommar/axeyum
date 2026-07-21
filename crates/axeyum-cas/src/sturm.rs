@@ -152,6 +152,53 @@ pub fn isolate_real_roots(p: &[Rational]) -> Option<Vec<(Rational, Rational)>> {
     Some(isolated)
 }
 
+/// Refine an isolating interval `(lower, upper]` for a **simple** root of the
+/// square-free polynomial `p` down to width `< width` by sign-bisection, returning
+/// the midpoint as a rational approximation. `None` on overflow.
+fn refine_root(p: &[Rational], mut lower: Rational, mut upper: Rational, width: Rational) -> Option<Rational> {
+    let sign_at = |x: Rational| -> Option<i32> {
+        let value = poly::eval_rat_poly(p, x)?;
+        Some(value.numerator().signum().try_into().unwrap_or(0))
+    };
+    let lower_sign = sign_at(lower)?;
+    let mut guard = 0usize;
+    while upper.checked_sub(lower)?.checked_cmp(&width)? == core::cmp::Ordering::Greater {
+        guard += 1;
+        if guard > 100_000 {
+            break;
+        }
+        let mid = lower.checked_add(upper)?.checked_div(Rational::integer(2))?;
+        let mid_sign = sign_at(mid)?;
+        if mid_sign == 0 {
+            return Some(mid); // landed exactly on the root
+        }
+        if mid_sign == lower_sign {
+            lower = mid;
+        } else {
+            upper = mid;
+        }
+    }
+    lower.checked_add(upper)?.checked_div(Rational::integer(2))
+}
+
+/// Rational approximations (to within `width`) of **every** real root of a
+/// univariate rational polynomial, ascending. Each root is first isolated by
+/// [`isolate_real_roots`] (Sturm-certified), then bisected to the requested width.
+/// `None` for the zero polynomial, a non-positive `width`, or on overflow.
+#[must_use]
+pub fn approximate_real_roots(p: &[Rational], width: Rational) -> Option<Vec<Rational>> {
+    if width.numerator() <= 0 {
+        return None;
+    }
+    let squarefree = poly::squarefree_part(p, GCD_DEGREE_CAP)?;
+    let intervals = isolate_real_roots(p)?;
+    let mut roots = Vec::with_capacity(intervals.len());
+    for (lower, upper) in intervals {
+        roots.push(refine_root(&squarefree, lower, upper, width)?);
+    }
+    Some(roots)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -200,6 +247,24 @@ mod tests {
         // (x−1)² = x² − 2x + 1: a double root at 1, isolated once.
         let p = poly_from(&[1, -2, 1]);
         assert_eq!(isolate_real_roots(&p).unwrap().len(), 1);
+    }
+
+    #[test]
+    #[allow(clippy::cast_precision_loss)] // small test values; f64 comparison only
+    fn approximates_roots_to_precision() {
+        // x² − 2: √2 ≈ 1.41421356. Approximate to width 1/1000.
+        let p = poly_from(&[-2, 0, 1]);
+        let width = Rational::new(1, 1000);
+        let roots = approximate_real_roots(&p, width).unwrap();
+        assert_eq!(roots.len(), 2);
+        // The positive approximation is within `width` of √2.
+        let positive = roots.iter().find(|r| r.numerator() > 0).unwrap();
+        let as_float = positive.numerator() as f64 / positive.denominator() as f64;
+        assert!((as_float - std::f64::consts::SQRT_2).abs() < 1e-2);
+        // Exact rational roots come out essentially exact: (x−3)(x+5) → {−5, 3}.
+        let q = poly_from(&[-15, 2, 1]); // x² + 2x − 15
+        let exact = approximate_real_roots(&q, Rational::new(1, 1_000_000)).unwrap();
+        assert_eq!(exact.len(), 2);
     }
 
     #[test]
