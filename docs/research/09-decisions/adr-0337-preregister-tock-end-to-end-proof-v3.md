@@ -91,6 +91,14 @@ two ordinary Rust tests pass with the authenticated test ignored, and targeted
 strict Clippy is clean under the cap. `proof-v3` remains absent. Commit and push
 these exact bytes before the archived non-authenticated compilation preflight.
 
+Pushed producer commit `c22734c3` matches local HEAD, its tracking ref, and
+remote `main`. Its fresh archived source resolves the corrected lock, compiles
+under the cap in 38.32 seconds, and runs exactly the independent-spec test: one
+pass, zero failures, two filtered tests, and no authenticated execution.
+`proof-v3` remains absent. Exact zero-query metadata is committed in
+`bench-results/verify-tock-log2-20260721/proof-v3-preflight.json`. Commit/push
+this gate before verifying refs/output and invoking v3 exactly once.
+
 ## Rejected alternatives
 
 - **Mark v2 BitBlast certified because the global ledger says it is

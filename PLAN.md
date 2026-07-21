@@ -553,6 +553,11 @@ session state.
 >    focused plus four inherited tests, two ordinary Rust tests, small non-target
 >    route smoke, and targeted Clippy pass under the cap; `proof-v3` is absent.
 >    Commit/push these bytes before archived-HEAD compilation. No target query.
+>    Producer commit `c22734c3` is pushed. Fresh archived-HEAD locked/offline
+>    compilation passes under the cap in 38.32 s with exactly one independent-
+>    spec pass, two filtered tests, and no authenticated execution/output.
+>    Commit/push this zero-query metadata, then verify refs and `proof-v3`
+>    absence before the one official invocation. Never rerun after observation.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

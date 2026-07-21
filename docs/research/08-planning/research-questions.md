@@ -1094,6 +1094,8 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     V3 implementation now requires dual recheck plus artifact hashes/sizes,
     preserves controls, and passes ten producer tests, two ordinary Rust tests,
     a non-target route smoke, and targeted Clippy. Push before archive preflight.
+    Pushed producer `c22734c3` passes that fresh locked/offline preflight with one
+    independent-spec pass, two filtered tests, and no authenticated output.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

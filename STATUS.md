@@ -376,6 +376,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   tests, two ordinary Rust tests, a small non-target route smoke, and targeted
   Clippy pass under the cap; `proof-v3` is absent. Next: commit/push exact bytes,
   then run only the archived non-authenticated compilation preflight.
+  Producer `c22734c3` is pushed and its fresh archived locked/offline preflight
+  passes under the cap in 38.32 s: one independent-spec pass, two filtered tests,
+  zero authenticated execution, and no v3 output. Next: commit/push this gate,
+  verify refs/output absence, then invoke v3 exactly once.
 
 - **2026-07-21 — ADR-0332 accepts the authenticated dedicated Cargo cache.**
   Pushed v5 passes DNS/fetch, 3,077-row hard-link-aware inventory (`fd6ee33d`),
