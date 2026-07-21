@@ -612,6 +612,61 @@ pub mod optimization {
     }
 }
 
+/// Interpolant construction and checked interpolation certificates.
+///
+/// This full-profile facade groups already-public interpolant contracts by
+/// logic while leaving model-based projection and verification algorithms in
+/// their own domains. Historical crate-root paths remain source-compatible
+/// aliases hidden from root rustdoc.
+#[cfg(feature = "full")]
+pub mod interpolation {
+    pub use crate::solver::InterpolantOutcome;
+
+    /// `QF_BV` interpolants and checked certificates.
+    pub mod bitvectors {
+        pub use crate::bv_interpolant::{
+            QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
+        };
+    }
+
+    /// `QF_UF` interpolants and checked certificates.
+    pub mod uninterpreted_functions {
+        pub use crate::euf_interpolant::{
+            QfUfInterpolantCertificate, qf_uf_interpolant, qf_uf_interpolant_certified,
+        };
+    }
+
+    /// Linear-integer interpolants, certificates, and CNF construction.
+    pub mod linear_integer {
+        pub use crate::lia_interpolant::{
+            LiaInterpolantCertificate, lia_interpolant, lia_interpolant_certified,
+        };
+        pub use crate::lia_interpolant_cnf::lia_interpolant_cnf;
+    }
+
+    /// Linear-real interpolants, certificates, and CNF construction.
+    pub mod linear_real {
+        pub use crate::interpolant::{
+            LraInterpolantCertificate, lra_interpolant, lra_interpolant_certified,
+        };
+        pub use crate::lra_interpolant_cnf::lra_interpolant_cnf;
+    }
+
+    /// Combined UF and linear-integer interpolants.
+    pub mod uflia {
+        pub use crate::uflia_interpolant::{
+            UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
+        };
+    }
+
+    /// Combined UF and linear-real interpolants.
+    pub mod uflra {
+        pub use crate::uflra_interpolant::{
+            UflraInterpolantCertificate, uflra_interpolant, uflra_interpolant_certified,
+        };
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -723,6 +778,7 @@ macro_rules! full_exports {
             BvForallNonconstantKind, BvForallNonconstantRefutationCertificate,
             bv_forall_nonconstant_refutation,
         };
+        #[doc(hidden)]
         pub use bv_interpolant::{
             QfBvInterpolantCertificate, qf_bv_interpolant, qf_bv_interpolant_certified,
         };
@@ -784,6 +840,7 @@ macro_rules! full_exports {
             check_qf_uf_online_cdclt, check_qf_uf_with_config, prove_unsat_by_congruence,
             prove_unsat_lazy, prove_unsat_qf_uf_online, solve_qf_uf_online,
         };
+        #[doc(hidden)]
         pub use euf_interpolant::{
             QfUfInterpolantCertificate, qf_uf_interpolant, qf_uf_interpolant_certified,
         };
@@ -818,6 +875,7 @@ macro_rules! full_exports {
             reconstruct_quantified_counterexample_cover_to_lean_module,
             reconstruct_single_pivot_equality_partition_to_lean_module,
         };
+        #[doc(hidden)]
         pub use interpolant::{
             LraInterpolantCertificate, lra_interpolant, lra_interpolant_certified,
         };
@@ -834,9 +892,11 @@ macro_rules! full_exports {
             prove_lia_unsat_by_diophantine, prove_lia_unsat_by_diophantine_certified,
             prove_lia_unsat_by_gcd,
         };
+        #[doc(hidden)]
         pub use lia_interpolant::{
             LiaInterpolantCertificate, lia_interpolant, lia_interpolant_certified,
         };
+        #[doc(hidden)]
         pub use lia_interpolant_cnf::lia_interpolant_cnf;
         #[doc(hidden)]
         pub use lia_online::{LiaTheory, check_qf_lia_online};
@@ -847,6 +907,7 @@ macro_rules! full_exports {
         pub use lra::{
             check_with_lia_simplex, check_with_lra, check_with_lra_simplex, lra_unsat_core,
         };
+        #[doc(hidden)]
         pub use lra_interpolant_cnf::lra_interpolant_cnf;
         #[doc(hidden)]
         pub use lra_online::{LraTheory, check_qf_lra_online};
@@ -1041,7 +1102,9 @@ macro_rules! full_exports {
             solve_smtlib_get_value, solve_smtlib_incremental, solve_smtlib_model,
             solve_smtlib_unsat_core, upgrade_bounded_string_unknown, word_route_verdict,
         };
-        pub use solver::{InterpolantOutcome, Solver};
+        #[doc(hidden)]
+        pub use solver::InterpolantOutcome;
+        pub use solver::Solver;
         pub use strategy::{
             Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy,
         };
@@ -1081,6 +1144,7 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
+        #[doc(hidden)]
         pub use uflia_interpolant::{
             UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
         };
@@ -1090,6 +1154,7 @@ macro_rules! full_exports {
         pub use uflia_online::check_qf_uflia_boolean_with_metrics;
         #[doc(hidden)]
         pub use uflia_online::check_qf_uflia_online;
+        #[doc(hidden)]
         pub use uflra_interpolant::{
             UflraInterpolantCertificate, uflra_interpolant, uflra_interpolant_certified,
         };

@@ -422,7 +422,19 @@ session state.
 >    module. All 891 solver-library tests, strict clippy, compatibility gates,
 >    and both warning-denied rustdoc profiles pass under the bounded profile.
 >    ADR-0310 records the boundary. Next census interpolation independently,
->    followed by the remaining general refutation utilities.
+>    followed by the remaining general refutation utilities. R4g now groups the
+>    existing common outcome plus QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA
+>    interpolation contracts under a full-only `interpolation` facade. Twenty-one
+>    root entries move into a 27-entry subtree including six grouping modules;
+>    the all-feature documented root falls 148→128, while minimal `qfbv`
+>    remains 26 with no interpolation surface. Model-based projection and two
+>    previously unreachable verifier functions stay outside the facade.
+>    Historical paths remain callable and type-identical; all 891
+>    solver-library tests, strict clippy, compatibility gates, and both
+>    warning-denied rustdoc profiles pass under the bounded profile. ADR-0311
+>    records the boundary. Next census the remaining general
+>    refutation/certificate utilities and core solver helpers without inventing
+>    a miscellaneous namespace.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has

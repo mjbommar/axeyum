@@ -267,3 +267,56 @@ fn smtlib_namespace_preserves_root_aliases() {
         axeyum_solver::word_route_verdict
     );
 }
+
+#[cfg(feature = "full")]
+#[test]
+fn interpolation_namespaces_preserve_root_aliases() {
+    use axeyum_solver::interpolation::{
+        bitvectors, linear_integer, linear_real, uflia, uflra, uninterpreted_functions,
+    };
+
+    assert_same_type::<
+        axeyum_solver::interpolation::InterpolantOutcome,
+        axeyum_solver::InterpolantOutcome,
+    >();
+    assert_same_type::<
+        bitvectors::QfBvInterpolantCertificate,
+        axeyum_solver::QfBvInterpolantCertificate,
+    >();
+    assert_same_type::<
+        uninterpreted_functions::QfUfInterpolantCertificate,
+        axeyum_solver::QfUfInterpolantCertificate,
+    >();
+    assert_same_type::<
+        linear_integer::LiaInterpolantCertificate,
+        axeyum_solver::LiaInterpolantCertificate,
+    >();
+    assert_same_type::<
+        linear_real::LraInterpolantCertificate,
+        axeyum_solver::LraInterpolantCertificate,
+    >();
+    assert_same_type::<
+        uflia::UfliaInterpolantCertificate,
+        axeyum_solver::UfliaInterpolantCertificate,
+    >();
+    assert_same_type::<
+        uflra::UflraInterpolantCertificate,
+        axeyum_solver::UflraInterpolantCertificate,
+    >();
+
+    assert_same_function!(
+        bitvectors::qf_bv_interpolant,
+        axeyum_solver::qf_bv_interpolant
+    );
+    assert_same_function!(
+        uninterpreted_functions::qf_uf_interpolant,
+        axeyum_solver::qf_uf_interpolant
+    );
+    assert_same_function!(
+        linear_integer::lia_interpolant_cnf,
+        axeyum_solver::lia_interpolant_cnf
+    );
+    assert_same_function!(linear_real::lra_interpolant, axeyum_solver::lra_interpolant);
+    assert_same_function!(uflia::uflia_interpolant, axeyum_solver::uflia_interpolant);
+    assert_same_function!(uflra::uflra_interpolant, axeyum_solver::uflra_interpolant);
+}

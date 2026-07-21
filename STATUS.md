@@ -322,6 +322,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4g gives interpolation a bounded canonical surface.** The
+  full-only `interpolation` facade groups 21 existing common, QF_BV, QF_UF,
+  LIA, LRA, UFLIA, and UFLRA contracts under six logic-specific submodules.
+  Model-based projection remains outside the boundary, and two verifier
+  functions that were never part of the public crate surface remain private.
+  The all-feature documented root falls 148→128 items; the interpolation
+  subtree contains 27 entries including its six grouping modules, while minimal
+  `qfbv` remains 26 with no interpolation module. Historical aliases remain
+  callable and type-identical. Dedicated compatibility gates, all 891
+  solver-library tests, strict all-target clippy, and both warning-denied
+  rustdoc profiles pass inside the one-job 4 GiB profile. Next: census the
+  remaining general refutation/certificate utilities and core solver helpers
+  independently, without creating a miscellaneous namespace.
+
 - **2026-07-20 — R4f exposes the exact SMT-LIB text-front-door module.** The
   existing full-only `smtlib.rs` has exactly the same 25 public contracts as the
   historical root export, with no public helper or internal state outside that
@@ -5522,6 +5536,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0311 accepts the interpolation API namespace.** Twenty-one
+  existing interpolation entries now have canonical paths under a full-only
+  facade with six logic-specific submodules. Model-based projection and two
+  private-module verifier functions are explicitly excluded. Warning-denied
+  rustdoc measures 148→128 root items and 27 interpolation-subtree entries;
+  minimal `qfbv` remains at 26 with only `proofs` exposed. Representative
+  compatibility tests cover every interpolation submodule, all 891
+  solver-library tests pass, and strict all-target clippy is clean under the
+  bounded profile. Next R4 work is an independent census of the remaining
+  general refutation/certificate utilities and core solver helpers.
 
 - **2026-07-20 — ADR-0310 accepts the exact SMT-LIB module boundary.** The
   existing full-only implementation module contains precisely the 25 structures

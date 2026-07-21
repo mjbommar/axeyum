@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4a--R4f namespaces complete
+Status: active; R1, R2, and R3 complete; R4a--R4g namespaces complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -42,16 +42,17 @@ The post-R3 rustdoc root was measured before selecting a namespace. Counts are
 from warning-denied rustdoc in both supported solver profiles, not from source
 text or the older approximate review number.
 
-| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d | After R4e | After R4f |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 | 172 | 148 |
-| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 | 26 | 26 |
-| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 | 115 | 115 |
-| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 | 105 | 105 |
-| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 | 70 | 70 |
-| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 | 72 | 72 |
-| entries organized in the `optimization` subtree | 0 | 0 | 0 | 0 | 0 | 43 | 43 |
-| entries organized in the `smtlib` module | 0 | 0 | 0 | 0 | 0 | 0 | 25 |
+| Profile / surface | Before R4a | After R4a | After R4b | After R4c | After R4d | After R4e | After R4f | After R4g |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| all-feature documented crate-root items | 549 | 442 | 338 | 276 | 211 | 172 | 148 | 128 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 | 26 | 26 | 26 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 | 115 | 115 | 115 | 115 |
+| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 | 105 | 105 | 105 | 105 |
+| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 | 70 | 70 | 70 | 70 |
+| entries organized in the `verification` subtree | 0 | 0 | 0 | 0 | 72 | 72 | 72 | 72 |
+| entries organized in the `optimization` subtree | 0 | 0 | 0 | 0 | 0 | 43 | 43 | 43 |
+| entries organized in the `smtlib` module | 0 | 0 | 0 | 0 | 0 | 0 | 25 | 25 |
+| entries organized in the `interpolation` subtree | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 27 |
 
 ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
 export plus full-profile Alethe, end-to-end certification, evidence,
@@ -81,7 +82,9 @@ MaxSAT, and objective-optimization entries under `optimization`. It deliberately
 excludes the Pbls satisfiability backend, SMT-LIB textual commands, and the
 consumer-facing `Solver` methods. ADR-0310 then exposes the existing `smtlib`
 module because its exact 25 public items already equal the complete root-owned
-text-front-door surface; no helper or internal state becomes public.
+text-front-door surface; no helper or internal state becomes public. ADR-0311
+then groups 21 common and logic-specific interpolation contracts without
+exposing private-module verifier functions or absorbing model-based projection.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -299,7 +302,17 @@ before/after byte comparisons for their affected fixtures.
    26 with no SMT-LIB surface. All 891 library tests, strict all-target clippy,
    compatibility gates, and both warning-denied rustdoc profiles pass. ADR-0310
    owns the boundary. Next, census interpolation independently, followed by the
-   remaining general-refutation utilities.
+   remaining general-refutation utilities. R4g groups the existing common
+   outcome plus QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA interpolation contracts
+   under a full-only `interpolation` facade. Twenty-one root entries move into a
+   27-entry subtree including six grouping modules; the all-feature root falls
+   from 148 to 128, while minimal `qfbv` remains 26 with no interpolation
+   surface. Model-based projection and two previously unreachable verifier
+   functions stay outside the facade. Historical paths remain callable and
+   type-identical. All 891 library tests, strict all-target clippy, compatibility
+   gates, and both warning-denied rustdoc profiles pass. ADR-0311 owns the
+   boundary. Next, census the remaining general refutation/certificate utilities
+   and core solver helpers without inventing a miscellaneous namespace.
 
 Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any

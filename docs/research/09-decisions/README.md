@@ -365,3 +365,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0308](adr-0308-verification-api-namespace.md) | Group transition-system verification, symbolic execution, and reference-VM APIs without changing historical root paths | accepted |
 | [0309](adr-0309-optimization-api-namespace.md) | Group model minimization, MaxSAT, and objective optimization while retaining SAT backends and SMT-LIB commands in their own domains | accepted |
 | [0310](adr-0310-smtlib-api-namespace.md) | Expose the exact 25-entry SMT-LIB text-front-door module while retaining source-compatible root aliases | accepted |
+| [0311](adr-0311-interpolation-api-namespace.md) | Group common, QF_BV, QF_UF, LIA, LRA, UFLIA, and UFLRA interpolation contracts without exposing internal verifiers | accepted |
