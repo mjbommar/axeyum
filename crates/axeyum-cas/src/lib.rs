@@ -3598,6 +3598,47 @@ pub fn characteristic_polynomial(matrix: &Matrix, var: &str) -> Option<CasExpr> 
     Some(expand(&determinant).unwrap_or(determinant))
 }
 
+/// The **parity** of a function `f` in `var` under `x → −x`: `Even` if
+/// `f(−x) ≡ f(x)`, `Odd` if `f(−x) ≡ −f(x)`, else `Neither` — decided by the
+/// (sound) zero-test [`equal`]. Useful for symmetry-based shortcuts (e.g. an odd
+/// integrand over a symmetric interval integrates to `0`).
+///
+/// `x²`, `cos x`, `x²+1` are even; `x`, `sin x`, `x³−x` are odd; `x+1`, `eˣ` are
+/// neither. `Neither` is also returned when the zero-test cannot decide (honest).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, function_parity, Parity};
+/// let x = CasExpr::var("x");
+/// assert_eq!(function_parity(&x.clone().pow(2), "x"), Parity::Even);
+/// assert_eq!(function_parity(&x.clone().sin(), "x"), Parity::Odd);
+/// assert_eq!(function_parity(&(x + CasExpr::int(1)), "x"), Parity::Neither);
+/// ```
+#[must_use]
+pub fn function_parity(f: &CasExpr, var: &str) -> Parity {
+    let reflected = f.substitute(var, &CasExpr::Neg(Box::new(CasExpr::var(var))));
+    let certified_zero = |a: &CasExpr, b: &CasExpr| {
+        matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+    };
+    if certified_zero(&reflected, f) {
+        Parity::Even
+    } else if certified_zero(&reflected, &CasExpr::Neg(Box::new(f.clone()))) {
+        Parity::Odd
+    } else {
+        Parity::Neither
+    }
+}
+
+/// The parity of a function under `x → −x` (see [`function_parity`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Parity {
+    /// `f(−x) = f(x)`.
+    Even,
+    /// `f(−x) = −f(x)`.
+    Odd,
+    /// Neither even nor odd (or undecided by the zero-test).
+    Neither,
+}
+
 /// The **companion matrix** of a univariate polynomial `p(var)` of degree `n ≥ 1`:
 /// the `n × n` rational matrix whose **eigenvalues are exactly the roots of `p`**.
 /// Uses the standard form — `1`s on the subdiagonal and the negated monic
@@ -8485,6 +8526,23 @@ mod tests {
             &(v("L").pow(2) + CasExpr::int(1)),
         );
         assert_eq!(eigenvalues(&rot, "L").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn function_parity_detection() {
+        let x = || v("x");
+        // Even.
+        for f in [x().pow(2), x().pow(2) + CasExpr::int(1), x().cos(), x() * x().sin()] {
+            assert_eq!(function_parity(&f, "x"), Parity::Even, "{f}");
+        }
+        // Odd.
+        for f in [x(), x().pow(3) - x(), x().sin(), x().pow(2) * x().sin()] {
+            assert_eq!(function_parity(&f, "x"), Parity::Odd, "{f}");
+        }
+        // Neither.
+        for f in [x() + CasExpr::int(1), x().exp(), x().pow(2) + x()] {
+            assert_eq!(function_parity(&f, "x"), Parity::Neither, "{f}");
+        }
     }
 
     #[test]
