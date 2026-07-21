@@ -3748,6 +3748,38 @@ pub fn imaginary_part(expr: &CasExpr) -> Option<CasExpr> {
     Some(im.to_expr())
 }
 
+/// The **modulus** `|z| = √(Re(z)² + Im(z)²)` of a complex-polynomial expression in
+/// the imaginary unit `I`, as an exact [`CasExpr`] with any surd simplified
+/// (`|3+4i| = 5`, `|1+i| = √2`). `None` if `expr` is not in the polynomial fragment
+/// or on overflow.
+#[must_use]
+pub fn modulus(expr: &CasExpr) -> Option<CasExpr> {
+    let re = real_part(expr)?;
+    let im = imaginary_part(expr)?;
+    let square = expand(&(re.clone() * re + im.clone() * im))?;
+    Some(simplify_radicals(&square.sqrt()))
+}
+
+/// The `n` complex **roots of unity** `e^{2πik/n} = cos(2πk/n) + i·sin(2πk/n)` for
+/// `k = 0..n`, with the exact trigonometric values substituted where they are
+/// tabulated (multiples of `π/12`). `None` for `n = 0`.
+#[must_use]
+pub fn roots_of_unity(n: u32) -> Option<Vec<CasExpr>> {
+    if n == 0 {
+        return None;
+    }
+    let pi = CasExpr::var("pi");
+    let mut roots = Vec::with_capacity(n as usize);
+    for k in 0..n {
+        // angle = 2πk/n
+        let angle = CasExpr::rat(2 * i128::from(k), i128::from(n)) * pi.clone();
+        let real = evaluate_trig(&angle.clone().cos());
+        let imaginary = evaluate_trig(&angle.sin());
+        roots.push(real + imaginary * CasExpr::imaginary_unit());
+    }
+    Some(roots)
+}
+
 /// A point at which to take a [`limit`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LimitPoint {
@@ -6363,6 +6395,29 @@ mod tests {
         // |z|² = z·conj(z) = 25 (real)
         assert_equal(&real_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::int(25));
         assert_equal(&imaginary_part(&(z.clone() * conjugate(&z))).unwrap(), &CasExpr::zero());
+    }
+
+    #[test]
+    fn complex_modulus_and_roots_of_unity() {
+        let i = CasExpr::imaginary_unit();
+        // |3 + 4i| = 5; |1 + i| = √2; |5| = 5.
+        assert_equal(&modulus(&(CasExpr::int(3) + CasExpr::int(4) * i.clone())).unwrap(), &CasExpr::int(5));
+        assert_equal(&modulus(&(CasExpr::int(1) + i.clone())).unwrap(), &CasExpr::int(2).sqrt());
+        assert_equal(&modulus(&CasExpr::int(5)).unwrap(), &CasExpr::int(5));
+        // 4th roots of unity: 1, i, −1, −i.
+        let roots = roots_of_unity(4).unwrap();
+        assert_eq!(roots.len(), 4);
+        assert_equal(&roots[0], &CasExpr::int(1));
+        assert_equal(&roots[1], &i);
+        assert_equal(&roots[2], &CasExpr::int(-1));
+        assert_equal(&roots[3], &(-i.clone()));
+        // Each 4th root of unity satisfies z⁴ = 1 (via the I²=−1 fold).
+        for z in &roots {
+            assert_equal(&z.clone().pow(4), &CasExpr::int(1));
+        }
+        // 6th roots include the primitive (1+√3 i)/2 at k=1: cos(π/3)+i sin(π/3).
+        let six = roots_of_unity(6).unwrap();
+        assert_equal(&six[1], &(CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * i));
     }
 
     #[test]
