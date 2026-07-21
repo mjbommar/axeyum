@@ -51,6 +51,12 @@ The division scoreboard contains 35 rows across 24 logic labels:
   substantial but uneven coverage, not 261 fully audited outcomes out of 327:
   selected QF_ABV/AUFBV/LIA/LRA/UF rows are complete while general nonlinear,
   strings/sequences, AUFLIA, and some UFLIA rows retain large proof gaps.
+- The generated [proof-gap matrix](generated/proof-gap-matrix.md) applies the
+  full conjunction rather than treating Lean acceptance as sufficient:
+  **259 / 327 baseline UNSATs** are certified, independently checked,
+  trust-hole-free, and Lean-reconstructed. The residual is 54 uncertified
+  routes, eight trust-free Lean-reconstruction gaps, four declared `bit-blast`
+  trust holes, and two proof-production errors.
 - Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
   only **837 unique normalized benchmark paths**: **90 repeated occurrences**
   come from overlapping row variants. The two synthetic rows contribute
@@ -214,6 +220,15 @@ missing evidence, evidence-check failure, Lean reconstruction absence, external-
 Lean rejection, and explicit trust holes. Prioritize high-prevalence reductions,
 not bespoke one-row proof modules.
 
+**Prototype landed:** `scripts/gen-proof-gap-matrix.py` deterministically emits
+the checked [Markdown matrix](generated/proof-gap-matrix.md) and its
+[machine-readable JSON](generated/proof-gap-matrix.json). It shows that the
+largest gap is not Lean kernel expressiveness: 54 routes remain uncertified,
+primarily `bare-unsat`. Eight instances already have certified, checked,
+trust-free evidence and are direct reconstruction work; four QF_SEQ DRAT rows
+retain a `bit-blast` trust hole; two QF_NIA `IntPow2` rows fail evidence
+production. `just parity-docs` rejects stale generated outputs.
+
 **Exit:** every definitive result in a claimed dominant fragment has a serialized
 certificate, independent recheck, zero implicit reductions, and a recorded
 second-pass cost.
@@ -306,7 +321,9 @@ reported as parity before it climbs the measured and certifying rungs.
    schema while preserving separate scores.
 5. Observe and archive the required representative official-Lean solver-proof
    CI result; size the scheduled exhaustive tier from that measurement.
-6. Generate the per-reduction proof-gap matrix from dominance audits.
+6. Derive an exact residual-shape census for the 54 uncertified routes before
+   selecting a shared proof mechanism; handle the eight reconstruction-only
+   gaps independently.
 7. Freeze the next multi-oracle profiles for ABV/UF and LIA/LRA.
 8. Define the SMT-LIB/API conformance schema before adding commands.
 9. Measure the actual minimal native/WASM consumer profiles.

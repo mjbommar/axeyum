@@ -33,9 +33,11 @@ exit-criteria'd tracks we advance one increment at a time.
   remain open.
 - **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
   decisions become 325 evidence-audit UNSAT outcomes and 261 Lean-checked
-  outcomes. Two QF_NIA `IntPow2` rows fail during proof production; coverage is
-  otherwise substantial but uneven, the trusted-reduction ledger is not zero,
-  and tactic backend P3.7 is unbuilt.
+  outcomes. The generated proof-gap matrix tightens the full conjunction to
+  259/327: 54 uncertified routes, eight reconstruction-only gaps, four declared
+  `bit-blast` trust holes, and two QF_NIA `IntPow2` proof-production errors.
+  Coverage is substantial but uneven, the trust ledger is not zero, and tactic
+  backend P3.7 is unbuilt.
 - **Dominance:** **23 / 35 audited rows** are fully dominant and 616/753 measured
   decisions are dominant candidates — the real, defensible selected-fragment
   claim.

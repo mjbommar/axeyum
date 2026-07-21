@@ -16,6 +16,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   **current** scoped evidence map and ranked research program. It separates
   fragment decision parity, production Z3 replacement, certified-result
   coverage, Lean-kernel compatibility, and Lean workflow integration.
+- [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
+  per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
+  outcome, certification, independent checking, trust holes, Lean
+  reconstruction, and the exact residual blockers.
 - [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) —
   historical pre-neutral-baseline leverage analysis; its p4dfa premise and
   scoreboard totals are superseded by the 2026-07-21 map
