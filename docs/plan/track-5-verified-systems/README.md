@@ -76,7 +76,7 @@ source authenticity, evidence routes, worked examples, and residuals.
 | [P5.2](P5.2-contracts-modular.md) | Contracts & modular verification (`#[requires]`/`#[ensures]`) | L | P5.1; `axeyum-verify` macro surface |
 | [P5.3](P5.3-kernel-theories.md) | Kernel-shaped obligations: memory regions/page tables, 2-safety/constant-time, FSM refinement | L | P5.1; arrays (shipped), `TransitionSystem` (shipped) |
 | [P5.4](P5.4-fuzz-oracle.md) | The fuzzing loop: reflected terms as oracles, witnesses as seeds, `unknown` handoff | M | P5.1 |
-| [P5.5](P5.5-external-target.md) | A real external target, measured — Maestro closes negative; Tock integer logs are the selected replacement and their checked `range`/`ctlz` prerequisite is proposed | M–L | P5.1 + at least one of P5.2/P5.3 |
+| [P5.5](P5.5-external-target.md) | A real external target, measured — Tock integer-log capture/parser admission is accepted; the separate proof/replay scoreboard is preregistered with zero rows | M–L | P5.1 + at least one of P5.2/P5.3 |
 
 Recommended order: **P5.1 → (P5.2 ∥ P5.4) → P5.3 → P5.5**, with P5.5's target
 selection done early (it shapes P5.1's fragment priorities).

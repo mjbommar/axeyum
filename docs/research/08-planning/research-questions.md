@@ -1060,6 +1060,12 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     selected helpers, records 1,105/1,033 ms and 289,104/288,312 KiB, and has
     zero path leaks/partial/OOM deltas. T5.5.2 closes; no property query or
     scoreboard row exists.
+  - [ADR-0335](../09-decisions/adr-0335-preregister-tock-log2-proof-scoreboard.md)
+    freezes the separate measured result: eight defined/zero/floor-log/MSB
+    proof rows with checked pure-Rust QF_BV evidence, six wrong-index/
+    inverted-zero/high-partition controls replayed against reflection and a
+    native oracle, exact limits, pushed-HEAD isolation, and an atomic two-target
+    scoreboard. No query or row exists before producer push.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?

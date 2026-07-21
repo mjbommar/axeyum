@@ -484,6 +484,13 @@ session state.
 >    `9ec0a0c3...84b9`. Generated Tock bytes remain ignored; only metadata is
 >    committed. T5.5.2 capture/parser admission is closed. Next preregister a
 >    zero-row T5.5.3 proof/replay/scoreboard protocol before any property query.
+>    ADR-0335 now freezes that protocol over the exact authenticated canonicals:
+>    eight defined/zero/independent-floor-log/MSB proof rows, six wrong-index/
+>    inverted-zero/high-partition controls with reflected plus native-oracle
+>    replay, proof-producing pure-Rust QF_BV with only certified trust steps,
+>    exact limits, archive-of-pushed-HEAD isolation from the dirty worktree, and
+>    atomic two-function scoreboard. Commit/push this zero-row ADR before adding
+>    the runner/producer/registration; no query yet.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,
