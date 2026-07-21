@@ -75,6 +75,59 @@ fn sum16(_1: u16, _2: u16) -> u16 {
 }
 ";
 
+/// Exact checked-MIR callee for ADR-0315's input-dependent panic experiment.
+const CHECKED_INC_MIR: &str = r#"
+fn checked_inc(_1: u8) -> u8 {
+    let mut _0: u8;
+    let mut _2: bool;
+
+    bb0: {
+        _2 = Lt(copy _1, const 255_u8);
+        assert(move _2, "checked_inc overflow") -> [success: bb1, unwind continue];
+    }
+
+    bb1: {
+        _0 = Add(copy _1, const 1_u8);
+        return;
+    }
+}
+"#;
+
+/// One modular caller using only ADR-0299's assigned direct-call syntax.
+const CHECKED_INC_CALL_MIR: &str = r"
+fn call_checked_inc(_1: u8) -> u8 {
+    let mut _0: u8;
+    let mut _2: u8;
+
+    bb0: {
+        _2 = checked_inc(copy _1) -> [return: bb1, unwind continue];
+    }
+
+    bb1: {
+        _0 = copy _2;
+        return;
+    }
+}
+";
+
+/// Independent inlined specification for the same call and panic behavior.
+const CHECKED_INC_INLINED_MIR: &str = r#"
+fn call_checked_inc(_1: u8) -> u8 {
+    let mut _0: u8;
+    let mut _2: bool;
+
+    bb0: {
+        _2 = Lt(copy _1, const 255_u8);
+        assert(move _2, "checked_inc overflow") -> [success: bb1, unwind continue];
+    }
+
+    bb1: {
+        _0 = Add(copy _1, const 1_u8);
+        return;
+    }
+}
+"#;
+
 /// `cksum_pair` after the MIR inliner: `sum16`'s body inlined, then `Not`.
 const CKSUM_MIR: &str = r"
 fn cksum_pair(_1: u16, _2: u16) -> u16 {
@@ -235,6 +288,30 @@ fn exact_sum16_relational_contract() -> ScalarCallContract {
         boxed(ScalarContractExpr::Result),
         boxed(sum16_contract_value()),
     ))
+}
+
+fn checked_inc_contract(panic_value: u128) -> ScalarCallContract {
+    let byte = |value| ScalarContractExpr::BitVec { width: 8, value };
+    ScalarCallContract::new_relational_with_panic(
+        "checked_inc",
+        vec![8],
+        8,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Eq(
+            boxed(ScalarContractExpr::Argument(0)),
+            boxed(byte(panic_value)),
+        ),
+        ScalarContractExpr::Eq(
+            boxed(ScalarContractExpr::Result),
+            boxed(ScalarContractExpr::BvAdd(
+                boxed(ScalarContractExpr::Argument(0)),
+                boxed(byte(1)),
+            )),
+        ),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap()
 }
 
 fn relational_resolver(contract: ScalarCallContract) -> VerifiedContractResolver {
@@ -617,6 +694,222 @@ fn mir_relational_sum16_contract_reproves_checksum_module() {
         receiver,
         "modular checked MIR receiver identity",
     );
+}
+
+#[test]
+fn mir_panic_contract_matches_inlined_caller_and_exposes_callee_panic() {
+    let resolver = MirVerifiedContractResolver::from_contracts(&[(
+        checked_inc_contract(255),
+        CHECKED_INC_MIR,
+    )])
+    .expect("checked_inc panic contract must verify exactly");
+    let mut arena = TermArena::new();
+    let input_symbol = arena.declare("input", Sort::BitVec(8)).unwrap();
+    let input = arena.var(input_symbol);
+    let modular = reflect_mir_scalar_with_contracts(
+        &mut arena,
+        &[input],
+        CHECKED_INC_CALL_MIR,
+        &mir_config("call_checked_inc"),
+        &resolver,
+    )
+    .unwrap();
+    let inlined = reflect_mir_scalar_into_checked(
+        &mut arena,
+        &[input],
+        CHECKED_INC_INLINED_MIR,
+        &mir_config("call_checked_inc"),
+    )
+    .unwrap();
+
+    assert_eq!(modular.call_sites().len(), 1);
+    let call = &modular.call_sites()[0];
+    assert_eq!(call.callee(), "checked_inc");
+    let panic_equal = arena.eq(modular.panic, inlined.panic).unwrap();
+    assert_proved(
+        &mut arena,
+        &[],
+        panic_equal,
+        "modular and inlined MIR panic predicates",
+    );
+    let site_panic_equal = arena.eq(call.callee_panic(), inlined.panic).unwrap();
+    assert_proved(
+        &mut arena,
+        &[],
+        site_panic_equal,
+        "call metadata exposes the exact callee panic predicate",
+    );
+    let result_equal = arena
+        .eq(modular.result.value, inlined.result.value)
+        .unwrap();
+    let normal = arena.not(modular.panic).unwrap();
+    assert_proved(
+        &mut arena,
+        &[modular.assumptions, normal],
+        result_equal,
+        "normal-return modular result equals the inlined result",
+    );
+}
+
+#[test]
+fn mir_panic_contract_exhaustively_replays_complete_u8_domain() {
+    let resolver = MirVerifiedContractResolver::from_contracts(&[(
+        checked_inc_contract(255),
+        CHECKED_INC_MIR,
+    )])
+    .unwrap();
+    let mut arena = TermArena::new();
+    let input_symbol = arena.declare("input", Sort::BitVec(8)).unwrap();
+    let input = arena.var(input_symbol);
+    let modular = reflect_mir_scalar_with_contracts(
+        &mut arena,
+        &[input],
+        CHECKED_INC_CALL_MIR,
+        &mir_config("call_checked_inc"),
+        &resolver,
+    )
+    .unwrap();
+    let call = &modular.call_sites()[0];
+    let mut normal_rows = 0_u32;
+    let mut panic_rows = 0_u32;
+
+    for value in 0_u128..=255 {
+        let expected_panic = value == 255;
+        let expected_result = (value + 1) & 0xff;
+        let mut assignment = Assignment::new();
+        assignment.set(input_symbol, Value::Bv { width: 8, value });
+        assignment.set(
+            call.result_symbol(),
+            Value::Bv {
+                width: 8,
+                value: expected_result,
+            },
+        );
+        assert_eq!(
+            eval_bool(&arena, modular.panic, &assignment),
+            expected_panic,
+            "caller panic at input {value}"
+        );
+        assert_eq!(
+            eval_bool(&arena, call.callee_panic(), &assignment),
+            expected_panic,
+            "callee panic metadata at input {value}"
+        );
+        assert!(
+            eval_bool(&arena, modular.assumptions, &assignment),
+            "guarded relation at input {value}"
+        );
+        if expected_panic {
+            panic_rows += 1;
+        } else {
+            normal_rows += 1;
+            assert_eq!(
+                eval_bv(&arena, modular.result.value, &assignment),
+                expected_result,
+                "normal result at input {value}"
+            );
+        }
+    }
+    assert_eq!((normal_rows, panic_rows), (255, 1));
+
+    // A panicking execution has no normal destination value. The exposed
+    // relation remains true for an arbitrary result, while the unguarded
+    // postcondition has real teeth and rejects it.
+    let mut panic_assignment = Assignment::new();
+    panic_assignment.set(
+        input_symbol,
+        Value::Bv {
+            width: 8,
+            value: 255,
+        },
+    );
+    panic_assignment.set(call.result_symbol(), Value::Bv { width: 8, value: 1 });
+    assert!(eval_bool(&arena, modular.assumptions, &panic_assignment));
+    let one = arena.bv_const(8, 1).unwrap();
+    let expected = arena.bv_add(input, one).unwrap();
+    let result = arena.var(call.result_symbol());
+    let unguarded = arena.eq(result, expected).unwrap();
+    assert!(!eval_bool(&arena, unguarded, &panic_assignment));
+}
+
+#[test]
+fn mir_panic_contract_mutations_and_invalid_boundaries_fail_closed() {
+    let wrong_body = CHECKED_INC_MIR.replace("const 255_u8", "const 254_u8");
+    let error = MirVerifiedContractResolver::from_contracts(&[(
+        checked_inc_contract(255),
+        wrong_body.as_str(),
+    )])
+    .unwrap_err();
+    assert_eq!(error.kind(), MirReflectErrorKind::ContractDisproved);
+
+    let error = MirVerifiedContractResolver::from_contracts(&[(
+        checked_inc_contract(254),
+        CHECKED_INC_MIR,
+    )])
+    .unwrap_err();
+    assert_eq!(error.kind(), MirReflectErrorKind::ContractDisproved);
+
+    let total_contract = ScalarCallContract::new_relational(
+        "checked_inc",
+        vec![8],
+        8,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Eq(
+            boxed(ScalarContractExpr::Result),
+            boxed(ScalarContractExpr::BvAdd(
+                boxed(ScalarContractExpr::Argument(0)),
+                boxed(ScalarContractExpr::BitVec { width: 8, value: 1 }),
+            )),
+        ),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap();
+    let error = MirVerifiedContractResolver::from_contracts(&[(total_contract, CHECKED_INC_MIR)])
+        .unwrap_err();
+    assert_eq!(error.kind(), MirReflectErrorKind::ContractDisproved);
+
+    let ill_sorted = ScalarCallContract::new_relational_with_panic(
+        "checked_inc",
+        vec![8],
+        8,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Argument(0),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap();
+    let error =
+        MirVerifiedContractResolver::from_contracts(&[(ill_sorted, CHECKED_INC_MIR)]).unwrap_err();
+    assert_eq!(error.kind(), MirReflectErrorKind::InvalidContract);
+
+    let result_in_panic = ScalarCallContract::new_relational_with_panic(
+        "checked_inc",
+        vec![8],
+        8,
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Eq(
+            boxed(ScalarContractExpr::Result),
+            boxed(ScalarContractExpr::Argument(0)),
+        ),
+        ScalarContractExpr::Bool(true),
+        ScalarContractExpr::Bool(true),
+    )
+    .unwrap_err();
+    assert_eq!(
+        result_in_panic.kind(),
+        LoopReflectErrorKind::InvalidContract
+    );
+
+    let limited = SolverConfig::default().with_node_budget(0);
+    let error = MirVerifiedContractResolver::from_contracts_with_config(
+        &[(checked_inc_contract(255), CHECKED_INC_MIR)],
+        &limited,
+    )
+    .unwrap_err();
+    assert_eq!(error.kind(), MirReflectErrorKind::ContractUnknown);
 }
 
 #[test]

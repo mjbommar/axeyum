@@ -113,5 +113,8 @@ straight-line LLVM relational scalar result with a fresh internal symbol and a
 separate body-verified assumption. ADR-0299 adds the equivalent one-call MIR
 checksum route only after independent checked-body relation and panic-freedom
 proofs. Loop havoc, annotations, general MIR calls, recursion, memory effects,
-and external calls remain outside the profile. The ten owned binaries currently
-contain 114 tests and the manifest owns 81 variants in 17 evidence groups.
+and external calls remain outside the profile. ADR-0315 adds one exact
+input-dependent MIR callee-panic summary, normal-return relation guarding, and
+complete `u8` replay without adding syntax variants. The ten owned binaries
+currently contain 117 tests and the manifest owns 81 variants in 17 evidence
+groups.

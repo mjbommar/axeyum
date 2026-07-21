@@ -83,8 +83,9 @@ enum ScalarContractResult {
 /// An explicit exact or relational contract for one scalar checked-IR callee.
 ///
 /// ADR-0296 supplies exact functional results, ADR-0297 adds guarded body
-/// verification and explicit loop-call requirement obligations, and ADR-0298
-/// adds an opt-in relational result for checked straight-line callers.
+/// verification and explicit loop-call requirement obligations, ADR-0298 adds
+/// an opt-in relational result for checked straight-line callers, and ADR-0315
+/// adds an independently verified checked-MIR panic predicate.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ScalarCallContract {
     name: String,
@@ -92,6 +93,7 @@ pub struct ScalarCallContract {
     result_width: u32,
     requires: ScalarContractExpr,
     immediate_defined: ScalarContractExpr,
+    panic_when: ScalarContractExpr,
     result: ScalarContractResult,
     result_defined: ScalarContractExpr,
 }
@@ -123,6 +125,7 @@ impl ScalarCallContract {
             result_width,
             requires,
             immediate_defined,
+            ScalarContractExpr::Bool(false),
             ScalarContractResult::Exact(result),
             result_defined,
         )
@@ -155,17 +158,56 @@ impl ScalarCallContract {
             result_width,
             requires,
             immediate_defined,
+            ScalarContractExpr::Bool(false),
             ScalarContractResult::Relational { ensures },
             result_defined,
         )
     }
 
+    /// Creates one relational scalar contract with an explicit MIR panic
+    /// predicate.
+    ///
+    /// `panic_when` is a Boolean expression over arguments only. Checked MIR
+    /// resolver construction proves it exactly equal to the reflected callee
+    /// panic predicate before discarding the body. LLVM contract resolution
+    /// rejects this constructor because LLVM definedness is not Rust panic.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`LoopReflectErrorKind::InvalidContract`] for the same bounded
+    /// signature/expression failures as [`Self::new_relational`], including a
+    /// forbidden [`ScalarContractExpr::Result`] reference in `panic_when`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_relational_with_panic(
+        name: impl Into<String>,
+        argument_widths: Vec<u32>,
+        result_width: u32,
+        requires: ScalarContractExpr,
+        immediate_defined: ScalarContractExpr,
+        panic_when: ScalarContractExpr,
+        ensures: ScalarContractExpr,
+        result_defined: ScalarContractExpr,
+    ) -> Result<Self, LoopReflectError> {
+        Self::new_with_result(
+            name,
+            argument_widths,
+            result_width,
+            requires,
+            immediate_defined,
+            panic_when,
+            ScalarContractResult::Relational { ensures },
+            result_defined,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
     fn new_with_result(
         name: impl Into<String>,
         argument_widths: Vec<u32>,
         result_width: u32,
         requires: ScalarContractExpr,
         immediate_defined: ScalarContractExpr,
+        panic_when: ScalarContractExpr,
         result: ScalarContractResult,
         result_defined: ScalarContractExpr,
     ) -> Result<Self, LoopReflectError> {
@@ -191,6 +233,7 @@ impl ScalarCallContract {
             result_width,
             requires,
             immediate_defined,
+            panic_when,
             result,
             result_defined,
         };
@@ -202,6 +245,7 @@ impl ScalarCallContract {
         let expressions = [
             (&contract.requires, false, "requires"),
             (&contract.immediate_defined, false, "immediate definedness"),
+            (&contract.panic_when, false, "panic predicate"),
             (
                 result_expression,
                 relational,
@@ -862,76 +906,99 @@ enum InstantiatedContractResult {
 struct InstantiatedScalarContract {
     requires: TermId,
     immediate_defined: TermId,
+    panic_when: TermId,
     result: InstantiatedContractResult,
     result_defined: TermId,
 }
 
-/// Instantiated relation for the deliberately total MIR/LLVM checksum slice.
-///
-/// This crate-private bridge keeps one contract AST and one strict sort checker
-/// while allowing the checked MIR reflector to verify its own body and panic
-/// semantics independently.
-pub(crate) struct TotalRelationalContractTerms {
+/// Instantiated checked-MIR relation and callee panic summary.
+pub(crate) struct MirRelationalContractTerms {
+    pub(crate) panic_when: TermId,
     pub(crate) ensures: TermId,
 }
 
-pub(crate) fn validate_total_relational_contract(
-    contract: &ScalarCallContract,
-) -> Result<(), LoopReflectError> {
+fn validate_mir_relational_contract(contract: &ScalarCallContract) -> Result<(), LoopReflectError> {
     if !matches!(contract.requires, ScalarContractExpr::Bool(true)) {
         return Err(contract_error(&format!(
-            "scalar contract `@{}` requires must be literal true for the total MIR slice",
+            "scalar contract `@{}` requires must be literal true for the MIR panic slice",
             contract.name
         )));
     }
     if !matches!(contract.immediate_defined, ScalarContractExpr::Bool(true)) {
         return Err(contract_error(&format!(
-            "scalar contract `@{}` immediate definedness must be literal true for the total MIR slice",
+            "scalar contract `@{}` immediate definedness must be literal true for the MIR panic slice",
             contract.name
         )));
     }
     if !matches!(contract.result_defined, ScalarContractExpr::Bool(true)) {
         return Err(contract_error(&format!(
-            "scalar contract `@{}` result definedness must be literal true for the total MIR slice",
+            "scalar contract `@{}` result definedness must be literal true for the MIR panic slice",
             contract.name
         )));
     }
     if !matches!(contract.result, ScalarContractResult::Relational { .. }) {
         return Err(contract_error(&format!(
-            "scalar contract `@{}` must be relational for the MIR havoc slice",
+            "scalar contract `@{}` must be relational for the MIR panic slice",
             contract.name
         )));
     }
     Ok(())
 }
 
-/// Instantiates one already bounded, total relational scalar contract.
-pub(crate) fn instantiate_total_relational_contract(
+/// Instantiates one bounded checked-MIR relational contract.
+pub(crate) fn instantiate_mir_relational_contract(
     arena: &mut TermArena,
     contract: &ScalarCallContract,
     arguments: &[TermId],
     result: TermId,
-) -> Result<TotalRelationalContractTerms, LoopReflectError> {
-    validate_total_relational_contract(contract)?;
+) -> Result<MirRelationalContractTerms, LoopReflectError> {
+    validate_mir_relational_contract(contract)?;
     let terms = instantiate_scalar_contract(arena, contract, arguments, Some(result))?;
     let InstantiatedContractResult::Relational { ensures } = terms.result else {
-        unreachable!("total relational contract validation rejected exact results");
+        unreachable!("MIR relational contract validation rejected exact results");
     };
-    Ok(TotalRelationalContractTerms { ensures })
+    Ok(MirRelationalContractTerms {
+        panic_when: terms.panic_when,
+        ensures,
+    })
 }
 
-/// Verifies the total relational postcondition against independently reflected
-/// body terms. MIR callers additionally prove their panic predicate false.
-pub(crate) fn verify_total_relational_contract_against_body(
+/// Verifies a checked-MIR relational contract against exact body result and
+/// panic terms.
+///
+/// The first panic-contract slice requires exact panic equality. The result
+/// relation is proved only when the declared panic predicate is false, because
+/// an unwinding call has no normal destination value.
+pub(crate) fn verify_mir_relational_contract_against_body(
     arena: &mut TermArena,
     contract: &ScalarCallContract,
     arguments: &[TermId],
     body_result: TermId,
+    body_panic: TermId,
     config: &SolverConfig,
 ) -> Result<(), LoopReflectError> {
-    let terms = instantiate_total_relational_contract(arena, contract, arguments, body_result)?;
+    let terms = instantiate_mir_relational_contract(arena, contract, arguments, body_result)?;
     let total = arena.bool_const(true);
-    verify_contract_postcondition(arena, total, total, terms.ensures, config, &contract.name)
+    verify_contract_equal_under(
+        arena,
+        total,
+        terms.panic_when,
+        body_panic,
+        config,
+        &contract.name,
+        "panic predicate",
+    )?;
+    let normal_return = arena
+        .not(terms.panic_when)
+        .map_err(|error| contract_error(&error.to_string()))?;
+    verify_contract_postcondition(
+        arena,
+        normal_return,
+        total,
+        terms.ensures,
+        config,
+        &contract.name,
+    )
 }
 
 fn verify_scalar_contract(
@@ -939,6 +1006,12 @@ fn verify_scalar_contract(
     body: &str,
     config: &SolverConfig,
 ) -> Result<(), LoopReflectError> {
+    if !matches!(contract.panic_when, ScalarContractExpr::Bool(false)) {
+        return Err(contract_error(&format!(
+            "scalar contract `@{}` has a MIR panic predicate; LLVM contract verification cannot consume it",
+            contract.name
+        )));
+    }
     let function = parse_function(body)?;
     validate_direct_callee(&function)?;
     if function.name != contract.name {
@@ -1241,6 +1314,14 @@ fn instantiate_scalar_contract(
         &contract.name,
         "immediate definedness",
     )?;
+    let panic_when = lower_contract_expression(arena, &contract.panic_when, arguments, None)?;
+    require_contract_sort(
+        arena,
+        panic_when,
+        Sort::Bool,
+        &contract.name,
+        "panic predicate",
+    )?;
     let instantiated_result = match &contract.result {
         ScalarContractResult::Exact(expression) => {
             let value = lower_contract_expression(arena, expression, arguments, None)?;
@@ -1277,6 +1358,7 @@ fn instantiate_scalar_contract(
     Ok(InstantiatedScalarContract {
         requires,
         immediate_defined,
+        panic_when,
         result: instantiated_result,
         result_defined,
     })

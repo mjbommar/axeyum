@@ -6,15 +6,14 @@ use std::fmt;
 use std::time::Duration;
 
 use axeyum_ir::{Sort, SymbolId, TermArena, TermId};
-use axeyum_solver::{ProofOutcome, SolverConfig, prove};
+use axeyum_solver::SolverConfig;
 
 use super::syntax::{
     BinaryOpcode, Function, IntegerConstant, MirType, Operand, ParseError, Rvalue, SourceSpan,
     StatementKind, TerminatorKind, parse_function,
 };
 use crate::reflect::llvm::loops::contracts::{
-    instantiate_total_relational_contract, validate_total_relational_contract,
-    verify_total_relational_contract_against_body,
+    instantiate_mir_relational_contract, verify_mir_relational_contract_against_body,
 };
 use crate::reflect::llvm::loops::{LoopReflectErrorKind, ScalarCallContract};
 
@@ -113,6 +112,7 @@ pub struct MirRelationalCallSite {
     callee: String,
     span: SourceSpan,
     result_symbol: SymbolId,
+    callee_panic: TermId,
     relation: TermId,
 }
 
@@ -135,6 +135,12 @@ impl MirRelationalCallSite {
         self.result_symbol
     }
 
+    /// Instantiated checked callee panic predicate at this call site.
+    #[must_use]
+    pub const fn callee_panic(&self) -> TermId {
+        self.callee_panic
+    }
+
     /// Path-guarded instantiated relation for this call.
     #[must_use]
     pub const fn relation(&self) -> TermId {
@@ -147,8 +153,8 @@ impl MirRelationalCallSite {
 pub struct CheckedMirRelationalScalar {
     /// Returned modular value, meaningful when `panic` is false.
     pub result: MirValue,
-    /// Caller panic predicate; the callee is admitted only after a separate
-    /// proof that its body cannot panic.
+    /// Caller panic predicate, including every separately verified callee
+    /// panic summary.
     pub panic: TermId,
     /// Path-conditioned conjunction of verified call relations.
     pub assumptions: TermId,
@@ -211,7 +217,7 @@ pub enum ReflectErrorKind {
     UnsupportedCall,
     /// A scalar contract is malformed, ill-sorted, or non-total for this slice.
     InvalidContract,
-    /// A body, panic-freedom, or postcondition claim was refuted.
+    /// A body, panic-summary, or postcondition claim was refuted.
     ContractDisproved,
     /// Contract verification exhausted its deterministic resource policy.
     ContractUnknown,
@@ -290,15 +296,15 @@ struct VerifiedMirContract {
 /// Deterministic inventory of relational scalar contracts proved against MIR.
 ///
 /// Successful construction independently reflects each checked MIR body,
-/// proves its panic predicate false, verifies the relation, and then retains no
-/// body text or body terms.
+/// proves its declared panic predicate exactly, verifies the normal-return
+/// relation, and then retains no body text or body terms.
 #[derive(Debug, Clone)]
 pub struct MirVerifiedContractResolver {
     contracts: BTreeMap<String, VerifiedMirContract>,
 }
 
 impl MirVerifiedContractResolver {
-    /// Verifies total relational contracts against exact checked MIR bodies.
+    /// Verifies relational contracts against exact checked MIR bodies.
     ///
     /// # Errors
     ///
@@ -525,7 +531,8 @@ pub fn reflect_scalar_into_checked(
 /// relational contract.
 ///
 /// The resolver retains no callee body. This route introduces one fresh
-/// internal result and returns its relation separately from Rust panic.
+/// internal result, propagates the verified callee panic summary, and returns
+/// the normal-return relation separately.
 ///
 /// # Errors
 ///
@@ -1231,11 +1238,14 @@ fn lower_call(
     let result_symbol =
         fresh_mir_result_symbol(arena, function, callee, span, verified.result_type.sort())?;
     let result = arena.var(result_symbol);
-    let terms =
-        instantiate_total_relational_contract(arena, &verified.contract, &arguments, result)
-            .map_err(|error| map_loop_contract_error(&error, Some(span)))?;
+    let terms = instantiate_mir_relational_contract(arena, &verified.contract, &arguments, result)
+        .map_err(|error| map_loop_contract_error(&error, Some(span)))?;
+    let callee_panic = terms.panic_when;
+    let combined_panic = arena
+        .or(state.panic, callee_panic)
+        .map_err(|error| ir_error(span, error.to_string()))?;
     let relation = arena
-        .or(state.panic, terms.ensures)
+        .or(combined_panic, terms.ensures)
         .map_err(|error| ir_error(span, error.to_string()))?;
     state.assumptions = arena
         .and(state.assumptions, relation)
@@ -1247,10 +1257,12 @@ fn lower_call(
             ty: verified.result_type,
         },
     );
+    state.panic = combined_panic;
     call_sites.push(MirRelationalCallSite {
         callee: callee.to_owned(),
         span,
         result_symbol,
+        callee_panic,
         relation,
     });
     Ok(())
@@ -1800,8 +1812,6 @@ fn verify_mir_contract(
     body: &str,
     config: &SolverConfig,
 ) -> Result<VerifiedMirContract, ReflectError> {
-    validate_total_relational_contract(contract)
-        .map_err(|error| map_loop_contract_error(&error, None))?;
     let function = parse_function(body, contract.name())?;
     if function.name != contract.name() {
         return Err(reflect_error(
@@ -1867,21 +1877,12 @@ fn verify_mir_contract(
         REGISTERED_USIZE_WIDTH,
         &mut calls,
     )?;
-    let no_panic = arena
-        .not(body_terms.panic)
-        .map_err(|error| ir_error(function.span, error.to_string()))?;
-    prove_mir_contract_goal(
-        &mut arena,
-        no_panic,
-        config,
-        contract.name(),
-        "panic freedom",
-    )?;
-    verify_total_relational_contract_against_body(
+    verify_mir_relational_contract_against_body(
         &mut arena,
         contract,
         &arguments,
         body_terms.result.term,
+        body_terms.panic,
         config,
     )
     .map_err(|error| map_loop_contract_error(&error, Some(function.span)))?;
@@ -1890,30 +1891,6 @@ fn verify_mir_contract(
         argument_types,
         result_type,
     })
-}
-
-fn prove_mir_contract_goal(
-    arena: &mut TermArena,
-    goal: TermId,
-    config: &SolverConfig,
-    name: &str,
-    component: &str,
-) -> Result<(), ReflectError> {
-    match prove(arena, &[], goal, config) {
-        Ok(ProofOutcome::Proved(_)) => Ok(()),
-        Ok(ProofOutcome::Disproved(_)) => Err(unlocated_error(
-            ReflectErrorKind::ContractDisproved,
-            format!("MIR scalar contract `{name}` disproved for {component}"),
-        )),
-        Ok(ProofOutcome::Unknown(reason)) => Err(unlocated_error(
-            ReflectErrorKind::ContractUnknown,
-            format!("MIR scalar contract `{name}` undecided for {component}: {reason:?}"),
-        )),
-        Err(error) => Err(unlocated_error(
-            ReflectErrorKind::ContractSolver,
-            format!("MIR scalar contract `{name}` solver failure for {component}: {error}"),
-        )),
-    }
 }
 
 fn map_loop_contract_error(

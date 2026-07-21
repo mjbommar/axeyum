@@ -1,6 +1,6 @@
 # ADR-0315: Preregister modular MIR panic-contract propagation
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
 
 ## Context
@@ -125,6 +125,35 @@ gate may be weakened after observing the implementation.
   `#[requires]`/`#[ensures]` lowering; it does not itself complete annotations.
 - A genuinely different second machine remains independently required for
   PLAN item 7. This local Track 5 work does not substitute for that evidence.
+
+## Acceptance evidence
+
+The accepted `ScalarCallContract::new_relational_with_panic` route keeps every
+existing constructor at literal-false panic and is rejected by LLVM contract
+verification. Checked MIR resolver construction lowers the declared predicate,
+proves it exactly equal to the reflected body panic term, and proves the result
+relation only under normal return. Caller lowering exposes the instantiated
+callee panic in `MirRelationalCallSite`, joins it into caller panic, and guards
+the fresh-result relation with the combined predicate.
+
+The fixed `checked_inc` experiment passes all frozen gates:
+
+- modular and independently inlined caller panic predicates are proved equal;
+- all 256 `u8` inputs replay with exactly 255 normal rows, one panic row, zero
+  disagreement, zero evaluation errors, and zero dropped rows;
+- the panic witness at 255 and its boundary neighbors replay, while a deliberately
+  unguarded postcondition rejects an arbitrary result on the panic row;
+- body/predicate mutations, old literal-false total behavior, ill-sorted and
+  result-dependent panic predicates, and a zero-node resource limit all fail
+  closed with the registered classes; and
+- the complete all-feature `axeyum-verify` package and doctests pass, as do the
+  81-variant/17-group/ten-binary/117-test semantics gate, strict all-target
+  Clippy, warning-denied rustdoc, formatting of every touched Rust file, links,
+  and the OOM audit under the one-job 4 GiB profile.
+
+This accepts only the runtime MIR panic-composition rule. Source annotations,
+cleanup execution, general calls, memory/effects, recursion, loops, and any
+performance claim remain outside the result.
 
 ## References
 

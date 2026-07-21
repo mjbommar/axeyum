@@ -342,16 +342,19 @@
       ],
       "proof_tests": [
         "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_sum16_contract_reproves_checksum_module",
-        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_contract_body_panic_and_totality_mutations_fail_closed"
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_contract_body_panic_and_totality_mutations_fail_closed",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_panic_contract_matches_inlined_caller_and_exposes_callee_panic"
       ],
       "fuzz_tests": [
         "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_checksum_havoc_gate_classifies_100000_rows",
-        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_result_symbols_are_deterministic_isolated_and_fresh"
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_result_symbols_are_deterministic_isolated_and_fresh",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_panic_contract_exhaustively_replays_complete_u8_domain"
       ],
       "refutation_tests": [
         "crates/axeyum-verify/tests/checksum_module.rs::mir_weak_relational_contract_exposes_real_havoc_countermodel",
         "crates/axeyum-verify/tests/checksum_module.rs::mir_relational_contract_body_panic_and_totality_mutations_fail_closed",
-        "crates/axeyum-verify/tests/checksum_module.rs::mir_contract_resolver_and_call_boundaries_fail_closed"
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_contract_resolver_and_call_boundaries_fail_closed",
+        "crates/axeyum-verify/tests/checksum_module.rs::mir_panic_contract_mutations_and_invalid_boundaries_fail_closed"
       ]
     },
     {
