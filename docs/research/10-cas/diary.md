@@ -665,3 +665,19 @@ first-order ODEs and recurrences, now confirmed from a second angle. Design note
 [exp-tower.md](exp-tower.md). It is the single highest-leverage next substrate step.
 
 **185 unit + 38 doctests, clippy-pedantic clean, WASM-green.**
+
+## 2026-07-21 — Entry 18: real-root isolation + numeric roots (191 tests)
+
+**Sturm real-root isolation** (`sturm.rs`, roadmap next-wave #8): `real_root_intervals`
+isolates each real root of a univariate polynomial into a disjoint half-open interval
+Sturm-certified to hold exactly one root (multiplicity collapsed via the square-free
+part); `count_real_roots` counts roots in any interval. The Sturm sign-count *is* the
+certificate — exact, theorem-backed, in exact rational arithmetic (Cauchy bound +
+bisection worklist with a resource cap). **`approximate_real_roots`** refines those
+intervals by sign-bisection to any width, giving decimalizable roots for irrational
+or degree-≥5 polynomials beyond closed-form radicals.
+
+This is the gateway to RootOf / algebraic-number machinery — the prerequisite for
+next-wave #15 (Lazard–Rioboo–Trager algebraic-number integration). Hermite/Smith
+normal form (#9) delegated to a sub-agent. **191 unit + 39 doctests, clippy-clean,
+WASM-green.**
