@@ -1096,6 +1096,62 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     Some(roots)
 }
 
+/// The binomial coefficient `C(n, k)` as an exact rational, or `None` on overflow.
+fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
+    if k > n {
+        return Some(Rational::zero());
+    }
+    let mut result = Rational::integer(1);
+    for i in 0..k {
+        let numer = Rational::integer(i128::try_from(n - i).ok()?);
+        let denom = Rational::integer(i128::try_from(i + 1).ok()?);
+        result = result.checked_mul(numer)?.checked_div(denom)?;
+    }
+    Some(result)
+}
+
+/// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f`, i.e. the
+/// **discrete antiderivative** `S` with `S(var+1) − S(var) = f(var)` and `S(0)=0`
+/// (so `∑_{k=0}^{n−1} f(k) = S(n)`). Solved as one exact linear system; **certified**
+/// by the telescoping zero-test `S(var+1) − S(var) − f ≡ 0`. E.g. `∑ k = (n²−n)/2`,
+/// `∑ 1 = n`. `None` if `f` is not a univariate polynomial or on overflow.
+#[must_use]
+pub fn sum_polynomial(f: &CasExpr, var: &str) -> Option<CasExpr> {
+    let f_coeffs = normalize(f)?.to_univariate(var)?;
+    if ratint::is_zero(&f_coeffs) {
+        return Some(CasExpr::zero());
+    }
+    let degree = poly::rat_degree(&f_coeffs)?;
+    let unknowns = degree + 2; // S has degree ≤ degree+1
+    // Column j is the contribution of unknown sⱼ to the equations
+    // [ΔS coefficients k⁰..k^degree ; boundary S(0)=0].
+    let mut cols: Vec<Vec<Rational>> = Vec::with_capacity(unknowns);
+    for j in 0..unknowns {
+        let mut col = vec![Rational::zero(); degree + 1];
+        // (k+1)^j − k^j = Σ_{i=0}^{j−1} C(j,i) k^i.
+        for (i, entry) in col.iter_mut().enumerate().take(j) {
+            *entry = binomial_rat(j, i)?;
+        }
+        col.push(if j == 0 {
+            Rational::integer(1)
+        } else {
+            Rational::zero()
+        });
+        cols.push(col);
+    }
+    let mut rhs = f_coeffs;
+    rhs.resize(degree + 1, Rational::zero());
+    rhs.push(Rational::zero()); // boundary S(0) = 0
+    let s_coeffs = ratint::solve_linear(&cols, &rhs)?;
+    let closed_form = MultiPoly::from_univariate(var, &s_coeffs).to_expr();
+    // Certify the telescoping identity S(var+1) − S(var) = f.
+    let shifted = closed_form.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
+    match equal(&(shifted - closed_form.clone()), f) {
+        ZeroTest::Certified { equal: true, .. } => Some(closed_form),
+        _ => None,
+    }
+}
+
 /// Partial-fraction decomposition of a univariate rational function whose
 /// denominator splits into **distinct** rational linear factors: `p/q =
 /// (polynomial part) + Σ Aᵢ/(x − rᵢ)` with residues `Aᵢ = rem(rᵢ)/q′(rᵢ)`. Returns
@@ -2028,6 +2084,24 @@ mod tests {
             format!("{}", CasExpr::rat(1, 5) * v("x").pow(5)),
             "(1/5)*x^5"
         );
+    }
+
+    #[test]
+    fn summation_closed_forms() {
+        let n = || v("n");
+        // ∑_{k=0}^{n−1} 1 = n
+        assert_equal(&sum_polynomial(&CasExpr::int(1), "n").unwrap(), &n());
+        // ∑_{k=0}^{n−1} k = (n²−n)/2
+        assert_equal(
+            &sum_polynomial(&n(), "n").unwrap(),
+            &(CasExpr::rat(1, 2) * n().pow(2) - CasExpr::rat(1, 2) * n()),
+        );
+        // ∑_{k=0}^{n−1} k² = (2n³−3n²+n)/6  — the certificate proves it regardless.
+        let s2 = sum_polynomial(&n().pow(2), "n").unwrap();
+        // spot-check at n=3: 0+1+4 = 5
+        let mut env = BTreeMap::new();
+        env.insert("n".to_owned(), Rational::integer(3));
+        assert_eq!(s2.eval(&env), Some(Rational::integer(5)));
     }
 
     #[test]
