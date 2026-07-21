@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4 visibility audit next
+Status: active; R1, R2, and R3 complete; R4a proof namespace complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -8,8 +8,8 @@ Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
 Reduce the artifact-review cost of `axeyum-solver`'s proof reconstruction code
 without weakening its trust boundary or changing generated Lean source. This is
-an internal organization and duplication project, not a new proof rule, solver
-capability, or public API project.
+an internal organization and duplication project followed by a measured
+public-API organization pass, not a new proof rule or solver capability.
 
 The non-negotiable identity is still **untrusted fast search, trusted small
 checking**. Moving a reconstructor must not move certificate validation into an
@@ -35,6 +35,27 @@ accepted terms.
 | `reconstruct_*_to_lean_module` functions in `reconstruct.rs` | 4 after R3 |
 | `ProofFragment` variants in the general dispatcher | 61 |
 | direct structural variants in the pre-dispatch seam | 34 |
+
+## R4 public API census
+
+The post-R3 rustdoc root was measured before selecting a namespace. Counts are
+from warning-denied rustdoc in both supported solver profiles, not from source
+text or the older approximate review number.
+
+| Profile / surface | Before R4a | After R4a |
+|---|---:|---:|
+| all-feature documented crate-root items | 549 | 442 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 |
+
+ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
+export plus full-profile Alethe, end-to-end certification, evidence,
+faithfulness, and Lean reconstruction. Historical root paths remain callable
+and type-identical but are `#[doc(hidden)]`; this is a source-compatible
+documentation and ownership change. Glaurung already selects the minimal
+`qfbv` profile, and its existing root imports continue to compile. Theory and
+certificate surfaces require separate consumer/collision censuses before they
+receive equivalent facades.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -98,7 +119,7 @@ following:
 5. successful independent kernel inference of `False`;
 6. deterministic naming and declaration order;
 7. the `qfbv` default feature boundary and native-free default build; and
-8. no new trusted axiom shape, unsafe code, or public re-export.
+8. no new trusted axiom shape, unsafe code, or unmeasured public re-export.
 
 The ordinary full-profile solver suite is necessary but insufficient for item
 4. Shared-emitter work therefore needs a test that compares the helper against
@@ -190,8 +211,19 @@ before/after byte comparisons for their affected fixtures.
    tests, clippy, and rustdoc pass. The parent is now 2,793 lines / 122,834
    bytes; the thin ABV orchestration remains parent-owned rather than becoming
    an artificial array module.
-4. **R4 — visibility audit.** After the files settle, narrow private imports and
-   only then evaluate the separate root-API namespacing work.
+4. **R4 — visibility and root-API audit (active).** R4a introduces a curated
+   `proofs` facade after measuring both feature profiles. It adds no previously
+   private item: every facade entry was already public at the crate root, and
+   every historical path remains available as a rustdoc-hidden alias. Dedicated
+   default-`qfbv` and all-feature gates prove representative type and function
+   identity. The documented all-feature root falls from 549 to 442 items and the
+   minimal root from 36 to 26, with 113 entries organized below `proofs`. All
+   891 solver-library tests, strict all-target clippy, and warning-denied
+   rustdoc pass. ADR-0305 owns the compatibility policy. Next, census
+   `theories` and `certificates` independently; do not turn R4 into a broad
+   breaking rename or mix it with solver behavior.
 
-Do not combine R1--R4 with solver behavior, proof-rule additions, or public API
-renaming. Small reviewable commits are the artifact-readiness objective.
+Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
+measured canonical facades only while preserving historical source paths; any
+removal or breaking rename requires its own decision. Small reviewable commits
+are the artifact-readiness objective.

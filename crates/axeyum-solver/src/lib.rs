@@ -190,6 +190,114 @@ macro_rules! full_modules {
 #[cfg(feature = "full")]
 full_modules!();
 
+/// Checkable proof, evidence, and reconstruction APIs.
+///
+/// This namespace is the canonical documentation home for proof-producing and
+/// proof-checking surfaces. The historical crate-root exports remain available
+/// as source-compatible aliases, but are hidden from the root documentation so
+/// ordinary solver consumers do not have to navigate every certificate and
+/// reconstruction entry point.
+pub mod proofs {
+    pub use crate::proof::{
+        UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
+        export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
+        export_qf_aufbv_unsat_proof_within, export_qf_bv_unsat_proof,
+        export_qf_bv_unsat_proof_within, export_qf_lia_unsat_proof, export_qf_uf_unsat_proof,
+    };
+
+    /// Alethe proof emission and checking.
+    #[cfg(feature = "full")]
+    pub mod alethe {
+        pub use crate::alethe_lra::{
+            check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,
+            prove_uflia_opaque_unsat_alethe, prove_uflra_unsat_alethe,
+        };
+        pub use crate::bitblast_alethe::bitblast_step;
+        pub use crate::qfabv_alethe::{
+            prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
+            prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe,
+        };
+        pub use crate::qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
+        pub use crate::qfbv_alethe::{
+            prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
+            prove_qf_bv_unsat_alethe_lowered, prove_qf_bv_unsat_alethe_route2,
+        };
+        pub use crate::qfdt_simp_alethe::{
+            prove_qf_dt_distinct_alethe_carcara, prove_qf_dt_injective_alethe_carcara,
+            prove_qf_dt_unsat_alethe_via_simplification,
+        };
+        pub use crate::qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
+        pub use crate::qfuflia_alethe::prove_qf_uflia_unsat_alethe;
+        pub use crate::quant_alethe::prove_quant_unsat_alethe;
+        pub use crate::skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
+        pub use crate::word_alethe::{
+            WORD_CLASH_RULE, WordAletheError, WordClashCertificate, word_conflict_alethe,
+        };
+    }
+
+    /// End-to-end bit-blast and CNF certification.
+    #[cfg(feature = "full")]
+    pub mod end_to_end {
+        pub use crate::bitblast_miter::{
+            BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
+            certify_bitblast_by_miter_within, certify_qf_bv_unsat_end_to_end,
+            certify_qf_bv_unsat_end_to_end_within,
+        };
+    }
+
+    /// Checked evidence production and replay.
+    #[cfg(feature = "full")]
+    pub mod evidence {
+        pub use crate::evidence::{
+            Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
+            produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
+            produce_evidence_minimized_with_objectives, produce_evidence_smtlib,
+            produce_lra_dpll_evidence, produce_lra_evidence, produce_nra_even_power_evidence,
+            produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
+            prove_minimized, prove_minimized_with_objectives,
+        };
+    }
+
+    /// Bit-lowering faithfulness checks.
+    #[cfg(feature = "full")]
+    pub mod faithfulness {
+        pub use crate::faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
+    }
+
+    /// Lean proof reconstruction and kernel-checking entry points.
+    #[cfg(feature = "full")]
+    pub mod lean {
+        pub use crate::int_reconstruct::{
+            IntReconstructCtx, is_int_inequality_refutation,
+            reconstruct_closed_universal_counterexample_to_lean_module,
+            reconstruct_diophantine_proof, reconstruct_diophantine_to_lean_module,
+            reconstruct_int_affine_growth_to_lean_module,
+            reconstruct_int_euclidean_residue_to_lean_module, reconstruct_int_inequality_proof,
+            reconstruct_int_inequality_to_lean_module, reconstruct_int_nested_xor_to_lean_module,
+            reconstruct_quantified_counterexample_cover_to_lean_module,
+            reconstruct_single_pivot_equality_partition_to_lean_module,
+        };
+        pub use crate::lex_reconstruct::reconstruct_lex_clash_to_lean_module;
+        pub use crate::reconstruct::{
+            LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,
+            prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
+            prove_unsat_to_lean_module, reconstruct_bitblast_step,
+            reconstruct_bv_alternation_counterexample_to_lean_module,
+            reconstruct_bv_closed_universal_counterexample_to_lean_module,
+            reconstruct_bv_conjunctive_universal_instance_to_lean_module,
+            reconstruct_bv_paired_existential_transfer_to_lean_module,
+            reconstruct_bv_positive_universal_instance_set_to_lean_module,
+            reconstruct_bv_vacuous_exists_universal_counterexample_to_lean_module,
+            reconstruct_cnf_intro_rule, reconstruct_const_shift_lowering, reconstruct_eq_step,
+            reconstruct_lra_proof, reconstruct_negated_existential_witness_to_lean_module,
+            reconstruct_qf_bv_proof, reconstruct_qf_uf_proof, reconstruct_qf_ufbv_proof,
+            reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
+            reconstruct_skolem_unsat_proof, reconstruct_sos_proof, scan_proof_fragment,
+        };
+        pub use crate::regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -205,6 +313,7 @@ pub use incremental::{
 };
 pub use layers::BvLayerStats;
 pub use model::Model;
+#[doc(hidden)]
 pub use proof::{
     UnsatProof, UnsatProofOutcome, export_datatype_unsat_proof, export_qf_abv_unsat_proof,
     export_qf_abv_unsat_proof_within, export_qf_aufbv_unsat_proof,
@@ -223,6 +332,7 @@ macro_rules! full_exports {
             check_qf_ax_declared_sort_lazy_row, check_with_array_elimination,
             cross_store_array_disequality_refutation,
         };
+        #[doc(hidden)]
         pub use alethe_lra::{
             check_alethe_lra, prove_lia_unsat_alethe, prove_lra_unsat_alethe,
             prove_uflia_opaque_unsat_alethe, prove_uflra_unsat_alethe,
@@ -256,7 +366,9 @@ macro_rules! full_exports {
             check_auto_explained, check_with_quantifiers, prove_unsat_by_ematching,
             prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
         };
+        #[doc(hidden)]
         pub use bitblast_alethe::bitblast_step;
+        #[doc(hidden)]
         pub use bitblast_miter::{
             BitblastMiterOutcome, EndToEndUnsatOutcome, certify_bitblast_by_miter,
             certify_bitblast_by_miter_within, certify_qf_bv_unsat_end_to_end,
@@ -334,6 +446,7 @@ macro_rules! full_exports {
         pub use euf_interpolant::{
             QfUfInterpolantCertificate, qf_uf_interpolant, qf_uf_interpolant_certified,
         };
+        #[doc(hidden)]
         pub use evidence::{
             Evidence, EvidenceReport, LayerVersions, ProofOutcome, Provenance, SEMANTICS_VERSION,
             produce_diophantine_evidence, produce_evidence, produce_evidence_minimized,
@@ -342,12 +455,14 @@ macro_rules! full_exports {
             produce_nra_evidence, produce_nra_sos_evidence, produce_qf_bv_evidence, prove,
             prove_minimized, prove_minimized_with_objectives,
         };
+        #[doc(hidden)]
         pub use faithfulness::{FaithfulnessOutcome, check_qf_bv_faithfulness};
         pub use fp::FloatFormat;
         pub use horn::{HornClause, HornModel, HornOutcome, HornSystem, solve_horn};
         pub use imc::{ImcOutcome, prove_safety_imc};
         pub use imc_lia::{ImcLiaOutcome, prove_safety_imc_lia};
         pub use imc_lra::{ImcLraOutcome, prove_safety_imc_lra};
+        #[doc(hidden)]
         pub use int_reconstruct::{
             IntReconstructCtx, is_int_inequality_refutation,
             reconstruct_closed_universal_counterexample_to_lean_module,
@@ -365,6 +480,7 @@ macro_rules! full_exports {
             LazyBvBackend, LazyBvOutcome, check_lazy_bv_abstraction, check_lazy_bv_abstraction_ro,
             solve_lazy_bv_abstraction,
         };
+        #[doc(hidden)]
         pub use lex_reconstruct::reconstruct_lex_clash_to_lean_module;
         pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
         pub use lia_gcd::{
@@ -413,20 +529,26 @@ macro_rules! full_exports {
         pub use pdr_lia::{PdrLiaOutcome, prove_safety_pdr_lia};
         pub use pdr_lra::{PdrLraOutcome, prove_safety_pdr_lra};
         pub use preprocess::check_with_preprocessing;
+        #[doc(hidden)]
         pub use qfabv_alethe::{
             prove_qf_abv_row_diff_alethe_carcara, prove_qf_abv_row_same_alethe_carcara,
             prove_qf_abv_select_congruence_alethe_carcara, prove_qf_abv_unsat_alethe,
         };
+        #[doc(hidden)]
         pub use qfabv_elim_alethe::prove_qf_abv_unsat_alethe_via_elimination;
+        #[doc(hidden)]
         pub use qfbv_alethe::{
             prove_qf_bv_unsat_alethe, prove_qf_bv_unsat_alethe_ext_compare,
             prove_qf_bv_unsat_alethe_lowered, prove_qf_bv_unsat_alethe_route2,
         };
+        #[doc(hidden)]
         pub use qfdt_simp_alethe::{
             prove_qf_dt_distinct_alethe_carcara, prove_qf_dt_injective_alethe_carcara,
             prove_qf_dt_unsat_alethe_via_simplification,
         };
+        #[doc(hidden)]
         pub use qfufbv_alethe::prove_qf_ufbv_unsat_alethe;
+        #[doc(hidden)]
         pub use qfuflia_alethe::prove_qf_uflia_unsat_alethe;
         pub use qinst_egraph::{
             QuantifierClausePropagationCertificate, QuantifierFalseSiblingJustification,
@@ -438,6 +560,7 @@ macro_rules! full_exports {
         pub use quant_affine_growth_cert::{
             IntAffineGrowthRefutationCertificate, int_affine_growth_refutation,
         };
+        #[doc(hidden)]
         pub use quant_alethe::prove_quant_unsat_alethe;
         pub use quant_bool_model_sat::{
             QUANT_BOOL_BV_MODEL_BINDER_CAP, QUANT_BOOL_BV_MODEL_DEPTH_CAP,
@@ -505,6 +628,7 @@ macro_rules! full_exports {
             VacuousExistsUniversalCounterexampleCertificate,
             check_vacuous_exists_universal_counterexample,
         };
+        #[doc(hidden)]
         pub use reconstruct::{
             LraReconstructCtx, ProofFragment, ReconstructCtx, ReconstructError,
             prove_const_shift_lowering_to_lean_module, prove_unsat_to_lean,
@@ -522,11 +646,13 @@ macro_rules! full_exports {
             reconstruct_skolem_unsat_proof, reconstruct_sos_proof, scan_proof_fragment,
         };
         pub use records::{RecordError, RecordSort};
+        #[doc(hidden)]
         pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
         pub use route_trace::{DeclineReason, RouteAttempt, RouteOutcome, RouteTrace, Verdict};
         pub use set_cardinality::{
             SetCardinalityRefutationCertificate, set_cardinality_refutation,
         };
+        #[doc(hidden)]
         pub use skolem_alethe::{SkolemCert, SkolemRecord, prove_skolem_unsat_alethe};
         pub use smtlib::{
             SmtLibModel, SmtLibOutcome, confirm_bounded_string_verdict, decide_word_only_script,
@@ -587,6 +713,7 @@ macro_rules! full_exports {
         pub use uflra_online::check_qf_uflra_boolean_prop_metrics;
         pub use uflra_online::check_qf_uflra_boolean_with_metrics;
         pub use uflra_online::check_qf_uflra_online;
+        #[doc(hidden)]
         pub use word_alethe::{
             WORD_CLASH_RULE, WordAletheError, WordClashCertificate, word_conflict_alethe,
         };

@@ -359,3 +359,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0302](adr-0302-preregister-symbolic-cve-reproducibility.md) | Preregister exact run/cross-machine authority stability plus backend-invariant finding identity on the admitted symbolic-CVE recall corpus | proposed |
 | [0303](adr-0303-preregister-engine-constraint-cache-factorial.md) | Preregister and freeze the bounded fixed-stream cold/warm x cache-off/exact/implication factorial for engine-cache additivity | accepted |
 | [0304](adr-0304-correct-canonical-cache-identity-and-rerun.md) | Reject the first factorial on textual-query versus canonical-set classification drift; freeze a fresh otherwise-identical rerun against corrected opportunity v2 | accepted |
+| [0305](adr-0305-proof-api-namespace.md) | Group proof, evidence, Alethe, faithfulness, and Lean APIs under a compatibility-preserving `proofs` facade | accepted |

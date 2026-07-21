@@ -322,6 +322,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4a gives proof APIs a canonical namespace without breaking
+  downstream paths.** `axeyum_solver::proofs` now groups the minimal proof
+  exports and the full-profile Alethe, end-to-end, evidence, faithfulness, and
+  Lean surfaces. Every historical root export remains callable and
+  type-identical but is hidden from root rustdoc. The measured documented root
+  falls 549→442 items under all features and 36→26 under minimal `qfbv`; the
+  facade owns 113 organized proof-facing entries. Dedicated compatibility tests
+  cover both profiles, all 891 solver-library tests pass, and strict clippy plus
+  warning-denied rustdoc are clean under the bounded one-job profile. Next:
+  continue R4 with independent `theories` and `certificates` censuses, retaining
+  the same source-compatibility gate and keeping behavior out of the refactor.
+
 - **2026-07-20 — Reconstruction cleanup R2 establishes a real direct-lane
   module boundary.** All 34 direct structural adapters, their five constructive
   encodings, the shared checked wrapper, and their explicit dispatcher now live
@@ -5441,6 +5453,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0305 accepts the first measured root-API namespace.** The
+  new `proofs` facade is the canonical documentation home for minimal UNSAT
+  proof export plus full-profile Alethe, end-to-end certification, checked
+  evidence, faithfulness, and Lean reconstruction. Historical root paths remain
+  source-compatible hidden aliases, including the minimal Glaurung consumer
+  imports. Rustdoc measures 549→442 all-feature root items and 36→26 minimal
+  root items, with 113 entries organized below `proofs`. Default-`qfbv` and
+  all-feature compatibility tests prove representative path identity; all 891
+  solver-library tests, strict all-target clippy, and warning-denied rustdoc
+  pass under the bounded one-job profile. R4 continues with separate measured
+  theory and certificate groupings, not a broad breaking rename.
 
 - **2026-07-20 — Split cohesive arithmetic reconstruction ownership and close
   R3.** The complete 4,970-line LRA/SOS family now lives in

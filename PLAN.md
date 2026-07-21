@@ -358,7 +358,17 @@ session state.
 >    tests, clippy, and rustdoc pass. The parent is now 2,793 lines / 122,834
 >    bytes. R3 is complete. Continue with R4's measured visibility/root-API
 >    audit; keep the thin ABV orchestration parent-owned and do not mix public
->    renaming with solver behavior.
+>    renaming with solver behavior. R4a now introduces the canonical
+>    `axeyum_solver::proofs` facade without deleting or changing any historical
+>    root path: old aliases remain callable and type-identical but are hidden
+>    from rustdoc. The all-feature documented root falls from 549 to 442 items;
+>    minimal `qfbv` falls from 36 to 26, while 113 proof-facing entries are
+>    organized under the facade. Default-`qfbv` and all-feature compatibility
+>    gates, 891 solver-library tests, strict clippy, and warning-denied rustdoc
+>    pass under the bounded one-job profile. ADR-0305 records the compatibility
+>    policy. Continue R4 with separate measured `theories` and `certificates`
+>    censuses; do not perform a broad rename or combine API organization with
+>    solver behavior.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
