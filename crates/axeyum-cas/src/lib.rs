@@ -1008,6 +1008,35 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     }
 }
 
+/// The monic greatest common divisor of two univariate polynomials over ℚ.
+/// `None` if either argument is not a univariate polynomial in `var` (or on
+/// overflow). `gcd(x²−1, x²−2x+1) = x−1`.
+#[must_use]
+pub fn poly_gcd(a: &CasExpr, b: &CasExpr, var: &str) -> Option<CasExpr> {
+    let ca = normalize(a)?.to_univariate(var)?;
+    let cb = normalize(b)?.to_univariate(var)?;
+    let bound = ca.len() + cb.len() + 4;
+    let g = poly::rat_gcd(&ca, &cb, bound)?;
+    Some(MultiPoly::from_univariate(var, &g).to_expr())
+}
+
+/// Polynomial division of univariate polynomials: returns `(quotient, remainder)`
+/// with `a = quotient·b + remainder` and `deg remainder < deg b`. `None` if either
+/// side is not a univariate polynomial in `var`, `b = 0`, or on overflow.
+#[must_use]
+pub fn poly_div(a: &CasExpr, b: &CasExpr, var: &str) -> Option<(CasExpr, CasExpr)> {
+    let ca = normalize(a)?.to_univariate(var)?;
+    let cb = normalize(b)?.to_univariate(var)?;
+    if ratint::is_zero(&cb) {
+        return None;
+    }
+    let (quotient, remainder) = ratint::divrem(&ca, &cb)?;
+    Some((
+        MultiPoly::from_univariate(var, &quotient).to_expr(),
+        MultiPoly::from_univariate(var, &remainder).to_expr(),
+    ))
+}
+
 /// Factor a univariate polynomial over ℚ into its rational linear factors times a
 /// remaining (rational-root-free) polynomial — e.g. `x² − 3x + 2 → (x−1)·(x−2)`,
 /// `2x² − 6x + 4 → 2·(x−1)·(x−2)`. The result is **certified** equal to the input
@@ -2384,6 +2413,20 @@ mod tests {
         );
         // pole: lim_{x→2} 1/(x−2) has no finite limit
         assert!(limit(&(CasExpr::int(1) / (x() - CasExpr::int(2))), "x", at(2)).is_none());
+    }
+
+    #[test]
+    fn polynomial_gcd_and_division() {
+        let x = || v("x");
+        // gcd(x²−1, x²−2x+1) = x−1
+        assert_equal(
+            &poly_gcd(&(x().pow(2) - CasExpr::int(1)), &(x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(1)), "x").unwrap(),
+            &(x() - CasExpr::int(1)),
+        );
+        // (x³−1) = (x²+x+1)(x−1) + 0
+        let (q, r) = poly_div(&(x().pow(3) - CasExpr::int(1)), &(x() - CasExpr::int(1)), "x").unwrap();
+        assert_equal(&q, &(x().pow(2) + x() + CasExpr::int(1)));
+        assert_equal(&r, &CasExpr::zero());
     }
 
     #[test]
