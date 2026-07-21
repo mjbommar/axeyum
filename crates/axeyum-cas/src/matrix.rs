@@ -501,6 +501,46 @@ impl Matrix {
             .collect()
     }
 
+    /// The determinant of a **rational-constant** square matrix by **Bareiss**
+    /// fraction-free Gaussian elimination — `O(n³)` with exact intermediate results
+    /// (unlike the `O(n!)` [`determinant`](Self::determinant) cofactor expansion, so
+    /// preferable for larger matrices). `None` if the matrix is not square, has a
+    /// non-constant entry, or on overflow.
+    #[must_use]
+    pub fn bareiss_determinant(&self) -> Option<CasExpr> {
+        if self.rows != self.cols {
+            return None;
+        }
+        let n = self.rows;
+        let mut m = self.to_rational_grid()?;
+        let mut sign = 1i128;
+        let mut previous = Rational::integer(1);
+        for k in 0..n {
+            if m[k][k].is_zero() {
+                // Pivot: swap in a nonzero row below; a zero column ⇒ det 0.
+                match (k + 1..n).find(|&r| !m[r][k].is_zero()) {
+                    Some(r) => {
+                        m.swap(k, r);
+                        sign = -sign;
+                    }
+                    None => return Some(CasExpr::zero()),
+                }
+            }
+            let pivot = m[k][k];
+            for i in (k + 1)..n {
+                for j in (k + 1)..n {
+                    let cross = pivot
+                        .checked_mul(m[i][j])?
+                        .checked_sub(m[i][k].checked_mul(m[k][j])?)?;
+                    m[i][j] = cross.checked_div(previous)?;
+                }
+            }
+            previous = pivot;
+        }
+        let det = m[n - 1][n - 1].checked_mul(Rational::integer(sign))?;
+        Some(CasExpr::Const(det))
+    }
+
     /// This matrix as a nested grid of exact rationals, or `None` if any entry is
     /// not a bare [`CasExpr::Const`].
     fn to_rational_grid(&self) -> Option<Vec<Vec<Rational>>> {

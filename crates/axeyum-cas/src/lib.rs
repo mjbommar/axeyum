@@ -5954,6 +5954,33 @@ mod tests {
     }
 
     #[test]
+    fn bareiss_determinant_matches_cofactor() {
+        // A 4×4 integer matrix — Bareiss (O(n³)) must agree with cofactor expansion.
+        let m = Matrix::from_rows(vec![
+            vec![CasExpr::int(2), CasExpr::int(1), CasExpr::int(0), CasExpr::int(3)],
+            vec![CasExpr::int(1), CasExpr::int(4), CasExpr::int(2), CasExpr::int(1)],
+            vec![CasExpr::int(0), CasExpr::int(2), CasExpr::int(5), CasExpr::int(1)],
+            vec![CasExpr::int(3), CasExpr::int(1), CasExpr::int(1), CasExpr::int(6)],
+        ])
+        .unwrap();
+        assert_equal(&m.bareiss_determinant().unwrap(), &m.determinant().unwrap());
+        // A matrix needing a pivot swap (zero at (0,0)).
+        let swap = Matrix::from_rows(vec![
+            vec![CasExpr::zero(), CasExpr::int(2)],
+            vec![CasExpr::int(3), CasExpr::int(4)],
+        ])
+        .unwrap();
+        assert_equal(&swap.bareiss_determinant().unwrap(), &CasExpr::int(-6)); // 0·4 − 2·3
+        // Singular matrix → 0.
+        let singular = Matrix::from_rows(vec![
+            vec![CasExpr::int(1), CasExpr::int(2)],
+            vec![CasExpr::int(2), CasExpr::int(4)],
+        ])
+        .unwrap();
+        assert_equal(&singular.bareiss_determinant().unwrap(), &CasExpr::zero());
+    }
+
+    #[test]
     fn hadamard_and_kronecker_products() {
         let a = Matrix::from_rows(vec![
             vec![CasExpr::int(1), CasExpr::int(2)],
