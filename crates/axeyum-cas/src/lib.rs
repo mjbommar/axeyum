@@ -6623,6 +6623,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_inverse_radical(expr, var),
         integrate_radical_usub(expr, var),
         integrate_sqrt_power(expr, var),
+        integrate_exp_quadratic_usub(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7700,6 +7701,67 @@ fn integrate_sqrt_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let x = CasExpr::var(var);
     let body = CasExpr::Mul(vec![x.clone().pow(degree + 1), x.sqrt()]);
     Some(scaled_term(coeff, body))
+}
+
+/// ∫ x·S(x²)·e^(c·x²) dx = ½·[∫ S(u)·e^(c·u) du]_{u=x²} — the `u = x²` chain-rule
+/// reversal for an odd polynomial times a Gaussian-exponent `exp`. Covers
+/// `∫x·e^(x²) = ½e^(x²)`, `∫x³·e^(x²) = ½(x²−1)e^(x²)`, etc. The inner integral is
+/// delegated to the poly×exp machinery; certified downstream by differentiate-and-check.
+fn integrate_exp_quadratic_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let factors: Vec<CasExpr> = match expr {
+        CasExpr::Mul(fs) => fs.clone(),
+        other => vec![other.clone()],
+    };
+    let mut exp_arg: Option<CasExpr> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for f in factors {
+        if let CasExpr::Unary(UnaryFunc::Exp, a) = &f {
+            if exp_arg.is_some() {
+                return None;
+            }
+            exp_arg = Some(a.as_ref().clone());
+        } else {
+            rest.push(f);
+        }
+    }
+    let exp_arg = exp_arg?;
+    // The exp argument must be a pure quadratic monomial c·x² (no linear/constant).
+    let arg_poly = normalize(&exp_arg)?.to_univariate(var)?;
+    if arg_poly.len() != 3 || arg_poly[2].is_zero() || !arg_poly[0].is_zero() || !arg_poly[1].is_zero() {
+        return None;
+    }
+    let c = arg_poly[2];
+    // The remaining factor R(x) must be an odd polynomial: R(x) = x·S(x²).
+    let rest_expr = if rest.is_empty() {
+        CasExpr::int(1)
+    } else {
+        CasExpr::Mul(rest)
+    };
+    let r_poly = normalize(&rest_expr)?.to_univariate(var)?;
+    for (i, coef) in r_poly.iter().enumerate() {
+        if i % 2 == 0 && !coef.is_zero() {
+            return None;
+        }
+    }
+    let s_coeffs: Vec<Rational> = (1..r_poly.len()).step_by(2).map(|i| r_poly[i]).collect();
+    if s_coeffs.iter().all(|coef| coef.is_zero()) {
+        return None;
+    }
+    // Fresh substitution variable that cannot clash with `var`.
+    let u = if var == "u" { "w" } else { "u" };
+    let s_expr = MultiPoly::from_univariate(u, &s_coeffs).to_expr();
+    let inner = CasExpr::Mul(vec![
+        s_expr,
+        CasExpr::Mul(vec![CasExpr::Const(c), CasExpr::var(u)]).exp(),
+    ]);
+    let anti_u = integrate(&inner, u)?;
+    if !anti_u.is_certified() {
+        return None;
+    }
+    let substituted = anti_u
+        .antiderivative
+        .substitute(u, &CasExpr::var(var).pow(2));
+    Some(scaled_term(Rational::new(1, 2), substituted))
 }
 
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
@@ -9752,11 +9814,11 @@ mod tests {
         };
         // Odd polynomial over [−1,1].
         sym(-1, 1, x().pow(3) - x());
-        // KEY: odd integrands `integrate` cannot handle (nonlinear argument) still
-        // give 0 by symmetry — antiderivative-free.
-        assert!(integrate(&(x() * x().pow(2).exp()), "x").is_none());
-        sym(-1, 1, x() * x().pow(2).exp()); // x·e^{x²}
-        sym(-2, 2, x() * x().pow(2).sin()); // x·sin(x²)
+        // KEY: odd integrands `integrate` cannot handle (antiderivative-free) still
+        // give 0 by symmetry — here x·sin(x²), whose antiderivative is non-elementary.
+        assert!(integrate(&(x() * x().pow(2).sin()), "x").is_none());
+        sym(-2, 2, x() * x().pow(2).sin()); // x·sin(x²) — via symmetry
+        sym(-1, 1, x() * x().pow(2).exp()); // x·e^{x²} — now via FTC (½e^{x²})
         // Even integrand over a symmetric interval is NOT shortcut to 0.
         let even = definite_integrate(&x().pow(2), "x", &CasExpr::int(-2), &CasExpr::int(2))
             .unwrap();
@@ -11191,6 +11253,25 @@ mod tests {
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
             assert_equal(&r.antiderivative, &anti);
         }
+    }
+
+    #[test]
+    fn exp_quadratic_usub_integrals() {
+        let x = || v("x");
+        // ∫ x·S(x²)·e^(c·x²) via u = x². Certified by differentiate-and-check.
+        for integrand in [
+            x() * x().pow(2).exp(),                              // ∫x·e^(x²) = ½e^(x²)
+            x().pow(3) * x().pow(2).exp(),                       // ∫x³·e^(x²) = ½(x²−1)e^(x²)
+            x() * (CasExpr::int(2) * x().pow(2)).exp(),          // scaled exponent
+            x() * (-x().pow(2)).exp(),                           // ∫x·e^(−x²)
+        ] {
+            let r = integrate(&integrand, "x").expect("exp-quadratic u-sub");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // Even powers are NOT elementary — must decline, never fabricate.
+        assert!(integrate(&x().pow(2).exp(), "x").is_none_or(|c| !c.is_certified()));
+        assert!(integrate(&(x().pow(2) * x().pow(2).exp()), "x").is_none_or(|c| !c.is_certified()));
     }
 
     #[test]
