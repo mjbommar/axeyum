@@ -26,6 +26,11 @@ identity. All three selected functions pass the scalar parser, but all three
 mangled names and current canonical hashes differ. `drift-result.json` records
 the metadata-only result; the external bytes remain local and ignored.
 
+ADR-0325 registers a fresh v2 producer rather than modifying v1. It applies the
+same remap through Cargo-encoded target flags to every dependency, requires
+zero real-root tokens and raw full-module equality, and only then allows
+dynamic symbol discovery and scalar parser admission. It still runs no proof.
+
 Build the Axeyum admission probe under the standing memory cap, prepare the
 locked Cargo cache if necessary, then run:
 

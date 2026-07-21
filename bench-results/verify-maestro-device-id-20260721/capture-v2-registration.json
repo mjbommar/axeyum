@@ -1,0 +1,37 @@
+{
+  "adr": "ADR-0325",
+  "base_registration": {
+    "path": "bench-results/verify-maestro-device-id-20260721/capture-registration.json",
+    "sha256": "5217ed365e9244c0043011e67f3c409758662526a7580fa367340933ce52ee21"
+  },
+  "diagnostic_result": {
+    "path": "bench-results/verify-maestro-device-id-20260721/drift-result.json",
+    "sha256": "274c5086a612324b4945f3f11d85e0fc0b9ad56ea8c1f6cb9ea09f42ea056f5b"
+  },
+  "encoded_rustflags": [
+    "-Zexport-executable-symbols",
+    "--remap-path-prefix=<isolated-root>=/axeyum-external/maestro"
+  ],
+  "final_rustc_tail": [
+    "-Ccodegen-units=1",
+    "-Clink-dead-code",
+    "--emit=llvm-ir"
+  ],
+  "local_output": "target/maestro-device-id-20260721/capture-v2",
+  "producer_files": [
+    {
+      "path": "docs/research/09-decisions/adr-0325-preregister-dependency-wide-maestro-path-remap.md",
+      "sha256": "d752016c6d47329f594f9bce81db0f2960294e5ed7d51a6fac04b3c2190f87fa"
+    },
+    {
+      "path": "scripts/capture-maestro-device-id-v2.py",
+      "sha256": "68d018bbf78f7b8c5164b9c93bdd3b28022ff297e421c5b9a032938442a2405e"
+    },
+    {
+      "path": "scripts/tests/test_capture_maestro_device_id_v2.py",
+      "sha256": "801f9abecd0bdc2f4368df4d0e6d76209946ffda8620aa41528086b978f3f497"
+    }
+  ],
+  "result_path": "bench-results/verify-maestro-device-id-20260721/capture-v2-result.json",
+  "schema": "axeyum.maestro-device-id-capture-v2-registration.v1"
+}
