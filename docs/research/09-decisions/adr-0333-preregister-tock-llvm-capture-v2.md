@@ -92,9 +92,16 @@ weakened after the first official build begins.
 
 ## Result
 
-Proposed. The authenticated cache exists locally and is committed only by
-summary/digests. No capture-v2 producer, registration, official build, module,
-symbol, extraction, admission, query, proof, or scoreboard row exists.
+Proposed. A thin v2 wrapper removes only the ambient Cargo bind, injects the
+authenticated cache read-only, structurally replays it, rejects its physical
+path from LLVM, records the virtual-path count, and outer-atomically delegates
+to frozen capture v1. Eight focused wrapper tests plus the ten v1 capture and 23
+cache-preparation protocol tests pass. Compact registration validates four
+direct capture producer files, the complete pinned cache-producer chain, nine
+tools, local preparation-result hash, and independently recomputed inventory
+`fd6ee33d...d379`. Commit and push this checkpoint before either build. No
+official build, module, symbol, extraction, admission, query, proof, or
+scoreboard row exists.
 
 ## Rejected alternatives
 

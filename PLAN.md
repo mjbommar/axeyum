@@ -458,8 +458,11 @@ session state.
 >    ADR-0333 now freezes that zero-result capture: thin ADR-0328 wrapper, exact
 >    ADR-0332 result/inventory replay, dedicated cache read-only at a stable
 >    virtual path, structural offline metadata replay, then unchanged two-root
->    raw-module/LLVM-22/admission gates. Implement/push wrapper/tests/registration
->    before either official build; proof queries remain separately gated.
+>    raw-module/LLVM-22/admission gates. The thin outer-atomic wrapper, eight
+>    focused plus 33 inherited protocol tests, compact registration, local-result
+>    replay, independent cache inventory, and cache-path identity checks pass
+>    with zero builds. Commit/push this checkpoint, then invoke capture v2 once;
+>    queries remain separately gated.
 >    `puts` remains rejected because it neither has a supplied body nor unlocks
 >    the rest of `hello.c`'s memory/call surface. Do not build early-exit
 >    support from the ADR-0293 singleton. General rejected-loop unrolling, MIR,

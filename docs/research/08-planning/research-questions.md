@@ -1045,7 +1045,10 @@ Full plan: [axeyum-glaurung-pareto-strategy.md](./axeyum-glaurung-pareto-strateg
     preregisters that build boundary: recompute and mount the exact dedicated
     cache read-only, structurally replay locked-offline metadata, then run the
     unchanged two-root raw-module/LLVM-22 extraction/admission gates. Its thin
-    producer/tests/registration remain unbuilt; no official build/query exists.
+    outer-atomic wrapper, compact registration, eight focused plus 33 inherited
+    protocol tests, local-result/inventory replay, and cache-path identity checks
+    now pass with zero builds. Commit/push precedes the one official capture-v2
+    invocation; no official build/query exists.
 - [x] Can one flat append-only CNF formula representation reduce the retained
   allocation footprint and total cold CNF time without changing any clause,
   proof, verdict, or replay identity?
