@@ -2751,6 +2751,50 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
     Some(expand(&result).unwrap_or(result))
 }
 
+/// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
+/// bounds — the multiplicative analogue of [`definite_sum`]. Each factor `f(k)` is
+/// obtained by substitution and the exact product is simplified. An empty range
+/// (`upper < lower`) is the empty product `1`. Handles any `f` (`∏ k = k!`,
+/// `∏ (x+k)` a rising-factorial polynomial, `∏ 2 = 2^{count}`); the closed form
+/// for a *symbolic* upper bound (Pochhammer/Γ) is out of the exact fragment and
+/// not attempted here. `None` if the bounds are not integer constants or on
+/// overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, finite_product, equal, ZeroTest};
+/// // ∏_{k=1}^{5} k = 120.
+/// let p = finite_product(&CasExpr::var("k"), "k", &CasExpr::int(1), &CasExpr::int(5)).unwrap();
+/// assert!(matches!(equal(&p, &CasExpr::int(120)), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn finite_product(
+    f: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    let a = integer_constant(lower)?;
+    let b = integer_constant(upper)?;
+    if b < a {
+        return Some(CasExpr::one()); // empty product
+    }
+    let mut product = CasExpr::one();
+    for k in a..=b {
+        let term = f.substitute(var, &CasExpr::int(k));
+        product = product * term;
+    }
+    Some(simplify(&product))
+}
+
+/// The exact integer value of `expr` if it is an integer [`CasExpr::Const`], else
+/// `None` (a fraction or non-constant).
+fn integer_constant(expr: &CasExpr) -> Option<i128> {
+    match expr {
+        CasExpr::Const(c) if c.denominator() == 1 => Some(c.numerator()),
+        _ => None,
+    }
+}
+
 /// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f` — the
 /// **discrete antiderivative** `S` with `S(var+1) − S(var) = f(var)` and `S(0)=0`.
 /// Solved as one exact linear system; **certified** by the telescoping zero-test
@@ -6789,6 +6833,40 @@ mod tests {
             &definite_sum(&k().pow(2), "k", &CasExpr::int(3), &CasExpr::int(5)).unwrap(),
             &CasExpr::int(50),
         );
+    }
+
+    #[test]
+    fn finite_products_over_concrete_bounds() {
+        let k = || v("k");
+        let x = || v("x");
+        // ∏_{k=1}^{5} k = 120 = 5!.
+        assert_equal(
+            &finite_product(&k(), "k", &CasExpr::int(1), &CasExpr::int(5)).unwrap(),
+            &CasExpr::int(120),
+        );
+        // ∏_{k=1}^{4} (2k−1) = 1·3·5·7 = 105.
+        assert_equal(
+            &finite_product(
+                &(CasExpr::int(2) * k() - CasExpr::int(1)),
+                "k",
+                &CasExpr::int(1),
+                &CasExpr::int(4),
+            )
+            .unwrap(),
+            &CasExpr::int(105),
+        );
+        // ∏_{k=1}^{3} (x+k) = (x+1)(x+2)(x+3).
+        assert_equal(
+            &finite_product(&(x() + k()), "k", &CasExpr::int(1), &CasExpr::int(3)).unwrap(),
+            &((x() + CasExpr::int(1)) * (x() + CasExpr::int(2)) * (x() + CasExpr::int(3))),
+        );
+        // Empty product (upper < lower) is 1.
+        assert_equal(
+            &finite_product(&k(), "k", &CasExpr::int(3), &CasExpr::int(1)).unwrap(),
+            &CasExpr::int(1),
+        );
+        // Non-integer bound is declined.
+        assert!(finite_product(&k(), "k", &CasExpr::rat(1, 2), &CasExpr::int(3)).is_none());
     }
 
     #[test]
