@@ -1,6 +1,6 @@
 # Reconstruction refactor inventory
 
-Status: active; R1, R2, and R3 complete; R4a/R4b namespaces complete
+Status: active; R1, R2, and R3 complete; R4a/R4b/R4c namespaces complete
 Date: 2026-07-20
 Baseline: Axeyum `852ec4790411a7fbf89c48dd1aa4a952f0cb5fa0`
 
@@ -42,12 +42,13 @@ The post-R3 rustdoc root was measured before selecting a namespace. Counts are
 from warning-denied rustdoc in both supported solver profiles, not from source
 text or the older approximate review number.
 
-| Profile / surface | Before R4a | After R4a | After R4b |
-|---|---:|---:|---:|
-| all-feature documented crate-root items | 549 | 442 | 338 |
-| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 |
-| entries organized in the `proofs` subtree | 0 | 113 | 115 |
-| entries organized in the `certificates` subtree | 0 | 0 | 105 |
+| Profile / surface | Before R4a | After R4a | After R4b | After R4c |
+|---|---:|---:|---:|---:|
+| all-feature documented crate-root items | 549 | 442 | 338 | 276 |
+| minimal-`qfbv` documented crate-root items | 36 | 26 | 26 | 26 |
+| entries organized in the `proofs` subtree | 0 | 113 | 115 | 115 |
+| entries organized in the `certificates` subtree | 0 | 0 | 105 | 105 |
+| entries organized in the `theories` subtree | 0 | 0 | 0 | 70 |
 
 ADR-0305 makes `proofs` the canonical documentation facade for minimal proof
 export plus full-profile Alethe, end-to-end certification, evidence,
@@ -61,7 +62,13 @@ for the two exact leak families identified by the review: 31 array entries and
 72 quantified entries now live under `certificates::{arrays, quantifiers}`.
 The two finite-quantifier Alethe emitters join `proofs::alethe`; general
 `check_model` replay and array decision procedures intentionally remain visible
-at the root for the separate theory/API census.
+at the root for the separate theory/API census. ADR-0307 completes that census:
+63 direct theory contracts and procedures now live under seven semantic
+`theories` submodules. The facade deliberately excludes model replay,
+auto-dispatch, SMT-LIB, optimization, interpolation, symbolic execution,
+verification, proofs, and certificates. The next root-API pass must measure
+those remaining cross-cutting domains independently rather than stretching the
+three accepted facades.
 
 The file is large for two different reasons that should not be conflated:
 
@@ -237,7 +244,20 @@ before/after byte comparisons for their affected fixtures.
    does not compile the full-only catalog. The compatibility tests now cover
    both catalogs; all 891 library tests, clippy, and both strict rustdoc profiles
    pass. ADR-0306 owns this boundary. Next, perform the separate theory API
-   census rather than grouping APIs by source-file accident.
+   census rather than grouping APIs by source-file accident. R4c then groups 63
+   direct theory contracts and procedures under seven full-only semantic
+   submodules: arrays, arithmetic, datatypes, quantifiers, strings,
+   uninterpreted functions, and combination. It leaves general model replay,
+   auto-dispatch, SMT-LIB, optimization, interpolation, symbolic execution,
+   verification, proofs, and certificates outside the facade. The all-feature
+   root falls from 338 to 276 items; the `theories` subtree contains 70 entries
+   including its seven grouping modules, while minimal `qfbv` remains 26 and
+   has no `theories` module. Historical paths remain callable and type-identical.
+   Dedicated compatibility tests, all 891 library tests, strict all-target
+   clippy, and both warning-denied rustdoc profiles pass. ADR-0307 owns this
+   boundary. Next, census the remaining cross-cutting root domains independently
+   before deciding whether R4 needs another facade; do not use `theories` as a
+   catch-all.
 
 Do not combine R1--R4 with solver behavior or proof-rule additions. R4 may add
 measured canonical facades only while preserving historical source paths; any

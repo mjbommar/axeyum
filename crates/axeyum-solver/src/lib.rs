@@ -428,6 +428,87 @@ pub mod certificates {
     }
 }
 
+/// Theory contracts and direct decision procedures.
+///
+/// This full-profile facade groups theory-specific state and entry points while
+/// leaving cross-cutting auto-dispatch, SMT-LIB, optimization, symbolic
+/// execution, proof, and certificate APIs in their own domains. Historical
+/// crate-root paths remain source-compatible aliases hidden from root rustdoc.
+#[cfg(feature = "full")]
+pub mod theories {
+    /// Array decision procedures.
+    pub mod arrays {
+        pub use crate::abv::{
+            check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_ax_declared_sort_lazy_row,
+            check_with_array_elimination,
+        };
+    }
+
+    /// Integer, real, and nonlinear arithmetic procedures.
+    pub mod arithmetic {
+        pub use crate::dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
+        pub use crate::dpll_t::check_with_lra_dpll;
+        pub use crate::lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
+        pub use crate::lia_online::{LiaTheory, check_qf_lia_online};
+        pub use crate::lia_theory::check_qf_lia_online_cdclt;
+        pub use crate::lra::{
+            check_with_lia_simplex, check_with_lra, check_with_lra_simplex, lra_unsat_core,
+        };
+        pub use crate::lra_online::{LraTheory, check_qf_lra_online};
+        pub use crate::lra_theory::check_qf_lra_online_cdclt;
+        pub use crate::nra::check_with_nra;
+    }
+
+    /// Datatype, enum, and record procedures and descriptors.
+    pub mod datatypes {
+        pub use crate::datatype_acyclicity::prove_datatype_unsat_structurally;
+        pub use crate::datatype_elim::check_with_datatype_elimination;
+        pub use crate::datatype_native::check_with_datatype_native;
+        pub use crate::enums::{EnumError, EnumSort, EnumVar};
+        pub use crate::records::{RecordError, RecordSort};
+    }
+
+    /// Quantifier decision procedures.
+    pub mod quantifiers {
+        pub use crate::auto::{
+            check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
+            prove_unsat_by_mbqi,
+        };
+    }
+
+    /// String-theory decision procedures.
+    pub mod strings {
+        pub use crate::string_theory::{
+            check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
+        };
+    }
+
+    /// Uninterpreted-function state and direct EUF procedures.
+    pub mod uninterpreted_functions {
+        pub use crate::euf::{check_qf_ufbv_lazy, check_with_function_elimination};
+        pub use crate::euf_egraph::{
+            EufConflict, EufTheory, check_qf_uf, check_qf_uf_online_cdclt, check_qf_uf_with_config,
+            prove_unsat_by_congruence, prove_unsat_lazy, prove_unsat_qf_uf_online,
+            solve_qf_uf_online,
+        };
+    }
+
+    /// Shared contracts and combined-theory procedures.
+    pub mod combination {
+        pub use crate::aufbv::check_with_arrays_and_functions;
+        pub use crate::combined::check_with_all_theories;
+        pub use crate::euf::{check_with_uf_arithmetic, check_with_uf_arithmetic_lazy};
+        pub use crate::euf_egraph::{TheoryLit, TheoryProp, TheorySolver};
+        pub use crate::theory_combination::{
+            InterfaceStatus, classify_interface_equalities, combination_conflict, interface_th_eqs,
+            propose_interface_equalities, shared_terms,
+        };
+        pub use crate::ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
+        pub use crate::uflia_online::check_qf_uflia_online;
+        pub use crate::uflra_online::check_qf_uflra_online;
+    }
+}
+
 /// Floating-point builders, available with the default `full` profile.
 #[cfg(feature = "full")]
 pub use axeyum_fp as fp;
@@ -461,6 +542,7 @@ macro_rules! full_exports {
             ArrayElimUnsatCertificate, CrossStoreArrayDisequalityCertificate,
             certify_array_elim_unsat, cross_store_array_disequality_refutation,
         };
+        #[doc(hidden)]
         pub use abv::{
             check_qf_abv_lazy, check_qf_abv_lazy_row, check_qf_ax_declared_sort_lazy_row,
             check_with_array_elimination,
@@ -502,11 +584,16 @@ macro_rules! full_exports {
             TwoByteXorSwapRoundtripCertificate, TwoCellXorSwapCertificate,
             two_byte_xor_swap_roundtrip_refutation, two_cell_xor_swap_refutation,
         };
+        #[doc(hidden)]
         pub use aufbv::check_with_arrays_and_functions;
         pub use auto::{
             BoundedIntBlastCertificate, certify_bounded_int_blast, check_auto,
-            check_auto_explained, check_with_quantifiers, prove_unsat_by_ematching,
-            prove_unsat_by_instantiation, prove_unsat_by_mbqi, solve, unsat_core,
+            check_auto_explained, solve, unsat_core,
+        };
+        #[doc(hidden)]
+        pub use auto::{
+            check_with_quantifiers, prove_unsat_by_ematching, prove_unsat_by_instantiation,
+            prove_unsat_by_mbqi,
         };
         #[doc(hidden)]
         pub use bitblast_alethe::bitblast_step;
@@ -543,6 +630,7 @@ macro_rules! full_exports {
         pub use certify::{
             CertifyOutcome, certify_finite_bv_by_enumeration, certify_qf_bv_by_enumeration,
         };
+        #[doc(hidden)]
         pub use combined::check_with_all_theories;
         #[doc(hidden)]
         pub use combined_theory::{
@@ -561,25 +649,31 @@ macro_rules! full_exports {
             minimize_model_objectives, minimize_model_objectives_with_config,
             minimize_model_with_config,
         };
+        #[doc(hidden)]
         pub use datatype_acyclicity::prove_datatype_unsat_structurally;
+        #[doc(hidden)]
         pub use datatype_elim::check_with_datatype_elimination;
+        #[doc(hidden)]
         pub use datatype_native::check_with_datatype_native;
         pub use distinct::distinct;
         pub use dpll_lia::{
             ArithDpllOutcome, ArithDpllRefutation, ArithLemmaLiteral, certify_arith_dpll_unsat,
-            check_with_arith_dpll, check_with_lia_dpll,
         };
-        pub use dpll_t::{
-            LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat,
-            check_with_lra_dpll,
-        };
+        #[doc(hidden)]
+        pub use dpll_lia::{check_with_arith_dpll, check_with_lia_dpll};
+        #[doc(hidden)]
+        pub use dpll_t::check_with_lra_dpll;
+        pub use dpll_t::{LemmaLiteral, LraDpllOutcome, LraDpllRefutation, certify_lra_dpll_unsat};
+        #[doc(hidden)]
         pub use enums::{EnumError, EnumSort, EnumVar};
+        pub use euf::{AckermannUnsatCertificate, certify_ackermann_unsat};
+        #[doc(hidden)]
         pub use euf::{
-            AckermannUnsatCertificate, certify_ackermann_unsat, check_qf_ufbv_lazy,
-            check_with_function_elimination, check_with_uf_arithmetic,
+            check_qf_ufbv_lazy, check_with_function_elimination, check_with_uf_arithmetic,
             check_with_uf_arithmetic_lazy,
         };
         pub use euf_alethe::prove_qf_uf_unsat_alethe;
+        #[doc(hidden)]
         pub use euf_egraph::{
             EufConflict, EufTheory, TheoryLit, TheoryProp, TheorySolver, check_qf_uf,
             check_qf_uf_online_cdclt, check_qf_uf_with_config, prove_unsat_by_congruence,
@@ -624,6 +718,7 @@ macro_rules! full_exports {
         };
         #[doc(hidden)]
         pub use lex_reconstruct::reconstruct_lex_clash_to_lean_module;
+        #[doc(hidden)]
         pub use lia::{DEFAULT_INT_WIDTH, check_with_int_blasting};
         pub use lia_gcd::{
             DiophantineCertificate, Equality, check_diophantine_certificate,
@@ -634,20 +729,26 @@ macro_rules! full_exports {
             LiaInterpolantCertificate, lia_interpolant, lia_interpolant_certified,
         };
         pub use lia_interpolant_cnf::lia_interpolant_cnf;
+        #[doc(hidden)]
         pub use lia_online::{LiaTheory, check_qf_lia_online};
+        #[doc(hidden)]
         pub use lia_theory::check_qf_lia_online_cdclt;
+        pub use lra::{FarkasAtom, FarkasCertificate, lra_farkas_certificate};
+        #[doc(hidden)]
         pub use lra::{
-            FarkasAtom, FarkasCertificate, check_with_lia_simplex, check_with_lra,
-            check_with_lra_simplex, lra_farkas_certificate, lra_unsat_core,
+            check_with_lia_simplex, check_with_lra, check_with_lra_simplex, lra_unsat_core,
         };
         pub use lra_interpolant_cnf::lra_interpolant_cnf;
+        #[doc(hidden)]
         pub use lra_online::{LraTheory, check_qf_lra_online};
+        #[doc(hidden)]
         pub use lra_theory::check_qf_lra_online_cdclt;
         pub use maxsat::{
             MaxSatOutcome, max_satisfiable, max_satisfiable_model, max_satisfiable_weighted,
             max_satisfiable_weighted_model,
         };
         pub use mbp::{mbp_lia, mbp_lra};
+        #[doc(hidden)]
         pub use nra::check_with_nra;
         pub use nra_even_power::{NraEvenPowerRefutationCertificate, nra_even_power_refutation};
         pub use nra_real_root::SosCertificate;
@@ -805,6 +906,7 @@ macro_rules! full_exports {
             reconstruct_quant_unsat_proof, reconstruct_resolution_proof,
             reconstruct_skolem_unsat_proof, reconstruct_sos_proof, scan_proof_fragment,
         };
+        #[doc(hidden)]
         pub use records::{RecordError, RecordSort};
         #[doc(hidden)]
         pub use regex_reconstruct::reconstruct_regex_emptiness_to_lean_module;
@@ -828,6 +930,7 @@ macro_rules! full_exports {
         pub use strategy::{
             Strategy, recommended_portfolio, solve_with_portfolio, solve_with_strategy,
         };
+        #[doc(hidden)]
         pub use string_theory::{
             check_qf_s_online_cdclt, check_qf_s_online_cdclt_with_memberships, check_qf_slia_length,
         };
@@ -839,6 +942,7 @@ macro_rules! full_exports {
         pub use term_identity::{
             TermIdentityKind, TermIdentityRefutationCertificate, term_identity_refutation,
         };
+        #[doc(hidden)]
         pub use theory_combination::{
             InterfaceStatus, classify_interface_equalities, combination_conflict, interface_th_eqs,
             propose_interface_equalities, shared_terms,
@@ -858,20 +962,25 @@ macro_rules! full_exports {
             BoolUfExhaustiveCertificate, FiniteDomainPigeonholeCertificate,
             bool_uf_exhaustive_refutation, finite_domain_pigeonhole_refutation,
         };
+        #[doc(hidden)]
         pub use ufbv_online::{check_qf_aufbv_online_cdclt, check_qf_ufbv_online_cdclt};
         pub use uflia_interpolant::{
             UfliaInterpolantCertificate, uflia_interpolant, uflia_interpolant_certified,
         };
         #[doc(hidden)]
         pub use uflia_online::check_qf_uflia_boolean_prop_metrics;
+        #[doc(hidden)]
         pub use uflia_online::check_qf_uflia_boolean_with_metrics;
+        #[doc(hidden)]
         pub use uflia_online::check_qf_uflia_online;
         pub use uflra_interpolant::{
             UflraInterpolantCertificate, uflra_interpolant, uflra_interpolant_certified,
         };
         #[doc(hidden)]
         pub use uflra_online::check_qf_uflra_boolean_prop_metrics;
+        #[doc(hidden)]
         pub use uflra_online::check_qf_uflra_boolean_with_metrics;
+        #[doc(hidden)]
         pub use uflra_online::check_qf_uflra_online;
         #[doc(hidden)]
         pub use word_alethe::{

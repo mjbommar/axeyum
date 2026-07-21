@@ -361,3 +361,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0304](adr-0304-correct-canonical-cache-identity-and-rerun.md) | Reject the first factorial on textual-query versus canonical-set classification drift; freeze a fresh otherwise-identical rerun against corrected opportunity v2 | accepted |
 | [0305](adr-0305-proof-api-namespace.md) | Group proof, evidence, Alethe, faithfulness, and Lean APIs under a compatibility-preserving `proofs` facade | accepted |
 | [0306](adr-0306-certificate-catalog-namespace.md) | Group specialized array and quantified certificate catalogs while retaining core model/theory APIs at the root | accepted |
+| [0307](adr-0307-theory-api-namespace.md) | Group direct theory contracts and procedures while retaining cross-cutting APIs in their own domains | accepted |

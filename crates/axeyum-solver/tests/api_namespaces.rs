@@ -10,7 +10,7 @@ fn assert_same_type<T: 'static, U: 'static>() {
 }
 
 macro_rules! assert_same_function {
-    ($canonical:path, $historical:path) => {
+    ($canonical:expr, $historical:expr) => {
         assert_eq!($canonical as *const (), $historical as *const ());
     };
 }
@@ -145,5 +145,55 @@ fn certificate_namespaces_preserve_root_aliases() {
     assert_same_function!(
         quantifiers::check_quantified_skolem_sat,
         axeyum_solver::check_quantified_skolem_sat
+    );
+}
+
+#[cfg(feature = "full")]
+#[test]
+fn theory_namespaces_preserve_root_aliases() {
+    use axeyum_solver::theories::{
+        arithmetic, arrays, combination, datatypes, quantifiers, strings, uninterpreted_functions,
+    };
+
+    assert_same_type::<arithmetic::LiaTheory, axeyum_solver::LiaTheory>();
+    assert_same_type::<arithmetic::LraTheory, axeyum_solver::LraTheory>();
+    assert_same_type::<datatypes::EnumSort, axeyum_solver::EnumSort>();
+    assert_same_type::<datatypes::RecordSort, axeyum_solver::RecordSort>();
+    assert_same_type::<uninterpreted_functions::EufTheory, axeyum_solver::EufTheory>();
+    assert_same_type::<combination::TheoryLit, axeyum_solver::TheoryLit>();
+
+    assert_same_function!(
+        arrays::check_with_array_elimination::<axeyum_solver::SatBvBackend>,
+        axeyum_solver::check_with_array_elimination::<axeyum_solver::SatBvBackend>
+    );
+    assert_same_function!(
+        arithmetic::check_qf_lia_online_cdclt,
+        axeyum_solver::check_qf_lia_online_cdclt
+    );
+    assert_same_function!(arithmetic::check_with_lra, axeyum_solver::check_with_lra);
+    assert_same_function!(arithmetic::check_with_nra, axeyum_solver::check_with_nra);
+    assert_same_function!(
+        datatypes::check_with_datatype_native,
+        axeyum_solver::check_with_datatype_native
+    );
+    assert_same_function!(
+        quantifiers::check_with_quantifiers,
+        axeyum_solver::check_with_quantifiers
+    );
+    assert_same_function!(
+        strings::check_qf_s_online_cdclt,
+        axeyum_solver::check_qf_s_online_cdclt
+    );
+    assert_same_function!(
+        uninterpreted_functions::check_qf_uf,
+        axeyum_solver::check_qf_uf
+    );
+    assert_same_function!(
+        combination::check_with_arrays_and_functions::<axeyum_solver::SatBvBackend>,
+        axeyum_solver::check_with_arrays_and_functions::<axeyum_solver::SatBvBackend>
+    );
+    assert_same_function!(
+        combination::check_qf_ufbv_online_cdclt,
+        axeyum_solver::check_qf_ufbv_online_cdclt
     );
 }

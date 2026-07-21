@@ -322,6 +322,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — R4c gives direct theory APIs semantic homes without absorbing
+  cross-cutting front doors.** The full-only `theories` facade groups 63 direct
+  contracts/procedures under arrays, arithmetic, datatypes, quantifiers,
+  strings, uninterpreted functions, and combination. General model replay,
+  auto-dispatch, SMT-LIB, optimization, interpolation, symbolic execution,
+  verification, proofs, and certificates remain outside it. The all-feature
+  documented root falls 338→276 items; the theory subtree contains 70 entries
+  including its seven grouping modules, and minimal `qfbv` remains 26 with no
+  theory facade. Historical aliases remain callable and type-identical.
+  Dedicated compatibility gates, all 891 solver-library tests, strict
+  all-target clippy, and both warning-denied rustdoc profiles pass inside the
+  one-job 4 GiB profile. Next: measure the remaining cross-cutting root domains
+  independently before deciding whether R4 needs another facade; do not stretch
+  `theories` or mix this artifact-readiness pass with solver behavior.
+
 - **2026-07-20 — R4b removes the specialized certificate catalogs from the
   documented solver root without hiding core APIs.** The full-only
   `certificates::{arrays, quantifiers}` facade owns 31 array and 72 quantified
@@ -5467,6 +5482,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — ADR-0307 accepts the direct-theory namespace.** Sixty-three
+  existing public contracts and procedures now have canonical homes under the
+  seven-submodule full-only `theories` facade. Cross-cutting model replay,
+  auto-dispatch, SMT-LIB, optimization, interpolation, symexec, verification,
+  proof, and certificate APIs remain in their own domains. Warning-denied
+  rustdoc measures 338→276 all-feature root items and 70 theory-subtree
+  entries; minimal `qfbv` remains at 26 root items with no theory module.
+  Representative compatibility tests cover all seven submodules, all 891
+  solver-library tests pass, and strict all-target clippy is clean under the
+  bounded profile. The next R4 decision requires a separate census of remaining
+  cross-cutting root domains, not a broader theory bucket.
 
 - **2026-07-20 — ADR-0306 accepts the array/quantified certificate namespace.**
   The exact catalog leakage named by the architecture review now lives under

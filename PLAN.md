@@ -379,7 +379,19 @@ session state.
 >    callable and type-identical. All 891 solver-library tests, strict clippy,
 >    compatibility gates, and warning-denied rustdoc pass under the bounded
 >    profile. ADR-0306 records the boundary. Continue R4 with the theory API
->    census, not a source-file-based sweep or behavior change.
+>    census, not a source-file-based sweep or behavior change. R4c now completes
+>    that census: 63 direct contracts/procedures live under seven semantic
+>    `theories` submodules, reducing the all-feature documented root 338→276
+>    while minimal `qfbv` remains 26 and does not expose the full-only facade.
+>    Model replay, auto-dispatch, SMT-LIB, optimization, interpolation, symbolic
+>    execution, verification, proofs, and certificates stay outside the theory
+>    namespace; historical paths remain callable and type-identical. Dedicated
+>    compatibility gates, all 891 solver-library tests, strict clippy, and both
+>    warning-denied rustdoc profiles pass under the bounded profile. ADR-0307
+>    records the boundary. The three review-requested facades are now measured;
+>    next census the remaining cross-cutting root domains independently before
+>    deciding on another facade. Do not turn `theories` into a catch-all or mix
+>    this artifact-readiness lane with solver/concretization behavior.
 >
 > Do NOT reopen symbolic memory / concretization coverage, chase raw-union
 > coverage, or claim performance leadership: the neutral warm baseline (#2) has
