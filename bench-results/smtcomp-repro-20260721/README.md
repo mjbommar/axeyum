@@ -98,9 +98,9 @@ axeyum is a close, honest third on speed.
 ## How to reproduce
 
 ```sh
-# 1. build the SMT-COMP CLI + run the 40-test scoring validation
+# 1. build the SMT-COMP CLI + run the 42-test scoring/provenance validation
 cargo build --release -p axeyum-bench --example smtcomp_cli
-for t in test_scoring test_pipeline test_selection; do python3 scripts/smtcomp_repro/tests/$t.py; done
+for t in test_scoring test_pipeline test_selection test_provenance; do python3 scripts/smtcomp_repro/tests/$t.py; done
 
 # 2. QF_BV head-to-head (this produced head_to_head_qfbv.json)
 python3 scripts/smtcomp_repro/compete.py --corpus corpus/qfbv-curated \
@@ -115,7 +115,11 @@ python3 scripts/smtcomp_repro/compete.py --corpus corpus/qfbv-curated \
 python3 scripts/smtcomp_repro/inventory.py raw_*.json --solver axeyum \
   --ceiling-s 120 --out inventory.json
 
-# 4. regenerate the charts in this directory
+# 4. regenerate exact-content/source-family provenance (source pack required)
+python3 scripts/smtcomp_repro/provenance.py inventory_raw.json \
+  --out provenance.json
+
+# 5. regenerate the charts in this directory
 python3 bench-results/smtcomp-repro-20260721/chart.py
 ```
 
@@ -124,9 +128,11 @@ python3 bench-results/smtcomp-repro-20260721/chart.py
 Interpretation boundary: this is a complete run over the 228 files currently
 present on the NAS, not a complete or officially selected SMT-COMP benchmark
 population. The set is source-skewed (113/228 are p4dfa), and exact/near-
-duplicate source-family groups are not yet classified. Keep its 82/228 result
-separate from the curated/regression scoreboard's denominator. The current
-cross-artifact research plan is
+duplicate source-family groups require separate treatment. The committed
+`provenance.json` finds seven source families and zero exact byte-duplicate
+groups; it does not identify renamed or semantic near duplicates. Keep the
+82/228 result separate from the curated/regression scoreboard's denominator.
+The current cross-artifact research plan is
 [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
 
 - **[`bench-results/SCOREBOARD.md`](../SCOREBOARD.md)** — axeyum vs z3 4.13.3,
@@ -166,11 +172,12 @@ cross-artifact research plan is
 |---|---|
 | `inventory.json` | complete per-logic inventory + solved-time stats + straggler list |
 | `inventory_raw.json` | merged raw per-benchmark results (all 228, all 12 shards) |
+| `provenance.json` | normalized IDs, SHA-256/size, source-family rows, exact duplicate groups |
 | `head_to_head_qfbv.json` | the 3-solver QF_BV scoreboard |
 | `inventory_decide_by_logic.png` | decide-rate-by-logic bar chart |
 | `head_to_head_qfbv.png` | 3-solver solved + PAR-2 chart |
 | `chart.py` | deterministic chart regenerator (reads the JSON above) |
 
-Harness (scoring engine, runner, selection, driver, tests, CLI):
+Harness (scoring engine, runner, selection, driver, provenance, tests, CLI):
 [`scripts/smtcomp_repro/`](../../scripts/smtcomp_repro/README.md) and
 [`crates/axeyum-bench/examples/smtcomp_cli.rs`](../../crates/axeyum-bench/examples/smtcomp_cli.rs).

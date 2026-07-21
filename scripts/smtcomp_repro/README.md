@@ -21,9 +21,12 @@ Section references in the code point at that document.
 | D. Division scoring: parallel, PAR-2, sequential, 24s, sat, unsat; disagreement removal | §7.2 | `scoring.py` | **done** |
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + sharded/distributed execution (local + s0..s7) | — | `compete.py`, `run_repro.sh` | **done** |
+| —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
-Tests (40, all passing): `tests/test_scoring.py` (30, one per rule), `tests/test_pipeline.py`
-(5, full aggregation/ranking), `tests/test_selection.py` (5, §6 caps + sampling).
+Tests (42, all passing): `tests/test_scoring.py` (30, one per rule),
+`tests/test_pipeline.py` (5, full aggregation/ranking),
+`tests/test_selection.py` (5, §6 caps + sampling), and
+`tests/test_provenance.py` (2, family normalization + exact duplicates).
 
 ## Reproduce
 

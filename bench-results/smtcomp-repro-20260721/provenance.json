@@ -1,0 +1,2344 @@
+{
+  "benchmarks": [
+    {
+      "bytes": 1037476,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "7d4fee20bd593e919c4a04ce58d27ca779195c366efb2aaf77511b53c243d2f3",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 9873366,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "1b033dd5d228b34475a160ecb2ae5b0bb94764bc5317d562bd0d3cfc545dc0d8",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 703378,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "efa159962727d89128effc18a7618da6de2e2d6c0fd478dafa34b3763da5a3d3",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 939320,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "be67112630230e3052eedc44b1228f820492dde2920652872a374681eb51de15",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 3209040,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a863db3f11bcc7f46e8ed0e2e7e279402f9ac6a5dad0003f00fefa9fb0f6f32c",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 4279124,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "ffe335c483df5aae261348353355171580a6579d0c2cf0e19d4d3f0422d348bb",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 13224529,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "133b3f174f45c78a24053a6a6bad5415bc9ad359679bf10b938c3d280c67f531",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 17645542,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "549e3475daa46d9c67d06a710bf899e88fa327048cd11e41f37b861896f50675",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 20213,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition/simple_bit8_na1_nr1_twocond.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "747be9b32be0ace042cb03b64b9e39fd050753bb9e9ddf6b3fbec9f302ebc4ba",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/Composition"
+    },
+    {
+      "bytes": 75136,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na1_nr1_twocond.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "01ef5533d634036dbbd97f56262546b8c9923ccaed5855b896c126f28aae76b0",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice"
+    },
+    {
+      "bytes": 427715,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "08b50b4649d7eb4643ee3c5ad7d864645d389e48a87f0ba9fe35b26f9d3bf1c1",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice"
+    },
+    {
+      "bytes": 270690,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_twocond.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "d642dd81a8c28e419b6875d5ebddd5e17cb23b7488175eb567317a047669c517",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice"
+    },
+    {
+      "bytes": 1110621,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.1._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "0069707a18a8c08f840f4317c8804f5f121ce06094be95e7a4b62d8c80d810b1",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1110621,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.10._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9f53fda9542ea515d5db1154713a0e7c37f1e7832b63e54e63bc0a86513d8e43",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1110621,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "64e820cb4826a02609e4a37d64826ba8e27ebef4f59a4e1fe248ca07671d205e",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 890753,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6c805677950803aca47c2b4897c9f20a37d00c7e8f65c04b522922dc80d938d4",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 670407,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9aa8f440ccdbff0114a05117ce417eea52f1cd9bfee7d7855a89e651e4e7dbe1",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 890757,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.5._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "7c9e6772febfa88550c5a6cb982603f4df751ed42c83ae235266210cdb75627f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1110625,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.6._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6b7247a7fe2a679d94518583133ca7cf9f4bd7b4691e747661af5a964ea70f40",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 890753,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.7._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9162d25b1d008ea18af175b8f570152c2c0ade28690d56ab521dcc5661fe138d",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 890753,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.8._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cd1256463ace68afb69d4580ec90987e418a3fbe2e34f5542ed81fe1520b3b93",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 890753,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.9._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "d0479101f3f34061c87aa9fd906906b09c48ef9a8aba5c893b27d96312702eab",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 491369,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.1._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "1e8c8061e1126500bcf637e139a51f847791e50ac1e2c24fb93e569f528e1bb6",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 491369,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.10._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "4840dd5fcf7982484d261e13169ebda20a7d7183727895c7f1ccd32f68976970",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 613012,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cccf4f4b3f058f1e669b8b616fdd2f298ddc9f6cefc5ff5ee60e7f5f46c9b76c",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 370810,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "76e684aac19961c10f3475daeaa9942a4244e63e639c3b5e2a644e9c444a12a5",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 251209,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a8984cc39bcfb7c9a0391f91ea2ab64c2935a2f8426ee9a96f2290de41ad987e",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 491369,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.5._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "3f971fd4d15e171270c761a0b0979673c22630fd217ba20b6e6f8c8bf2246108",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 370810,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.6._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "505acf6c4a142141aa089c85846519d6a551751b6a424a0882870b3e7c5c5b97",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 251209,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.7._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f5c0fa37f9b911bc5ebac8a99957c524b714a1f3246dd5e595d09809bd2bb999",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 491369,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.8._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "810f70f0b44de610cace0b8eaeda477c4fbb1a09d28c515a1124a490115cc624",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 491369,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.9._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "521fe8fab3eab7db2c5abe801c507d625e2d05ecdab4c99cebd747ab3af43a02",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3626427,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.1._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "60a8d8bb345dc8d5b1b9e995de7a817652b07918f9fd7433e8f4473ffd5000c8",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3727820,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.10._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "815db29270581915ed0446498781e2abe9adbf4324dd80381a68a4615f62c5fc",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3270439,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "214d389bfcf9e6dcc3ef532aca3a525f4001ce621622c946a7ecbdd25de10ff7",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4186112,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cdb16f3c4a702a042a66c6c40d7e5bb3f87fff79cde820eea33494119c5c7f8b",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1896804,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "bf52250caca491ac312d9ba0fdf1dbf8600245ffbb1a50a540165223098edd26",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4186112,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.5._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "dbddb1d75652198c7ea97078564532e3a21f0773bee27cdd9162acaed5bc6a04",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2354744,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.6._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "51cb7cf91aa6b259c8e89084168d95f16a15348719b19282f2e65761471ea545",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1896792,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.7._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "e5aca0b449e6a04be4d814c95735fca457e226452b0311eaeced8b588e77e2b9",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4186112,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.8._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "31a55b4921f75b06a1e50f9ece9c9eb9185a857f128da4b4e94406da38ea03ae",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4186116,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.9._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "24fc9c2817645d1d539cdda4e32ef4ed06d1ff3f520edc8015011699ffd34e2f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1545607,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.1._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9f717b6d9a119bca39f658f329cac43289537051b55334e92ed22a5f034741bc",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1402685,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.10._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a2b973c0a1a21bf9a435a3a66d986b06021e3a2f4e4059cef341c56d1142f329",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1402689,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "2c6e8a0be4263fb1bc655a9a7560b4f9440a741b4857a5c35fe57d2d7e140365",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1864485,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "47035ced19ee15bb4555c570a15b462dff0d145724d16468b69b9d9dce759b10",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 940571,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b8c612ee08a32c4fcb4473ba1f9a67e218703b223076913725101efd8c47bf7c",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1402689,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.5._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "d80fc64821e1d7aebc654c2dce8fd6261ce0ac1fd8a6141ab3ef603983d861da",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1171275,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.6._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6b4c21f5a4e396d9517eb5d348dbee16a01f728e6fea6f6894cc9e3e5dfaa460",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 940571,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.7._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "4177bbce8b8b7305f44c10191ac6b8e4ed4656564932b2ad02181e0fd3134250",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1402689,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.8._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "51de4d890ca3cd658ae0d0ef7c43d182c25d3cf7933ecfaa5bfd3d48bb9381a6",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1402689,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.9._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6288624e5f2e6ba73045f4929450e6e40c7324d5b95a9328692f970325fa3e8e",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2843015,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "50a120376bd3ad965d4067388b7b1ca9e6ede3802c5b1112c3ba975f32afcc4d",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 9430665,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "06a49836582a8edd9ded9d30210fb57a5f2a16b01a1054c59d2982a191222691",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 10530249,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "5f1814d99fd6872312b8ac935a80ce2bd8e23ad63586b091b21589c3a6b1ca5b",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4861224,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9f777804bfccfe0c7728dcf6458c63fb884555f5f7a6aadc59b99089b3cbf33c",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 13498383,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6a3efb128c0d280e7e0b5974098c66e3b23ba569a1ab9fb9646b100b6941a656",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 15070614,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "efcb195013e17299338ce264b6f9963a5e12f3a805359160d1c75836c1abacb7",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2520934,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b36e0860983a86a10f7c26ba478910d0034c0f3362d8164ac17a81f46b1dc413",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 9572635,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "37f5ea041ddf6e75f0446672c09b79bd9e15f4946fd2062fc796b186a1e17206",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 10688295,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f07c683a55177ba7d4ad1ad65043129b5672762dc69a18860f2aa3921217d734",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2044513,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "7786c8d2394c6d4e63ff4d9354d909059a9fb3afaefc0472cafd2a85bd5768da",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 7106031,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "efb9854898e50ec390a2bbd07a73365931e2f72d22fa1a82dd49101ffd3ccc67",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 7933624,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "3d941b8e05a6b810d802ce07e430d600600f65e35871caffc2ee12c07e5b1170",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3873081,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "20306ccf519b51c633e4860a2c7d2c988530f5e483544ce8a9a6c3c36ed7074f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 10909975,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b05cff67c71d0f48f039f3bdfdc47a3c8c5386fc2b0dcd99cd2db8f9a4bb3075",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 12181632,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "008a4f64e9ca1b79a65fe2e28f37417c1a8a31013718759f8cc64597f4add932",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3873081,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "8f124f8f49e92c2436285ac29a75d5926624c16e6f4a847a2bbc2d113cbb7c28",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 12108625,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "c447db2110a3c6e1921e05881f54b2e2e5e342b4fac4bd8eacbbfdab7f3561af",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 13522095,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f48c5fddaf6e69f714efddcad53aeeea2d675edffc37dcec5455a1c54a715290",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2108503,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a532e9e18e8f417ee822d78984e45192becc595a9462c9f39a078e3c247c66f2",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 7211546,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f8104caf925b6b4171314568ac5a5f1015f8ad872dc0224415ffbf6c21ddc840",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 8050251,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "746fe618e43752d1ca0cec67c3c24f356d450e0c2dbfe0f04ac5e74ed13693ab",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3986788,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cf4941f5ca40bc432bd6ccefacdcf586c8108153225b31b224172854d6429ed7",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 13498383,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "no_answer",
+      "reported_status": null,
+      "sha256": "a9c17675791b736daad567277a736664ed84435042c567d260726fa9bbf35ed2",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 15070614,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "2c5a14910a626569bf599b21c6844f2e7636c1a2f5f0d9a6615f370bed392575",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1696442,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "368e89fb531ba552f10782cc06fb9bea04093210ebf50d19e456321c16654f2b",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 7212601,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "aacd2f3569cf0d603cae5c8ddbab74be1783ffbc40a6aeafe61b06f78941d3e2",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 8051862,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "0c09a67fb80a17b4ae670757e70febd2f3028d324f7c7793be2aa2882d621250",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2674549,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "7b8a346ae7bd4a786f06006db269fd1ed124d45208d162f86d00f61f4b8a1235",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 7423751,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "38b436317af52ed2c9872850e2f8504e5fced61ab290f12e222f1425538ccf4e",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 8286206,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit8_na6_nr4_pairedtwobranch.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "0006135d68b2a10454cfc845a6f0209a0b972df64a5be5b7b73531103a181be8",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3803222,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "19961063fabb03aeb1e968e3738392f67ec763a91fb2f5e259f423efdc7cd3a2",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2843014,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "0d69eaefe3ba41c2e959fa1e9f2985654532e96ea68fa427c5cd74951f4fbaf2",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 6531693,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "c4b178045270bfb5bbcac66368fd465ac19545335dd3321071689e2fa96b8635",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 4861223,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "327a36b02ce4c3f0cdb1ac96782b2912e76acef3d33317724e6f19c4f8ec44f5",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3370307,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "804ed1e943ff4b2c64b5db51ab8f71a57bf50a3e4f8737ebc3a6ecf0265b9692",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2520933,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b83f35888ea7cd1afabf7d21d3fcd97ba6eec5dd3d110e923c76be415f2d32ce",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2732202,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f981869f2f313f76a39952a440d1534ea58a48b33ce8c10c40cc5c4150ad8b22",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2044512,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "07803d522a2171e6f2c7249797a145b16b55d8df6f84f733f012ee8349318273",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 5186309,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "146af8ee8b1cdfe387dafe46ce72a8de4dcebb51bc875bcd2d4e311e22438829",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3873080,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "10ed37176b3b3c5223cd1126cb0f369e34fe39caa91c335d44015558dbcc3018",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 5186309,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "504cc5e69eb40fc1dae0d3f604969b3b517ec502fd85468234e2cf07c7667c6f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3873080,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6a310d56f540428fe4f80ade0f07fec7d9d12154152bdffa538e4a8a138d99ec",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2817315,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "0c5c239a2a04e93cfdb8882b520043642c718a68adc232120a1a2a948ecf4d6b",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2108502,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b09a7d227b4d2386e47a784930ba555ec8d4a437963bfcd8a5b4bfb8d9871292",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 5341090,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9f789e6af456b4a9cb612292e14d36cd811f35566e41d675e7491b8143bea588",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3986787,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "dfc42b21f7da1aea08f3a15fcddde12a4b12bb544f2218ccb25d22a9448974a5",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2264731,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "5f3e5c334944a64f98d2e3d9bf4fa64514a54ef863df82daa69c60f84880c184",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 1696441,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "bb909bf61dfb6d351c18819cf08df65d69187ad674c74f58ab952f378caaf1dc",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3575363,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit16_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "df56c94ff6cff03789bfdd1881033a100a88b0d0e81d0f89fa442a12d756f332",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 2674548,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "7ee5e78ea6d6c36ef2e827d50ca8a2041a0a3526fae99ae5978d23a49ce82367",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching"
+    },
+    {
+      "bytes": 3947567,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit16_na13_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9a43e9d5518ec39d059bd9cf5a9f9fb8a158caa9d8737dd552b93c8b1e6e9fa4",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 2193476,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "25d36df24cf8b003b495576d7385d96456171a9ce97367f9bc8f7de04156b97f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 2923436,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a4554c0cdb7c49b510928d2ca088454a38de5e37389ef96e15b591acb0e4e81f",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 3579152,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_split4_bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "6e7da05be244f1282b6c66f039f4f33a484a430f7b7cf10554b185aa028e642c",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 690522,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "56567438a58a05a114d75e7703a9293f25f1712f10ffc981e5aa1e084f2ba0b7",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 922165,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "23205548b66f0e7c9e64c188b4c1886f345c908f5deb1f686dd01219c04e2151",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/TCP"
+    },
+    {
+      "bytes": 1389185,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit16_na13_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "48bc6e3af0be358a151ecf602c8eee866f3c2aa5ea4c5d22da8d7d216ece7a21",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf"
+    },
+    {
+      "bytes": 1042072,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "3ae02a082f8269fd8b324b253558f1770eea13de384d25b19b5e9ab848c510ae",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf"
+    },
+    {
+      "bytes": 1389185,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "5611616a46d87e3161ebd9df6f9c95be7126cd42081f63a3c2e80b07f5f0fa55",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf"
+    },
+    {
+      "bytes": 714878,
+      "expected_status": "sat",
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_simple_bit8_na6_nr3_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "33ebc43930de51afb2daaf660a0ca51e00b3331d7fd4d4f8cdf4733690c5eff4",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf"
+    },
+    {
+      "bytes": 1729999,
+      "expected_status": null,
+      "id": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_split4_full_bit16_na13_nr4_paired.smt2",
+      "logic": "QF_BV",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f63529c75bcce4103b7fa39c28d044405a4255e6ab9aa84ccc876c7f12ce07e3",
+      "source_family": "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf"
+    },
+    {
+      "bytes": 326,
+      "expected_status": "unsat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__arith__ite-lift.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "330d5a850b55f21eec6155aa9ad7673caa19dfa7f8fccbc020879889784ea661",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 123,
+      "expected_status": "sat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__bug187.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "df323878b6fae03006b3d7bcf70a5390dca0b65cd52d0a25cf39ac0d9d42212f",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 205,
+      "expected_status": "sat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__bug339.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "12d74e4aa0ea41722bacb52027c766e164e2c3e9e9029d430115bf99f78f0d88",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 363,
+      "expected_status": null,
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.01.smtv1.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "cc5641fe557145037a2d6c36d8ae37301e2103772d6a5be43dac1f4eb09d0c44",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 389,
+      "expected_status": null,
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.03.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "ceb5dc02281814f83aa50a219438582169441076d0508e94c4203017fb8b7b32",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 138,
+      "expected_status": "sat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__ite2.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "9dee4d036077a9fc7fffa26f48dd5aa7d10e121e7c5d23d139c69fc3a5b0f31c",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 140,
+      "expected_status": "unsat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "3e88caaadbec049de2a566923eb301d8a4282d9aff6ee591e7edfd9bc0edc8fa",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 174,
+      "expected_status": "unsat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress0__simple-lra.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "e9339ad9ad292aa51ff978523d3d1dfe05400ba7f9bb18a793ed3589b04ae964",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 388,
+      "expected_status": null,
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress1__arith__div.09.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "6ed67d8aa0bc16d0b2a4e59cd1d68ca8b5b382f40c9ef11e9906259ae57c9018",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 263,
+      "expected_status": null,
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress1__arith__mult.02.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "7fcbd623b6ce86107266087f4ebf928a0473462a004e37973450ccfd761bb81f",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 223944,
+      "expected_status": "unsat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress2__arith__miplib-opt1217--27.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "dea560b2d294be53ec0290ff1a736b148f18cc02ef639f1e475904c80e14da7b",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 70453,
+      "expected_status": "unsat",
+      "id": "QF_LRA/cvc5-regress-clean/cli__regress4__miplib-pp08a-3000.smt2",
+      "logic": "QF_LRA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "19a30edd313f5f643ef3b8b7a6c6c3ba39a5e1945dae48b3e545e5d7a7305f95",
+      "source_family": "QF_LRA/cvc5-regress-clean"
+    },
+    {
+      "bytes": 203,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__arith__exp-in-model.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "d297802a74d225f26c2084d6d3286cfd00972d7cee0bbbb36c5e3678100da689",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 349,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__arrays__issue5836-2.smt2",
+      "logic": "QF_UFNRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "b61a764ba68ef49f3b9848cf2232112ba35a797e446381af034f687f407e1b01",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1326,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__aufbv__issue3737.smt2",
+      "logic": "QF_UFBV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "edd6af7457887946d5e23caaf4ed3c8b571b36e4da8a5033884dc7d9b96f198e",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 395,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bt-test-00.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "09e8ad83158b754a50eed46933a590fa4f77e1f35b4697b953733d5c95745790",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 422,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bt-test-01.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "c95a4fc4712145460e73d5cc31c0daab9fea906020cdca0ca4b8c18054786635",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 461,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bug303.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "8e330d15df4692b70f7071a5948f9cb19464817a910b30c4b6dda0fdd92d35d7",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 769,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bug576.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "5299f31039cd23687b6d898c66ba54e1148c385f030e97675fd860ab8a2e43dd",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1841,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bug576a.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "1639d7b7844dabab2f3269fb3c607083aa98236942aa20843d030c8e2e39910f",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 355,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__buggy-ite.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "421af1dfcbcaec9c15d56cfb19a9f885d16a0ea13fde1fcff826c2645d2dcafd",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 535,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bv__ackermann2.smt2",
+      "logic": "QF_UFBV",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "12defffd96e7021421015a308da1792accd5d035652f9276f2441baa12f378fd",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 407,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bv__bv2nat-ground-c.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "ad957c360b905733df5e8ecdae2cd72c9c142cb199d775367fde0ced8e54da3a",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 120,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bv__issue3621.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "cf5d9626b970b09b159939e1bbf4c12b6d658cf7862a53879369b73912b8e345",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 314,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__bv__issue5396.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "492f9ebaa6977defaa489a25c5918c55d1fed38e6df327c632f9aede9f43e27d",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 204,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__datatypes__issue1433.smt2",
+      "logic": "QF_UFDTLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "3e48d27e44c80c733ffc02c6476644756539790ade9f0fa62274f982be6e3db3",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 179,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-simple.smt2",
+      "logic": "QF_UFC",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a73011d7f6c2c2a36d83b4a16a25613e1cb8569ca358aec793b3fec75177bd3b",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 326,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-unsat-pent.smt2",
+      "logic": "QF_UFC",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b70ee34f6d4c1c0c94ccaf60ce62aa8e7c8384cb63d018ea7fc2c73d8cddb897",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 152,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__fmf__issue4872-qf_ufc.smt2",
+      "logic": "QF_UFC",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "8ee5f008e83c78c18b5f7ae07a348a132d2497fb2ff1cd057afbd8ad55e1c139",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 209,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__issue5947.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "d64a74b0380e5669384287f3a81f181ffe219ef493ba32dc546aea43fae1fc4c",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 152,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__ite.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "44da276a692facc6480b145cc39006a7e840da2dc2d8e3fe3b87814dcd21b49f",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 199,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__ite3.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "1109af2b5417ce6ed2dd93ae5a1e4b335b621f1db0b13000a20c5b3f4f5a764f",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 197,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__ite4.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "1c1fb1bf3f50903a7b73200d5a2b84f349567eb2674a212c9f1c5b288ce3c525",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 179,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__nl__issue4007-rint-uf.smt2",
+      "logic": "QF_UFNIRA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f83b74c77c24409f2df2c8ebecda2ebb1d2574ab6e0866575c92caf2e2103696",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 162,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__cos-sig-value.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "892ba853e9efc69c30909e92585738205e924c231166a322cfac70cfccffdd88",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 197,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__sin-sym.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "9760e546c63c24dabbbd85323c37369f6e2eb59060c592808225df25fc891968",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 207,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__tan-rewrite.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "90f331bb6061450d03fd4963ce38a8f4e94ed5a03fd63d143e13ada6cab3c7b5",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 280,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__nl__real-div-ufnra.smt2",
+      "logic": "QF_UFNRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "becfdd532be3dc038711e5303bee33ea89abe870a44661c71d071e742782ad1a",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 184,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__parallel-let.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "2d3bc5d410933be427f61130e53adfebcc4de4b112f270496a33cdb13a8c5692",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 357,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__parser__as.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "30bec809e57e5dce6c67cfbbf4421dadd6fbb4b813f5a9c2ee0c27f1d560d10a",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 201,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__parser__named-attr.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "422cfe002a2eb126cf80f4b1c1ce3bf58a2de8f2191ed258723d3dc391c37dc9",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1583,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__parser__use-name-in-same-command.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "8431d03a8477f074713d363a5ad7b45a69a44a302f33ed8f1f64264ff0b9be15",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 163,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__printer__issue9928.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "91d447b3b334d30c820e8c030e00619747679bebb9f3b23f11e19ba4a344f1ec",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 222,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__proofs__bvrewrite-shlbyconst.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "828ed387fecfb1eddf2ac3585d73c5fb0dc90d7d75ca15fbb527fe024f979828",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 347,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__seq__mixed-types-seq-nth.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "4583cea4c815fcebdc7ee6792f6eab3939c395ffa115fa88e5d4c64bc4c2ab10",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 210,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-ex1.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "c79f2b2b180d45b0db0aaf051363494dd311aa43efe2fdac83844fda13ca73e6",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 332,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-nth-uf.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "c143e6f09f6389445fbe9d305fac1ae68002731753b9ca61c8e031b0a5130430",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 677,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-rewrites.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a9ab54348bbde0469ce3d4be4c3a03d904348cd2bf8146b4f77c32d56bb5efd6",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 270,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__seq__update-eq.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a5cb7dabbcfa4f3f503566e5540349da24cf1565ac0a2309a21982941033694d",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 276,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__card-2.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "4c10bce127d62c3cb76018bd977368b0c2f11f7dd7d9087a7feb43b2dd546f21",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 234,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__card.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "fba5a0c2ccc54ff6880ced0cbd327e4dd4305ba4fefe76e47073028c01b19410",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 350,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__comp-qf-error.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cc9ebfb3876b3c0b25ddb8fdc3176395beb8e0474897559972f805a37ca982e3",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 281,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__error1.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "e4b86031c36f164aab855da7a8260d36f45a0275b9801468987ebce3a18d8917",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 593,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-int-real.smt2",
+      "logic": "QF_UFLIRAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "b7c4e63f0ae731ff33169afe79d4c543b89c4ad454b235ad83d09a310a2132ec",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 301,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-nonint.smt2",
+      "logic": "QF_UFLIRAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "e6ffdb41a1c12dd212e8737995443e619a543f8cfa34f0e4d04067ee60857561",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 153,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-ints.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "5152f1e5e00dab20e84b6c9c8f4e29c03095d46f1d02c654104284f1c4ec2c38",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 155,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-reals.smt2",
+      "logic": "QF_UFLRAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "4533199bbfec70463f9b1f35a8631146c724ca0c749365953fc9fde399d559b0",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 170,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma.smt2",
+      "logic": "QF_UFBVFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "b24f018a88b0ca916d553c745359bf43dd7c8716b75738b751ceb1fd120ad239",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 201,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__simple-uf.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "523fcc49163d18c4386dfab218a2be49f64bf965739d513337fa55e50264f855",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 234,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__strings__std2.6.1.smt2",
+      "logic": "QF_UFSLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "f4c21d7b4aaf58a870e41b56041ec48c4133d8720271a60a44901efa2679b702",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 141,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__bool-pred-nested.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "bb557a55c2c5d74b30d7ba552ad4cdfece0180c378e53cb405df6cc71e999ad0",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 270,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-and-neg.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "4f83c1fd0cd23e2bdf12a68e3616767b9a7b3716f40e98e1bb227af9a6f47ae9",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 321,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff-base.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "ea378b347d0df6ca9e4767ff279f8b03abc7549384c1a03ddd1d6e3510b7ced6",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 909,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "31e12aac34eec18d8cb099ec6c646d331b8a9689f7d7c2c60f519bd1d203a3bf",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 838,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-ite.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "ca1bd8126a76648afee2b6713aa5b8f985f8edd6b9f5820715627aed0907cf41",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1932,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf_abc.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "5259744371b3a65f70787d17b626c9e6b9b37bc2b11f2ff312b5df03e06186d2",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 163,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__uf__issue2947.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "3b02804db5919517484d031e6e474b4e7a96e930655fc2bca393c6a40d05a782",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 372,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__use_approx__error0_approx.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "73785f9ab2e27499c11351e75db654354c1e331b08e1cce433eefea0e2144535",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 345,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress0__use_approx__issue2429_approx.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "bd2b1b50bc56e76dd3a7f09cce635c6a8fe5cfce3bfa66b03d7f507cbb319c16",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 5884,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__bug520.smt2",
+      "logic": "QF_UFBV",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "9e4b10ec1e77d0a5ff5493540264873325cbac8cfae81d34f0b3b4e368f50dde",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 321,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__bug593.smt2",
+      "logic": "QF_UFBV",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "f11ce4616c4737e920ca54412e3d5898ecca9735aef6827b11b6258769fe3013",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 129,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__bv__issue3776.smt2",
+      "logic": "QF_UFBVLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "a22280105d4b73bc432982a59168d74aa1a09166ac36c863e870222283605830",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 188,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__fmf__issue4068-si-qf.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "f531b5ae7321c5408dd11f2d9673fafa5bdc8bec3efb7f3be70176468f736509",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 37318,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__gensys_brn001.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "03806fb52b12f135c9dd0b05e226950f8f15e7535c0b59a7032e0fee057b340e",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1388,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__issue3970-nl-ext-purify.smt2",
+      "logic": "QF_UFNRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "0b38f26431403153645527a2689289c9cc5a02bfcd9398f562f3524836bf7dbb",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 308,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__div-mod-partial.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "bf43406e57c70b25c1e66fe9fcca8c0f4860c79dd15d542640e1c90924bab0bf",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 309,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__exp_monotone.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "4a7fd2923f59086ee6d8e2d4973ea808fa42d70cac4b934014d297bd68611e90",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 181,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3955-ee-double-notify.smt2",
+      "logic": "QF_UFNRA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "da03e838940ee470077b892b99d55eab862a00a7250c71789633ec9ecc9c0f22",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 690,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3966-conf-coeff.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "beb6192c3c0e0257ec375d8d37d6f783ce791b3fc7d3a699710d8b128fe7fdd9",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 276,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__nl_uf_lalt.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "878583dfa5be196aa44af295e3378a0fe525b2f91059d5d209df49ce89ab9637",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 483,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__proj-issue251.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "ca04e30def97501dd4e410cf7b8c688b4da380e36eadef5d8f4bbf6243483c87",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 179,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare-across-phase.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "19b092aabd94ff51172ffda5f7037c74e982ea93949b7f0bab17e6cab0943406",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 209,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "47734cd61ade049ce66421c1bfd851573ce539aadcb144577592de77caf36b7c",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 207,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sign.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "230d31f77f4a96d2e765deea891ae1cbc5520c11fdebffd50584ab9b34560e6c",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 293,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sym2.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "422099f05b21937365e790d77b88dfad4ccf91967ec323bc8ff9f43fc8399395",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 242,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__nl__tan-rewrite2.smt2",
+      "logic": "QF_UFNRAT",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "1bac953f76b519e88ed42c60b5c641da629bbe4f38c7b66a30b9d11ace739187",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1911,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__proof00.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "abc7d1c0db641c4ee1894a6d54dd87021b9677f064141aba086fcdea8356c0c9",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 33951,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2",
+      "logic": "QF_UF",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "05b486bd1a6c39849246e914456c7facb4169d28a690014606ad9ede32e936e8",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 370,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__card-3.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "706cc6bead20e48b36c4240583797ee89cec1fdba17e0cb5a96bc24302ea1280",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 663,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__card-4.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "e70fb6fa810a98b8ec57ed9c037a57338f23f471e6d6801c40dc9b510b8fafdc",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 703,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__card-5.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "efab217b28140f09b182dbb42f4f2d2efdfcd312ef2bcbfbe2aaa7d2d2e33a8c",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 342,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__card-6.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "f3d843890d05cdebfabcde8db66c41060d6476fcf4f9153561c9af7b485ec447",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 1426,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__card-7.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "4281799434347b256c44e7dc5e007e1b738c0f5b5950d58e26a21b623163918d",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 5286,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz14418.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "53468f83c0e4590908fc1567538d3721ae6b139bda4872242f0f15b868e77ae6",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 6033,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz31811.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "237c8aaf3a1137747f215387dd593211570d388ad1e08c26709d80569bf99bc1",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 4595,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sets__sharingbug.smt2",
+      "logic": "QF_UFLIAFS",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "a1975431454869e6efb1888c6b46a63b133420f99ae9b6b5bca8a8a8a0f42ea4",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 397,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sygus__proj-issue165.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "b1afbf939a52d2f0ea04aaf3b8f8445d65bd533235169c972c62f8b41ce06aa0",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 246,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sym__qf-function.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "cf07066b240163a32649456567cf5f5de59f73db24c04bf37cffbd950f8d5cfa",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 167,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__sym__sb-wrong.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "265b43120af5ef778e9da15146a68c75e77d5a7e4bbaf04f5dd64272665d1a1c",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 9501,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__uflia__FIREFLY_luke_1b_e2_3049_e7_1173.ec.minimized.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "e886c2f714d7b8bafdbfb72ec3cf7ce21dd2a23ee1b1b1f07ffb0dfed397a2b1",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 28381,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__uflia__microwave21.ec.minimized.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "1f4632c2a3605d8aafa7fed2f2e38d9226936fcb41a5f2d4945a1794c2dad003",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 23789,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress1__uflia__simple_cyclic2.smt2",
+      "logic": "QF_UFIDL",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "04c1627ca1af88ebbb8530fd24f1630fd8da51ed85e3519dabf5894434a608a5",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 24689,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_06_19.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "f3a7f77fcfaa8bf3fcddeada848894a49a1334af8e76ff2fd8ee5dec4b583779",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 29767,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_07_17.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "c3f3f60dd843261496f67bcf78fdafd02ab30347a1d5464b3ba99be9e979f735",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 25980,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_09_09.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "cebac720616403e6fe6e817d7e386c542a3587e0fc5e2e8897728aab2128dd31",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 31951,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_10_09.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "declined",
+      "reported_status": "unknown",
+      "sha256": "047d8d3af9d5cbd68800c8e57c1aef8a3ea3a2250212e857d58cfe12f00519b2",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 116426,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.StandardPrettyPrint.319_no_forall.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "70ac5d2210af003f1e3c70d78ca092241bc25fc181b9cdb513e383b64444bdd2",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 83179,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.WhileStmt.447_no_forall.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "c8497173db43a24f7c207488f365525c3907cc313a5796adc9f496749949ebcc",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 517,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__nl__ufnia-factor-open-proof.smt2",
+      "logic": "QF_UFNIA",
+      "outcome_class": "no_answer",
+      "reported_status": null,
+      "sha256": "35ee098bfef286126ef38fdd29691186967af55e23a2e99d9ffb794934050214",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 10010,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__ooo.rf6.smt2",
+      "logic": "QF_UFIDL",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "4203b6962adddb96a4cea833adec608c47ec04a766a00b5dffb4c0e5846e0480",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 43809,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__ooo.tag10.smt2",
+      "logic": "QF_UFIDL",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "c883c0b7393d468d57ff894bfc47dff3b4b6fa694c9c44dde51dac1a82403c89",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 84910,
+      "expected_status": "sat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "sat",
+      "sha256": "34711d0dea745562130816f65adfdf0b962ff0686f7fa32ef5a027f3fb2ddfcd",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 360988,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress2__uflia-error0.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "0db37c05949d282129258208eae99e5a1f7d0e18dabf7eb50efaf1faf43f9e49",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 360930,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress3__error0.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "bed85dc60a05b5cac4b5ae7c1894cdee8369c6af7c5e11b58a1652da875c7f57",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    },
+    {
+      "bytes": 6505,
+      "expected_status": "unsat",
+      "id": "QF_UF/cvc5-regress-clean/cli__regress4__xs-11-20-5-2-5-3.smt2",
+      "logic": "QF_UFLIA",
+      "outcome_class": "decided_correct",
+      "reported_status": "unsat",
+      "sha256": "278a60d254d2c0603b294e0106ba245a2de0e7a5b5b4c584faa515ac8f70cb28",
+      "source_family": "QF_UF/cvc5-regress-clean"
+    }
+  ],
+  "exact_duplicate_groups": [],
+  "schema": "axeyum.smtcomp-provenance.v1",
+  "source_family_rows": {
+    "QF_BV/20221214-p4dfa-XiaoqiChen/Composition": {
+      "decided_correct": 3,
+      "declined": 6,
+      "files": 9,
+      "no_answer": 0,
+      "wrong": 0
+    },
+    "QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice": {
+      "decided_correct": 2,
+      "declined": 1,
+      "files": 3,
+      "no_answer": 0,
+      "wrong": 0
+    },
+    "QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching": {
+      "decided_correct": 0,
+      "declined": 89,
+      "files": 90,
+      "no_answer": 1,
+      "wrong": 0
+    },
+    "QF_BV/20221214-p4dfa-XiaoqiChen/TCP": {
+      "decided_correct": 1,
+      "declined": 5,
+      "files": 6,
+      "no_answer": 0,
+      "wrong": 0
+    },
+    "QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf": {
+      "decided_correct": 0,
+      "declined": 5,
+      "files": 5,
+      "no_answer": 0,
+      "wrong": 0
+    },
+    "QF_LRA/cvc5-regress-clean": {
+      "decided_correct": 10,
+      "declined": 2,
+      "files": 12,
+      "no_answer": 0,
+      "wrong": 0
+    },
+    "QF_UF/cvc5-regress-clean": {
+      "decided_correct": 66,
+      "declined": 36,
+      "files": 103,
+      "no_answer": 1,
+      "wrong": 0
+    }
+  },
+  "summary": {
+    "exact_duplicate_excess": 0,
+    "exact_duplicate_groups": 0,
+    "files": 228,
+    "source_families": 7,
+    "unique_content_sha256": 228
+  }
+}

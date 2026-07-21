@@ -39,6 +39,9 @@ SMTCOMP_INVENTORY = (
 SMTCOMP_QFBV = (
     ROOT / "bench-results" / "smtcomp-repro-20260721" / "head_to_head_qfbv.json"
 )
+SMTCOMP_PROVENANCE = (
+    ROOT / "bench-results" / "smtcomp-repro-20260721" / "provenance.json"
+)
 
 LIVE_DOCS = (
     ROOT / "PLAN.md",
@@ -92,6 +95,7 @@ def measured_snapshot() -> dict[str, int]:
     z3 = load_json(Z3_P4DFA)
     inventory = load_json(SMTCOMP_INVENTORY)
     qfbv = load_json(SMTCOMP_QFBV)
+    provenance = load_json(SMTCOMP_PROVENANCE)
     for artifact in (axeyum, z3):
         config = artifact["config"]
         summary = artifact["summary"]
@@ -101,6 +105,22 @@ def measured_snapshot() -> dict[str, int]:
         raise RuntimeError("p4dfa Axeyum/Z3 controls do not bind the same corpus hash")
     qfbv_division = qfbv["divisions"]["QF_BV"]
     qfbv_solvers = qfbv_division["solvers"]
+
+    scoreboard_ids = []
+    scoreboard_aggregate_only = 0
+    for row in rows:
+        baseline = load_json(ROOT / row["file"])
+        instances = baseline.get("instances", [])
+        if not instances:
+            scoreboard_aggregate_only += row["files"]
+            continue
+        for instance in instances:
+            path = instance["file"]
+            if "non-incremental/" in path:
+                path = path.split("non-incremental/", 1)[1]
+            elif "quantified/" in path:
+                path = "quantified/" + path.split("quantified/", 1)[1]
+            scoreboard_ids.append(path)
 
     return {
         "rows": len(rows),
@@ -128,6 +148,14 @@ def measured_snapshot() -> dict[str, int]:
         "qfbv_head_to_head_axeyum": qfbv_solvers["axeyum"]["par2"]["n"],
         "qfbv_head_to_head_cvc5": qfbv_solvers["cvc5"]["par2"]["n"],
         "qfbv_head_to_head_bitwuzla": qfbv_solvers["bitwuzla"]["par2"]["n"],
+        "scoreboard_file_occurrences": len(scoreboard_ids),
+        "scoreboard_unique_ids": len(set(scoreboard_ids)),
+        "scoreboard_repeated_occurrences": len(scoreboard_ids)
+        - len(set(scoreboard_ids)),
+        "scoreboard_aggregate_only": scoreboard_aggregate_only,
+        "public_source_families": provenance["summary"]["source_families"],
+        "public_unique_sha256": provenance["summary"]["unique_content_sha256"],
+        "public_exact_duplicate_groups": provenance["summary"]["exact_duplicate_groups"],
     }
 
 
@@ -154,6 +182,12 @@ def main() -> int:
         f"{snapshot['public_inventory_decided']} / {snapshot['public_inventory_files']}",
         f"{snapshot['public_inventory_wrong']} wrong verdicts",
         f"{snapshot['qfbv_head_to_head_axeyum']} / {snapshot['qfbv_head_to_head_files']}",
+        f"{snapshot['scoreboard_file_occurrences']} file-backed occurrences",
+        f"{snapshot['scoreboard_unique_ids']} unique normalized benchmark paths",
+        f"{snapshot['scoreboard_repeated_occurrences']} repeated occurrences",
+        f"{snapshot['scoreboard_aggregate_only']} aggregate-only synthetic cases",
+        f"{snapshot['public_source_families']} source families",
+        f"{snapshot['public_exact_duplicate_groups']} exact byte-duplicate groups",
     )
     gap_text = GAP_DOC.read_text(encoding="utf-8")
     for marker in required_gap_markers:

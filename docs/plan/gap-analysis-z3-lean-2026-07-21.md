@@ -48,6 +48,11 @@ The division scoreboard contains 35 rows across 24 logic labels:
   substantial coverage, but it is uneven: selected QF_ABV/AUFBV/LIA/LRA/UF
   rows are complete while general nonlinear, strings/sequences, AUFLIA, and
   some UFLIA rows retain large proof gaps.
+- Its 33 file-backed baseline rows contain **927 file-backed occurrences** but
+  only **837 unique normalized benchmark paths**: **90 repeated occurrences**
+  come from overlapping row variants. The two synthetic rows contribute
+  **65 aggregate-only synthetic cases** whose per-instance identities are
+  absent.
 
 These denominators are measurements of the committed slices, not estimates of
 the entire SMT-LIB population and not proof of universal soundness.
@@ -68,10 +73,13 @@ currently present on the NAS, Axeyum records:
 This public inventory is stronger evidence of difficulty than the regression
 scoreboard, but it is still a **partial convenience set**, not the official
 SMT-COMP selection: p4dfa contributes 113/228 files, source families are not
-population-weighted, duplicate/near-duplicate classes are not yet identified,
-and the three-solver head-to-head contains no Z3 cell. Report the 36% inventory
-rate and 75.9% regression-row rate side by side with their provenance; never
-average them or use either as a global solver-completeness percentage.
+population-weighted, and the three-solver head-to-head contains no Z3 cell. The
+new exact-content provenance artifact finds **7 source families**, 228 unique
+SHA-256 values, and **0 exact byte-duplicate groups**. That closes exact-byte
+deduplication only; it does not detect renamed, option-edited, generated-family,
+or semantic near duplicates. Report the 36% inventory rate and 75.9% regression-
+row rate side by side with their provenance; never average them or use either
+as a global solver-completeness percentage.
 
 ### Corrected public QF_BV control
 
@@ -134,9 +142,11 @@ regression slices. It is useful for regression tracking but not a population
 claim.
 
 **Prototype already present:** `scripts/smtcomp_repro/` implements the 2026
-scoring rules and the committed 228-file inventory establishes a harder public
-view. It does not yet classify source-family duplication or make the 35-row
-scoreboard and 228-file inventory share one provenance schema.
+scoring rules; the committed 228-file inventory establishes a harder public
+view; and `provenance.py` now commits normalized IDs, exact hashes, seven source
+families, and exact-duplicate groups. The live docs gate separately counts the
+scoreboard's 90 repeated file occurrences. Semantic/near-duplicate grouping and
+a shared schema across both measurement regimes remain open.
 
 **Research:** classify every row/file by source hash, source family, provenance,
 difficulty, theory/operators, SAT/UNSAT direction, exact/near duplication,
