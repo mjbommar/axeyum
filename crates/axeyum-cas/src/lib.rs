@@ -3918,6 +3918,52 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     Some(simplify(&result))
 }
 
+/// The **inverse Laplace transform** `L⁻¹{F}(t)` of a proper rational function `F(s)`
+/// with **simple real rational poles**: `F = Σ Rᵢ/(s−aᵢ)` gives `Σ Rᵢ·e^{aᵢt}`,
+/// where each residue `Rᵢ = Res_{s=aᵢ} F`. **Certified** by the round trip
+/// `L{result} = F` (via [`laplace_transform`] and the zero-test). Returns `None` for
+/// an improper `F`, or poles that are repeated, irrational, or complex (future work).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, inverse_laplace, equal, ZeroTest};
+/// let s = CasExpr::var("s");
+/// // L⁻¹{1/(s−2)} = e^{2t}.
+/// let g = inverse_laplace(&(CasExpr::int(1) / (s - CasExpr::int(2))), "s", "t").unwrap();
+/// let expected = (CasExpr::int(2) * CasExpr::var("t")).exp();
+/// assert!(matches!(equal(&g, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let rf = normalize_rational(f)?;
+    let num = rf.num.to_univariate(s)?;
+    let den = rf.den.to_univariate(s)?;
+    let deg_num = poly::rat_degree(&num).unwrap_or(0);
+    let deg_den = poly::rat_degree(&den)?;
+    if deg_num >= deg_den {
+        return None; // improper — the polynomial (δ-function) part is unsupported
+    }
+    // Require `deg_den` distinct rational poles (⇒ all simple).
+    let mut poles: Vec<Rational> = Vec::new();
+    for root in ratint::rational_roots(&den)? {
+        if !poles.contains(&root) {
+            poles.push(root);
+        }
+    }
+    if poles.len() != deg_den {
+        return None;
+    }
+    let mut result = CasExpr::zero();
+    for pole in poles {
+        let res = residue(f, s, pole)?;
+        result = result + res * (CasExpr::Const(pole) * CasExpr::var(t)).exp();
+    }
+    // Round-trip certificate: L{result} = F.
+    match equal(&laplace_transform(&result, t, s)?, f) {
+        ZeroTest::Certified { equal: true, .. } => Some(result),
+        _ => None,
+    }
+}
+
 /// The Maclaurin coefficients of `f` about `0` to `order`, or `None` outside the
 /// series-expandable fragment.
 fn series_coefficients(f: &CasExpr, var: &str, order: usize) -> Option<Vec<Rational>> {
@@ -5223,6 +5269,22 @@ mod tests {
         holds(
             CasExpr::int(3) * t() + CasExpr::int(2) * t().exp(),
             CasExpr::int(3) / s().pow(2) + CasExpr::int(2) / (s() - CasExpr::int(1)),
+        );
+        // Inverse Laplace (simple real poles), certified by the L round-trip.
+        // L⁻¹{1/(s−2)} = e^{2t}.
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / (s() - CasExpr::int(2))), "s", "t").unwrap(),
+            &(CasExpr::int(2) * t()).exp(),
+        );
+        // L⁻¹{1/((s−1)(s−2))} = −e^t + e^{2t}.
+        assert_equal(
+            &inverse_laplace(
+                &(CasExpr::int(1) / ((s() - CasExpr::int(1)) * (s() - CasExpr::int(2)))),
+                "s",
+                "t",
+            )
+            .unwrap(),
+            &(-t().exp() + (CasExpr::int(2) * t()).exp()),
         );
     }
 
