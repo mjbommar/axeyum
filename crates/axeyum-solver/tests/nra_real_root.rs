@@ -13,7 +13,7 @@
 #![cfg(feature = "full")]
 
 use axeyum_ir::{Rational, Sign, Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, SolverConfig, solve};
+use axeyum_solver::{CheckResult, Model, SolverConfig, solve};
 
 /// Declare a real symbol and return `(its id, a var term)`.
 fn real(arena: &mut TermArena, name: &str) -> (SymbolId, TermId) {
@@ -1306,6 +1306,14 @@ fn strict_cad_open_quarter_disk_sat() {
     let CheckResult::Sat(model) = &r else {
         panic!("x²+y²<4 ∧ x>0 ∧ y>0 must be Sat (open quarter-disk); got {r:?}");
     };
+    let mut expected = Model::new();
+    expected.set(xs, Value::Real(Rational::integer(1)));
+    expected.set(ys, Value::Real(Rational::integer(1)));
+    assert_eq!(
+        r,
+        CheckResult::Sat(expected),
+        "strict CAD must preserve its deterministic first witness"
+    );
     // Witness is rational (interior of an open cell).
     assert!(
         matches!(model.get(xs), Some(Value::Real(_))),
@@ -1960,6 +1968,14 @@ fn nonstrict_disk_boundary_witness_is_sat() {
     let CheckResult::Sat(model) = &r else {
         panic!("x²+y²≤1 ∧ x=1 is SAT (witness (1,0) on the boundary); got {r:?}");
     };
+    let mut expected = Model::new();
+    expected.set(xs, Value::Real(Rational::integer(1)));
+    expected.set(ys, Value::Real(Rational::zero()));
+    assert_eq!(
+        r,
+        CheckResult::Sat(expected),
+        "non-strict CAD must preserve its deterministic boundary witness"
+    );
     // Replay: both original atoms hold at the returned model.
     let asg = model.to_assignment();
     assert!(
@@ -1970,7 +1986,6 @@ fn nonstrict_disk_boundary_witness_is_sat() {
         matches!(eval(&a, a2, &asg), Ok(Value::Bool(true))),
         "x=1 must replay true at the witness"
     );
-    let _ = (xs, ys);
 }
 
 /// Non-strict UNSAT (rational critical points, exhaustive): `x² + y² ≤ 1 ∧ x ≥ 2`.

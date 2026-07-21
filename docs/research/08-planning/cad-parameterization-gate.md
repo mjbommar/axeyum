@@ -1,6 +1,6 @@
 # CAD parameterization gate
 
-Status: accepted census; implementation staged
+Status: N1a accepted; N1b/N1c remain staged
 Date: 2026-07-20
 Baseline: Axeyum `12f85d19`
 
@@ -156,3 +156,32 @@ projection/root preparation while leaving strict and non-strict sampling in
 separate wrappers. N1c is optional and should proceed only if the explicit cell
 policy is easier to audit than the two 90-line visitors. Algebraic
 genericization has no current authorization.
+
+## N1a result
+
+N1a landed as the gate specified. One private `decide_rational_cell` owns the
+rational substitution, constant folding, residual conversion, and univariate
+decision. `decide_strict_cell` and `decide_nonstrict_cell` remain named wrappers;
+their callers and every projection, sample, budget, deadline, algebraic, and
+replay path are unchanged.
+
+The production file falls from 7,544 lines / 333,529 bytes to 7,521 lines /
+332,505 bytes. The modest reduction is the intended result of preserving the
+two semantic wrappers and their documentation rather than maximizing line-count
+movement.
+
+Two pre/post exact-result controls pin the complete deterministic models:
+
+- strict quarter-disk: `x = 1, y = 1`; and
+- non-strict rational boundary: `x = 1, y = 0`.
+
+All 86 focused NRA tests pass. The fixed 2,000-seed Z3 sweep reports 1,807
+joint decisions, 1,807 agreements, 1,293 independently replayed SAT models,
+zero Z3 skips, and `DISAGREEMENTS: 0`; two outer worker timeouts are diagnostic.
+All 891 all-feature solver-library tests, strict all-target Clippy, both
+warning-denied rustdoc profiles, formatting of the touched Rust files, link
+checks, and the kernel OOM audit pass under the bounded profile.
+
+This evidence accepts N1a only. N1b still needs a pre-change review of the
+strict-only entry poll and an exact projection-result seam; it must not become a
+sampling refactor. N1c and algebraic genericization remain unauthorized.

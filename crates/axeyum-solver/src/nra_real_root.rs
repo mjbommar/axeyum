@@ -3066,12 +3066,13 @@ enum CellOutcome {
     Unsat,
 }
 
-/// Substitute the RATIONAL `keep := s` into every atom of the strict component,
-/// producing a conjunction of single-variable strict constraints in `elim`, and
-/// decide it with the sign-cell decider [`decide_system_value`]. `None` declines
-/// (overflow during substitution, a degenerate residual that loses `elim`, or an
-/// indeterminate sub-decision ⇒ we never claim Unsat with a gap).
-fn decide_strict_cell(
+/// Substitute the rational `keep := s` into every atom, preserve each atom's
+/// original comparator, and decide the resulting univariate system in `elim`.
+/// This is the common mechanism for strict open-cell samples and non-strict
+/// rational open/section samples; the callers retain the distinct cell-coverage
+/// policies. `None` declines on overflow, a degenerate residual, or an
+/// indeterminate sub-decision.
+fn decide_rational_cell(
     comp: &[&MultiAtom],
     keep: SymbolId,
     elim: SymbolId,
@@ -3082,10 +3083,9 @@ fn decide_strict_cell(
     let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
     for atom in comp {
         let residual = substitute_rationals(&atom.poly, &subst)?;
-        // After fixing `keep`, the atom is univariate in `elim` (or constant).
         if residual.vars().is_empty() {
-            // A constant strict comparison `c ⋈ 0`: false ⇒ the whole cell is
-            // Unsat; true ⇒ the atom is vacuous and dropped.
+            // A constant comparison `c ⋈ 0`: false makes the cell Unsat; true is
+            // vacuous and can be dropped.
             let c = residual
                 .terms
                 .get(&Vec::new())
@@ -3098,8 +3098,7 @@ fn decide_strict_cell(
         }
         let poly = residual.to_single_var_integer_poly(elim)?;
         if poly.len() <= 1 {
-            // Should not happen (residual has `elim`), but stay safe.
-            return None;
+            return None; // residual mentions `elim` yet collapsed: decline
         }
         single_atoms.push(Atom {
             cmp: atom.cmp,
@@ -3107,15 +3106,28 @@ fn decide_strict_cell(
         });
     }
     if single_atoms.is_empty() {
-        // Every atom collapsed to a satisfied constant ⇒ the cell is satisfiable;
-        // any rational `elim` value (0) is a witness for the surviving (empty)
-        // constraint set.
+        // Every atom collapsed to a satisfied constant. Zero is a witness for
+        // the empty residual system.
         return Some(CellOutcome::Sat(Value::Real(Rational::zero())));
     }
     match decide_system_value(&single_atoms)? {
         SystemVerdict::Unsat => Some(CellOutcome::Unsat),
         SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
     }
+}
+
+/// Substitute the RATIONAL `keep := s` into every atom of the strict component,
+/// producing a conjunction of single-variable strict constraints in `elim`, and
+/// decide it with the sign-cell decider [`decide_system_value`]. `None` declines
+/// (overflow during substitution, a degenerate residual that loses `elim`, or an
+/// indeterminate sub-decision ⇒ we never claim Unsat with a gap).
+fn decide_strict_cell(
+    comp: &[&MultiAtom],
+    keep: SymbolId,
+    elim: SymbolId,
+    s: Rational,
+) -> Option<CellOutcome> {
+    decide_rational_cell(comp, keep, elim, s)
 }
 
 // ============================================================================
@@ -3389,42 +3401,7 @@ fn decide_nonstrict_cell(
     elim: SymbolId,
     s: Rational,
 ) -> Option<CellOutcome> {
-    let mut subst: BTreeMap<SymbolId, Rational> = BTreeMap::new();
-    subst.insert(keep, s);
-    let mut single_atoms: Vec<Atom> = Vec::with_capacity(comp.len());
-    for atom in comp {
-        let residual = substitute_rationals(&atom.poly, &subst)?;
-        if residual.vars().is_empty() {
-            // A constant comparison `c ⋈ 0`: false ⇒ the whole cell is Unsat;
-            // true ⇒ the atom is vacuous and dropped.
-            let c = residual
-                .terms
-                .get(&Vec::new())
-                .copied()
-                .unwrap_or_else(Rational::zero);
-            if !sign_satisfies(atom.cmp, Sign::of_rational(c)) {
-                return Some(CellOutcome::Unsat);
-            }
-            continue;
-        }
-        let poly = residual.to_single_var_integer_poly(elim)?;
-        if poly.len() <= 1 {
-            return None; // residual mentions `elim` yet collapsed ⇒ decline
-        }
-        single_atoms.push(Atom {
-            cmp: atom.cmp,
-            poly,
-        });
-    }
-    if single_atoms.is_empty() {
-        // Every atom collapsed to a satisfied constant ⇒ the cell is satisfiable;
-        // any rational `elim` value (0) witnesses the (empty) residual system.
-        return Some(CellOutcome::Sat(Value::Real(Rational::zero())));
-    }
-    match decide_system_value(&single_atoms)? {
-        SystemVerdict::Unsat => Some(CellOutcome::Unsat),
-        SystemVerdict::Sat(v) => Some(CellOutcome::Sat(v)),
-    }
+    decide_rational_cell(comp, keep, elim, s)
 }
 
 // ============================================================================

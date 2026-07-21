@@ -322,6 +322,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-20 — N1a shares only the rational CAD cell mechanism.** One private
+  `decide_rational_cell` now owns rational substitution, constant folding, and
+  univariate decision behind the unchanged strict/non-strict wrappers. Exact
+  deterministic models remain `(x=1,y=1)` and `(x=1,y=0)`. All 86 focused NRA
+  tests, the fixed 2,000-seed Z3 sweep (1,807 joint decisions, 1,807 agreements,
+  1,293 replayed SAT, zero disagreements), all 891 library tests, strict Clippy,
+  both rustdoc profiles, links, and the OOM audit pass under the bounded cap.
+  `nra_real_root.rs` is 7,521 lines, down 23. Next: review N1b's projection-only
+  seam and the strict-only entry deadline poll; do not combine it with sampling
+  or algebraic traversal.
+
 - **2026-07-20 — N1 freezes the semantic gate before CAD
   parameterization.** The 7,544-line `nra_real_root.rs` does contain duplicated
   rational cell and projection mechanics, but strict open-cell coverage,
@@ -5648,6 +5659,11 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured (Maestro / Hubris / Tock / Asterinas-OSTD slice / rust-sel4 task) | TODO — the measured-not-seeded rule applies doubly: the exit is a committed scoreboard result on someone else's code (module verified or bug found+reproduced), DISAGREE=0, wall-times recorded |
 
 ## Changelog
+
+- **2026-07-20 — N1a deduplicates rational CAD cell decision.** Strict and
+  non-strict coverage remain in their named wrappers while one private helper
+  owns their identical rational residual decision. Exact models, focused NRA,
+  2,000-seed differential/replay, 891-library, lint/doc, and OOM gates pass.
 
 - **2026-07-20 — N1 preregisters the CAD parameterization gate.** The measured
   census separates duplicated rational mechanics from strict/non-strict cell

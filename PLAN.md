@@ -515,8 +515,16 @@ session state.
 >    rational substitution/univariate cell decision behind the existing strict
 >    and non-strict wrappers. Projection, cell selection, budget charges,
 >    deadline polls, algebraic fallback, witness order, and public paths do not
->    change in that checkpoint. N1b/N1c remain gated candidates, not implied
->    follow-ons. Revisit the 4,531-line ABV replay/repair residual only
+>    change in that checkpoint. N1a is now complete: one private helper owns
+>    rational substitution/constant folding/univariate decision while the two
+>    semantic wrappers remain. Exact models stay `(x=1,y=1)` for the strict
+>    quarter-disk and `(x=1,y=0)` for the non-strict boundary. All 86 focused
+>    NRA tests, the 2,000-seed Z3 differential sweep (1,807/1,807 joint
+>    agreements, 1,293 replayed SAT, `DISAGREEMENTS: 0`), all 891 library tests,
+>    strict Clippy, both rustdoc profiles, links, and the OOM audit pass. The
+>    file falls 7,544→7,521 lines. N1b/N1c remain gated candidates, not implied
+>    follow-ons; review the strict-only deadline poll before any projection
+>    extraction. Revisit the 4,531-line ABV replay/repair residual only
 >    with a seam that preserves its shared ROW ownership and test privacy rather
 >    than widening dozens of helpers for a cosmetic file move.
 >
