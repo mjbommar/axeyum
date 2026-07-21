@@ -3303,6 +3303,42 @@ pub fn matrix_exp(matrix: &Matrix, t: &str) -> Option<Matrix> {
     Some(result)
 }
 
+/// Solve the **linear ODE system** `x′(t) = A·x(t)` with initial condition
+/// `x(0) = x0`, for a diagonalizable rational matrix `A`. The unique solution is
+/// `x(t) = e^{A·t}·x0` (see [`matrix_exp`]); returned as the solution vector (an
+/// `n × 1` [`Matrix`] of [`CasExpr`] in the symbol `t`), simplified entrywise.
+///
+/// **Certified**: `matrix_exp` proves `d/dt e^{At} = A·e^{At}` and `e^{A·0}=I`, so
+/// `x′ = A·x` and `x(0) = x0` hold by construction. Returns `None` if `A` is not
+/// square/diagonalizable over ℚ, `x0` is not an `n × 1` matrix, or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, Matrix, linear_ode_system, equal, ZeroTest};
+/// // x′ = [[1,0],[0,2]]·x, x(0) = (1,1)  ⇒  x(t) = (e^t, e^{2t}).
+/// let a = Matrix::from_rows(vec![
+///     vec![CasExpr::int(1), CasExpr::zero()],
+///     vec![CasExpr::zero(), CasExpr::int(2)],
+/// ]).unwrap();
+/// let x0 = Matrix::from_rows(vec![vec![CasExpr::int(1)], vec![CasExpr::int(1)]]).unwrap();
+/// let x = linear_ode_system(&a, &x0, "t").unwrap();
+/// let t = CasExpr::var("t");
+/// assert!(matches!(equal(x.get(0, 0).unwrap(), &t.clone().exp()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn linear_ode_system(matrix: &Matrix, initial: &Matrix, t: &str) -> Option<Matrix> {
+    let n = matrix.rows();
+    if initial.rows() != n || initial.cols() != 1 {
+        return None;
+    }
+    let fundamental = matrix_exp(matrix, t)?;
+    let solution = fundamental.mul(initial)?;
+    // Simplify each solution component for a clean result.
+    let rows: Vec<Vec<CasExpr>> = (0..n)
+        .map(|i| Some(vec![simplify(solution.get(i, 0)?)]))
+        .collect::<Option<_>>()?;
+    Matrix::from_rows(rows)
+}
+
 /// A square rational-constant matrix as an exact rational grid, or `None` if any
 /// entry is not a bare [`CasExpr::Const`].
 fn matrix_to_rationals(matrix: &Matrix) -> Option<Vec<Vec<Rational>>> {
@@ -7038,6 +7074,31 @@ mod tests {
         ])
         .unwrap();
         assert!(matrix_exp(&shear, "t").is_none());
+    }
+
+    #[test]
+    fn linear_ode_system_satisfies_ivp() {
+        // x′ = [[0,1],[-2,-3]]·x, x(0) = (1, 0). Solution x(t) with x′ = A·x.
+        let a = Matrix::from_rows(vec![
+            vec![CasExpr::int(0), CasExpr::int(1)],
+            vec![CasExpr::int(-2), CasExpr::int(-3)],
+        ])
+        .unwrap();
+        let x0 = Matrix::from_rows(vec![vec![CasExpr::int(1)], vec![CasExpr::int(0)]]).unwrap();
+        let x = linear_ode_system(&a, &x0, "t").expect("diagonalizable system");
+        // x(0) = x0.
+        for i in 0..2 {
+            let at_zero = x.get(i, 0).unwrap().substitute("t", &CasExpr::zero());
+            assert_equal(&at_zero, x0.get(i, 0).unwrap());
+        }
+        // x′(t) = A·x(t) componentwise.
+        let ax = a.mul(&x).unwrap();
+        for i in 0..2 {
+            assert_equal(&x.get(i, 0).unwrap().differentiate("t"), ax.get(i, 0).unwrap());
+        }
+        // Wrong-shaped initial condition is declined.
+        let bad = Matrix::from_rows(vec![vec![CasExpr::int(1)]]).unwrap();
+        assert!(linear_ode_system(&a, &bad, "t").is_none());
     }
 
     #[test]
