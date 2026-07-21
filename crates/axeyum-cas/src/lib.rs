@@ -6625,6 +6625,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_sqrt_power(expr, var),
         integrate_exp_quadratic_usub(expr, var),
         integrate_power_of_inner(expr, var),
+        integrate_log_derivative(expr, var),
         integrate_split_fraction(expr, var),
     ]
     .into_iter()
@@ -7842,6 +7843,21 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     None
 }
 
+/// ∫ k·g′(x)/g(x) dx = k·ln(g(x)) — the logarithmic-derivative rule for a general
+/// (possibly transcendental) `g`, catching what the rational log path can't:
+/// `∫cos x/sin x = ln(sin x)`, `∫(2x−1)/(x²−x+5) = ln(x²−x+5)`. Certified downstream.
+fn integrate_log_derivative(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(num, den) = expr else {
+        return None;
+    };
+    let gprime = den.differentiate(var);
+    let (rn, rg) = (normalize_rational(num)?, normalize_rational(&gprime)?);
+    let lhs = rn.num.mul(&rg.den)?;
+    let rhs = rg.num.mul(&rn.den)?;
+    let k = multipoly_proportion(&lhs, &rhs)?;
+    Some(scaled_term(k, den.as_ref().clone().ln()))
+}
+
 /// Elementary-function integration by table, for `k · f(a·x + b)` where `f` is a
 /// standard elementary function and the argument is linear in `var`. Returns the
 /// antiderivative or `None` outside the supported shapes; certified downstream.
@@ -7991,23 +8007,24 @@ fn integrate_log_part(var: &str, c: &[Rational], d: &[Rational]) -> Option<CasEx
 }
 
 /// `∫ (c₁·x + c₀)/(a·x² + b·x + d) dx` for an **irreducible** quadratic
-/// (discriminant `b² − 4ad < 0`) whose `√(4ad − b²)` is rational:
+/// (discriminant `b² − 4ad < 0`):
 /// `(c₁/2a)·ln(a·x²+b·x+d) + ((2a·c₀ − b·c₁)/(a·s))·atan((2a·x + b)/s)`,
-/// `s = √(4ad − b²)`. Declines (`None`) when the root is irrational (needs
-/// algebraic numbers). Certified downstream by differentiate-and-check.
+/// `s = √(4ad − b²)`. When `s` is rational the atan is built with rational
+/// coefficients; otherwise it is built with a **symbolic surd** `√(4ad − b²)`
+/// (e.g. `∫1/(x²+x+1) = (2/√3)·atan((2x+1)/√3)`). The surd squares away under
+/// differentiation, so either way the certificate is rational.
 fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) -> Option<CasExpr> {
     let a = dd[2];
     let b = dd.get(1).copied().unwrap_or_else(Rational::zero);
     let d = dd.first().copied().unwrap_or_else(Rational::zero);
     let c1 = cc.get(1).copied().unwrap_or_else(Rational::zero);
     let c0 = cc.first().copied().unwrap_or_else(Rational::zero);
-    // 4ad − b² must be positive (irreducible) and a perfect rational square.
+    // 4ad − b² must be positive (no real roots).
     let four_ad = Rational::integer(4).checked_mul(a)?.checked_mul(d)?;
     let neg_disc = four_ad.checked_sub(b.checked_mul(b)?)?;
     if neg_disc.numerator() <= 0 {
         return None; // real roots — handled by the rational-root path, not here
     }
-    let s = rational_sqrt(neg_disc)?;
     let two_a = Rational::integer(2).checked_mul(a)?;
 
     let mut parts: Vec<CasExpr> = Vec::new();
@@ -8020,22 +8037,37 @@ fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) 
         );
         parts.push(scaled_term(ln_coeff, ln));
     }
-    // atan term: coefficient (2a·c₀ − b·c₁)/(a·s), argument (2a·x + b)/s.
-    let atan_coeff = two_a
-        .checked_mul(c0)?
-        .checked_sub(b.checked_mul(c1)?)?
-        .checked_div(a.checked_mul(s)?)?;
-    if !atan_coeff.is_zero() {
-        let arg =
-            MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?]).to_expr();
-        let atan = CasExpr::Unary(UnaryFunc::Atan, Box::new(arg));
-        parts.push(if atan_coeff == Rational::integer(1) {
-            atan
-        } else if atan_coeff == Rational::integer(-1) {
-            CasExpr::Neg(Box::new(atan))
+    // atan numerator (2a·c₀ − b·c₁); the term is that over (a·s), argument (2a·x+b)/s.
+    let atan_top = two_a.checked_mul(c0)?.checked_sub(b.checked_mul(c1)?)?;
+    if !atan_top.is_zero() {
+        if let Some(s) = rational_sqrt(neg_disc) {
+            // Rational surd — clean rational coefficients.
+            let atan_coeff = atan_top.checked_div(a.checked_mul(s)?)?;
+            let arg = MultiPoly::from_univariate(var, &[b.checked_div(s)?, two_a.checked_div(s)?])
+                .to_expr();
+            let atan = CasExpr::Unary(UnaryFunc::Atan, Box::new(arg));
+            parts.push(if atan_coeff == Rational::integer(1) {
+                atan
+            } else if atan_coeff == Rational::integer(-1) {
+                CasExpr::Neg(Box::new(atan))
+            } else {
+                CasExpr::Mul(vec![CasExpr::Const(atan_coeff), atan])
+            });
         } else {
-            CasExpr::Mul(vec![CasExpr::Const(atan_coeff), atan])
-        });
+            // Irrational surd: build atan with a symbolic √(4ad − b²). The coefficient
+            // (2a·c₀ − b·c₁)/a folds out the rational part; 1/s stays symbolic.
+            let rational_top = atan_top.checked_div(a)?;
+            let inv_s = CasExpr::int(1) / CasExpr::Const(neg_disc).sqrt();
+            let arg = CasExpr::Mul(vec![
+                MultiPoly::from_univariate(var, &[b, two_a]).to_expr(),
+                inv_s.clone(),
+            ]);
+            parts.push(fold_trivial(&CasExpr::Mul(vec![
+                CasExpr::Const(rational_top),
+                inv_s,
+                CasExpr::Unary(UnaryFunc::Atan, Box::new(arg)),
+            ])));
+        }
     }
     match parts.len() {
         0 => None,
@@ -8624,11 +8656,13 @@ mod tests {
     }
 
     #[test]
-    fn integrate_declines_irrational_quadratic() {
-        // ∫ 1/(x²+2) dx = (1/√2)·atan(x/√2): the coefficient is irrational
-        // (needs algebraic numbers), so honest None — never a wrong answer.
+    fn integrate_irrational_quadratic_via_surd() {
+        // ∫ 1/(x²+2) dx = (1/√2)·atan(x/√2): now built with a symbolic surd √2
+        // (which squares away under differentiation, so the certificate is rational).
         let f = CasExpr::int(1) / (v("x").pow(2) + CasExpr::int(2));
-        assert!(integrate(&f, "x").is_none());
+        let r = integrate(&f, "x").expect("surd-atan integral");
+        assert!(r.is_certified());
+        assert_equal(&r.antiderivative.differentiate("x"), &f);
     }
 
     #[test]
@@ -11355,6 +11389,31 @@ mod tests {
         // Even powers are NOT elementary — must decline, never fabricate.
         assert!(integrate(&x().pow(2).exp(), "x").is_none_or(|c| !c.is_certified()));
         assert!(integrate(&(x().pow(2) * x().pow(2).exp()), "x").is_none_or(|c| !c.is_certified()));
+    }
+
+    #[test]
+    fn irreducible_quadratic_and_log_derivative_integrals() {
+        let x = || v("x");
+        // Irreducible quadratic denominators, incl. surd atan (D not a perfect square).
+        for integrand in [
+            CasExpr::int(1) / (x().pow(2) + x() + CasExpr::int(1)),   // (2/√3)atan((2x+1)/√3)
+            CasExpr::int(1) / (x().pow(2) - x() + CasExpr::int(1)),
+            (x() + CasExpr::int(1)) / (x().pow(2) + x() + CasExpr::int(1)), // ln + surd atan
+            CasExpr::int(1) / (CasExpr::int(2) * x().pow(2) + CasExpr::int(3)),
+        ] {
+            let r = integrate(&integrand, "x").expect("irreducible quadratic");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // Logarithmic derivative ∫g′/g = ln g for transcendental g.
+        for (integrand, g) in [
+            (x().cos() / x().sin(), x().sin()),                 // ∫cos/sin = ln(sin x)
+            (x().exp() / (x().exp() + CasExpr::int(1)), x().exp() + CasExpr::int(1)),
+        ] {
+            let r = integrate(&integrand, "x").expect("log-derivative");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative, &g.ln());
+        }
     }
 
     #[test]
