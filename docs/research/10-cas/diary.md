@@ -976,3 +976,34 @@ negative half-integers; Pell/Jacobsthal/Tribonacci/Motzkin/Eulerian/Narayana/Lah
 **415 unit + 143 doctests, clippy-pedantic clean (incl. examples), WASM-green.** Frontier
 remaining: Gamma/digamma **heads** (derivative tower), Bessel, multivariate factorization,
 Puiseux, Zeilberger, general Gruntz/Risch, arbitrary-precision N[expr,d].
+
+## 2026-07-21 — Entry 30: substitution/power-rule integration + a radical soundness fix (421 tests)
+
+Two more integral-defined heads (`BesselJ0/J1`, closed derivative pair J₀′=−J₁, J₁′=J₀−J₁/u)
+and the inverse pair `asin/acos/asinh/acosh` (415→419) with `∫1/√(1−x²)=asin`, `∫1/√(x²+1)=asinh`,
+`∫1/√(x²−1)=acosh`. Then a **substitution/power-rule wave** on the integrator, each certified by
+the usual differentiate-and-check:
+
+- **`atom_name` canonicalization** — sqrt/atom keys now key on the *normalized* argument, so
+  `√(1+x²)` and `√(x²+1)` share one atom and relate under `equal` (general zero-test robustness).
+- **`integrate_radical_usub`**: `∫k·f′/√f = 2k·√f` (`∫x/√(1−x²)=−√(1−x²)`, `∫(2x+1)/√(x²+x)`).
+- **`integrate_sqrt_power`**: the half-integer power rule the `Pow(_,u32)` representation can't
+  hold — `∫√x=(2/3)x√x`, `∫xᵐ√x`, `∫√(ax+b)`.
+- **`integrate_exp_quadratic_usub`**: `u=x²` reversal for an odd polynomial times `{exp,sin,cos}`
+  of a pure-quadratic argument — `∫x·e^{x²}=½e^{x²}`, `∫x·sin(x²)=−½cos x²`, `∫x³·cos(x²)`.
+- **`integrate_power_of_inner`**: the general reverse power rule `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` for a
+  factor `gⁿ` whose cofactor is a constant multiple of `g′` — `∫(ln x)²/x=(ln x)³/3`,
+  `∫eˣ(eˣ+1)²`, `∫atan²/(x²+1)`; handles both `Mul` and `Div` shapes. New `multipoly_proportion`
+  decides `rest = k·g′` over the atom-polynomial ring.
+
+**Soundness fix (important):** the zero-test's `fold_radical` only reduced `(√c)²=c` for rational
+*constant* radicands, so `equal(x/√x, √x)` and `equal((√x)², x)` certified **FALSE** — a
+relation-blind inequality on a true identity. Generalized it to symbolic radicands: `equal_core`
+resolves each sqrt atom's radicand from the compared expressions and passes the dictionary into
+`fold_radical`, which now reduces `sqrt(u)^{2k} → u^k` for any `u`. Sound wherever `√u` is real
+(`u≥0`). This is what makes the half-integer power rule certify (the derivative check folds
+`u/√u=√u`), and fixes radical arithmetic generally.
+
+**421 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining unchanged:
+Gamma/digamma heads, multivariate factorization, Puiseux, Zeilberger, general Gruntz/Risch,
+arbitrary-precision N[expr,d].

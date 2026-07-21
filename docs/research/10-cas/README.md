@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 417 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 421 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -20,7 +20,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation (definite) | `definite_sum` (Σ over bounds), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
-| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd + even powers), `∫f+g` (linearity), `∫ln x/x`, `∫1/(x ln x)`, `∫tan`, `∫atan`, `∫p·ln`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd + even powers), `∫f+g` (linearity), `∫ln x/x`, `∫1/(x ln x)`, `∫tan`, `∫atan`, `∫p·ln`; **substitution/power-rule family**: `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` (reverse power rule — `∫(ln x)²/x`, `∫eˣ(eˣ+1)²`, `∫sin·cos³`), `∫k·f′/√f = 2k√f`, half-integer power rule `∫√(ax+b)`/`∫xᵐ√x`, `u=x²` for `∫x·S(x²)·{eˣ²,sin,cos}`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`), `series`/`series_at`/`laurent_series` (incl. `tan`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` + `inverse_laplace`, `z_transform` + `inverse_z_transform` (discrete; simple poles, round-trip-certified) | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `dsolve_separable`, `dsolve_exact`, `dsolve_bernoulli`, `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
@@ -46,7 +46,8 @@ Heads: `exp, sin, cos, tan, ln, atan, sqrt, abs`, the inverse pair
 `asin/acos/asinh/acosh`, and the special functions `erf, Si, Ci, Ei, li, Shi, Chi,
 FresnelS, FresnelC, BesselJ0, BesselJ1` (extensible `Unary` — each adds a `name`,
 derivative, `series` rule, and `evalf` kernel; everything else is catch-all). The zero-test
-carries sound folds — `I²=−1`, Pythagorean `sin²+cos²=1`, `sqrt(c)²=c`, and the
+carries sound folds — `I²=−1`, Pythagorean `sin²+cos²=1`, the **symbolic radical
+fold** `(√u)²=u` for any `u` (not just constants — so `x/√x=√x` certifies), and the
 **exp tower** (`exp(A+B)=exp(A)exp(B)`, `exp(2x)=exp(x)²`, `exp(k·ln v)=vᵏ`) — which
 is what makes complex arithmetic, radical arithmetic, first-order ODEs, and
 recurrences certify. Progress log: [diary.md](diary.md).
