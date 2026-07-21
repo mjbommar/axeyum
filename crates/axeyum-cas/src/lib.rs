@@ -4756,12 +4756,103 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
     }
+    // At ±∞, an exponential dominates any rational factor: `R(x)·∏exp(cᵢx)^{±} → 0`
+    // when the net exponential rate decays (e.g. `x²/eˣ → 0`).
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_exp_dominated(expr, var, point)
+    {
+        return Some(value);
+    }
     // Series fallback for transcendental `0/0` forms at a finite point
     // (`sin x/x → 1`, `(1−cos x)/x² → 1/2`, `(eˣ−1)/x → 1`).
     if let LimitPoint::Finite(a) = point {
         return limit_via_series(expr, var, a);
     }
     None
+}
+
+/// Limit at `±∞` of a product/quotient `R(x)·∏ exp(cᵢ·x)^{±}` where `R` is a
+/// rational function of `var`: the **net exponential rate** decides. An
+/// exponential beats any rational factor, so if the net rate is strictly negative
+/// in the direction of the limit the value is `0`. A positive net rate diverges
+/// (`None`); a zero net rate leaves it to the rational path. `None` if any factor
+/// is outside `{rational function, exp(linear·var)}` or the expression has a
+/// top-level sum (asymptotics of sums are not handled here).
+fn limit_exp_dominated(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    let mut rate = Rational::zero();
+    if !accumulate_exp_rate(expr, var, Rational::integer(1), &mut rate) {
+        return None;
+    }
+    if rate.is_zero() {
+        return None; // no net exponential — not this path
+    }
+    // Rate acts along +x; at −∞ the effective sign flips.
+    let effective = match point {
+        LimitPoint::NegInfinity => rate.checked_neg()?,
+        _ => rate,
+    };
+    if effective.numerator() < 0 {
+        Some(CasExpr::zero()) // decay beats the rational factor
+    } else {
+        None // growth → ±∞
+    }
+}
+
+/// Walk a product/quotient, adding `sign·cᵢ` to `rate` for each `exp(cᵢ·var)`
+/// factor and verifying every non-exponential factor is a rational function of
+/// `var` (finite polynomial growth). Returns `false` if any factor is outside the
+/// supported shape. `sign` carries the numerator/denominator and power multiplicity.
+fn accumulate_exp_rate(expr: &CasExpr, var: &str, sign: Rational, rate: &mut Rational) -> bool {
+    match expr {
+        CasExpr::Mul(_) => flatten_mul(expr)
+            .iter()
+            .all(|f| accumulate_exp_rate(f, var, sign, rate)),
+        CasExpr::Div(a, b) => {
+            let Some(neg) = sign.checked_neg() else {
+                return false;
+            };
+            accumulate_exp_rate(a, var, sign, rate) && accumulate_exp_rate(b, var, neg, rate)
+        }
+        CasExpr::Neg(inner) => accumulate_exp_rate(inner, var, sign, rate),
+        CasExpr::Pow(base, exponent) => {
+            // exp(c·x)^k contributes k·c; a rational-function base stays rational.
+            if let CasExpr::Unary(UnaryFunc::Exp, _) = base.as_ref() {
+                match sign.checked_mul(Rational::integer(i128::from(*exponent))) {
+                    Some(scaled) => accumulate_exp_rate(base, var, scaled, rate),
+                    None => false,
+                }
+            } else {
+                is_rational_function(expr, var)
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            // Only exp(c·var) (linear, no constant that would just be a factor).
+            match linear_var_coefficient(arg, var) {
+                Some(coeff) => match sign.checked_mul(coeff) {
+                    Some(contribution) => {
+                        *rate = match rate.checked_add(contribution) {
+                            Some(sum) => sum,
+                            None => return false,
+                        };
+                        true
+                    }
+                    None => false,
+                },
+                None => false,
+            }
+        }
+        // Anything else must be a plain rational function of `var` (bounded growth).
+        _ => is_rational_function(expr, var),
+    }
+}
+
+/// Whether `expr` is a univariate rational function of `var` (so it grows at most
+/// polynomially, and an exponential factor dominates it at `±∞`).
+fn is_rational_function(expr: &CasExpr, var: &str) -> bool {
+    let Some(rf) = normalize_rational(expr) else {
+        return false;
+    };
+    rf.num.to_univariate(var).is_some() && rf.den.to_univariate(var).is_some()
 }
 
 /// The limit over the **rational-function** fragment: continuous evaluation, `0/0`
@@ -7042,6 +7133,36 @@ mod tests {
         );
         // pole: lim_{x→2} 1/(x−2) has no finite limit
         assert!(limit(&(CasExpr::int(1) / (x() - CasExpr::int(2))), "x", at(2)).is_none());
+    }
+
+    #[test]
+    fn limits_with_exponential_dominance() {
+        let x = || v("x");
+        // Exp beats any polynomial: x²/eˣ → 0, x⁵·e^{−x} → 0, (x²+1)/e^{2x} → 0.
+        assert_equal(
+            &limit(&(x().pow(2) / x().exp()), "x", LimitPoint::PosInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(
+                &(x().pow(5) * (CasExpr::int(-1) * x()).exp()),
+                "x",
+                LimitPoint::PosInfinity,
+            )
+            .unwrap(),
+            &CasExpr::zero(),
+        );
+        // eˣ → 0 as x → −∞; x·eˣ → 0 as x → −∞.
+        assert_equal(
+            &limit(&x().exp(), "x", LimitPoint::NegInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(&(x() * x().exp()), "x", LimitPoint::NegInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        // Growth diverges (no finite limit): eˣ/x → +∞.
+        assert!(limit(&(x().exp() / x()), "x", LimitPoint::PosInfinity).is_none());
     }
 
     #[test]
