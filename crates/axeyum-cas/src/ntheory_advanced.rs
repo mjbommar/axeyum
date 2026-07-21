@@ -25,7 +25,7 @@
 
 use std::collections::BTreeMap;
 
-use crate::ntheory::{divisors, euler_phi, factorize, gcd, is_prime, mod_pow};
+use crate::ntheory::{divisors, euler_phi, extended_gcd, factorize, gcd, is_prime, mod_pow};
 
 // ---------------------------------------------------------------------------
 // Internal overflow-safe helpers
@@ -299,6 +299,43 @@ pub fn sqrt_mod(a: i128, p: i128) -> Option<i128> {
         remainder = mul_mod(remainder, generator)?;
         root = mul_mod(root, factor)?;
     }
+}
+
+/// Solve the **linear congruence** `a·x ≡ b (mod n)`, returning **all** solutions
+/// in `[0, n)` sorted ascending. Let `g = gcd(a, n)`: there is a solution iff
+/// `g | b`, and then exactly `g` of them, `x₀ + k·(n/g)` for `k = 0..g`. An empty
+/// vector means no solution (`g ∤ b`); `None` only for `n ≤ 0`.
+///
+/// Each returned `x` re-checks directly: `a·x ≡ b (mod n)`.
+///
+/// # Examples
+///
+/// ```
+/// use axeyum_cas::ntheory_advanced::solve_linear_congruence;
+/// // 3x ≡ 6 (mod 9): gcd(3,9)=3 | 6, three solutions {2, 5, 8}.
+/// assert_eq!(solve_linear_congruence(3, 6, 9), Some(vec![2, 5, 8]));
+/// // 2x ≡ 3 (mod 4): gcd(2,4)=2 ∤ 3, no solution.
+/// assert_eq!(solve_linear_congruence(2, 3, 4), Some(vec![]));
+/// ```
+#[must_use]
+pub fn solve_linear_congruence(a: i128, b: i128, n: i128) -> Option<Vec<i128>> {
+    if n <= 0 {
+        return None;
+    }
+    // divisor = gcd(a, n); bezout·a ≡ divisor (mod n).
+    let (divisor, bezout, _t) = extended_gcd(a.rem_euclid(n), n);
+    if b.rem_euclid(n) % divisor != 0 {
+        return Some(Vec::new()); // divisor ∤ b — no solution
+    }
+    let step = n / divisor;
+    // Base solution x₀ = (b/divisor)·bezout (mod step), b reduced mod n (divisor | both).
+    let base = (b.rem_euclid(n) / divisor)
+        .checked_mul(bezout)?
+        .rem_euclid(step);
+    let mut solutions: Vec<i128> =
+        (0..divisor).map(|k| (base + k * step).rem_euclid(n)).collect();
+    solutions.sort_unstable();
+    Some(solutions)
 }
 
 /// Multiplicative order of `a` modulo `n`: the least `k > 0` with `a^k ≡ 1`.
@@ -648,6 +685,26 @@ mod tests {
                 assert_eq!(is_quadratic_residue(a, p), brute_is_qr, "QR({a}, {p})");
             }
         }
+    }
+
+    #[test]
+    fn linear_congruences() {
+        // Every returned x satisfies a·x ≡ b (mod n), the count is gcd(a,n) when
+        // solvable, and 0 when gcd(a,n) ∤ b — checked exhaustively for small moduli.
+        for n in 1..=20i128 {
+            for a in 0..n {
+                for b in 0..n {
+                    let solutions = solve_linear_congruence(a, b, n).unwrap();
+                    // Brute-force truth set.
+                    let brute: Vec<i128> =
+                        (0..n).filter(|&x| (a * x).rem_euclid(n) == b).collect();
+                    assert_eq!(solutions, brute, "{a}x≡{b} (mod {n})");
+                }
+            }
+        }
+        assert_eq!(solve_linear_congruence(3, 6, 9), Some(vec![2, 5, 8]));
+        assert_eq!(solve_linear_congruence(2, 3, 4), Some(vec![]));
+        assert_eq!(solve_linear_congruence(1, 0, 0), None); // non-positive modulus
     }
 
     #[test]
