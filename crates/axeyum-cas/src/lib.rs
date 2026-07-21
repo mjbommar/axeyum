@@ -2849,6 +2849,55 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
     ])
 }
 
+/// The **falling factorial** `base^{(n)} = base·(base−1)···(base−n+1)` (`n` factors;
+/// `1` when `n = 0`), expanded to canonical form. Its forward difference obeys the
+/// finite-calculus power rule `Δ[x^{(n)}] = n·x^{(n−1)}`.
+#[must_use]
+pub fn falling_factorial(base: &CasExpr, n: u32) -> CasExpr {
+    let factors: Vec<CasExpr> = (0..n)
+        .map(|i| base.clone() - CasExpr::int(i128::from(i)))
+        .collect();
+    let product = match factors.len() {
+        0 => return CasExpr::one(),
+        1 => factors.into_iter().next().unwrap_or_else(CasExpr::one),
+        _ => CasExpr::Mul(factors),
+    };
+    expand(&product).unwrap_or(product)
+}
+
+/// The **rising factorial** (Pochhammer symbol) `base^{(n)↑} =
+/// base·(base+1)···(base+n−1)` (`n` factors; `1` when `n = 0`), expanded to
+/// canonical form.
+#[must_use]
+pub fn rising_factorial(base: &CasExpr, n: u32) -> CasExpr {
+    let factors: Vec<CasExpr> = (0..n)
+        .map(|i| base.clone() + CasExpr::int(i128::from(i)))
+        .collect();
+    let product = match factors.len() {
+        0 => return CasExpr::one(),
+        1 => factors.into_iter().next().unwrap_or_else(CasExpr::one),
+        _ => CasExpr::Mul(factors),
+    };
+    expand(&product).unwrap_or(product)
+}
+
+/// The **forward difference** `Δf = f(var+1) − f(var)`, expanded to canonical form —
+/// the discrete analogue of the derivative.
+#[must_use]
+pub fn forward_difference(f: &CasExpr, var: &str) -> CasExpr {
+    let shifted = f.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
+    let difference = shifted - f.clone();
+    expand(&difference).unwrap_or(difference)
+}
+
+/// The **backward difference** `∇f = f(var) − f(var−1)`, expanded to canonical form.
+#[must_use]
+pub fn backward_difference(f: &CasExpr, var: &str) -> CasExpr {
+    let shifted = f.substitute(var, &(CasExpr::var(var) - CasExpr::int(1)));
+    let difference = f.clone() - shifted;
+    expand(&difference).unwrap_or(difference)
+}
+
 /// The Hessian matrix `H[i][j] = ∂²f/∂xᵢ∂xⱼ` of a scalar field `f` over `vars` — the
 /// symmetric matrix of second partial derivatives, each entry expanded to canonical
 /// form and certified (a second partial of the certified `differentiate`). `None`
@@ -5234,6 +5283,30 @@ mod tests {
 
         // exp(x) about a nonzero center leaves the rational fragment → None.
         assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
+    }
+
+    #[test]
+    fn finite_difference_calculus() {
+        let x = || v("x");
+        // Falling factorial x⁽³⁾ = x(x−1)(x−2) = x³ − 3x² + 2x.
+        let ff3 = falling_factorial(&x(), 3);
+        assert_equal(&ff3, &(x().pow(3) - CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x()));
+        // The finite power rule: Δ[x⁽³⁾] = 3·x⁽²⁾.
+        assert_equal(
+            &forward_difference(&ff3, "x"),
+            &(CasExpr::int(3) * falling_factorial(&x(), 2)),
+        );
+        // Rising factorial x⁽³⁾↑ = x(x+1)(x+2) = x³ + 3x² + 2x.
+        assert_equal(
+            &rising_factorial(&x(), 3),
+            &(x().pow(3) + CasExpr::int(3) * x().pow(2) + CasExpr::int(2) * x()),
+        );
+        // Forward difference of x² = 2x + 1; backward difference of x² = 2x − 1.
+        assert_equal(&forward_difference(&x().pow(2), "x"), &(CasExpr::int(2) * x() + CasExpr::int(1)));
+        assert_equal(&backward_difference(&x().pow(2), "x"), &(CasExpr::int(2) * x() - CasExpr::int(1)));
+        // Δ of a constant is 0; falling_factorial(x, 0) = 1.
+        assert_equal(&forward_difference(&CasExpr::int(5), "x"), &CasExpr::zero());
+        assert_equal(&falling_factorial(&x(), 0), &CasExpr::int(1));
     }
 
     #[test]
