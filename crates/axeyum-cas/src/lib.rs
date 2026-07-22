@@ -3438,11 +3438,29 @@ fn binomial_rat(n: usize, k: usize) -> Option<Rational> {
 /// ```
 #[must_use]
 pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) -> Option<CasExpr> {
-    let antidifference = sum_polynomial(f, var)?; // S(n) = Σ_{k=0}^{n-1} f(k)
+    // The antidifference `S` with `S(k+1) − S(k) = f(k)`: polynomial summands via
+    // `sum_polynomial`, hypergeometric/geometric ones (`Σ 2^k`, `Σ k·2^k`) via
+    // Gosper. Either way the definite sum telescopes to `S(upper+1) − S(lower)`
+    // (the additive constant cancels).
+    let (antidifference, expand_result) = match sum_polynomial(f, var) {
+        Some(s) => (s, true), // polynomial → expand to a clean monomial form
+        None => (gosper_sum(f, var)?, false), // geometric/hypergeometric → keep exp form
+    };
     let at_upper = antidifference.substitute(var, &(upper.clone() + CasExpr::int(1)));
     let at_lower = antidifference.substitute(var, lower);
     let result = at_upper - at_lower;
-    Some(expand(&result).unwrap_or(result))
+    if expand_result {
+        return Some(expand(&result).unwrap_or(result));
+    }
+    // Geometric/hypergeometric: with concrete integer bounds the result is a
+    // constant, so `simplify` collapses the `exp(k·ln c)` tower to an exact number
+    // (`Σ_{0}^{3} 2^k = 15`). With a symbolic bound, `simplify` would atomize the
+    // `exp`, so keep the clean, substitutable `exp((n+1)·ln c)` form instead.
+    if integer_constant(lower).is_some() && integer_constant(upper).is_some() {
+        Some(simplify(&result))
+    } else {
+        Some(fold_trivial(&fold_elementary_constants(&result)))
+    }
 }
 
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
@@ -9383,6 +9401,23 @@ mod tests {
         assert_equal(
             &definite_sum(&k().pow(2), "k", &CasExpr::int(3), &CasExpr::int(5)).unwrap(),
             &CasExpr::int(50),
+        );
+        // Geometric summands route through Gosper: Σ_{k=0}^{3} 2^k = 15.
+        let two_pow = geometric_power(Rational::integer(2), "k");
+        assert_equal(
+            &definite_sum(&two_pow, "k", &CasExpr::int(0), &CasExpr::int(3)).unwrap(),
+            &CasExpr::int(15),
+        );
+        // Σ_{k=1}^{4} k·2^k = 2+8+24+64 = 98.
+        let k_two_pow = CasExpr::Mul(vec![k(), geometric_power(Rational::integer(2), "k")]);
+        assert_equal(
+            &definite_sum(&k_two_pow, "k", &CasExpr::int(1), &CasExpr::int(4)).unwrap(),
+            &CasExpr::int(98),
+        );
+        // Σ_{k=0}^{5} 2^k = 63 = 2⁶ − 1.
+        assert_equal(
+            &definite_sum(&two_pow, "k", &CasExpr::int(0), &CasExpr::int(5)).unwrap(),
+            &CasExpr::int(63),
         );
     }
 
