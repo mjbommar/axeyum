@@ -252,6 +252,33 @@ resulting parity map is trustworthy rather than corrupted by harness faults.
 
 **s4:** `2667/8043`, WRONG=2 (stale binary). **Health:** green, 35 °C.
 
+### Cycle 11 — 2026-07-22 (~13:15 EDT) — trigger: Lean M3 landing (major)
+
+Interim minor merges since cycle 9 (batched, all gated green): SMT `14b54be9`
+keep-staged-immutable, `84b40626` seal-E3-env+fault-evidence; Lean docs
+`ab5dbf99`/`d03ba0fc` (M3 integrity/survivor evidence).
+
+**Micro — the M3 implementation landed:** Lean `6a2afdd5 Harden nested inductive
+restoration evidence` (→ main `0569c9cf`) — **+3826 lines**: `inductive.rs` +170,
+`inductive_tests.rs` +841, new **2817-line** `nested_inductive_grammar.rs`. The
+grammar test is a **systematic 640-case matrix** — `admit:320, reject:320` with a
+mutation-check grid (`auxiliary-count-and-order`, `deduplicated-reuse`,
+`distinct-specialization`, `motive-and-minor-order`, `recursor-dependency-target`,
+`restored-rule-constructor-and-nfields`, `temporary-name-leakage`,
+**`typed-rejection-rollback:320`**). In-lane, merge-clean. **Gate: GREEN** —
+grammar matrix `generated_nested_inductive_grammar_is_complete_and_byte_identical`
+passes (64.9s, all 640 cases, byte-identical/deterministic); kernel lib **188
+passed** (+3); `cargo check --workspace` exit 0.
+
+**Macro.** The Lean leg reaches a milestone: nested-inductive elimination is not
+just *implemented* (TL2.14, cycle 3) but **exhaustively characterized** — 320
+admissions and 320 typed rejections, each rejection verified to roll back with no
+partial environment mutation, and the whole grammar proven complete + byte-identical
+(reproducible). For a *trusted kernel*, this exhaustive-negative + transactional
++ deterministic coverage is the real bar; it's what lets nested inductives be
+admitted without widening the trusted base unsoundly. Lean-4-kernel parity on this
+feature is now genuinely close.
+
 ---
 
 ## Cycle log
