@@ -10,13 +10,16 @@
 //! - `has_fvars` — whether any free variable occurs in the node.
 //!
 //! Ported from nanoda's `expr.rs`, adapted to axeyum's interned handles instead
-//! of a lifetime-tagged arena (ADR-0036). nanoda's `Proj` and arbitrary-precision
-//! `NatLit` are simplified here: there is no `Proj` in this slice, and `Lit::Nat`
-//! holds a `u128` (arbitrary-precision `Nat` is **deferred** to a later slice —
-//! see [`Lit`]).
+//! of a lifetime-tagged arena (ADR-0036). `Proj` is represented directly;
+//! inference, reduction, and structure eta land in their separately gated
+//! TL2.3--TL2.5 slices. `Lit::Nat` uses canonical arbitrary-precision storage;
+//! typing and reduction remain separately gated by TL2.7 (see [`Lit`]).
+
+use std::fmt;
 
 use crate::level::LevelId;
 use crate::name::NameId;
+use num_bigint::BigUint;
 
 /// A lifetime-free, `Copy` handle to an interned [`ExprNode`].
 ///
@@ -51,18 +54,81 @@ pub enum BinderInfo {
     InstImplicit,
 }
 
+/// Canonical arbitrary-precision payload for a Lean natural-number literal.
+///
+/// Decimal parsing accepts only a non-empty sequence of ASCII digits. Leading
+/// zeroes are normalized by the numeric representation, and formatting always
+/// emits the canonical base-10 spelling. No fixed-width conversion is used.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct NatLit(BigUint);
+
+impl NatLit {
+    /// Parses a non-negative base-10 integer without imposing a width bound.
+    #[must_use]
+    pub fn from_decimal(value: &str) -> Option<Self> {
+        if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+            return None;
+        }
+        BigUint::parse_bytes(value.as_bytes(), 10).map(Self)
+    }
+
+    /// Whether this natural is zero.
+    pub(crate) fn is_zero(&self) -> bool {
+        self.0 == BigUint::default()
+    }
+
+    /// The predecessor of a positive natural.
+    pub(crate) fn predecessor(&self) -> Option<Self> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Self(&self.0 - BigUint::from(1_u8)))
+        }
+    }
+
+    /// The successor of this natural.
+    pub(crate) fn successor(&self) -> Self {
+        Self(&self.0 + BigUint::from(1_u8))
+    }
+}
+
+impl fmt::Display for NatLit {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(formatter)
+    }
+}
+
+macro_rules! impl_nat_lit_from_unsigned {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl From<$ty> for NatLit {
+                fn from(value: $ty) -> Self {
+                    Self(BigUint::from(value))
+                }
+            }
+        )+
+    };
+}
+
+impl_nat_lit_from_unsigned!(u8, u16, u32, u64, u128, usize);
+
 /// A literal value embeddable in an expression.
 ///
-/// `Nat` is currently a `u128`; arbitrary-precision natural-number literals
-/// (Lean uses a bignum here) are **deferred** to a later slice. `u128` is
-/// sufficient for the data-structure and de Bruijn work in this slice, and the
-/// public shape can later widen its payload type without changing the variant.
+/// Representation is complete for arbitrary-precision natural numbers, but
+/// literal typing and reduction remain fail-closed until TL2.7.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Lit {
-    /// A natural-number literal (bignum deferred; see type docs).
-    Nat(u128),
+    /// A natural-number literal with no fixed-width ceiling.
+    Nat(NatLit),
     /// A string literal.
     Str(String),
+}
+
+impl Lit {
+    /// Constructs a natural-number literal from any supported unsigned value.
+    pub fn nat(value: impl Into<NatLit>) -> Self {
+        Self::Nat(value.into())
+    }
 }
 
 /// Cached structural metadata recomputed once at intern time.
@@ -86,6 +152,14 @@ pub enum ExprNode {
     Sort(LevelId),
     /// A constant reference with universe arguments.
     Const(NameId, Vec<LevelId>),
+    /// A structure projection: structure type name, zero-based field index,
+    /// and the structure-valued expression being projected.
+    ///
+    /// The field index excludes constructor parameters, matching Lean's core
+    /// `Expr::Proj` and `lean4export` format 3.1. It is a fixed-width `u32` so
+    /// the representation is deterministic across native and WASM targets;
+    /// wire values outside this range must decline before construction.
+    Proj(NameId, u32, ExprId),
     /// Function application `fun arg`.
     App(ExprId, ExprId),
     /// `fun (name : ty) => body` with binder info.

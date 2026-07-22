@@ -527,8 +527,12 @@ reduction. Attribution and next steps are recorded in
 [the P2.1 findings note](../docs/research/05-algorithms/lazy-bitblasting-p21-findings.md);
 the opt-in `SolverConfig::lazy_bv` dispatch (`10a412e`,
 `tests/lazy_bv_dispatch.rs`) already exists, and default-on needs its own ADR.
-Z3 decides all 113 in ≤ 1 s each — parity on this slice remains open, owned by
-reduction depth.
+Later matched controls supersede the old unmeasured Z3-sweep premise: the
+authoritative 20-second Axeyum artifact and the standalone Z3-crate artifact
+each decide 8/113 on different sets (the Z3 CLI control decides 9/113). This is
+bounded hard-corpus parity, not general QF_BV parity. The residual is primarily
+SAT-search timeouts; broaden matched corpora and budget curves rather than
+reusing the earlier universal-sweep claim.
 <!-- NOTES:END -->
 
 ## Progress frontiers (lever depth)

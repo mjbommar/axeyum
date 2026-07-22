@@ -1,0 +1,428 @@
+{
+  "schema": "axeyum-lean-mutual-inductive-groups-v1",
+  "stage": "source-wire-frozen",
+  "date": "2026-07-22",
+  "decision": "docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md",
+  "plan": "docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md",
+  "baseline": {
+    "preregistration_revision": "0527a61a6de3703b94a8bbd59f5295af4a846b4e",
+    "semantic_revision": "78f4c5631dbca3fce568be72bde2d906d6e3705f",
+    "construct_matrix": {
+      "path": "docs/plan/lean-official-construct-matrix-v1.json",
+      "sha256": "f6c11499ab38130de75c7acbd7ad1db79afcd080ab405a7233087f8f67c3ac3e"
+    },
+    "mutual_stream": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-mutual.ndjson",
+      "sha256": "06aa05ccc8abc9309fad04b373017e770da25c7b0c2743fc0f097efd72de3174",
+      "bytes": 23596,
+      "records": 395,
+      "registered_outcome": "ImportError::Unsupported(line=233,code=inductive-mutual)"
+    },
+    "singleton_control": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson",
+      "sha256": "91df1e44219483b213000b94b06016f9569dc648d0680d9ae91ff3198817db08",
+      "registered_outcome": "completed-import"
+    },
+    "declaration_identity_version": "axeyum-lean-declaration-identity-v1"
+  },
+  "pins": {
+    "lean": {
+      "toolchain": "leanprover/lean4:v4.30.0",
+      "version": "4.30.0",
+      "git_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+    },
+    "lean4export": {
+      "version": "v4.30.0",
+      "git_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+      "format": "3.1.0"
+    }
+  },
+  "resource_policy": {
+    "runner": "systemd-run --user --scope",
+    "memory_high": "3G",
+    "memory_max": "4G",
+    "memory_swap_max": "512M",
+    "lean_jobs": 1,
+    "rust_jobs": 1,
+    "per_stream_max_bytes": 1048576,
+    "aggregate_stream_max_bytes": 2097152
+  },
+  "commands": {
+    "working_directory": "repository-local target/tl213-m0-run<1|2>",
+    "resource_runner_argv": [
+      "systemd-run",
+      "--user",
+      "--scope",
+      "--quiet",
+      "-p",
+      "MemoryHigh=3G",
+      "-p",
+      "MemoryMax=4G",
+      "-p",
+      "MemorySwapMax=512M"
+    ],
+    "lean_compile_argv": [
+      "/usr/bin/time",
+      "-v",
+      "<pinned-lean>",
+      "-j1",
+      "-o",
+      "AxeyumMutualInductiveComputation.olean",
+      "lean-v4.30-mutual-inductive-computation.lean"
+    ],
+    "lean4export_argv_template": [
+      "/usr/bin/time",
+      "-v",
+      "env",
+      "PATH=<pinned-lean-bin>:$PATH",
+      "LEAN_PATH=<run-directory>",
+      "<pinned-lean4export>",
+      "AxeyumMutualInductiveComputation",
+      "--",
+      "<selected-root>"
+    ]
+  },
+  "semantic_contract": {
+    "group": "ordered nonempty [I_0, ..., I_(g-1)]",
+    "shared_parameters": "definitionally equal parameter telescope instantiated by one shared local vector",
+    "result_universes": "equivalent across every family",
+    "positivity": "one occurrence set containing every group family before provisional insertion",
+    "recursive_field": "u : Pi xs, I_j params recursive_indices",
+    "induction_hypothesis": "Pi xs, motive_j recursive_indices (u xs)",
+    "rule_argument": "fun xs => I_j.rec params all_motives all_minors recursive_indices (u xs)",
+    "minor_conclusion": "motive_i result_indices (owner_ctor params fields)",
+    "motive_order": "family order",
+    "minor_order": "family order then constructor order",
+    "ih_order": "after all fields, in recursive-field order",
+    "recursor_suffix": "owner-family indices then owner-family major",
+    "mutual_prop": "elimination restricted to Prop and K-like reduction disabled",
+    "publication": "all families, constructors, and recursors or none",
+    "singleton": "add_inductive delegates without identity or behavior drift",
+    "wire_recursor_order": "descriptive dependency order; match recursors by checked name and owned rules"
+  },
+  "source": {
+    "path": "docs/plan/fixtures/lean-v4.30-mutual-inductive-computation.lean",
+    "sha256": "d04059e05cbb15d74c6dc526c63e2ac028dfb4b0fe604c9dd3eebdc963e06404",
+    "bytes": 1676,
+    "lines": 66,
+    "module": "AxeyumMutualInductiveComputation",
+    "compile_runs": 2,
+    "compile_exit_statuses": [
+      0,
+      0
+    ],
+    "compile_elapsed_ms": [
+      460,
+      220
+    ],
+    "compile_max_rss_kib": [
+      474312,
+      474740
+    ],
+    "olean_sha256": "b2582c150c5901728a871919e1c04922f44c11ddeba1a8a446189b6c4d604aba",
+    "roots": [
+      {
+        "id": "cross-family-computation",
+        "selected_root": "AxeyumMutualInductiveComputation.crossFamilyComputes",
+        "consumer": "AxeyumMutualInductiveComputation.evenHeight",
+        "transition": "EvenTree.rec -> OddTree.rec -> EvenTree.rec",
+        "expected_normal_form": "MiniNat.succ (MiniNat.succ MiniNat.zero)"
+      },
+      {
+        "id": "indexed-cross-family-computation",
+        "selected_root": "AxeyumMutualInductiveComputation.indexedCrossFamilyComputes",
+        "consumer": "AxeyumMutualInductiveComputation.oddVecHeight",
+        "transition": "OddVec.rec -> EvenVec.rec -> OddVec.rec",
+        "expected_normal_form": "MiniNat.succ (MiniNat.succ MiniNat.zero)"
+      }
+    ]
+  },
+  "streams": {
+    "cross-family-computation": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-mutual-cross-computation.ndjson",
+      "selected_root": "AxeyumMutualInductiveComputation.crossFamilyComputes",
+      "sha256": "5013aff1165c8a50a63c54cd946ab2b489d0edfee7e0862bc53b061eabac0070",
+      "bytes": 18827,
+      "records": 318,
+      "export_runs": 2,
+      "byte_identical": true,
+      "max_rss_kib": [
+        711496,
+        711984
+      ],
+      "inventory": {
+        "format": "3.1.0",
+        "lean": "4.30.0",
+        "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "names": 60,
+        "levels": 4,
+        "expressions": 246,
+        "declaration_records": 7,
+        "blockers": [
+          "inductive-mutual"
+        ],
+        "family_order": [
+          "AxeyumMutualInductiveComputation.EvenTree",
+          "AxeyumMutualInductiveComputation.OddTree"
+        ],
+        "families": [
+          {
+            "name": "AxeyumMutualInductiveComputation.EvenTree",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_nested": 0,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": [
+              "AxeyumMutualInductiveComputation.EvenTree.leaf",
+              "AxeyumMutualInductiveComputation.EvenTree.branch"
+            ]
+          },
+          {
+            "name": "AxeyumMutualInductiveComputation.OddTree",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_nested": 0,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": [
+              "AxeyumMutualInductiveComputation.OddTree.leaf",
+              "AxeyumMutualInductiveComputation.OddTree.branch"
+            ]
+          }
+        ],
+        "wire_recursor_order": [
+          "AxeyumMutualInductiveComputation.OddTree.rec",
+          "AxeyumMutualInductiveComputation.EvenTree.rec"
+        ],
+        "recursors": [
+          {
+            "name": "AxeyumMutualInductiveComputation.OddTree.rec",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 4,
+            "rule_constructors": [
+              "AxeyumMutualInductiveComputation.OddTree.leaf",
+              "AxeyumMutualInductiveComputation.OddTree.branch"
+            ],
+            "rule_nfields": [
+              0,
+              1
+            ]
+          },
+          {
+            "name": "AxeyumMutualInductiveComputation.EvenTree.rec",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 4,
+            "rule_constructors": [
+              "AxeyumMutualInductiveComputation.EvenTree.leaf",
+              "AxeyumMutualInductiveComputation.EvenTree.branch"
+            ],
+            "rule_nfields": [
+              1,
+              1
+            ]
+          }
+        ]
+      }
+    },
+    "indexed-cross-family-computation": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-mutual-indexed-computation.ndjson",
+      "selected_root": "AxeyumMutualInductiveComputation.indexedCrossFamilyComputes",
+      "sha256": "fe867639eeed25db9672730b092db32a49b79e82c6c59c386d9ff0e6a48b3787",
+      "bytes": 21455,
+      "records": 374,
+      "export_runs": 2,
+      "byte_identical": true,
+      "max_rss_kib": [
+        712284,
+        712428
+      ],
+      "inventory": {
+        "format": "3.1.0",
+        "lean": "4.30.0",
+        "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "names": 72,
+        "levels": 4,
+        "expressions": 290,
+        "declaration_records": 7,
+        "blockers": [
+          "inductive-mutual",
+          "inductive-recursive-indexed"
+        ],
+        "family_order": [
+          "AxeyumMutualInductiveComputation.EvenVec",
+          "AxeyumMutualInductiveComputation.OddVec"
+        ],
+        "families": [
+          {
+            "name": "AxeyumMutualInductiveComputation.EvenVec",
+            "num_params": 1,
+            "num_indices": 1,
+            "num_nested": 0,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": [
+              "AxeyumMutualInductiveComputation.EvenVec.nil",
+              "AxeyumMutualInductiveComputation.EvenVec.step"
+            ]
+          },
+          {
+            "name": "AxeyumMutualInductiveComputation.OddVec",
+            "num_params": 1,
+            "num_indices": 1,
+            "num_nested": 0,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": [
+              "AxeyumMutualInductiveComputation.OddVec.nil",
+              "AxeyumMutualInductiveComputation.OddVec.step"
+            ]
+          }
+        ],
+        "wire_recursor_order": [
+          "AxeyumMutualInductiveComputation.OddVec.rec",
+          "AxeyumMutualInductiveComputation.EvenVec.rec"
+        ],
+        "recursors": [
+          {
+            "name": "AxeyumMutualInductiveComputation.OddVec.rec",
+            "num_params": 1,
+            "num_indices": 1,
+            "num_motives": 2,
+            "num_minors": 4,
+            "rule_constructors": [
+              "AxeyumMutualInductiveComputation.OddVec.nil",
+              "AxeyumMutualInductiveComputation.OddVec.step"
+            ],
+            "rule_nfields": [
+              0,
+              2
+            ]
+          },
+          {
+            "name": "AxeyumMutualInductiveComputation.EvenVec.rec",
+            "num_params": 1,
+            "num_indices": 1,
+            "num_motives": 2,
+            "num_minors": 4,
+            "rule_constructors": [
+              "AxeyumMutualInductiveComputation.EvenVec.nil",
+              "AxeyumMutualInductiveComputation.EvenVec.step"
+            ],
+            "rule_nfields": [
+              0,
+              2
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "case_ids": [
+    "singleton-wrapper-control",
+    "two-family-cross",
+    "mixed-self-cross",
+    "three-family-cycle",
+    "shared-dependent-params",
+    "different-index-counts",
+    "indexed-cross",
+    "higher-order-cross",
+    "multiple-targets",
+    "empty-constructor-family",
+    "mutual-prop-restriction",
+    "empty-group",
+    "parameter-mismatch",
+    "result-universe-mismatch",
+    "cross-negative-domain",
+    "cross-invalid-application",
+    "duplicate-group-name",
+    "late-recursor-failure"
+  ],
+  "mutation_ids": [
+    "motive-omit-duplicate-reorder",
+    "owner-motive-for-target",
+    "owner-recursor-for-target",
+    "minor-omit-duplicate-reorder",
+    "family-local-minor-index",
+    "all-family-list-drift",
+    "parameter-or-uparam-drift",
+    "result-universe-or-index-count",
+    "cross-occurrence-positivity-miss",
+    "ih-field-order",
+    "target-index-telescope-field-order",
+    "constructor-owner-cidx-nfields-rule",
+    "recursor-type-count-rule-nfields",
+    "metadata-nonauthority",
+    "mutual-prop-or-k-permission",
+    "late-failure-no-publication"
+  ],
+  "generated_grammar": {
+    "seed_policy": "fixed and committed at M3 before the first generated run",
+    "minimum_unique_cases": 640,
+    "group_sizes": "1..3",
+    "shared_parameters": "0..2 including dependent pairs",
+    "indices_per_family": "0..2",
+    "constructors_per_family": "0..3",
+    "recursive_fields": "0..3 among 0..5 total fields",
+    "recursive_targets": [
+      "self",
+      "earlier-family",
+      "later-family"
+    ],
+    "telescope_depth": "0..2",
+    "binder_info": [
+      "explicit",
+      "implicit",
+      "strict-implicit"
+    ],
+    "result_sorts": [
+      "Type",
+      "Prop-restricted"
+    ],
+    "required_repetitions": 2,
+    "summary_identity": "byte-identical"
+  },
+  "mandatory_controls": {
+    "recursive_manifest": "docs/plan/lean-recursive-induction-hypotheses-v1.json",
+    "recursive_generated_cases": 768,
+    "strict_positivity_manifest": "docs/plan/lean-strict-positivity-v1.json",
+    "strict_positivity_generated_cases": 840,
+    "official_construct_matrix": "docs/plan/lean-official-construct-matrix-v1.json",
+    "transactional_import": "CompletedImport only after full-stream success",
+    "declaration_identity_version": "axeyum-lean-declaration-identity-v1"
+  },
+  "stop_condition_ids": [
+    "lean-group-rule-disagreement",
+    "singleton-identity-or-behavior-drift",
+    "group-positivity-incomplete-or-singleton-drift",
+    "requires-separate-family-publication",
+    "target-family-reconstruction-disagreement",
+    "self-checks-but-official-differs",
+    "official-import-without-complete-comparison",
+    "constructor-witness-promoted-to-computation",
+    "failure-publishes-group-or-import",
+    "mutual-prop-or-k-unsoundness",
+    "identity-v1-drift",
+    "frontend-lowering-enters-kernel-slice",
+    "generated-summary-invalid",
+    "resource-cap-exceeded-or-killed",
+    "unrelated-dirty-overlap"
+  ],
+  "claim_limits": {
+    "official_source": "accepted-twice",
+    "olean_reproducibility": "byte-identical-twice",
+    "official_export": "byte-identical-twice-per-root",
+    "official_wire_inventory": "frozen",
+    "axeyum_import": "not-run-on-new-streams",
+    "axeyum_admission": "not-run-on-new-streams",
+    "axeyum_computation": "not-run-on-new-streams",
+    "mutual_kernel_support": "not-yet-implemented",
+    "full_lean_kernel_parity": "not-claimed",
+    "lean_ecosystem_parity": "not-claimed"
+  },
+  "next": "M1: ordered group representation and singleton delegation under the existing mutual policy decline"
+}

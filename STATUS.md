@@ -9,7 +9,7 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 > so the two never edit the same lines. See
 > [PLAN.md § Consumer-track integration](PLAN.md#consumer-track-integration-2026-06-27-converge-the-apps-onto-main).
 
-## Project reality check (2026-06-28)
+## Project reality check (updated 2026-07-21)
 
 **Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
 soundness holding, parity not yet reached, the road there fully mapped.** Sound
@@ -20,24 +20,71 @@ exit-criteria'd tracks we advance one increment at a time.
   oracle-compared count lives in the generated scoreboard) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
   + fixed this session.)
 - **Decide-rate (the central gap):** see the generated
-  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (~73% as of
-  2026-07-07 — the scoreboard is authoritative; this line links rather than
-  hand-copies because hand-copied totals rotted twice), 0–100% across
-  divisions, **19/35 decide-strong**. Z3/cvc5 decide more on most fragments.
+  [SCOREBOARD](bench-results/SCOREBOARD.md) totals (authoritative; this line
+  intentionally does not hand-copy the aggregate), 0–100% across divisions;
+  **25 / 35 rows** are decide-strong. The missing piece is representative depth
+  and coverage, not another unpartitioned global percentage.
 - **Performance:** the **first committed PAR-2 head-to-head exists**
   (`582ecba8`, public QF_BV p4dfa, lazy-vs-eager at 3s/20s, DISAGREE=0): lazy
-  weakly dominates (7>4 decided at 20s) but `lazy_ops_total=0` everywhere —
-  the edge is inherited word-level preprocessing, not CEGAR, and Z3 still
-  decides all 113 in ≤1s. Parity remains open; the measured lever is
-  reduction depth. No parity claim without these numbers widening.
-- **Lean:** narrow (~15/35 rows audit-eligible; trusted-reduction ledger ≠ 0;
-  tactic backend P3.7 unbuilt).
-- **Dominance:** **23 fragments** with audited `dominant%` — the real, defensible
-  claim.
+  weakly dominates (7>4 decided at 20s) but `lazy_ops_total=0` everywhere. The
+  later paired controls correct the old Z3 premise: Axeyum and the Z3 crate each
+  decide 8/113 at 20s; exact overlap is 6 jointly decided, 2 Axeyum-only, and 2
+  Z3-only (Z3 CLI 9/113). This is bounded corpus
+  parity; matched breadth, decision-set overlap, RSS, and warm/cold regimes
+  remain open.
+- **Lean:** all 35 rows have complete audit artifacts; 327 baseline UNSAT
+  decisions become 325 evidence-audit UNSAT outcomes, 267 certified + genuinely
+  independently checked outcomes, and 260 Lean-checked outcomes. The affected
+  v1 rows historically had 28 vacuous `bare-unsat` check booleans; the v2
+  refresh now records zero and attributes all 58 residual bare outcomes to a
+  decision backend. The full conjunction remains 259/327: 58 uncertified
+  audit-row occurrences, eight reconstruction-only gaps, zero declared trust
+  holes, and two QF_NIA `IntPow2` proof-production errors. Four stale QF_SEQ rows
+  created before the string evidence soundness fix lose source-invalid DRAT
+  credit without verdict changes. The parser-backed census deduplicates the 58 to
+  56 paths / 51 exact contents, split 25 arithmetic / 26 string-sequence, and
+  attributes 31/15/12 occurrences to the string front door, `auto-solve`, and
+  NRA fallback respectively. Coverage is substantial but uneven; trace the
+  QF_SEQ source-to-lowered boundary and route-provenance P1 before choosing a
+  proof mechanism.
+- **Dominance:** **23 / 35 audited rows** are fully dominant and the current
+  mixed-vintage artifacts mark 594/753 decisions as dominant candidates. The
+  v2 proof refresh changed 22 timing-derived flags without verdict changes, so
+  paired timing cells must be refreshed before this count supports publication.
 
 **Where to continue (toward the mission) — updated 2026-07-01/02 after a heavy
 landing wave.** The two theory frontiers **advanced from planning into landed
 increments**:
+
+**Parity-gap research update (2026-07-21).** The current evidence and research
+queue now live in
+[`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+It separates selected-fragment decision parity, production Z3 replacement,
+certified-result coverage, Lean-kernel compatibility, and Lean workflow
+integration. The first prototype, `scripts/check-parity-docs.py`, derives the
+live scoreboard/dominance/p4dfa denominators from committed artifacts and is in
+`just check`; it caught and corrected the stale universal-sweep Z3 premise plus
+stale decide/proof denominators in PLAN, STATUS, and SCOREBOARD. The same gate
+now binds the branch's harder 228-file SMT-COMP-style inventory and 24-file
+QF_BV three-solver control (19/24 each). The public inventory's legacy
+82-decision scorer field is
+**78 known-status agreements plus 4 unadjudicated decisions**, with zero
+contradictions of known statuses; the exact p4dfa overlap is 6 jointly decided,
+2 Axeyum-only, and 2 Z3-only. General Z3 solving-power distance is therefore
+unmeasured, while production compatibility remains demonstrably far. The
+required 71-family official-Lean solver-proof tier now bypasses the
+Lake-only action, installs checksum-pinned elan, and fails closed on a missing
+binary or incomplete sweep. Its first real local run rejected four modules
+(67/71): three lost Bool/BV iota rules under opaque-inductive export and one hit
+Lean's default elaborator recursion depth. Narrow export corrections rerun at
+**71/71 accepted with two workers, zero skipped, zero failed**. The first
+corrected run's Lean-worker phase took 6.8 s; a same-shape confirmation under
+different local load took 53.3 s, so neither is promoted as a performance
+claim. The standalone inductive test and missing-Lean negative control also
+pass. A remote green job and archived duration/RSS remain open before sizing
+the scheduled exhaustive tier. See the
+[target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
+
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
   `Sort::Seq` + seq ops), and **A.2 landed (ADR-0052)**: the `bv2nat`-linear→BV
   equivalence blast + a parser-built **unbounded length abstraction** + the
@@ -321,6 +368,799 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-22 — TL2.13 mutual inductive groups are complete; TL2.14 nested-
+  inductive kernel elimination is preregistered and M0 is next.**
+  [Accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+  and the
+  [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
+  bind pinned Lean 4.30's actual atomic group algorithm. M0 freezes a
+  1,676-byte / 66-line source compiled twice to one OLEAN digest and
+  two byte-identical-per-root official streams totaling 40,282 bytes. The
+  independent inventory finds two motives and four minors per recursor and
+  records that the wire `recs` arrays are dependency-ordered `Odd.rec,
+  Even.rec`, not family-ordered; M4 must match names and owned rules rather than
+  array position. Eleven fail-closed tests enforce the exact no-product-credit
+  boundary. The subsequent
+  [M1 result](docs/plan/lean-mutual-inductive-groups-m1-2026-07-22.md) adds the
+  public ordered `InductiveFamilySpec`/`add_mutual_inductive` path, checks
+  group-local names, definitionally equal shared parameters, per-family
+  indices, and equivalent result universes, and places singleton admission
+  inside an insertion-log transaction. Nine focused public-path tests preserve
+  complete singleton declarations, iota computation, direct-recursive
+  identities, exact error payloads, rollback, and retry behavior. The
+  subsequent
+  [M2 result](docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md) replaces
+  the policy decline with one native group algorithm. Positivity sees every
+  family before staging; all family/constructor headers then become
+  provisionally visible; motives follow family order, minors follow family then
+  constructor order; terminal-family motives/recursors drive recursive fields;
+  and every recursor type plus closed rule value is inferred before commit.
+  Eighteen public integration tests cover singleton, two/three-family cross,
+  mixed self/cross, zero/one/two indices, indexed and higher-order recursion,
+  empty-constructor families, mutual predicates, and the typed negative matrix.
+  Two private tests freeze 16 mutation classes and inject a final-rule failure
+  after complete staging to prove whole-group rollback. Exact singleton
+  declarations, `MiniNat.rec`/`MiniList.rec` identities, and the 768/840
+  controls remain unchanged. The subsequent
+  [M3 result](docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md) executes
+  720 unique public production records twice to a byte-identical summary:
+  432 positive admission/inference/iota contracts and 288 exact typed
+  rollbacks. It spans one through three families, zero through two shared
+  parameters and per-family indices, zero through three constructors/recursive
+  fields, zero through five total fields, telescope depths zero through two,
+  `Prop`/`Type`, and self/earlier/later targets. The oracle reads motive/minor
+  order from generated recursor telescopes and target-family counts from rule
+  syntax; 288 group-order and 240 target-family mutations are detectably
+  unequal. The descriptor is `2ea6769fa45ea159`, and the retained 768/840
+  descriptors remain exact. Importer policy and both M0 streams are untouched.
+  The subsequent
+  [M4 result](docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md) removes
+  only that blanket importer decline. Every ordered family/constructor/recursor
+  record is validated, the atomic group gate is called once, and the official
+  dependency-ordered `recs` arrays are matched by checked name. The construct
+  stream and both computation streams import twice to identical reports with
+  zero axioms; the selected non-indexed and indexed theorem sides both reduce
+  to `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Twenty-two rejecting metadata,
+  type, count, rule, field, and late-publication mutations plus recursor-order
+  and descriptive-metadata positive controls pass. The complete importer suite
+  is 40 integration tests; the complete kernel suite, 720/768/840 populations,
+  strict Clippy, and rustdoc pass. The
+  [M5 final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+  adds a history-preserving assurance overlay with five admitted rows, three
+  independently computation-checked rows, and one current decline; removes the
+  obsolete live `inductive-mutual` decline; and closes every registered code,
+  pinned-Lean, contract, foundational-resource, and link gate. ADR-0354 is
+  accepted and TL2.13 is DONE. The subsequent
+  [dependency audit](docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
+  corrects the next trust boundary: pinned Lean 4.30 performs nested-inductive
+  expansion/restoration inside kernel admission, while native well-founded
+  source recursion remains elaborator task TL4.10. The already elaborated
+  well-founded root remains a passing 35-declaration/zero-axiom control, not
+  new frontend credit. [Proposed ADR-0355](docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+  and the [P0--M6 execution plan](docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
+  bind structural nested discovery, complete auxiliary-container copying,
+  reuse of TL2.13's atomic group checker, final-surface restoration,
+  deterministic `.rec_N` publication, >=640 generated profiles, and retained
+  720/768/840 controls. P0 is complete. M0 must compile and export explicit
+  auxiliary-recursor computations and a negative source twice, then register
+  their exact hashes and a no-product-observation boundary before M1 changes
+  the current nested diagnostic.
+
+- **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
+  mutual groups are next.**
+  [Accepted ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+  and the
+  [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
+  bind direct, recursive-indexed, higher-order, and combined indexed/higher-
+  order fields to one Lean 4.30 rule: `u : Pi xs, I params indices` receives
+  `Pi xs, motive indices (u xs)`, while its computation rule passes
+  `fun xs => I.rec params motive minors indices (u xs)` to the minor. Existing
+  direct recursion is the empty-telescope/empty-index control. The plan freezes
+  exact `MiniVector`/`MiniAcc` stream hashes and makes constructor-only witnesses
+  ineligible for computation credit. The
+  [M0 result](docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+  now freezes a 1,422-byte explicit-recursor source that compiles twice and two
+  root-specific official streams that reproduce byte-identically: Vector
+  15,944 bytes/284 records and Acc 17,722 bytes/314 records. Independent
+  inventories freeze their exact recursive-indexed/reflexive metadata. Ten
+  fail-closed tests bind source/stream/baseline hashes, roots and normal forms,
+  pins/resources/commands, semantic/claim/case/mutation/generated/stop
+  contracts, and reject any premature Axeyum observation. The Rust product has
+  not run on either M0 computation stream. The
+  [M1 result](docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+  routes direct recursion through one WHNF telescope-tail classifier and
+  reopener shared by minor types and rule right-hand sides. The
+  [M2 result](docs/plan/lean-recursive-induction-hypotheses-m2-2026-07-22.md)
+  admits all ten positive native rows, retains four typed transactional
+  negatives, rejects ten native mutation classes, and repeats a 768-case
+  public-path grammar byte-identically. The retained 840-case grammar reports
+  both its TL2.11 baseline partition and the intended 186-case M2 admission
+  widening. Stable metadata retains only field position and telescope depth;
+  reconstruction disagreement returns `RecursiveFieldShapeMismatch`. Exact
+  `MiniNat.rec`/`MiniList.rec` declaration identities, Nat/List computations,
+  182 kernel units, and both generated summaries remain green. The
+  [M3 result](docs/plan/lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+  makes `isReflexive` descriptive metadata and completes both frozen construct
+  targets twice with exact official/generated recursor comparison. The
+  pre-elaborated well-founded stream also completes through `Acc.rec`; this is
+  bounded kernel import, not source elaboration. Mutual/nested retain their
+  typed outcomes, and metadata plus late-publication mutations pass. The
+  [M4 result](docs/plan/lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+  confirms pinned Lean twice to one OLEAN digest, imports both computation
+  streams twice, and recursively normalizes the selected results to
+  `MiniNat.succ MiniNat.zero` and `True`. The generated matrix now reports four
+  admitted rows, two separately computation-checked rows, and two typed
+  declines from a machine-validated TL2.12 overlay. The
+  [M5 final result](docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+  closes the complete bounded Rust, contract, parity, foundational-resource,
+  and link gates, accepts ADR-0353, and marks TL2.12 DONE. Every milestone was
+  bounded to one Lean/two Rust workers and 4 GiB, then added, committed, pushed,
+  and remote-verified. Resume by preregistering mutual-group positivity,
+  multiple motives/minors, exact official recursor comparison, and group-level
+  rollback as TL2.13. A later dependency audit assigns kernel-side nested-
+  inductive elimination to TL2.14 and native recursive source elaboration to
+  TL4.9/TL4.10.
+
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity is complete; TL2.12 is
+  next.** Accepted
+  [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
+  and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
+  bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
+  reject family occurrences in `Pi` domains, recurse through codomains, and
+  otherwise accept only the exact family application with fixed parameters,
+  full index arity, and occurrence-free indices. The guard must run before
+  provisional inductive environment insertion and return separate typed non-
+  positive/invalid-occurrence errors. Direct recursion must remain admitted;
+  positive `MiniVector`/`MiniAcc` shapes must pass positivity but retain their
+  current feature declines. A >=256-case deterministic polarity grammar and a
+  mandatory pinned-Lean differential gate precede acceptance. The
+  [M0 result](docs/plan/lean-strict-positivity-m0-2026-07-22.md) and
+  [`lean-strict-positivity-v1.json`](docs/plan/lean-strict-positivity-v1.json)
+  hash-freeze four sources and six rule classes before new execution. Eight
+  mutation tests reject source/case/pin/resource/command/diagnostic drift and
+  premature observations. The
+  [M1 result](docs/plan/lean-strict-positivity-m1-2026-07-22.md) now implements
+  the exact single-family WHNF/`Pi`/family-application preflight before
+  provisional environment insertion. It returns stable non-positive and
+  invalid-occurrence payloads, preserves direct recursion and the positive
+  recursive-indexed/reflexive feature declines, and passes 182 kernel unit
+  tests plus focused clippy/rustdoc under the 4 GiB cap. The
+  [M2 result](docs/plan/lean-strict-positivity-m2-2026-07-22.md) adds all twelve
+  public contract rows and a seed-frozen 840-case grammar, repeated twice with
+  exact summary identity across three parameter/index profiles, both result
+  sorts, depths zero through four, and constructor/field ordering. Exact typed
+  failures compare the complete environment before/after. It does not widen
+  admission or complete TL2.11. The
+  [M3 result](docs/plan/lean-strict-positivity-m3-2026-07-22.md) records eight
+  cgroup-bounded runs at exact Lean 4.30 commit `d024af09`: the positive source
+  accepts twice and all three negatives reject twice with the registered
+  diagnostic, at 468432 KiB maximum RSS. A required CI test repeats that exact
+  population and fails closed when Lean is required but absent. An explicitly
+  synthetic format mutation propagates `NonPositiveInductiveOccurrence` at
+  `MiniNat`, field zero, without returning `CompletedImport`; the immutable
+  construct matrix preserves ten controls and ten declines. The
+  [M4 final result](docs/plan/lean-strict-positivity-final-2026-07-22.md) closes
+  182 kernel units, 38 kernel integrations, 30 importer integrations, both
+  doctests, focused clippy/rustdoc/rustfmt, 14 observation-validator tests,
+  foundational resources, parity artifacts, and links under the bounded
+  policy. ADR-0352 is accepted, the research question is closed, and
+  TL2.11/T6.0.2 are DONE without widening admission. TL2.12 recursive-indexed
+  plus reflexive/higher-order induction-hypothesis generation is the next
+  preregistration-first semantic slice.
+
+- **2026-07-22 — the official Lean construct-matrix selected-family milestone
+  is complete; its TL2.11 handoff is now closed.** The milestone remains explicitly
+  a measurement artifact, not kernel implementation. The
+  [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+  and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+  and [Stage B result](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
+  and [M3 product result](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
+  and [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
+  and [accepted ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+  define six positive/control families (existing direct recursion,
+  recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
+  well-founded) plus one official non-positive source rejection. Source intent
+  freezes before export; exact wire features freeze from two byte-identical
+  official exports and the independent Python inventory before the Rust
+  importer is run. Every Rust decline must be typed, repeatable,
+  completion-only, and paired with the immutable 11-declaration direct-
+  recursive pass. Source family, wire construct, parsing, translation,
+  independent admission, computation, and assurance credit remain separate
+  generated fields. New streams have fixed 1 MiB each / 2 MiB aggregate
+  retention bounds, and all Lean/Rust work remains under 4 GiB with one/two
+  workers. M0 regenerated both historical streams twice with exact hashes and
+  repeated the flat 8-declaration/one-axiom and direct-recursive
+  11-declaration/zero-axiom imports twice without drift. Stage A freezes seven
+  ordered cases and two source hashes in a fail-closed registration: pinned
+  Lean accepts the positive recursive-indexed/reflexive/mutual/nested/well-
+  founded module at 471,712 KiB peak RSS and rejects the non-positive control
+  at the kernel positivity check at 88,972 KiB. Eight contract tests reject
+  source/case/pin/resource/retention drift and all premature Stage B or product
+  fields. Stage B now retains five new byte-identical two-run streams totaling
+  116,636 bytes. The independent reader freezes their complete declaration
+  populations and group metadata: recursive-indexed `MiniVector`, indexed and
+  reflexive `MiniAcc`, a two-type/two-motive mutual group, `Rose` with
+  `numNested=1` and two recursors, and a well-founded source whose ordinary
+  definition depends on recursive-indexed/reflexive `Acc`. All ten exports stay
+  below 701 MiB RSS. M3 at remote Stage B revision `22f51b4b` then repeats all
+  five current-product declines twice, with the 11-declaration/zero-axiom
+  direct-recursive control passing before all ten runs. Recursive-indexed
+  reaches `KernelError::RecursiveIndexedNotSupported`; reflexive, mutual, and
+  the well-founded `Acc` closure stop at stable policy codes; nested exposes a
+  transactional but incorrect `Malformed` classification for its valid two-
+  recursor official group. The product freezer, 11 contract tests, and Rust
+  integration test bind every payload and forbid a published `CompletedImport`.
+  M4 now derives the seven-row
+  [generated matrix](docs/plan/generated/lean-official-construct-matrix.md): one
+  independently admitted control, one translated-kernel decline, three parsed/
+  policy declines, one inventory-only nested misclassification, one official-
+  source rejection, and zero computation-checked rows. Thirteen contract tests
+  reject false admission, parsed, or computation promotion. The
+  [M5 final result](docs/plan/lean-official-construct-matrix-final-2026-07-22.md)
+  closes the bounded Rust, contract, parity, foundational-resource, link,
+  documentation, ADR, and ref-equality gates. The first rustdoc link attempt's
+  LLD `SIGBUS` reproduced only on the 80%-full `/tmp` tmpfs and passed under the
+  same 4 GiB cgroup with an ext-family `TMPDIR`; no OOM or kernel I/O fault was
+  logged. Workspace-wide rustfmt remains pre-existing red outside the milestone,
+  while the new Rust test is focused-format clean. **Next:** preregister and
+  implement TL2.11 strict positivity as the primary
+  trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
+  lane.
+
+- **2026-07-22 — TL1.7 canonical Lean declaration/dependency identity is
+  complete; the remaining official inductive fixture matrix is next.** Every
+  successful import now publishes `axeyum-lean-declaration-identity-v1` in its
+  report: TL0.4-compatible axiom name/rendered-type SHA-256 rows plus a complete
+  structural Merkle digest for every admitted declaration and a separate digest
+  binding each sorted direct dependency name to its admitted content. The
+  encoding covers names, levels, expressions, binder info, literals, all seven
+  declaration variants, reducibility hints, inductive/constructor metadata, and
+  recursor rules without hashing wire IDs, arena IDs, record order, debug text,
+  or JSON spelling. Five focused tests freeze all eight flat-fixture identities.
+  Repeated imports and an independent declaration-record reorder agree exactly;
+  valid axiom-type, definition-body, and binder-info mutations change their
+  intended content/dependency cone. The importer passes 28 cases across three
+  binaries plus its example target. Warning-denied Clippy/rustdoc, compile-fail
+  doctest, 21 compatibility/prototype/ledger tests, generated compatibility and
+  65-row ledger checks, parity prose, foundational resources, focused format/
+  diff hygiene, and links pass with two build jobs. Workspace-wide rustfmt is
+  not credited because unrelated pre-existing benchmark/CAS drift remains;
+  `cargo deny` is also red on the existing unlicensed `axeyum-wasm` manifest
+  and benchmark/Rayon `crossbeam-epoch 0.9.18` advisory RUSTSEC-2026-0204. The
+  importer reuses the already-locked `sha2` package with no new transitive
+  package. See
+  [ADR-0350](docs/research/09-decisions/adr-0350-canonical-lean-declaration-identity.md)
+  and the [TL1.7 result](docs/plan/lean-declaration-identity-tl1.7-2026-07-22.md).
+  **Next:** generate recursive-indexed, reflexive, mutual, nested, and well-
+  founded official fixtures with direct-recursive positive controls. TL1.5 is
+  dependency-ready for property fuzzing; TL2.11 owns strict positivity before
+  semantic admission widens.
+
+- **2026-07-22 — TL1.4's generated Lean import mutation corpus is complete;
+  TL1.7 declaration digests were next at this checkpoint.** The new
+  deterministic binary generates
+  226 unique cases across EOF before every official record, one-byte truncation
+  and one unknown top-level field for every official record, nested unknown
+  fields, duplicate IDs, forward/self references, a declaration self-cycle,
+  bounded/excessive JSON depth, raw/escaped/invalid Unicode, non-ASCII Nat
+  digits, integer boundaries, version/exporter drift, and discriminant errors.
+  Two full generations/executions produce the same ordered summary:
+  `json=67`, `malformed=90`, `kernel=1`, `published=3`,
+  `published-unsealed=64`, and `unsupported:format-version=1`. All 65
+  record-body truncations reject. The 64 complete-record prefixes publish only
+  relative to delivered EOF and are explicitly unsealed with no exact-artifact
+  credit because upstream format 3.1 defines no footer, expected count, or root
+  manifest. Raw and escaped `λ😀` names admit identically; excessive depth,
+  invalid surrogate/numeral, width, topology, and semantic-cycle controls reject
+  without panic. The importer now passes 23 cases across two binaries plus its
+  example target. Warning-denied Clippy/rustdoc, compile-fail doctest, 14
+  compatibility/prototype tests, generated compatibility, parity prose,
+  foundational resources, focused formatting/JSON, and links pass. See
+  [ADR-0349](docs/research/09-decisions/adr-0349-generated-lean-import-mutation-corpus.md)
+  and the [TL1.4 result](docs/plan/lean-import-mutation-corpus-tl1.4-2026-07-22.md).
+  **Then:** TL1.7 subsequently added canonical axiom/declaration/dependency
+  identities. TL1.5 later adds property fuzzing; TL0.3/TL1.6/TL1.9 own
+  external artifact identity and durable completion.
+
+- **2026-07-22 — TL1.3 whole-environment import publication is complete;
+  TL1.4 mutation generation was next at this checkpoint.** `import_ndjson` no longer accepts or
+  mutates a caller-owned kernel. It stages the full format-3.1 stream in a
+  private fresh kernel and returns a field-private `CompletedImport` only after
+  EOF and every parse, topology, translation, independent-admission, and
+  recursor-comparison check succeeds. The wrapper exposes read-only kernel and
+  report borrows plus explicit `into_parts` ownership transfer. Late malformed
+  JSON after a complete valid stream, final-declaration kernel rejection,
+  quotient decline after dependencies, record exhaustion one line before
+  completion, and injected I/O failure after all valid bytes each return only
+  `ImportError`; no environment or arena handle crosses the error branch. All
+  prior exact fixture reports, declaration order, computations, and repeated-
+  import determinism remain unchanged. The importer passes 20 integration
+  cases plus its example target; a compile-fail doctest rejects forged
+  `CompletedImport` fields. Warning-denied Clippy/rustdoc, 14
+  compatibility/prototype tests, generated compatibility, parity prose,
+  foundational resources, and documentation links pass. See
+  [ADR-0348](docs/research/09-decisions/adr-0348-owned-lean-import-publication.md)
+  and the [TL1.3 result](docs/plan/lean-import-transactional-publication-tl1.3-2026-07-22.md).
+  **Then:** TL1.4 subsequently generated the 226-case structural mutation
+  corpus and made the upstream no-footer prefix boundary explicit. TL1.7
+  canonical dependency digests subsequently landed.
+
+- **2026-07-22 — TL2.7 checked Nat literal semantics is complete; TL1.3
+  transactional publication was next at this checkpoint.** Natural literals now infer as `Nat`
+  only after the independent kernel has admitted the exact canonical `Nat`,
+  `Nat.zero`, and `Nat.succ` bootstrap. Definitional equality peels literal/
+  constructor offsets in either direction, transparent wrappers do not obscure
+  the comparison, `Nat.succ` over a literal reduces without narrowing, and
+  `Nat.rec` exposes one literal constructor layer before ordinary iota. Missing,
+  renamed, reordered, malformed, and Prop-valued bootstraps reject with a typed
+  error; String literals and general accelerated Nat operations remain
+  fail-closed. The official format-3.1 Nat root translates all 90 expressions,
+  admits ten declarations from five records with zero axioms, and reduces
+  `importNatLiteral` to `37`. Boundary replacements at and above `2^128` admit
+  exactly, while a renamed `Nat.zero` mutation rejects. A required pinned-Lean
+  4.30 differential agrees on zero, unary three, an above-`u128` successor,
+  recursor computation, and a false adjacent-value control. The kernel passes
+  179 unit tests and 35 integration cases across twelve binaries; the importer
+  passes 18 cases; 14 compatibility/prototype tests pass. The generated
+  compatibility matrix now records 12 rows, five profile passes, one declined
+  row, six source-bound decline codes, and eight assurance fields. Focused
+  rustfmt, warning-denied Clippy/rustdoc, doctest, parity-document,
+  foundational-resource, and link gates pass; the unavailable `just` wrapper
+  was replaced by its exact constituent commands. See
+  [ADR-0347](docs/research/09-decisions/adr-0347-checked-lean-nat-literal-semantics.md)
+  and the [TL2.7 result](docs/plan/lean-nat-literal-semantics-tl2.7-2026-07-22.md).
+  **Then:** TL1.3 subsequently made completed-environment publication
+  transactional. TL1.4 mutation corpora and TL1.7 dependency digests have since
+  landed.
+  TL2.8 still owns
+  accelerated Nat operations and TL2.9 owns String literals.
+
+- **2026-07-22 — TL2.6 arbitrary-precision Nat storage is complete; TL2.7
+  literal typing was next at this checkpoint.** `Lit::Nat` now carries canonical `NatLit(BigUint)`
+  storage, and the official format-3.1 decimal path validates directly into
+  that representation without a `u64`/`u128` intermediate. Values at
+  `2^128 - 1`, `2^128`, `2^128 + 1`, and a much larger decimal round-trip
+  through parsing, interning, structural operations, and Lean rendering.
+  Malformed spellings reject before the semantic boundary. The TL2.15 literal
+  seed now includes explicit above-`u128` corners while preserving 768 total
+  deterministic cases and rejecting every attempted `False` admission.
+  Inference remains `UnsupportedLit`; no Nat typing, reduction, or official
+  declaration admission is claimed. At this checkpoint the Nat root declines at line 125 with
+  the narrower `literal-nat-typing` code. The kernel passes 179 unit tests and
+  29 integration cases across ten binaries, the importer passes 16 tests, and
+  focused doctest, warning-denied Clippy, and warning-denied rustdoc gates pass.
+  See [ADR-0346](docs/research/09-decisions/adr-0346-arbitrary-precision-lean-nat-literals.md)
+  and the [TL2.6 result](docs/plan/lean-nat-literal-storage-tl2.6-2026-07-22.md).
+  **Then:** TL2.7 subsequently typed Nat literals, implemented checked
+  constructor/literal conversion, and closed the exact official Nat closure.
+
+- **2026-07-21 — TL2.5 structure eta is complete; this records the prior
+  definitional-equality boundary.** Definitional equality now mirrors Lean's
+  symmetric structure-eta rule only for an exactly saturated constructor whose checked
+  parent inductive has one constructor, zero indices, and no recursive fields.
+  Constructor admission persists the aggregate recursion bit after checking
+  fields, so eta eligibility consumes trusted metadata rather than guessing
+  from syntax. Seven native integration families cover both directions,
+  under-application, a duplicated-field false equality, a wrong structure
+  type, zero-field and multi-constructor boundaries, parameters and universes,
+  a dependent second field, and explicit indexed/recursive exclusions. The
+  required differential runs pinned Lean 4.30.0 commit
+  `d024af099ca4bf2c86f649261ebf59565dc8c622`: official Lean accepts the
+  reconstruction by `rfl` and rejects the duplicated-field mutation. Under the
+  4 GiB bound, the kernel passes 179 unit tests and 25 integration cases across
+  nine binaries; warning-denied all-target Clippy and the repository-local-TMP
+  doctest pass. The generated TL2.15 projection/reduction/eta fuzz family
+  remains open, and no new K1 import population is claimed. See the
+  [TL2.5 result](docs/plan/lean-structure-eta-tl2.5-2026-07-21.md).
+  TL2.6 arbitrary-precision storage and TL2.7 checked literal semantics have
+  since landed; the exact Nat root now admits and computes.
+
+- **2026-07-21 — TL2.4 constructor projection reduction and the exact official
+  K1 projection root are complete; this records the prior computation/import
+  boundary.** Projection reduction now
+  runs in WHNF beside beta/zeta/iota: it normalizes the projected value, requires
+  a constructor, skips checked parameters, selects the field, and re-applies any
+  outer spine. Four native integration families cover parameterized and
+  universe-polymorphic structures, dependent proof fields, transparent versus
+  opaque/neutral values, under-application, and Lean's deliberate split where
+  reduction follows the constructor but inference rejects a wrong structure
+  name. Only after that gate passed did `axeyum-lean-import` translate the wire
+  `proj` record. The pinned official stream now translates 61 expressions,
+  independently admits nine declarations from four records with zero axioms,
+  and computes `importPairLeft (ImportPair.mk 0 1)` to `0`; wrong-name/index
+  mutations reject at declaration line 83. The importer suite grows to 14
+  tests. Re-running the Nat root moves its first decline to line 125
+  `literal-nat-bignum-and-typing`. The compatibility matrix now has four passing
+  profiles, two declined rows, and nine live decline codes. This is one exact K1
+  root, not `Init`/`Std`/mathlib or native-source parity; the unretained String
+  stream's old projection decline is retired without guessing its next blocker.
+  See the [TL2.4 result](docs/plan/lean-projection-reduction-tl2.4-2026-07-21.md).
+  TL2.5 structure eta, TL2.6 arbitrary-precision Nat storage, and TL2.7 checked
+  literal semantics have since landed separately. Both historical Nat decline
+  codes above are retired; the exact Nat root now admits and computes.
+
+- **2026-07-21 — TL2.3 dependent projection inference is complete; this records
+  the prior typing boundary.** Checked inductive declarations now retain
+  parameter/index counts, and `infer(Proj)` follows Lean's single-constructor
+  telescope algorithm: it validates the structure head and full argument spine,
+  instantiates parameters, substitutes earlier projections into dependent field
+  types, and enforces the Prop-elimination restriction. Four integration
+  families cover parameterized dependent fields, universe-polymorphism, indexed
+  metadata, proof fields, and wrong name/head/arity/constructor-count/index/
+  Prop-elimination controls; an internal corruption test rejects inconsistent
+  unchecked metadata without panic. Under 4 GiB, the kernel passes 179 unit
+  tests and 13 integration cases across six binaries, the importer passes 11
+  integration tests while retaining the then-current `expr-projection` decline,
+  and warning-denied all-target kernel Clippy passes. At that checkpoint this
+  earned native K0 inference credit only: no constructor projection reduced and
+  the official projection closure remained untranslated/unadmitted. TL2.5 eta
+  was separate, and TL2.15 had not yet gained
+  a generated projection/reduction/eta family. See the
+  [TL2.3 result](docs/plan/lean-projection-inference-tl2.3-2026-07-21.md).
+  TL2.4 has since landed reduction, wire translation, and exact closure
+  computation. TL2.5 eta has since landed as its deliberately separate gate.
+
+- **2026-07-21 — TL2.2 first-class projection representation is complete;
+  this records the prior structural boundary.** `ExprNode::Proj(NameId, u32,
+  ExprId)` and `Kernel::proj` now carry Lean's structure type name, zero-based
+  non-parameter field index, and projected expression through interning,
+  hashing, exact child metadata, level/term substitution, every de Bruijn and
+  free-variable operation, dependency/constant traversal, and both Lean
+  renderers. Numeric rendering converts to Lean's one-based field syntax. Four
+  new integration tests independently mutate name/index/child payloads, cover
+  abstraction/instantiation/lifting/closure, and prove neutral normalization,
+  identical-term definitional equality, typed unsupported inference, and
+  rollback-clean declaration rejection; renderer coverage also checks
+  streaming parity and traversal order. The full 4 GiB package gate passes 178
+  unit tests plus nine cases across five integration binaries; warning-denied
+  all-target Clippy, all-target checking, and warning-denied rustdoc pass. The
+  complete parity-document recipe's direct commands, generated-file checks,
+  link checker, touched-file rustfmt, and `git diff --check` are green; `just`
+  itself is unavailable on this host. Workspace-wide `cargo fmt --all --check`
+  remains red only on the pre-existing unrelated `axeyum-bench`/`axeyum-cas`
+  drift. At that checkpoint the importer intentionally retained
+  `expr-projection`, the committed official projection closure remained
+  untranslated/unadmitted, and TL2.15 gained no semantic seam. See the
+  [TL2.2 result](docs/plan/lean-projection-representation-tl2.2-2026-07-21.md).
+  TL2.3/TL2.4 have since landed dependent inference, constructor reduction,
+  wire translation, closure admission, and the later separate TL2.5 eta gate.
+
+- **2026-07-21 — T6.0.3 closes the current four-seam fuzz seed; TL2.15 remains
+  partial by construction.** The new fixed-seed
+  [`kernel_seam_fuzz`](crates/axeyum-lean-kernel/tests/kernel_seam_fuzz.rs)
+  integration test registers `Prop`/elimination, universes/inductives,
+  proof-irrelevance/iota, and literals/reduction as four explicit active bits.
+  It runs 768 unique cases: 192 multi-constructor Prop cases; 320 universe cases
+  whose first 288 exhaust the `8×4×3×3` universe/constructor/proof-field/data-
+  field product; and 256 literal cases spanning Nat 0/1/`u128::MAX`/random plus
+  empty/ASCII/Unicode/NUL strings under beta/zeta depths 0–4. Every case reaches
+  theorem admission with `False` as the claimed type, rejects, and leaves no
+  declaration behind. The complete population runs twice and produces equal
+  structured summaries. The focused gate and the complete kernel `--lib
+  --tests` package gate pass under 4 GiB: 177 unit tests plus five integration
+  tests, including the historical exploit and the locally optional
+  official-Lean cross-check wrapper. Forcing that wrapper with
+  `AXEYUM_REQUIRE_LEAN=1` fails closed because this host has no Lean binary; no
+  fresh official-Lean differential credit is taken for this slice.
+  Warning-denied all-target Clippy, all parity-document generators/checkers, the
+  link checker, and `git diff --check` are green. Workspace-wide `cargo fmt
+  --all --check` remains red only on the pre-existing unrelated
+  `axeyum-bench`/`axeyum-cas` drift; the touched Rust file passes standalone
+  rustfmt. The [result note](docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
+  records seeds and non-credit: no projection/eta, quotient, typed-literal,
+  shrinker, or official-Lean differential claim. TL2.2-TL2.4 representation,
+  inference, reduction, and the separately gated TL2.5 eta rule have now
+  landed; each admitted seam extends this negative class before receiving
+  TL2.15 credit.
+
+- **2026-07-21 — TL0.4 binds the actual 65-assumption prelude boundary.** A
+  runtime inventory constructs the real, integer, and string reconstruction
+  preludes in independent kernels and enumerates admitted `Declaration::Axiom`
+  values. The checked
+  [`lean-axiom-ledger-v1.json`](docs/plan/lean-axiom-ledger-v1.json) records 30
+  real, 34 integer, and one string assumption with canonical rendered type,
+  SHA-256 digest, source, owner, classification, and discharge fields; the
+  generated [65-row ledger](docs/plan/generated/lean-axiom-ledger.md) is
+  byte-stable. This corrects the old 64-row helper-call census, which missed
+  `axeyum.string.append` because it is inserted directly as
+  `Declaration::Axiom`. Seven mutation/contract tests reject missing, extra,
+  duplicate, renamed, type-mutated, illegally classified, or falsely
+  discharged rows, and `parity-docs` reconstructs the preludes under the 4 GiB
+  cap. Validation passes 177 kernel unit tests, four integration tests including
+  the official-Lean cross-check, all seven ledger tests, the full direct
+  `parity-docs` command set, generated-file checks, link checks, touched-file
+  rustfmt, and `git diff --check`. The single kernel doctest compiled but could
+  not link because both lld and GNU ld hit the host `/tmp`/user quota; 52 GiB of
+  regenerable incremental/example cache was removed without touching source or
+  evidence. Workspace-wide `cargo fmt --all --check` still fails on the same
+  pre-existing unrelated `axeyum-bench`/`axeyum-cas` drift. All 65 rows remain
+  explicitly `unclassified`/`unreviewed`; TL0.4 freezes the trust boundary but
+  does not prove it. The seam-fuzz seed follows immediately above; projection
+  TL2.2-TL2.5 are now landed. TL3.2 owns semantic classification and discharge
+  targets.
+
+- **2026-07-21 — TL0.1/TL0.2 close the Lean ownership and assurance
+  boundary.** ADR-0167 and ADR-0345 are accepted together: Track 6 owns the one
+  goal/tactic engine; the Lean-system program owns versioned import,
+  source/workflow/runtime compatibility, and pinned-mathlib build work; neither
+  expands the kernel's admission authority. The new
+  [`lean-compatibility-v1.json`](docs/plan/lean-compatibility-v1.json) contract
+  separates `parsed`, `translated`, `admitted`, `official_admitted`,
+  `source_elaborated`, `proof_checked`, `workflow_reproduced`, and
+  `runtime_reproduced`. Its generated
+  [12-row matrix](docs/plan/generated/lean-compatibility.md) reported four
+  profile-passing exact rows (native K0 plus three K1 fixtures), two fail-closed
+  K1 declines, and zero completed K2-K6 native profiles at that checkpoint.
+  Six tests reject missing assurance fields or
+  evidence, translation without parsing, official-oracle credit laundering,
+  proof credit without admission, and missing/unregistered/misapplied decline
+  codes. `parity-docs` now checks the contract and byte-identical generated
+  matrix. Fourteen importer tests pass under the 4 GiB cap; the six contract
+  tests, full parity-doc suite, JSON check, generated-file check, and docs links
+  are green. `cargo fmt --all --check` remains red on pre-existing committed
+  formatting drift in unrelated `axeyum-bench`/`axeyum-cas` Rust files; this
+  slice does not rewrite them. TL0.4 follows immediately above; next is the
+  now-landed T6.0.3/TL2.15 seam-fuzz harness, now-landed TL2.2-TL2.5
+  projection representation/inference/reduction/eta sequence, and now-landed
+  TL2.6 arbitrary-precision Nat storage. TL2.7 has since closed checked literal
+  semantics, TL1.3 has closed atomic publication, and TL1.4 has closed the
+  generated mutation corpus; TL1.7 has since closed canonical declaration and
+  dependency identity.
+
+- **2026-07-21 — the complete Lean-system implementation program is now an
+  executable plan, not a list of missing subsystems.** The active
+  [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
+  defines checker-through-ecosystem profiles K0-K6, a common ten-part
+  definition of done, crate/TCB ownership, parallel lanes, task IDs TL0.1
+  through TL10.9, milestones M0-M7, and a 23-item immediate queue. It covers
+  the production exporter reader, kernel projection/literal/quotient/inductive
+  breadth, axiom discharge and selected libraries, the existing Track 6
+  bridge/goal/tactic work, native parser/macros and elaboration, modules/caches,
+  Lake and version-specific `.olean` compatibility outside the TCB, LSP,
+  compiler/runtime/metaprograms, and a full pinned mathlib build. The first
+  execution slice is TL0.1/TL0.2 contract reconciliation and capability schema,
+  through the now-landed T6.0.3/TL2.15 fuzz seed; kernel semantics advance one
+  measured slice at a time, and TL2.2-TL2.5 projection representation,
+  inference, reduction/import, structure eta, arbitrary-precision Nat storage,
+  and checked Nat literal semantics are now complete. The plan removes
+  the rewrite-provenance/`simp` dependency cycle and makes selected mathlib
+  imports and native source/workflow compatibility explicit owners rather than
+  contradictions in Track 6 scope prose.
+
+- **2026-07-21 — the Lean-system roadmap objective passes its completion
+  audit; implementation remains open.** The
+  [requirement audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+  maps all eight originally named gaps plus the detailed-roadmap and
+  actual-assets requirements to current evidence, architecture, phase sizing,
+  and exits. Fresh local inventory records 13,929 CAS source lines, exactly 56
+  default canonical rules, a 19-covered/4-Lean-horizon curriculum, 137 concepts,
+  173 non-template packs, 1,131 result rows (399 checked / 596 replay-only / 136
+  Lean-horizon), 173 promoted solver-reuse packs, and 249 math learning files.
+  Shallow tagged-tree checks reproduce Lean v4.30.0's subsystem scale and
+  mathlib v4.30.0's 8,606 `.lean` files plus every listed directory count.
+  Focused kernel/import validation passes 177 kernel unit tests, four kernel
+  integration tests, one doctest, and eleven importer tests under 4 GiB. This
+  completes the requested research/design/prototype/documentation deliverable,
+  not Lean parity: ADR-0345 is accepted and L0-L10 implementation resumes
+  with projection-first L2, axiom contracts, and the remaining fixture matrix.
+
+- **2026-07-21 — Lean-system distance is now decomposed and a real import seam
+  is prototyped.** The new
+  [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+  distinguishes independent kernel admission, official source acceptance,
+  declaration import, language compatibility, and workflow/ecosystem
+  compatibility. It audits the actual assets rather than repeating the gap
+  list: the pure-Rust kernel already has environments/reduction/definitional
+  equality/type checking/selected inductives; Track 6 already owns goals,
+  holes, delayed assignment, and certificate tactics; the
+  13,929-line CAS, 56-rule canonical manifest, and 173 validated math packs are
+  candidate proof engines and theorem targets, not mathlib coverage. Proposed
+  ADR-0345 chooses both bridge directions, sequenced: retain fail-closed
+  official source validation, then consume pinned `lean4export` NDJSON and
+  independently admit supported declarations. A fresh official Lean 4.30 /
+  export-format 3.1 fixture contains 14 names, two nonzero universe levels, 43
+  expressions, and five declaration records; the Python reader reports no
+  inventory blockers on that flat slice and passes six fixture/mutation tests,
+  including the direct-recursive inventory.
+  The new separate `axeyum-lean-import` Rust crate now independently admits the
+  same stream as eight kernel declarations through checked public gates. A
+  second official, byte-reproducible fixture admits direct-recursive `MiniNat`
+  and parametric-recursive `MiniList`: 30 names, four nonzero levels, 130
+  expressions, and five records become 11 checked declarations with no axioms.
+  Its first import exposed alpha-equivalent fresh recursor universe names
+  (`u_1` from official Lean versus `u.1` from Axeyum); the importer now
+  alpha-renames exported universe binders before definitionally comparing the
+  recursor type and iota-rule RHSs. Theorem-body and recursor-rule tampering
+  reject among the original eleven Rust tests (now fourteen after TL2.4). The
+  flat result still reports `axioms=P`, so
+  the assumption is not converted into a theorem. This is exact flat and
+  direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
+  credit. Direct `.olean` reading remains rejected; official Lean is an optional
+  sandboxed frontend/workflow adapter while the default checker remains pure
+  Rust. A new four-root official census freezes exact projection, Nat, String,
+  and quotient closures. Projection is the only blocker in its four-declaration
+  closure and the first product decline for both literal roots. The String root
+  expands to 290 declarations and also contains 27 projections, 20 Nat
+  literals, one String literal, and recursive-indexed inductives; quotient is an
+  isolated five-record closure. Three small streams are committed, the 570,807-
+  byte String stream is source/command/hash bound, consecutive exports are
+  byte-identical, and eight Python tests hash/inventory the evidence. **Next:**
+  review ADR-0345 and the crate/TCB boundary, implement projection
+  representation/inference/constructor reduction, generate the remaining
+  recursive-indexed/mutual/nested/reflexive fixtures plus the assurance matrix,
+  then retain the now-landed runtime/type-digested 65-assumption ledger before
+  any native parser, Lake, LSP, or compiler work. See the
+  [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md)
+  and [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md).
+
+- **2026-07-21 — the representative official-Lean gate is now locally real and
+  fail-closed.** Primary-source inspection showed that `leanprover/lean-action`
+  required a Lake manifest even though Axeyum only needs standalone Lean; a
+  checksum-pinned elan installer now follows `lean-toolchain` without inventing
+  a Lake project. Executing the previously blocked gate exposed four real
+  quantified-BV exporter failures (67/71), fixed narrowly by retaining the
+  required Bool/BV inductive computation and a self-contained measured
+  `maxRecDepth` option. Two corrected official-Lean 4.30 runs accept 71/71 with
+  zero skips/failures, and the missing-binary negative control now fails. Local
+  duration varied materially (6.8 s and 53.3 s in the Lean-worker phase), so no
+  speed claim is attached. **Next:** push the repaired workflow, require one
+  remote 71/71 attestation with version/duration/RSS, then inventory expected
+  axioms before sizing the exhaustive sweep. See the
+  [gate audit](docs/plan/official-lean-ci-gate-audit-2026-07-21.md).
+
+- **2026-07-21 — G1 now has a shared measurement schema, and the two headline
+  populations overlap materially.** The generated 53-row provenance matrix
+  gives the 35-row scoreboard and 18 public-inventory logic strata one
+  raw/path/content/selection/scoring/oracle vocabulary without merging scores.
+  Exact inspection contracts 927 scoreboard file occurrences to 837 normalized
+  paths and 778 unique contents; 58 exact-alias groups remove 59 further path
+  identities, while 65 synthetic cases remain aggregate-only. The 228-file
+  public inventory is exact-byte unique but shares 99 contents with the
+  scoreboard (43.4% of the public view), so it is not independent replication.
+  Row-local PAR-2 is present for all 53 rows; both current regimes are
+  non-official and have zero neutral-oracle rows on their exact populations.
+  Proposed ADR-0343 forbids a global aggregate. Next: review that policy, then
+  archive and validate the newly produced full-library candidate selection/run,
+  then prototype mutation-tested syntax normalization before any deduplicated
+  score. Concurrent commit `d9e71e21` adds explicit-file execution, a 2024
+  full-tree cap/family selector, and the s4-s7 distributor. Its external
+  manifest records 438,631 pool / 64,345 selected across 84 logics. The first
+  52-shard 300-second run is now frozen incomplete: all workers stopped after
+  2,041 total progress rows (36-44 per shard), no raw shard JSON exists, and no
+  traceback explains the termination; remote `dmesg` is permission-denied, so
+  OOM is unverified rather than ruled out. End-of-shard-only raw output made the
+  partial work non-mergeable. Do not rerun unchanged; first
+  preregister atomic checkpoint/resume records, terminal shard status, strict
+  merge completeness, interruption equivalence, and aggregate memory controls.
+  This is not yet committed measurement evidence or an official selection: the current selector does not bind the full
+  eligibility/status/difficulty filters, official release/seed, corpus-tree
+  digest, or per-file hashes. Do not add its numbers to the public matrix until
+  a versioned complete result and those omissions are explicit. The exact
+  selection hashes, failure snapshot, and safe resume checks are in the
+  [candidate-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+  Proposed ADR-0344 now supplies the v2 E0 contract: 18 invariants and 28
+  executable scenarios (five accepted controls, 23 rejected mutations), with
+  deterministic interrupted/resumed and uninterrupted scoring projections
+  byte-identical. V2 supersedes the committed v1 prototype before integration:
+  it adds per-result attempt attribution, typed process termination,
+  observed-vs-admitted verdicts, content-addressed outputs, and complete policy/
+  source/toolchain identity. It separates terminal-less failed attempts from later honest
+  shard completion, rejects silent duplicate overwrite and identity/resource
+  drift, and requires a complete shard set before scoring. This is an in-memory
+  planning prototype, not production durability. E1a now implements the local
+  immutable record boundary and passes 8/8 real `SIGKILL` recovery cells over
+  tmpfs and the worktree's ext-family filesystem. Identical records skip,
+  conflicting/truncated artifacts quarantine without overwrite or promotion,
+  filename/key drift rejects, and all recovered canonical bundles equal the
+  uninterrupted control. This does not test power loss, NFS, solvers, leases,
+  cgroups, or remote hosts. Next: E1b integrates an opt-in writer and fake
+  solver into the active runner, makes completion last, rejects duplicate raw
+  merge, verifies output sidecars, preserves timeout-observed responses under
+  the SMT-COMP 2026 rule, removes signal-to-OOM guessing, and defines
+  single-owner recovery; E2-E3 then prove aggregate
+  enforcement and multi-host recovery. Do not rerun the 64,345-file candidate first.
+
+- **2026-07-21 — the public project state no longer requires reading the battle
+  logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
+  measurements, selected-fragment parity, production Z3 distance, solver-proof
+  export, Lean-core compatibility, and explicitly out-of-scope full Lean-system
+  replacement. README, the docs hub, limitations, and benchmarks now route
+  through that page and no longer claim every UNSAT is certified, describe
+  WHNF/type checking as future work, turn finite differential evidence into
+  universal soundness, or publish the superseded p4dfa 3/20/60-second narrative.
+  `scripts/check-parity-docs.py` now guards these public pages and derives the
+  project-state solver/proof denominators from the committed artifacts. The
+  follow-on `gap-ownership-v1.json` manifest and generated contributor map route
+  all G0-G10 gaps to owner paths, evidence, executable gates, ADR anchors, and a
+  next safe action; path and gap-title drift fail generation. Three gaps expose
+  the absence of a gap-specific ADR rather than inventing one. Next: use this map
+  for the next behavior-preserving namespace/module split; do not expand the
+  executive page back into a second STATUS.
+
+- **2026-07-21 — the ordered SMT-LIB session contract is prototyped, and the
+  real gap includes signature scope.** The official SMT-LIB 2.7 state machine,
+  current parser/helper source, Z3 command-context source, and bounded local
+  Bitwuzla transcripts show that declarations/definitions are scoped by
+  `push`/`pop` by default, `reset-assertions` removes non-global declarations,
+  output options take effect immediately, inspection commands bind to the
+  exact most-recent query, and continued errors must be atomic. Axeyum currently
+  has one shared arena, global parser environments, final option maps, output
+  no-ops, full-reset rejection, and silent pop underflow. The new executable
+  planning model checks 14 invariants and 20 fixtures / 107 commands with zero
+  mismatch; nine deliberate errors continue into a verified unchanged state.
+  Proposed ADR-0342 pins SMT-LIB 2.7 and stages the work as complete ordered
+  command/event capture (S1), exact query snapshots, scoped external-name
+  environments plus reset epochs, option enforcement/rendering, then facade
+  convergence. No production behavior or conformance claim changes yet. Next:
+  review ADR-0342 and implement S1 only if accepted.
+
+- **2026-07-21 — SMT-LIB/API distance is now measured by command behavior, not
+  helper presence.** The new machine-readable 30-row conformance manifest and
+  generated matrix distinguish six axes that prior P4.4 prose collapsed:
+  parser state, execution mode, output representation, assurance, exact test
+  evidence, and residual scope. The audited snapshot has six absent command
+  families, seven accepted no-ops, eight globally recorded surfaces, five
+  command-point surfaces, three semantic definitions, one explicit rejection,
+  27 rows with exact named tests, and zero ordered interactive-text rows. Models,
+  values, assignments, scoped assertions, info/options, cores, Alethe proofs,
+  and optimization already have bounded Rust helpers; interpolation, Horn, and
+  abduction already have verify-before-return direct APIs. The actual P4.4
+  blocker is one command-point textual session runner with option/lifecycle
+  semantics, not another theory seed. `scripts/gen-smtlib-api-conformance.py
+  --check` verifies source markers, negative parser assertions, named tests, and
+  generated drift and now runs in the parity/docs gates. The follow-up session
+  contract now defines the event/result IR, transcript invariants, signature
+  scope, and reset-epoch requirements; retain production full `reset`, recursive
+  definitions, and textual categorical commands as explicit negative controls
+  until their separately gated implementation slices land.
+
+- **2026-07-21 — Categorical-engine roadmap drift is corrected; depth is the
+  gap.** Source/public-API/decline inspection plus a hard-4-GiB sequential run
+  passes 125/125 focused tests: 94 interpolation, 22 CHC/Horn, and nine
+  abduction. Six interpolation families have canonical direct APIs; Horn handles
+  Real and Bool/BV state, stratified multi-predicate systems, compatible mutual
+  SCCs, and lower-stratum nonlinear folding with source-clause reverification;
+  abduction performs bounded synthesized shared-vocabulary search with mandatory
+  consistency/sufficiency/vocabulary checks. These are seeded or selected-
+  fragment implementations, not absent engines. Next work is textual
+  conformance, representative Z3/cvc5/Spacer corpora, Horn theory/nonlinear
+  depth, and portable certification. General SyGuS remains absent and separately
+  demand-gated. The durable audit is
+  `docs/plan/categorical-engine-depth-audit-2026-07-21.md`.
+
+- **2026-07-21 — Proof-gap population is refreshed under dominance schema v2;
+  causal tracing is next.** The eight rows containing every historical bare
+  UNSAT were rerun sequentially in release mode: 211 decided instances retain
+  zero verdict mismatches/timeouts, with only the two known QF_NIA `IntPow2`
+  evidence-production errors. The live residual is 58 occurrences / 56 paths /
+  51 exact contents, all independently unchecked and backend-attributed:
+  string front door 31, `auto-solve` 15, NRA fallback 12. Four stale QF_SEQ rows
+  created before the string evidence soundness fix lose DRAT credit because the
+  old proof covered only the bounded/flat lowering. Use those as the first
+  `source-side-channel-not-serialized` trace case, then land stable attempt/
+  boundary and obligation IDs across all four bare exits only after proposed
+  ADR-0341's invariance/mutation gates are reviewed. The eight
+  reconstruction-only gaps remain an independent lane: five quantified-BV
+  selected certificates and three QF_NIA Alethe proofs should be consumed
+  directly by a bounded Lean prototype before any new theorem family is added.
+  The first selected-evidence prototype now closes two BV rows directly (15 KB
+  closed-universal and 18.5 MB paired-existential modules). Phase telemetry now
+  separates the three remaining BV rows: `bug802` exceeds a hard 4 GiB cap in
+  scoped kernel closure after its 8,524-command tail; `small-pipeline-fixpoint-3`
+  closes the kernel in 7.744 seconds below 600 MiB, then misses 30 seconds before
+  module spooling; and `cond-var-elim-binary` emits a 15,705-command residual by
+  2.607 seconds below 525 MiB, then misses 30 seconds in CPS tail reconstruction.
+  The three QF_NIA proof
+  objects now also reconstruct directly through the existing EUF consumer:
+  6/15-command congruence+resolution proofs produce 2,916/8,082-byte modules in
+  about 0.10 seconds below 9.5 MiB RSS. Their prior `la_generic` failures were
+  source-syntax route misclassification, not missing arithmetic proof theory.
+  Five of eight diagnostic rows are existing-consumer plumbing wins. Profile
+  the three distinct kernel-closure, compact-spooling, and CPS-reconstruction
+  mechanisms under the existing 4 GiB/30-second bounds before selecting a
+  production evidence-aware dispatch boundary; do not raise the cap or add a
+  theorem family.
 
 - **2026-07-21 — T5.4.3 reason-preserving directed-fuzz implementation is
   pushed, acceptance remains WIP (`3d75d407`, ADR-0340).** The new public
@@ -6112,6 +6952,9 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
+| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups followed in TL2.13; a later audit separates TL2.14 kernel nested elimination from TL4.9/TL4.10 source elaboration. |
+| P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. |
+| P3.6 / TL2.14 | Nested-inductive kernel elimination | **TODO (P0 complete; ADR-0355 proposed)** — the dependency audit corrects the former frontend framing: nested expansion/restoration is a pinned-Lean kernel admission transformation; well-founded source recursion remains TL4.10. The P0--M6 plan binds exact structural discovery, complete auxiliary-container copying, reuse of atomic group checking, restored `.rec_N` publication, >=640 generated cases, exact official computation, and retained 720/768/840 plus well-founded controls. M0 source/wire/no-product freeze is next. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6124,6 +6967,10 @@ plan is built and committed on the current branch:
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | WIP — direct select consistency and equal-array same-index congruence now use standard Alethe equality rules; ADR-0075 makes the latter one artifact accepted in-tree, by Carcara (forward/reverse + tamper rejection), and by real Lean with no array-elimination trust step. ROW same/diff collapse reasoning is externally checked modulo an asserted ROW rewrite instance. Remaining: certify the ROW axiom itself, disequality/diff-witness extensionality, portable equality chains, canonical online proof logging, and the broader Ackermann/int-blast ledger |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | WIP — **crate started (ADR-0036, commit db18886)**: destination-3 (Lean parity) foundation. `Name`/`Level`/`Expr` + de Bruijn ops (instantiate/abstract/lift) ported from `references/nanoda_lib`, adapted to axeyum's **lifetime-free Copy-id interning** (no `'a` leaks). Faithful level `leq`/`is_equiv`/`simplify` + param subst; Expr with `BinderInfo`; cached `num_loose_bvars`/`has_fvars`. 27 tests incl. translated nanoda level tests + de Bruijn laws. **Type-theory core landed (slice 2, commit e37da7b)**: `whnf` (beta/zeta), `def_eq` (lazy structural + Pi/Lam congruence + eta + proof irrelevance), and checking-mode `infer` (Sort/FVar/App/Lam/Pi/Let, IMax impredicativity) over the **environment-free fragment** — the kernel now TYPE-CHECKS terms (polymorphic identity infers `Π(α:Sort 0),α→α`, etc.). Faithful nanoda port; the env boundary (`Const`/δ, inductives/ι, projections, literal typing) errors explicitly (`KernelError`), never a wrong accept. 52 kernel tests. **Environment + Const δ landed (slice 3, commit f0f6e0d)**: non-inductive declarations (Axiom/Definition/Theorem/Opaque) with `ReducibilityHint`; `Environment` (deterministic `BTreeMap`); `add_declaration` is the trusted gate (type-checks each decl's type-is-a-sort + value `def_eq` declared type); universe instantiation; `infer(Const)`; δ-unfolding in `whnf`; faithful `lazy_delta_step` (height-based side choice, same-const short-circuit, Opaque/Axiom non-unfolding). The kernel now type-checks terms referencing globals (`id := λαx,x` admits + δ+β-reduces under application). 68 kernel tests. **Inductive layer started (slice 4, commit 4457594)**: `Declaration::{Inductive,Constructor,Recursor}` + `RecRule`; `add_inductive` (trusted gate: type whnf's to a Sort, constructor telescopes type-check + end in `I` + **non-recursive** field restriction); **recursor generation** (`I.rec : Π {motive}(minors…)(major), motive major`, with the generated type infer-self-checked) + **ι-reduction** (`I.rec … (c_i flds) → m_i flds`). Scoped to **non-recursive, non-parametric, non-indexed** inductives — enums (`Bool.rec` ι picks the right minor) + structures (`P.rec C m (mk x y) → m x y`); param/indexed/mutual + Prop-subsingleton large-elim DEFERRED (reject explicitly). **Recursive inductives landed (slice 5, commit 24607a9)**: DIRECT recursive fields (field type exactly `I`, e.g. `Nat.succ : Nat→Nat`) now admitted; `mk_recursor` adds one IH binder `motive f_j` per recursive field to each minor (`Nat.succ`'s minor = `Π(n:Nat)(ih:motive n), motive (succ n)`); recursive ι appends a recursive `I.rec … f_j` call per recursive field (`Nat.rec C z s (succ k) → s k (Nat.rec C z s k)`). **The kernel checks AND computes with `Nat` and binary trees** (end-to-end recursive normalization verified; recursor type infer-self-checks). Higher-order/reflexive fields, params, indices still rejected. 82 kernel tests. **Parametric inductives landed (slice 6, commit bc95c21)**: `add_inductive(num_params)` — leading binders are params (fixed across the family), recursive field = `I params` (generalizing bare `I`); recursor abstracts params before the motive and threads them through minors/IH/ctor-apps + recursive ι calls. **`List`/`Option`/`Prod`/`Sum` check + compute** (`List.rec α C cnil ccons (cons α a l) → ccons a l (List.rec … l)`; a length recursion normalizes; recursor types infer-self-check). Indices (`Eq`/`Vector`, a binder between params and the `Sort`) → `IndicesNotSupported` (deferred). 92 kernel tests. **Indexed inductives landed (slice 7, commit 223e81c)**: indices after params; the dependent motive ranges over indices + major; each minor applies the motive to the constructor's OWN index exprs; index-matching ι. **`Eq.rec` (the dependent eliminator used in every equality proof) generates, infer-self-checks, and ι-reduces on `refl`** (`Eq.rec α a motive m a (refl α a) → m`); an end-to-end transport/symmetry normalizes; a 2-ctor indexed family picks the right minor by index. Recursive-indexed (`Vector.cons`) → `RecursiveIndexedNotSupported` (deferred). 97 kernel tests. **The inductive layer now covers non-recursive + recursive + parametric + indexed — essentially all of Lean's inductive families** (bar recursive-indexed/nested/mutual + projections + literal typing + Prop-subsingleton elim). Next: **P3.7 Alethe→Lean reconstruction** (where this kernel finally checks reconstructed solver proofs — the destination-3 payoff) + the remaining minor inductive cases. |
+| P3.6 / TL2.2-TL2.7 | Projection representation, inference, reduction, exact K1 import, structure eta, and checked arbitrary-precision Nat literals | **DONE for the direct slices** — `Proj(NameId,u32,ExprId)` is structurally complete; checked metadata drives dependent inference and eta eligibility; WHNF selects constructor fields; format-3.1 translation admits/computes the exact official projection root with mutation rejection; symmetric eta passes native and pinned-Lean controls; `NatLit(BigUint)` removes the width ceiling; checked bootstrap typing, constructor-offset equality, successor reduction, and recursor conversion admit/compute the exact official Nat root. Generated TL2.15 projection/reduction/eta and quotient semantics remain. The kernel gate passes 179 unit tests plus 35 integration cases across twelve binaries; the expanded importer gate passes 28 tests across three binaries. |
+| P3.6 / TL1.3 | Owned completed import publication | **DONE** — `import_ndjson` owns private staging state and publishes `CompletedImport` only after full success. Appended JSON, final kernel rejection, quotient, late record-limit, and post-byte-stream I/O failures return no partial environment. Existing exact K1 results remain unchanged; its 20-case checkpoint passed before TL1.4 expanded the importer suite. |
+| P3.6 / TL1.4 | Generated format-3.1 mutation corpus | **DONE** — 226 unique deterministic cases run twice with exact stable counts: 67 JSON, 90 malformed, one kernel, one format decline, three positive, and 64 published-unsealed. Every official record body rejects truncation; complete-record prefixes remain explicitly unauthenticated because the upstream format has no footer. Its checkpoint total was 23 cases across two binaries. TL1.7 subsequently landed. |
+| P3.6 / TL1.7 | Canonical imported declaration and dependency identity | **DONE** — `ImportReport` publishes TL0.4-compatible axiom identities plus complete domain-separated v1 structural content and sorted direct-dependency bindings for all seven declaration variants. Five focused tests freeze all eight flat-fixture rows and prove repeated/reordered identity, valid type/body/binder mutation sensitivity, and dependency propagation. Importer total is 28 cases across three binaries. |
 | P3.7 | Alethe→Lean reconstruction (proof terms) | WIP — **foundation laid (commit ab2e615)**: `axeyum_lean_kernel::build_logic_prelude` declares the standard Lean logical foundation (`True`/`False`/`And`/`Or`/`Iff`/`Eq`/`Not`) through the trusted gates, and the kernel **type-checks real proof terms** — And.intro, and-elim (via And.rec), Or case analysis, Eq symmetry transport (checks + ι-reduces on refl), modus ponens, ex-falso (False.rec), and a composite `And A B → And B A`. 15 proof tests. The kernel is a Lean-grade checker of real proofs. **Reconstruction started — Eq fragment (slice 1, commit 56709ef)**: `axeyum-solver` gained a dep on the leaf `axeyum-lean-kernel`; the new `reconstruct` module translates Alethe equality terms to Lean `Expr` (`(= a b)` → `Eq.{1} α a b`) and the **`eq_reflexive`/`eq_symmetric`/`eq_transitive`** Alethe rules into `Eq.rec` proof terms the **kernel type-checks** (`def_eq` against the translated conclusion — the kernel is the checker; a wrong term is rejected). End-to-end transitivity chain reconstructs + kernel-checks; 2 negative soundness tests (wrong conclusion rejected). 11 tests. **End-to-end EUF refutation reconstructed (slice 2, commit 7267b2d):** `reconstruct_qf_uf_proof` walks a REAL `prove_qf_uf_unsat_alethe` proof — `assume` (eq → `h:Eq`, diseq → `h:Not(Eq)`), `eq_transitive`/`eq_symmetric` (n-ary fold + reversed-edge flip), `eq_congruent` (unary, congrArg via `Eq.rec`), and the closing resolution to the empty clause → `h_ne h_eq : False` — into a Lean term the **kernel checks to `False`**. 7 end-to-end instances (transitivity `a=b∧b=c∧a≠c`, longer chain, reversed edge, depth-1 congruence `f(a)≠f(b)`) + 2 negative tests. 17 tests. **Propositional resolution reconstructed (slice 3, commit fc23d4c):** the clausal layer — atom → opaque `Prop`, `(cl l…)` → right-nested `Or`, `(cl)` → `False`; `reconstruct_resolution_proof` builds the resolvent via iterated `Or.rec` (constructive case-split; `em` declared for the classical commitment but unconsumed), pivot-scheduled for the emitter's arbitrary-order RUP hints. **A REAL emitted clausal proof reconstructs end-to-end** (UNSAT CNF → `solve_with_drat_proof` → LRAT → Alethe → kernel-checked `False`). 26 tests. **Both the EUF and the clausal-resolution fragments now close to kernel-checked `False`.** **Tseitin CNF-intro rules reconstructed (slice 4, commit 237d13b):** `reconstruct_cnf_intro_rule` builds all 12 gate-definitional tautologies (`and_pos/neg`, `or_pos/neg`, `equiv_pos1/2`+`neg1/2`, `xor_pos1/2`+`neg1/2`; `xor a b := Not(Iff a b)`) as kernel-checked classical-tautology proofs (em + Or.rec case-split + prelude eliminators); a composite feeds a reconstructed `and_neg` clause through the slice-3 resolution to `False`. 43 reconstruct tests. **P3.7 now covers EUF + clausal resolution + the Tseitin Boolean-gate layer.** **Bitwise QF_BV bitblast reconstructed (slice 5, commit 4b356b3):** bit model — each bit a Lean Prop, variable bit → opaque `((_ @bit_of i) x)`, const → `True`/`False`, `bvnot/and/or/xor` pointwise (`xor` = `Not(Iff)`), `@bit_of i (@bbterm bs)` → `bs[i]`. `reconstruct_bitblast_step` kernel-checks all 7 bitwise rules (`var`/`const`/`not`/`and`/`or`/`xor`/`equal`; the bit-iffs are reflexive under the pointwise model); non-bitwise → `UnsupportedRule`. `reconstruct_qf_bv_proof` walks a REAL `prove_qf_bv_unsat_alethe` bitwise proof → **kernel-checked `False`** (1-bit bvand w/ full cong/trans/`@bbterm` plumbing + width-2 eq). 55 reconstruct tests. **HONEST soundness boundary:** the bit-level Boolean refutation + each bitblast step's bit-iffs are GENUINELY kernel-checked, but the term-level `cong`/`trans`/`equiv` bridge (`(= bvterm @bbterm)` transport) enters resolution as out-of-band-verified clause hypotheses, not yet fused into the single `False` term. **Eq-transport bridge FUSED (slice 6, commit 8c19e23):** the bitwise QF_BV reconstruction is now a CLOSED proof — `False` derived from ONLY the input assumptions + prelude + `em`, **no bridge axioms** (asserted via `declared_axiom_roles()` = `[assume,assume,em]`). Input `(= s t)` → hypothesis `h:⟦B⟧` directly; equiv1/2 → genuine `¬B∨B` tautologies (not assumed); term-level cong/trans deferred (never load-bearing); bit-iffs kernel-checked up front. 58 reconstruct tests. **The bitwise QF_BV unsat fragment reconstructs to a fully-kernel-checked, axiom-free Lean `False` proof.** Remaining for full QF_BV: arithmetic bitblast (`bvadd`/`bvmul` carries). **LRA arithmetic prelude built (commit 6869e49):** `axeyum_lean_kernel::build_arith_prelude` declares an axiomatized linear ordered field (carrier `R`, `add/mul/neg/zero/one`, `le/lt`, order+additive+scaling axioms) through the trusted gate; a **baby-Farkas refutation kernel-checks to `False`** (`le a 0 ∧ le 1 a` → `lt 1 1` → `lt_irrefl` → False). 119 kernel tests. **VERIFIED CURRENT STATE (2026-06-20 — the above history understated coverage; confirmed by reading the dispatch at `reconstruct.rs:1334`):** the `prove_unsat_to_lean` dispatch now reconstructs **8 fragments** to kernel-checked `False` — **QF_BV (bitwise AND arithmetic: `bitblast_add` ripple-carry + `bvneg`/`bvmul`/`bvsub`/concat/extend, memoized-linear carry, closed over assume+em), QF_UF (EUF congruence), QF_UFBV, QF_ABV (via array elimination), datatypes (via simplification), ∀ (quantifier unsat), ∃ (skolem), and QF_LRA (general n-constraint arbitrary-rational `la_generic` Farkas — `try_general_farkas`/`try_mixed_farkas`/`try_strict_cycle`, λ-denominators cleared, ring cancellation via explicit kernel-checked `Eq` rewrites)**. Since `has_arith→Lra`, QF_LIA whose LP-relaxation is Farkas-infeasible ALSO reconstructs (ℤ⊂ℝ). **Integer equality-system infeasibility is ALSO reconstructed** — `int_reconstruct::reconstruct_diophantine_to_lean_module` (ADR-0042, wired into the dispatch at `reconstruct.rs:3723`) turns the `DiophantineCertificate` (P2.4) into a kernel-checked Lean `False` over the discretely-ordered ring `IntPrelude` (encode each `Eᵢ` as `h:Eq Z`, derive `Σλᵢ·Eᵢ`, reduce to `g·m'=r, 0<r<g`, close on the discreteness axiom `no_int_between`); `diophantine_lean_reconstruct.rs` covers it. **Genuine remaining proof gaps (the hard frontier):** integer *inequality* cutting-plane QF_LIA (LP-feasible-but-no-integer-point over inequalities via Gomory/cube cuts — the Diophantine route above is equality-systems only), NIA/NRA proofs (bar the degree-2 SOS fragment, which reconstructs), strings, FP-arith — each genuinely hard. |
 
 > P3.7 update (2026-06-27): `prove_unsat_to_lean_module` and
@@ -6146,7 +6993,7 @@ plan is built and committed on the current branch:
 | P4.1 | Warm lazy arrays / symbolic memory (ADR-0030 deferred half) | WIP — committed assertions and one-shot assumptions over arrays/UFs route through memory-aware APIs with original-term replay/core reporting. The warm path now admits reducible ROW and array-ITE readbacks, retained BV-indexed Bool/BV selects, scalar UF applications, scalar-keyed array-valued UF parents (ADR-0088), projection equality and exact structural disequality witnesses (ADR-0089), top-level positive structural equality over supported store/constant/array-ITE parents through private constructor owners plus class-aware realization (ADR-0090), nested Boolean array-relation flags (ADR-0091), direct array-valued UF parameters (ADR-0092), supported structural array-valued UF parameters (ADR-0093), nested array-valued application keys (ADR-0094), and memory-aware k-induction through eager memory elimination. `SymbolicExecutor` and `SymbolicMemory` use these warm abstractions before falling back to the full dispatcher. Remaining: certified memory k-induction, memory PDR/IMC, path-condition CFG/import frontends, nested/extended arrays, deeper memory helpers, online proofs, and broader performance measurement |
 | P4.2 | Symbolic-execution CFG frontend (angr/unicorn-class) | WIP — first frontend-facing primitives landed: `SymbolicMemory` wraps an SMT array memory state, builds `select`/`store`, routes load-equality branch/assume queries through `SymbolicExecutor`'s automatic warm/memory feasibility APIs, and now exposes conservative write-log normalization / compact read-specific read-over-write `ite` construction for frontend memory logs that skips literal-distinct writes, elides exact-hit guards, preserves later symbolic aliases, and uses the auto route; `SymbolicExecutor::assume_auto` and `SymbolicExecutor::branch` keep same-index store/read-back constraints, literal-distinct concrete-address store-chain misses, zero-initialized constant-array reads, simple array-ITE state-merge reads including same-readback merge-guard and tautology pruning, reducible conditional read/write-index paths with scalar equality-over-`ite` cleanup, symbolic Bool readback equality/connective/xor/implication cleanup, BV bitwise/arithmetic/comparison/slice-extension/shift/div-rem readback cleanup, reducible symbolic-address ROW over store chains with same-index shadowed-store pruning, plain symbolic-base Bool/BV array loads via retained select-congruence abstraction including wide/BV256 index or element projection, direct equal-array symbol assumptions/assertions via retained cross-array select congruence and equal-array model projection, scalar Bool/BV UF applications via retained congruence abstraction including wide/BV256 argument or result projection, helper-level load/write-log queries, and default `explore_cfg` branch/assume/status/model queries on the warm BV path when they reduce or abstract, with original-term replay, while remaining general memory/UF still auto-promotes to the memory/theory-aware route; `SymbolicExecutor::explore_cfg` provides a reusable DFS harness over frontend-supplied CFG states, with solver-scope management, infeasible pruning, unknown-safe traversal, and model-witnessed targets; `explore_cfg_checked` adds frontend-supplied concrete witness extraction + replay callbacks and buckets targets into verified/missing-witness/mismatch cases; `TinyBvProgram` is the first reusable small-target frontend, with a validated BV register/memory IR, label-aware line-oriented assembly import with retained label/source metadata, deterministic PC-to-label lookup, typed static CFG edges and basic blocks, deterministic Graphviz DOT export for the basic-block CFG plus trace-highlighted, block-coverage-highlighted, and edge-coverage-highlighted DOT overlays, block-level trace paths, taken-edge trace reports, source-aware trace rows, consolidated witness trace reports, replay-checked test-case generation reports, block-coverage and edge-coverage test-suite reports, register-register equality branches, symbolic instruction lifting, zero-initialized SMT array memory for `Load`/`Store`, model-witness extraction, independent concrete replay, concrete execution traces, and bounded PC/label reachability/safety reports. Remaining: byte-level/binary broader target work, unbounded/certified safety wrappers over richer CFGs, and eventually general warm memory reuse from P4.1 |
 | P4.3 | Optimization: OMT lexicographic/Pareto + MILP hardening | WIP — single-objective `maximize/minimize_lia` + `_bv`/`_bv_signed` already shipped (exponential+binary bound search, Boolean-structured oracle). **Lexicographic multi-objective landed** (`optimize_lia_lexicographic`, 2026-06-18): optimize objectives in order, pinning each at its optimum (`obj≥v`/`obj≤v`) before the next so later ones range over the optimal face — z3's default lex combination. Sound + terminating (bounded composition of the checked single-objective optimizer); `LexOutcome::Stopped` at the first unbounded/infeasible/unknown objective. **BV lexicographic also landed** (`optimize_bv_lexicographic`, signed/unsigned, `bv_uge/ule/sge/sle` pinning) — lexicographic OMT now covers both LIA and BV. **Box** (`optimize_lia_box` / `optimize_bv_box`, independent) **and Pareto** (`optimize_lia_pareto` / `optimize_bv_pareto`, guided-improvement front enumeration, deterministic point/push caps, each point verified Pareto-optimal) modes also landed — **axeyum now has all 3 of z3's OMT modes (box, lexicographic, pareto) across LIA+BV**. BV Pareto covers unsigned and signed objective values, max/min directions, and graceful `Unknown` for out-of-fragment objective values. MaxSAT returns the witnessing model (`max_satisfiable_model`). `minimize_model` / `Solver::minimize_model` provide replay-checked lexicographic counterexample minimization over selected Bool, unsigned-BV<=127, and Int symbols, and the metadata-aware `minimize_model_objectives` / `Solver::minimize_model_objectives` route adds signed two's-complement BV objective order for signed SDK inputs. `produce_evidence_minimized` / `prove_minimized` preserve the default surface, while `_with_objectives` variants expose signed-objective metadata to frontends. `axeyum-property` v0 is now the first typed SDK consumer of that surface: Bool/BV/Int handles, assumptions, proof calls, minimized countermodel lifting, checked `EvidenceReport` exposure plus best-effort standalone Lean modules and stable evidence/trust/Lean summaries through `ProofCertificate`, typed BV overflow predicates, `.equals()` equality aliases, property-owned Bool/BV/Int builder aliases, `Property::all` / `Property::any` Boolean folds, deterministic native-scalar counterexample-to-`#[test]` rendering with caller-owned prelude/setup snippets, helper-rendered Boolean / `Result<(), E>` / `Result<bool, E>` replay adapters, deterministic `#[cfg(test)]` module assembly, deterministic multi-case fixture file assembly, direct named/tuple aggregate initializer snippets, and explicit nested aggregate field composition, scalar/tuple/derived-struct `Symbolic` declarations/lifting including signed-order two's-complement fixed-width Rust integers, named-field `symbolic_struct` bundles, and the generated SDK corpus/scoreboard gate with 16 graduated workflows, deterministic executable baseline comparisons for scalar counterexamples, an actual fixed-seed proptest shrunk counterexample, struct and replay counterexamples, proved assertions, assumption-backed proved assertions, and a Kani-style assume/assert counterexample baseline, machine-readable `corpus.json`, DISAGREE=0, and 1/1 Lean-required coverage. Remaining: MILP hardening; broader objective support for minimized counterexamples beyond Bool/BV/Int native scalars; property SDK ergonomics (operator traits, richer replay bodies); richer proptest families and real Kani CLI-backed property corpus comparison; differential validation vs Z3 `opt` |
-| P4.4 | SMT-LIB command-surface completeness (declare-sort, reset, get-proof, …) | WIP — broad command surface already parsed (declare-const/fun/datatype(s), define-fun/sort, push/pop, reset(-assertions), check-sat(-assuming), get-proof/model/value/unsat-core/assignment/assertions, set-option/info, get-option, echo/exit); term forms let/forall/exists/`!`/`as` handled. `reset-assertions` is represented and honored by scoped incremental solving; full `(reset)` is explicitly rejected in the shared-arena parse/solve model. The single-result front-door helpers (`solve_smtlib`, OMT, `get-value`, `get-unsat-core`, `get-proof`, `get-assignment`) now replay the command stream for zero-or-one-query scripts, honoring `push`/`pop`, `check-sat-assuming`, and `reset-assertions` instead of flattening scoped scripts; multi-query scripts are rejected there and routed to `solve_smtlib_incremental`. `solve_smtlib_get_model` returns user-declared constants/functions for sat `(get-model)` scripts as Rust IR values, `solve_smtlib_get_assignment` returns active top-level named assertion assignments for sat scripts while filtering popped/reset assertions, and `solve_smtlib_get_assertions` returns exact command-point assertion-stack snapshots rendered from IR while excluding one-shot `check-sat-assuming` literals. The parser records `set-info`, `set-option`, requested `get-info`, and requested `get-option` commands; `solve_smtlib_get_info` returns recorded metadata, axeyum defaults for `:name`/`:version`, computed `:reason-unknown`, and explicit unsupported markers, while `solve_smtlib_get_option` returns recorded/default option values and explicit unsupported markers. **`match` datatype pattern-matching added** (commit d404794, P4.4): parse-time desugaring to nested `ite`/`DtTest`/`DtSelect`, exhaustiveness + arity checked, 11 tests. Remaining: parametric `declare-sort`/`define-sort`, `define-fun-rec`, full `match` for parametric datatypes, full option-driven solver semantics, and textual interactive command output |
+| P4.4 | SMT-LIB command/API conformance | WIP — the checked 30-row API matrix records 27 rows with exact tests, 6 absent families (including SMT-LIB 2.7 `declare-sort-parameter`), 7 accepted no-ops, and 0 interactive textual-session rows. The follow-up SMT-LIB 2.7 contract prototype passes 14 invariants and 20 abstract fixtures / 107 commands, and corrects the architecture estimate: default/global declaration and definition scope, `reset-assertions`, full-reset arena epochs, exact query snapshots, post-`unknown` inspection, immediate options, and atomic continued errors all precede rendering. Proposed ADR-0342 gates S1 complete ordered command/event capture; production behavior remains unchanged. Later gaps are canonical adapters, parametric sorts, recursive definitions, textual categorical commands, and separately scoped general SyGuS. |
 | P4.5 | Benchmarking & the performance gate (measured Z3 head-to-head) | **WIP: correctness/deployability evidence, neutral warm controls, exact cold attribution, proof denominators, authoritative-policy gates, selected-pair symbolic-CVE recall, and negative harder-driver/duplicate-clause/storage/memo results are complete through ADR-0300; ADR-0302 now passes its run/backend gates on one machine but has not completed the required cross-machine recall-reproducibility matrix.** ADR-0272 rejects performance leadership because warm Bitwuzla wins all four fair drivers. ADR-0273--0275 retain the harder-driver census as incomplete-work negative evidence; ADR-0277 removes its structurally exact candidate after the frozen variance/family gates fail. ADR-0285's flat CNF arena preserves all correctness and exact construction identities and reaches a favorable 0.540824 aggregate logical-storage ratio, but fails its frozen per-instance <=80% gate on 5/162 payload-dominated singleton-clause rows. ADR-0300's dense memo preserves all registered structure and shows favorable bit-blast/cold-total point estimates, but fails the <=3% run-total CV gate (3.0023% BTree, 6.8664% dense); production is restored to BTree and the 12-run negative artifact is retained. ADR-0302 distinguishes exact authority-report stability, backend finding/work identity, and replay-valid model diversity and requires two genuine machines. Broader labeled recall and honest correctness/deployability/proof framing remain open; no warm-speed headline, post-observation rerun, or concretization/symbolic-memory reopening is authorized. |
 
 ### Track 5 — Verified Systems (IR reflection) — ADR-0056, adopted 2026-07-06
@@ -6161,6 +7008,436 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Corrected and preregistered the post-TL2.13 trust boundary.**
+  Direct inspection of pinned Lean 4.30 shows nested-inductive elimination in
+  kernel `environment::add_inductive`, while well-founded source recursion is
+  an elaborator transformation. The completed dependency audit therefore makes
+  TL2.14 kernel-side nested expansion/restoration dependent only on TL2.13 and
+  leaves source recursion in TL4.10. Proposed ADR-0355 and its P0--M6 plan bind
+  the transformation, exact official comparisons, >=640 generated profiles,
+  retained 720/768/840 and well-founded controls, resource limits, stop
+  conditions, and non-claims. M0 source/wire/no-product freeze is next.
+
+- **2026-07-22 — Completed TL2.13 M5 and accepted ADR-0354.** The append-only
+  construct-matrix overlay preserves ADR-0351/TL2.12 history while recording
+  five admitted rows, three independently computation-checked rows, and one
+  current decline. The live compatibility contract removes
+  `inductive-mutual`; historical validators project their original matrix
+  view; 184 kernel units, 61 kernel integrations, 40 importer integrations,
+  both doctests, the 720/768/840 populations, pinned-Lean differentials,
+  strict Clippy/rustdoc, 77 Python tests, every generator/checker, 137 concepts,
+  174 packs, and links pass under the 4 GiB policy. The
+  [final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+  marks TL2.13 DONE. The subsequent dependency audit corrects the TL2.14
+  handoff to kernel-side nested-inductive elimination.
+
+- **2026-07-22 — Completed TL2.13 M4 exact official mutual-group import and
+  computation.** The importer now validates each ordered family/constructor/
+  recursor record, calls `add_mutual_inductive` once, and matches official
+  dependency-ordered recursor arrays by checked name and owned rules. The
+  construct, non-indexed computation, and indexed computation streams each
+  import twice to identical zero-axiom reports; both selected cross-family
+  theorem sides normalize to the registered two-successor normal form. A new
+  six-test product target covers 22 rejecting metadata/type/count/rule/field/
+  publication mutations plus recursor-order and descriptive-metadata controls.
+  The 40-test importer suite, complete 184-unit kernel suite and integrations,
+  retained 720/768/840 populations, strict Clippy, rustdoc, both doctests,
+  owned formatting, and diff checks pass under one job and 4 GiB. The kernel
+  doctest required temporary output on the normal filesystem because the
+  unrelated `/tmp` tmpfs was 80% occupied; the unchanged test then passed and
+  the unique temporary directory was removed. Historical pre-widening product
+  observations remain immutable. M5 assurance/final closure is next.
+
+- **2026-07-22 — Completed TL2.13 M3 deterministic mutual-group grammar.** A
+  fixed-seed independent producer executes 720 unique public group cases twice
+  to byte-identical descriptor `2ea6769fa45ea159`. The population contains 432
+  positive admission/inference/base-iota contracts and 288 exact typed
+  rollbacks across all registered group, parameter, index, constructor, field,
+  recursion-target, telescope, binder, sort, and invalid-shape dimensions.
+  Motive/minor order is read from generated recursor `Pi` telescopes; target
+  recursion is counted from rule constants. Swapped group-order expectations
+  reject in 288 cases, moved target-family expectations reject in 240, and all
+  288 negatives restore the exact environment. The 768 recursive and 840
+  positivity descriptors remain unchanged. Complete bounded kernel/importer,
+  clippy, rustdoc, doctest, parity, foundational, link, owned-format, and diff
+  gates pass; unrelated workspace formatting drift remains outside this
+  milestone. No importer policy or M0 official stream changed. M4 is next.
+
+- **2026-07-22 — Completed TL2.13 M2 native mutual-group semantics.** One
+  trusted group algorithm now handles singleton and multi-family positivity,
+  constructor classification, globally ordered motives/minors, target-family
+  induction hypotheses and recursor calls, per-owner indices/majors, mutual-
+  `Prop` elimination restriction, recursor/rule inference, and atomic
+  publication. The 18-test public matrix covers all registered native rows,
+  including non-indexed/indexed/higher-order cross computation; two private
+  tests freeze the 16 mutation classes and prove complete rollback after a
+  final staged-rule failure. The complete bounded kernel/importer suites,
+  warning-denied clippy/rustdoc, exact direct-recursive identities, byte-
+  identical 768/840 controls, parity/foundational/link gates, owned-file
+  formatting, and diff checks pass under one job and 4 GiB. Workspace-wide
+  formatting remains blocked only by unrelated existing CAS/bench drift, which
+  this milestone does not rewrite. The importer decline and M0 streams remain
+  untouched. M3's >=640-case deterministic group grammar is next.
+
+- **2026-07-22 — Completed TL2.13 M1 ordered-group representation and
+  singleton delegation.** `InductiveFamilySpec` and
+  `Kernel::add_mutual_inductive` now express one ordered group with universe
+  parameters and shared parameter count supplied once. Multi-family preflight
+  rejects empty groups, group-local/environment name collisions, non-shared
+  parameter telescopes, and inequivalent result universes with typed errors;
+  each family opens its own indices. A private insertion log gives constant-
+  time checkpoints and group-sized rollback without cloning the environment.
+  `add_inductive` delegates through the singleton path with complete
+  declaration/rule equality, exact iota computation and error payloads, and
+  cache-safe same-name retry. Nine new focused tests, 182 kernel units, 51
+  kernel integrations, 34 importer integrations, exact `MiniNat.rec`/
+  `MiniList.rec` identities, and the unchanged 768/840 summaries pass under the
+  one-job/4 GiB policy. Valid multi-family input remains a typed policy decline;
+  M2 native semantics are next and no M0 official stream has entered Axeyum.
+
+- **2026-07-22 — Completed TL2.13 M0 mutual-group source/wire freeze.** The
+  pinned 66-line source compiles twice to one OLEAN digest and forces both
+  non-indexed and indexed cross-family recursor computations to
+  `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Two twice-exported official
+  format-3.1 streams are byte-identical per root and total 40,282 bytes; each
+  recursor has two motives and four minors. Independent inventory exposes and
+  freezes dependency-ordered wire recursor arrays (`Odd.rec, Even.rec`) while
+  semantic motives/minors retain family order. The machine contract binds 18
+  native cases, 16 mutation classes, the future >=640 group grammar, retained
+  768/840 controls, 15 stop conditions, exact resource/tool pins, and no Axeyum
+  product observation. Eleven fail-closed tests plus parity-doc/shell gate
+  integration pass. M1 ordered representation/singleton delegation is next.
+
+- **2026-07-22 — Preregistered TL2.13 atomic mutual-inductive groups.** Proposed
+  ADR-0354 and a P0--M5 plan derive the exact shared-parameter, equivalent-
+  universe, group-wide positivity, motive/minor ordering, target-family
+  recursion, per-family index, mutual-`Prop`, and atomic-publication rules from
+  pinned Lean 4.30. Eighteen native rows, sixteen mutation families, a future
+  >=640-case group grammar, retained 768/840 controls, exact official recursor
+  and explicit cross-computation gates, one-worker/4 GiB resources, stop
+  conditions, and milestone commit/push discipline are fixed before semantics
+  change. M0 source/wire freeze is next; no new Axeyum stream was observed.
+
+- **2026-07-22 — Completed TL2.12 and accepted ADR-0353.** The final bounded
+  pass closes 182 kernel unit, 42 kernel integration, 34 importer integration,
+  and both doctest gates; focused rustfmt/clippy/rustdoc, 56 parity/contract
+  tests, all registered generators/checkers, 137 foundational concept rows,
+  174 packs, links, and `git diff --check` pass. The historical construct
+  observation remains frozen while a separate TL2.12 overlay records four
+  admitted, two computation-checked, and two declined rows. The research
+  question and Lean roadmaps now hand the primary semantic path to TL2.13
+  mutual groups with every positivity, direct-recursive, generated, official,
+  and transactional-publication control retained.
+
+- **2026-07-22 — Completed TL2.12 M4 official computation and assurance
+  update.** Pinned Lean compiles the unchanged explicit-recursor source twice
+  to one OLEAN digest. Both frozen computation streams retain their hashes,
+  complete twice through Axeyum, preserve exact recursor metadata, and
+  recursively normalize the selected theorem sides to
+  `MiniNat.succ MiniNat.zero` and `True`. A machine-validated TL2.12 overlay
+  preserves the historical ADR-0351 observation and regenerates the current
+  matrix at four admitted rows, two separately computation-checked rows, and
+  two typed declines. Timed validation remains below 463 MiB for Lean and 141
+  MiB for the Rust gate. M5 final gates and disposition are next.
+
+- **2026-07-22 — Completed TL2.12 M3 exact official construct imports.** The
+  importer now parses `isReflexive` as descriptive metadata and leaves
+  structural authority with the independent kernel. `MiniVector` and `MiniAcc`
+  construct streams complete twice with exact generated/exported recursor
+  comparison; the mandatory well-founded row also completes through `Acc.rec`
+  without a frontend-support claim. Mutual and nested retain typed outcomes.
+  Metadata flips, unsafe/nested/multi-family boundaries, and late recursor
+  type/count/rule/`nfields` mutations all fail closed without partial
+  publication. The 32 importer integration tests, one compile-fail doctest,
+  focused clippy, and rustdoc pass. M4 owns the first computation-stream product
+  observation and assurance regeneration.
+
+- **2026-07-22 — Completed TL2.12 M2 generalized native recursion without an
+  official-stream product observation.** The one M1 telescope-tail
+  representation now generates index-aware, telescope-preserving IH types and
+  matching recursive iota arguments. Ten positive and four negative registered
+  rows pass through the public kernel path; a deterministic 768-case grammar
+  repeats exactly and exercises nine semantic mutation classes, while the
+  recursor contract rejects type/minor/rule/field-count corruption. The 840-case
+  positivity population retains its TL2.11 digest and failure partition while
+  reporting the intended 174-to-360 admission transition. All 182 kernel units,
+  direct-recursive identities, focused clippy, and rustdoc pass. M3 owns both
+  frozen official streams and the remaining importer mutations.
+
+- **2026-07-22 — Completed TL2.12 M1 shared recursive-field representation
+  without widening admission.** One WHNF telescope-tail operation now drives
+  constructor classification plus the independently reopened minor-IH and rule
+  RHS paths. Checked metadata stores stable field position/telescope depth;
+  mismatches return `RecursiveFieldShapeMismatch`. Canonical identities remain
+  `MiniNat.rec=dee04a36...f5ef` and `MiniList.rec=1087558f...7660`; Nat/List
+  computation, both feature declines, 182 kernel units, and the exact 840-case
+  positivity summary pass. The gate caught and rejected an eager-slice panic and
+  a reducible-let error-precedence drift before acceptance. M2 native semantics
+  is next; no new official stream has entered the Rust importer.
+
+- **2026-07-22 — Completed TL2.12 M0 source/wire freeze without product
+  observation.** The final 1,422-byte explicit-recursor source compiles twice
+  under pinned Lean and closes both registered computations by `rfl`. Two
+  root-specific `lean4export` streams repeat byte-identically: Vector is 15,944
+  bytes/284 records at SHA-256 `1ab5a38b...6df19`; Acc is 17,722 bytes/314
+  records at `3cb06283...c003`. Independent inventories freeze the exact target
+  inductive/recursor metadata. A machine contract binds 14 native cases, 12
+  mutation families, the future >=512-case grammar, the mandatory 840-case
+  positivity control, resources, commands, claim limits, and 13 stop
+  conditions; ten tests reject drift and premature Axeyum observations. No new
+  stream was passed to the Rust importer. M1 shared representation is next.
+
+- **2026-07-22 — Preregistered TL2.12 recursive-indexed plus
+  reflexive/higher-order induction hypotheses.** Proposed ADR-0353 and a bounded
+  M0--M5 plan now reduce all supported recursive fields to one telescope/index
+  rule, pin the Lean 4.30 implementation authority and exact official stream
+  hashes, separate constructor admission from recursor computation, register
+  native/mutation/generated/official gates, preserve TL2.11 and transactional
+  import controls, and freeze stop/resource/commit-push discipline. No kernel or
+  importer semantics changed; M0 machine registration and supplemental official
+  computation-source freeze are next.
+
+- **2026-07-22 — Completed TL2.11/T6.0.2 and accepted ADR-0352.** The final
+  bounded pass closes 182 kernel unit, 38 kernel integration, 30 importer
+  integration, and both doctest cases; required pinned Lean, the repeated
+  840-case grammar, focused clippy/rustdoc/rustfmt, 14 observation-validator
+  tests, foundational resources, parity artifacts, and links all pass. The
+  research question is closed. No inductive admission widened; TL2.12 is now
+  the preregistration-first recursive-indexed/reflexive IH handoff.
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M3 official/import gate.**
+  Ran four immutable sources twice at exact pinned Lean 4.30 under the 3/4 GiB
+  systemd policy: two accepts and six diagnostic-matched rejects, max 468432
+  KiB RSS. Added the mandatory fail-closed CI differential, an explicitly
+  synthetic official-stream mutation that propagates the exact typed kernel
+  error without publication, and a machine-checked observation manifest. The
+  frozen construct matrix remains unchanged. M4 closure remains.
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M2 public/generated gate.**
+  Added a twelve-row `add_inductive` contract matrix and a fixed-seed 840-case
+  structural grammar with independently assigned outcomes. Two complete runs
+  reproduce the frozen summary byte-for-byte: 174 admissions, 42 recursive-
+  indexed declines, 144 reflexive declines, 270 non-positive rejections, and
+  210 invalid-application rejections. All package unit/integration tests pass;
+  the known `/tmp` LLD doctest fault passes when temporary linker output is
+  redirected under `target/`. Focused clippy/rustdoc are clean. M3 official and
+  importer evidence remains.
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M1 trusted preflight.**
+  Added Lean 4.30's single-family WHNF/`Pi`/valid-family-application rule before
+  provisional inductive insertion, with separate exact non-positive and
+  invalid-occurrence errors. Public-path tests prove error precedence and
+  transactional rollback; direct-recursive computation and positive deferred
+  families retain their prior outcomes. The bounded gate passes 182 kernel
+  unit tests plus focused clippy/rustdoc. M2's full public matrix and >=256-case
+  repeated generated grammar remain open.
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M0 source freeze.** Added
+  hash-frozen mixed-polarity and deep-negative Lean sources beside the immutable
+  construct-matrix controls; registered six ordered rule classes and exact Lean
+  4.30/resource/command policy; added a fail-closed checker plus eight mutation
+  tests to normal parity/check paths. No new Lean or Axeyum product run occurred;
+  M1 pre-insertion trusted checking is next.
+
+- **2026-07-22 — Preregistered TL2.11/T6.0.2 strict positivity before kernel
+  implementation.** Proposed ADR-0352 and a bounded M0--M4 execution plan from
+  the exact Lean 4.30 kernel rule. Froze the intended WHNF/`Pi`/valid-family-
+  application semantics, separate typed polarity/invalid-occurrence errors,
+  pre-insertion environment ordering, twelve-row public case matrix, generated
+  adversarial grammar, official differential, stop conditions, and TL2.12
+  deferral. No kernel or importer semantics changed; M0 negative-source freeze
+  is next.
+
+- **2026-07-22 — Completed M5 and accepted the official Lean construct-matrix
+  decision.** All milestone-owned Rust, Python, parity, foundational-resource,
+  and link gates pass under bounded resources. Accepted ADR-0351, closed its
+  research question, synchronized PLAN/STATUS and both Lean roadmaps, and handed
+  the primary semantic sequence to TL2.11 strict positivity. The selected seven-
+  row matrix remains one admission, one translated-kernel decline, three parsed
+  declines, one inventory-only nested misclassification, one official source
+  rejection, and zero computation rows; TL1.8/TL2.16 remain PARTIAL globally.
+  The environmental `/tmp`-LLD rustdoc fault and unrelated workspace rustfmt
+  failure are recorded without modifying their files.
+
+- **2026-07-22 — Completed official Lean construct-matrix M4 generated
+  assurance output.** The checked seven-row matrix derives one exact independent
+  admission, one translated-kernel decline, three parsed/policy declines, one
+  inventory-only nested format misclassification, one official source
+  rejection, and zero computation-checked rows from the canonical registration.
+  Implication tests reject promotion without `CompletedImport`, promotion of
+  nested `Malformed` to parsed/unsupported credit, and computation credit
+  without a check. TL2.16 is now PARTIAL for this selected population; M5 final
+  gates and ADR closure remain.
+
+- **2026-07-22 — Completed official Lean construct-matrix M3 current-product
+  measurement.** At the pushed Stage B revision, ran the immutable direct-
+  recursive positive control before every one of ten measurements and repeated
+  all five new outcomes exactly. Recursive-indexed reaches the trusted kernel's
+  typed decline; reflexive, mutual, and the well-founded `Acc` dependency stop
+  at typed importer policy boundaries; nested reveals that the current importer
+  misclassifies its valid two-recursor official group as malformed. Added a
+  bounded Rust regression and machine product freezer/validator without changing
+  importer or kernel semantics. Every decline publishes no `CompletedImport`;
+  M4 generated assurance matrix is next.
+
+- **2026-07-22 — Completed the official Lean construct-matrix Stage B wire
+  freeze.** Exported each of five frozen roots twice under the 4 GiB cgroup;
+  every pair is byte-identical and the retained set is 116,636 bytes. Extended
+  the independent reader to freeze declaration names and complete inductive/
+  constructor/recursor metadata. The measured wire forms distinguish source
+  labels honestly: `MiniAcc` is both reflexive and recursive-indexed, `Rose`
+  retains `numNested=1` with two recursors, and well-founded source elaborates
+  through ordinary definitions plus the `Acc` closure. The Stage B generator,
+  validator, and ten contract tests reject byte/inventory/repetition/retention/
+  case-link/product drift. No Rust importer was run; M3 is next after push.
+
+- **2026-07-22 — Completed official Lean construct-matrix M0 and Stage A.**
+  Reproduced the flat and direct-recursive official streams twice at their
+  committed SHA-256 identities and repeated both current importer reports
+  twice. Froze minimal recursive-indexed, Acc-shaped reflexive, mutual, nested,
+  and explicit well-founded sources plus an official non-positive negative;
+  pinned Lean accepts the positive module and rejects the negative in the
+  kernel positivity check under a 4 GiB cgroup. Added the seven-case
+  machine-readable source registration and eight fail-closed tests. No new
+  export or product measurement occurred; ADR-0351 remains proposed and M2
+  official wire freeze is next.
+
+- **2026-07-22 — Proposed the official Lean construct-matrix execution
+  plan.** Proposed ADR-0351 and the linked execution plan separate source
+  families from official core wire forms, freeze source then independently
+  inventoried export evidence before product measurement, pair every current
+  decline with the direct-recursive positive control, define generated
+  assurance classes and exact retention/resource/stop gates, and keep
+  TL1.8/TL2.16 honestly incomplete. M0 baseline reproduction and the Stage A
+  source freeze are next; no importer or kernel semantics changed.
+
+- **2026-07-22 — Completed TL1.7 canonical Lean declaration identity.**
+  Accepted ADR-0350; published ledger-compatible axiom identities plus complete
+  structural content and direct-dependency digests for every admitted
+  declaration; froze the exact flat-fixture rows; and proved reorder invariance
+  plus valid type/body/binder mutation sensitivity. Importer 28 across three
+  binaries plus the example target pass. The remaining official inductive
+  fixture matrix is next; TL1.5 property fuzzing is dependency-ready.
+
+- **2026-07-22 — Completed TL1.4 generated Lean import mutation coverage.**
+  Accepted ADR-0349; added 226 deterministic cases across every specified
+  truncation/ID/reference/field/depth/Unicode/integer/cycle/version family;
+  froze exact stable outcome counts and repeated-summary identity; and recorded
+  64 complete-record prefixes as unsealed rather than full artifacts under the
+  upstream no-footer grammar. Importer 23 across two binaries plus example
+  target pass. TL1.7 declaration digests subsequently landed.
+
+- **2026-07-22 — Completed TL1.3 transactional Lean import publication.**
+  Accepted ADR-0348; removed caller-owned `&mut Kernel` import; introduced the
+  private-field `CompletedImport` success boundary; preserved every exact
+  fixture result; and added late parser, kernel, unsupported, resource, and I/O
+  failure controls. Importer 20 plus example target pass. TL1.4 generated
+  mutation coverage subsequently landed.
+
+- **2026-07-22 — Completed TL2.7 checked Lean Nat literal semantics.** Accepted
+  ADR-0347; required an independently checked canonical `Nat` bootstrap before
+  literal typing; implemented arbitrary-precision constructor-offset equality,
+  successor reduction, and one-layer recursor conversion; admitted and computed
+  the exact official Nat root as ten declarations with zero axioms; added
+  bootstrap, above-`u128`, false-equality, recursor, importer, seam-fuzz, and
+  pinned-Lean controls. Kernel 179+35, importer 18, compatibility/prototype 14,
+  and the required official Lean differential pass. The compatibility contract
+  advances to five passing profiles, one decline, and eight codes. TL1.3
+  transactional publication subsequently landed.
+
+- **2026-07-22 — Completed TL2.6 arbitrary-precision Lean Nat literal
+  storage.** Accepted ADR-0346; replaced the public `u128` payload with
+  canonical `NatLit(BigUint)`; validated format-3.1 decimal payloads without
+  narrowing; advanced the official Nat root to `literal-nat-typing`; added
+  boundary, malformed-input, interning, structural, rendering, importer, and
+  above-`u128` seam-fuzz coverage. Kernel 179+29, importer 16, doctest, focused
+  warning-denied Clippy/rustdoc, compatibility generation, and link gates pass.
+  TL2.7 literal typing is next.
+
+- **2026-07-21 — Completed TL2.5 structure eta as a separate kernel and
+  differential gate.** Checked inductives now persist whether constructor
+  fields are recursive; definitional equality applies symmetric eta only to
+  exactly saturated constructors of one-constructor, zero-index,
+  non-recursive families and requires equal inferred types plus field-by-field
+  projection equality. Seven native families cover symmetry, false equality,
+  wrong types, parameters/universes, dependencies, and indexed/recursive
+  exclusions. Pinned Lean 4.30 accepts the positive `rfl` control and rejects
+  the duplicated-field mutation under the 4 GiB bound. PLAN, STATUS, the
+  implementation and compatibility roadmaps, Project State, compatibility
+  contract/matrix, blocker census, importer result, and TL2.4 handoff now agree
+  that TL2.6 arbitrary-precision Nat storage is next; generated TL2.15 eta fuzz
+  coverage remains open.
+
+- **2026-07-21 — Completed TL2.4 constructor projection reduction and closed
+  the exact official projection root.** Native parameter/universe/dependent/
+  neutral/malformed controls pass; format-3.1 `proj` translation is live; the
+  official four-record stream admits nine declarations and computes; name/index
+  mutations reject. The compatibility contract advances that row to K1 pass and
+  removes the retired `expr-projection` decline code. The Nat root now exposes
+  line-125 bignum/literal typing as its exact first blocker. PLAN, Project State,
+  both Lean roadmaps, blocker census, importer result, kernel trust plan, and
+  diary preserve the TL2.5 eta and broader-compatibility boundaries.
+
+- **2026-07-21 — Completed TL2.3 dependent projection inference without
+  importing or computing projections.** The kernel preserves checked
+  parameter/index metadata and infers parameterized, indexed,
+  universe-polymorphic, and dependent field types using Lean's sole-constructor
+  telescope rule. Positive and mutation tests cover malformed names, shapes,
+  arity, fields, Prop elimination, and injected metadata corruption. The
+  compatibility contract/matrix, Lean implementation/compatibility roadmaps,
+  blocker census, Project State, PLAN, and prover-track documents now agree:
+  TL2.4 reduction is next, TL2.5 eta is separate, and `expr-projection` remains
+  a K1 decline until the official closure computes.
+
+- **2026-07-21 — Completed TL2.2 projection representation without semantic
+  overclaim.** The kernel now carries `Proj` through every structural and
+  de Bruijn operation and both renderers, backed by four integration tests and
+  renderer traversal coverage. Inference returns `UnsupportedProj`, admission
+  rolls back, and the importer retains `expr-projection`; TL2.3 is the next
+  unblocked task. The compatibility contract/matrix, Lean implementation and
+  compatibility roadmaps, blocker census, Project State, PLAN, and current
+  status all preserve that boundary.
+
+- **2026-07-21 — Reclassified the Z3-class categorical-engine gaps.** The
+  source-backed audit and 125/125 focused test run replace stale “new/absent”
+  roadmap wording. Interpolation, substantial direct CHC/Horn, and bounded
+  verified abduction are existing seeds; textual commands, representative
+  corpora, Horn depth, portable certification, and production hardening remain.
+  General SyGuS is the separately absent engine. P3.8/P4.6/P4.7 and the Track 4
+  index now preserve those distinctions.
+
+- **2026-07-21 — Classified the three quantified-BV Lean export costs.** Opt-in
+  phase telemetry leaves proof semantics and default output unchanged. Under a
+  30-second wall bound, `bug802` builds its 8,524-command tail and then exceeds
+  a hard 4 GiB cap in scoped kernel closure; `small-pipeline-fixpoint-3` closes
+  its 13,824-command proof in 7.744 seconds below 600 MiB but does not spool a
+  module; and `cond-var-elim-binary` emits 15,705 commands by 2.607 seconds below
+  525 MiB but does not finish CPS reconstruction. This rejects a single renderer
+  fix and preserves the production denominator pending mechanism-specific work,
+  evidence-aware dispatch, and official-Lean checking.
+
+- **2026-07-21 — Prototyped Lean reconstruction from selected evidence.** The
+  exact eight reconstruction gaps split into five existing-consumer plumbing
+  wins and three bounded quantified-BV cost cases. Two quantified-BV selected
+  certificates return 15 KB / 18.5 MB kernel-checked modules. All three QF_NIA
+  selected Alethe proofs contain only congruence+resolution rules and route to
+  the existing EUF reconstructor, producing 2.9--8.1 KB modules in about 0.10 s
+  below 9.5 MiB RSS; query-only source classification had incorrectly selected
+  `la_generic`. Two BV alternation rows and one conjunctive row remain bounded
+  mechanism-specific cost diagnostics. The durable probe and result note
+  preserve the 30-second per-row protocol; production credit still requires
+  evidence-aware dispatch plus the official-Lean tier.
+
+- **2026-07-21 — Refreshed the complete bare-UNSAT population under audit v2.**
+  Corrected the v1 vacuous-check accounting in the artifacts themselves,
+  recorded coarse backend/check-mode attribution for every residual, and
+  regenerated the proof matrix and parser-backed shape census. The refresh
+  preserves every verdict but removes four stale QF_SEQ source-invalid DRAT
+  credits and changes 22 unpaired timing-derived dominance flags; both are
+  reported rather than normalized away. Current proof counts are 267 certified
+  and independently checked, 260 Lean-checked, 259 full-conjunction, 58 bare,
+  zero declared trust holes, and two proof-production errors.
 
 - **2026-07-21 — Landed the T5.4.3 directed-fuzz implementation checkpoint.**
   Pushed `3d75d407` after targeted tests and strict Clippy. The API retains

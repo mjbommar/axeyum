@@ -7,6 +7,14 @@ Entry ADR: [ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md
 Each phase has its own file with tasks, sizes, exit criteria, and its TCB
 statement. **Every slice lands alone**; none is justified by a later one.
 
+This track builds Axeyum's native certificate-first proof assistant. The
+separate [Lean-system compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md)
+and [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md)
+add versioned declaration/library import and staged native
+source/Lake/editor/runtime/mathlib compatibility. They reuse P6.2/P6.3 for goals
+and tactics rather than creating a second goal engine; Track 6 does not own a
+competing theorem library or an Axeyum-only proof language.
+
 ---
 
 ## The shape
@@ -39,15 +47,16 @@ statement. **Every slice lands alone**; none is justified by a later one.
 | **9** | **[P6.5](P6.5-spec-surface.md)** — specs | L | **Test the reduction to P5.2 first.** May correctly cancel. |
 | **—** | **[P6.6-probe](../process/quantified-uf-probe.md)** — quantified-UF measurement | S | Independent; run when convenient. Fix `!fn_app_0`, Skolemize, re-run, **report depth**. |
 
-## Start here — the first commit
+## First kernel-fuzz increment — landed
 
-**P6.0, T6.0.3: fuzz the kernel, seam-first.**
+**P6.0, T6.0.3: fuzz the kernel, seam-first — DONE for the current four seams.**
 
-The kernel has **181 hand-written tests and zero fuzz**. Note 01's measured finding:
-every historical Lean/Rocq kernel bug lived at a **feature seam**, and
-example-based testing appears **nowhere** in the record of how they were found —
-ours included. The `False` bug was found by reading the code against the
-metatheory, not by a test.
+The starting point was **181 hand-written tests and zero fuzz**. The landed
+[768-case seed](../../plan/lean-kernel-seam-fuzz-seed-2026-07-21.md) now covers
+the four representable seams below, reruns its summary deterministically, and
+rejects a `False` admission in every case. This does not erase the measured
+finding: every historical Lean/Rocq kernel bug lived at a **feature seam**, and
+the original `False` bug was found by reading the code against the metatheory.
 
 Seams, in priority order:
 
@@ -60,8 +69,14 @@ Seams, in priority order:
    rejects literals first. **Bignum lands before `Lit` typing** (T6.0.4), or ingest
    raises `LitTooWide`.
 
-The negative class to build: **"the kernel accepts `False`."** Per the standing
-hard rule, a generator that avoids the corner is not a gate.
+The negative class is now live: **"the kernel accepts `False`."** TL2.2
+represents projections structurally, TL2.3 infers checked dependent field types,
+and TL2.4 reduces/imports the exact official root; generated
+projection/reduction/eta and quotient semantic cases remain explicit TL2.15
+follow-ups. TL2.5 separately adds structure eta with native and pinned-Lean
+positive/rejecting controls. Next kernel implementation work is TL2.6
+arbitrary-precision Nat storage, with each new admitted seam required to join
+the same negative class.
 
 ## The five things not to get wrong
 
@@ -81,7 +96,9 @@ hard rule, a generator that avoids the corner is not a gate.
 
 ## What this track must never do
 
-- Import Mathlib, or grow a mathematical corpus. **Ever.**
+- Make mathlib part of this track's native trusted goal/tactic core. Selected
+  pinned mathlib imports belong to the interoperability track as external
+  compatibility and theorem-discharge evidence.
 - Add a human proof-scripting language.
 - Claim `sorry`. **`fail`.**
 - Claim we decide more than Z3 (`PLAN.md:2901-2904` settles it).
@@ -107,8 +124,8 @@ Each slice pays alone:
 
 | Item | Status |
 |---|---|
-| **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `proposed` |
+| **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `accepted` |
 | **[ADR-0166](../../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**; cvc5's Alethe has **no bit-vectors** | filed, `proposed` — **urgent, and independent of this track** |
-| The prelude-axiom boundary — **64** axioms, none proved | T6.0.6 |
+| The prelude-assumption boundary — **65** runtime/type-digested rows, none yet proved or semantically classified | T6.0.6 / TL0.4 / TL3.2 |
 | The `sat` trust story | P6.1c |
 | **What the QF_UF 54% actually reflects** — the previous explanation was false ([note 08's correction](../research/08-solver-automation-assets.md)) | unwritten |

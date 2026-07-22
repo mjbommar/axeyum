@@ -1,0 +1,1449 @@
+{
+  "categories": [
+    {
+      "category": "proof-production-error",
+      "description": "Evidence production did not reproduce UNSAT.",
+      "instances": 2
+    },
+    {
+      "category": "uncertified-and-unchecked",
+      "description": "The UNSAT route is neither certified nor independently checked.",
+      "instances": 58
+    },
+    {
+      "category": "uncertified-but-checked",
+      "description": "Reserved invalid combination; normalized into uncertified-and-unchecked.",
+      "instances": 0
+    },
+    {
+      "category": "evidence-check-gap",
+      "description": "Certified evidence exists but did not pass its independent checker.",
+      "instances": 0
+    },
+    {
+      "category": "trust-hole-and-lean-gap",
+      "description": "Checked evidence retains a trust hole and has no Lean reconstruction.",
+      "instances": 0
+    },
+    {
+      "category": "trust-hole",
+      "description": "Lean reconstruction exists, but a declared trust hole remains.",
+      "instances": 0
+    },
+    {
+      "category": "lean-reconstruction-gap",
+      "description": "Certified, checked, trust-free evidence lacks Lean reconstruction.",
+      "instances": 8
+    },
+    {
+      "category": "dominant",
+      "description": "Certified, checked, trust-free, and Lean-reconstructed UNSAT.",
+      "instances": 259
+    }
+  ],
+  "evidence_kinds": [
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 58,
+      "baseline_unsat": 58,
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "evidence_kind": "bare-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 58,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 12,
+      "audit_unsat": 12,
+      "baseline_unsat": 12,
+      "dominant_unsat": 9,
+      "evidence_certified": 12,
+      "evidence_checked": 12,
+      "evidence_kind": "alethe-unsat",
+      "lean_checked": 9,
+      "proof_errors": 0,
+      "trust_hole_free": 12,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 0,
+      "baseline_unsat": 2,
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "evidence_kind": "(none)",
+      "lean_checked": 0,
+      "proof_errors": 2,
+      "trust_hole_free": 0,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 0,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "bv-alternation-counterexample-unsat",
+      "lean_checked": 0,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 1,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "closed-universal-counterexample-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 0,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "bv-conjunctive-universal-instance-unsat",
+      "lean_checked": 0,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 0,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "bv-paired-existential-transfer-unsat",
+      "lean_checked": 0,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 86,
+      "audit_unsat": 86,
+      "baseline_unsat": 86,
+      "dominant_unsat": 86,
+      "evidence_certified": 86,
+      "evidence_checked": 86,
+      "evidence_kind": "array-axiom-unsat",
+      "lean_checked": 86,
+      "proof_errors": 0,
+      "trust_hole_free": 86,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 20,
+      "audit_unsat": 20,
+      "baseline_unsat": 20,
+      "dominant_unsat": 20,
+      "evidence_certified": 20,
+      "evidence_checked": 20,
+      "evidence_kind": "bounded-int-blast-unsat",
+      "lean_checked": 20,
+      "proof_errors": 0,
+      "trust_hole_free": 20,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 14,
+      "audit_unsat": 14,
+      "baseline_unsat": 14,
+      "dominant_unsat": 14,
+      "evidence_certified": 14,
+      "evidence_checked": 14,
+      "evidence_kind": "term-level-unsat",
+      "lean_checked": 14,
+      "proof_errors": 0,
+      "trust_hole_free": 14,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 10,
+      "audit_unsat": 10,
+      "baseline_unsat": 10,
+      "dominant_unsat": 10,
+      "evidence_certified": 10,
+      "evidence_checked": 10,
+      "evidence_kind": "regex-emptiness-unsat",
+      "lean_checked": 10,
+      "proof_errors": 0,
+      "trust_hole_free": 10,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 9,
+      "audit_unsat": 9,
+      "baseline_unsat": 9,
+      "dominant_unsat": 9,
+      "evidence_certified": 9,
+      "evidence_checked": 9,
+      "evidence_kind": "nra-even-power-unsat",
+      "lean_checked": 9,
+      "proof_errors": 0,
+      "trust_hole_free": 9,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 8,
+      "audit_unsat": 8,
+      "baseline_unsat": 8,
+      "dominant_unsat": 8,
+      "evidence_certified": 8,
+      "evidence_checked": 8,
+      "evidence_kind": "arith-dpll-unsat",
+      "lean_checked": 8,
+      "proof_errors": 0,
+      "trust_hole_free": 8,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 8,
+      "audit_unsat": 8,
+      "baseline_unsat": 8,
+      "dominant_unsat": 8,
+      "evidence_certified": 8,
+      "evidence_checked": 8,
+      "evidence_kind": "bv-defined-enum-unsat",
+      "lean_checked": 8,
+      "proof_errors": 0,
+      "trust_hole_free": 8,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 7,
+      "audit_unsat": 7,
+      "baseline_unsat": 7,
+      "dominant_unsat": 7,
+      "evidence_certified": 7,
+      "evidence_checked": 7,
+      "evidence_kind": "bool-euf-exhaustive-unsat",
+      "lean_checked": 7,
+      "proof_errors": 0,
+      "trust_hole_free": 7,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 7,
+      "audit_unsat": 7,
+      "baseline_unsat": 7,
+      "dominant_unsat": 7,
+      "evidence_certified": 7,
+      "evidence_checked": 7,
+      "evidence_kind": "bool-uf-exhaustive-unsat",
+      "lean_checked": 7,
+      "proof_errors": 0,
+      "trust_hole_free": 7,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 7,
+      "audit_unsat": 7,
+      "baseline_unsat": 7,
+      "dominant_unsat": 7,
+      "evidence_certified": 7,
+      "evidence_checked": 7,
+      "evidence_kind": "bv-uf-local-unsat",
+      "lean_checked": 7,
+      "proof_errors": 0,
+      "trust_hole_free": 7,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 7,
+      "audit_unsat": 7,
+      "baseline_unsat": 7,
+      "dominant_unsat": 7,
+      "evidence_certified": 7,
+      "evidence_checked": 7,
+      "evidence_kind": "sos-unsat",
+      "lean_checked": 7,
+      "proof_errors": 0,
+      "trust_hole_free": 7,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 6,
+      "audit_unsat": 6,
+      "baseline_unsat": 6,
+      "dominant_unsat": 6,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
+      "evidence_kind": "bv-forall-nonconstant-unsat",
+      "lean_checked": 6,
+      "proof_errors": 0,
+      "trust_hole_free": 6,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 6,
+      "audit_unsat": 6,
+      "baseline_unsat": 6,
+      "dominant_unsat": 6,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
+      "evidence_kind": "term-identity-unsat",
+      "lean_checked": 6,
+      "proof_errors": 0,
+      "trust_hole_free": 6,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 5,
+      "audit_unsat": 5,
+      "baseline_unsat": 5,
+      "dominant_unsat": 5,
+      "evidence_certified": 5,
+      "evidence_checked": 5,
+      "evidence_kind": "finite-domain-enum-unsat",
+      "lean_checked": 5,
+      "proof_errors": 0,
+      "trust_hole_free": 5,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "evidence_kind": "bv-abstraction-unsat",
+      "lean_checked": 4,
+      "proof_errors": 0,
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "evidence_kind": "finite-array-extensionality-unsat",
+      "lean_checked": 4,
+      "proof_errors": 0,
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "evidence_kind": "set-cardinality-unsat",
+      "lean_checked": 4,
+      "proof_errors": 0,
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "evidence_kind": "uf-arith-congruence-unsat",
+      "lean_checked": 4,
+      "proof_errors": 0,
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "bool-euf-online-unsat",
+      "lean_checked": 3,
+      "proof_errors": 0,
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "datatype-structural-unsat",
+      "lean_checked": 3,
+      "proof_errors": 0,
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "finite-domain-pigeonhole-unsat",
+      "lean_checked": 3,
+      "proof_errors": 0,
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "evidence_kind": "negated-existential-witness-unsat",
+      "lean_checked": 3,
+      "proof_errors": 0,
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "bool-simplification-unsat",
+      "lean_checked": 2,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "cross-store-array-disequality-unsat",
+      "lean_checked": 2,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "diophantine-unsat",
+      "lean_checked": 2,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "evidence_kind": "lra-dpll-unsat",
+      "lean_checked": 2,
+      "proof_errors": 0,
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "aligned-write-chain-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "binary-search16-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "bool-array-read-collapse-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "bv-positive-universal-instance-set-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "const-array-default-mismatch-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "fifo-bc04-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "store-chain-readback-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "two-byte-memcpy-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "two-byte-xor-swap-roundtrip-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "two-cell-xor-swap-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "two-element-bubble-sort-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "two-element-selection-sort-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "evidence_kind": "vacuous-exists-universal-counterexample-unsat",
+      "lean_checked": 1,
+      "proof_errors": 0,
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    }
+  ],
+  "lean_reconstruction_gaps": [
+    {
+      "evidence_kind": "bv-alternation-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__bug802.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-alternation-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__small-pipeline-fixpoint-3.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-conjunctive-universal-instance-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress0__quantifiers__cond-var-elim-binary.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "bv-paired-existential-transfer-unsat",
+      "file": "corpus/public-curated/quantified/BV/cvc5-regress-clean/cli__regress1__quantifiers__nested9_true-unreach-call.i_575.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "closed-universal-counterexample-unsat",
+      "file": "corpus/public-curated/quantified/BV/bitwuzla-regress-clean/solver__quant__regsmtparselet.smt2",
+      "lean_error": "malformed `prove_unsat_to_lean` step: emitter declined: not unsat through this fragment",
+      "logic": "BV"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__div.01.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.08.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    },
+    {
+      "evidence_kind": "alethe-unsat",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__minimal_unsat_core.smt2",
+      "lean_error": "malformed `la_generic` step: LRA decision failed: unsupported by backend: QF_LRA: assertion is not a conjunctive linear real constraint",
+      "logic": "QF_NIA"
+    }
+  ],
+  "proof_errors": [
+    {
+      "error": "backend failure: int-blast failed: integer bit-blast does not support operator IntPow2",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-2.smt2",
+      "logic": "QF_NIA",
+      "phase": "produce-evidence"
+    },
+    {
+      "error": "backend failure: int-blast failed: integer bit-blast does not support operator IntPow2",
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-7.smt2",
+      "logic": "QF_NIA",
+      "phase": "produce-evidence"
+    }
+  ],
+  "rows": [
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "blockers": {
+        "lean-reconstruction-gap": 1
+      },
+      "dominant_unsat": 3,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "lean_checked": 3,
+      "logic": "BV",
+      "proof_errors": 0,
+      "slice": "bv-bitwuzla-regress-clean-quantified-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json",
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 18,
+      "audit_unsat": 18,
+      "baseline_unsat": 18,
+      "blockers": {
+        "lean-reconstruction-gap": 4
+      },
+      "dominant_unsat": 14,
+      "evidence_certified": 18,
+      "evidence_checked": 18,
+      "lean_checked": 14,
+      "logic": "BV",
+      "proof_errors": 0,
+      "slice": "bv-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
+      "trust_hole_free": 18,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 0,
+      "baseline_unsat": 0,
+      "blockers": {},
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "LIA",
+      "proof_errors": 0,
+      "slice": "lia-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json",
+      "trust_hole_free": 0,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 85,
+      "audit_unsat": 85,
+      "baseline_unsat": 85,
+      "blockers": {},
+      "dominant_unsat": 85,
+      "evidence_certified": 85,
+      "evidence_checked": 85,
+      "lean_checked": 85,
+      "logic": "QF_ABV",
+      "proof_errors": 0,
+      "slice": "qf-abv-cvc5-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json",
+      "trust_hole_free": 85,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 5,
+      "audit_unsat": 5,
+      "baseline_unsat": 5,
+      "blockers": {},
+      "dominant_unsat": 5,
+      "evidence_certified": 5,
+      "evidence_checked": 5,
+      "lean_checked": 5,
+      "logic": "QF_ALIA",
+      "proof_errors": 0,
+      "slice": "qf-alia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 5,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 20,
+      "audit_unsat": 20,
+      "baseline_unsat": 20,
+      "blockers": {},
+      "dominant_unsat": 20,
+      "evidence_certified": 20,
+      "evidence_checked": 20,
+      "lean_checked": 20,
+      "logic": "QF_AUFBV",
+      "proof_errors": 0,
+      "slice": "qf-aufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json",
+      "trust_hole_free": 20,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 0,
+      "baseline_unsat": 0,
+      "blockers": {},
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "QF_AUFBV",
+      "proof_errors": 0,
+      "slice": "qf-aufbv-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 0,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {
+        "uncertified-and-unchecked": 2
+      },
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "QF_AUFLIA",
+      "proof_errors": 0,
+      "slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 5,
+      "audit_unsat": 5,
+      "baseline_unsat": 5,
+      "blockers": {},
+      "dominant_unsat": 5,
+      "evidence_certified": 5,
+      "evidence_checked": 5,
+      "lean_checked": 5,
+      "logic": "QF_AX",
+      "proof_errors": 0,
+      "slice": "qf-ax-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 5,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {},
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_BV",
+      "proof_errors": 0,
+      "slice": "qf-bv-curated-bvred-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "blockers": {},
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "lean_checked": 3,
+      "logic": "QF_BVFP",
+      "proof_errors": 0,
+      "slice": "qf-bvfp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "blockers": {},
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "lean_checked": 3,
+      "logic": "QF_DT",
+      "proof_errors": 0,
+      "slice": "qf-dt-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 10,
+      "audit_unsat": 10,
+      "baseline_unsat": 10,
+      "blockers": {},
+      "dominant_unsat": 10,
+      "evidence_certified": 10,
+      "evidence_checked": 10,
+      "lean_checked": 10,
+      "logic": "QF_FF",
+      "proof_errors": 0,
+      "slice": "qf-ff-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 10,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 7,
+      "audit_unsat": 7,
+      "baseline_unsat": 7,
+      "blockers": {},
+      "dominant_unsat": 7,
+      "evidence_certified": 7,
+      "evidence_checked": 7,
+      "lean_checked": 7,
+      "logic": "QF_FP",
+      "proof_errors": 0,
+      "slice": "qf-fp-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
+      "trust_hole_free": 7,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 4,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "blockers": {},
+      "dominant_unsat": 4,
+      "evidence_certified": 4,
+      "evidence_checked": 4,
+      "lean_checked": 4,
+      "logic": "QF_LIA",
+      "proof_errors": 0,
+      "slice": "qf-lia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "blockers": {},
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "lean_checked": 3,
+      "logic": "QF_LRA",
+      "proof_errors": 0,
+      "slice": "qf-lra-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {},
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_NIA",
+      "proof_errors": 0,
+      "slice": "qf-nia-curated-iand-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-nia-curated-iand-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 5,
+      "audit_unsat": 13,
+      "baseline_unsat": 15,
+      "blockers": {
+        "lean-reconstruction-gap": 3,
+        "proof-production-error": 2,
+        "uncertified-and-unchecked": 8
+      },
+      "dominant_unsat": 2,
+      "evidence_certified": 5,
+      "evidence_checked": 5,
+      "lean_checked": 2,
+      "logic": "QF_NIA",
+      "proof_errors": 2,
+      "slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 13,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 16,
+      "audit_unsat": 16,
+      "baseline_unsat": 16,
+      "blockers": {},
+      "dominant_unsat": 16,
+      "evidence_certified": 16,
+      "evidence_checked": 16,
+      "lean_checked": 16,
+      "logic": "QF_NIA",
+      "proof_errors": 0,
+      "slice": "qf-nia-synthetic-graduated-vs-z3.json",
+      "source": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
+      "trust_hole_free": 16,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 14,
+      "baseline_unsat": 14,
+      "blockers": {
+        "uncertified-and-unchecked": 13
+      },
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "lean_checked": 2,
+      "logic": "QF_NRA",
+      "proof_errors": 0,
+      "slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 14,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 16,
+      "audit_unsat": 16,
+      "baseline_unsat": 16,
+      "blockers": {},
+      "dominant_unsat": 16,
+      "evidence_certified": 16,
+      "evidence_checked": 16,
+      "lean_checked": 16,
+      "logic": "QF_NRA",
+      "proof_errors": 0,
+      "slice": "qf-nra-synthetic-graduated-vs-z3.json",
+      "source": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
+      "trust_hole_free": 16,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 8,
+      "audit_unsat": 28,
+      "baseline_unsat": 28,
+      "blockers": {
+        "uncertified-and-unchecked": 20
+      },
+      "dominant_unsat": 8,
+      "evidence_certified": 8,
+      "evidence_checked": 8,
+      "lean_checked": 8,
+      "logic": "QF_S",
+      "proof_errors": 0,
+      "slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 28,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 5,
+      "baseline_unsat": 5,
+      "blockers": {
+        "uncertified-and-unchecked": 5
+      },
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "QF_SEQ",
+      "proof_errors": 0,
+      "slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 5,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 8,
+      "baseline_unsat": 8,
+      "blockers": {
+        "uncertified-and-unchecked": 6
+      },
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_SLIA",
+      "proof_errors": 0,
+      "slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 8,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 15,
+      "audit_unsat": 15,
+      "baseline_unsat": 15,
+      "blockers": {},
+      "dominant_unsat": 15,
+      "evidence_certified": 15,
+      "evidence_checked": 15,
+      "lean_checked": 15,
+      "logic": "QF_UF",
+      "proof_errors": 0,
+      "slice": "qf-uf-cvc5-regress-clean-bounded-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
+      "trust_hole_free": 15,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 15,
+      "audit_unsat": 15,
+      "baseline_unsat": 15,
+      "blockers": {},
+      "dominant_unsat": 15,
+      "evidence_certified": 15,
+      "evidence_checked": 15,
+      "lean_checked": 15,
+      "logic": "QF_UF",
+      "proof_errors": 0,
+      "slice": "qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
+      "trust_hole_free": 15,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 3,
+      "audit_unsat": 3,
+      "baseline_unsat": 3,
+      "blockers": {},
+      "dominant_unsat": 3,
+      "evidence_certified": 3,
+      "evidence_checked": 3,
+      "lean_checked": 3,
+      "logic": "QF_UF",
+      "proof_errors": 0,
+      "slice": "qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
+      "trust_hole_free": 3,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 1,
+      "audit_unsat": 1,
+      "baseline_unsat": 1,
+      "blockers": {},
+      "dominant_unsat": 1,
+      "evidence_certified": 1,
+      "evidence_checked": 1,
+      "lean_checked": 1,
+      "logic": "QF_UFBV",
+      "proof_errors": 0,
+      "slice": "qf-ufbv-bitwuzla-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json",
+      "trust_hole_free": 1,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {},
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_UFBV",
+      "proof_errors": 0,
+      "slice": "qf-ufbv-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 6,
+      "audit_unsat": 6,
+      "baseline_unsat": 6,
+      "blockers": {},
+      "dominant_unsat": 6,
+      "evidence_certified": 6,
+      "evidence_checked": 6,
+      "lean_checked": 6,
+      "logic": "QF_UFFF",
+      "proof_errors": 0,
+      "slice": "qf-ufff-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 6,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {},
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_UFLIA",
+      "proof_errors": 0,
+      "slice": "qf-uflia-curated-named-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uflia-curated-named-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {},
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_UFLIA",
+      "proof_errors": 0,
+      "slice": "qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 2,
+      "baseline_unsat": 2,
+      "blockers": {
+        "uncertified-and-unchecked": 2
+      },
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "QF_UFLIA",
+      "proof_errors": 0,
+      "slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
+      "trust_hole_free": 2,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 2,
+      "audit_unsat": 4,
+      "baseline_unsat": 4,
+      "blockers": {
+        "uncertified-and-unchecked": 2
+      },
+      "dominant_unsat": 2,
+      "evidence_certified": 2,
+      "evidence_checked": 2,
+      "lean_checked": 2,
+      "logic": "QF_UFLIA",
+      "proof_errors": 0,
+      "slice": "qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
+      "trust_hole_free": 4,
+      "trust_hole_instances": 0
+    },
+    {
+      "audit_reported_checked": 0,
+      "audit_unsat": 0,
+      "baseline_unsat": 0,
+      "blockers": {},
+      "dominant_unsat": 0,
+      "evidence_certified": 0,
+      "evidence_checked": 0,
+      "lean_checked": 0,
+      "logic": "UF",
+      "proof_errors": 0,
+      "slice": "uf-cvc5-regress-clean-quantified-solver-vs-z3-10s.json",
+      "source": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
+      "trust_hole_free": 0,
+      "trust_hole_instances": 0
+    }
+  ],
+  "sources": [
+    {
+      "path": "bench-results/dominance/bv-bitwuzla-regress-clean-quantified-dominance-audit.json",
+      "sha256": "d6757e8ca8275a575c6ea12c885d77af6948e95e709fd9e77fcb096818cb20c6"
+    },
+    {
+      "path": "bench-results/dominance/bv-cvc5-regress-clean-quantified-dominance-audit.json",
+      "sha256": "0ec37f4606e84618ec771778b7295fdf96a91b0d106e1cf8a2124c1b916f6482"
+    },
+    {
+      "path": "bench-results/dominance/lia-cvc5-regress-clean-quantified-dominance-audit.json",
+      "sha256": "9533761a8f6818533df79cf53993deb8fcc73a96f67a92a1f630632b22cc18d3"
+    },
+    {
+      "path": "bench-results/dominance/qf-abv-cvc5-bitwuzla-regress-clean-dominance-audit.json",
+      "sha256": "5c965300ec3c2dac27ffd283b9a0fa5a63d89f885fcaca8ee0c93c104142a235"
+    },
+    {
+      "path": "bench-results/dominance/qf-alia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "aa1105c80d88f98f095af897b0280ed146c68c52caa83c6c076e844ccb2c4d2d"
+    },
+    {
+      "path": "bench-results/dominance/qf-aufbv-bitwuzla-regress-clean-dominance-audit.json",
+      "sha256": "9f97f8e2556b9a2c9e8a2b0a8448604b0b7fd244630c0e673f6a95b7359b61ed"
+    },
+    {
+      "path": "bench-results/dominance/qf-aufbv-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "db5e6786c284fc173204d2bb29df28737ade93807356946e736a29c5562919a9"
+    },
+    {
+      "path": "bench-results/dominance/qf-auflia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "cc4e3bc3bee95676af93bafca5863ec896ee31b377f08ab89cb1e55ea37ca529"
+    },
+    {
+      "path": "bench-results/dominance/qf-ax-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "705bcf3bb4d9ee05ccd2b82a2e16bbfe251d02b11db9e56e919f18f2bc7c6e62"
+    },
+    {
+      "path": "bench-results/dominance/qf-bv-curated-bvred-dominance-audit.json",
+      "sha256": "16612a6cb6f74a7ab823b9927409254248061795baeaac087e732e2176d5de2b"
+    },
+    {
+      "path": "bench-results/dominance/qf-bvfp-bitwuzla-regress-clean-dominance-audit.json",
+      "sha256": "05c388aaf11cc164ae3038efa0811043d38a9482e250b79a7f7ecc47cafd6c28"
+    },
+    {
+      "path": "bench-results/dominance/qf-dt-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "57a939c9e24e3aa0825f96d10aff0638a5d14309387dd342e3066b0a703c8e5a"
+    },
+    {
+      "path": "bench-results/dominance/qf-ff-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "c6b87e2ce1d315a0c1233caa715b68daa02df092ec606e231f2947b462760183"
+    },
+    {
+      "path": "bench-results/dominance/qf-fp-bitwuzla-regress-clean-dominance-audit.json",
+      "sha256": "f7236fa94ece23f32fc4559b7f6f567f339fb0a525ea85e36724586123b126e9"
+    },
+    {
+      "path": "bench-results/dominance/qf-lia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "d2a10ff175eab7d70037d557c2ae1a4722ef6175268ef2b7d994060c9293babe"
+    },
+    {
+      "path": "bench-results/dominance/qf-lra-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "292d1bb6ee2d36bfe6bdfa7ad3f51769ed192a092c15548927e4620ac4bb1beb"
+    },
+    {
+      "path": "bench-results/dominance/qf-nia-curated-iand-dominance-audit.json",
+      "sha256": "04c59b2829d979095aee18b9427544b008a1b1d9ff5ec557352a68c1634d48c8"
+    },
+    {
+      "path": "bench-results/dominance/qf-nia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "49c5baa05b29ca1c0e54acfc0d59fad937c065ebd0421ed5f56c39ec2992fc29"
+    },
+    {
+      "path": "bench-results/dominance/qf-nia-synthetic-graduated-dominance-audit.json",
+      "sha256": "68ed92fba4a5e29d48c9a98e4913ded4cf8b5c57c410bc630ea07be1d0b71e37"
+    },
+    {
+      "path": "bench-results/dominance/qf-nra-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "fa84205e08c7657e3bdbd7196acc3ffc0edd71643d109836c58f96a17ddbc4da"
+    },
+    {
+      "path": "bench-results/dominance/qf-nra-synthetic-graduated-dominance-audit.json",
+      "sha256": "b4c9c0f631b2e4be954c386d3cfcbdefc109015183b5ef5320c24a5adfd621ef"
+    },
+    {
+      "path": "bench-results/dominance/qf-s-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "072792ed9ec391b20c81185a1e58a2fa488c70d041c1d9d4f4ec191272978c66"
+    },
+    {
+      "path": "bench-results/dominance/qf-seq-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "0ff43544404dbcd6465c63031a619add346efa87ddf6498f3a4ccd0b3318d945"
+    },
+    {
+      "path": "bench-results/dominance/qf-slia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "23cfcd1f5ca021ddfd855df062e080153dd3f01d2c084e61ec76dc7a8ba27933"
+    },
+    {
+      "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-dominance-audit.json",
+      "sha256": "3297a645bde8b3e48763bcc92b067cc907ee0449adf54282f8df33ba51548fcf"
+    },
+    {
+      "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
+      "sha256": "fd7bd53dc9bdc06cfd607e139a27d4c5d29ee61abf0672b9a3ba6df0a344bda9"
+    },
+    {
+      "path": "bench-results/dominance/qf-uf-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
+      "sha256": "fbe5bcfc7c233ffce39b0fb44efe38d9214dfc33112e1e3bcf8998c3849d9398"
+    },
+    {
+      "path": "bench-results/dominance/qf-ufbv-bitwuzla-regress-clean-dominance-audit.json",
+      "sha256": "d45b43b63de6942f8e0d16bd3ede2c439bead021b499dd7f8dfb2d59bef55dbd"
+    },
+    {
+      "path": "bench-results/dominance/qf-ufbv-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "115f4ec569d627bdcf9e5119d8856a678b73db8f4674cd07ccbc06036d61ae52"
+    },
+    {
+      "path": "bench-results/dominance/qf-ufff-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "b8e29548374faba569edcf549b1e667cb6a04895751ddce4ff6829b0163e1a6e"
+    },
+    {
+      "path": "bench-results/dominance/qf-uflia-curated-named-dominance-audit.json",
+      "sha256": "e3a0d9fbc713e1082a7fd08ba97b1290d96137f2099b80766d8e68fd0db7ba4f"
+    },
+    {
+      "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-bounded-uninterp-sorts-dominance-audit.json",
+      "sha256": "ec2c413fee1375a836f2f48d4296761371325057643d83b00cc87e035265bd09"
+    },
+    {
+      "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-dominance-audit.json",
+      "sha256": "9702bc4267bece393a84a2f05ca911fb040491f790fb98e828f808beb1bc0e8d"
+    },
+    {
+      "path": "bench-results/dominance/qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-dominance-audit.json",
+      "sha256": "16e392be05d81a74c81483684262135123a293f568e67cc91a80acdfe608204f"
+    },
+    {
+      "path": "bench-results/dominance/uf-cvc5-regress-clean-quantified-dominance-audit.json",
+      "sha256": "8c6e03439eaf82e6447d3de6bdc74211a68e9671ac97e081a217d3549a0896c9"
+    }
+  ],
+  "summary": {
+    "audit_reported_checked": 267,
+    "audit_unsat": 325,
+    "baseline_unsat": 327,
+    "complete_audits": 35,
+    "dominant_unsat": 259,
+    "evidence_certified": 267,
+    "evidence_checked": 267,
+    "lean_checked": 260,
+    "proof_errors": 2,
+    "trust_hole_free": 325,
+    "trust_hole_instances": 0
+  },
+  "trust_holes": [],
+  "version": 1
+}

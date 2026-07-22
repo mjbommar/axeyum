@@ -420,8 +420,10 @@ decides 7 with EncodingBudget 6). **The lazy backend's measured edge on this
 slice is 100 % the solve-path reduction it inherits, 0 % the abstraction.**
 Any default-on decision for `SolverConfig::lazy_bv` (needs its own ADR) should
 instead credit and route the reduction pipeline; the CEGAR machinery remains
-reserved for arithmetic-heavy corpora. Z3 still decides all 113 in ≤ 1 s each —
-parity on this slice remains open, owned by reduction depth.
+reserved for arithmetic-heavy corpora. Later matched controls supersede the
+unmeasured Z3-sweep premise: Axeyum and the Z3 crate each decide 8/113 at 20s
+on different sets (Z3 CLI 9/113). This slice is a bounded hard-corpus parity
+point, not a general performance claim.
 
 ## Bottom line
 

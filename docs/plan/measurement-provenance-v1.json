@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "official_reference": {
+    "title": "SMT-COMP 2026 Rules and Procedures",
+    "revision": "2026-04-11",
+    "url": "https://smt-comp.github.io/2026/rules.pdf",
+    "selection_sections": [
+      "6"
+    ],
+    "scoring_sections": [
+      "7.1",
+      "7.2"
+    ]
+  },
+  "shared_contract": {
+    "raw_denominator": "Every recorded benchmark occurrence in the regime, including repeated paths and aggregate-only synthetic cases.",
+    "normalized_id": "A repository-independent benchmark path after a declared corpus marker; identity is weaker than content identity.",
+    "exact_content": "SHA-256 of the exact benchmark bytes. This detects byte-identical aliases but not semantic or near duplicates.",
+    "deduplicated_denominator": "Unique exact-content SHA-256 values among file-backed cases. Aggregate-only cases remain separate and are never fabricated as files.",
+    "par2": "Mean wall-clock PAR-2 within one row and its recorded wall limit. No cross-row or cross-regime PAR-2 is computed.",
+    "coverage_class": "Axeyum-relative observed decide rate: decide-strong >=80%, partial >=20%, frontier <20%; it is not an intrinsic difficulty label.",
+    "neutral_oracle": "At least one non-Z3 external solver on the exact same population and configuration. A solver that supplied corpus files is not thereby an oracle.",
+    "adjudication": "Known-status agreement, known-status disagreement, and definitive answers without a known status are separate. Missing status never supplies correctness evidence.",
+    "near_duplicate": "Not measured in v1. Exact-content deduplication must not be described as semantic deduplication.",
+    "source_balance": "Reported as strata only. V1 does not invent a weighted aggregate across source families or regimes."
+  },
+  "regimes": [
+    {
+      "id": "regression-scoreboard",
+      "label": "Curated/regression scoreboard",
+      "population_class": "curated-regression",
+      "selection_class": "maintainer-curated-committed-slices",
+      "official_selection": false,
+      "score_source": "artifact-reported-par2",
+      "oracle_policy": "Per-row Z3 library, Z3 binary, or benchmark :status as recorded by gen-scoreboard.py.",
+      "neutral_oracle_status": "absent-on-exact-population",
+      "expected_rows": 35,
+      "expected_raw_cases": 992,
+      "artifacts": {
+        "generator": "scripts/gen-scoreboard.py",
+        "scoreboard": "bench-results/SCOREBOARD.md"
+      }
+    },
+    {
+      "id": "public-inventory",
+      "label": "Partial public convenience inventory",
+      "population_class": "partial-public-inventory",
+      "selection_class": "all-files-in-available-partial-source-pack",
+      "official_selection": false,
+      "score_source": "recomputed-smtcomp-2026-par2",
+      "wall_limit_s": 120.0,
+      "oracle_policy": "Benchmark :status where present for the 228-file inventory; definitive answers without known status remain unadjudicated. The separate three-solver 24-file QF_BV run grants no oracle credit to this population.",
+      "neutral_oracle_status": "absent-on-exact-population",
+      "expected_rows": 18,
+      "expected_raw_cases": 228,
+      "expected_known_status_cases": 145,
+      "expected_known_status_agreements": 78,
+      "expected_unadjudicated_decisions": 4,
+      "artifacts": {
+        "registration": "bench-results/smtcomp-repro-20260721/README.md",
+        "inventory": "bench-results/smtcomp-repro-20260721/inventory.json",
+        "raw": "bench-results/smtcomp-repro-20260721/inventory_raw.json",
+        "provenance": "bench-results/smtcomp-repro-20260721/provenance.json",
+        "related_distinct_population": "bench-results/smtcomp-repro-20260721/head_to_head_qfbv.json"
+      }
+    }
+  ]
+}

@@ -6,14 +6,18 @@
 //! families (`List`, `Option`, `Prod`, `Sum`), and the slice-7 **indexed**
 //! families (`Eq` — the backbone — plus a simple indexed enum), with the
 //! dependent-motive `Eq.rec` self-check, its ι-reduction on `refl`, and a
-//! transport that computes; plus the rejections the trusted gate must catch
-//! (recursive-indexed, wrong parameters, reflexive fields).
+//! transport that computes; recursive-indexed and higher-order recursive
+//! families; plus the malformed/non-positive rejections the trusted gate must
+//! catch.
 #![allow(
     clippy::many_single_char_names,
     clippy::similar_names,
     clippy::doc_markdown
 )]
 
+use std::collections::BTreeSet;
+
+use super::{CheckedCtor, CheckedFamily, CheckedInductiveGroup, InductiveFamilySpec};
 use crate::env::Declaration;
 use crate::expr::ExprNode;
 use crate::tc::KernelError;
@@ -245,11 +249,11 @@ fn reject_wrong_result_head() {
     assert!(!k.environment().contains(bad_ctor));
 }
 
-/// Reject: a **reflexive / higher-order** recursive field — a field whose type
-/// is a `Pi` ending in the inductive (`(Nat → I) → I`). Direct recursive fields
-/// are now admitted (slice 5), but reflexive ones are still deferred.
+/// Reject: a mixed-polarity higher-order field. Its codomain occurrence is
+/// positive, but its domain occurrence is negative and wins before the later
+/// reflexive-feature decline.
 #[test]
-fn reject_reflexive_recursive_field() {
+fn reject_non_positive_recursive_field() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let z = k.level_zero();
@@ -257,7 +261,8 @@ fn reject_reflexive_recursive_field() {
     let s1 = k.sort(one);
     let ind_name = k.name_str(anon, "Refl");
     let ind_const = k.const_(ind_name, vec![]);
-    // ctor: Π (_ : (Refl → Refl)), Refl — the field type is a Pi ending in I.
+    // ctor: Π (_ : (Refl → Refl)), Refl — the field type contains I on both
+    // sides of the inner Pi.
     let cn = k.name_str(anon, "node");
     let field_ty = k.pi(anon, ind_const, ind_const, BinderInfo::Default);
     let cty = k.pi(anon, field_ty, ind_const, BinderInfo::Default);
@@ -265,11 +270,147 @@ fn reject_reflexive_recursive_field() {
         .add_inductive(ind_name, &[], 0, s1, &[(cn, cty)])
         .unwrap_err();
     assert!(
-        matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
+        matches!(
+            err,
+            KernelError::NonPositiveInductiveOccurrence {
+                inductive,
+                ctor,
+                field_index: 0,
+            } if inductive == ind_name && ctor == cn
+        ),
         "got {err:?}"
     );
     assert!(!k.environment().contains(ind_name));
     assert!(!k.environment().contains(cn));
+}
+
+/// A negative occurrence is classified before constructor type inference and
+/// before provisional environment insertion. The dangling codomain would be an
+/// `UnknownConst` if the later type checker ran first.
+#[test]
+fn positivity_preflight_precedes_provisional_insertion_and_type_checking() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let ty = k.sort(one);
+    let ind_name = k.name_str(anon, "Preflight");
+    let ind_const = k.const_(ind_name, vec![]);
+    let unknown_name = k.name_str(anon, "MissingType");
+    let unknown = k.const_(unknown_name, vec![]);
+    let ctor = k.name_str(ind_name, "mk");
+    let negative = k.pi(anon, ind_const, unknown, BinderInfo::Default);
+    let ctor_ty = k.pi(anon, negative, ind_const, BinderInfo::Default);
+
+    let before: Vec<_> = k
+        .environment()
+        .iter()
+        .map(|(&name, declaration)| (name, declaration.clone()))
+        .collect();
+    let error = k
+        .add_inductive(ind_name, &[], 0, ty, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::NonPositiveInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 0,
+        }
+    );
+    let after: Vec<_> = k
+        .environment()
+        .iter()
+        .map(|(&name, declaration)| (name, declaration.clone()))
+        .collect();
+    assert_eq!(after, before);
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
+}
+
+/// A family nested below a foreign type constructor is not a valid raw kernel
+/// recursive application. Native nested-inductive lowering remains separate.
+#[test]
+fn reject_family_nested_under_foreign_head() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let sort_one = k.sort(one);
+    let wrapper = k.name_str(anon, "Wrapper");
+    let wrapper_ty = k.pi(anon, sort_one, sort_one, BinderInfo::Default);
+    k.add_declaration(Declaration::Axiom {
+        name: wrapper,
+        uparams: vec![],
+        ty: wrapper_ty,
+    })
+    .expect("Wrapper type former should admit");
+
+    let ind_name = k.name_str(anon, "NestedRaw");
+    let ind_const = k.const_(ind_name, vec![]);
+    let wrapper_const = k.const_(wrapper, vec![]);
+    let nested = k.app(wrapper_const, ind_const);
+    let ctor = k.name_str(ind_name, "mk");
+    let ctor_ty = k.pi(anon, nested, ind_const, BinderInfo::Default);
+    let error = k
+        .add_inductive(ind_name, &[], 0, sort_one, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::InvalidInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 0,
+        }
+    );
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
+    assert!(k.environment().contains(wrapper));
+}
+
+/// A recursive indexed application may not contain the family being declared
+/// inside one of its own index expressions (Lean issue #2125 boundary).
+#[test]
+fn reject_family_occurrence_inside_recursive_index() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let sort_one = k.sort(one);
+    let ind_name = k.name_str(anon, "SelfIndex");
+    let ind_const = k.const_(ind_name, vec![]);
+    let ind_ty = k.pi(anon, sort_one, sort_one, BinderInfo::Default);
+    let ctor = k.name_str(ind_name, "mk");
+
+    // mk : (A : Type) -> SelfIndex (SelfIndex A) -> SelfIndex A
+    let ctor_ty = {
+        let a_for_result = k.bvar(1);
+        let result = k.app(ind_const, a_for_result);
+        let a_for_field = k.bvar(0);
+        let inner_index = k.app(ind_const, a_for_field);
+        let recursive_field = k.app(ind_const, inner_index);
+        let inner = k.pi(anon, recursive_field, result, BinderInfo::Default);
+        k.pi(anon, sort_one, inner, BinderInfo::Default)
+    };
+    let error = k
+        .add_inductive(ind_name, &[], 0, ind_ty, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::InvalidInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 1,
+        }
+    );
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
 }
 
 /// Admit: an inductive whose type has a leading `Pi` not declared as a
@@ -1790,13 +1931,10 @@ fn eq_rec_transport_computes() {
     );
 }
 
-/// Reject: a **recursive** field on an **indexed** inductive (recursion +
-/// indices together, e.g. a `Vector.cons`-shaped constructor) ⇒
-/// `RecursiveIndexedNotSupported`. We build a 1-index family `V : Nat → Sort 1`
-/// with `cons : Π (n : Nat), V n → V (succ n)` — the field `V n` is recursive
-/// AND the family is indexed.
+/// A direct recursive field on an indexed family receives an IH at the field's
+/// own index, and its computation rule recursively evaluates that field.
 #[test]
-fn reject_recursive_indexed_field() {
+fn recursive_indexed_field_admits_and_computes() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let (nat, _nat_rec, [_zero, succ]) = declare_nat(&mut k);
@@ -1826,15 +1964,54 @@ fn reject_recursive_indexed_field() {
         let n_name = k.name_str(anon, "n");
         k.pi(n_name, nat_const, inner, BinderInfo::Default)
     };
-    let err = k
-        .add_inductive(vname, &[], 0, ty, &[(cons, cons_ty)])
-        .unwrap_err();
-    assert!(
-        matches!(err, KernelError::RecursiveIndexedNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(vname));
-    assert!(!k.environment().contains(cons));
+    k.add_inductive(vname, &[], 0, ty, &[(cons, cons_ty)])
+        .expect("recursive indexed family should admit");
+    let rec_name = k.name_str(vname, "rec");
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_level = match rec_decl {
+        Declaration::Recursor {
+            ref uparams,
+            num_motives,
+            num_minors,
+            num_indices,
+            ..
+        } => {
+            assert_eq!((num_motives, num_minors, num_indices), (1, 1, 1));
+            k.level_param(uparams[0])
+        }
+        _ => panic!("V.rec should be a recursor"),
+    };
+
+    let motive = k.fvar(100);
+    let minor = k.fvar(101);
+    let n = k.fvar(102);
+    let tail = k.fvar(103);
+    let cons_c = k.const_(cons, vec![]);
+    let major = {
+        let app = k.app(cons_c, n);
+        k.app(app, tail)
+    };
+    let succ_n = k.app(succ_c, n);
+    let rec_c = k.const_(rec_name, vec![rec_level]);
+    let application = {
+        let app = k.app(rec_c, motive);
+        let app = k.app(app, minor);
+        let app = k.app(app, succ_n);
+        k.app(app, major)
+    };
+    let recursive_call = {
+        let rec_c = k.const_(rec_name, vec![rec_level]);
+        let app = k.app(rec_c, motive);
+        let app = k.app(app, minor);
+        let app = k.app(app, n);
+        k.app(app, tail)
+    };
+    let expected = {
+        let app = k.app(minor, n);
+        let app = k.app(app, tail);
+        k.app(app, recursive_call)
+    };
+    assert_eq!(k.whnf(application), expected);
 }
 
 /// A simple **indexed enum** with two constructors landing at different index
@@ -1957,12 +2134,11 @@ fn reject_ctor_wrong_param() {
     assert!(!k.environment().contains(mk));
 }
 
-/// Reject: a reflexive recursive field in a parametric inductive — a field whose
-/// type is a `Pi` ending in `I α` (`(Nat → List α) → List α` shape). Direct
-/// recursive fields (`List α`) are admitted (slice 6); reflexive ones are still
-/// deferred.
+/// A higher-order recursive field receives a telescope-shaped IH, and its
+/// computation rule supplies a lambda that recursively evaluates every field
+/// application.
 #[test]
-fn reject_parametric_reflexive_field() {
+fn parametric_higher_order_field_admits_and_computes() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let u = k.name_str(anon, "u");
@@ -1990,15 +2166,60 @@ fn reject_parametric_reflexive_field() {
         let inner = k.pi(f_name, f_ty, refl_a_res, BinderInfo::Default);
         k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
     };
-    let err = k
-        .add_inductive(refl, &[u], 1, ty, &[(node, node_ty)])
-        .unwrap_err();
-    assert!(
-        matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(refl));
-    assert!(!k.environment().contains(node));
+    k.add_inductive(refl, &[u], 1, ty, &[(node, node_ty)])
+        .expect("higher-order recursive family should admit");
+    let rec_name = k.name_str(refl, "rec");
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let family_level = match rec_decl {
+        Declaration::Recursor {
+            ref uparams,
+            num_motives,
+            num_minors,
+            num_indices,
+            ..
+        } => {
+            assert_eq!((num_motives, num_minors, num_indices), (1, 1, 0));
+            assert_eq!(
+                uparams.len(),
+                1,
+                "potentially-Prop family eliminates to Prop"
+            );
+            k.level_param(uparams[0])
+        }
+        _ => panic!("PRefl.rec should be a recursor"),
+    };
+
+    let alpha = k.fvar(100);
+    let motive = k.fvar(101);
+    let minor = k.fvar(102);
+    let field = k.fvar(103);
+    let node_c = k.const_(node, vec![family_level]);
+    let major = {
+        let app = k.app(node_c, alpha);
+        k.app(app, field)
+    };
+    let rec_c = k.const_(rec_name, vec![family_level]);
+    let application = {
+        let app = k.app(rec_c, alpha);
+        let app = k.app(app, motive);
+        let app = k.app(app, minor);
+        k.app(app, major)
+    };
+    let ih = {
+        let x = k.bvar(0);
+        let field_x = k.app(field, x);
+        let rec_c = k.const_(rec_name, vec![family_level]);
+        let app = k.app(rec_c, alpha);
+        let app = k.app(app, motive);
+        let app = k.app(app, minor);
+        let body = k.app(app, field_x);
+        k.lam(anon, alpha, body, BinderInfo::Default)
+    };
+    let expected = {
+        let app = k.app(minor, field);
+        k.app(app, ih)
+    };
+    assert_eq!(k.whnf(application), expected);
 }
 
 /// Determinism for a parametric inductive: building `List` twice yields the same
@@ -2011,4 +2232,187 @@ fn determinism_parametric_inductive() {
         k.environment().get(rec_name).unwrap().ty().index()
     }
     assert_eq!(build(), build());
+}
+
+/// A failure injected after every family, constructor, and recursor has been
+/// provisionally generated must roll the complete group back. This exercises
+/// the late side of the same transaction used by the public group gate.
+#[test]
+fn late_mutual_recursor_rule_failure_rolls_back_the_complete_group() {
+    let mut k = Kernel::new();
+    let root = k.anon();
+    let left = k.name_str(root, "LateMutualLeft");
+    let right = k.name_str(root, "LateMutualRight");
+    let base = k.name_str(left, "base");
+    let left_rec = k.name_str(left, "rec");
+    let unknown = k.name_str(root, "lateUnknown");
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let ty = k.sort(one);
+    let left_const = k.const_(left, vec![]);
+    let families = [
+        InductiveFamilySpec::new(left, ty, vec![(base, left_const)]),
+        InductiveFamilySpec::new(right, ty, Vec::new()),
+    ];
+
+    let result = k.with_inductive_transaction(|kernel| {
+        kernel.add_inductive_group(&[], 0, &families)?;
+        let mut recursor = kernel.environment().get(left_rec).unwrap().clone();
+        let Declaration::Recursor { rec_rules, .. } = &mut recursor else {
+            unreachable!();
+        };
+        rec_rules[0].value = kernel.const_(unknown, vec![]);
+        kernel.check_group_recursor_rules(&[recursor])
+    });
+    assert_eq!(result, Err(KernelError::UnknownConst { name: unknown }));
+    assert!(k.environment().is_empty());
+    let right_rec = k.name_str(right, "rec");
+    for name in [left, right, base, left_rec, right_rec] {
+        assert!(!k.environment().contains(name));
+    }
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn mutual_recursor_contract_mutations_are_rejected_or_detectably_distinct() {
+    let mut k = Kernel::new();
+    let root = k.anon();
+    let left = k.name_str(root, "MutContractLeft");
+    let right = k.name_str(root, "MutContractRight");
+    let left_base = k.name_str(left, "base");
+    let right_base = k.name_str(right, "base");
+    let left_rec = k.name_str(left, "rec");
+    let right_rec = k.name_str(right, "rec");
+    let wrong = k.name_str(root, "wrong");
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let ty = k.sort(one);
+    let left_const = k.const_(left, vec![]);
+    let right_const = k.const_(right, vec![]);
+    let families = [
+        InductiveFamilySpec::new(left, ty, vec![(left_base, left_const)]),
+        InductiveFamilySpec::new(right, ty, vec![(right_base, right_const)]),
+    ];
+    k.add_mutual_inductive(&[], 0, &families).unwrap();
+    let recursors = [
+        k.environment().get(left_rec).unwrap().clone(),
+        k.environment().get(right_rec).unwrap().clone(),
+    ];
+    let checked = CheckedInductiveGroup {
+        params: Vec::new(),
+        result_level: one,
+        families: vec![
+            CheckedFamily {
+                name: left,
+                ty,
+                num_indices: 0,
+                ind_const: left_const,
+                constructors: vec![CheckedCtor {
+                    name: left_base,
+                    ty: left_const,
+                    idx: 0,
+                    fields: Vec::new(),
+                    recursive_fields: Vec::new(),
+                    exposes_non_prop_fields: true,
+                }],
+            },
+            CheckedFamily {
+                name: right,
+                ty,
+                num_indices: 0,
+                ind_const: right_const,
+                constructors: vec![CheckedCtor {
+                    name: right_base,
+                    ty: right_const,
+                    idx: 0,
+                    fields: Vec::new(),
+                    recursive_fields: Vec::new(),
+                    exposes_non_prop_fields: true,
+                }],
+            },
+        ],
+    };
+
+    let mut candidates = Vec::new();
+    let mut missing_recursor = recursors.to_vec();
+    missing_recursor.pop();
+    candidates.push(missing_recursor);
+    for mutate in [
+        "name",
+        "motives",
+        "minors",
+        "params",
+        "indices",
+        "owner-rule",
+        "nfields",
+    ] {
+        let mut candidate = recursors.to_vec();
+        let Declaration::Recursor {
+            name,
+            rec_rules,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            ..
+        } = &mut candidate[0]
+        else {
+            unreachable!();
+        };
+        match mutate {
+            "name" => *name = wrong,
+            "motives" => *num_motives -= 1,
+            "minors" => *num_minors -= 1,
+            "params" => *num_params += 1,
+            "indices" => *num_indices += 1,
+            "owner-rule" => rec_rules[0].ctor_name = right_base,
+            "nfields" => rec_rules[0].num_fields += 1,
+            _ => unreachable!(),
+        }
+        candidates.push(candidate);
+    }
+    for candidate in candidates {
+        assert_eq!(
+            k.validate_group_recursor_contract(0, &checked, &candidate),
+            Err(KernelError::MutualRecursorContractMismatch { family: left })
+        );
+    }
+
+    let mut wrong_rule = recursors[0].clone();
+    let Declaration::Recursor { rec_rules, .. } = &mut wrong_rule else {
+        unreachable!();
+    };
+    rec_rules[0].value = k.const_(wrong, vec![]);
+    assert_eq!(
+        k.check_group_recursor_rules(&[wrong_rule]),
+        Err(KernelError::UnknownConst { name: wrong })
+    );
+    let invalid_type = k.const_(wrong, vec![]);
+    assert_eq!(
+        k.infer(invalid_type),
+        Err(KernelError::UnknownConst { name: wrong })
+    );
+
+    // Every preregistered load-bearing family has a concrete structural,
+    // metadata, type, or rule-inference tooth above or in the public native
+    // integration matrix. This registry prevents silent test-plan shrinkage.
+    let registered = BTreeSet::from([
+        "constructor-owner-cidx-field-count-rule-constructor",
+        "cross-family-occurrence-positivity",
+        "family-list-order-membership",
+        "global-minor-omit-duplicate-reorder",
+        "global-versus-local-minor-index",
+        "ih-after-fields-and-field-order",
+        "mutual-prop-elimination-and-k",
+        "parameter-count-type-universe-list",
+        "per-family-index-count",
+        "recursor-counts-type-rule-rhs-nfields",
+        "result-universe",
+        "target-indices-telescope-field-application",
+        "target-motive-not-owner-motive",
+        "target-recursor-not-owner-recursor",
+        "wire-metadata-does-not-authorize",
+        "late-complete-group-rollback",
+    ]);
+    assert_eq!(registered.len(), 16);
 }

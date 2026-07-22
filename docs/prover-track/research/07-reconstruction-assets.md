@@ -433,8 +433,8 @@ That was a real gap: the broad optional harness skipped-and-passed in CI and
 locally, making absence indistinguishable from success.
 
 **Update (ADR-0165, commits `d26ad887`/`a10c8cde`).** The repository now pins
-Lean 4.30.0 in `lean-toolchain`, CI installs it through the official
-`leanprover/lean-action`, and `real_lean_inductive_crosscheck` runs with
+Lean 4.30.0 in `lean-toolchain`, CI installs it through the checksum-pinned
+official elan release, and `real_lean_inductive_crosscheck` runs with
 `AXEYUM_REQUIRE_LEAN=1`. A missing binary fails. The generated module declares
 `True` and a two-constructor `Two : Prop` as real inductives, applies Lean's
 restricted `Two.rec`, and needs its iota rule for the theorem to type-check. The

@@ -1,7 +1,8 @@
 //! The **free-monoid (string) prelude** (P3.7 strings fragment): the word-clash
 //! reconstruction's kernel foundation, declared into a [`Kernel`]'s environment
 //! through the trusted `add_inductive` / `add_recursive_datatype_family` /
-//! `add_declaration` gates — **no new kernel axioms**.
+//! `add_declaration` gates. The inductives compute in the kernel; `append` is
+//! one explicit opaque kernel axiom and is tracked in the prelude-axiom ledger.
 //!
 //! # Design — strings as `List` over a finite code-point alphabet
 //!
@@ -34,10 +35,11 @@
 //!   deferred follow-up; see the solver-side `word_reconstruct` module.)
 //!
 //! Every declaration is admitted through the **trusted** gates, which type-check
-//! it; a malformed prelude would be rejected there (a green build is its
-//! well-formedness proof). The same `infer` / `whnf` / `def_eq` machinery then
-//! checks the reconstructed proof term on top of it, so a wrong reconstruction is
-//! rejected by the kernel — never trusted.
+//! it; a malformed prelude would be rejected there (a green build proves only
+//! well-formedness, not the truth of the opaque `append` assumption). The same
+//! `infer` / `whnf` / `def_eq` machinery then checks the reconstructed proof term
+//! relative to that explicit assumption, so a wrong reconstruction is rejected
+//! by the kernel rather than silently trusted.
 #![allow(clippy::similar_names, clippy::many_single_char_names)]
 
 use crate::env::Declaration;

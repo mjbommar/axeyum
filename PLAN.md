@@ -1,16 +1,485 @@
 # PLAN.md — master index
 
-This is the entry point. The full, end-to-end engineering plan to take axeyum to
-**Z3 + Lean parity** lives under [`docs/plan/`](docs/plan/README.md). This file
-is the map and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker
-(current focus, per-phase state, changelog) and is the only file with mutable
-session state.
+This is the engineering entry point. The short, public account of what is built,
+measured, partial, and deliberately out of scope is
+[`docs/PROJECT-STATE.md`](docs/PROJECT-STATE.md). The full plan for Z3-class
+solving, certified-result coverage, Lean-core compatibility, and Lean workflow
+integration lives under [`docs/plan/`](docs/plan/README.md). This file is the map
+and the standing rules; **[STATUS.md](STATUS.md)** is the live tracker (current
+focus, per-phase state, changelog) and is the only file with mutable session
+state.
 
 > The goal is large and deliberately multi-week/multi-month. It is decomposed
 > into tracks → phases → tasks, each with concrete reference file paths, sizing,
 > and exit criteria, so work can proceed one verifiable increment at a time
 > without ever losing the thread. **We do not stop and we do not hand-wave; we
 > advance the next task and record it.**
+
+> **Parity terminology reset (2026-07-21).** “Z3 + Lean parity” is the north
+> star, not one scalar status. The current operational map is
+> [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](docs/plan/gap-analysis-z3-lean-2026-07-21.md):
+> report fragment decision/performance depth, production solver replacement,
+> certified-result coverage, Lean-kernel compatibility, and Lean workflow
+> integration separately. The committed p4dfa 20-second control is 8/113 for
+> Axeyum and 8/113 for the Z3 crate on different decided sets; it is bounded
+> corpus parity, not a universal performance claim. `just parity-docs` now
+> rejects the stale p4dfa and proof-denominator claims that had survived in live
+> prose after their correcting measurements landed.
+> The follow-up [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md)
+> tightens this again: the p4dfa artifacts have **6 jointly decided**, **2
+> Axeyum-only**, and **2 Z3-only** cases. The public inventory's legacy 82/228
+> scorer field partitions into **78 known-status agreements** plus **4
+> unadjudicated decisions**, not 82 independently correct answers. General Z3
+> solving-power distance remains unmeasured until a representative matched run;
+> production/API replacement remains demonstrably far. The repaired
+> [official-Lean gate](docs/plan/official-lean-ci-gate-audit-2026-07-21.md)
+> now installs checksum-pinned elan without a fake Lake project and makes
+> `AXEYUM_REQUIRE_LEAN=1` fail closed. Its first real run exposed four hidden
+> quantified-BV export failures (67/71); real-inductive rendering for the exact
+> computing Bool/BV families plus one measured elaborator-depth option raises
+> the same bounded local run to **71/71 accepted, zero skipped, zero failed**.
+> Remote CI acceptance and prelude-axiom discharge remain open; do not convert
+> representative source acceptance into full proof-family or Lean parity.
+
+> **Lean-system interoperability reset (2026-07-21).** The independent Rust
+> kernel and the 71/71 official-source gate are not a bundled Lean distribution,
+> but neither are they merely a printer. The new
+> [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+> inventories the actual kernel, CAS, rewrite, curriculum, and Track 6 assets
+> against the distinct missing parser/macro, elaborator/unifier, tactic,
+> compiler, Lake, LSP, mathlib, and import surfaces. Proposed ADR-0345 sequences
+> both bridge directions: preserve fail-closed source export, then ingest pinned
+> official `lean4export` 3.1 NDJSON and independently admit supported
+> declarations. The separate `axeyum-lean-import` crate now crosses that seam.
+> The flat Lean 4.30 fixture's 14 names, two nonzero levels, 43 expressions, and
+> five declaration records become eight independently checked kernel
+> declarations. A second official fixture adds direct-recursive `MiniNat` and
+> parametric-recursive `MiniList`: 30 names, four nonzero levels, 130
+> expressions, and five records become 11 checked declarations with zero
+> axioms. The importer independently regenerates and compares each recursor;
+> the recursive fixture exposed alpha-renamed universe binders (`u_1` versus
+> `u.1`), now compared after explicit level substitution. At that checkpoint,
+> theorem-body and recursor-rule plus projection mutations rejected among
+> fourteen Rust tests.
+> This is exact flat and direct-recursive fixture credit, not
+> `Init`/`Std`/mathlib or general kernel
+> credit. A direct `.olean` reader and full native ecosystem compatibility are
+> late, untrusted-adapter/native-system phases rather than checker
+> prerequisites. A four-root
+> [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md)
+> now freezes exact projection, Nat, String, and quotient dependency closures.
+> The census initially found projection as the sole blocker for its
+> four-declaration closure and the first Rust decline for both literal roots;
+> the String closure already spans 290 declarations and also reaches Nat
+> literals and recursive-indexed inductives.
+> Three small streams are committed, the 570,807-byte String stream is bound by
+> source/command/hash, and the initial census used 14 Rust plus eight Python
+> tests to hold the boundary.
+> TL2.2 now lands first-class projection representation across interning,
+> metadata, structural/de Bruijn operations, dependency traversal, and both
+> Lean renderers, with four integration tests plus a renderer unit test. TL2.3
+> now adds checked parameter/index metadata and Lean-compatible dependent
+> projection inference, including Prop-elimination restrictions and typed
+> malformed-structure failures. The bounded kernel gate passes 179 unit tests
+> and 13 integration cases across six binaries. This is native K0 inference
+> credit only. TL2.4 now adds Lean-compatible constructor projection reduction,
+> enables validated format-3.1 `proj` translation, and closes the exact official
+> projection root: 61 expressions become nine admitted declarations and
+> `importPairLeft (ImportPair.mk 0 1)` computes to `0`; wrong name/index
+> mutations reject at the kernel gate. TL2.5 now adds symmetric
+> structure eta for exactly saturated constructors of checked one-constructor,
+> zero-index, non-recursive inductives. Seven native families cover false
+> equality, universes, parameters, dependencies, and indexed/recursive
+> exclusions; a required local run against pinned Lean 4.30 accepts the
+> reconstruction by `rfl` and rejects the duplicated-field mutation. The
+> bounded kernel gate at that checkpoint recorded 179 unit tests and 25
+> integration cases across nine binaries. TL2.6 replaces `Lit::Nat(u128)` with
+> canonical `NatLit(BigUint)` storage. TL2.7 now types those literals only
+> against a structurally checked canonical `Nat` bootstrap and implements
+> Lean-compatible constructor-offset equality, successor reduction, and one-
+> layer recursor conversion. The exact official Nat root translates all 90
+> expressions, admits ten declarations with zero axioms, and computes to `37`;
+> renamed/reordered/malformed bootstraps reject, values above `u128` stay exact,
+> and a required pinned-Lean 4.30 differential agrees on positive and false
+> controls. The kernel gate passes 179 unit tests and 35 integration cases
+> across twelve binaries. TL1.3 now removes the caller-owned mutable-kernel
+> import API: format-3.1 streams stage in a private kernel and publish a
+> field-private `CompletedImport` only after full success. Late JSON, kernel,
+> unsupported, record-limit, and I/O failures return no environment. TL1.4 now
+> freezes a 226-case deterministic mutation corpus: 67 JSON, 90 malformed, one
+> kernel, one format decline, three positive, and 64 explicitly
+> `published-unsealed` complete-record prefixes. The upstream format has no
+> footer, so those prefixes receive no exact-artifact credit; all 65
+> record-body truncations reject. TL1.7 now publishes ledger-compatible axiom
+> name/type identities plus complete domain-separated structural declaration
+> content and direct-dependency digests under the explicit
+> `axeyum-lean-declaration-identity-v1` schema. Five focused tests freeze all
+> eight flat-fixture identities: repeated imports and independent declaration-
+> record reordering are identical; a valid axiom type mutation changes its own
+> ledger/content identity and the dependent theorem's dependency identity
+> without changing that theorem's content; valid body and binder-info mutations
+> have the intended sensitivity. The importer passes 28 cases across three
+> binaries. See the
+> [TL1.7 result](docs/plan/lean-declaration-identity-tl1.7-2026-07-22.md).
+> The remaining recursive-indexed/mutual/nested/reflexive/well-founded fixture
+> matrix is now governed by a
+> [source-first, wire-second execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+> under accepted ADR-0351. It freezes official source cases before export,
+> freezes independently inventoried official wire forms before Rust product
+> measurement, pairs every decline with the exact direct-recursive positive
+> control, and forbids admission work inside the measurement milestone. M0 and
+> the [machine-checked Stage A source freeze](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+> are complete: both historical streams reproduced twice, pinned Lean
+> accepts the positive source and rejects the non-positive control, seven case
+> IDs/roots are hash-frozen, and the registration rejects any premature wire or
+> product observation. The
+> [Stage B wire freeze](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
+> is now also complete: five retained streams total 116,636 bytes, every
+> official pair is byte-identical, and the independent reader freezes complete
+> declaration/group metadata without invoking the Rust importer. The subsequent
+> [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
+> is now frozen against the remote Stage B revision: ten direct-recursive
+> controls pass, all five declines repeat twice with exact typed payloads, and
+> no error publishes `CompletedImport`. It also exposes the valid nested stream's
+> current `Malformed` misclassification. M4 now generates the
+> [seven-row assurance matrix](docs/plan/generated/lean-official-construct-matrix.md)
+> from those facts and rejects false admission/computation promotions. The
+> [M5 final result](docs/plan/lean-official-construct-matrix-final-2026-07-22.md)
+> closes the bounded kernel/importer, contract, parity, foundational-resource,
+> and link gates; accepts ADR-0351; and records the unrelated workspace-format
+> boundary. TL2.16 is PARTIAL for this selected population, not complete.
+> TL2.11 strict positivity, TL2.12 recursive induction-hypothesis generation,
+> and TL2.13 mutual groups are now complete. A post-TL2.13 dependency audit
+> corrects the next slice: TL2.14 is pinned-Lean kernel-side nested-inductive
+> expansion/restoration, while well-founded source recursion remains TL4.10.
+> Accepted ADR-0352 and the
+> [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
+> now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
+> two typed occurrence failures, pre-insertion environment ordering, a generated
+> polarity grammar, and official differential gates. M0 freezes added negative
+> sources before any kernel semantic change; the
+> [M0 result](docs/plan/lean-strict-positivity-m0-2026-07-22.md) now binds four
+> hashes, six ordered rule classes, exact resources/commands, and eight
+> fail-closed tests with no new observation. The subsequent
+> [M1 trusted-preflight result](docs/plan/lean-strict-positivity-m1-2026-07-22.md)
+> now adds the two typed failures and the exact Lean 4.30 single-family rule
+> before provisional environment insertion. The bounded kernel gate passes
+> 182 unit tests; focused clippy and rustdoc are clean; direct-recursive
+> computation and the positive recursive-indexed/reflexive feature declines
+> remain unchanged. The
+> [M2 result](docs/plan/lean-strict-positivity-m2-2026-07-22.md) now closes all
+> twelve public rows and repeats a frozen 840-case fixed-seed grammar
+> byte-identically across `0p0i`/`1p0i`/`1p1i`, `Prop`/`Type`, depths zero
+> through four, and first/later constructor/field positions. The
+> [M3 result](docs/plan/lean-strict-positivity-m3-2026-07-22.md) now records
+> eight bounded pinned-Lean 4.30 observations (two accepts, six diagnostic-
+> matched rejects), makes that source population a required CI differential,
+> propagates the typed error through an explicitly synthetic importer mutation
+> without `CompletedImport`, and preserves all frozen construct-matrix
+> outcomes. The
+> [M4 final result](docs/plan/lean-strict-positivity-final-2026-07-22.md)
+> closes every bounded gate, accepts ADR-0352, marks TL2.11/T6.0.2 DONE, and
+> hands the primary semantic path to preregistered TL2.12 recursive-indexed +
+> reflexive induction-hypothesis generation. No inductive admission widened in
+> TL2.11; all direct-recursive, non-positive, generated, importer-publication,
+> and construct-matrix controls remain mandatory for TL2.12.
+> TL2.12 is now complete under
+> [accepted ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+> and its
+> [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
+> The trusted rule is singular: a positive recursive field
+> `u : Pi xs, I params indices` receives
+> `u_ih : Pi xs, motive indices (u xs)`, and its iota rule supplies the matching
+> recursively computed function. Empty telescopes/indices recover the existing
+> direct case. The
+> [M0 source/wire freeze](docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+> now binds the baseline revision, exact semantic/case/mutation/resource/stop
+> contract, a twice-compiled explicit-recursor source, and two root-specific
+> byte-identical official streams. Its ten fail-closed tests reject drift and
+> any premature Axeyum product observation. The subsequent
+> [M1 shared-representation result](docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+> now routes direct recursion through one WHNF classifier/reopener used by both
+> minor types and rule right-hand sides. Checked metadata retains only stable
+> field position/telescope depth, reconstruction mismatch is a typed error, the
+> exact `MiniNat.rec`/`MiniList.rec` declaration identities and computations are
+> unchanged, and both feature declines plus the frozen 840-case summary remain
+> intact. The subsequent
+> [M2 native-semantics result](docs/plan/lean-recursive-induction-hypotheses-m2-2026-07-22.md)
+> now admits all ten positive native rows through the one telescope/index-aware
+> rule, retains four typed transactional negatives, rejects all ten native
+> mutation classes, and repeats a 768-case public-path grammar byte-identically.
+> The frozen 840-case population separately records its exact TL2.11 baseline
+> partition and M2's deliberate 186-case admission widening. The 182 kernel
+> units, direct-recursive identities, focused clippy, and rustdoc pass. No new
+> official stream was passed to the importer; M3 owns its first product
+> observation and the remaining metadata/publication mutations. The subsequent
+> [M3 importer result](docs/plan/lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+> now treats `isReflexive` as descriptive metadata and completes both frozen
+> construct targets twice with exact generated/exported recursor comparison.
+> The mandatory regression also completes the pre-elaborated well-founded
+> stream through `Acc.rec`, while mutual and nested retain typed declines.
+> Synthetic metadata and late recursor mutations prove kernel authority and
+> completion-only publication. No M0 computation stream has entered the Rust
+> product; M4 owns that observation and the assurance-matrix update. The
+> [M4 computation/assurance result](docs/plan/lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+> now confirms the pinned source twice to one OLEAN digest, imports both frozen
+> computation streams twice, and normalizes their registered theorem sides to
+> `MiniNat.succ MiniNat.zero` and `True`. The machine-derived matrix now records
+> four admitted rows, two separate computation-checked rows, and two typed
+> declines while preserving the historical product observation. The
+> [M5 final result](docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+> closes all registered gates, accepts ADR-0353, and marks TL2.12 DONE. The new
+> >=512-case
+> recursive grammar, the existing 840-case positivity grammar, completion-only
+> import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
+> Mutual groups were the primary TL2.13 semantic path. The subsequent
+> dependency audit separates kernel-side nested-inductive elimination in
+> TL2.14 from native nested/well-founded source elaboration in TL4.9/TL4.10.
+> TL2.13 is now complete under
+> [accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> and its
+> [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
+> The trusted unit is one ordered group, not repeated single-family calls:
+> parameters are shared, positivity ranges over every group family, every
+> recursor binds all motives and all minors, and a recursive field selects the
+> motive and recursor of its terminal family. `add_inductive` must become a
+> behavior- and identity-preserving singleton wrapper. The completed
+> [M0 source/wire freeze](docs/plan/lean-mutual-inductive-groups-m0-2026-07-22.md)
+> now binds a twice-compiled 66-line source and two twice-exported official
+> computation streams totaling 40,282 bytes, with no Axeyum product
+> observation. It also freezes the non-obvious wire rule: family order is
+> `Even, Odd`, while the exported recursor arrays are dependency-ordered
+> `Odd.rec, Even.rec`; later comparison must match checked names and owned rules,
+> not array position. The subsequent
+> [M1 result](docs/plan/lean-mutual-inductive-groups-m1-2026-07-22.md) now adds
+> `InductiveFamilySpec`, the public ordered-group gate, definitionally checked
+> shared parameters, per-family index opening, equivalent result-universe
+> preflight, and a private insertion-log transaction whose rollback cost scales
+> with the attempted group rather than the whole environment. `add_inductive`
+> delegates through a singleton group with exact declaration/rule/iota/error
+> behavior; the 768/840 summaries and direct-recursive identities are unchanged.
+> The subsequent
+> [M2 result](docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md) replaces
+> that policy decline with one native group algorithm. Complete-group
+> positivity precedes staging; every family and constructor then becomes
+> provisionally visible; motives follow family order, minors follow family then
+> constructor order, and each recursive field selects its terminal family's
+> motive and recursor. Eighteen public integration rows plus two kernel-private
+> mutation/late-rollback tests cover cross, indexed, higher-order, mixed,
+> empty-constructor, and mutual-`Prop` groups while retaining exact singleton
+> declarations, direct identities, and the 768/840 controls. Every generated
+> recursor type and closed rule value is inferred before the transaction can
+> commit. The importer decline and both M0 official streams remain untouched.
+> The subsequent
+> [M3 result](docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md) now runs
+> 720 unique public-path production records twice to a byte-identical summary:
+> 432 positive admission/inference/iota contracts and 288 exact typed
+> rollbacks. It reads motive/minor order from generated recursor telescopes,
+> counts target recursor constants in rules, and rejects 288 group-order plus
+> 240 target-family expectation mutations while retaining the exact 768/840
+> control descriptors. No production code or importer policy changed, and the
+> M0 streams remain unobserved. The subsequent
+> [M4 result](docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md) now removes
+> only the blanket multi-family importer decline. It parses and validates one
+> ordered group, calls the atomic kernel gate once, matches dependency-ordered
+> wire recursors by checked name rather than array position, and compares every
+> family/constructor/recursor type, count, rule, and field contract. The frozen
+> construct, non-indexed computation, and indexed computation streams each
+> import twice to identical declaration manifests; both selected theorem sides
+> normalize to `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Twenty-two rejecting
+> metadata/type/count/rule/field/publication mutations plus two positive
+> non-authority controls pass, as do the retained 720/768/840 populations. The
+> [M5 final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+> preserves the historical matrix in an append-only TL2.13 overlay, records
+> five admitted rows, three independently computation-checked rows, and one
+> current decline, removes the obsolete live `inductive-mutual` decline, closes
+> every bounded gate, accepts ADR-0354, and marks TL2.13 DONE. The
+> [post-TL2.13 dependency audit](docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
+> then corrects the next trust boundary: nested-inductive expansion is part of
+> pinned Lean 4.30's kernel admission path, while well-founded source recursion
+> is elaborator work and remains TL4.10. [Proposed ADR-0355](docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+> and the [TL2.14 P0--M6 plan](docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
+> preregister structural discovery, auxiliary-group expansion, ordinary atomic
+> checking, restoration, deterministic `.rec_N` publication, exact official
+> comparison, a >=640-case grammar, and retained 720/768/840 plus well-founded
+> controls. P0 is complete; M0 must freeze explicit auxiliary-recursor
+> computation and negative sources twice before any product observation. One
+> Lean/Rust worker and 4 GiB caps remain mandatory.
+> The runtime-derived
+> TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
+> string 1) by canonical type digest before dependent native elaborator, Lake,
+> LSP, or compiler work. The TL6.1-TL6.4 source/syntax
+> substrate may proceed independently after TL0. See
+> the
+> [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
+> A final [roadmap completion audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+> maps every requested parser/macro, elaborator/unifier, tactic, compiler, Lake,
+> LSP, mathlib, and import surface to current evidence and an L0-L10 exit. It
+> revalidates the current 13,929-line CAS, 56-rule manifest, 23-node curriculum,
+> 137 concepts, 173 non-template packs, 1,131 result rows, 249 learning files,
+> and the pinned Lean/mathlib tree counts. The research/design/prototype/docs
+> objective is complete without claiming that the implementation program is:
+> resume implementation through the new
+> [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md),
+> which assigns task IDs, dependencies, owners, gates, milestones, and concrete
+> exits to L0-L10. TL0.1 is now closed with ADR-0167/ADR-0345 accepted. TL0.2's
+> [machine-readable assurance contract](docs/plan/lean-compatibility-v1.json)
+> and [generated matrix](docs/plan/generated/lean-compatibility.md) retain 12
+> exact rows across eight independent assurance fields, five currently passing
+> profile rows, one explicit import decline, and six source-bound decline
+> codes; six mutation/contract tests reject illegal parser/oracle-to-admission
+> credit. TL0.4 is now closed by the 65-row runtime-derived
+> [axiom ledger](docs/plan/generated/lean-axiom-ledger.md): seven tests and the
+> normal gate reject population/name/type drift, while all rows remain honestly
+> unclassified for TL3.2. The T6.0.3/TL2.15
+> [seam-fuzz seed](docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md) now runs
+> 768 unique generated cases across the four currently representable kernel
+> seams, repeats the complete summary deterministically, and rejects every
+> attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
+> partial until generated projection/reduction/eta and quotient semantic
+> families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
+> constructor reduction/import, TL2.5 structure eta, and TL2.6
+> arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, TL1.3
+> owned transactional publication, TL1.4 generated mutation coverage, and TL1.7
+> canonical declaration/dependency identity are complete. The
+> [accepted official construct matrix](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+> is complete for its selected population from
+> [M0/Stage A](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+> and [Stage B](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
+> checkpoints and the completed
+> [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md):
+> the [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
+> and [M5 handoff](docs/plan/lean-official-construct-matrix-final-2026-07-22.md).
+> Do not conflate the bounded nested diagnostic-classification follow-up with
+> semantic nested support. TL1.5 property fuzzing is dependency-ready. TL2.11's
+> completed positivity guard remains mandatory during TL2.12 recursive
+> admission widening. Native
+> parser/macros,
+> elaboration, tactics,
+> modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
+> all planned; adapter-first ordering controls risk but does not erase the
+> destination.
+
+> **Measurement-provenance reset (2026-07-21).** G1's shared schema and
+> generated 53-row matrix now separate raw occurrence, normalized path, exact
+> content, selection, scoring, and oracle identity across the regression and
+> partial-public regimes. The 927 file-backed scoreboard occurrences contract
+> to 837 paths and 778 byte contents; 58 exact-alias groups remove 59 additional
+> path identities, while 65 synthetic cases remain aggregate-only. The 228-file
+> public inventory shares 99 exact contents with the scoreboard (43.4% of that
+> inventory), so it is a harder weighting, not independent replication. Both
+> regimes remain non-official and have zero neutral-oracle rows on their exact
+> populations. Resume by reviewing proposed ADR-0343, then prototype a
+> mutation-tested syntax-normalized identity and freeze a complete official-
+> style eligible/selected manifest before any deduplicated or source-balanced
+> score. Never average the two current decide rates.
+> Follow-on commit `d9e71e21` adds explicit-file execution plus a candidate
+> full-library cap/family selector. Its external 2024 manifest maps 438,631
+> files to 64,345 candidates. Its first 52-shard 300-second run terminated
+> unexplained after only 2,041 progress rows (36-44 per shard), with zero raw
+> shard artifacts, no live workers, and no traceback. Remote kernel OOM state
+> is unavailable because `dmesg` is permission-denied on s4-s7. The attempt is
+> frozen incomplete and receives zero result credit.
+> Because raw output was end-of-shard only, it also exposes a resumability gap;
+> proposed ADR-0344's v2 contract now freezes 18 lifecycle/process/identity/
+> resource invariants and a checked 28-scenario prototype (five accepted
+> controls, 23 rejected mutations). It supersedes v1 before production because
+> v1 omitted attempt attribution, typed termination, observed-vs-admitted
+> verdicts, and content-addressed outputs. A deterministic interrupted/resumed
+> scoring projection is byte-identical to its uninterrupted control. E1a also
+> passes 8/8 real `SIGKILL`
+> recovery cells across tmpfs and the local ext-family worktree: identical
+> resume skips, conflicts/orphans quarantine, filename drift rejects, and
+> canonical merge remains equal. This is local record-mechanism credit only.
+> Integrate the writer, fake solver, attempt lifecycle, completion-last export,
+> strict duplicate rejection, and single-owner lease at E1b; then prove one-host
+> aggregate enforcement and multi-host recovery at E2-E3 before rerunning. Do
+> not modify the frozen attempt or launch the candidate.
+> The candidate is not
+> official selection evidence:
+> it still lacks the complete eligibility/status/difficulty policy, official
+> release/seed, corpus-tree identity, and per-selected-file hashes. Archive and
+> validate those boundaries before adding a third regime to the matrix. See the
+> [failed-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
+> Resume with the [resumable-run design](docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
+> and generated [failure/recovery matrix](docs/plan/generated/smtcomp-resumable-run-contract.md),
+> plus the [E1a result](docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md),
+> and [E1b runner audit](docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md), not
+> with `distribute_run.sh`. The active runner still drops timeout-observed
+> responses contrary to the registered SMT-COMP policy and guesses any other
+> signal is memory exhaustion; fix and mutation-test those paths only inside
+> opt-in v2 mode before changing legacy scoring behavior.
+
+> **Proof-gap refresh and resume point (2026-07-21).** The eight audit rows
+> containing every historical bare UNSAT have been rerun sequentially under
+> release-profile dominance schema v2. Verdict identity holds with zero
+> mismatches/timeouts; the two known QF_NIA `IntPow2` production errors remain.
+> Current proof denominators are 267 certified/independently checked, 260
+> Lean-checked, 259 fully dominant, and 58 bare-UNSAT occurrences. All 58 now
+> carry coarse decision-backend attribution; four stale QF_SEQ rows created
+> before the string evidence soundness fix lose source-invalid DRAT credit and
+> now honestly report bare UNSAT. Resume by using those four as the bounded
+> `source-side-channel-not-serialized` P1 case, then add stable attempt/boundary and obligation IDs across
+> the 51 unique residual contents under proposed ADR-0341. Do not implement the
+> telemetry before its exact invariance/mutation gates are reviewed. Do not
+> select a proof mechanism from syntax counts or turn the 22 unpaired timing-
+> flag changes into a performance claim.
+
+> **Lean reconstruction-only lane (2026-07-21).** The exact eight-row generated
+> queue splits five quantified-BV certificates from three QF_NIA Alethe proofs.
+> A selected-evidence diagnostic closes two BV rows directly (15 KB and 18.5 MB
+> modules). Of the other three BV rows, `bug802` exceeds a hard 4 GiB cap in
+> scoped kernel closure after building an 8,524-command tail;
+> `small-pipeline-fixpoint-3` closes the kernel in 7.744 s below 600 MiB but
+> misses 30 s before module spooling; and `cond-var-elim-binary` emits a
+> 15,705-command residual by 2.607 s below 525 MiB but misses 30 s in CPS tail
+> reconstruction. All three QF_NIA
+> proofs reconstruct directly through the existing EUF consumer as 2.9--8.1 KB
+> modules in about 0.10 s and below 9.5 MiB RSS: source-syntax routing had chosen
+> the wrong `la_generic` consumer. Five of eight rows are therefore measured
+> dispatch/plumbing wins; the remaining three are distinct quantified-BV
+> kernel-closure, compact-spooling, and CPS-reconstruction cost cases. Profile
+> those mechanisms separately under the existing 4 GiB/30 s bounds before
+> choosing a production evidence-aware dispatch boundary; do not add a theorem
+> family or raise the memory cap.
+
+> **Categorical-engine depth reset (2026-07-21).** A source/API/decline audit
+> plus 125/125 focused tests under a hard 4 GiB cap confirms that six
+> interpolation families, a substantial multi-predicate CHC/Horn direct API,
+> and bounded verified abduction are implemented. They are seeded or decide
+> selected fragments; they are not absent engines. The remaining Z3-class work
+> is textual `get-interpolant` / `declare-rel`+`rule`+`query` / `get-abduct`,
+> representative Z3/cvc5/Spacer corpora, Horn Int/array/mixed/nonlinear depth,
+> portable certification, and production hardening. General `synth-fun`/SyGuS
+> remains absent and separately demand-gated. Use the
+> [categorical-engine depth audit](docs/plan/categorical-engine-depth-audit-2026-07-21.md);
+> do not schedule another interpolation/Horn/abduction seed.
+
+> **SMT-LIB/API conformance reset (2026-07-21).** The checked
+> [30-row matrix](docs/plan/generated/smtlib-api-conformance.md) separates parser
+> state, execution semantics, output representation, assurance, exact tests, and
+> residual work. It finds six absent command families, seven syntactically
+> accepted no-ops, eight globally recorded surfaces, five command-point
+> surfaces, three semantic definitions, and one explicit rejection. Existing
+> Rust helpers already answer models, values, assignments, scoped assertions,
+> info/options, unsat cores, proofs, optimization, interpolation, Horn, and
+> abduction at bounded scopes, but **zero rows implement an ordered interactive
+> textual session**. P4.4 therefore advances an ordered session runner and
+> option/lifecycle semantics before adding another engine. The manifest's
+> negative source assertions force updates when recursive definitions,
+> interpolation, Horn, abduction, or SyGuS parser commands appear.
+>
+> The follow-up
+> [ordered-session contract](docs/plan/smtlib-session-contract-design-2026-07-21.md)
+> corrects the initial “runner over helpers” estimate. SMT-LIB 2.7 scopes
+> declarations and definitions by default, makes `reset-assertions` conditional
+> on `:global-declarations`, binds inspection to the exact preceding query, and
+> requires continued errors to leave state unchanged. Axeyum's shared arena,
+> global parser environments, final option maps, output no-ops, and silent pop
+> underflow cannot express those semantics. The checked abstract prototype
+> freezes 14 invariants and 20 transcripts / 107 commands under proposed
+> ADR-0342. P4.4 is now size L and resumes with capture-only complete ordered
+> command/event IR (S1), not a renderer or another isolated helper.
 
 > **Distilled next-10 focus, both lanes (2026-07-19).** Post-refutation reset:
 > ADR-0240/0243/0248 closed the concretization-coverage hypothesis -- no
@@ -21,7 +490,7 @@ session state.
 > self-owned IOCTL-census stack (Windows + Linux census -> glaurung/ioctlance ->
 > axeyum, with 22-CVE ground truth and an LLM-ranked handler worklist) and a
 > candidate LLVM-IR Linux frontend. Ranked next actions, balanced across the
-> solver lane (STATUS current focus: decide-rate ~73%, reduction-depth
+> solver lane (STATUS current focus: generated decide-rate frontier, SAT-search
 > performance, proofs) and the integration lane (open: broader labeled recall,
 > reproducibility, and frontend breadth; the neutral baseline and this exact
 > timeout tier are closed):
@@ -3032,29 +3501,34 @@ defined in
 
 ## Where we are vs the north star — measured reality check (2026-06-28)
 
-**Measured status: the build is well underway, soundness is holding, and there
-is a concrete, fully-mapped road to Z3 + Lean parity.** axeyum is a sound,
-pure-Rust reasoning stack — *measurably ahead on a growing set of fragments*,
-with every remaining fragment decomposed into sized, exit-criteria'd work. The
-job is exactly what it has always been: advance the next verifiable increment,
-relentlessly. Scored against [the north-star definition of done](docs/plan/00-north-star.md):
+**Measured status: the build is well underway, selected fragments are
+competitive, and the remaining distances are mapped on separate axes.** Axeyum
+is a pure-Rust reasoning stack with strong measured correctness evidence and a
+substantial certifying lane. The table does not turn finite tests into universal
+soundness or combine fragment parity, production replacement, proof coverage,
+kernel compatibility, and workflow integration into one percentage. Scored
+against [the north-star reference targets](docs/plan/00-north-star.md):
 
 | North-star criterion | Status | Evidence (measured, not asserted) |
 |---|---|---|
-| **Soundness (never a wrong verdict)** | **Strong / holding** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed. |
+| **Measured correctness / fail-closed behavior** | **Strong evidence; not a universal proof** | `DISAGREE = 0` across all 35 division baselines (oracle-compared count lives in the generated scoreboard — hand-copies rotted three times) ([SCOREBOARD](bench-results/SCOREBOARD.md)). Two real wrong-safes in the consumer apps were found by new differential fuzzes and fixed, demonstrating why this remains an empirical gate rather than a theorem. |
 | **Feature coverage (breadth)** | **Partial** | Columns exist for ~24 fragments (BV/ABV/UF/LRA/LIA/NRA/NIA/FP/DT/strings/seq/FF/…), but many are shallow. |
-| **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; ~73% as of 2026-07-07 — do not hand-copy the integers, they rotted repeatedly), decide-rate **0%–100%** across divisions. Arithmetic now decide-strong (QF_NIA-cvc5 85%, QF_NRA-cvc5 84%); the dominant remaining wired-fragment gap is strings (QF_SLIA 36%, QF_S 58%). Z3/cvc5 still cover more divisions than the ~35 measured. |
-| **Measured performance (PAR-2 head-to-head)** | **Weak — but now measured where it matters most** | The north star says *no parity claim without this number*. The first committed head-to-head exists (`582ecba8`, 2026-07-03, public QF_BV p4dfa lazy-vs-eager at 3s/20s, DISAGREE=0): lazy weakly dominates (7>4 at 20s) but `lazy_ops_total=0` on all 113 — the edge is inherited word-level preprocessing, not CEGAR, and Z3 decides all 113 in ≤1s. Not competitive at scale; the measured lever is reduction depth. |
-| **Lean parity (every unsat carries a kernel-checkable proof)** | **Early / narrow** | ~15/35 rows have a Lean route worth auditing; the trusted-reduction ledger is **not yet zero**. The Lean *tactic backend* (P3.7) is unbuilt. |
-| **Pareto-dominance on selected fragments** | **Growing — the real, defensible claim** | **23 fragments** carry a committed, audited `dominant%` ([DOMINANCE](bench-results/DOMINANCE.md)). This — not wholesale replacement — is what the strategy actually targets. |
+| **Completeness / decide-rate** | **Partial — the central gap, narrowing** | decided/total live in the generated [SCOREBOARD](bench-results/SCOREBOARD.md) **Totals** line (authoritative; do not hand-copy it), with decide-rate **0%–100%** across divisions. Arithmetic is decide-strong on the measured rows; the dominant wired-fragment gaps include QF_SLIA and bounded/general UF. Z3/cvc5 still cover more divisions and much deeper corpora than the measured set. |
+| **Measured performance (PAR-2 head-to-head)** | **Regime-dependent; broad production parity open** | The registered p4dfa 20-second controls decide 8/113 for Axeyum and 8/113 for the Z3 crate on different sets; the Z3 CLI control decides 9/113. That is bounded hard-corpus parity, not a universal lead. The neutral Glaurung six-cell study has Axeyum ahead of warm Z3 on three drivers and behind on Dptf, while warm Bitwuzla wins all four. Widen matched corpora, budgets, decision-set overlap, RSS, and warm/cold controls before a broad claim. |
+| **Lean certificate coverage** | **Substantial but uneven** | All 35 measured rows have complete dominance-audit artifacts: 327 baseline UNSAT decisions become 325 evidence-audit UNSAT outcomes, 267 certified + genuinely independently checked outcomes, and 260 Lean-checked outcomes. The affected v1 rows historically had 28 vacuous `bare-unsat` check booleans; the schema-v2 refresh now records zero, gates checking on certification, and attributes all residual bare outcomes to a decision backend/check mode. The full conjunction remains 259/327: 58 uncertified audit-row occurrences, eight reconstruction-only gaps, zero declared trust holes, and two QF_NIA `IntPow2` proof-production errors. Four stale QF_SEQ rows created before the string evidence soundness fix lose source-invalid DRAT credit: their old proof covered only the bounded/flat lowering, while the source verdicts remain unchanged. The parser-backed [shape census](docs/plan/generated/proof-gap-shape-census.md) deduplicates the 58 to 56 paths / 51 exact contents (25 arithmetic, 26 string/sequence): all 26 string/sequence contents use bounded lowering, 31 occurrences return through `smtlib-string-front-door`, 15 through `auto-solve`, and 12 through `nra-linear-abstraction`. The [causal design](docs/plan/evidence-route-provenance-design-2026-07-21.md) makes route/reduction tracing—starting with the QF_SEQ `source-side-channel-not-serialized` case—the next prerequisite, not a syntax-selected proof rule. The eight reconstruction-only gaps split into five measured selected-evidence plumbing wins (two quantified-BV plus all three QF_NIA proofs through the existing EUF consumer) and three distinct quantified-BV cost cases: scoped kernel closure exceeds 4 GiB, compact spooling misses 30 seconds after kernel closure below 600 MiB, and CPS tail reconstruction misses 30 seconds below 525 MiB. The production denominator remains unchanged until evidence-aware dispatch and official-Lean checking land; add no theorem family from query-only re-derivation failures. The current declared trust-hole ledger is zero, but 58 definitive results still lack certificates and the Lean tactic backend (P3.7) is unbuilt. |
+| **Pareto-dominance on selected rows** | **Strong selected-fragment result; timing refresh required** | 23/35 audited rows are fully dominant; the current mixed-vintage audit artifacts mark 594/753 measured decisions as dominant candidates ([DOMINANCE](bench-results/DOMINANCE.md)). The schema-v2 proof refresh changed 22 timing-derived flags, mostly in QF_SEQ, without changing verdicts; do not turn that unpaired rerun into a performance claim. Refresh paired timing cells before publication. |
 
-**Full parity across all of Z3/cvc5/Lean is not yet reached — and it is the
-destination we are actively building toward, not a wish.** The identity is:
-*untrusted fast search, trusted small checking* — sound everywhere measured,
-dominant on a growing fragment set, with a pure-Rust/WASM/certifying moat. The
-remaining decide-rate, performance, and proof-coverage work is mapped track by
-track below and under [`docs/plan/`](docs/plan/README.md); we advance it one
-increment at a time and record each one.
+**"Full parity across Z3/cvc5/Lean" is not one scalar milestone.** The
+active product targets are measured fragment competitiveness, production
+SMT-LIB/API depth, complete evidence on claimed routes, a versioned Lean-core
+compatibility profile, and a fail-closed Lean bridge. The identity remains
+*untrusted fast search, trusted small checking*. Work on each axis is mapped
+below and under [`docs/plan/`](docs/plan/README.md). Full Lean-system
+compatibility is a separate, long-horizon program—not a solver-parity shortcut
+or proof-kernel prerequisite. Its adapter-first strategy is in the
+[Lean-system compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
+and its complete native implementation breakdown is in the
+[Lean-system implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md).
 
 **Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread
@@ -7409,12 +7883,13 @@ it's genuinely a 15-year catch-up (high-degree NRA), not where one IR change clo
 
 ## What "done" means
 
-See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the full
-definition. In one line: **Z3 parity** = feature coverage + competitive
-measured performance on the decidable/semidecidable fragments, with honest
-`unknown` where undecidable; **Lean parity** = every `unsat`/`valid` result
-carries a machine-checkable proof a Lean-grade kernel accepts, produced by an
-untrusted search and validated by small independent checkers.
+See [`docs/plan/00-north-star.md`](docs/plan/00-north-star.md) for the separated
+definitions. In one line: **fragment decision parity** requires a matched query
+class, population, budgets, verdicts, decided sets, and PAR-2;
+**production-solver replacement** additionally requires broad protocol,
+portfolio, tooling, and deployment depth; **Lean integration** requires complete
+certified coverage on the claimed route, a versioned core-compatibility profile,
+and a fail-closed tactic/import bridge.
 
 ## The two load-bearing fronts
 
@@ -8264,9 +8739,11 @@ label-based reachability/safety query wrappers over the existing checked PC
 queries. P4.2 still needs richer byte-level/binary frontend work,
 unbounded/certified safety, and eventual warm lazy theory reuse.
 
-> **Reframe (2026-06-22; amended 2026-06-23).** With interpolation done and CHC/abduction opened (item 3
-> below) and the NRA CAD decision side complete, the three categorically-missing
-> engines are now *addressed*. So the dominant gap is no longer "what can't we
+> **Reframe (2026-06-22; audited 2026-07-21).** With selected-fragment
+> interpolation done, CHC/abduction seeded (item 3 below), and the NRA CAD
+> decision side complete, the three historical categorical gaps are addressed
+> at different maturity rungs; general SyGuS remains absent. So the dominant gap
+> is no longer "what can't we
 > decide." It is **(A) architecture maturity** — chiefly *online* multi-theory
 > combination, still eager Ackermann today (the e-graph keystone and the EUF lazy
 > DPLL(T) loop already exist; cross-theory propagation does not) — and **(B) the
@@ -8303,33 +8780,42 @@ depth ladders are already planned; this audit only sharpens their exit criteria:
   glue/LBD retention, SCC/equiv-lit substitution, probing, and word-level BV
   abstraction. The hard-QF_BV tail (~9 instances) remains mostly search-bound.
 
-**3. ~3 categorically-absent engines** — **ALL THREE now addressed (2026-06-22),
-each verify-guarded (untrusted search, trusted small checking); depth/fuller
-versions remain:**
+**3. Historically categorical gaps** — **interpolation, CHC, and abduction now
+have verify-guarded direct implementations; general SyGuS remains absent;
+depth/interfaces/corpora remain:**
 - **CHC / Horn (PDR/Spacer)** — *unbounded* invariant discovery, the step beyond
-  today's bounded BMC + inductive k-induction. The single biggest categorical hole
-  vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
+  today's bounded BMC + inductive k-induction. Historically the single biggest
+  categorical hole vs Z3. [P4.6](docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md). **OPENED
   (ADR-0048):** verify-guarded single-predicate **IC3/PDR over QF_BV**
   (`prove_safety_pdr`) discovers invariants where k-induction is inconclusive —
   `Safe` only when the discovered invariant passes the 3 implication checks; **MBP
   for LRA** (P2.6-T2.6.6) **landed** as the Spacer predecessor primitive; an **IMC**
-  (interpolation-based model checking) consumer of the interpolation API is the next
-  slice. Depth: LRA-theory PDR, online LRA solver, multi-predicate Horn core.
+  (interpolation-based model checking) consumer of the interpolation API has
+  since landed. The current direct API also supports Real and Bool/BV state,
+  stratified multi-predicate systems, compatible mutual SCCs, and lower-stratum
+  nonlinear folding with source-clause reverification. Depth: textual CHC,
+  representative Spacer measurement, Int/arrays/mixed state, genuine nonlinear
+  recursion, incompatible SCC signatures, and a portable certificate bundle.
 - **Craig interpolation** — a feature column *and* CHC's lemma engine; read off
   the already-checked proof. [P3.8](docs/plan/track-3-proof-lean/P3.8-interpolation.md)
-  **ENGINE DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
+  **SELECTED DIRECT-API FRAGMENTS DONE (2026-06-22, ADR-0047):** interpolants land for conjunctive
   **QF_LRA** (Farkas), **QF_UF** (congruence-explanation), **propositional/SAT**
   (McMillan over the LRAT resolution proof), **QF_BV** (joint bit-blast + lifted
   propositional interpolant), and **QF_UFLRA** (Ackermannize → LRA interpolant →
   translate) — every phase-exit fragment, each **verify-before-return** (declines
-  rather than emitting anything unverified). Only the SMT-LIB `(get-interpolant)`
-  parse surface remains (coordinate `axeyum-smtlib`).
+  rather than emitting anything unverified). LIA/UFLIA families and certificate-
+  bearing variants have since joined the public namespace. SMT-LIB
+  `(get-interpolant)`, broader mixed/proof-shape coverage, representative
+  comparison, and complete Lean/export accounting remain.
 - **Synthesis / abduction (SyGuS, `get-abduct`)** — turns the checker into a
   generator. [P4.7](docs/plan/track-4-usecases-frontend/P4.7-synthesis.md).
   **OPENED (ADR-0049):** `abduct(axioms, conjecture)` — bounded enumeration of
   shared-vocab atoms, each candidate returned only when `check_auto` confirms
-  consistency + sufficiency + vocabulary. Depth: SyGuS grammar synthesizing *new*
-  atoms, CEGIS, minimality, `(get-abduct)` surface.
+  consistency + sufficiency + vocabulary; it now synthesizes new shared
+  equalities and arithmetic comparisons and tries bounded two-literal
+  conjunctions. Depth: textual `(get-abduct)`, minimality/weakest guarantees,
+  richer user grammar, general CEGIS, and independently measured corpora.
+  General `synth-fun`/SyGuS remains absent and must be reported separately.
 - Plus the enumerated **breadth tail** (sequences, sets/bags, separation logic,
   finite fields, co-datatypes, rec-fun) kept *counted*, not forgotten:
   [P2.10](docs/plan/track-2-theories/P2.10-breadth-backlog.md).
@@ -8403,15 +8889,17 @@ checklist:
 |---|---|---|
 | **Seeded** | sound, verify-guarded first slice (often conjunctive / bounded / single-predicate) | **most newer engines** — CHC/PDR, abduction, interpolation, online combination |
 | **Decides** | complete on the decidable fragment; honest `unknown` outside | QF_BV, QF_UF, QF_LRA; NRA CAD decision side |
-| **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | **QF_BV only** (p4dfa 113, parity, both hard-capped) |
-| **Certifying** | every `unsat` carries a Lean-checkable certificate | QF_BV (DRAT), QF_LRA (Farkas), QF_UF, degree-2 SOS — **ahead of Z3** |
+| **Measured-competitive** | solved-count + PAR-2 within target of Z3/cvc5 on a *committed* corpus, same hardware/timeout | selected rows plus bounded controls; p4dfa is 8/113 vs 8/113 at 20s on different sets, and Glaurung is workload-dependent |
+| **Certifying** | every definitive UNSAT in the registered fragment/population carries independently checked, trust-accounted, Lean-reconstructed evidence | 23 fully dominant measured rows; partial globally |
 | **Production** | tuned, scalable, robust across the division's *full* benchmark suite | **none yet** — Z3/cvc5 are here across all divisions |
 
 **The honest position:** axeyum has **breadth of seeds + a leading *certifying*
-story + one measured division.** It is *not* at Z3/cvc5 parity, and the distance
-is dominated by two things the ledger does not show — **production depth** (the
-bulk of Z3's ~688k LoC) and **measurement debt** (only QF_BV is measured; every
-other "parity" is a feature-ledger assertion, not a number).
+story + 35 measured rows across 24 logic labels.** It is not a general
+production Z3/cvc5 replacement. The remaining distance is dominated by
+**production depth**, corpus representativeness/difficulty, unsupported and
+timeout residuals, proof gaps outside the dominant rows, and compatibility
+surface. Use the scoped 2026-07-21 gap map rather than turning the aggregate
+row count into a global parity percentage.
 
 **The phase pivot.** Breadth acquisition is essentially done — the ledger has a
 seed for nearly everything. **The standing rule now inverts: stop adding new engine
@@ -8428,8 +8916,9 @@ measured corpus behind it adds claim-surface, not parity.
 2. **Do not race Z3 to production depth on every division** — that is a 15-year
    loss. **Pick the divisions where axeyum can be both measured-competitive *and*
    fully-certifying** — QF_BV, QF_LRA, QF_UF, QF_LIA, QF_ABV — and drive those to the
-   top of the ladder. "Fast-enough **and** every `unsat` carries a Lean-checkable
-   proof" is a position **neither Z3 nor cvc5 occupies**; that is the winnable parity.
+   top of the ladder. "Fast-enough **and** every definitive UNSAT in the named
+   population carries independently checked Lean evidence" is the scoped,
+   reproducible position to pursue.
 3. **Accept sound-incompleteness on the hard frontiers** (NRA, strings, full
    quantifiers, large-scale CHC) as the honest steady state — match Z3's *practical*
    heuristics where cheap, return first-class `unknown` otherwise, and let

@@ -1,0 +1,5790 @@
+{
+  "contents": [
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_AUFLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2"
+      ],
+      "ir_ops": [
+        "Apply",
+        "BoolAnd",
+        "BoolNot",
+        "Eq",
+        "Store"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "93fab1c36a8546706899f50cb5d1bc34b5ff2120ad7df1dc9480d8c16c5f8adb",
+      "source_heads": [
+        "=",
+        "and",
+        "f",
+        "g",
+        "not",
+        "store"
+      ],
+      "tags": [
+        "arrays",
+        "uf"
+      ],
+      "unique_ir_terms": 21,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_AUFLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2"
+      ],
+      "ir_ops": [
+        "Apply",
+        "BoolNot",
+        "Eq",
+        "Select",
+        "Store"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "a028621397a8410e0e8fd1063ddacf029dad9899bd084acd5db4df597fdf198e",
+      "source_heads": [
+        "=",
+        "?v_0",
+        "?v_1",
+        "?v_10",
+        "?v_11",
+        "?v_12",
+        "?v_13",
+        "?v_14",
+        "?v_15",
+        "?v_16",
+        "?v_17",
+        "?v_18",
+        "?v_19",
+        "?v_2",
+        "?v_20",
+        "?v_21",
+        "?v_22",
+        "?v_23",
+        "?v_24",
+        "?v_3",
+        "?v_4",
+        "?v_5",
+        "?v_6",
+        "?v_7",
+        "?v_8",
+        "?v_9",
+        "let",
+        "not",
+        "select",
+        "sk",
+        "store"
+      ],
+      "tags": [
+        "arrays",
+        "uf"
+      ],
+      "unique_ir_terms": 90,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq",
+        "IntAdd",
+        "IntMod",
+        "IntMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "99c1453b3e6716596cb1dfe96c6cd8afe63a651ec6cd18e1e0158a4e822d7542",
+      "source_heads": [
+        "*",
+        "+",
+        "=",
+        "mod",
+        "not"
+      ],
+      "tags": [
+        "int-divmod",
+        "int-nonlinear"
+      ],
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2"
+      ],
+      "ir_ops": [
+        "IntGt",
+        "IntLe",
+        "IntLt",
+        "IntPow2"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "7204396e13cf9ea99c9b98217353e8e56572abfd75728b45071af37bb91af9ad",
+      "source_heads": [
+        "<",
+        "<=",
+        ">",
+        "int.pow2"
+      ],
+      "tags": [
+        "int-pow2"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2"
+      ],
+      "ir_ops": [
+        "IntGt",
+        "IntLe",
+        "IntPow2"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "942844c4147d54567eecb8cb3a7c3bdb970ec6298031ca2af38eabd5175f1772",
+      "source_heads": [
+        "<=",
+        ">",
+        "int.pow2"
+      ],
+      "tags": [
+        "int-pow2"
+      ],
+      "unique_ir_terms": 5,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2"
+      ],
+      "ir_ops": [
+        "IntGt",
+        "IntLt",
+        "IntMod",
+        "IntPow2"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "c92ce743342584064b70e334b0a92527afafecdf7efbc1a5f99d925860dd302a",
+      "source_heads": [
+        "<",
+        ">",
+        "int.pow2",
+        "mod"
+      ],
+      "tags": [
+        "int-divmod",
+        "int-pow2"
+      ],
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq",
+        "IntDiv",
+        "IntLe",
+        "IntPow2"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "422851e353fc365bc4ab1d49349071704dc660b28d332e5e9819e00e591b0f3f",
+      "source_heads": [
+        "<=",
+        "distinct",
+        "div",
+        "int.pow2"
+      ],
+      "tags": [
+        "int-divmod",
+        "int-pow2"
+      ],
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2"
+      ],
+      "ir_ops": [
+        "IntDiv",
+        "IntGe",
+        "IntGt",
+        "IntLt"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "d67c531f0875234685a9142e496d008cafdce247fa5723556a5e0e47303355ee",
+      "source_heads": [
+        "<",
+        ">",
+        ">=",
+        "div"
+      ],
+      "tags": [
+        "int-divmod"
+      ],
+      "unique_ir_terms": 8,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq",
+        "IntGt",
+        "IntMod"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "fff049ef54aba3fadbe7838236421365c4537a716d878ecb5bda6c337b857757",
+      "source_heads": [
+        ">",
+        "distinct",
+        "mod"
+      ],
+      "tags": [
+        "int-divmod"
+      ],
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2"
+      ],
+      "ir_ops": [
+        "BoolOr",
+        "Eq",
+        "IntAdd",
+        "IntGt",
+        "IntMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "9d80f6c9e2e708c98dc37b2f3274fc6da7e1dfd6a3411a791509861177fff1d0",
+      "source_heads": [
+        "*",
+        "+",
+        "=",
+        ">",
+        "or"
+      ],
+      "tags": [
+        "int-nonlinear"
+      ],
+      "unique_ir_terms": 27,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2"
+      ],
+      "ir_ops": [
+        "Eq",
+        "RealDiv",
+        "RealGe",
+        "RealLe"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "16c1a680ede546f3de5b899ef2c5814af2bbae7b13d1f85b78ad277566eb2e3c",
+      "source_heads": [
+        "/",
+        "<=",
+        "=",
+        ">="
+      ],
+      "tags": [
+        "real-division"
+      ],
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq",
+        "RealGe",
+        "RealLe",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "8b631207b659ec4384db6da20f68309d05a3113a77f2bd236c22a64c2a4139be",
+      "source_heads": [
+        "*",
+        "<=",
+        "=",
+        ">=",
+        "not"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "BoolOr",
+        "Eq",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "628e27d5bb91f32cd4908314f7d28cb759d11725560bba772e08119225844b81",
+      "source_heads": [
+        "*",
+        "=",
+        "not",
+        "or"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 19,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2"
+      ],
+      "ir_ops": [
+        "Eq",
+        "IntNeg",
+        "IntToReal",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "61646e31c5018b683e4c81c1e3efca536f7f39dafc1bbb79c4b861914520557a",
+      "source_heads": [
+        "*",
+        "-",
+        "="
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2"
+      ],
+      "ir_ops": [
+        "BoolOr",
+        "Eq",
+        "RealAdd",
+        "RealGt",
+        "RealMul",
+        "RealNeg"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "26ca249d6ca2f212b2c9397b7978627dc3944a4e5088c1f99530592d6bf22d13",
+      "source_heads": [
+        "*",
+        "+",
+        "-",
+        "=",
+        ">",
+        "or"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 29,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2"
+      ],
+      "ir_ops": [
+        "RealGe",
+        "RealGt",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "02a341c9f9148ccf4e5f65948c47202b68fe8607d4807566d6089fe15bfd40cb",
+      "source_heads": [
+        "*",
+        "<",
+        ">",
+        ">="
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2"
+      ],
+      "ir_ops": [
+        "RealGe",
+        "RealGt",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "568ac40854ce8b7ce2d0abf01543097b78cecd0c0487a96b48ee3afcc82a2ecf",
+      "source_heads": [
+        "*",
+        "<",
+        ">",
+        ">="
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2"
+      ],
+      "ir_ops": [
+        "RealGt",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "b77b0462646b4055aea92942da971c93788bda7dae74c2e5fe5bc791fc557f8c",
+      "source_heads": [
+        "*",
+        "<",
+        ">"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 6,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2"
+      ],
+      "ir_ops": [
+        "BoolOr",
+        "Eq",
+        "RealGe",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "7446153df8fae9712ab6a154f3f3c9dce84c342e0e59e01310ed5de5de01fdf2",
+      "source_heads": [
+        "*",
+        "<",
+        "=",
+        ">=",
+        "or"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 20,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Eq",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "77828f4b61370473c2f8c08f2ababaa11e50524794a59127311b692f7614213d",
+      "source_heads": [
+        "*",
+        "=",
+        "and",
+        "not",
+        "or"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 15,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2"
+      ],
+      "ir_ops": [
+        "BoolOr",
+        "Eq",
+        "RealGt",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "d3ab75dcfd6558e7646dffdbce4309643c3df0d8bfdf1ae4aa701fa79113d9d8",
+      "source_heads": [
+        "*",
+        "<",
+        "=",
+        ">",
+        "or"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 17,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2"
+      ],
+      "ir_ops": [
+        "RealGt",
+        "RealLt",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "8453b0d84d5654fba624037c7b708b94d6e8159f05b3da0f65419a3337152061",
+      "source_heads": [
+        "*",
+        "<",
+        ">"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2",
+      "decision_backends": [
+        "nra-linear-abstraction"
+      ],
+      "declared_logic": "QF_NRA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq",
+        "RealMul"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "24d82ec76a44211fb6f01c3a52d940d746b7fd0579c106a1e7196d6b19a6de7e",
+      "source_heads": [
+        "*",
+        "=",
+        "not"
+      ],
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvAdd",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "77f238b673f0a0b4894380b7806158630df1df05e79bbe8f75d69f9f576e8b04",
+      "source_heads": [
+        "not",
+        "str.contains"
+      ],
+      "tags": [
+        "string-contains"
+      ],
+      "unique_ir_terms": 382,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 7,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "ed891aecf9f701ba5bed404d217cd3e414ad78673e0e8ac604efb120521e7625",
+      "source_heads": [
+        "=",
+        "str.++"
+      ],
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 343,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 1
+    },
+    {
+      "assertions": 9,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "2e82f58936b9878f981a2103b1cecaf1827a40efac8e83ef53c2acf2c654382a",
+      "source_heads": [
+        "=",
+        "not",
+        "str.++"
+      ],
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 469,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 3
+    },
+    {
+      "assertions": 8,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Bv2Nat",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 2,
+      "membership_problem": false,
+      "sha256": "8a6bacd88bd9084aac83d56a189ba330a159ba0ed5a7335c46241ff21545f9cd",
+      "source_heads": [
+        "=",
+        "not",
+        "str.len"
+      ],
+      "tags": [
+        "string-length"
+      ],
+      "unique_ir_terms": 274,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "27ead957948d3fb90e3e7cbb43a4a2aec0337f25bf46c678665423a496508b82",
+      "source_heads": [
+        "=",
+        "and",
+        "not",
+        "re.*",
+        "re.++",
+        "str.in_re",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 398,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2"
+      ],
+      "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "eb04bf9f4fabc8397e0709b20e610a08b59beb98222185a817e500b7b6de797a",
+      "source_heads": [
+        "=",
+        "and",
+        "not",
+        "or",
+        "str.++"
+      ],
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "39f746a5fa70e910dec462383a98b0e2636d91e208a92b7c21a0a0e1be6ddda0",
+      "source_heads": [
+        "=",
+        "or",
+        "str.++"
+      ],
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 196,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 3
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": true,
+      "sha256": "c46116db9ceeb81aa9fb04ad431825fab27ef29131b4de9968e90e8294487d39",
+      "source_heads": [
+        "=",
+        "re.comp",
+        "str.in_re",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 14425,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "6ccb49fe0554b0e138130754169ee432e66de9d8741f2c5b29a2dd0fd39e5759",
+      "source_heads": [
+        "=",
+        "str.replace_all"
+      ],
+      "tags": [
+        "string-replace"
+      ],
+      "unique_ir_terms": 56,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_S",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2"
+      ],
+      "ir_ops": [
+        "BoolNot",
+        "Eq"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "2ed8ab2d4c75b8df32685a542ed4d4343a537a2341d72e16559134af19e682a1",
+      "source_heads": [
+        "=",
+        "not",
+        "re.range",
+        "str.replace_re_all"
+      ],
+      "tags": [
+        "string-regex",
+        "string-replace"
+      ],
+      "unique_ir_terms": 3,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SEQ",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "Bv2Nat",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract",
+        "IntMul",
+        "IntSub",
+        "Ite"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "1908e43fbc1e6f5abbd063bab4594063058c05e02ab23d4356d4cfaa5b50e9f0",
+      "source_heads": [
+        "=",
+        "seq.len",
+        "seq.nth"
+      ],
+      "tags": [
+        "int-nonlinear",
+        "sequence-index"
+      ],
+      "unique_ir_terms": 97,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__leq.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
+      "source_heads": [
+        "not",
+        "or",
+        "str.++",
+        "str.<="
+      ],
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2"
+      ],
+      "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "51afd1c76c25613dfd618281f0fef0d890fe45bafdeea1a077c297d79a515374",
+      "source_heads": [
+        "not",
+        "re.*",
+        "re.++",
+        "re.range",
+        "re.union",
+        "str.++",
+        "str.in_re",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-concat",
+        "string-regex"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 18
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "4b5b64e23de09b6d1d895261e44c8bd087240fc7442285925ac9c6cc5cbed4e7",
+      "source_heads": [
+        "not",
+        "re.++",
+        "str.in_re",
+        "str.prefixof",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 250,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2"
+      ],
+      "ir_ops": [],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
+      "source_heads": [
+        "=",
+        "not",
+        "str.++",
+        "str.replace"
+      ],
+      "tags": [
+        "string-concat",
+        "string-replace"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
+    },
+    {
+      "assertions": 8,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Bv2Nat",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "IntGt",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 2,
+      "membership_problem": false,
+      "sha256": "52df9cd70d506b79133d75c114624352160a9083a13b19d66ad6fe042ef9caac",
+      "source_heads": [
+        "=",
+        ">",
+        "str.++",
+        "str.len"
+      ],
+      "tags": [
+        "string-concat",
+        "string-length"
+      ],
+      "unique_ir_terms": 439,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 7,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-mod-eq.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
+      "source_heads": [
+        "=",
+        "or",
+        "re.*",
+        "re.++",
+        "str.in_re",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "Bv2Nat",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract",
+        "IntGt",
+        "IntLt",
+        "Ite"
+      ],
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "7e6f16ba2fd3bf26db7bb54bbe534c85c88d872c6d6cb1c6403faa52b1a92fb5",
+      "source_heads": [
+        "<",
+        "=",
+        ">",
+        "or",
+        "str.len",
+        "str.to_code"
+      ],
+      "tags": [
+        "string-code",
+        "string-length"
+      ],
+      "unique_ir_terms": 64,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 12,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__str-code-unsat-3.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Bv2Nat",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract",
+        "IntAdd",
+        "IntGe",
+        "IntLe",
+        "Ite"
+      ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
+      "source_heads": [
+        "+",
+        "<=",
+        "=",
+        ">=",
+        "distinct",
+        "str.to_code"
+      ],
+      "tags": [
+        "string-code"
+      ],
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 12,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Bv2Nat",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract",
+        "IntAdd",
+        "IntGe",
+        "IntLe",
+        "Ite"
+      ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 9,
+      "len_abstraction_map_entries": 6,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "c9352865a0d9ed25bec15bfa9a1b38569317c74643c51ceb294e3eafd9c71f45",
+      "source_heads": [
+        "+",
+        "<=",
+        "=",
+        ">=",
+        "distinct",
+        "str.to_code"
+      ],
+      "tags": [
+        "string-code"
+      ],
+      "unique_ir_terms": 174,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 9,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__strings-leq-trans-unsat.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
+      "source_heads": [
+        "=",
+        "str.++",
+        "str.<="
+      ],
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUle",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.replace_all",
+        "seq.unit"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 50,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.rev",
+        "seq.unit"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 85,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.unit",
+        "seq.update"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 147,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvAdd",
+        "BvAnd",
+        "BvMul",
+        "BvOr",
+        "BvShl",
+        "BvSub",
+        "BvUle",
+        "BvUlt",
+        "Concat",
+        "Eq",
+        "Extract",
+        "Ite",
+        "ZeroExt"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
+      "source_heads": [
+        "=",
+        "seq.++",
+        "seq.unit",
+        "seq.update"
+      ],
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 88,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": 1,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2",
+      "decision_backends": [
+        "smtlib-string-front-door"
+      ],
+      "declared_logic": "QF_SLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2"
+      ],
+      "ir_ops": [
+        "BoolAnd",
+        "BoolOr",
+        "BvUlt",
+        "Eq",
+        "Extract"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": true,
+      "sha256": "dd6f81b2c3889224cc1741fe6b0cc8863bd3f59ec2d3db2e41172c7d5e55c709",
+      "source_heads": [
+        "str.in_re",
+        "str.to_re"
+      ],
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 80,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 1248,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_UFLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
+      ],
+      "ir_ops": [
+        "Apply",
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Eq",
+        "IntAdd",
+        "IntGe",
+        "IntLe",
+        "IntMul",
+        "IntNeg"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "0db37c05949d282129258208eae99e5a1f7d0e18dabf7eb50efaf1faf43f9e49",
+      "source_heads": [
+        "*",
+        "+",
+        "-",
+        "<=",
+        "=",
+        ">=",
+        "and",
+        "format",
+        "not",
+        "or",
+        "s_count",
+        "x_count"
+      ],
+      "tags": [
+        "int-nonlinear",
+        "uf"
+      ],
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1248,
+      "audit_occurrences": 2,
+      "canonical_file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+      "decision_backends": [
+        "auto-solve"
+      ],
+      "declared_logic": "QF_UFLIA",
+      "files": [
+        "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
+      ],
+      "ir_ops": [
+        "Apply",
+        "BoolAnd",
+        "BoolNot",
+        "BoolOr",
+        "Eq",
+        "IntAdd",
+        "IntGe",
+        "IntLe",
+        "IntMul",
+        "IntNeg"
+      ],
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "membership_problem": false,
+      "sha256": "bed85dc60a05b5cac4b5ae7c1894cdee8369c6af7c5e11b58a1652da875c7f57",
+      "source_heads": [
+        "*",
+        "+",
+        "-",
+        "<=",
+        "=",
+        ">=",
+        "and",
+        "format",
+        "not",
+        "or",
+        "s_count",
+        "x_count"
+      ],
+      "tags": [
+        "int-nonlinear",
+        "uf"
+      ],
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    }
+  ],
+  "decision_backends": [
+    {
+      "audit_occurrences": 31,
+      "decision_backend": "smtlib-string-front-door",
+      "unique_contents": 26,
+      "unique_paths": 31
+    },
+    {
+      "audit_occurrences": 15,
+      "decision_backend": "auto-solve",
+      "unique_contents": 13,
+      "unique_paths": 13
+    },
+    {
+      "audit_occurrences": 12,
+      "decision_backend": "nra-linear-abstraction",
+      "unique_contents": 12,
+      "unique_paths": 12
+    }
+  ],
+  "declared_logics": [
+    {
+      "logic": "QF_SLIA",
+      "unique_contents": 15
+    },
+    {
+      "logic": "QF_NRA",
+      "unique_contents": 13
+    },
+    {
+      "logic": "QF_S",
+      "unique_contents": 10
+    },
+    {
+      "logic": "QF_NIA",
+      "unique_contents": 8
+    },
+    {
+      "logic": "QF_AUFLIA",
+      "unique_contents": 2
+    },
+    {
+      "logic": "QF_UFLIA",
+      "unique_contents": 2
+    },
+    {
+      "logic": "QF_SEQ",
+      "unique_contents": 1
+    }
+  ],
+  "feature_families": [
+    {
+      "audit_occurrences": 12,
+      "description": "Parsed IR contains real multiplication.",
+      "family": "real-nonlinear",
+      "unique_contents": 12
+    },
+    {
+      "audit_occurrences": 12,
+      "description": "Source uses string concatenation.",
+      "family": "string-concat",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 8,
+      "description": "Source uses regex construction or membership.",
+      "family": "string-regex",
+      "unique_contents": 7
+    },
+    {
+      "audit_occurrences": 7,
+      "description": "Parsed IR contains integer multiplication.",
+      "family": "int-nonlinear",
+      "unique_contents": 5
+    },
+    {
+      "audit_occurrences": 5,
+      "description": "Parsed IR contains integer division or modulo.",
+      "family": "int-divmod",
+      "unique_contents": 5
+    },
+    {
+      "audit_occurrences": 6,
+      "description": "Parsed IR contains uninterpreted-function application.",
+      "family": "uf",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "description": "Parsed IR contains cvc5 `int.pow2`.",
+      "family": "int-pow2",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "description": "No current high-level tag matched; inspect exact heads/ops.",
+      "family": "uncategorized",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "description": "Source uses `str.to_code`.",
+      "family": "string-code",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 4,
+      "description": "Source uses a string replacement operator.",
+      "family": "string-replace",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "description": "Source uses string length.",
+      "family": "string-length",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 4,
+      "description": "Source uses lexicographic string comparison.",
+      "family": "string-lex",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "description": "Parsed IR contains array select/store.",
+      "family": "arrays",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 1,
+      "description": "Parsed IR contains real division.",
+      "family": "real-division",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "description": "Source uses sequence indexing.",
+      "family": "sequence-index",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "description": "Source uses string containment.",
+      "family": "string-contains",
+      "unique_contents": 1
+    }
+  ],
+  "files": [
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_AUFLIA",
+          "audit_slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress0__auflia__bug336.smt2",
+      "ir_ops": {
+        "Apply": 4,
+        "BoolAnd": 3,
+        "BoolNot": 2,
+        "Eq": 4,
+        "Store": 2
+      },
+      "ir_sorts": {
+        "Array": 4,
+        "Bool": 9,
+        "Int": 8
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_AUFLIA",
+      "membership_problem": false,
+      "sha256": "93fab1c36a8546706899f50cb5d1bc34b5ff2120ad7df1dc9480d8c16c5f8adb",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 4,
+        "and": 1,
+        "f": 2,
+        "g": 2,
+        "not": 2,
+        "store": 2
+      },
+      "tags": [
+        "arrays",
+        "uf"
+      ],
+      "unique_ir_terms": 21,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_AUFLIA",
+          "audit_slice": "qf-auflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/cli__regress4__swap_t1_pp_nf_ai_00010_004.cvc.smt2",
+      "ir_ops": {
+        "Apply": 1,
+        "BoolNot": 1,
+        "Eq": 1,
+        "Select": 38,
+        "Store": 40
+      },
+      "ir_sorts": {
+        "Array": 41,
+        "Bool": 2,
+        "Int": 47
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_AUFLIA",
+      "membership_problem": false,
+      "sha256": "a028621397a8410e0e8fd1063ddacf029dad9899bd084acd5db4df597fdf198e",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "?v_0": 1,
+        "?v_1": 1,
+        "?v_10": 1,
+        "?v_11": 1,
+        "?v_12": 1,
+        "?v_13": 1,
+        "?v_14": 1,
+        "?v_15": 1,
+        "?v_16": 1,
+        "?v_17": 1,
+        "?v_18": 1,
+        "?v_19": 1,
+        "?v_2": 1,
+        "?v_20": 1,
+        "?v_21": 1,
+        "?v_22": 1,
+        "?v_23": 1,
+        "?v_24": 1,
+        "?v_3": 1,
+        "?v_4": 1,
+        "?v_5": 1,
+        "?v_6": 1,
+        "?v_7": 1,
+        "?v_8": 1,
+        "?v_9": 1,
+        "let": 23,
+        "not": 1,
+        "select": 38,
+        "sk": 1,
+        "store": 40
+      },
+      "tags": [
+        "arrays",
+        "uf"
+      ],
+      "unique_ir_terms": 90,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__arith__mod-simp.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 1,
+        "IntAdd": 1,
+        "IntMod": 2,
+        "IntMul": 2
+      },
+      "ir_sorts": {
+        "Bool": 2,
+        "Int": 8
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "99c1453b3e6716596cb1dfe96c6cd8afe63a651ec6cd18e1e0158a4e822d7542",
+      "source_assertions": 1,
+      "source_heads": {
+        "*": 2,
+        "+": 1,
+        "=": 1,
+        "mod": 2,
+        "not": 1
+      },
+      "tags": [
+        "int-divmod",
+        "int-nonlinear"
+      ],
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-3.smt2",
+      "ir_ops": {
+        "IntGt": 1,
+        "IntLe": 2,
+        "IntLt": 1,
+        "IntPow2": 2
+      },
+      "ir_sorts": {
+        "Bool": 4,
+        "Int": 5
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "7204396e13cf9ea99c9b98217353e8e56572abfd75728b45071af37bb91af9ad",
+      "source_assertions": 4,
+      "source_heads": {
+        "<": 1,
+        "<=": 2,
+        ">": 1,
+        "int.pow2": 2
+      },
+      "tags": [
+        "int-pow2"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-4.smt2",
+      "ir_ops": {
+        "IntGt": 1,
+        "IntLe": 1,
+        "IntPow2": 1
+      },
+      "ir_sorts": {
+        "Bool": 2,
+        "Int": 3
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "942844c4147d54567eecb8cb3a7c3bdb970ec6298031ca2af38eabd5175f1772",
+      "source_assertions": 2,
+      "source_heads": {
+        "<=": 1,
+        ">": 1,
+        "int.pow2": 1
+      },
+      "tags": [
+        "int-pow2"
+      ],
+      "unique_ir_terms": 5,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-5.smt2",
+      "ir_ops": {
+        "IntGt": 1,
+        "IntLt": 1,
+        "IntMod": 1,
+        "IntPow2": 1
+      },
+      "ir_sorts": {
+        "Bool": 2,
+        "Int": 5
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "c92ce743342584064b70e334b0a92527afafecdf7efbc1a5f99d925860dd302a",
+      "source_assertions": 2,
+      "source_heads": {
+        "<": 1,
+        ">": 1,
+        "int.pow2": 1,
+        "mod": 1
+      },
+      "tags": [
+        "int-divmod",
+        "int-pow2"
+      ],
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress0__nl__pow2-native-6.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 1,
+        "IntDiv": 1,
+        "IntLe": 1,
+        "IntPow2": 1
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Int": 4
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "422851e353fc365bc4ab1d49349071704dc660b28d332e5e9819e00e591b0f3f",
+      "source_assertions": 2,
+      "source_heads": {
+        "<=": 1,
+        "distinct": 1,
+        "div": 1,
+        "int.pow2": 1
+      },
+      "tags": [
+        "int-divmod",
+        "int-pow2"
+      ],
+      "unique_ir_terms": 7,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__div.03.smt2",
+      "ir_ops": {
+        "IntDiv": 1,
+        "IntGe": 1,
+        "IntGt": 1,
+        "IntLt": 1
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Int": 5
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "d67c531f0875234685a9142e496d008cafdce247fa5723556a5e0e47303355ee",
+      "source_assertions": 3,
+      "source_heads": {
+        "<": 1,
+        ">": 1,
+        ">=": 1,
+        "div": 1
+      },
+      "tags": [
+        "int-divmod"
+      ],
+      "unique_ir_terms": 8,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__arith__mod.02.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 1,
+        "IntGt": 1,
+        "IntMod": 1
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Int": 3
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "fff049ef54aba3fadbe7838236421365c4537a716d878ecb5bda6c337b857757",
+      "source_assertions": 2,
+      "source_heads": {
+        ">": 1,
+        "distinct": 1,
+        "mod": 1
+      },
+      "tags": [
+        "int-divmod"
+      ],
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NIA",
+          "audit_slice": "qf-nia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NIA/cvc5-regress-clean/cli__regress1__nl__rewriting-sums.smt2",
+      "ir_ops": {
+        "BoolOr": 4,
+        "Eq": 7,
+        "IntAdd": 4,
+        "IntGt": 1,
+        "IntMul": 1
+      },
+      "ir_sorts": {
+        "Bool": 12,
+        "Int": 15
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NIA",
+      "membership_problem": false,
+      "sha256": "9d80f6c9e2e708c98dc37b2f3274fc6da7e1dfd6a3411a791509861177fff1d0",
+      "source_assertions": 4,
+      "source_heads": {
+        "*": 1,
+        "+": 4,
+        "=": 7,
+        ">": 1,
+        "or": 3
+      },
+      "tags": [
+        "int-nonlinear"
+      ],
+      "unique_ir_terms": 27,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__div.07.smt2",
+      "ir_ops": {
+        "Eq": 3,
+        "RealDiv": 2,
+        "RealGe": 1,
+        "RealLe": 1
+      },
+      "ir_sorts": {
+        "Bool": 5,
+        "Real": 7
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "16c1a680ede546f3de5b899ef2c5814af2bbae7b13d1f85b78ad277566eb2e3c",
+      "source_assertions": 5,
+      "source_heads": {
+        "/": 3,
+        "<=": 1,
+        "=": 3,
+        ">=": 1
+      },
+      "tags": [
+        "real-division"
+      ],
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__arith__mult.01.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 1,
+        "RealGe": 2,
+        "RealLe": 2,
+        "RealMul": 1
+      },
+      "ir_sorts": {
+        "Bool": 6,
+        "Real": 4
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "8b631207b659ec4384db6da20f68309d05a3113a77f2bd236c22a64c2a4139be",
+      "source_assertions": 5,
+      "source_heads": {
+        "*": 1,
+        "<=": 2,
+        "=": 1,
+        ">=": 2,
+        "not": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 10,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__subs0-unsat-confirm.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "BoolOr": 1,
+        "Eq": 3,
+        "RealMul": 6
+      },
+      "ir_sorts": {
+        "Bool": 5,
+        "Real": 14
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "628e27d5bb91f32cd4908314f7d28cb759d11725560bba772e08119225844b81",
+      "source_assertions": 2,
+      "source_heads": {
+        "*": 1,
+        "=": 3,
+        "not": 1,
+        "or": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 19,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress0__nl__very-simple-unsat.smt2",
+      "ir_ops": {
+        "Eq": 1,
+        "IntNeg": 1,
+        "IntToReal": 1,
+        "RealMul": 1
+      },
+      "ir_sorts": {
+        "Bool": 1,
+        "Int": 2,
+        "Real": 3
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "61646e31c5018b683e4c81c1e3efca536f7f39dafc1bbb79c4b861914520557a",
+      "source_assertions": 1,
+      "source_heads": {
+        "*": 1,
+        "-": 1,
+        "=": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 6,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__approx-sqrt-unsat.smt2",
+      "ir_ops": {
+        "BoolOr": 2,
+        "Eq": 1,
+        "RealAdd": 3,
+        "RealGt": 4,
+        "RealMul": 4,
+        "RealNeg": 6
+      },
+      "ir_sorts": {
+        "Bool": 7,
+        "Real": 22
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "26ca249d6ca2f212b2c9397b7978627dc3944a4e5088c1f99530592d6bf22d13",
+      "source_assertions": 3,
+      "source_heads": {
+        "*": 7,
+        "+": 3,
+        "-": 6,
+        "=": 1,
+        ">": 4,
+        "or": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 29,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat-base.smt2",
+      "ir_ops": {
+        "RealGe": 1,
+        "RealGt": 2,
+        "RealLt": 1,
+        "RealMul": 4
+      },
+      "ir_sorts": {
+        "Bool": 4,
+        "Real": 8
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "02a341c9f9148ccf4e5f65948c47202b68fe8607d4807566d6089fe15bfd40cb",
+      "source_assertions": 4,
+      "source_heads": {
+        "*": 3,
+        "<": 1,
+        ">": 2,
+        ">=": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 12,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__coeff-unsat.smt2",
+      "ir_ops": {
+        "RealGe": 1,
+        "RealGt": 2,
+        "RealLt": 1,
+        "RealMul": 4
+      },
+      "ir_sorts": {
+        "Bool": 4,
+        "Real": 9
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "568ac40854ce8b7ce2d0abf01543097b78cecd0c0487a96b48ee3afcc82a2ecf",
+      "source_assertions": 4,
+      "source_heads": {
+        "*": 3,
+        "<": 1,
+        ">": 2,
+        ">=": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__combine.smt2",
+      "ir_ops": {
+        "RealGt": 2,
+        "RealLt": 1,
+        "RealMul": 2
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Real": 6
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "b77b0462646b4055aea92942da971c93788bda7dae74c2e5fe5bc791fc557f8c",
+      "source_assertions": 3,
+      "source_heads": {
+        "*": 2,
+        "<": 1,
+        ">": 2
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 6,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__ones.smt2",
+      "ir_ops": {
+        "BoolOr": 3,
+        "Eq": 4,
+        "RealGe": 4,
+        "RealLt": 1,
+        "RealMul": 3
+      },
+      "ir_sorts": {
+        "Bool": 12,
+        "Real": 8
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "7446153df8fae9712ab6a154f3f3c9dce84c342e0e59e01310ed5de5de01fdf2",
+      "source_assertions": 6,
+      "source_heads": {
+        "*": 1,
+        "<": 1,
+        "=": 4,
+        ">=": 4,
+        "or": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 20,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__red-exp.smt2",
+      "ir_ops": {
+        "BoolAnd": 1,
+        "BoolNot": 1,
+        "BoolOr": 1,
+        "Eq": 4,
+        "RealMul": 4
+      },
+      "ir_sorts": {
+        "Bool": 7,
+        "Real": 8
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "77828f4b61370473c2f8c08f2ababaa11e50524794a59127311b692f7614213d",
+      "source_assertions": 2,
+      "source_heads": {
+        "*": 3,
+        "=": 4,
+        "and": 1,
+        "not": 1,
+        "or": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 15,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono-unsat.smt2",
+      "ir_ops": {
+        "BoolOr": 1,
+        "Eq": 2,
+        "RealGt": 2,
+        "RealLt": 1,
+        "RealMul": 4
+      },
+      "ir_sorts": {
+        "Bool": 6,
+        "Real": 11
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "d3ab75dcfd6558e7646dffdbce4309643c3df0d8bfdf1ae4aa701fa79113d9d8",
+      "source_assertions": 4,
+      "source_heads": {
+        "*": 1,
+        "<": 1,
+        "=": 2,
+        ">": 2,
+        "or": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 17,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__simple-mono.smt2",
+      "ir_ops": {
+        "RealGt": 2,
+        "RealLt": 1,
+        "RealMul": 2
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Real": 6
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "8453b0d84d5654fba624037c7b708b94d6e8159f05b3da0f65419a3337152061",
+      "source_assertions": 3,
+      "source_heads": {
+        "*": 2,
+        "<": 1,
+        ">": 2
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 9,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_NRA",
+          "audit_slice": "qf-nra-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "nra-linear-abstraction",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_NRA/cvc5-regress-clean/cli__regress1__nl__zero-subset.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 2,
+        "RealMul": 4
+      },
+      "ir_sorts": {
+        "Bool": 3,
+        "Real": 10
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_NRA",
+      "membership_problem": false,
+      "sha256": "24d82ec76a44211fb6f01c3a52d940d746b7fd0579c106a1e7196d6b19a6de7e",
+      "source_assertions": 2,
+      "source_heads": {
+        "*": 2,
+        "=": 2,
+        "not": 1
+      },
+      "tags": [
+        "real-nonlinear"
+      ],
+      "unique_ir_terms": 13,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_leq.smt2",
+      "ir_ops": {
+        "BoolAnd": 346,
+        "BoolNot": 34,
+        "BoolOr": 165,
+        "BvAdd": 5,
+        "BvAnd": 5,
+        "BvOr": 5,
+        "BvShl": 15,
+        "BvSub": 5,
+        "BvUle": 2,
+        "BvUlt": 144,
+        "Concat": 68,
+        "Eq": 67,
+        "Extract": 148,
+        "ZeroExt": 12
+      },
+      "ir_sorts": {
+        "BitVec": 298,
+        "Bool": 760
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
+      "source_assertions": 1,
+      "source_heads": {
+        "not": 2,
+        "or": 1,
+        "str.++": 6,
+        "str.<=": 3
+      },
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_norn-simp-rew.smt2",
+      "ir_ops": {},
+      "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "51afd1c76c25613dfd618281f0fef0d890fe45bafdeea1a077c297d79a515374",
+      "source_assertions": 10,
+      "source_heads": {
+        "not": 1,
+        "re.*": 17,
+        "re.++": 18,
+        "re.range": 4,
+        "re.union": 12,
+        "str.++": 8,
+        "str.in_re": 10,
+        "str.to_re": 36
+      },
+      "tags": [
+        "string-concat",
+        "string-regex"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 18
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_re.all.smt2",
+      "ir_ops": {
+        "BoolAnd": 81,
+        "BoolNot": 9,
+        "BoolOr": 61,
+        "BvUle": 2,
+        "BvUlt": 16,
+        "Eq": 46,
+        "Extract": 18
+      },
+      "ir_sorts": {
+        "BitVec": 33,
+        "Bool": 217
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "4b5b64e23de09b6d1d895261e44c8bd087240fc7442285925ac9c6cc5cbed4e7",
+      "source_assertions": 2,
+      "source_heads": {
+        "not": 1,
+        "re.++": 1,
+        "str.in_re": 1,
+        "str.prefixof": 1,
+        "str.to_re": 1
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 250,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_replace-find-base.smt2",
+      "ir_ops": {},
+      "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "not": 1,
+        "str.++": 1,
+        "str.replace": 1
+      },
+      "tags": [
+        "string-concat",
+        "string-replace"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
+    },
+    {
+      "assertions": 8,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_SLIA_str004.smt2",
+      "ir_ops": {
+        "BoolAnd": 64,
+        "BoolNot": 16,
+        "BoolOr": 64,
+        "Bv2Nat": 2,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvOr": 1,
+        "BvShl": 3,
+        "BvSub": 1,
+        "BvUle": 6,
+        "BvUlt": 64,
+        "Concat": 25,
+        "Eq": 65,
+        "Extract": 88,
+        "IntGt": 1,
+        "ZeroExt": 3
+      },
+      "ir_sorts": {
+        "BitVec": 157,
+        "Bool": 280,
+        "Int": 2
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 2,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "52df9cd70d506b79133d75c114624352160a9083a13b19d66ad6fe042ef9caac",
+      "source_assertions": 2,
+      "source_heads": {
+        "=": 1,
+        ">": 1,
+        "str.++": 1,
+        "str.len": 2
+      },
+      "tags": [
+        "string-concat",
+        "string-length"
+      ],
+      "unique_ir_terms": 439,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_bug612.smt2",
+      "ir_ops": {
+        "BoolAnd": 80,
+        "BoolNot": 17,
+        "BoolOr": 96,
+        "BvAdd": 16,
+        "BvUle": 17,
+        "BvUlt": 24,
+        "Eq": 80,
+        "Extract": 27,
+        "ZeroExt": 3
+      },
+      "ir_sorts": {
+        "BitVec": 67,
+        "Bool": 315
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "77f238b673f0a0b4894380b7806158630df1df05e79bbe8f75d69f9f576e8b04",
+      "source_assertions": 2,
+      "source_heads": {
+        "not": 1,
+        "str.contains": 2
+      },
+      "tags": [
+        "string-contains"
+      ],
+      "unique_ir_terms": 382,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 7,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_loop001.smt2",
+      "ir_ops": {
+        "BoolAnd": 48,
+        "BoolOr": 48,
+        "BvAdd": 2,
+        "BvAnd": 2,
+        "BvOr": 2,
+        "BvShl": 6,
+        "BvSub": 2,
+        "BvUle": 6,
+        "BvUlt": 48,
+        "Concat": 33,
+        "Eq": 49,
+        "Extract": 72,
+        "ZeroExt": 5
+      },
+      "ir_sorts": {
+        "BitVec": 144,
+        "Bool": 199
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "ed891aecf9f701ba5bed404d217cd3e414ad78673e0e8ac604efb120521e7625",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "str.++": 2
+      },
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 343,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 1
+    },
+    {
+      "assertions": 9,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str003.smt2",
+      "ir_ops": {
+        "BoolAnd": 64,
+        "BoolNot": 17,
+        "BoolOr": 64,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvOr": 1,
+        "BvShl": 3,
+        "BvSub": 1,
+        "BvUle": 6,
+        "BvUlt": 64,
+        "Concat": 33,
+        "Eq": 67,
+        "Extract": 106,
+        "ZeroExt": 4
+      },
+      "ir_sorts": {
+        "BitVec": 187,
+        "Bool": 282
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "2e82f58936b9878f981a2103b1cecaf1827a40efac8e83ef53c2acf2c654382a",
+      "source_assertions": 3,
+      "source_heads": {
+        "=": 3,
+        "not": 1,
+        "str.++": 1
+      },
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 469,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": true,
+      "word_skeleton_terms": 3
+    },
+    {
+      "assertions": 8,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r0_QF_S_str005.smt2",
+      "ir_ops": {
+        "BoolAnd": 48,
+        "BoolNot": 1,
+        "BoolOr": 48,
+        "Bv2Nat": 1,
+        "BvUle": 6,
+        "BvUlt": 48,
+        "Eq": 50,
+        "Extract": 54
+      },
+      "ir_sorts": {
+        "BitVec": 71,
+        "Bool": 201,
+        "Int": 2
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 2,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "8a6bacd88bd9084aac83d56a189ba330a159ba0ed5a7335c46241ff21545f9cd",
+      "source_assertions": 2,
+      "source_heads": {
+        "=": 2,
+        "not": 1,
+        "str.len": 1
+      },
+      "tags": [
+        "string-length"
+      ],
+      "unique_ir_terms": 274,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 7,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_re-mod-eq.smt2",
+      "ir_ops": {
+        "BoolAnd": 246,
+        "BoolOr": 174,
+        "BvUle": 3,
+        "BvUlt": 24,
+        "Eq": 97,
+        "Extract": 27
+      },
+      "ir_sorts": {
+        "BitVec": 42,
+        "Bool": 546
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
+      "source_assertions": 4,
+      "source_heads": {
+        "=": 2,
+        "or": 1,
+        "re.*": 3,
+        "re.++": 3,
+        "str.in_re": 3,
+        "str.to_re": 8
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-2.smt2",
+      "ir_ops": {
+        "BoolAnd": 8,
+        "BoolOr": 9,
+        "Bv2Nat": 2,
+        "BvUle": 1,
+        "BvUlt": 8,
+        "Eq": 9,
+        "Extract": 9,
+        "IntGt": 1,
+        "IntLt": 1,
+        "Ite": 1
+      },
+      "ir_sorts": {
+        "BitVec": 20,
+        "Bool": 37,
+        "Int": 7
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "7e6f16ba2fd3bf26db7bb54bbe534c85c88d872c6d6cb1c6403faa52b1a92fb5",
+      "source_assertions": 2,
+      "source_heads": {
+        "<": 1,
+        "=": 1,
+        ">": 1,
+        "or": 1,
+        "str.len": 1,
+        "str.to_code": 2
+      },
+      "tags": [
+        "string-code",
+        "string-length"
+      ],
+      "unique_ir_terms": 64,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 12,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat-3.smt2",
+      "ir_ops": {
+        "BoolAnd": 44,
+        "BoolNot": 21,
+        "BoolOr": 24,
+        "Bv2Nat": 6,
+        "BvUle": 3,
+        "BvUlt": 24,
+        "Eq": 50,
+        "Extract": 27,
+        "IntAdd": 2,
+        "IntGe": 3,
+        "IntLe": 3,
+        "Ite": 3
+      },
+      "ir_sorts": {
+        "BitVec": 44,
+        "Bool": 172,
+        "Int": 17
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
+      "source_assertions": 9,
+      "source_heads": {
+        "+": 2,
+        "<=": 3,
+        "=": 2,
+        ">=": 3,
+        "distinct": 1,
+        "str.to_code": 10
+      },
+      "tags": [
+        "string-code"
+      ],
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 12,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_str-code-unsat.smt2",
+      "ir_ops": {
+        "BoolAnd": 26,
+        "BoolNot": 3,
+        "BoolOr": 24,
+        "Bv2Nat": 6,
+        "BvUle": 3,
+        "BvUlt": 24,
+        "Eq": 32,
+        "Extract": 27,
+        "IntAdd": 2,
+        "IntGe": 3,
+        "IntLe": 3,
+        "Ite": 3
+      },
+      "ir_sorts": {
+        "BitVec": 40,
+        "Bool": 118,
+        "Int": 16
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 9,
+      "len_abstraction_map_entries": 6,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "c9352865a0d9ed25bec15bfa9a1b38569317c74643c51ceb294e3eafd9c71f45",
+      "source_assertions": 9,
+      "source_heads": {
+        "+": 2,
+        "<=": 3,
+        "=": 2,
+        ">=": 3,
+        "distinct": 1,
+        "str.to_code": 10
+      },
+      "tags": [
+        "string-code"
+      ],
+      "unique_ir_terms": 174,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 9,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_SLIA_strings-leq-trans-unsat.smt2",
+      "ir_ops": {
+        "BoolAnd": 164,
+        "BoolNot": 32,
+        "BoolOr": 106,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvOr": 1,
+        "BvShl": 3,
+        "BvSub": 1,
+        "BvUle": 5,
+        "BvUlt": 72,
+        "Concat": 33,
+        "Eq": 76,
+        "Extract": 88,
+        "ZeroExt": 4
+      },
+      "ir_sorts": {
+        "BitVec": 167,
+        "Bool": 457
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
+      "source_assertions": 4,
+      "source_heads": {
+        "=": 2,
+        "str.++": 1,
+        "str.<=": 2
+      },
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_re-neg-unfold-rev-a.smt2",
+      "ir_ops": {
+        "BoolAnd": 161,
+        "BoolNot": 1,
+        "BoolOr": 144,
+        "BvUle": 2,
+        "BvUlt": 16,
+        "Eq": 39,
+        "Extract": 18
+      },
+      "ir_sorts": {
+        "BitVec": 33,
+        "Bool": 365
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "27ead957948d3fb90e3e7cbb43a4a2aec0337f25bf46c678665423a496508b82",
+      "source_assertions": 2,
+      "source_heads": {
+        "=": 2,
+        "and": 2,
+        "not": 1,
+        "re.*": 6,
+        "re.++": 2,
+        "str.in_re": 2,
+        "str.to_re": 8
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 398,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str002.smt2",
+      "ir_ops": {},
+      "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "eb04bf9f4fabc8397e0709b20e610a08b59beb98222185a817e500b7b6de797a",
+      "source_assertions": 2,
+      "source_heads": {
+        "=": 4,
+        "and": 1,
+        "not": 2,
+        "or": 1,
+        "str.++": 6
+      },
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 5,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/r1_QF_S_str007.smt2",
+      "ir_ops": {
+        "BoolAnd": 16,
+        "BoolOr": 17,
+        "BvAdd": 4,
+        "BvAnd": 3,
+        "BvOr": 4,
+        "BvShl": 10,
+        "BvSub": 3,
+        "BvUle": 2,
+        "BvUlt": 16,
+        "Concat": 43,
+        "Eq": 19,
+        "Extract": 36,
+        "ZeroExt": 7
+      },
+      "ir_sorts": {
+        "BitVec": 126,
+        "Bool": 70
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "39f746a5fa70e910dec462383a98b0e2636d91e208a92b7c21a0a0e1be6ddda0",
+      "source_assertions": 3,
+      "source_heads": {
+        "=": 4,
+        "or": 1,
+        "str.++": 4
+      },
+      "tags": [
+        "string-concat"
+      ],
+      "unique_ir_terms": 196,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 3
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__re_comp__a-in-comp-a.smt2",
+      "ir_ops": {
+        "BoolAnd": 5927,
+        "BoolOr": 6153,
+        "BvUle": 1,
+        "BvUlt": 8,
+        "Eq": 2058,
+        "Extract": 9
+      },
+      "ir_sorts": {
+        "BitVec": 276,
+        "Bool": 14149
+      },
+      "len_abstraction_bound_terms": 1,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": true,
+      "sha256": "c46116db9ceeb81aa9fb04ad431825fab27ef29131b4de9968e90e8294487d39",
+      "source_assertions": 2,
+      "source_heads": {
+        "=": 1,
+        "re.comp": 1,
+        "str.in_re": 1,
+        "str.to_re": 1
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 14425,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "ir_ops": {
+        "BoolAnd": 8,
+        "BoolOr": 8,
+        "BvUle": 1,
+        "BvUlt": 8,
+        "Eq": 9,
+        "Extract": 9
+      },
+      "ir_sorts": {
+        "BitVec": 22,
+        "Bool": 34
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "6ccb49fe0554b0e138130754169ee432e66de9d8741f2c5b29a2dd0fd39e5759",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "str.replace_all": 1
+      },
+      "tags": [
+        "string-replace"
+      ],
+      "unique_ir_terms": 56,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_S",
+          "audit_slice": "qf-s-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_S/cvc5-regress-clean/unsat__replace_re_all__not-all-digits.smt2",
+      "ir_ops": {
+        "BoolNot": 1,
+        "Eq": 1
+      },
+      "ir_sorts": {
+        "BitVec": 1,
+        "Bool": 2
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 1,
+      "length_skeleton_terms": 0,
+      "logic": "QF_S",
+      "membership_problem": false,
+      "sha256": "2ed8ab2d4c75b8df32685a542ed4d4343a537a2341d72e16559134af19e682a1",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "not": 1,
+        "re.range": 1,
+        "str.replace_re_all": 1
+      },
+      "tags": [
+        "string-regex",
+        "string-replace"
+      ],
+      "unique_ir_terms": 3,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 4,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__nth__oob-functional.smt2",
+      "ir_ops": {
+        "BoolAnd": 14,
+        "BoolOr": 14,
+        "Bv2Nat": 3,
+        "BvUle": 1,
+        "BvUlt": 7,
+        "Eq": 17,
+        "Extract": 9,
+        "IntMul": 1,
+        "IntSub": 1,
+        "Ite": 8
+      },
+      "ir_sorts": {
+        "BitVec": 28,
+        "Bool": 54,
+        "Int": 15
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 1,
+      "len_abstraction_map_entries": 2,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SEQ",
+      "membership_problem": false,
+      "sha256": "1908e43fbc1e6f5abbd063bab4594063058c05e02ab23d4356d4cfaa5b50e9f0",
+      "source_assertions": 3,
+      "source_heads": {
+        "=": 3,
+        "seq.len": 1,
+        "seq.nth": 2
+      },
+      "tags": [
+        "int-nonlinear",
+        "sequence-index"
+      ],
+      "unique_ir_terms": 97,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__replace_all__not-first-only.smt2",
+      "ir_ops": {
+        "BoolAnd": 7,
+        "BoolOr": 7,
+        "BvUle": 1,
+        "BvUlt": 7,
+        "Eq": 8,
+        "Extract": 8
+      },
+      "ir_sorts": {
+        "BitVec": 20,
+        "Bool": 30
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "26f84dee0bcbd5047bf9a1c8d1af319557405b1f58610f10d12df880f58c4380",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.replace_all": 2,
+        "seq.unit": 10
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 50,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__rev__not-identity.smt2",
+      "ir_ops": {
+        "BoolAnd": 7,
+        "BoolOr": 7,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvMul": 1,
+        "BvOr": 1,
+        "BvShl": 2,
+        "BvSub": 1,
+        "BvUle": 1,
+        "BvUlt": 7,
+        "Concat": 7,
+        "Eq": 11,
+        "Extract": 15,
+        "Ite": 4,
+        "ZeroExt": 4
+      },
+      "ir_sorts": {
+        "BitVec": 52,
+        "Bool": 33
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "ef569f35ae02603313d0a2ef947678c00bbd4a70b7bd5f5b6b9698c97f6ba190",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.rev": 1,
+        "seq.unit": 4
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 85,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__span-truncate.smt2",
+      "ir_ops": {
+        "BoolAnd": 9,
+        "BoolOr": 7,
+        "BvAdd": 5,
+        "BvAnd": 3,
+        "BvMul": 3,
+        "BvOr": 5,
+        "BvShl": 8,
+        "BvSub": 3,
+        "BvUle": 1,
+        "BvUlt": 9,
+        "Concat": 23,
+        "Eq": 8,
+        "Extract": 30,
+        "Ite": 1,
+        "ZeroExt": 10
+      },
+      "ir_sorts": {
+        "BitVec": 113,
+        "Bool": 34
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "64df0b935e26b8bdfcdcb173d13be80bc19f1e422da65d076217860c62c73efd",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 5,
+        "seq.unit": 8,
+        "seq.update": 1
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 147,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 2,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SEQ",
+          "audit_slice": "qf-seq-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SEQ/cvc5-regress-clean/unsat__update__wrong-result.smt2",
+      "ir_ops": {
+        "BoolAnd": 9,
+        "BoolOr": 7,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvMul": 1,
+        "BvOr": 1,
+        "BvShl": 2,
+        "BvSub": 1,
+        "BvUle": 1,
+        "BvUlt": 9,
+        "Concat": 8,
+        "Eq": 8,
+        "Extract": 17,
+        "Ite": 1,
+        "ZeroExt": 3
+      },
+      "ir_sorts": {
+        "BitVec": 54,
+        "Bool": 34
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "62f76c9018029b4146c1fffca7ddaf5381e52af1dea5690c8217b3f0f7698cb4",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "seq.++": 2,
+        "seq.unit": 5,
+        "seq.update": 1
+      },
+      "tags": [
+        "uncategorized"
+      ],
+      "unique_ir_terms": 88,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__proofs__dsl-no-eval.smt2",
+      "ir_ops": {
+        "BoolAnd": 25,
+        "BoolOr": 8,
+        "BvUlt": 8,
+        "Eq": 17,
+        "Extract": 9
+      },
+      "ir_sorts": {
+        "BitVec": 20,
+        "Bool": 60
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": true,
+      "sha256": "dd6f81b2c3889224cc1741fe6b0cc8863bd3f59ec2d3db2e41172c7d5e55c709",
+      "source_assertions": 1,
+      "source_heads": {
+        "str.in_re": 1,
+        "str.to_re": 1
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 80,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 2
+    },
+    {
+      "assertions": 3,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__leq.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__leq.smt2",
+      "ir_ops": {
+        "BoolAnd": 346,
+        "BoolNot": 34,
+        "BoolOr": 165,
+        "BvAdd": 5,
+        "BvAnd": 5,
+        "BvOr": 5,
+        "BvShl": 15,
+        "BvSub": 5,
+        "BvUle": 2,
+        "BvUlt": 144,
+        "Concat": 68,
+        "Eq": 67,
+        "Extract": 148,
+        "ZeroExt": 12
+      },
+      "ir_sorts": {
+        "BitVec": 298,
+        "Bool": 760
+      },
+      "len_abstraction_bound_terms": 2,
+      "len_abstraction_fact_terms": 2,
+      "len_abstraction_map_entries": 3,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "cdb403e6f6fdcff1a5261797efde7650360590006aede18f400d876561d60ed0",
+      "source_assertions": 1,
+      "source_heads": {
+        "not": 2,
+        "or": 1,
+        "str.++": 6,
+        "str.<=": 3
+      },
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 1058,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 0,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress0__strings__replace-find-base.smt2",
+      "ir_ops": {},
+      "ir_sorts": {},
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "3286e654c5c1dcd2ff8c314d5101766a50abca0f5b6e552b256fc32eaa77e1df",
+      "source_assertions": 1,
+      "source_heads": {
+        "=": 1,
+        "not": 1,
+        "str.++": 1,
+        "str.replace": 1
+      },
+      "tags": [
+        "string-concat",
+        "string-replace"
+      ],
+      "unique_ir_terms": 0,
+      "uses_bounded_strings": true,
+      "word_only_fallback": true,
+      "word_problem": true,
+      "word_skeleton_terms": 1
+    },
+    {
+      "assertions": 7,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-mod-eq.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__re-mod-eq.smt2",
+      "ir_ops": {
+        "BoolAnd": 246,
+        "BoolOr": 174,
+        "BvUle": 3,
+        "BvUlt": 24,
+        "Eq": 97,
+        "Extract": 27
+      },
+      "ir_sorts": {
+        "BitVec": 42,
+        "Bool": 546
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 5,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "d722416f69fbcb21c4dbd485d1cca49fced11606efe6943aca66f8959806d07c",
+      "source_assertions": 4,
+      "source_heads": {
+        "=": 2,
+        "or": 1,
+        "re.*": 3,
+        "re.++": 3,
+        "str.in_re": 3,
+        "str.to_re": 8
+      },
+      "tags": [
+        "string-regex"
+      ],
+      "unique_ir_terms": 588,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 4
+    },
+    {
+      "assertions": 12,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__str-code-unsat-3.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__str-code-unsat-3.smt2",
+      "ir_ops": {
+        "BoolAnd": 44,
+        "BoolNot": 21,
+        "BoolOr": 24,
+        "Bv2Nat": 6,
+        "BvUle": 3,
+        "BvUlt": 24,
+        "Eq": 50,
+        "Extract": 27,
+        "IntAdd": 2,
+        "IntGe": 3,
+        "IntLe": 3,
+        "Ite": 3
+      },
+      "ir_sorts": {
+        "BitVec": 44,
+        "Bool": 172,
+        "Int": 17
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 27,
+      "len_abstraction_map_entries": 24,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "bdbb1ba453e649a2b02379c9824ec9362de8bfc5cf76654033ceb2b52101f566",
+      "source_assertions": 9,
+      "source_heads": {
+        "+": 2,
+        "<=": 3,
+        "=": 2,
+        ">=": 3,
+        "distinct": 1,
+        "str.to_code": 10
+      },
+      "tags": [
+        "string-code"
+      ],
+      "unique_ir_terms": 233,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 9,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_SLIA",
+          "audit_slice": "qf-slia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "smtlib-string-front-door",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__strings-leq-trans-unsat.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_SLIA/cvc5-regress-clean/cli__regress1__strings__strings-leq-trans-unsat.smt2",
+      "ir_ops": {
+        "BoolAnd": 164,
+        "BoolNot": 32,
+        "BoolOr": 106,
+        "BvAdd": 1,
+        "BvAnd": 1,
+        "BvOr": 1,
+        "BvShl": 3,
+        "BvSub": 1,
+        "BvUle": 5,
+        "BvUlt": 72,
+        "Concat": 33,
+        "Eq": 76,
+        "Extract": 88,
+        "ZeroExt": 4
+      },
+      "ir_sorts": {
+        "BitVec": 167,
+        "Bool": 457
+      },
+      "len_abstraction_bound_terms": 3,
+      "len_abstraction_fact_terms": 3,
+      "len_abstraction_map_entries": 4,
+      "length_skeleton_terms": 0,
+      "logic": "QF_SLIA",
+      "membership_problem": false,
+      "sha256": "514d7ad53367c0c5ed582611f7a2b2ced487d13ffde8bdb8927c8f02b294b825",
+      "source_assertions": 4,
+      "source_heads": {
+        "=": 2,
+        "str.++": 1,
+        "str.<=": 2
+      },
+      "tags": [
+        "string-concat",
+        "string-lex"
+      ],
+      "unique_ir_terms": 624,
+      "uses_bounded_strings": true,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1248,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_UFLIA",
+          "audit_slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
+        },
+        {
+          "audit_logic": "QF_UFLIA",
+          "audit_slice": "qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress2__uflia-error0.smt2",
+      "ir_ops": {
+        "Apply": 42,
+        "BoolAnd": 189,
+        "BoolNot": 761,
+        "BoolOr": 2356,
+        "Eq": 53,
+        "IntAdd": 104,
+        "IntGe": 215,
+        "IntLe": 217,
+        "IntMul": 43,
+        "IntNeg": 12
+      },
+      "ir_sorts": {
+        "Bool": 3791,
+        "Int": 233
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_UFLIA",
+      "membership_problem": false,
+      "sha256": "0db37c05949d282129258208eae99e5a1f7d0e18dabf7eb50efaf1faf43f9e49",
+      "source_assertions": 1248,
+      "source_heads": {
+        "*": 6896,
+        "+": 6822,
+        "-": 8360,
+        "<=": 4222,
+        "=": 331,
+        ">=": 4485,
+        "and": 3410,
+        "format": 5800,
+        "not": 2539,
+        "or": 2965,
+        "s_count": 1430,
+        "x_count": 1004
+      },
+      "tags": [
+        "int-nonlinear",
+        "uf"
+      ],
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    },
+    {
+      "assertions": 1248,
+      "audit_occurrences": [
+        {
+          "audit_logic": "QF_UFLIA",
+          "audit_slice": "qf-uflia-cvc5-regress-clean-overbound-uninterp-sorts-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
+        },
+        {
+          "audit_logic": "QF_UFLIA",
+          "audit_slice": "qf-uflia-cvc5-regress-clean-solver-vs-z3-10s.json",
+          "audit_version": 2,
+          "decision_backend": "auto-solve",
+          "evidence_check_mode": "not-applicable-uncertified",
+          "evidence_checked": false,
+          "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2"
+        }
+      ],
+      "file": "corpus/public-curated/non-incremental/QF_UFLIA/cvc5-regress-clean-overbound/cli__regress3__error0.smt2",
+      "ir_ops": {
+        "Apply": 42,
+        "BoolAnd": 189,
+        "BoolNot": 761,
+        "BoolOr": 2356,
+        "Eq": 53,
+        "IntAdd": 104,
+        "IntGe": 215,
+        "IntLe": 217,
+        "IntMul": 43,
+        "IntNeg": 12
+      },
+      "ir_sorts": {
+        "Bool": 3791,
+        "Int": 233
+      },
+      "len_abstraction_bound_terms": 0,
+      "len_abstraction_fact_terms": 0,
+      "len_abstraction_map_entries": 0,
+      "length_skeleton_terms": 0,
+      "logic": "QF_UFLIA",
+      "membership_problem": false,
+      "sha256": "bed85dc60a05b5cac4b5ae7c1894cdee8369c6af7c5e11b58a1652da875c7f57",
+      "source_assertions": 1248,
+      "source_heads": {
+        "*": 6896,
+        "+": 6822,
+        "-": 8360,
+        "<=": 4222,
+        "=": 331,
+        ">=": 4485,
+        "and": 3410,
+        "format": 5800,
+        "not": 2539,
+        "or": 2965,
+        "s_count": 1430,
+        "x_count": 1004
+      },
+      "tags": [
+        "int-nonlinear",
+        "uf"
+      ],
+      "unique_ir_terms": 4024,
+      "uses_bounded_strings": false,
+      "word_only_fallback": false,
+      "word_problem": false,
+      "word_skeleton_terms": 0
+    }
+  ],
+  "ir_op_prevalence": [
+    {
+      "audit_occurrences": 46,
+      "ir_op": "Eq",
+      "unique_contents": 40
+    },
+    {
+      "audit_occurrences": 36,
+      "ir_op": "BoolOr",
+      "unique_contents": 30
+    },
+    {
+      "audit_occurrences": 32,
+      "ir_op": "BoolAnd",
+      "unique_contents": 26
+    },
+    {
+      "audit_occurrences": 27,
+      "ir_op": "BoolNot",
+      "unique_contents": 22
+    },
+    {
+      "audit_occurrences": 26,
+      "ir_op": "BvUlt",
+      "unique_contents": 22
+    },
+    {
+      "audit_occurrences": 26,
+      "ir_op": "Extract",
+      "unique_contents": 22
+    },
+    {
+      "audit_occurrences": 25,
+      "ir_op": "BvUle",
+      "unique_contents": 21
+    },
+    {
+      "audit_occurrences": 12,
+      "ir_op": "RealMul",
+      "unique_contents": 12
+    },
+    {
+      "audit_occurrences": 12,
+      "ir_op": "BvAdd",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 12,
+      "ir_op": "ZeroExt",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvAnd",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvOr",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvShl",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "BvSub",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 11,
+      "ir_op": "Concat",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 8,
+      "ir_op": "IntGt",
+      "unique_contents": 8
+    },
+    {
+      "audit_occurrences": 10,
+      "ir_op": "IntLe",
+      "unique_contents": 7
+    },
+    {
+      "audit_occurrences": 8,
+      "ir_op": "Ite",
+      "unique_contents": 7
+    },
+    {
+      "audit_occurrences": 9,
+      "ir_op": "IntAdd",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 7,
+      "ir_op": "Bv2Nat",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 6,
+      "ir_op": "RealGt",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 6,
+      "ir_op": "RealLt",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 8,
+      "ir_op": "IntGe",
+      "unique_contents": 5
+    },
+    {
+      "audit_occurrences": 7,
+      "ir_op": "IntMul",
+      "unique_contents": 5
+    },
+    {
+      "audit_occurrences": 5,
+      "ir_op": "RealGe",
+      "unique_contents": 5
+    },
+    {
+      "audit_occurrences": 6,
+      "ir_op": "Apply",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "ir_op": "IntLt",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "ir_op": "IntPow2",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 5,
+      "ir_op": "IntNeg",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "ir_op": "BvMul",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "ir_op": "IntMod",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 2,
+      "ir_op": "IntDiv",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "ir_op": "RealLe",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "ir_op": "Store",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "IntSub",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "IntToReal",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "RealAdd",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "RealDiv",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "RealNeg",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "ir_op": "Select",
+      "unique_contents": 1
+    }
+  ],
+  "producer": {
+    "path": "crates/axeyum-smtlib/examples/proof_gap_shape_census.rs",
+    "sha256": "139b691b589cd8fc1a727bf25ea2dc154cfdfdef4034bbaa52c50863ccc72a48"
+  },
+  "source_head_prevalence": [
+    {
+      "audit_occurrences": 42,
+      "source_head": "=",
+      "unique_contents": 36
+    },
+    {
+      "audit_occurrences": 23,
+      "source_head": "not",
+      "unique_contents": 19
+    },
+    {
+      "audit_occurrences": 18,
+      "source_head": "*",
+      "unique_contents": 16
+    },
+    {
+      "audit_occurrences": 14,
+      "source_head": ">",
+      "unique_contents": 14
+    },
+    {
+      "audit_occurrences": 17,
+      "source_head": "or",
+      "unique_contents": 13
+    },
+    {
+      "audit_occurrences": 13,
+      "source_head": ">=",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 10,
+      "source_head": "<",
+      "unique_contents": 10
+    },
+    {
+      "audit_occurrences": 12,
+      "source_head": "<=",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 12,
+      "source_head": "str.++",
+      "unique_contents": 9
+    },
+    {
+      "audit_occurrences": 10,
+      "source_head": "+",
+      "unique_contents": 7
+    },
+    {
+      "audit_occurrences": 8,
+      "source_head": "and",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 7,
+      "source_head": "str.in_re",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 7,
+      "source_head": "str.to_re",
+      "unique_contents": 6
+    },
+    {
+      "audit_occurrences": 6,
+      "source_head": "-",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 5,
+      "source_head": "distinct",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 5,
+      "source_head": "re.++",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "int.pow2",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "seq.++",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "seq.unit",
+      "unique_contents": 4
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "re.*",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "str.to_code",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "source_head": "mod",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 3,
+      "source_head": "str.len",
+      "unique_contents": 3
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "format",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "s_count",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "str.<=",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 4,
+      "source_head": "x_count",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "div",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "re.range",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "seq.update",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "store",
+      "unique_contents": 2
+    },
+    {
+      "audit_occurrences": 2,
+      "source_head": "str.replace",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "/",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_0",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_1",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_10",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_11",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_12",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_13",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_14",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_15",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_16",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_17",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_18",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_19",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_2",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_20",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_21",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_22",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_23",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_24",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_3",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_4",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_5",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_6",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_7",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_8",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "?v_9",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "f",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "g",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "let",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "re.comp",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "re.union",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "select",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "seq.len",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "seq.nth",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "seq.replace_all",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "seq.rev",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "sk",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "str.contains",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "str.prefixof",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "str.replace_all",
+      "unique_contents": 1
+    },
+    {
+      "audit_occurrences": 1,
+      "source_head": "str.replace_re_all",
+      "unique_contents": 1
+    }
+  ],
+  "summary": {
+    "arithmetic_contents": 25,
+    "audit_occurrences": 58,
+    "audit_reported_check_true_occurrences": 0,
+    "bounded_string_contents": 26,
+    "exact_duplicate_groups": 5,
+    "independently_checked_occurrences": 0,
+    "schema_v2_attributed_occurrences": 58,
+    "string_sequence_contents": 26,
+    "unique_content_sha256": 51,
+    "unique_paths": 56,
+    "word_only_fallback_contents": 3,
+    "zero_ir_term_contents": 3
+  },
+  "version": 2
+}

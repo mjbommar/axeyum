@@ -18,10 +18,12 @@
 //! trusted [`Kernel::add_declaration`](crate::Kernel::add_declaration)
 //! admission gate.
 //!
-//! **Deferred to a later slice** (and erroring cleanly if reached): literal
-//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]),
-//! inductive/recursor (ι) reduction, structure projections, and `Quotient`
-//! reduction. An unknown `Const` name returns [`KernelError::UnknownConst`].
+//! **Deferred to a later slice** (and erroring cleanly if reached):
+//! String-literal typing/reduction (`Lit::Str` →
+//! [`KernelError::UnsupportedLit`]) and `Quotient` reduction. Projection
+//! inference/reduction, structure eta, and inductive/recursor ι-reduction are
+//! implemented. An
+//! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
 //!
@@ -47,12 +49,12 @@
 use std::collections::HashMap;
 
 use crate::env::{Declaration, ReducibilityHint};
-use crate::expr::{ExprId, ExprNode};
+use crate::expr::{ExprId, ExprNode, Lit};
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
 
-/// An error from the environment-free type-checker.
+/// An error from the kernel type-checker.
 ///
 /// All variants are returned, never panicked: the kernel rejects malformed or
 /// out-of-scope input deterministically.
@@ -115,14 +117,116 @@ pub enum KernelError {
         /// The number of universe arguments the `Const` supplied.
         got: usize,
     },
-    /// A `Lit` reached inference. Literal typing needs inductive `Nat`/`String`
-    /// declarations and their reduction rules, deferred to a later slice.
+    /// A literal outside the currently typed Nat profile reached inference.
+    /// String literal typing/reduction remains deferred to TL2.9.
     UnsupportedLit,
+    /// A Nat literal was used before the checked environment contained the
+    /// canonical non-polymorphic `Nat`/`Nat.zero`/`Nat.succ` bootstrap.
+    NatLiteralBootstrapMismatch {
+        /// The reserved `Nat` name whose checked declaration was absent or
+        /// malformed.
+        nat: crate::name::NameId,
+    },
+    /// The inferred type of a projected value did not have the structure name
+    /// carried by the `Proj` node as its constant head.
+    ProjectionTypeMismatch {
+        /// Structure name recorded in the projection node.
+        expected: crate::name::NameId,
+        /// Complete inferred/WHNF type of the projected value.
+        got: ExprId,
+    },
+    /// A projection's named type was absent or was not an inductive
+    /// declaration in the checked environment.
+    ProjectionNotInductive {
+        /// Invalid structure type name.
+        name: crate::name::NameId,
+    },
+    /// Projection requires an inductive with exactly one constructor.
+    ProjectionConstructorCount {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Number of constructors recorded by its checked declaration.
+        got: usize,
+    },
+    /// The projected value's type did not supply exactly the inductive's
+    /// checked parameter-plus-index argument count.
+    ProjectionArityMismatch {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Checked parameter-plus-index count.
+        expected: usize,
+        /// Application arguments present on the projected value's type.
+        got: usize,
+    },
+    /// A projection selected a field outside the checked constructor field
+    /// range. Field indices exclude parameters and are zero-based.
+    ProjectionFieldOutOfBounds {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+        /// Checked number of non-parameter constructor fields.
+        field_count: u16,
+    },
+    /// Checked structure metadata and the constructor telescope disagreed
+    /// while instantiating parameters or walking to the selected field.
+    MalformedProjectionConstructor {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Sole constructor expected to supply the field telescope.
+        ctor: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+    },
+    /// A projection attempted to eliminate a proof-valued structure into data.
+    /// Lean permits such a projection only when every traversed dependent field
+    /// and the selected field are themselves propositions.
+    ProjectionFromPropToType {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+    },
     /// A declaration with this name already exists in the environment;
     /// re-declaration is rejected.
     DeclarationExists {
         /// The name that was already declared.
         name: crate::name::NameId,
+    },
+    /// An attempted mutual-inductive declaration contained no families.
+    EmptyInductiveGroup,
+    /// A family, constructor, or generated recursor name occurred more than
+    /// once inside one ordered mutual-inductive group.
+    DuplicateInductiveGroupName {
+        /// The repeated group-local declaration name.
+        name: crate::name::NameId,
+    },
+    /// One mutual-inductive family did not expose the shared parameter at the
+    /// registered position, or its parameter type was not definitionally equal
+    /// to the first family's parameter type.
+    MutualInductiveParameterMismatch {
+        /// The family whose parameter telescope disagreed.
+        family: crate::name::NameId,
+        /// Zero-based position in the shared parameter telescope.
+        parameter_index: usize,
+    },
+    /// One mutual-inductive family's result universe was not equivalent to the
+    /// first family's result universe after opening parameters and indices.
+    MutualInductiveResultUniverseMismatch {
+        /// The family whose result universe disagreed.
+        family: crate::name::NameId,
+    },
+    /// Historical M1 policy decline retained for public error-enum compatibility.
+    /// TL2.13 M2 no longer returns this result from the native group gate.
+    MutualInductiveNotSupported {
+        /// Number of families in the declined group.
+        family_count: usize,
+    },
+    /// A generated mutual recursor disagreed with the checked group's owner,
+    /// count, rule ordering, or field-count contract.
+    MutualRecursorContractMismatch {
+        /// Family whose generated recursor contract disagreed.
+        family: crate::name::NameId,
     },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).
@@ -153,23 +257,45 @@ pub enum KernelError {
         /// The constructor whose result was wrong.
         ctor: crate::name::NameId,
     },
-    /// A constructor field mentioned the inductive type being declared in a
-    /// shape this slice does not handle. Slice 5 admits **direct** recursive
-    /// fields (a field whose type is exactly `Const(I, uparams)`); this error is
-    /// reserved for the disallowed shapes that still need the deferred recursive
-    /// machinery (positivity, parameters/indices) — e.g. a recursive occurrence
-    /// applied to arguments such as `I a` (a parametric/indexed self-reference).
+    /// A constructor field contains the inductive family being declared in the
+    /// domain of a function type. Such a negative occurrence violates Lean's
+    /// strict-positivity condition and is rejected before the inductive is
+    /// provisionally inserted into the environment.
+    NonPositiveInductiveOccurrence {
+        /// The inductive family whose occurrence is negative.
+        inductive: crate::name::NameId,
+        /// The constructor containing the offending field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
+    /// A constructor field contains the inductive family being declared, but
+    /// not as a Lean-valid strictly-positive family application: the head,
+    /// universe instantiation, fixed parameters, index arity, or occurrence-
+    /// free index condition is invalid.
+    InvalidInductiveOccurrence {
+        /// The inductive family whose occurrence is invalid.
+        inductive: crate::name::NameId,
+        /// The constructor containing the offending field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
+    /// A constructor field mentioned the inductive type being declared in an
+    /// unsupported recursive shape. Valid single-family telescope-tail
+    /// recursion is admitted by ADR-0353; this compatibility variant remains
+    /// for malformed or future recursive forms outside that boundary.
+    /// Non-positive and invalid occurrences have distinct variants above.
     RecursiveInductiveNotSupported {
         /// The inductive whose constructor was recursive.
         inductive: crate::name::NameId,
         /// The recursive constructor.
         ctor: crate::name::NameId,
     },
-    /// A constructor field mentioned the inductive type being declared in a
-    /// **higher-order / reflexive** position — a field whose type is a `Pi`
-    /// ending in `I` (e.g. `(A → I) → I`), or any non-direct occurrence of `I`.
-    /// Reflexive and nested recursion are deferred to a later slice; this slice
-    /// admits only *bare* `Const(I, uparams)` recursive fields.
+    /// A constructor field contains an occurrence nested under a foreign head,
+    /// or another unsupported shape historically grouped with reflexive/nested
+    /// recursion. A positive `Pi` telescope ending directly in the exact family
+    /// application is supported; this variant does not reject that shape.
     ReflexiveOrNestedNotSupported {
         /// The inductive whose constructor used a reflexive/nested occurrence.
         inductive: crate::name::NameId,
@@ -190,23 +316,33 @@ pub enum KernelError {
     /// As of ADR-0036 slice 7, **non-recursive** indexed families (`Eq`, and
     /// finite indexed enums) are supported; this variant is retained for
     /// back-compatibility but is no longer produced by `add_inductive` for a
-    /// bare index. Recursive constructors on an indexed family are rejected with
-    /// [`KernelError::RecursiveIndexedNotSupported`] instead.
+    /// bare index.
     IndicesNotSupported {
         /// The inductive whose type had indices.
         inductive: crate::name::NameId,
     },
-    /// A constructor of an **indexed** inductive had a **recursive field** (a
-    /// field whose type is the inductive applied to arguments). Recursion and
-    /// indices together (e.g. `Vector.cons`) need induction-hypothesis motive
-    /// applications over the recursive occurrence's indices, deferred past
-    /// ADR-0036 slice 7. Non-recursive indexed families (`Eq`) and
-    /// recursive non-indexed families (`Nat`, `List`) are both supported.
+    /// Compatibility error for recursive-indexed fields. ADR-0353 admits valid
+    /// single-family occurrences and generates motive applications at the
+    /// recursive field's own indices, so `add_inductive` no longer emits this
+    /// variant for a valid `Vector`-shaped field. Importer policy or older
+    /// callers may still expose the typed code while staged support is widened.
     RecursiveIndexedNotSupported {
         /// The indexed inductive whose constructor was recursive.
         inductive: crate::name::NameId,
         /// The offending recursive constructor.
         ctor: crate::name::NameId,
+    },
+    /// Constructor checking recorded a recursive field, but recursor
+    /// generation could not rederive the same WHNF telescope-tail shape in its
+    /// fresh local context. This is an internal checked-metadata mismatch, not
+    /// permission to treat the field as non-recursive.
+    RecursiveFieldShapeMismatch {
+        /// The inductive whose recursive-field metadata disagreed.
+        inductive: crate::name::NameId,
+        /// The constructor containing the field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
     },
 }
 
@@ -410,24 +546,69 @@ impl Kernel {
                     let instd = self.instantiate(body, &[val]);
                     cursor = self.foldl_apps(instd, args.iter().copied());
                 }
-                // ι: a recursor `Const(I.rec, _)` applied to its premises and a
-                // constructor-headed major reduces to the matching minor applied
-                // to the constructor's fields (ADR-0036, slice 4).
-                ExprNode::Const(..) => match self.reduce_rec(cursor) {
+                // Projection: normalize the projected value; when it becomes a
+                // constructor application, select the requested field after
+                // the constructor parameters and re-apply any outer spine.
+                ExprNode::Proj(..) => match self.reduce_projection(cursor) {
                     Some(reduced) => cursor = reduced,
                     None => return cursor,
                 },
+                // ι: a recursor `Const(I.rec, _)` applied to its premises and a
+                // constructor-headed major reduces to the matching minor applied
+                // to the constructor's fields (ADR-0036, slice 4).
+                ExprNode::Const(..) => {
+                    if let Some(reduced) = self.reduce_rec(cursor) {
+                        cursor = reduced;
+                    } else if let Some(reduced) = self.reduce_nat_succ(cursor) {
+                        cursor = reduced;
+                    } else {
+                        return cursor;
+                    }
+                }
                 // A bare `Sort` is normal; simplify its level for canonicity.
                 ExprNode::Sort(level) if args.is_empty() => {
                     let level = self.simplify(level);
                     return self.sort(level);
                 }
                 // All other heads are already weak-head-normal here: FVar,
-                // Const, Sort (applied — ill-typed but inert), Pi, BVar (loose —
+                // Sort (applied — ill-typed but inert), Pi, BVar (loose —
                 // inert), Lit, and Lam with no args.
                 _ => return cursor,
             }
         }
+    }
+
+    /// Try one constructor-projection reduction step.
+    ///
+    /// This mirrors Lean's `reduce_proj_core`: normalize the projected value,
+    /// require a constructor head, obtain the constructor's checked parameter
+    /// count from its parent inductive, and select argument
+    /// `num_params + field_index`. Reduction intentionally follows the actual
+    /// constructor and does not re-check the structure name stored in the
+    /// projection node; projection inference owns that well-typedness check,
+    /// matching Lean's separation between reduction and inference.
+    fn reduce_projection(&mut self, expression: ExprId) -> Option<ExprId> {
+        let (head, trailing) = self.unfold_apps(expression);
+        let ExprNode::Proj(_, field_index, structure) = self.expr_node(head).clone() else {
+            return None;
+        };
+
+        let structure = self.whnf(structure);
+        let (ctor_head, ctor_args) = self.unfold_apps(structure);
+        let ExprNode::Const(ctor_name, _) = self.expr_node(ctor_head) else {
+            return None;
+        };
+        let inductive = match self.env.get(*ctor_name) {
+            Some(Declaration::Constructor { inductive, .. }) => *inductive,
+            _ => return None,
+        };
+        let num_params = match self.env.get(inductive) {
+            Some(Declaration::Inductive { num_params, .. }) => usize::from(*num_params),
+            _ => return None,
+        };
+        let selected_index = num_params.checked_add(usize::try_from(field_index).ok()?)?;
+        let selected = ctor_args.get(selected_index).copied()?;
+        Some(self.foldl_apps(selected, trailing))
     }
 
     /// Weak head normal form for the in-scope fragment.
@@ -441,8 +622,8 @@ impl Kernel {
     /// matching nanoda.
     ///
     /// `Opaque` and `Axiom` `Const` heads do **not** δ-unfold (matching
-    /// nanoda's `get_declar_val`). There is no ι (recursor/inductive) or
-    /// projection reduction in this slice.
+    /// nanoda's `get_declar_val`). Inductive ι and constructor-projection
+    /// reduction are included; quotient reduction remains deferred.
     ///
     /// # Panics
     ///
@@ -620,6 +801,10 @@ impl Kernel {
         if let Some(r) = self.def_eq_binder(x, y, ctx) {
             return Some(r);
         }
+        if let (ExprNode::Lit(left), ExprNode::Lit(right)) = (self.expr_node(x), self.expr_node(y))
+        {
+            return Some(left == right);
+        }
         None
     }
 
@@ -724,6 +909,72 @@ impl Kernel {
         let new_body = self.app(y_lifted, v0);
         let new_lam = self.lam(name, dom, new_body, info);
         self.def_eq_core(x, new_lam, ctx)
+    }
+
+    /// Structure eta (Lean's `try_eta_struct`): recognize one side as an
+    /// exactly saturated constructor of a non-recursive, non-indexed,
+    /// one-constructor inductive, require both sides to have definitionally
+    /// equal types, and compare each constructor field with the corresponding
+    /// projection from the other side.
+    fn try_eta_structure(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
+        self.try_eta_structure_aux(x, y, ctx) || self.try_eta_structure_aux(y, x, ctx)
+    }
+
+    fn try_eta_structure_aux(
+        &mut self,
+        structure: ExprId,
+        constructor_app: ExprId,
+        ctx: &mut LocalContext,
+    ) -> bool {
+        let (head, args) = self.unfold_apps(constructor_app);
+        let ExprNode::Const(ctor_name, _) = self.expr_node(head) else {
+            return false;
+        };
+        let (inductive, num_fields) = match self.env.get(*ctor_name) {
+            Some(Declaration::Constructor {
+                inductive,
+                num_fields,
+                ..
+            }) => (*inductive, usize::from(*num_fields)),
+            _ => return false,
+        };
+        let (num_params, eligible) = match self.env.get(inductive) {
+            Some(Declaration::Inductive {
+                num_params,
+                num_indices,
+                is_recursive,
+                ctor_names,
+                ..
+            }) => (
+                usize::from(*num_params),
+                *num_indices == 0 && !*is_recursive && ctor_names.as_slice() == [*ctor_name],
+            ),
+            _ => return false,
+        };
+        if !eligible || args.len() != num_params + num_fields {
+            return false;
+        }
+
+        let Ok(structure_type) = self.infer_core(structure, ctx) else {
+            return false;
+        };
+        let Ok(constructor_type) = self.infer_core(constructor_app, ctx) else {
+            return false;
+        };
+        if !self.def_eq_core(structure_type, constructor_type, ctx) {
+            return false;
+        }
+
+        for (field_index, &field) in args.iter().skip(num_params).enumerate() {
+            let Ok(field_index) = u32::try_from(field_index) else {
+                return false;
+            };
+            let projection = self.proj(inductive, field_index, structure);
+            if !self.def_eq_core(projection, field, ctx) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Proof irrelevance (nanoda's `proof_irrel_eq`): if both `x` and `y` are
@@ -852,6 +1103,9 @@ impl Kernel {
         ctx: &mut LocalContext,
     ) -> DeltaResult {
         loop {
+            if let Some(result) = self.def_eq_nat_offset(x, y, ctx) {
+                return DeltaResult::FoundEqResult(result);
+            }
             let r1 = self.get_applied_def(x);
             let r2 = self.get_applied_def(y);
             match (r1, r2) {
@@ -884,7 +1138,7 @@ impl Kernel {
     /// check, WHNF-without-δ both sides, quick check again, proof irrelevance,
     /// then the **lazy-delta step** (δ-unfolding with height-driven side
     /// choice), and finally the structural checks (`Const`, `FVar`, `App`
-    /// spine, eta-expansion) on the delta-exhausted heads.
+    /// spine, function eta, structure eta) on the delta-exhausted heads.
     fn def_eq_core(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
         if let Some(quick) = self.def_eq_quick(x, y, ctx) {
             return quick;
@@ -929,6 +1183,9 @@ impl Kernel {
                 if self.try_eta_expansion(x_n, y_n, ctx) {
                     return true;
                 }
+                if self.try_eta_structure(x_n, y_n, ctx) {
+                    return true;
+                }
                 false
             }
         }
@@ -969,13 +1226,194 @@ enum DeltaResult {
     Exhausted(ExprId, ExprId),
 }
 
+/// Checked environment/type-spine facts needed to walk one projection's sole
+/// constructor telescope. Kept private so callers cannot manufacture trusted
+/// structure metadata outside the inductive admission gate.
+struct ProjectionInferenceData {
+    ctor_name: NameId,
+    num_params: usize,
+    levels: Vec<LevelId>,
+    type_args: Vec<ExprId>,
+}
+
+/// Checked reserved declarations used by primitive Nat literal semantics.
+#[derive(Debug, Clone, Copy)]
+struct NatLiteralBootstrap {
+    zero: NameId,
+    succ: NameId,
+    nat_type: ExprId,
+}
+
+/// One constructor layer of a compact Nat value.
+enum NatOffset {
+    Zero,
+    Succ(ExprId),
+}
+
+impl Kernel {
+    /// Validate the reserved declarations on which primitive Nat literals
+    /// depend. Official Lean inherits these from its bootstrap; Axeyum imports
+    /// into a fresh environment and therefore checks the shape explicitly.
+    fn nat_literal_bootstrap(&mut self) -> Result<NatLiteralBootstrap, KernelError> {
+        let anon = self.anon();
+        let nat = self.name_str(anon, "Nat");
+        let zero = self.name_str(nat, "zero");
+        let succ = self.name_str(nat, "succ");
+        let level_zero = self.level_zero();
+        let level_one = self.level_succ(level_zero);
+        let expected_inductive_type = self.sort(level_one);
+        let nat_type = self.const_(nat, vec![]);
+
+        let inductive_ok = matches!(
+            self.env.get(nat),
+            Some(Declaration::Inductive {
+                uparams,
+                ty,
+                num_params: 0,
+                num_indices: 0,
+                is_recursive: true,
+                ctor_names,
+                ..
+            }) if uparams.is_empty()
+                && *ty == expected_inductive_type
+                && ctor_names.as_slice() == [zero, succ]
+        );
+        let zero_ok = matches!(
+            self.env.get(zero),
+            Some(Declaration::Constructor {
+                uparams,
+                ty,
+                inductive,
+                idx: 0,
+                num_fields: 0,
+                ..
+            }) if uparams.is_empty() && *ty == nat_type && *inductive == nat
+        );
+        let succ_type = match self.env.get(succ) {
+            Some(Declaration::Constructor {
+                uparams,
+                ty,
+                inductive,
+                idx: 1,
+                num_fields: 1,
+                ..
+            }) if uparams.is_empty() && *inductive == nat => Some(*ty),
+            _ => None,
+        };
+        let succ_ok = succ_type.is_some_and(|ty| {
+            matches!(
+                self.expr_node(ty),
+                ExprNode::Pi(_, domain, body, BinderInfo::Default)
+                    if *domain == nat_type && *body == nat_type
+            )
+        });
+
+        if !(inductive_ok && zero_ok && succ_ok) {
+            return Err(KernelError::NatLiteralBootstrapMismatch { nat });
+        }
+        Ok(NatLiteralBootstrap {
+            zero,
+            succ,
+            nat_type,
+        })
+    }
+
+    fn infer_nat_literal(&mut self) -> Result<ExprId, KernelError> {
+        Ok(self.nat_literal_bootstrap()?.nat_type)
+    }
+
+    fn nat_offset(
+        &mut self,
+        expression: ExprId,
+        bootstrap: NatLiteralBootstrap,
+    ) -> Option<NatOffset> {
+        if let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(expression).clone() {
+            return match value.predecessor() {
+                Some(predecessor) => Some(NatOffset::Succ(self.lit(Lit::Nat(predecessor)))),
+                None => Some(NatOffset::Zero),
+            };
+        }
+
+        let (head, arguments) = self.unfold_apps(expression);
+        let ExprNode::Const(name, levels) = self.expr_node(head) else {
+            return None;
+        };
+        if !levels.is_empty() {
+            return None;
+        }
+        if *name == bootstrap.zero && arguments.is_empty() {
+            Some(NatOffset::Zero)
+        } else if *name == bootstrap.succ && arguments.len() == 1 {
+            Some(NatOffset::Succ(arguments[0]))
+        } else {
+            None
+        }
+    }
+
+    /// Lean's offset equality: compact literals and unary constructors expose
+    /// one zero/successor layer, then ordinary definitional equality compares
+    /// the predecessors.
+    fn def_eq_nat_offset(
+        &mut self,
+        left: ExprId,
+        right: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<bool> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        match (
+            self.nat_offset(left, bootstrap)?,
+            self.nat_offset(right, bootstrap)?,
+        ) {
+            (NatOffset::Zero, NatOffset::Zero) => Some(true),
+            (NatOffset::Succ(left), NatOffset::Succ(right)) => {
+                Some(self.def_eq_core(left, right, ctx))
+            }
+            _ => None,
+        }
+    }
+
+    /// The TL2.7 constructor conversion subset of Lean's Nat reducer.
+    /// General arithmetic operations remain TL2.8.
+    fn reduce_nat_succ(&mut self, expression: ExprId) -> Option<ExprId> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        let (head, arguments) = self.unfold_apps(expression);
+        let ExprNode::Const(name, levels) = self.expr_node(head) else {
+            return None;
+        };
+        if *name != bootstrap.succ || !levels.is_empty() || arguments.len() != 1 {
+            return None;
+        }
+        let argument = self.whnf(arguments[0]);
+        let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(argument).clone() else {
+            return None;
+        };
+        Some(self.lit(Lit::Nat(value.successor())))
+    }
+
+    /// Expose one constructor layer for Nat recursor reduction, matching
+    /// Lean's `nat_lit_to_constructor` helper.
+    pub(crate) fn nat_literal_to_constructor(&mut self, expression: ExprId) -> Option<ExprId> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(expression).clone() else {
+            return None;
+        };
+        match value.predecessor() {
+            None => Some(self.const_(bootstrap.zero, vec![])),
+            Some(predecessor) => {
+                let succ = self.const_(bootstrap.succ, vec![]);
+                let predecessor = self.lit(Lit::Nat(predecessor));
+                Some(self.app(succ, predecessor))
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Type inference
 // ---------------------------------------------------------------------------
 
 impl Kernel {
-    /// Infer the type of `e` for the environment-free fragment, in a checking
-    /// mode that validates as it goes.
+    /// Infer the type of `e` in a checking mode that validates as it goes.
     ///
     /// Allocates a fresh [`LocalContext`]; use [`Kernel::infer_in`] to share an
     /// existing one.
@@ -985,11 +1423,12 @@ impl Kernel {
     /// Returns [`KernelError`] for ill-typed or out-of-scope input: a non-`Pi`
     /// applied as a function ([`KernelError::NotAPi`]), a binder domain that is
     /// not a type ([`KernelError::NotASort`]), an argument or `let`-value type
-    /// mismatch ([`KernelError::TypeMismatch`]), a loose `BVar`
+    /// mismatch ([`KernelError::TypeMismatch`]), an invalid projection, a loose `BVar`
     /// ([`KernelError::LooseBVar`]), an unbound `FVar`
-    /// ([`KernelError::UnboundFVar`]), a `Const`
-    /// ([`KernelError::UnsupportedConst`]), or a `Lit`
-    /// ([`KernelError::UnsupportedLit`]).
+    /// ([`KernelError::UnboundFVar`]), an unknown `Const`
+    /// ([`KernelError::UnknownConst`]), or a `Lit`
+    /// ([`KernelError::UnsupportedLit`]) or an invalid Nat-literal bootstrap
+    /// ([`KernelError::NatLiteralBootstrapMismatch`]).
     pub fn infer(&mut self, e: ExprId) -> Result<ExprId, KernelError> {
         let mut ctx = LocalContext::new();
         self.infer_core(e, &mut ctx)
@@ -1135,7 +1574,11 @@ impl Kernel {
                 Ok(self.sort(succ))
             }
             ExprNode::Const(name, levels) => self.infer_const(name, &levels),
-            ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
+            ExprNode::Proj(type_name, field_index, structure) => {
+                self.infer_projection(type_name, field_index, structure, ctx)
+            }
+            ExprNode::Lit(Lit::Nat(_)) => self.infer_nat_literal(),
+            ExprNode::Lit(Lit::Str(_)) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => {
                 self.infer_lambda(e, name, dom, body, info, ctx)
@@ -1149,6 +1592,186 @@ impl Kernel {
             ctx.remember_inferred(e, inferred);
         }
         Ok(inferred)
+    }
+
+    /// Infer `Proj(type_name, field_index, structure)` using Lean's checked
+    /// single-constructor telescope algorithm.
+    ///
+    /// The projected value supplies the inductive's universe levels,
+    /// parameters, and indices. Constructor parameters are instantiated from
+    /// that type; each earlier dependent field is instantiated with a
+    /// projection from the same value. This slice does not reduce projections
+    /// of constructor applications (TL2.4) or add structure eta (TL2.5).
+    fn infer_projection(
+        &mut self,
+        type_name: NameId,
+        field_index: u32,
+        structure: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<ExprId, KernelError> {
+        let structure_type = self.infer_core(structure, ctx)?;
+        let structure_type = self.whnf_in(structure_type, ctx);
+        let data = self.projection_inference_data(type_name, field_index, structure_type)?;
+
+        let mut cursor = self.infer_const(data.ctor_name, &data.levels)?;
+        for &parameter in data.type_args.iter().take(data.num_params) {
+            cursor = self.whnf_in(cursor, ctx);
+            let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: data.ctor_name,
+                    field_index,
+                });
+            };
+            cursor = self.instantiate(body, &[parameter]);
+        }
+
+        let structure_is_prop = self.type_expression_is_prop(structure_type, ctx)?;
+        for previous_index in 0..field_index {
+            cursor = self.whnf_in(cursor, ctx);
+            let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: data.ctor_name,
+                    field_index,
+                });
+            };
+            if self.has_loose_bvars(body) {
+                if structure_is_prop && !self.type_expression_is_prop(domain, ctx)? {
+                    return Err(KernelError::ProjectionFromPropToType {
+                        name: type_name,
+                        field_index,
+                    });
+                }
+                let previous = self.proj(type_name, previous_index, structure);
+                cursor = self.instantiate(body, &[previous]);
+            } else {
+                cursor = body;
+            }
+        }
+
+        cursor = self.whnf_in(cursor, ctx);
+        let ExprNode::Pi(_, field_type, _, _) = self.expr_node(cursor).clone() else {
+            return Err(KernelError::MalformedProjectionConstructor {
+                name: type_name,
+                ctor: data.ctor_name,
+                field_index,
+            });
+        };
+        if structure_is_prop && !self.type_expression_is_prop(field_type, ctx)? {
+            return Err(KernelError::ProjectionFromPropToType {
+                name: type_name,
+                field_index,
+            });
+        }
+        Ok(field_type)
+    }
+
+    /// Validate the projected type head, checked inductive metadata, complete
+    /// parameter/index spine, sole constructor identity, and selected field
+    /// bound before any constructor telescope is traversed.
+    fn projection_inference_data(
+        &self,
+        type_name: NameId,
+        field_index: u32,
+        structure_type: ExprId,
+    ) -> Result<ProjectionInferenceData, KernelError> {
+        let (type_head, type_args) = self.unfold_apps(structure_type);
+        let ExprNode::Const(inferred_name, levels) = self.expr_node(type_head).clone() else {
+            return Err(KernelError::ProjectionTypeMismatch {
+                expected: type_name,
+                got: structure_type,
+            });
+        };
+        if inferred_name != type_name {
+            return Err(KernelError::ProjectionTypeMismatch {
+                expected: type_name,
+                got: structure_type,
+            });
+        }
+
+        let (ctor_name, num_params, num_indices, constructor_count) = match self.env.get(type_name)
+        {
+            Some(Declaration::Inductive {
+                num_params,
+                num_indices,
+                ctor_names,
+                ..
+            }) => (
+                ctor_names.first().copied(),
+                usize::from(*num_params),
+                usize::from(*num_indices),
+                ctor_names.len(),
+            ),
+            _ => {
+                return Err(KernelError::ProjectionNotInductive { name: type_name });
+            }
+        };
+        if constructor_count != 1 {
+            return Err(KernelError::ProjectionConstructorCount {
+                name: type_name,
+                got: constructor_count,
+            });
+        }
+        let Some(ctor_name) = ctor_name else {
+            return Err(KernelError::ProjectionConstructorCount {
+                name: type_name,
+                got: constructor_count,
+            });
+        };
+        let expected_arity = num_params + num_indices;
+        if type_args.len() != expected_arity {
+            return Err(KernelError::ProjectionArityMismatch {
+                name: type_name,
+                expected: expected_arity,
+                got: type_args.len(),
+            });
+        }
+
+        let field_count = match self.env.get(ctor_name) {
+            Some(Declaration::Constructor {
+                inductive,
+                num_fields,
+                ..
+            }) if *inductive == type_name => *num_fields,
+            _ => {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: ctor_name,
+                    field_index,
+                });
+            }
+        };
+        if field_index >= u32::from(field_count) {
+            return Err(KernelError::ProjectionFieldOutOfBounds {
+                name: type_name,
+                field_index,
+                field_count,
+            });
+        }
+
+        Ok(ProjectionInferenceData {
+            ctor_name,
+            num_params,
+            levels,
+            type_args,
+        })
+    }
+
+    /// Whether a type expression is a proposition: its own inferred type
+    /// WHNFs to `Sort 0` in the active local context.
+    fn type_expression_is_prop(
+        &mut self,
+        expression: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<bool, KernelError> {
+        let sort = self.infer_core(expression, ctx)?;
+        let sort = self.whnf_in(sort, ctx);
+        let ExprNode::Sort(level) = self.expr_node(sort) else {
+            return Err(KernelError::NotASort { got: sort });
+        };
+        let level = *level;
+        Ok(self.level_is_zero(level))
     }
 
     /// Infer a complete application spine in one dependent-telescope pass.

@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution has moved to the
 multi-track Z3 + Lean parity plan.
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -11,8 +11,128 @@ Last updated: 2026-07-21
 > (Track 1 engine/perf · Track 2 theories · Track 3 proofs/Lean · Track 4
 > use-cases · Track 5 verified systems / IR reflection —
 > [ADR-0056](../09-decisions/adr-0056-verified-systems-track.md)), with the
-> current honest gap analysis in PLAN.md's
-> "the gap to Z3/cvc5, itemized" section. Live per-session state is in
+> current scoped gap analysis in
+> [`docs/plan/gap-analysis-z3-lean-2026-07-21.md`](../../../docs/plan/gap-analysis-z3-lean-2026-07-21.md).
+> Its [target evidence audit](../../../docs/plan/parity-target-evidence-audit-2026-07-21.md)
+> prevents one “distance” label from crossing targets: selected fragment cells
+> can be competitive; general Z3 solving-power distance is unmeasured;
+> production Z3 compatibility is demonstrably far; solver-proof export to Lean
+> now has a bounded local 71/71 official-Lean acceptance result after four
+> hidden export failures were exposed and fixed, while remote CI and exhaustive
+> acceptance remain open. Full Lean language/toolchain compatibility is a
+> separate long-horizon implementation program, while selected declaration
+> import, certificate tactics, and optional workflow adapters remain the first
+> value-bearing stages in the
+> [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+> under accepted ADR-0345. The complete native work breakdown is the
+> [Lean-system implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md).
+> Its
+> [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+> verifies every named environment gap and the current Axeyum/Lean/mathlib
+> inventories while keeping the L0-L10 implementation program explicitly open.
+> TL0.4 now freezes the actual reconstruction-prelude trust boundary in a
+> [runtime-derived 65-row ledger](../../../docs/plan/generated/lean-axiom-ledger.md):
+> real 30, integer 34, string 1, with canonical type digests and mutation-tested
+> population drift checks. The former 64-row helper-call census omitted the
+> directly inserted string `append` axiom. Classification and discharge remain
+> open under TL3.2; inventory is not truth.
+> The next T6.0.3/TL2.15 seed is also live: a
+> [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
+> covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
+> fail-closed literals/reduction, with deterministic replay and 768 rejected
+> `False` admissions. TL2.2 represents projections throughout the kernel's
+> structural operations, and TL2.3 infers parameterized, indexed,
+> universe-polymorphic, and dependent field types with typed rejection controls.
+> TL2.4 now reduces constructor projections, translates the wire form, and
+> independently admits/computes the exact official projection root; the Nat
+> root advances to its line-125 literal decline. TL2.5 now implements symmetric
+> structure eta for exactly saturated constructors of checked one-constructor,
+> zero-index, non-recursive inductives. Seven native control families pass, and
+> pinned Lean 4.30 accepts the reconstruction while rejecting its duplicated-
+> field mutation. TL2.6 replaces the `u128` ceiling with canonical
+> `NatLit(BigUint)` storage. TL2.7 types literals only against a checked
+> canonical `Nat` bootstrap and adds constructor-offset equality, successor
+> reduction, and one-layer recursor conversion. The exact official Nat root now
+> admits ten declarations with zero axioms and computes to `37`; bootstrap
+> mutations reject and a pinned-Lean 4.30 differential passes. TL1.3 now stages
+> each stream in a private kernel and publishes only an owned
+> `CompletedImport` after full success; late parser, kernel, unsupported,
+> resource, and I/O failures return no partial environment. TL1.4 adds 226
+> deterministic truncation/ID/reference/field/depth/Unicode/integer/cycle/
+> version cases. All 65 record bodies reject truncation; 64 complete-record
+> prefixes are explicitly `published-unsealed` because upstream format 3.1 has
+> no footer, and receive no artifact credit. Generated projection/reduction/eta
+> and quotient semantic seams remain uncredited. TL1.7 now adds ledger-compatible
+> axiom identities and complete v1 structural content/direct-dependency digests;
+> five focused identity tests bring the importer to 28 cases across three
+> binaries. The remaining recursive-indexed/reflexive/mutual/nested/well-
+> founded official cases now have a
+> [proposed construct-matrix plan](../../../docs/plan/lean-official-construct-matrix-plan-2026-07-22.md):
+> freeze source intent, freeze byte-identical official wire observations with
+> the independent reader, and only then measure the current Rust boundary.
+> M0 and the
+> [machine-checked Stage A source freeze](../../../docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+> are complete. The subsequent
+> [Stage B wire freeze](../../../docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
+> retains five byte-identical two-run exports and complete independent group
+> metadata. The subsequent
+> [M3 product measurement](../../../docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
+> now freezes two exact current outcomes per row beside ten passing immutable
+> direct-recursive controls, including the nested stream's `Malformed`
+> misclassification, without admission changes. The
+> [M4 assurance result](../../../docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
+> now generates seven implication-checked rows; M5 and TL2.11 strict positivity
+> are complete. TL2.16 is PARTIAL for this selected population. TL1.5 property
+> fuzzing is dependency-ready. TL2.12 is complete under
+> [accepted ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md):
+> one telescope-based rule covers direct, indexed, and higher-order recursive
+> fields. [M0](../../../docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+> now freezes the twice-compiled explicit-recursor source, two byte-identical
+> official root streams, independent inventories, and fail-closed machine
+> contract with no Axeyum product observation. The
+> [M1 result](../../../docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+> now routes direct recursion through the shared classifier/reopener with exact
+> identities and all existing declines unchanged. M2-M4 then close native
+> semantics, official imports, and selected computation. The
+> [M5 result](../../../docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+> accepts the decision after every bounded gate and hands the semantic path to
+> TL2.13 mutual groups; the completed TL2.11 guard remains mandatory.
+> TL2.13 is now complete under
+> [accepted ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> and a
+> [P0--M5 plan](../../../docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md):
+> one atomic ordered group path checks shared parameters/universes and complete-
+> group positivity, derives all motives/minors, selects the recursive target
+> family's motive/recursor, and publishes all families or none. The completed
+> [M0 freeze](../../../docs/plan/lean-mutual-inductive-groups-m0-2026-07-22.md)
+> binds explicit non-indexed/indexed mutual recursor computations and complete
+> wire inventories without product observation. It freezes dependency-ordered
+> wire recursor arrays separately from semantic family/motive/minor order. The
+> [M1 result](../../../docs/plan/lean-mutual-inductive-groups-m1-2026-07-22.md)
+> adds the public ordered group path, common-parameter/result-universe and name
+> preflight, per-family index opening, insertion-log rollback, exact singleton
+> delegation, and a typed multi-family policy decline. The
+> [M2 result](../../../docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md)
+> now admits native groups through complete-group positivity, globally ordered
+> motives/minors, target-family recursion, per-family recursors, and atomic
+> rollback. Eighteen public rows and two mutation/late-failure tests pass while
+> importer policy remains closed. The
+> [M3 result](../../../docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md)
+> adds 720 unique public cases repeated byte-identically, with 432 positive
+> inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
+> target-rule oracles, and retained 768/840 controls. The
+> [M4 result](../../../docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md)
+> imports all three official streams twice, compares named recursors exactly,
+> confirms both registered cross-family normal forms, and closes 22 rejecting
+> importer/publication mutation classes. The
+> [M5 result](../../../docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+> preserves the historical assurance record, closes every bounded gate, accepts
+> the decision, and marks TL2.13 DONE. A subsequent
+> [dependency audit](../../../docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
+> corrects TL2.14 to pinned Lean's kernel-side nested-inductive expansion and
+> restoration; well-founded source recursion remains TL4.10. Proposed ADR-0355
+> and its P0-M6 plan are committed; M0 source/wire freeze is next.
+> Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
 
@@ -23,6 +143,36 @@ Last updated: 2026-07-21
 > package/documentation/profile/resource checks recorded in PLAN/STATUS. This
 > does not reopen concretization or symbolic memory, and it does not replace the
 > separate multi-oracle publication campaign.
+
+> **Current compatibility checkpoint.** P4.4 now has a machine-readable,
+> source/test-checked 30-row
+> [SMT-LIB/API conformance matrix](../../../docs/plan/generated/smtlib-api-conformance.md).
+> It records six absent command families, seven accepted parser no-ops, and
+> zero ordered interactive-text outputs alongside the bounded Rust helpers that
+> already exist. The follow-up
+> [session contract](../../../docs/plan/generated/smtlib-session-contract.md)
+> freezes 14 invariants and 20 abstract fixtures / 107 commands under proposed
+> ADR-0342. It also finds a deeper signature gap: declarations/definitions must
+> be scoped by default, `reset-assertions` is conditional on
+> `:global-declarations`, full reset needs a fresh arena epoch, and continued
+> errors must be atomic. The next frontend increment is capture-only complete
+> command/event IR (S1), not a renderer. Do not add another isolated output
+> helper or report a direct interpolation/Horn/abduction API as textual
+> conformance.
+
+> **Current measurement-durability checkpoint.** G1's failed 52-shard
+> candidate run receives zero result credit, and proposed ADR-0344 now freezes
+> the prerequisite resume protocol. The generated v2 contract checks 18
+> invariants across 28 scenarios and proves deterministic interrupted/resumed
+> scoring-projection equivalence. V2 supersedes the thin v1 process schema
+> before integration. E1a subsequently passes 8/8 real `SIGKILL` record-recovery
+> cells on local tmpfs and ext-family storage, but the active runner, solver,
+> leases, shared storage, and resources are untouched. Production stages E1b-E3
+> must integrate completion-last output, strict duplicate rejection,
+> typed termination, observed/admitted verdict preservation, output-sidecar
+> validation, single-owner recovery, aggregate resource enforcement, and multi-host
+> loss/retry on a tiny corpus before the 64,345-file candidate may be rerun. This is measurement
+> infrastructure under G1, not a new solver or foundation phase.
 
 ## Purpose
 
@@ -535,14 +685,51 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
 - Quantified fragments: finite expansion + e-matching + MBQI **landed**;
   maturity at [P2.6](../../../docs/plan/track-2-theories/P2.6-quantifiers.md).
 - Proof production: DRAT (clausal) + Alethe + an in-tree **Lean-grade kernel**
-  with reconstruction **landed**; the trust ledger drives "modulo trusted
-  reduction" toward zero ([Track 3](../../../docs/plan/track-3-proof-lean/README.md)).
+  with reconstruction **landed**; current measured coverage is substantial but
+  uneven, so the trust ledger and generated proof-gap matrix—not capability
+  presence—drive "modulo trusted reduction" toward zero
+  ([Track 3](../../../docs/plan/track-3-proof-lean/README.md)).
 - Proof-assistant interop: Alethe→Lean reconstruction is the
   [Track 3 capstone](../../../docs/plan/track-3-proof-lean/P3.7-lean-reconstruction.md).
-- **Newly scoped categorical engines** (the honest remaining gap vs Z3): CHC/Horn
-  PDR ([P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md)),
-  Craig interpolation ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md)),
-  synthesis/abduction ([P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)).
+  The bounded selected-evidence prototype now routes five of eight measured
+  reconstruction-only rows through existing consumers. The remaining three are
+  measured as separate scoped-kernel-closure (>4 GiB), post-closure compact-
+  spooling (<600 MiB), and CPS-tail-reconstruction (<525 MiB) cost lanes under a
+  30-second bound. The next boundary is evidence-aware production dispatch plus
+  mechanism-specific profiling under the existing hard cap, not a new theorem
+  family or a larger memory allowance.
+- Lean-system interoperability: the independent Rust checker remains the
+  default TCB; the separate pinned format-3.1 `lean4export` reader now admits the
+  official flat fixture as eight checked declarations and the direct-recursive
+  `MiniNat`/`MiniList` fixture as 11 declarations with no axioms. It compares
+  independently generated recursors after binder-correct universe alpha-renaming
+  under the importer mutation matrix. A four-root official dependency
+  census made projection the first product decline; TL2.2-TL2.4 now close its
+  exact nine-declaration root, and TL2.6-TL2.7 close the committed Nat root as
+  ten declarations with zero axioms and checked arbitrary-precision
+  constructor/literal semantics. Quotient remains a separate closure; the
+  unretained String root awaits a refreshed rerun. Broader
+  dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
+  Track 6 goals/tactics, and official Lean/Lake/editor adapters. Native source,
+  elaboration, modules/Lake, a version-specific untrusted `.olean` reader, LSP,
+  compiler/runtime, and full pinned-mathlib compatibility are later staged
+  phases with their own gates; none enters the checker TCB or blocks the earlier
+  useful profiles. See the
+  [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
+  [implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md),
+  [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md),
+  [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
+  and [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
+- **Categorical-engine depth, not green-field breadth:** the
+  [source-backed audit](../../../docs/plan/categorical-engine-depth-audit-2026-07-21.md)
+  confirms 125/125 focused tests across six interpolation families, a substantial
+  direct CHC/Horn engine, and bounded verified abduction. These are seeded
+  capabilities, not absent engines. Advance textual conformance, representative
+  Z3/cvc5/Spacer corpora, Horn theory/nonlinear depth, and portable certification
+  ([P3.8](../../../docs/plan/track-3-proof-lean/P3.8-interpolation.md),
+  [P4.6](../../../docs/plan/track-4-usecases-frontend/P4.6-chc-horn.md),
+  [P4.7](../../../docs/plan/track-4-usecases-frontend/P4.7-synthesis.md)). General
+  SyGuS remains absent and separately demand-gated.
 
 Entering any horizon item gets its own ADR with prerequisites and exit
 criteria; none may begin while it would starve a foundation phase.

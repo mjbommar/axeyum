@@ -1,8 +1,12 @@
-# 00 — North star: what "Z3 + Lean parity" means
+# 00 — North-star reference targets
 
-This file pins down the goal so progress is measurable and "done" is not a
-moving target. It is the answer to "what are we actually building, and how do we
-know when a piece is finished."
+This file pins down the long-horizon reference targets. "Z3 + Lean parity" is
+legacy shorthand, not one scalar status or one exit criterion. Current reporting
+must keep fragment decision/performance, production solver replacement,
+certified-result coverage, Lean-core compatibility, and Lean workflow
+integration separate. See [Project State](../PROJECT-STATE.md) for the current
+short answer and the [scoped gap program](gap-analysis-z3-lean-2026-07-21.md) for
+the operational definitions.
 
 ## The one-sentence identity
 
@@ -12,32 +16,34 @@ backs every definitive answer with a small, independent, machine-checkable
 certificate. Z3 is the performance/feature yardstick; Lean is the
 proof-checking yardstick.
 
-## Definition of done — Z3 parity
+## Definition of done — fragment decision parity
 
-Z3 is ~688k lines of C++ (`references/z3/src`); cvc5 ~512k. "100% parity" is not
-a single deliverable and not a single-session target — it is a destination
-reached fragment by fragment. A fragment is at **Z3 parity** when:
+A fragment reaches decision parity only when all of the following hold on a
+registered population:
 
-1. **Feature coverage** — axeyum decides the same query class Z3 does
-   (operators, sorts, commands), end to end (IR → decision procedure → model /
-   proof → SMT-LIB I/O).
-2. **Soundness + completeness** — on the decidable fragment it never returns a
-   wrong answer and returns `unknown` only where Z3 also would (resource limits),
-   not because of missing reasoning.
+1. **Query-class alignment** — Axeyum and the reference solver receive the same
+   operators, sorts, assumptions, resource bounds, and query population.
+2. **Decision alignment** — verdict directions agree; decided-set overlap,
+   declines, timeouts, and unsupported outcomes are reported rather than hidden
+   inside one solved count.
 3. **Measured performance** — on a committed real-corpus slice, axeyum's PAR-2
    is within a target factor of Z3's (initial bar: same order of magnitude;
    stretch: competitive), measured **head-to-head** by
    [P4.5](track-4-usecases-frontend/P4.5-benchmarking.md). No parity claim
    exists without this number.
-4. **Honest unknown on the undecidable** — for semidecidable/undecidable
+4. **Honest unknown on the incomplete** — for semidecidable/undecidable
    fragments (full NRA without CAD, general quantifiers), parity means matching
    Z3's *practical* decide-rate and heuristics, with `unknown` first-class. We do
    not claim to "solve the halting problem"; we claim to match the engineering.
 
-## Definition of done — Lean parity
+This is deliberately narrower than production replacement. A production
+Z3-class replacement additionally needs broad SMT-LIB session/API conformance,
+incremental robustness, mature per-logic strategy portfolios, representative
+full-corpus depth, stable tooling, and supported deployment profiles.
 
-"Lean parity" means axeyum is a proof-producing solver whose proofs a
-**Lean-grade kernel** accepts:
+## Definition of done — certified-result coverage
+
+For a claimed fragment, certified-result coverage means:
 
 1. Every `unsat`/`valid` over a supported fragment emits a proof object.
 2. The proof is checked by a **small, independent** checker — first the Rust
@@ -48,9 +54,23 @@ reached fragment by fragment. A fragment is at **Z3 parity** when:
    or listed in the [trust ledger](track-3-proof-lean/P3.0-trust-ledger.md) with
    a pedantic level. "Modulo trusted reduction" becomes a countable list that
    goes to zero.
-4. **Proof-assistant interop**: axeyum's proofs can be reconstructed as Lean
-   proof terms (the lean-smt-style bridge), so axeyum can serve as a Lean tactic
-   backend.
+4. The evidence can be reconstructed as a Lean proof term without a hidden
+   `sorry`/trust fallback.
+
+## Definition of done — Lean integration
+
+Lean-facing completion has two independent gates:
+
+1. **Lean-core compatibility profile** — the in-tree checker and official Lean
+   accept/reject the same declarations and proof terms for a versioned core
+   profile, with a differential corpus covering every admitted kernel feature.
+2. **Workflow integration** — a fail-closed tactic/import path converts a real
+   Lean goal into an Axeyum obligation, returns a proof term, reports its axioms
+   and trust boundary, and leaves the goal unsolved when any step declines.
+
+Reimplementing Lean's parser, macros, elaborator, unifier, tactic ecosystem,
+compiler, package ecosystem, or language server is not a solver milestone and
+is not implied by either gate.
 
 ## Definition of done — the verified-systems trajectory (Track 5)
 
@@ -82,7 +102,11 @@ what the compiler produced, post-borrowck and post-optimization, and the
 cross-IR equivalence proofs are what let us trust both views at once. Plan:
 [`track-5-verified-systems/`](track-5-verified-systems/README.md).
 
-## What is already true (the starting line, 2026-06-15)
+## Historical starting line — 2026-06-15
+
+The bullets below preserve the baseline from which this plan was written. They
+are not current status; use [Project State](../PROJECT-STATE.md) and generated
+artifacts for current claims.
 
 - Broad decidable+arithmetic foundation, ~63k LoC Rust, pure (no C/C++ default).
 - Independently checked today: QF_BV clausal `unsat` (DRAT, `UnsatProof::recheck`),

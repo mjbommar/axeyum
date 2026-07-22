@@ -39,7 +39,7 @@ not independent — the arrows below are the real constraints.
   TRACK 4: USE CASES & FRONTEND
   P4.1 warm lazy memory ◄ needs P1.4/P1.5 (or interim eager) ─► P4.2 CFG frontend (angr/unicorn-class)
   P4.3 OMT/MILP (independent)   P4.4 SMT-LIB surface (independent)   P4.5 benchmarking (do FIRST, gates Track 1)
-  ┌─ VERIFICATION FRONTIER (new categorical engines) ───────────────────────────────────────────────┐
+  ┌─ VERIFICATION FRONTIER (seeded engines; depth/interfaces/corpora remain) ────────────────────────┐
   │ {P3.8 interpolation + P2.6 MBP + P1.5 CDCL(T)} ─► P4.6 CHC/Horn (PDR/Spacer, unbounded invariants) │
   │                                                   P4.7 synthesis/abduction ◄ needs P2.6 + P3.8     │
   └───────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -75,11 +75,13 @@ not independent — the arrows below are the real constraints.
   P2.6, P2.9} → P1.6 (combination)`. P2.4 (LIA cuts), P2.5 (NRA/CAD), P2.8 (FP)
   are independent and can proceed any time. P2.10 (breadth backlog) rides the
   keystones.
-- **To unbounded verification (the biggest categorical gap):** `P3.2 (Alethe IR)
-  → P3.8 (interpolation) + P2.6 (MBP) + P1.5 (CDCL(T)) → P4.6 (CHC/Horn, PDR)`.
-  The cheapest first slice of P3.8 (Farkas/LRA interpolants) reuses certificates
-  already in tree, so this path can start partially before the e-graph lands.
-  P4.7 (synthesis/abduction) reuses P2.6 + P3.8 and trails P4.6.
+- **To production unbounded verification:** `P3.2 (Alethe IR) → P3.8
+  (interpolation) + P2.6 (MBP) + P1.5 (CDCL(T)) → P4.6 (CHC/Horn, PDR)`.
+  Those direct engines are now seeded; the path continues through textual CHC,
+  representative Spacer measurement, Horn theory/nonlinear depth, and portable
+  certification. P4.7's bounded abduction seed reuses P2.6 + P3.8; general SyGuS
+  remains a separate absent and demand-gated branch. See the
+  [categorical-engine depth audit](categorical-engine-depth-audit-2026-07-21.md).
 
 ## Recommended execution order (waterfall with parallelism)
 

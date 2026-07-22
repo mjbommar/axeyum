@@ -769,6 +769,10 @@ belongs in the gate, not in review.**
 - **The axiom count is exactly 64** (arith 30 + int 34; logic and string 0). Not
   "~74". I had published that estimate as a count in three documents — the third
   instance of the exact sin I kept flagging. Now counted.
+  **Correction, 2026-07-21:** this was only a `declare_axiom(...)` call-site
+  census. Runtime construction finds one additional directly inserted
+  `axeyum.string.append` axiom, for 65 total; the type-digested TL0.4 ledger is
+  authoritative.
 - **The ℝ and ℤ preludes cannot coexist in one `Kernel`, and it panics.** 28
   identically-named axioms off the same anonymous root. Probed directly: it fails
   at `prelude.rs:182` on `True` before even reaching the 28. **The gate behaved
@@ -1122,6 +1126,11 @@ I was correcting, and it is the fourth instance of the same failure in one sessi
 The counts are now: **64 axioms** (arith 30 + int 34, by `declare_axiom(` census)
 and **6 of 14** ledger entries open (by `is_certified()`).
 
+**Correction, 2026-07-21:** the text itself identifies the weak method. The
+runtime population is 65 because `axeyum.string.append` is inserted directly as
+`Declaration::Axiom`; TL0.4 now derives and type-digests the environment instead
+of treating helper-call grep as a census.
+
 **The lesson is not "check your numbers."** I knew that; I wrote it down twice and
 did it anyway. The lesson is that **a grep is not a census** — the failure was
 using a tool that silently under-reports and treating its output as verification.
@@ -1339,3 +1348,107 @@ most directly useful research in the track:
   kernel-checkable `Eq.trans`/congruence spine**, not getting the chain. And
   Micromega (`lia` = untrusted search + reflective checker + certificate) is our
   identity sentence, written by someone else.
+
+## 2026-07-21 — the zero-fuzz baseline is closed, not the kernel program
+
+T6.0.3 now has a fixed-seed, dependency-free generated gate over the four seams
+the Rust kernel can currently represent: `Prop`/elimination,
+universes/inductives, proof-irrelevance/iota, and literals/reduction. Its 768
+unique cases run twice for equal structured summaries; every case attempts a
+theorem whose claimed type is `False`, rejects, and leaves the environment
+unchanged. The historical complete large-elimination exploit remains a separate
+regression.
+
+This closes the literal “zero fuzz” statement in the earlier diary entries. It
+does **not** close TL2.15: at that seed point projection/eta and quotient did not
+exist, literals remain fail-closed rather than typed, and the harness is neither an official-Lean
+differential corpus nor a consistency proof. The next kernel work is therefore
+TL2.2 first-class `Proj`, followed by dependent inference, constructor reduction,
+and structure eta; each admitted seam must extend the same negative class.
+
+## 2026-07-21 — TL2.2 lands the projection term without laundering semantics
+
+The kernel now interns `Proj(structure_name, field_index, structure)` as a
+first-class expression. Every structural operation and both Lean renderers
+traverse it, and dedicated tests independently mutate all three payloads and
+exercise metadata, substitution, abstraction, lifting, closure, dependency
+collection, and rendering. The index is a target-stable `u32`; rendering
+converts its zero-based kernel meaning to Lean's one-based numeric field syntax.
+
+This commit deliberately stops before inference. `UnsupportedProj` rejects
+typing and declaration admission with rollback, while the import crate retains
+its line-81 `expr-projection` decline. Therefore the official projection root,
+the Nat/String roots that encounter projection first, and TL2.15 projection
+semantics receive no new admission credit. The next work is TL2.3 structure
+metadata and dependent field inference, followed by TL2.4 constructor reduction
+and only then wire translation of the committed closure.
+
+## 2026-07-21 — TL2.3 types dependent projections without claiming computation
+
+The checked inductive environment now retains parameter and index counts, and
+the type checker follows Lean's single-constructor projection algorithm. It
+infers and normalizes the projected value's type, validates the declared
+structure head and complete argument spine, instantiates constructor parameters,
+and substitutes projections of earlier fields into dependent later-field types.
+Proof-valued structures retain Lean's restriction against eliminating a data
+field from `Prop`.
+
+The positive matrix covers parameterized dependent fields,
+universe-polymorphism, an indexed family, and proof fields. Wrong names,
+non-inductive heads, wrong arity, multiple constructors, out-of-range fields,
+Prop-to-Type elimination, and injected inconsistent metadata reject with typed
+errors. Under 4 GiB the kernel passes 179 unit tests and 13 integration cases;
+the importer passes its 11 cases while retaining `expr-projection`.
+
+This is native inference, not computation or import compatibility. The official
+projection closure remains untranslated and unadmitted because constructor
+projection reduction is still absent. TL2.4 is next; TL2.5 eta stays separate,
+and importer enablement follows only after the committed closure independently
+admits and computes.
+
+## 2026-07-21 — TL2.4 computes and imports the exact projection root
+
+Projection reduction now sits beside beta, zeta, and recursor iota in the
+weak-head reducer. Once the projected value normalizes to a constructor, the
+kernel skips its checked parameter prefix, selects the requested field, and
+re-applies any outer application spine. Universe-polymorphic, parameterized,
+dependent-field, transparent-definition, opaque/neutral, under-applied, and
+wrong-name separation controls pass.
+
+Only after that native gate passed did the untrusted format-3.1 reader begin
+translating `proj`. The committed official stream now translates 61 expressions,
+admits nine declarations with zero axioms, and computes
+`importPairLeft (ImportPair.mk 0 1)` to `0`. Wrong name/index mutations reach
+the trusted declaration gate and reject. The Nat root consequently moves from
+its old projection decline to the exact line-125
+`literal-nat-bignum-and-typing` boundary.
+
+This closes TL2.4 and one exact K1 root, not general Lean compatibility.
+Structure eta remains TL2.5, and the generated projection/reduction/eta fuzz
+family still remains open under TL2.15. The large String stream was not retained
+in the tree, so its historical line-184 projection decline is retired without
+inventing a replacement blocker from its syntax inventory.
+
+## 2026-07-21 — TL2.5 adds structure eta without widening inductive admission
+
+Definitional equality now applies Lean's symmetric structure-eta rule only when
+one side is an exactly saturated constructor application and the checked parent
+inductive has one constructor, zero indices, and no recursive fields. Admission
+persists the aggregate recursive-field bit after constructor checking; eta does
+not infer eligibility from a weak syntactic proxy. Both operand types must be
+definitionally equal, then every constructor field must equal the corresponding
+projection from the other operand.
+
+Seven native families cover symmetry, duplicated-field and wrong-type false
+equalities, universe parameters, dependent fields, and indexed/recursive
+exclusions. A fail-closed wrapper runs the positive and mutated controls through
+pinned Lean 4.30: official Lean accepts the reconstruction by `rfl` and rejects
+the duplicated-field equality. Under 4 GiB the kernel records 179 unit tests and
+25 integration cases across nine binaries; warning-denied Clippy and the
+repository-local-TMP doctest pass. The shared `/tmp` path hit its host disk
+quota during the first doctest link, so the successful rerun used `target/` as
+`TMPDIR`; no semantic failure was hidden.
+
+This closes direct TL2.5 credit, not TL2.15's generated projection/eta seam and
+not broader Lean compatibility. TL2.6 arbitrary-precision Nat storage is next,
+before any Nat literal typing can make the current `u128` bound live.

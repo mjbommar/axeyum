@@ -28,6 +28,7 @@ use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use axeyum_ir::{TermArena, TermId};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{
     Evidence, SolverConfig, produce_evidence, produce_evidence_smtlib, prove_unsat_to_lean_module,
@@ -190,6 +191,30 @@ fn evidence_kind(evidence: &Evidence) -> &'static str {
         Evidence::UnsatWordClash(_) => "word-clash-unsat",
         Evidence::Unknown(_) => "unknown",
     }
+}
+
+/// Run only a *real* independent evidence check.
+///
+/// `Evidence::check` deliberately treats `Unsat(None)` and `Unknown` as
+/// structurally well-formed (`Ok(true)`), but neither carries a certificate to
+/// recheck. The dominance audit must therefore gate on `is_certified()` before
+/// calling it. String SAT has a separate limitation: its faithful replay happened
+/// inside the text front door and cannot be repeated against the bounded/empty
+/// arena view available here.
+fn independently_check_evidence(
+    evidence: &Evidence,
+    arena: &TermArena,
+    assertions: &[TermId],
+    is_string_script: bool,
+) -> bool {
+    if !evidence.is_certified() {
+        return false;
+    }
+    if is_string_script && matches!(evidence, Evidence::Sat(_)) {
+        return false;
+    }
+    let assertions = if is_string_script { &[] } else { assertions };
+    evidence.check(arena, assertions).unwrap_or(false)
 }
 
 fn check_result_label(evidence: &Evidence) -> Verdict {
@@ -363,33 +388,24 @@ fn audit_instance(
     let evidence_certified = report.evidence.is_certified();
     mark_phase(progress, "check-evidence");
     let check_start = Instant::now();
-    // For a string script only a certified evidence whose `check` performs a GENUINE
-    // self-contained re-derivation counts. Two vacuous-`Ok(true)` traps must both be
-    // excluded here, or the audit would over-credit:
-    //   1. A bare `Evidence::Unsat(None)` (word clash, concat/length conflict) is
-    //      correct-but-uncertified; its `check` returns a vacuous `Ok(true)`. Gating on
-    //      `is_certified()` FIRST excludes it (`is_certified()` is false for `Unsat(None)`).
-    //   2. A string `sat` is `Evidence::Sat(seq_model)` — `is_certified()` IS true, but the
-    //      Seq-level witness has no in-tree assertion view to replay against here (the flat
-    //      arena is the bounded/empty view, and we pass `&[]`), so `check` iterates zero
-    //      assertions and returns a vacuous `Ok(true)`. The route already Seq-replay-checked
-    //      that model internally; this audit records it HONESTLY as unchecked (as #64 did).
-    // What remains is the regex derivative-emptiness class (#58): a transferable
-    // `Evidence::UnsatRegexEmptiness` whose `check` re-derives the emptiness certificate from
-    // a self-contained `Membership` (ignoring the arena) and re-runs the kernel — a real
-    // independent re-validation, credited here.
-    let evidence_checked = if is_string_script {
-        evidence_certified
-            && !matches!(report.evidence, Evidence::Sat(_))
-            && report
-                .evidence
-                .check(&evidence_script.arena, &[])
-                .unwrap_or(false)
+    // A true independent check requires a certificate on every route. In particular,
+    // bare `Evidence::Unsat(None)` returns structural `Ok(true)` but has nothing to
+    // replay; v1 accidentally credited 28 non-string cases on that basis. String SAT
+    // adds a separate limitation: its faithful Seq replay happened inside the text
+    // route, while the bounded/empty arena view here cannot repeat it. Certified string
+    // UNSAT variants are self-contained and can be independently rechecked here.
+    let evidence_checked = independently_check_evidence(
+        &report.evidence,
+        &evidence_script.arena,
+        &assertions,
+        is_string_script,
+    );
+    let evidence_check_mode = if !evidence_certified {
+        "not-applicable-uncertified"
+    } else if is_string_script && matches!(report.evidence, Evidence::Sat(_)) {
+        "internal-route-replay-only"
     } else {
-        report
-            .evidence
-            .check(&evidence_script.arena, &assertions)
-            .unwrap_or(false)
+        "independent-recheck-attempted"
     };
     let check_evidence_ms = ms(check_start.elapsed());
     let trust_steps: Vec<JsonValue> = report
@@ -483,8 +499,10 @@ fn audit_instance(
                 "lean_reconstruction": lean_reconstruction_ms,
             },
             "evidence_kind": evidence_kind(&report.evidence),
+            "decision_backend": report.provenance.backend,
             "evidence_certified": evidence_certified,
             "evidence_checked": evidence_checked,
+            "evidence_check_mode": evidence_check_mode,
             "lean_fragment": lean_fragment,
             "lean_checked": lean_checked,
             "lean_module_bytes": lean_module_bytes,
@@ -807,7 +825,7 @@ fn main() {
     };
 
     let artifact = json!({
-        "version": 1,
+        "version": 2,
         "baseline": repo_rel(&baseline),
         "logic": logic,
         "slice": slice,
@@ -843,4 +861,23 @@ fn main() {
     eprintln!(
         "dominance audit {logic}: {dominant_candidates}/{audited_decided} audited decided ({dominant_pct_audited:.1}%), Lean unsat {lean_checked_unsat}/{audited_unsat} ({lean_unsat_pct:.1}%), mismatches {baseline_mismatches}, audit errors {audit_errors}, timeouts {timed_out}"
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bare_unsat_structural_ok_is_not_an_independent_check() {
+        let arena = TermArena::new();
+        let evidence = Evidence::Unsat(None);
+        assert!(evidence.check(&arena, &[]).unwrap());
+        assert!(!evidence.is_certified());
+        assert!(!independently_check_evidence(
+            &evidence,
+            &arena,
+            &[],
+            false
+        ));
+    }
 }

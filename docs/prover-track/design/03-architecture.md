@@ -265,9 +265,10 @@ solver, the design is wrong.
 
 ## 10. Build order, and why
 
-1. **[P6.0](../plan/P6.0-kernel-trustworthiness.md)** — the kernel. It admitted
-   `False` this morning; zero fuzz; positivity enforced vacuously; **64** unproven
-   prelude axioms. Everything here stands on it, **and it is the product**: a
+1. **[P6.0](../plan/P6.0-kernel-trustworthiness.md)** — the kernel. It once
+   admitted `False`; the first 768-case four-seam fuzz gate is now live, while
+   positivity remains vacuous and **65** prelude assumptions remain unproved.
+   Everything here stands on it, **and it is the product**: a
    kernel that admitted `False` cannot be anyone's independent check.
 2. **[P6.1a](../plan/P6.1-obligation-bridge.md)** — extract IR→CIC from
    reconstruction into a real bridge. Zero new capability; it de-risks the seam,

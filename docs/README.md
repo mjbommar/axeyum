@@ -2,8 +2,8 @@
 
 > **Identity in one line:** *untrusted fast search, trusted small checking.*
 > Axeyum searches for answers with fast (possibly buggy) procedures, then
-> **re-checks** every answer with small, independent checkers — so a wrong
-> search can never produce a wrong result, only an honest `unknown`.
+> replays or certifies supported definitive results with independent checkers.
+> Uncovered, incomplete, or resource-bounded routes remain explicit.
 
 This is the documentation hub. The [README](../README.md) is the lobby; this is
 the directory. Pick the path that matches why you're here.
@@ -34,6 +34,7 @@ flowchart TD
 
 | You are… | Start here |
 |---|---|
+| **Evaluating what exists today** | [`PROJECT-STATE.md`](PROJECT-STATE.md) — built vs measured vs partial, with exact Z3/Lean scope |
 | **New to automated reasoning** | [`learn/`](learn/README.md) — concepts through tiny examples, no internals |
 | **A user** | [`user-guide/`](user-guide/README.md) — run a query, read a model, know the limits |
 | **A contributor** | [`contributor-guide/`](contributor-guide/README.md) — the obligations for new public surface |
@@ -53,29 +54,22 @@ mathematics lane grounded by the
 
 ## The honest current state
 
-Axeyum's **north star** is Z3-class solving with Lean-grade checkable evidence.
-**Today** it is a research-grade Rust stack with strong foundations and explicit
-`unknown`s where support or performance is incomplete. We state this concretely,
-not with broad parity language:
+Axeyum's north star is Z3-class solving with Lean-grade checkable evidence. Its
+current state is not one scalar percentage: selected solver fragments are
+already competitive, proof coverage is substantial but incomplete, and
+production SMT-LIB plus full Lean-core compatibility remain materially open.
 
-- ✅ **Solid today** — typed IR, the QF_BV bit-blast→SAT path, SMT-LIB front
-  door, model replay, and many proof/evidence routes (DRAT/LRAT/Alethe, a Rust
-  Lean kernel). See the [capability matrix](research/08-planning/capability-matrix.md).
-- 🚧 **In progress** — performance, full SMT-LIB command semantics, complete
-  proof coverage, NRA/quantifier completeness.
-- 🔭 **North star** — general Z3 replacement, full Lean parity, unbounded
-  strings.
-
-Measured, not asserted: on the public QF_BV `p4dfa` slice, the pure-Rust path
-and Z3 4.13.3 are at **parity** at second-scale budgets (8–8 @20s, 11–11 @60s);
-**both** time out on ~90% of that adversarially-hard corpus. The earlier "Z3
-sweeps essentially all" was an unmeasured premise. See
-[`user-guide/benchmarks.md`](user-guide/benchmarks.md).
+Read **[Project State](PROJECT-STATE.md)** for the short, evidence-linked account
+of what exists, what the committed measurements establish, and what the project
+does not claim. Use the [benchmark guide](user-guide/benchmarks.md) for the
+performance cells and [limitations](user-guide/limitations.md) before relying on
+a fragment.
 
 ## Authoritative references
 
 | What | Where |
 |---|---|
+| Plain-English built / measured / partial summary | [Project State](PROJECT-STATE.md) |
 | Capability × assurance × evidence (golden-tested) | [capability-matrix](research/08-planning/capability-matrix.md) |
 | Parser / IR / solver / proof support per feature | [support-matrix](research/08-planning/support-matrix.md) |
 | What is trusted vs independently checked | [trust-ledger](research/08-planning/trust-ledger.md) |

@@ -11,53 +11,82 @@ passes. Operational errors make `axeyum-bench` exit nonzero, and
 `P`. This prevents a backend that fails quickly on most inputs from appearing
 faster than a backend that actually solves them.
 
-## The measured Z3 head-to-head (public QF_BV)
+## Current measured map
 
-On the public `QF_BV` slice `20221214-p4dfa-XiaoqiChen` (113 files, SMT-LIB 2024,
-Zenodo 11061097), pure-Rust Axeyum vs Z3 4.13.3, single-threaded:
+No single corpus establishes "Z3 parity." The committed evidence intentionally
+keeps distinct populations, limits, and consumer regimes separate.
 
-| budget | **Axeyum** (sat-bv, preprocess+inprocess) | **Z3 4.13.3** |
-|---|---:|---:|
-| 3 s | 4 / 113 | 5 / 113 |
-| 20 s | 8 / 113 | 9 / 113 |
-| 60 s | 11 / 113 | 11 / 113 |
+### Regression scoreboard
 
-```mermaid
-xychart-beta
-    title "Decided / 113 vs budget (both time out on ~90%)"
-    x-axis "budget (s)" [3, 20, 60]
-    y-axis "decided" 0 --> 15
-    line "axeyum" [4, 8, 11]
-    line "z3" [5, 9, 11]
-```
+The generated [scoreboard](../../bench-results/SCOREBOARD.md) contains 35 rows
+across 24 logic labels: **753 / 992** files decided, **680 oracle-compared**, and
+zero recorded disagreements. The rows are curated regression slices and include
+overlapping file populations: 927 file occurrences contract to
+**837 normalized paths** and 778 exact byte contents. The generated
+[measurement-provenance matrix](../plan/generated/measurement-provenance-matrix.md)
+records the row-local PAR-2 and identity layers, so 75.9% is not a global
+completeness estimate.
 
-**What this says, honestly:**
+### Harder public inventory
 
-- They are at **parity** at second-scale, and parity is *budget-robust* (it holds
-  at 3 s, 20 s, and 60 s).
-- **Both** time out on ~**90%** (≈102/113) of this corpus even at 60 s — it is
-  adversarially hard *for both solvers*, not just for Axeyum.
-- The earlier "Z3 sweeps essentially all 113" was an **unmeasured premise**; when
-  measured, Z3 decides 11/113 at 60 s. Axeyum even decides instances Z3 times out
-  on (e.g. `string1x8.3`).
+The [SMT-COMP-style reproduction](../../bench-results/smtcomp-repro-20260721/README.md)
+runs a separate 228-file public convenience inventory at a 120-second ceiling.
+Its legacy scorer reports **82 / 228** decisions; status-aware audit separates
+those into **78 known-status agreements** and **4 unadjudicated decisions**,
+with 144 explicit declines, two no-answer outcomes, and zero wrong verdicts
+against known statuses. This is not the official
+SMT-COMP selection and is dominated numerically by one hard 113-file p4dfa
+family.
 
-This is *not* a claim of general Z3 performance parity — it is parity *on this
-corpus*. Z3's breadth (strings, FP, NRA, incremental, tactics) and its complete
-nonlinear engine remain ahead. See [Limitations](limitations.md).
+The [E1b runner audit](../plan/smtcomp-runner-e1b-audit-2026-07-21.md)
+finds one scoring-fidelity gap in this local path: a parsed response is
+currently discarded when the watchdog times out, while the SMT-COMP 2026 rule
+admits responses after timeout or abnormal termination. Because the committed
+raw artifact omits stdout and typed termination, its two no-answer rows
+cannot be retrospectively reclassified. Preserve 82/144/2 as the artifact's result;
+do not upgrade or downgrade it without a new v2 run.
 
-## Where Axeyum's design shows: embeddability + certification
+This view is not independent of the scoreboard. Exactly 99 contents occur in
+both regimes—43.4% of the public inventory and 12.7% of the scoreboard's unique
+file-backed contents. Keep the two results side by side; do not average them.
 
-On small, frequent proof obligations (e.g. Euclidean-geometry facts), the story
-is different and favorable:
+The separate 64,345-file full-tree candidate has no benchmark result. Its first
+52-shard attempt stopped after 2,041 progress rows and wrote no raw shard JSON.
+Do not reconstruct data from its logs or rerun the old launcher. The
+[frozen handoff](../plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
+and [resumable-run contract](../plan/generated/smtcomp-resumable-run-contract.md)
+make atomic checkpoints, strict completion, and enforced aggregate resources
+prerequisites to another attempt.
+The local record primitive now passes forced-process-kill recovery on tmpfs and
+ext-family storage, but the active runner, shared filesystem, resource envelope,
+and remote retry protocol are still unchanged.
 
-- **No process tax.** As an embedded Rust library, Axeyum answers in
-  microseconds–milliseconds. If your integration *shells out* to the `z3` binary,
-  you also pay ~100 ms of process startup *per query* — embedding wins by orders
-  of magnitude there. (Against *in-process* libz3 the gap is a process-model
-  effect, not solver speed — be fair about which you're comparing.)
-- **Certified answers** where Z3's default `unsat` is unchecked.
+A separate 24-file QF_BV comparison has Axeyum, cvc5, and Bitwuzla each deciding
+19/24; PAR-2 ranks Bitwuzla, cvc5, then Axeyum. That cell contains no Z3 result
+and must not be described as a four-solver ranking.
 
-See the runnable [`geometry_portfolio` example](../../crates/axeyum-solver/examples/geometry_portfolio.rs).
+### Registered p4dfa control
+
+At the authoritative same-corpus, 20-second cell, Axeyum and the in-process Z3
+crate each decide **8 / 113**. Exact matching finds six jointly decided, two
+Axeyum-only, and two Z3-only cases. A separately recorded
+Z3 CLI artifact decides 9/113. Equal solved counts in this one deliberately hard
+cell are bounded corpus parity, not general QF_BV or production parity. See the
+[scoped parity analysis](../plan/gap-analysis-z3-lean-2026-07-21.md#corrected-public-qf_bv-control).
+
+### Fair embedded Glaurung baseline
+
+The preregistered six-cell experiment compares `{Z3, Axeyum, Bitwuzla} ×
+{cold, warm}` over four real drivers. All cells decide and agree on all checks.
+Warm Axeyum beats warm Z3 on vwififlt, IntcSST, and SurfacePen and loses on
+DptfDevGen; warm Bitwuzla beats both on all four. The result establishes a
+workload-dependent embedded regime and rejects an Axeyum performance-leadership
+headline. See [ADR-0272](../research/09-decisions/adr-0272-preregister-six-cell-neutral-warm-regime.md).
+
+Embeddability, WASM availability, and independently checkable evidence remain
+product advantages, but they are separate axes. A shell-out comparison includes
+process overhead and is not evidence of solver-core speed against an in-process
+baseline.
 
 ## Reproducing
 
@@ -77,7 +106,8 @@ just compare-glaurung-qfbv-repeated BASE CAND OUT # controlled cross-commit delt
 
 **Resource rules** (this matters — the harness can OOM a small host otherwise):
 
-- Build with capped jobs: `CARGO_BUILD_JOBS=4` / `-j4`.
+- Build with one Cargo job on this host: `CARGO_BUILD_JOBS=1` / `--jobs 1`, and
+  retain the aggregate cgroup memory cap described in [PLAN](../../PLAN.md).
 - Do **not** sweep the full ~41 GB public corpus to "make progress." Measure once
   on a committed slice, then stop.
 

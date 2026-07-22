@@ -1,0 +1,2966 @@
+{
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 36.49354062299244,
+   "cpu_time": 25.789845,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.1._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.1._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.43311243399512,
+   "cpu_time": 78.023192,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.31748815800529,
+   "cpu_time": 79.108479,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.64446501299972,
+   "cpu_time": 79.782981,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.6._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.6._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.42893322597956,
+   "cpu_time": 79.68098500000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.52151514700381,
+   "cpu_time": 74.60701999999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.80354414600879,
+   "cpu_time": 80.148529,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.93693962495308,
+   "cpu_time": 116.58592099999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.25253239803715,
+   "cpu_time": 116.24320899999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit16_na13_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit16_na13_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.19541899097385,
+   "cpu_time": 115.18440200000009,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__simple-lra.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__simple-lra.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.005354485008865595,
+   "cpu_time": 0.003851999999938016,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug576a.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug576a.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005573438014835119,
+   "cpu_time": 0.004250000000070031,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite3.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite3.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.004583627975080162,
+   "cpu_time": 0.003256999999962318,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__proofs__bvrewrite-shlbyconst.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__proofs__bvrewrite-shlbyconst.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.005407633958384395,
+   "cpu_time": 0.004087000000026819,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-ints.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-ints.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004866520990617573,
+   "cpu_time": 0.0035400000000436194,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__use_approx__error0_approx.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__use_approx__error0_approx.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004978589015081525,
+   "cpu_time": 0.003781000000003587,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__nl_uf_lalt.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__nl_uf_lalt.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 115.03347958700033,
+   "cpu_time": 115.02518299999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-6.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-6.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.013135335990227759,
+   "cpu_time": 0.011429000000021006,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_07_17.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_07_17.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.28637245704886,
+   "cpu_time": 115.27667300000007,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.p3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 117.97424463700736,
+   "cpu_time": 76.246396,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.10._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.10._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.44968232198153,
+   "cpu_time": 78.17947399999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.21534927299945,
+   "cpu_time": 78.15853600000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.5._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.5._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.18913731398061,
+   "cpu_time": 77.805433,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.7._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.7._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.40250072500203,
+   "cpu_time": 76.33945499999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.57843674701871,
+   "cpu_time": 77.714182,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.30254253896419,
+   "cpu_time": 106.16411099999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.10._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.86198175599566,
+   "cpu_time": 115.82414200000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.7._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.57036155101378,
+   "cpu_time": 115.55425500000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.12461042101495,
+   "cpu_time": 115.11920599999996,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress1__arith__div.09.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress1__arith__div.09.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": null,
+   "reported_status": "sat",
+   "wall_time": 0.004718612995930016,
+   "cpu_time": 0.0033149999999295687,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__buggy-ite.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__buggy-ite.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004267295997124165,
+   "cpu_time": 0.0031290000001718,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite4.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite4.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004314020974561572,
+   "cpu_time": 0.003152999999997519,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__mixed-types-seq-nth.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__mixed-types-seq-nth.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.0038105020066723228,
+   "cpu_time": 0.0027039999999942665,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-reals.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma-reals.smt2",
+   "division": "QF_UFLRAFS",
+   "logic": "QF_UFLRAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004086512024514377,
+   "cpu_time": 0.0030289999999695283,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__use_approx__issue2429_approx.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__use_approx__issue2429_approx.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.004066982015501708,
+   "cpu_time": 0.0029199999999036663,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__proj-issue251.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__proj-issue251.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.07770312298089266,
+   "cpu_time": 0.07660800000007839,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-7.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-7.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 1.630656822992023,
+   "cpu_time": 1.629434999999944,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_09_09.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_09_09.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.31725606502732,
+   "cpu_time": 115.30878800000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.14068642398342,
+   "cpu_time": 82.179588,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.1._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.1._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.2908719870029,
+   "cpu_time": 73.02317300000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.10018056299305,
+   "cpu_time": 83.31903199999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.27589564101072,
+   "cpu_time": 79.809215,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.87752374500269,
+   "cpu_time": 78.90815299999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.67461168399313,
+   "cpu_time": 78.641075,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.12236108101206,
+   "cpu_time": 104.89074900000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.64996878197417,
+   "cpu_time": 115.633286,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 108.50156020902796,
+   "cpu_time": 108.47910999999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite2.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006615101010538638,
+   "cpu_time": 0.004997000000003027,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug303.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug303.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.011041401012334973,
+   "cpu_time": 0.007468000000017128,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__issue5947.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__issue5947.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.007606011000461876,
+   "cpu_time": 0.006070999999906235,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__use-name-in-same-command.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__use-name-in-same-command.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.007443376001901925,
+   "cpu_time": 0.005872000000067601,
+   "num_named_assertions": 24
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-int-real.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-int-real.smt2",
+   "division": "QF_UFLIRAFS",
+   "logic": "QF_UFLIRAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.0070522589958272874,
+   "cpu_time": 0.00544800000000123,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf_abc.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf_abc.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.007514983997680247,
+   "cpu_time": 0.005934000000024753,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3955-ee-double-notify.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3955-ee-double-notify.smt2",
+   "division": "QF_UFNRA",
+   "logic": "QF_UFNRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006813637039158493,
+   "cpu_time": 0.005153000000063912,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-4.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-4.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.005579732998739928,
+   "cpu_time": 0.004089999999905558,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__simple_cyclic2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__simple_cyclic2.smt2",
+   "division": "QF_UFIDL",
+   "logic": "QF_UFIDL",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 1.5250834340113215,
+   "cpu_time": 1.523147999999992,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress3__error0.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress3__error0.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 4.605419197003357,
+   "cpu_time": 4.600969999999961,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_twocond.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na6_nr3_twocond.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 13.881178629992064,
+   "cpu_time": 8.895726,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.10._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.10._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.26894181600073,
+   "cpu_time": 74.434697,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.02808716398431,
+   "cpu_time": 75.53869699999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.5._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.5._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.37637957499828,
+   "cpu_time": 81.28637300000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.2._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.59305464301724,
+   "cpu_time": 77.30228300000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.6._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.97515117499279,
+   "cpu_time": 79.40131500000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.1._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.00722021399997,
+   "cpu_time": 80.50910999999996,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.6._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.46065963094588,
+   "cpu_time": 110.916202,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_open_bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.13946618000045,
+   "cpu_time": 115.12599,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__ite_arith.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.005037882016040385,
+   "cpu_time": 0.0036490000001094813,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug576.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bug576.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005621422023978084,
+   "cpu_time": 0.0041999999998552084,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__ite.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.005029824038501829,
+   "cpu_time": 0.0036539999999831707,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__printer__issue9928.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__printer__issue9928.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.007428573968354613,
+   "cpu_time": 0.005284000000074229,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-nonint.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-poly-nonint.smt2",
+   "division": "QF_UFLIRAFS",
+   "logic": "QF_UFLIRAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.008508144994266331,
+   "cpu_time": 0.006381999999916843,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__issue2947.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__issue2947.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.008490248990710825,
+   "cpu_time": 0.00627400000007583,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3966-conf-coeff.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__issue3966-conf-coeff.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.019560265995096415,
+   "cpu_time": 0.017411999999922045,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-5.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-5.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.00744555500568822,
+   "cpu_time": 0.0053060000001323715,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_06_19.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_06_19.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 96.34124343597796,
+   "cpu_time": 96.33721400000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress4__xs-11-20-5-2-5-3.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress4__xs-11-20-5-2-5-3.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 5.227040041005239,
+   "cpu_time": 5.224757999999952,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 94.45964154601097,
+   "cpu_time": 58.628394,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.423085774004,
+   "cpu_time": 77.81162599999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.15476574399509,
+   "cpu_time": 79.27178,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.6._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.6._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.89550619403599,
+   "cpu_time": 77.274833,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.8._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.8._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.66185748402495,
+   "cpu_time": 75.88329900000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.30301518598571,
+   "cpu_time": 80.06721599999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": null,
+   "wall_time": 120.25455566297751,
+   "cpu_time": 101.66854100000012,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.00716958899284,
+   "cpu_time": 115.97436299999993,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.62381432997063,
+   "cpu_time": 115.61865699999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_full_bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.1777375349775,
+   "cpu_time": 115.17114400000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress1__arith__mult.02.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress1__arith__mult.02.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": null,
+   "reported_status": "sat",
+   "wall_time": 0.006086667999625206,
+   "cpu_time": 0.0042429999999740176,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__ackermann2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__ackermann2.smt2",
+   "division": "QF_UFBV",
+   "logic": "QF_UFBV",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.005378287984058261,
+   "cpu_time": 0.004015000000094915,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__issue4007-rint-uf.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__issue4007-rint-uf.smt2",
+   "division": "QF_UFNIRA",
+   "logic": "QF_UFNIRA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.005730261036660522,
+   "cpu_time": 0.004281999999989239,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-ex1.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-ex1.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.0071581180091015995,
+   "cpu_time": 0.005804999999895699,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__sets-testlemma.smt2",
+   "division": "QF_UFBVFS",
+   "logic": "QF_UFBVFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005207424983382225,
+   "cpu_time": 0.003890000000069449,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bug520.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bug520.smt2",
+   "division": "QF_UFBV",
+   "logic": "QF_UFBV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.011607466032728553,
+   "cpu_time": 0.010329999999953543,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare-across-phase.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare-across-phase.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0043450259836390615,
+   "cpu_time": 0.0029749999999921783,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz14418.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz14418.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.004429846012499183,
+   "cpu_time": 0.003073999999969601,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_10_09.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__hash_sat_10_09.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.34824711002875,
+   "cpu_time": 115.34142499999996,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s2._bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.45017113100039,
+   "cpu_time": 77.10142300000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.24490912194597,
+   "cpu_time": 79.77602299999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.5._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.5._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.30756853800267,
+   "cpu_time": 77.355774,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.7._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.7._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.68991249002283,
+   "cpu_time": 79.059517,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.9._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.9._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.64038298098603,
+   "cpu_time": 72.56370100000004,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.3._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.07699644099921,
+   "cpu_time": 80.86672599999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.7._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.75304607400903,
+   "cpu_time": 107.43148800000006,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.3707320879912,
+   "cpu_time": 115.35242299999993,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.8._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.21627352002542,
+   "cpu_time": 115.19235800000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_simple_bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_simple_bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.07151429803343,
+   "cpu_time": 115.06816300000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress2__arith__miplib-opt1217--27.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress2__arith__miplib-opt1217--27.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 1.1085504069924355,
+   "cpu_time": 1.107605000000035,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__bv2nat-ground-c.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__bv2nat-ground-c.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.004982839978765696,
+   "cpu_time": 0.0037449999998671046,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__cos-sig-value.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__cos-sig-value.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.003601867996621877,
+   "cpu_time": 0.002782000000024709,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-nth-uf.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-nth-uf.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.10674199200002477,
+   "cpu_time": 0.10577300000011292,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__simple-uf.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__simple-uf.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.0033387349685654044,
+   "cpu_time": 0.002599999999915781,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bug593.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bug593.smt2",
+   "division": "QF_UFBV",
+   "logic": "QF_UFBV",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.002921834005974233,
+   "cpu_time": 0.002223999999955595,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-compare.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0028372560045681894,
+   "cpu_time": 0.0021570000000110667,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz31811.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__fuzz31811.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.0028755509993061423,
+   "cpu_time": 0.00220400000000609,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.StandardPrettyPrint.319_no_forall.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.StandardPrettyPrint.319_no_forall.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 35.474345948023256,
+   "cpu_time": 35.47306400000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.75753513502423,
+   "cpu_time": 68.791,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.35985864396207,
+   "cpu_time": 78.93218900000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.6._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.6._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.23508720699465,
+   "cpu_time": 77.73246699999996,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.8._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.8._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.42906957195373,
+   "cpu_time": 81.60567200000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.99978985701455,
+   "cpu_time": 79.28062799999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.41106061998289,
+   "cpu_time": 79.279447,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.42479179502698,
+   "cpu_time": 102.08479599999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.73097623500507,
+   "cpu_time": 115.62590300000011,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.88566331099719,
+   "cpu_time": 115.87548699999991,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_split4_full_bit16_na13_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/VideoConf/videoconf_split4_full_bit16_na13_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.21032522595488,
+   "cpu_time": 115.205106,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress4__miplib-pp08a-3000.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress4__miplib-pp08a-3000.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 115.06412462802837,
+   "cpu_time": 115.0565489999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__issue3621.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__issue3621.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.0029933929909020662,
+   "cpu_time": 0.0022779999999329448,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__sin-sym.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__sin-sym.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.002146362967323512,
+   "cpu_time": 0.0016180000000076689,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-rewrites.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__seq-rewrites.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0021967439679428935,
+   "cpu_time": 0.0016000000000531145,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__strings__std2.6.1.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__strings__std2.6.1.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.04196944599971175,
+   "cpu_time": 0.026618999999982407,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bv__issue3776.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__bv__issue3776.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.0030908299959264696,
+   "cpu_time": 0.002310000000079526,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sign.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sign.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0022119740024209023,
+   "cpu_time": 0.0016630000000077416,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__sharingbug.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__sharingbug.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.0021935340482741594,
+   "cpu_time": 0.0017550000000028376,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.WhileStmt.447_no_forall.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__javafe.ast.WhileStmt.447_no_forall.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 6.192209590051789,
+   "cpu_time": 6.188691000000063,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s3._bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 116.19507963501383,
+   "cpu_time": 77.600008,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.5._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.5._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.34266042895615,
+   "cpu_time": 78.016806,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.7._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.7._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.10829736699816,
+   "cpu_time": 82.87471499999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.9._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.9._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.33006997796474,
+   "cpu_time": 72.18222799999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.72049418999813,
+   "cpu_time": 78.34631800000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 119.2472910140059,
+   "cpu_time": 84.032241,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.19770095299464,
+   "cpu_time": 107.17881,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.39712772198254,
+   "cpu_time": 115.38356599999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.9._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.3645392889739,
+   "cpu_time": 115.34324900000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__arith__ite-lift.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__arith__ite-lift.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.006198729039169848,
+   "cpu_time": 0.0043969999999262654,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__arith__exp-in-model.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__arith__exp-in-model.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.005827816028613597,
+   "cpu_time": 0.004044000000135384,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__issue5396.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bv__issue5396.smt2",
+   "division": "QF_UFBVLIA",
+   "logic": "QF_UFBVLIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.008744365011807531,
+   "cpu_time": 0.006962999999927888,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__tan-rewrite.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__nta__tan-rewrite.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.00570580898784101,
+   "cpu_time": 0.003956000000016502,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__update-eq.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__seq__update-eq.smt2",
+   "division": "QF_UFSLIA",
+   "logic": "QF_UFSLIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.005765667010564357,
+   "cpu_time": 0.004066000000079839,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__bool-pred-nested.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__bool-pred-nested.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006353442033287138,
+   "cpu_time": 0.004682999999999993,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__fmf__issue4068-si-qf.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__fmf__issue4068-si-qf.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006658387021161616,
+   "cpu_time": 0.004774999999881402,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sym2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__sin-sym2.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.005638273956719786,
+   "cpu_time": 0.004207999999948697,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sygus__proj-issue165.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sygus__proj-issue165.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.30935756501276046,
+   "cpu_time": 0.30757900000014615,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__nl__ufnia-factor-open-proof.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__nl__ufnia-factor-open-proof.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "unsat",
+   "reported_status": null,
+   "wall_time": 120.08770625398029,
+   "cpu_time": 120.07960099999991,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.51422795897815,
+   "cpu_time": 80.716183,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.6._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.6._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.4245855830377,
+   "cpu_time": 76.65053500000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.8._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.8._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.26258810801664,
+   "cpu_time": 76.48162199999996,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.1._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.1._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.43958530196687,
+   "cpu_time": 82.07603099999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.1._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.95257751800818,
+   "cpu_time": 76.73858100000007,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.4._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.38951922702836,
+   "cpu_time": 77.24586599999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.8._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.4236428719596,
+   "cpu_time": 105.66922900000009,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.26470583502669,
+   "cpu_time": 116.2486449999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit16_na13_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit16_na13_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.6011972760316,
+   "cpu_time": 115.58364300000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__bug187.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__bug187.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005328277009539306,
+   "cpu_time": 0.0031759999999394495,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__arrays__issue5836-2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__arrays__issue5836-2.smt2",
+   "division": "QF_UFNRA",
+   "logic": "QF_UFNRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006237640976905823,
+   "cpu_time": 0.004067999999961103,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__datatypes__issue1433.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__datatypes__issue1433.smt2",
+   "division": "QF_UFDTLIA",
+   "logic": "QF_UFDTLIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.005211554002016783,
+   "cpu_time": 0.003053000000022621,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__real-div-ufnra.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__nl__real-div-ufnra.smt2",
+   "division": "QF_UFNRA",
+   "logic": "QF_UFNRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.11761213396675885,
+   "cpu_time": 0.11532799999997678,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__card-2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__card-2.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.006751883018296212,
+   "cpu_time": 0.00537500000007185,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-and-neg.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-and-neg.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.004720769997220486,
+   "cpu_time": 0.003376000000002932,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__gensys_brn001.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__gensys_brn001.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.06048685603309423,
+   "cpu_time": 0.059006999999951404,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__tan-rewrite2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__tan-rewrite2.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.004795874003320932,
+   "cpu_time": 0.0032400000000052387,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sym__qf-function.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sym__qf-function.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005315729009453207,
+   "cpu_time": 0.004052000000115186,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__ooo.rf6.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__ooo.rf6.smt2",
+   "division": "QF_UFIDL",
+   "logic": "QF_UFIDL",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 1.4361924789845943,
+   "cpu_time": 1.4342769999999518,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/compose.s4._bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 119.27598815102829,
+   "cpu_time": 83.712169,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.7._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.7._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.28128823899897,
+   "cpu_time": 77.573877,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.9._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x8.9._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.15041099896189,
+   "cpu_time": 72.30156099999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.10._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.10._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.37889061699389,
+   "cpu_time": 78.24429100000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.36015084094834,
+   "cpu_time": 79.72773799999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.9928960929974,
+   "cpu_time": 76.89562699999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.805033962999,
+   "cpu_time": 104.23449599999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.4._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.59060186805436,
+   "cpu_time": 115.549801,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.24643138900865,
+   "cpu_time": 115.24238500000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__bug339.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__bug339.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.005659066024236381,
+   "cpu_time": 0.003306999999949767,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__aufbv__issue3737.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__aufbv__issue3737.smt2",
+   "division": "QF_UFBV",
+   "logic": "QF_UFBV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.011300587968435138,
+   "cpu_time": 0.0033060000000659784,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-simple.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-simple.smt2",
+   "division": "QF_UFC",
+   "logic": "QF_UFC",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0034818699932657182,
+   "cpu_time": 0.0023239999999304928,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parallel-let.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parallel-let.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.0051566920010373,
+   "cpu_time": 0.004011999999988802,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__card.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__card.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.009226171998307109,
+   "cpu_time": 0.007870000000139044,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff-base.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff-base.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.005643772950861603,
+   "cpu_time": 0.004191999999989093,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__issue3970-nl-ext-purify.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__issue3970-nl-ext-purify.smt2",
+   "division": "QF_UFNRA",
+   "logic": "QF_UFNRA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.0050113690085709095,
+   "cpu_time": 0.003729999999904976,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__proof00.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__proof00.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.007092480955179781,
+   "cpu_time": 0.005798000000027059,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sym__sb-wrong.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sym__sb-wrong.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.0057472019689157605,
+   "cpu_time": 0.0044769999999516585,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__ooo.tag10.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__ooo.tag10.smt2",
+   "division": "QF_UFIDL",
+   "logic": "QF_UFIDL",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 22.586601300979964,
+   "cpu_time": 22.584464000000025,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/simple_bit8_na1_nr1_twocond.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/Composition/simple_bit8_na1_nr1_twocond.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.033539266034495085,
+   "cpu_time": 0.017491,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.8._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.8._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.2798338800203,
+   "cpu_time": 81.182921,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.1._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.1._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.29896178899799,
+   "cpu_time": 80.25281799999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.2._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.2._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.45239132200368,
+   "cpu_time": 78.36882800000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.96307204198092,
+   "cpu_time": 81.60248900000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 119.61935294402065,
+   "cpu_time": 83.73121399999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.45761671301443,
+   "cpu_time": 80.17519199999998,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit16_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit16_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.21632064098958,
+   "cpu_time": 107.79929700000008,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.35541599104181,
+   "cpu_time": 115.31600199999991,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.01.smtv1.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.01.smtv1.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": null,
+   "reported_status": "sat",
+   "wall_time": 0.028332667017821223,
+   "cpu_time": 0.00620600000002014,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bt-test-00.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bt-test-00.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.0369607710163109,
+   "cpu_time": 0.007372000000032131,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-unsat-pent.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__fc-unsat-pent.smt2",
+   "division": "QF_UFC",
+   "logic": "QF_UFC",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.010804515972267836,
+   "cpu_time": 0.006695000000036089,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__as.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__as.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.010178390017244965,
+   "cpu_time": 0.007546999999931359,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__comp-qf-error.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__comp-qf-error.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.0083903560298495,
+   "cpu_time": 0.006034999999997126,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-iff.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.031161930004600435,
+   "cpu_time": 0.006681999999955224,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__div-mod-partial.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__div-mod-partial.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 8.73722742497921,
+   "cpu_time": 8.646025000000122,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__proofs__macro-res-exp-crowding-lit-inside-unit.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 1.625157953996677,
+   "cpu_time": 1.6228099999999586,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__FIREFLY_luke_1b_e2_3049_e7_1173.ec.minimized.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__FIREFLY_luke_1b_e2_3049_e7_1173.ec.minimized.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.3326230919919908,
+   "cpu_time": 0.3300739999999678,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__simplify.javafe.ast.ArrayInit.35_without_quantification2.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 60.71874080400448,
+   "cpu_time": 60.71175100000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na1_nr1_twocond.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/MobileDevice/mobiledevice_bit8_na1_nr1_twocond.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 2.7727698339731432,
+   "cpu_time": 1.9702469999999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.9._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string1x16.9._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.31783976999577,
+   "cpu_time": 82.46464,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.10._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x16.10._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 116.09955380100291,
+   "cpu_time": 77.99774300000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.3._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string2x8.3._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 115.60853099799715,
+   "cpu_time": 72.42157399999999,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.10._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.86636758199893,
+   "cpu_time": 76.52344500000001,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.5._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 118.4663111169939,
+   "cpu_time": 83.40403099999997,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit8_na6_nr4_pairedtwobranch.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x16.9._bit8_na6_nr4_pairedtwobranch.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 117.27717928704806,
+   "cpu_time": 80.420952,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit8_na6_nr3_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/StringMatching/string4x8.5._bit8_na6_nr3_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.98084115900565,
+   "cpu_time": 107.87318800000003,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_split4_bit8_na6_nr4_paired.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_BV/20221214-p4dfa-XiaoqiChen/TCP/tcp_full_split4_bit8_na6_nr4_paired.smt2",
+   "division": "QF_BV",
+   "logic": "QF_BV",
+   "expected_status": null,
+   "reported_status": "unknown",
+   "wall_time": 115.53580962395063,
+   "cpu_time": 115.51939900000002,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.03.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_LRA/cvc5-regress-clean/cli__regress0__expect__scrub.03.smt2",
+   "division": "QF_LRA",
+   "logic": "QF_LRA",
+   "expected_status": null,
+   "reported_status": "sat",
+   "wall_time": 0.00857673300197348,
+   "cpu_time": 0.006042999999976928,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bt-test-01.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__bt-test-01.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.03014653001446277,
+   "cpu_time": 0.006624999999985448,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__issue4872-qf_ufc.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__fmf__issue4872-qf_ufc.smt2",
+   "division": "QF_UFC",
+   "logic": "QF_UFC",
+   "expected_status": "sat",
+   "reported_status": "unknown",
+   "wall_time": 0.009116613015066832,
+   "cpu_time": 0.006272999999964668,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__named-attr.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__parser__named-attr.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.02921593002974987,
+   "cpu_time": 0.00739099999998416,
+   "num_named_assertions": 2
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__error1.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__sets__error1.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "sat",
+   "reported_status": "sat",
+   "wall_time": 0.009293521987274289,
+   "cpu_time": 0.0064810000001216395,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-ite.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress0__uf__cnf-ite.smt2",
+   "division": "QF_UF",
+   "logic": "QF_UF",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 0.012074352998752147,
+   "cpu_time": 0.006887000000006083,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__exp_monotone.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__nl__exp_monotone.smt2",
+   "division": "QF_UFNRAT",
+   "logic": "QF_UFNRAT",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 0.008452954003587365,
+   "cpu_time": 0.005956999999966683,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-3.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__sets__card-3.smt2",
+   "division": "QF_UFLIAFS",
+   "logic": "QF_UFLIAFS",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 108.92505907895975,
+   "cpu_time": 108.89728699999989,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__microwave21.ec.minimized.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress1__uflia__microwave21.ec.minimized.smt2",
+   "division": "QF_UFNIA",
+   "logic": "QF_UFNIA",
+   "expected_status": "unsat",
+   "reported_status": "unknown",
+   "wall_time": 115.22518388798926,
+   "cpu_time": 115.21891000000005,
+   "num_named_assertions": 0
+  }
+ },
+ "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__uflia-error0.smt2": {
+  "axeyum": {
+   "solver": "axeyum",
+   "benchmark": "/nas3/data/axeyum/corpus/public/non-incremental/QF_UF/cvc5-regress-clean/cli__regress2__uflia-error0.smt2",
+   "division": "QF_UFLIA",
+   "logic": "QF_UFLIA",
+   "expected_status": "unsat",
+   "reported_status": "unsat",
+   "wall_time": 2.5227026820066385,
+   "cpu_time": 2.521315999999956,
+   "num_named_assertions": 0
+  }
+ }
+}

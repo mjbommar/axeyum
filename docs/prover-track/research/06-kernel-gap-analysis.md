@@ -9,10 +9,14 @@ pattern (deferred-by-*permission* rather than deferred-by-*rejection*).
 
 Every claim below is `file:line` against the code, not the doc comments.
 
-> **Doc-comment health warning.** `src/lib.rs:6-7` still says "WHNF reduction,
-> definitional equality, and type checking are the **next** slice and are
-> intentionally absent here." This is false: `src/tc.rs` implements all three.
-> Treat module docs in this crate as lagging indicators; the code is the truth.
+> **2026-07-21 refresh.** The stale `src/lib.rs` scope comment identified by the
+> original audit is corrected, and row #14's initial import path has landed.
+> TL2.2-TL2.4 have since added first-class structural `Proj` representation,
+> checked dependent inference, constructor reduction, and validated importer
+> translation; statements below that projection is wholly unrepresentable
+> describe the audit point. Structure eta remains open. §3 records
+> the exact import boundary and links the superseding interoperability
+> measurements.
 
 ---
 
@@ -160,7 +164,7 @@ accepts something it cannot justify; the P0 pattern).
 | 11 | **Ill-shaped recursive self-ref** | `RecursiveInductiveNotSupported` (`tc.rs:162`, raised `inductive.rs:522`) | parametric/indexed self-refs | — | — | Yes | **REJECTION** |
 | 12 | **Positivity checker** | *not needed for admitted fragment* (`inductive.rs:26-28`) | Prerequisite for #5-#8 | **M** | ~300-500 | **Yes — critical** | **REJECTION (vacuous today)** |
 | 13 | **Prelude axioms undischarged** | *none — asserted* (`arith_prelude.rs`, `int_prelude.rs`) | — | **XL** | ~2000+ | **Yes** | **⚠ PERMISSION — see §2.2** |
-| 14 | **Export-format (`.olean`/`lean4export`) reader** | *none exists* | Ingesting real Lean/mathlib | **L** | ~600-900 | No (kernel re-checks) | **REJECTION (by absence)** |
+| 14 | **Broad export-format admission** | initial fail-closed `lean4export` 3.1 reader admits two exact fixture profiles | Ingesting dependency-closed `Init`/`Std`/mathlib | **L, WIP** | reader landed; kernel breadth open | No (kernel re-checks) | **REJECTION with typed declines** |
 
 > **Sizing caveat — read §2.3 before costing this table.** Checked against the
 > Lean 4 kernel, rows **#7 (nested)** and **#9 (well-founded)** are *elaborator*
@@ -278,7 +282,7 @@ which changes what "implementing" them means for us.
 | 9 | Well-founded recursion | **Elaborator-level.** `WellFounded.fix` + `WF.fix_eq`; the kernel only ever sees the resulting term. The kernel's real obligation is reducing `Acc.rec` — an inductive with a **reflexive** field. | **Re-sizes #9 as kernel work — to zero, but re-points it**: what we actually need is #6, since `Acc` is reflexive. `Acc.rec` is the hidden dependency behind every well-founded definition in a real export. |
 | 10 | Structure eta | `isDefEqEtaStruct` in `type_checker.cpp`: if one side is a constructor application of a single-constructor non-recursive structure and the other is not, expand the other via projections and retry. | Confirms **M**, strictly behind #1 as stated. |
 | 12 | Positivity | `inductive.cpp` checks `I` occurs **strictly positively** in every constructor argument — a real check, run at admission, on which #5–#8 all depend. | Confirms **M** and confirms the hazard: in Lean this check is *load-bearing from day one*. In ours it is vacuous only because the admitted fragment is so narrow. |
-| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | Confirms **L** and confirms the goal: nanoda — already our porting reference — has a reader we can mirror. This is the intended integration point, not an exotic ask. |
+| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | The reader now admits flat, direct-recursive, and exact projection fixtures independently; Nat literal and quotient records retain typed declines. Broad dependency-closed admission remains the L-sized target. |
 
 **Three corrections to §2.1 fall out of this comparison**, all in the same
 direction — we have over-sized the inductive work by mis-attributing
@@ -301,16 +305,27 @@ elaborator features to the kernel:
 
 ## 3. The export-format reader and the real-Lean cross-check
 
-**There is no export-format reader.** No `.olean`, `lean4export`, or
-`Environment.export` ingest path exists (row #14). The kernel is
-*construction-only*: terms are built through Rust builder APIs. The traffic
-flows the other way — `lean_pp.rs` (1598 lines) **renders** kernel terms *out*
-as Lean source.
+**2026-07-21 update:** there is now a separate, fail-closed
+`axeyum-lean-import` reader for pinned `lean4export` 3.1 NDJSON. It keeps JSON
+and malformed-input handling outside the zero-dependency kernel, then admits
+supported records only through `Kernel::add_declaration` and
+`Kernel::add_inductive`. The exact flat fixture becomes eight checked
+declarations; direct-recursive `MiniNat`/`MiniList` becomes 11 with zero axioms.
+Projection, literal, quotient, and harder-inductive constructs remain explicit
+declines. Direct `.olean` parsing remains absent by design.
+
+The [interoperability roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md),
+[Rust import result](../../plan/lean4export-rust-import-prototype-2026-07-21.md),
+and [official blocker census](../../plan/lean4export-official-blocker-census-2026-07-21.md)
+supersede the original construction-only status. The architectural conclusion
+survives: the interchange is the intended third-party seam, and parsing alone
+never grants theorem credit.
 
 ### Does the cross-check actually run, or skip-and-pass?
 
-**It runs in CI, genuinely.** This is the rare case where the gate is real, and
-the code is careful about exactly the failure mode worth worrying about:
+**Correction after executing the solver-proof gate (2026-07-21):** the
+standalone inductive test was fail-closed, but the CI job did not reach it and
+the 71-family solver harness could still skip. The repaired state is:
 
 - The test `restricted_prop_recursor_checks_in_real_lean`
   (`tests/real_lean_inductive_crosscheck.rs:83-126`) locates Lean via
@@ -318,13 +333,18 @@ the code is careful about exactly the failure mode worth worrying about:
 - On a missing binary it **does** early-return (`:92-100`) — *but* guarded by
   `assert_ne!(env::var("AXEYUM_REQUIRE_LEAN"), Ok("1"))` (`:93-97`). So a skip
   is a **hard failure** when the flag is set.
-- CI sets `AXEYUM_REQUIRE_LEAN: 1` (`.github/workflows/ci.yml:136`), installs
-  the pinned toolchain via `leanprover/lean-action@v1` (`ci.yml:143`), asserts
-  `lean --version` (`ci.yml:151`), and runs the test (`ci.yml:152`).
+- CI sets `AXEYUM_REQUIRE_LEAN: 1`, installs checksum-pinned elan without
+  requiring a Lake manifest, asserts `lean --version`, and runs the test.
+- The solver harness now independently rejects a missing Lean binary or any
+  incomplete required sweep and emits an exact checked-family attestation.
+- A bounded local official-Lean run initially accepted 67/71 representative
+  modules and exposed four export failures; after preserving the required
+  Bool/BV iota rules and one measured elaborator-depth bound, the same cell
+  accepts 71/71 with zero skips or failures. Remote CI acceptance remains open.
 
-So: **skipping locally, mandatory in CI, and the skip path is itself asserted
-against.** A missing-Lean CI runner fails loudly rather than passing silently.
-That is the correct construction and it should be the template for future gates.
+So: **skipping remains optional locally, while required runs now fail closed.**
+The complete diagnosis, negative control, and non-claims are in the
+[official-Lean gate audit](../../plan/official-lean-ci-gate-audit-2026-07-21.md).
 
 **What it actually checks** (`:27-81`): it builds `Two : Prop | a | b` — the
 exact P0 shape — through `add_inductive`, confirms Axeyum's restricted `Two.rec`
@@ -406,10 +426,15 @@ Prop-1-ctor subsingleton), which is exactly the boundary the P0 crossed.
 **Differential testing against real Lean: exactly one test** (§3), covering one
 family shape (nullary-ctor `Prop` enum). That is a keyhole, not a corpus.
 
-### Untested classes
+### Untested classes at the audit point
 
-- **No fuzzing / property testing of any kind** in this crate — no differential
-  term generator, no random well-typed-term round-trip.
+- **At the audit point there was no fuzzing/property testing of any kind** in
+  this crate — no differential term generator and no random well-typed-term
+  round-trip. **Correction, 2026-07-21:** T6.0.3 now supplies a deterministic
+  768-case generated seed over the four representable seams, with exact corner
+  coverage, repeated summaries, and rejected `False` admission in every case.
+  It is not an official-Lean differential term generator; projection/eta and
+  quotient seams remain open under TL2.15.
 - **No differential coverage** of: `def_eq` (eta × proof-irrelevance ×
   lazy-delta interaction), universe `leq` (ported but only nanoda's tests),
   parametric/indexed recursor generation vs Lean's, ι-reduction vs Lean's.
@@ -424,7 +449,8 @@ family shape (nullary-ctor `Prop` enum). That is a keyhole, not a corpus.
   land, that incidental rejection disappears and positivity (row #12) becomes
   load-bearing overnight.** This is the single highest-risk sequencing hazard in
   P6.0 after Finding B.
-- **The 64 arith/int prelude axioms are untested as to truth** (Finding A). The
+- **The 64 arithmetic/integer prelude axioms are untested as to truth**, as is
+  the string prelude's opaque `append` assumption (Finding A). The
   prelude tests (`arith_prelude_tests.rs`, 9; `int_prelude_tests.rs`, 7) build
   refutation proof *terms* on the axioms and `infer`-check them
   (`arith_prelude.rs:12-14`) — this validates the *reconstruction*, and assumes
@@ -545,11 +571,13 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
    kernel and `False`. **This is the highest-risk item in P6.0** and must be
    accompanied by a negative-test corpus (`Bad : Type | mk : (Bad → Bad) → Bad`
    and friends) that fails loudly. **M, ~300-500 LoC.**
-3. **`Proj` in `ExprNode` + structure eta** (gaps #1 + #10). Not representable
-   today; touches the term language, so every traversal, `instantiate`,
-   `abstract`, `whnf`, `infer`, and `def_eq` site changes. **Land it early** —
-   it is the most invasive change remaining and gets harder with every slice
-   built on the current nine-variant enum. **L, ~800-1300 LoC.**
+3. **`Proj` inference/reduction + structure eta** (gaps #1 + #10).
+   **TL2.2-TL2.5 update:** the first-class node, every structural traversal,
+   checked structure metadata, dependent field-type inference, constructor
+   reduction, exact official-root import/computation, and separately tested
+   structure eta now exist. **L, ~800-1300 LoC was the original complete-slice
+   estimate; the direct slice is now closed, while generated TL2.15 seam fuzz
+   remains.**
 4. **A performance baseline** (§6). The kernel would sit in the goal layer's
    inner loop and `bv_decide`'s bottleneck is precisely kernel reduction speed.
    Building a goal layer on an un-benchmarked kernel means discovering it is too
@@ -558,10 +586,11 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
 
 **Soundness obligations (the goal layer's results are only as good as these):**
 
-5. **Discharge the 64 arith/int prelude axioms against mathlib** (Finding A).
-   Until then, every LRA/LIA reconstruction rests on 64 unproven assertions
-   that no gate checks and that the real-Lean cross-check *structurally cannot*
-   catch (§3). This is the largest unguarded soundness surface in the crate.
+5. **Classify and discharge the 65 ledgered prelude assumptions** (Finding A).
+   Until then, every LRA/LIA reconstruction rests on 64 unproven arithmetic/
+   integer assertions, while string reconstruction rests on one opaque `append`
+   assumption. No official-Lean cross-check can establish those premises (§3).
+   This is the largest unguarded soundness surface in the crate.
    **XL as stated, but the first 80% is mechanical**: emit each axiom type as a
    mathlib obligation and discharge in CI.
 6. **A machine-checked axiom inventory.** Assert that each prelude declares
@@ -597,7 +626,7 @@ every gap except the prelude axioms (Finding A) and latent bignum truncation
 (Finding B) is deferred by rejection, with a rollback-clean admission gate and
 a negative test per boundary. **No second instance of the P0 permission pattern
 exists in the kernel rules.** The exposure has moved out of the kernel and into
-(a) the 64 unproven arithmetic axioms the reconstruction layer trusts, and
+(a) the 65 unproven prelude assumptions the reconstruction layer trusts, and
 (b) the sequencing hazards — bignum-after-`Lit`, and positivity-after-recursive
 inductives — either of which would let a P0-shaped defect back in by omission
 rather than by commission.
@@ -609,7 +638,7 @@ rather than by commission.
 Three corrections/extensions to the above, each checked by running code rather
 than reading it.
 
-### The axiom count is exactly 64, not "~74"
+### Historical helper-call census: 64, superseded by runtime population 65
 
 By census of `declare_axiom(` call sites:
 
@@ -623,7 +652,15 @@ By census of `declare_axiom(` call sites:
 
 The "~74" that circulated through the design docs was an estimate presented as a
 count — the same unsourced-number sin this track flagged twice and then committed
-a third time. Use **64**, or count again.
+a third time. This table correctly counts helper calls but incorrectly treats
+them as the complete runtime population.
+
+**Correction (runtime environment inventory, 2026-07-21):** constructing each
+prelude in an independent kernel yields **65** admitted assumptions: real 30,
+integer 34, and string 1. `axeyum.string.append` bypasses `declare_axiom(...)`
+and is inserted directly as `Declaration::Axiom`, so the helper-call census
+missed it. The [machine-checked ledger](../../plan/generated/lean-axiom-ledger.md)
+binds all 65 names to canonical type digests and supersedes this call-site count.
 
 ### The ℝ and ℤ preludes cannot coexist in one `Kernel` — and it panics
 

@@ -383,6 +383,7 @@ impl Kernel {
             uparams,
             ty,
             ctor_names,
+            ..
         }) = self.environment().get(ind).cloned()
         else {
             return None;
@@ -624,6 +625,10 @@ impl Kernel {
             }
             match self.expr_node(e) {
                 ExprNode::Const(n, _) => out.push(*n),
+                ExprNode::Proj(type_name, _, structure) => {
+                    out.push(*type_name);
+                    stack.push(*structure);
+                }
                 ExprNode::App(f, a) => {
                     stack.push(*f);
                     stack.push(*a);
@@ -738,6 +743,7 @@ impl Kernel {
 
     fn expr_children(&self, id: ExprId) -> Vec<ExprId> {
         match self.expr_node(id) {
+            ExprNode::Proj(_, _, structure) => vec![*structure],
             ExprNode::App(function, argument) => vec![*function, *argument],
             ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
                 vec![*ty, *body]
@@ -818,6 +824,7 @@ impl Kernel {
                     && matches!(
                         self.expr_node(expression),
                         ExprNode::App(_, _)
+                            | ExprNode::Proj(..)
                             | ExprNode::Lam(..)
                             | ExprNode::Pi(..)
                             | ExprNode::Let(..)
@@ -849,7 +856,11 @@ impl Kernel {
                 && !self.has_fvars(expression)
                 && matches!(
                     self.expr_node(expression),
-                    ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..)
+                    ExprNode::App(_, _)
+                        | ExprNode::Proj(..)
+                        | ExprNode::Lam(..)
+                        | ExprNode::Pi(..)
+                        | ExprNode::Let(..)
                 );
             if selected.contains(&expression) || (shareable && size >= COMPACT_CHUNK_TREE_NODES) {
                 selected.insert(expression);
@@ -970,6 +981,7 @@ impl Kernel {
             | ExprNode::FVar(_)
             | ExprNode::Const(_, _)
             | ExprNode::Sort(_)
+            | ExprNode::Proj(..)
             | ExprNode::Lit(_) => {
                 self.write_expr_with_shares(
                     out,
@@ -991,6 +1003,32 @@ impl Kernel {
                     expand_root,
                 );
                 let _ = out.write_char(')');
+            }
+        }
+    }
+
+    fn write_projection_with_shares<O: LeanModuleOutput>(
+        &self,
+        out: &mut O,
+        structure: ExprId,
+        field_index: u32,
+        binders: &mut Vec<String>,
+        at_consts: &BTreeSet<NameId>,
+        share_state: (&BTreeMap<ExprId, String>, Option<ExprId>),
+    ) {
+        let (shares, expand_root) = share_state;
+        let _ = out.write_char('(');
+        self.write_expr_with_shares(out, structure, binders, at_consts, shares, expand_root);
+        let _ = write!(out, ").{}", u64::from(field_index) + 1);
+    }
+
+    fn write_literal<O: LeanModuleOutput>(out: &mut O, literal: &Lit) {
+        match literal {
+            Lit::Nat(value) => {
+                let _ = write!(out, "{value}");
+            }
+            Lit::Str(value) => {
+                let _ = write!(out, "{value:?}");
             }
         }
     }
@@ -1039,6 +1077,16 @@ impl Kernel {
                         .collect::<Vec<_>>();
                     let _ = write!(out, ".{{{}}}", levels.join(", "));
                 }
+            }
+            ExprNode::Proj(_, field_index, structure) => {
+                self.write_projection_with_shares(
+                    out,
+                    *structure,
+                    *field_index,
+                    binders,
+                    at_consts,
+                    (shares, expand_root),
+                );
             }
             ExprNode::App(function, argument) => {
                 self.write_expr_with_shares_atom(
@@ -1089,12 +1137,7 @@ impl Kernel {
                 self.write_expr_with_shares(out, *body, binders, at_consts, shares, expand_root);
                 binders.pop();
             }
-            ExprNode::Lit(Lit::Nat(value)) => {
-                let _ = write!(out, "{value}");
-            }
-            ExprNode::Lit(Lit::Str(value)) => {
-                let _ = write!(out, "{value:?}");
-            }
+            ExprNode::Lit(literal) => Self::write_literal(out, literal),
         }
     }
 
@@ -1111,6 +1154,7 @@ impl Kernel {
             | ExprNode::FVar(_)
             | ExprNode::Const(_, _)
             | ExprNode::Sort(_)
+            | ExprNode::Proj(..)
             | ExprNode::Lit(_) => self.render_expr(id, binders, at_consts),
             ExprNode::App(_, _) | ExprNode::Lam(..) | ExprNode::Pi(..) | ExprNode::Let(..) => {
                 format!("({})", self.render_expr(id, binders, at_consts))
@@ -1147,6 +1191,10 @@ impl Kernel {
                     let ls: Vec<String> = levels.iter().map(|l| self.render_level(*l)).collect();
                     format!("{n}.{{{}}}", ls.join(", "))
                 }
+            }
+            ExprNode::Proj(_, field_index, structure) => {
+                let structure = self.render_expr(*structure, binders, at_consts);
+                format!("({structure}).{}", u64::from(*field_index) + 1)
             }
             ExprNode::App(f, a) => {
                 let fs = self.render_expr_atom(*f, binders, at_consts);
@@ -1202,6 +1250,39 @@ mod tests {
         let body = k.bvar(0);
         let lam = k.lam(p, prop, body, crate::BinderInfo::Default);
         assert_eq!(k.render_lean(lam), "fun (p : Prop) => p");
+    }
+
+    /// Core projections use Lean's 1-based field-index surface syntax while
+    /// retaining the 0-based index in the interned node. Both the ordinary and
+    /// streaming renderers must make the same conversion, and dependency/DAG
+    /// traversal must retain the structure type and structure-valued child.
+    #[test]
+    fn renders_and_traverses_projection() {
+        let mut k = Kernel::new();
+        let anon = k.anon();
+        let pair = k.name_str(anon, "Pair");
+        let self_name = k.name_str(anon, "self");
+        let prop = k.sort_zero();
+        let self_value = k.bvar(0);
+        let second = k.proj(pair, 1, self_value);
+        let projection = k.lam(self_name, prop, second, crate::BinderInfo::Default);
+
+        assert_eq!(k.render_lean(projection), "fun (self : Prop) => (self).2");
+        let mut streamed = String::new();
+        k.write_lean_without_shares(
+            &mut streamed,
+            projection,
+            &std::collections::BTreeSet::new(),
+        );
+        assert_eq!(streamed, "fun (self : Prop) => (self).2");
+
+        let source_name = k.name_str(anon, "source");
+        let source = k.const_(source_name, vec![]);
+        let root = k.proj(pair, 0, source);
+        let mut dependencies = Vec::new();
+        k.collect_const_deps(root, &mut dependencies);
+        assert_eq!(dependencies, [pair, source_name]);
+        assert_eq!(k.expr_postorder(&[root]), [source, root]);
     }
 
     /// A `Pi` (dependent arrow) and a nested application render with the binder name
@@ -1509,7 +1590,7 @@ mod tests {
         let prop = k.sort_zero();
         let mut closed = prop;
         for value in 0..600_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             closed = k.app(closed, argument);
         }
         let body = k.app(closed, closed);
@@ -1534,7 +1615,7 @@ mod tests {
         // serializer pass and must preserve every repeated closed DAG node
         // regardless of the source proof's size.
         for value in 0..16_500_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             chain = k.app(chain, argument);
         }
         let root = k.app(chain, chain);
@@ -1579,7 +1660,7 @@ mod tests {
         let mut k = Kernel::new();
         let mut chain = k.sort_zero();
         for value in 0..20_000_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             chain = k.app(chain, argument);
         }
 

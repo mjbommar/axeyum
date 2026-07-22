@@ -3,11 +3,12 @@
 **Axeyum answers hard questions about logic, math, and programs — and *proves*
 its answers instead of asking you to trust them.**
 
-Give it a claim ("this bit-vector formula can never be satisfied", "this Rust
-function can't panic", "the derivative of x² + c is 2x") and Axeyum decides it.
-When the answer is *yes*/*no*, it hands back a small, independently re-checkable
-certificate — a model you can evaluate yourself, or a proof a tiny checker (or a
-Lean-grade kernel) can verify without trusting the search that found it.
+Give it a supported claim ("this bit-vector formula can never be satisfied",
+"this Rust function can't panic", "the derivative of x² + c is 2x") and Axeyum
+tries to decide it. A definitive result is replayed or certified according to
+the route; unsupported, incomplete, or resource-bounded cases remain an explicit
+`unknown`. The exact current coverage is summarized in
+[Project State](docs/PROJECT-STATE.md).
 
 It's written entirely in Rust, has **no C or C++ in the default build**, and
 **runs in the browser via WebAssembly** — no server, no install, same trust
@@ -23,7 +24,7 @@ If you already use these, here's where Axeyum fits:
 
 | If you reach for… | …Axeyum is | What's different |
 |---|---|---|
-| **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | every `unsat` carries a machine-checkable proof, not just a verdict |
+| **Z3 / cvc5** (SMT solvers) | a pure-Rust SMT solver | supported certified routes return independently checkable evidence; uncovered routes remain explicit in the proof ledger |
 | **Lean / Coq** (proof assistants) | a certificate-first prover with an in-tree Lean-style kernel | fast automated search *emits* proofs a small kernel checks — the search never enters the trusted base |
 | **Mathematica / SymPy** (computer algebra) | a **proof-carrying CAS** | differentiate / factor / integrate / solve return results *certified* by lowering to the decidable core — out of fragment it declines, never guesses wrong |
 | **a textbook + a lab** | a built-in library of tutorials, rules, axioms, and worked theorems | the same artifacts that *teach* a concept also *test* an Axeyum theory (double-duty) |
@@ -33,23 +34,17 @@ WASM-clean build.
 
 ## Honest status
 
-Axeyum today is a **broad, evidence-backed foundation** — decidable theories and
-arithmetic, end to end, with checkable evidence, plus a working proof-carrying
-CAS and consumer-facing verifiers. It is **not yet**:
+Axeyum today is a **broad, evidence-backed research implementation**, not merely
+a design. It is competitive on selected measured solver fragments and has a
+substantial Lean-checkable proof lane. It is not a drop-in Z3 replacement, a
+conformant interactive SMT-LIB 2.7 implementation, or a replacement for the Lean
+system.
 
-- a **performance-parity** replacement for Z3/cvc5 (the pure-Rust path *decides* a
-  real slice of public QF_BV; head-to-head speed on real corpora is the open gate);
-- **full SMT-LIB breadth** (unbounded strings and quantified arithmetic are partial);
-- **Lean parity** (bit-vector-reducible `unsat` carries DRAT/Farkas certificates
-  today; exporting those as Lean-checkable proof *terms* is a built-but-incomplete
-  ladder — the in-tree kernel currently has the term language and de Bruijn
-  machinery, with reduction/def-eq/type-checking as the next slices).
-
-The followable roadmap from here to Z3 + Lean parity is [PLAN.md](PLAN.md); the
-live tracker is [STATUS.md](STATUS.md). 300+ decision records (ADRs) capture the
-design. The authoritative, golden-tested inventory (capability × assurance ×
-evidence) is the
-[capability matrix](docs/research/08-planning/capability-matrix.md).
+The current measured denominators, important negative results, and precise
+meaning of "parity" are in **[Project State](docs/PROJECT-STATE.md)**. The
+authoritative capability × assurance × evidence inventory is the
+[capability matrix](docs/research/08-planning/capability-matrix.md); [PLAN.md](PLAN.md)
+and [STATUS.md](STATUS.md) are the detailed engineering map and battle log.
 
 ---
 
@@ -96,13 +91,19 @@ carry a **machine-checkable proof** a Lean-grade kernel would accept:
 - `QF_LRA` `unsat` → a **Farkas** refutation (exact-rational, self-verifying).
 - **k-induction** safety proofs emit a DRAT certificate for *each* obligation.
 
-The endgame is Lean parity: `axeyum-lean-kernel` is an in-tree Rust
-reimplementation of the Lean 4 kernel (lifetime-free interned `Name`/`Level`/
-`Expr` + de Bruijn ops today; WHNF, definitional equality, and type checking are
-the next slices), and the **prover track** (designed; ADR-0167) extends
-certificate-first reasoning from *formulas* to *goals* — a tactic is an untrusted
-procedure that emits a certificate a small checker turns into a kernel-checked
-term. The tactic never enters the trusted base.
+`axeyum-lean-kernel` is an in-tree Rust implementation of a useful Lean core:
+lifetime-free interned terms and universes, WHNF, definitional equality, type
+checking, proof irrelevance, inductives, recursors, and iota reduction. Supported
+solver proofs already reconstruct to kernel-checked terms and self-contained
+Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
+admits exact flat and direct-recursive official fixtures; a four-root census
+makes projection the measured next kernel blocker. It is not a complete Lean
+kernel or ecosystem: projections, quotients, literal/bignum handling,
+recursive-indexed/mutual breadth, dependency-closed `Init`/`Std`/mathlib imports,
+and a fail-closed tactic bridge remain open. See
+[Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
+[Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md).
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
@@ -240,6 +241,7 @@ by use (each is accepted in an ADR).
 |---|---|
 | [`axeyum-cas`](crates/axeyum-cas) | Proof-carrying computer algebra (differentiate/factor/integrate/solve/linear algebra/number theory), certified by lowering to the decidable core. |
 | [`axeyum-lean-kernel`](crates/axeyum-lean-kernel) | In-tree Rust Lean kernel — interned `Name`/`Level`/`Expr` + de Bruijn machinery (the proof-export target). |
+| [`axeyum-lean-import`](crates/axeyum-lean-import) | Fail-closed official `lean4export` 3.1 reader; supported declarations enter only through the independent kernel's checked gates. |
 | [`axeyum-property`](crates/axeyum-property) (+ [`-macros`](crates/axeyum-property-macros)) | Typed prove-or-counterexample SDK over Axeyum evidence and model replay. |
 | [`axeyum-verify`](crates/axeyum-verify) (+ [`-macros`](crates/axeyum-verify-macros)) | `#[axeyum::verify]` bounded Rust verifier — panics/overflow/`unwrap`/assertions → failing test or certificate. |
 | [`axeyum-evm`](crates/axeyum-evm) | EVM bytecode symbolic bug-hunter with replayable calldata witnesses and no-bug certificates. |
@@ -255,8 +257,9 @@ by use (each is accepted in an ADR).
 
 ## Start here
 
-- [PLAN.md](PLAN.md) / [STATUS.md](STATUS.md) — master plan + live tracker; the
-  single entry point for resuming work.
+- [Project State](docs/PROJECT-STATE.md) — what is built, what has actually been
+  measured, what remains partial, and what "Z3/Lean parity" does and does not
+  mean.
 - [How Axeyum solves a query](docs/learn/07-how-axeyum-solves-a-query.md) — the
   best single page: the pipeline and the untrusted-search / trusted-checking
   boundary, with diagrams.
@@ -268,6 +271,8 @@ by use (each is accepted in an ADR).
   a searchable mdBook site with Mermaid diagrams).
 - [docs/research/](docs/research/README.md) — the research foundation, and
   [09-decisions/](docs/research/09-decisions/README.md), the ADRs.
+- [PLAN.md](PLAN.md) / [STATUS.md](STATUS.md) — the detailed roadmap and mutable
+  engineering log for maintainers resuming work.
 
 | You are… | Start here |
 |---|---|

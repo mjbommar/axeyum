@@ -12,6 +12,13 @@ Current: [`00-thesis.md`](../design/00-thesis.md) (v4),
 Sections below were first written under v3 ("do not build") and are corrected
 where that framing leaked.
 
+> **Current-boundary correction (2026-07-21):** the runtime-derived ledger now
+> contains 65 prelude assumptions, not the historical 64 call-site count, and
+> T6.0.3 now runs a deterministic 768-case generated gate over the four
+> representable kernel seams. Positivity, prelude discharge, projection/eta,
+> quotient, and typed-literal work remain open; the historical argument below
+> is preserved rather than silently rewritten.
+
 ---
 
 ## A — A general proof assistant (elaborator + tactics + library)
@@ -133,12 +140,13 @@ of the track has to justify itself on decomposition alone (P6.6).
 
 **Refused**, and it is the only option this track definitively killed.
 
-Doing nothing leaves in place: a kernel that admitted `False` this morning, 64
-unproven axioms under every LRA/LIA reconstruction, a positivity checker that is
-enforced only *vacuously* and goes live-broken the moment someone lands the
-obvious next inductive gap, `Lit::Nat` truncation guarded by nothing, zero fuzz
-in a trusted component, a keystone format bet that may be aimed at the wrong
-target, and `sat` results with no trust story at all.
+Doing nothing left in place at this decision point: a kernel that had admitted
+`False`, the then-under-counted prelude-assumption boundary, a positivity checker
+enforced only *vacuously* and liable to go live-broken when the next inductive
+gap lands, `Lit::Nat` truncation guarded by nothing, no generated seam fuzz in a
+trusted component, a keystone format bet that might be aimed at the wrong
+target, and `sat` results with no trust story at all. The correction above records
+the two boundaries subsequently closed without weakening the residual case.
 
 "No prover" is not "no work." Gate 0 exists because doing nothing is the one
 answer the evidence rules out.
@@ -165,7 +173,7 @@ The work itself remains real and is owed regardless — it just is not a substit
 |---|---|---|
 | Quantified **UF** 0/5 (**not** quantified LIA — see above) | Track 2 | P6.6 attacks it by decomposition; Track 2 attacks it by deciding. Both, not either |
 | Trusted-reduction ledger — **6 of 14** `TrustId` variants open; `IntBlast`, `XorGaussian` "unsound with no recovery" at pedantic 3 | Track 3 | The layer inherits every hole |
-| **64** unproven prelude axioms | Track 3 / **T6.0.6** | Bounds what "kernel-checked" means for arithmetic |
+| **65** unproven prelude assumptions (64 arithmetic/integer + string `append`) | Track 3 / **T6.0.6** / TL3.2 | Bounds what "kernel-checked" means; TL0.4 now freezes names/types but does not prove them |
 | `sat` has no trust story | **P6.1c** | Counterexamples are unsound until it lands |
 
 *(v3 cited "6/14" here. Uncited and wrong: `trust.rs` defines 13 `TrustId`

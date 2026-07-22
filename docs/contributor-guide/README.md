@@ -1,18 +1,22 @@
 # Contributor Guide
 
 How to change Axeyum *safely* — the obligations that come with new public
-surface. The detailed how-to pages are planned (see the
-[documentation plan](../documentation-plan.md)); this hub captures the
-non-negotiables now.
+surface. Start with the generated [measured-gap ownership map](gap-ownership.md)
+when choosing work: it routes every current G0-G10 gap to code owners, committed
+evidence, executable gates, decision anchors, and the next safe action.
 
 ## Start with the session protocol
 
-1. [PLAN.md](../../PLAN.md) — the map and standing rules.
-2. [STATUS.md](../../STATUS.md) — live state, current focus, next actions.
-3. [docs/plan/01-dependency-dag.md](../plan/01-dependency-dag.md) — what depends on what.
-4. The foundational DAG before adding operators/encodings/logics:
+1. [Project State](../PROJECT-STATE.md) — what is built, measured, partial, and
+   explicitly not claimed.
+2. [Measured-gap ownership map](gap-ownership.md) — the owning module, evidence,
+   checker, ADR, and next action for G0-G10.
+3. [PLAN.md](../../PLAN.md) and [STATUS.md](../../STATUS.md) — standing rules,
+   live focus, and the engineering record.
+4. [docs/plan/01-dependency-dag.md](../plan/01-dependency-dag.md) — what depends on what.
+5. The foundational DAG before adding operators/encodings/logics:
    [foundational-dag.md](../research/08-planning/foundational-dag.md).
-5. When multiple agents are active, follow the
+6. When multiple agents are active, follow the
    [multi-agent worktree protocol](multi-agent-worktrees.md).
 
 ## Obligations for new public surface

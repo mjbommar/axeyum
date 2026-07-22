@@ -1,7 +1,7 @@
 # Research Questions
 
 Status: draft
-Last updated: 2026-07-11
+Last updated: 2026-07-22
 
 ## Purpose
 
@@ -467,6 +467,15 @@ Out of scope:
     model or an `unsat` DIMACS+DRAT certificate) and self-checks via
     `Evidence::check` (model replay / `check_drat` re-run). Versioned provenance
     fields are the remaining extension.
+- [ ] How should evidence production expose the decisive route, ordered
+      certificate attempts, source-to-lowered obligation identity, checker, and
+      first uncertified boundary without conflating them with the arena-level
+      auto-solver `RouteTrace`?
+  - Proposed answer: a distinct, versioned `EvidenceTrace` threaded as an
+    optional recorder through the same evidence-production control flow, with
+    existing APIs as recorder-free wrappers and exact report/trace invariance
+    gates; see
+    [ADR-0341](../09-decisions/adr-0341-preregister-source-bound-evidence-route-telemetry.md).
 
 ### Incrementality And API
 
@@ -597,10 +606,19 @@ Out of scope:
 ### Formats
 
 - [x] Full SMT-LIB script support or benchmark-slice parsing first?
-  - Answer: benchmark-slice parsing first, with explicit Unsupported errors
-    for arrays, UF, and incremental commands; implemented in `axeyum-smtlib`.
+  - Answer: benchmark-slice parsing first, implemented by ADR-0018 in
+    `axeyum-smtlib`. The parser later expanded through arrays, UF, incremental
+    queries, and additional theories; do not reuse the original slice boundary
+    as current status. The live surface is the generated
+    [command/API matrix](../../plan/generated/smtlib-api-conformance.md), and
+    full ordered-session work is proposed in ADR-0342.
 - [ ] Which SMT-LIB standard/theory versions should be pinned in artifacts
       and tests before adding conversion operators or future logics?
+  - Proposed answer for the command/session surface: pin the official SMT-LIB
+    2.7 release dated 2025-07-07 and implement the transactional state contract
+    in [ADR-0342](../09-decisions/adr-0342-preregister-ordered-smtlib-session.md).
+    The question remains open until the proposed transcript and Rust gates pass;
+    theory-version pins remain separate per-theory obligations.
 - [ ] When does BTOR2 import earn its keep?
 - [x] Where does the format parser crate boundary land?
   - Answer: `axeyum-smtlib` is a dedicated crate because parsing/writing is
@@ -610,6 +628,34 @@ Out of scope:
 
 - [ ] Is portfolio dispatch in scope for the first public release?
 - [ ] What must be `Send`/`Sync` to make portfolio solving natural?
+
+### Measurement And Benchmarking
+
+- [ ] How should heterogeneous benchmark regimes share provenance without
+      producing a false global parity score?
+  - Proposed answer:
+    [ADR-0343](../09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
+    gives raw occurrences, normalized paths, exact contents, selection policy,
+    row-local scoring, and oracle evidence separate identities. The first
+    prototype finds 778 unique byte contents behind the scoreboard's 927
+    file-backed occurrences and 99 exact-content overlaps with the 228-file
+    public inventory. Acceptance remains open; semantic near-duplicate policy,
+    official selection, and matched neutral-oracle populations are not yet
+    resolved.
+- [ ] What makes an interrupted distributed benchmark run safely resumable and
+      its final population scoreable?
+  - Proposed answer:
+    [ADR-0344](../09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
+    requires immutable per-result checkpoints, exact run/environment identity,
+    explicit accounting for terminal-less attempts, complete shard manifests,
+    strict merge, and aggregate resource enforcement. Its v2 correction adds
+    typed process outcomes, observed/admitted verdict separation, per-result
+    attempt ownership, and content-addressed outputs. The checked prototype
+    exercises 18 invariants across 28 scenarios and makes deterministic
+    interrupted/resumed scoring output byte-identical to an uninterrupted
+    control. E1a passes local kill tests; the question remains open until E1b
+    runner/solver/lease/output integration and E2-E3 resource/multi-host gates
+    pass. The 64,345-case candidate must not be rerun first.
 
 ### Horizon: General Reasoning And Proving
 
@@ -655,9 +701,202 @@ Out of scope:
     `Sort 0`. A generated adversarial matrix and a mandatory real-Lean
     flat-inductive/iota CI test guard the boundary. See
     [ADR-0165](../09-decisions/adr-0165-lean-compatible-prop-large-elimination.md).
-- [ ] Should the proof-assistant bridge export obligations to Lean, import
+- [x] How should the independent Lean kernel represent natural literals before
+      it implements literal typing and reduction?
+  - Answer (2026-07-22): use a canonical `NatLit` newtype over pure-Rust
+    `BigUint`, parse official decimal payloads without any fixed-width
+    conversion, and keep inference fail-closed until the separately gated
+    TL2.7 slice. Values around and far above `2^128` must round-trip through
+    interning, structural operations, rendering, and importer validation. See
+    [ADR-0346](../09-decisions/adr-0346-arbitrary-precision-lean-nat-literals.md).
+- [x] When may raw Lean Nat literals receive a type, and how much constructor
+      conversion belongs before accelerated Nat operations?
+  - Answer (2026-07-22): only after the fresh checked environment contains the
+    canonical `Nat`/`Nat.zero`/`Nat.succ` bootstrap. Type raw values as `Nat`,
+    reproduce Lean's zero/successor offset equality, one-step successor
+    reduction, and literal-major recursor conversion, but leave every other Nat
+    operation to TL2.8. See
+    [ADR-0347](../09-decisions/adr-0347-checked-lean-nat-literal-semantics.md).
+- [x] How can the streaming `lean4export` reader publish a checked environment
+      atomically without cloning or rolling back kernel arenas?
+  - Answer (2026-07-22): stage the complete stream in a private owned `Kernel`
+    and return a field-private `CompletedImport` only after EOF and every
+    translation/admission check succeed. Errors carry no kernel or arena handle;
+    the caller-supplied mutable-kernel API is removed rather than retained as a
+    documented footgun. See
+    [ADR-0348](../09-decisions/adr-0348-owned-lean-import-publication.md).
+- [x] Can format-3.1 record-boundary truncation be detected from the bare
+      NDJSON stream, and how should the importer mutation corpus classify it?
+  - Answer (2026-07-22): not in general. The upstream grammar has initial
+    metadata followed by a backward-referencing record sequence but no footer,
+    expected count, or root manifest, so a complete-record prefix is a valid
+    unsealed stream. Generate every prefix and record-body truncation, classify
+    accepted prefixes as `published-unsealed` with no exact-artifact credit,
+    and assign authenticated completion to TL0.3/TL1.6/TL1.9. See
+    [ADR-0349](../09-decisions/adr-0349-generated-lean-import-mutation-corpus.md).
+- [x] Which identity should bind imported Lean axioms, declaration content, and
+      direct dependencies without depending on wire or arena order?
+  - Answer (2026-07-22): retain TL0.4's rendered-type SHA-256 for axiom-ledger
+    comparison, but use a complete domain-separated structural Merkle encoding
+    for declaration content. Bind each sorted direct dependency name to its
+    admitted content digest so dependency mutations propagate without changing
+    the dependent declaration's own content identity. See
+    [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
+- [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
+      and well-founded official Lean cases be measured before independent
+      admission widens?
+  - Answer (2026-07-22): freeze minimal source cases first; export
+    every selected root twice; freeze exact official wire features with the
+    independent Python reader before running Axeyum; then pair every typed Rust
+    decline with the existing direct-recursive positive control and generate an
+    assurance-separated matrix. Source family and elaborated core form remain
+    separate facts. M0 and Stage A now freeze the exact seven-case source
+    population. Stage B now freezes five byte-identical official streams and
+    their full independent group metadata. M3 now freezes two current-product
+    outcomes per row beside ten passing direct-recursive controls, without
+    changing semantics. M4 now generates seven implication-checked assurance
+    rows. M5 closes the bounded validation, documentation, decision, and remote-
+    ref gates without changing importer or kernel semantics. See
+    [accepted ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+    and the
+    [execution plan](../../plan/lean-official-construct-matrix-plan-2026-07-22.md)
+    plus the
+    [Stage A result](../../plan/lean-official-construct-matrix-stage-a-2026-07-22.md).
+    The measured wire forms are in the
+    [Stage B result](../../plan/lean-official-construct-matrix-stage-b-2026-07-22.md).
+    The typed declines are in the
+    [M3 product result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
+    The generated selected-family result is in the
+    [M4 assurance report](../../plan/lean-official-construct-matrix-m4-2026-07-22.md).
+    The exact gate and handoff record is in the
+    [final result](../../plan/lean-official-construct-matrix-final-2026-07-22.md).
+- [x] Which exact strict-positivity rule must guard the next Lean inductive
+      admission widening, and when must it run?
+  - Answer (2026-07-22): reproduce pinned Lean 4.30's WHNF-based
+    single-family rule exactly for the currently representable profile. Accept
+    no occurrence; recurse through a `Pi` codomain only when its domain contains
+    no family occurrence; otherwise require the exact family application with
+    fixed parameters, complete index arity, and occurrence-free indices. Run
+    this as a fail-closed preflight before provisional inductive environment
+    insertion. Positive recursive-indexed/reflexive shapes retain their feature
+    declines until TL2.12. See
+    [accepted ADR-0352](../09-decisions/adr-0352-preregister-lean-strict-positivity.md),
+    the [TL2.11 execution plan](../../plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md),
+    and the [final result](../../plan/lean-strict-positivity-final-2026-07-22.md).
+- [x] What exact induction-hypothesis and computation-rule construction should
+      admit recursive-indexed and reflexive/higher-order fields without
+      duplicating trusted semantics?
+  - Answer (2026-07-22): treat direct, indexed, higher-order, and
+    combined indexed+higher-order recursive fields as empty/nonempty cases of
+    one rule. If `u : Pi xs, I P indices`, generate
+    `u_ih : Pi xs, motive indices (u xs)` and pass
+    `fun xs => I.rec P motive minors indices (u xs)` to the minor premise.
+    Preserve all constructor fields first and IHs second in source order; use
+    one WHNF telescope-tail helper for minor types and rule right-hand sides;
+    remove the importer's reflexive policy decline only after native support.
+    Mutual groups remain TL2.13. A later dependency audit separates kernel-side
+    nested-inductive elimination in TL2.14 from source recursion elaboration in
+    TL4.9/TL4.10. See
+    [accepted ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+    and the
+    [TL2.12 execution plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
+    [M0](../../plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+    now freezes the explicit-recursor source, two official root streams, and
+    exact metadata/claim boundary before product implementation. The
+    [M1 result](../../plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+    routes direct recursion through the shared classifier/reopener with exact
+    declaration/computation identity and both declines unchanged. M2-M4 close
+    native semantics, official import, and selected computation; the
+    [M5 result](../../plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+    closes all bounded gates and marks TL2.12 DONE. TL2.13 mutual groups are
+    the next atomic semantic widening.
+- [x] What is the trusted admission/publication unit for mutual inductive
+      groups, and how must motives, minors, positivity, indices, and recursive
+      target families be ordered?
+  - Answer (2026-07-22): use one atomic ordered group, never repeated
+    single-family calls. Check common universe parameters and definitionally
+    equal shared parameter telescopes, equivalent result universes, and the
+    complete group occurrence set before publication. Order motives by family
+    and minors by family then constructor. For a field
+    `u : Pi xs, I_j params indices`, generate
+    `Pi xs, motive_j indices (u xs)` and call `I_j.rec` with every group motive
+    and minor. Each owner-family recursor then binds its own indices/major and
+    returns its own motive. Restrict mutual predicates to `Prop`, disable mutual
+    K-like reduction, infer-check every recursor, and commit all declarations or
+    none. Preserve `add_inductive` as a singleton wrapper. Nested-inductive
+    expansion/restoration is the next kernel admission transformation under
+    TL2.14; source recursion remains separate in TL4.9/TL4.10. See
+    [accepted ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+    and the
+    [TL2.13 execution plan](../../plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
+    M0 now freezes both explicit official computations and their complete wire
+    inventories without Axeyum product credit. In both streams, family order is
+    `Even, Odd` while wire recursor order is dependency-ordered `Odd.rec,
+    Even.rec`; importer comparison must therefore use checked recursor identity
+    and owned rules rather than array position. See the
+    [M0 result](../../plan/lean-mutual-inductive-groups-m0-2026-07-22.md).
+    The
+    [M1 result](../../plan/lean-mutual-inductive-groups-m1-2026-07-22.md)
+    now makes the ordered group a public kernel input, preserves singleton
+    declarations/computation/errors exactly, and checks group-local names,
+    definitionally equal shared parameters, per-family indices, and equivalent
+    result universes inside a scalable insertion-log transaction. A valid
+    multi-family group still receives a typed policy decline. The
+    [M2 result](../../plan/lean-mutual-inductive-groups-m2-2026-07-22.md) now
+    implements the native positivity/constructor/motive/minor/recursor/
+    publication rule through one group path. Eighteen public rows and focused
+    mutation/late-rollback tests cover the registered native matrix without
+    importer widening. The
+    [M3 result](../../plan/lean-mutual-inductive-groups-m3-2026-07-22.md) now
+    repeats 720 unique public-path cases byte-identically with 432 positive
+    inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
+    target-rule oracles, and retained 768/840 controls. The
+    [M4 result](../../plan/lean-mutual-inductive-groups-m4-2026-07-22.md) now
+    imports all three frozen official streams twice, compares dependency-
+    ordered recursors by checked name, confirms both registered cross-family
+    normal forms, and closes 22 rejecting importer/publication mutation
+    classes. The
+    [M5 result](../../plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+    preserves the historical assurance record, removes the obsolete live
+    decline, closes every bounded gate, accepts the decision, and marks TL2.13
+    DONE. A subsequent source-backed audit corrects TL2.14 to the distinct
+    kernel-side nested-inductive elimination question.
+- [ ] How must nested inductive applications be expanded and restored, and
+      which layer owns well-founded recursion?
+  - Proposed answer (2026-07-22): follow pinned Lean 4.30's kernel boundary.
+    Discover applications of already admitted inductive containers whose
+    parameter tuple contains a new family; require complete parameter prefixes
+    and no loose bound variables; copy the container's complete mutual group
+    into structurally deduplicated auxiliary families; process copied
+    constructors recursively; check the expanded group through the existing
+    TL2.11--TL2.13 atomic path; then restore and publish only the source
+    families/constructors, main recursors, and deterministic `.rec_N` auxiliary
+    recursors. Derive and compare `numNested` and wire records rather than
+    trusting them. Keep native `termination_by`/`decreasing_by`,
+    `WellFounded.fix`, equation compilation, and recursive source metadata in
+    TL4.10. The already completing 35-declaration well-founded export is a core
+    control, not frontend credit. See the
+    [dependency audit](../../plan/lean-post-tl2.13-dependency-audit-2026-07-22.md),
+    [proposed ADR-0355](../09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md),
+    and the
+    [TL2.14 plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
+    P0 is complete; M0 source/wire/no-product freeze is next. Close this question
+    only when ADR-0355's native, generated, import, computation, mutation,
+    retention, and final gates pass.
+- [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
+  - Answer (2026-07-21): **both, sequenced**. Preserve the existing
+    fail-closed source-export/official-check lane, then import pinned official
+    `lean4export` NDJSON and independently admit supported declarations.
+    Selected theorem-backed rewrite/CAS tactic slices follow the importer and
+    the 65-row prelude-assumption inventory. Native parser/macros, elaboration,
+    modules/Lake, a late untrusted version-specific `.olean` reader, LSP,
+    compiler/runtime, and full pinned-mathlib compatibility are separately
+    gated later phases rather than permanent exclusions. See
+    [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md),
+    [compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md),
+    and [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md).
 - [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
   - Answer: expose each live combined theory through the shared `TheorySolver`

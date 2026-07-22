@@ -2,6 +2,8 @@
 
 [Documentation Hub](README.md)
 
+[Project State](PROJECT-STATE.md)
+
 [Sibling Project Notes](sibling-projects.md)
 - [Foundational Resource Expansion](foundational-resources/README.md)
   - [Source Research Ledger](foundational-resources/SOURCES.md)
@@ -65,6 +67,7 @@
 # Contributor Guide
 
 - [Contributor Guide](contributor-guide/README.md)
+  - [Measured-gap ownership map](contributor-guide/gap-ownership.md)
   - [Multi-agent worktrees](contributor-guide/multi-agent-worktrees.md)
 
 # Interactive

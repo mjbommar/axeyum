@@ -457,14 +457,16 @@ fn theorem_admits_and_infers() {
     assert_eq!(ty, p_const2);
 }
 
-/// Deferred boundary still errors cleanly: a `Lit` term yields UnsupportedLit
-/// (no panic).
+/// Nat literals fail closed until the checked canonical Nat bootstrap exists.
 #[test]
-fn deferred_lit_still_errors() {
+fn nat_literal_without_bootstrap_still_errors() {
     let mut k = Kernel::new();
-    let n = k.lit(Lit::Nat(3));
+    let n = k.lit(Lit::nat(3_u8));
     let err = k.infer(n).unwrap_err();
-    assert!(matches!(err, KernelError::UnsupportedLit), "got {err:?}");
+    assert!(
+        matches!(err, KernelError::NatLiteralBootstrapMismatch { .. }),
+        "got {err:?}"
+    );
 }
 
 /// A declaration whose value references an UNKNOWN const is rejected (the

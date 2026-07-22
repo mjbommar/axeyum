@@ -220,7 +220,7 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0164](adr-0164-opt-in-glaurung-snapshot-incremental-reuse.md) | Opt-in Glaurung snapshot-to-incremental reuse: structural longest-common-prefix scopes retain arena/AIG/CNF/SAT state and halve native client time without treating cloned expression IDs as global identity | accepted |
 | [0165](adr-0165-lean-compatible-prop-large-elimination.md) | Lean-compatible `Prop` large elimination: syntactic-subsingleton recursors retain arbitrary motives; every other potentially-`Prop` family is restricted to `Sort 0` and checked by mandatory real Lean CI | accepted |
 | [0166](adr-0166-alethe-target-reassessment.md) | Reassess the Alethe proof-format bet against CPC: `lean-smt` targets CPC, and cvc5's Alethe output has no bit-vectors — decide the keystone rather than inherit it | proposed |
-| [0167](adr-0167-prover-track-entry.md) | Enter the proof-construction rung for a certificate-first goal layer, gated; supersede `proof-assistant-lessons.md`'s stale "implementing dependent type theory is out of scope" (overtaken by ADR-0036) | proposed |
+| [0167](adr-0167-prover-track-entry.md) | Enter the proof-construction rung for a certificate-first goal layer, gated; supersede `proof-assistant-lessons.md`'s stale "implementing dependent type theory is out of scope" (overtaken by ADR-0036) | accepted |
 | [0166](adr-0166-untrusted-glaurung-ordered-trace-replay.md) | Untrusted Glaurung ordered-trace replay: independently reconstruct lineage/scopes, re-solve exact QF_BV bytes with original-model replay, and prove exploration-driving value constraints satisfiable | accepted |
 | [0167](adr-0167-opt-in-ordered-per-lineage-warm-replay.md) | Opt-in ordered per-lineage warm replay: validate fork prefixes, retain one solver per path without shared mutable state, and expose model-choice divergence plus fork-replay cost | accepted |
 | [0168](adr-0168-opt-in-ordered-replay-policy-controls.md) | Opt-in ordered replay policy controls: compare exact cold occurrences, consecutive snapshot/LCP reuse, and explicit lineage in separate processes with replay and memory telemetry | accepted |
@@ -395,3 +395,18 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0338](adr-0338-preregister-tock-proof-v4-marker-parser.md) | Accept eight dual-DRAT Tock proofs and six replayed controls after exact first-row parser correction | accepted |
 | [0339](adr-0339-preregister-deterministic-witness-seed-corpus.md) | Accept deterministic replay-checked solver witness corpora and generated regression tests | accepted |
 | [0340](adr-0340-preregister-reason-preserving-directed-fuzz-handoff.md) | Preregister a reason-preserving Unknown-to-directed-fuzz handoff | proposed |
+| [0341](adr-0341-preregister-source-bound-evidence-route-telemetry.md) | Preregister source-bound evidence-route telemetry with verdict-invariant recorder plumbing | proposed |
+| [0342](adr-0342-preregister-ordered-smtlib-session.md) | Preregister an ordered transactional SMT-LIB 2.7 session | proposed |
+| [0343](adr-0343-preregister-cross-regime-measurement-provenance.md) | Preregister cross-regime measurement provenance without a false global parity aggregate | proposed |
+| [0344](adr-0344-preregister-resumable-distributed-benchmark-execution.md) | Preregister resumable distributed benchmark execution before another large candidate run | proposed |
+| [0345](adr-0345-preregister-lean-system-interoperability.md) | Preregister adapter-first, full Lean-system compatibility through versioned trust boundaries | accepted |
+| [0346](adr-0346-arbitrary-precision-lean-nat-literals.md) | Store Lean natural literals as canonical arbitrary-precision values without preempting literal typing | accepted |
+| [0347](adr-0347-checked-lean-nat-literal-semantics.md) | Type Lean Nat literals only against a checked canonical bootstrap and reproduce offset/recursor conversion separately from accelerated operations | accepted |
+| [0348](adr-0348-owned-lean-import-publication.md) | Publish Lean imports only as owned completed environments after the full stream succeeds | accepted |
+| [0349](adr-0349-generated-lean-import-mutation-corpus.md) | Generate and stably classify every TL1.4 Lean import mutation family while exposing the upstream no-footer boundary | accepted |
+| [0350](adr-0350-canonical-lean-declaration-identity.md) | Publish ledger-compatible axiom identities plus canonical structural declaration and direct-dependency digests | accepted |
+| [0351](adr-0351-preregister-official-lean-construct-matrix.md) | Preregister source-first and wire-second official Lean construct measurement before widening recursive admission | accepted |
+| [0352](adr-0352-preregister-lean-strict-positivity.md) | Reproduce Lean 4.30 strict positivity before recursive-indexed or reflexive admission widens | accepted |
+| [0353](adr-0353-preregister-lean-recursive-induction-hypotheses.md) | Accept one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields | accepted |
+| [0354](adr-0354-preregister-lean-mutual-inductive-groups.md) | Preregister atomic ordered mutual-inductive groups with group-wide positivity, shared motives/minors, and target-family recursion | accepted |
+| [0355](adr-0355-preregister-lean-nested-inductive-elimination.md) | Preregister kernel-side nested-inductive expansion, checking, restoration, and auxiliary recursors | proposed |

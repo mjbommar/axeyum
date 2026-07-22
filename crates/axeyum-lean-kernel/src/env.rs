@@ -16,10 +16,11 @@
 //! universe instantiation, `Const` inference, δ-unfolding, and the lazy-delta
 //! step live on [`super::Kernel`] (see `tc.rs`).
 //!
-//! **Deferred to a later slice** (and erroring cleanly if reached): inductive
-//! types, constructors, recursors and their ι-reduction, structure
-//! projections, and `Quotient` reduction. Those declaration kinds are not
-//! representable here; admitting one is rejected, not guessed.
+//! The inductive, constructor, and recursor variants plus ι-reduction are now
+//! implemented by `inductive.rs`. Projection inference, constructor reduction,
+//! and structure eta use the checked inductive metadata recorded here.
+//! **Deferred to later slices**: `Quotient` reduction; unsupported semantic
+//! paths reject rather than guess.
 //!
 //! ## Determinism
 //!
@@ -88,20 +89,22 @@ pub struct RecRule {
     pub value: ExprId,
 }
 
-/// A non-inductive global declaration.
+/// A checked global declaration.
 ///
 /// Every declaration carries a `name`, a list of universe parameter names
 /// (`uparams`), and a closed type (`ty`). Definitions/theorems/opaque
 /// constants additionally carry a closed `value`. Definitions carry a
 /// [`ReducibilityHint`] driving lazy-delta side choice.
 ///
-/// The inductive layer (ADR-0036, through slice 7) adds
+/// The inductive layer (ADR-0036 and ADR-0353) adds
 /// [`Declaration::Inductive`], [`Declaration::Constructor`], and
-/// [`Declaration::Recursor`], supporting **parametric**, **recursive**
-/// (non-indexed), and **non-recursive indexed** inductive types (enums,
-/// structures, `Nat`/`List`/`Prod`/`Sum`, and `Eq`). Recursive constructors on
-/// an indexed family, reflexive/nested fields, and mutual inductives are
-/// deferred to later slices and rejected explicitly by the admission gate
+/// [`Declaration::Recursor`], supporting parametric/indexed single-family
+/// inductives and recursive fields whose WHNF is a possibly empty `Pi`
+/// telescope ending in the exact family application. This includes enums,
+/// structures, `Nat`/`List`/`Prod`/`Sum`, `Eq`, and `Vector`/`Acc`-shaped
+/// recursion. TL2.13 M1 represents and preflights ordered mutual groups, but
+/// multi-family declarations are not yet admitted into these declaration
+/// variants. Occurrences nested under foreign heads remain explicitly rejected
 /// rather than guessed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Declaration {
@@ -161,14 +164,26 @@ pub enum Declaration {
         name: NameId,
         /// The universe parameter names the type is polymorphic over.
         uparams: Vec<NameId>,
-        /// The inductive's (closed) type — a `Sort` in this slice.
+        /// The inductive's closed type: a parameter/index telescope ending in
+        /// a `Sort`.
         ty: ExprId,
+        /// Number of leading parameter binders fixed across the family.
+        /// Projection inference instantiates these from the projected value's
+        /// type before walking constructor fields.
+        num_params: u16,
+        /// Number of index binders after the parameters. Projection inference
+        /// validates the projected value's complete parameter/index spine.
+        num_indices: u16,
+        /// Whether any checked constructor has a recursive field.
+        /// Structure eta is legal only when this is false, matching Lean's
+        /// `is_non_rec_structure` predicate.
+        is_recursive: bool,
         /// The names of this type's constructors, in declaration order.
         ctor_names: Vec<NameId>,
     },
     /// A constructor `c : Π params fields, I params indices` of inductive
-    /// `inductive`. Field types may mention `I` as a **direct recursive field**
-    /// (only on a non-indexed family).
+    /// `inductive`. A recursive field may open a `Pi` telescope and end in the
+    /// exact indexed family application accepted by the positivity gate.
     Constructor {
         /// The constructor's name.
         name: NameId,
@@ -336,11 +351,14 @@ impl Declaration {
 /// [`Declaration`].
 ///
 /// Backed by a [`BTreeMap`] so iteration order is id order (determinism rule).
+/// A private insertion log provides constant-time transaction checkpoints for
+/// atomic inductive-group admission; it is not part of iteration or identity.
 /// Declarations are admitted only through [`super::Kernel::add_declaration`],
 /// which type-checks them first (the trusted kernel gate).
 #[derive(Debug, Default, Clone)]
 pub struct Environment {
     declars: BTreeMap<NameId, Declaration>,
+    insertion_log: Vec<NameId>,
 }
 
 impl Environment {
@@ -395,13 +413,23 @@ impl Environment {
     /// validated the declaration. Use [`super::Kernel::add_declaration`] for
     /// the trusted, type-checked admission path.
     pub(crate) fn insert_unchecked(&mut self, decl: Declaration) {
-        self.declars.insert(decl.name(), decl);
+        let name = decl.name();
+        if self.declars.insert(name, decl).is_none() {
+            self.insertion_log.push(name);
+        }
     }
 
-    /// Remove a declaration by name (used to roll back a partially-admitted
-    /// inductive when a later constructor or the recursor fails to check).
-    pub(crate) fn remove_unchecked(&mut self, name: NameId) {
-        self.declars.remove(&name);
+    /// Return an opaque checkpoint for a later all-or-nothing admission.
+    pub(crate) fn checkpoint(&self) -> usize {
+        self.insertion_log.len()
+    }
+
+    /// Remove every declaration first inserted after `checkpoint`.
+    pub(crate) fn rollback_unchecked(&mut self, checkpoint: usize) {
+        let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();
+        for name in inserted.into_iter().rev() {
+            self.declars.remove(&name);
+        }
     }
 }
 

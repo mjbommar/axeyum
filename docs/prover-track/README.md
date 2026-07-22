@@ -55,7 +55,7 @@ Findings that stand on their own, whether or not the prover is built:
 |---|---|
 | **A P0 unsoundness: the kernel admitted `theorem bad : False`** — found, reproduced, fixed | [`research/09`](research/09-P0-kernel-unsoundness.md); ADR-0165 |
 | **[ADR-0166](../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**, and cvc5's Alethe has **no bit-vectors**. A `[critical path]` keystone may be aimed wrong. **Urgent, and independent of this track.** | filed |
-| **64 unproven prelude axioms** — ℝ's carrier is an opaque `Declaration::Axiom`; Lean accepts axioms *vacuously*, so the real-Lean gate cannot catch a false one | [`research/06`](research/06-kernel-gap-analysis.md) → T6.0.6 |
+| **65 unproven prelude assumptions** (real 30 + integer 34 + string `append` 1) — the carriers/operations/laws include opaque `Declaration::Axiom` values; Lean accepts axioms *vacuously*, so the real-Lean gate cannot establish their truth | [`runtime-derived ledger`](../plan/generated/lean-axiom-ledger.md); [`research/06`](research/06-kernel-gap-analysis.md) → T6.0.6/TL3.2 |
 | **Positivity is enforced only *vacuously*** — land the next inductive gap and the rejection vanishes with no checker behind it | T6.0.2 |
 | **The `!fn_app_0` Ackermann collision** — blocks every quantified-UF goal with a genuine (non-predicate) function; 7-line repro | [`process/quantified-uf-probe.md`](process/quantified-uf-probe.md) |
 | **`sat` has no trust story** — the kernel gate covers `unsat` only | [`research/08`](research/08-solver-automation-assets.md) → P6.1c |
@@ -69,7 +69,7 @@ Findings that stand on their own, whether or not the prover is built:
 | [`03-atp-itp-seam.md`](research/03-atp-itp-seam.md) | **CPC, not Alethe** → ADR-0166. Instability is a property of *undecidable encodings*: `KomodoD` 5.01% vs `KomodoS` **0.52%**. |
 | [`04-software-ir-verification.md`](research/04-software-ir-verification.md) | The graveyard died of *assuming the spec is free*. **Verification Theatre**: 4 vulns **inside** verified code, from an undocumented boundary. |
 | [`05-education-and-agentic.md`](research/05-education-and-agentic.md) | An IDE models a cursor; **an agent models a search over states.** Counterexample-first is unoccupied. |
-| [`06-kernel-gap-analysis.md`](research/06-kernel-gap-analysis.md) | 64 axioms; vacuous positivity; `Lit::Nat` truncation; **zero fuzz**. |
+| [`06-kernel-gap-analysis.md`](research/06-kernel-gap-analysis.md) | Historical 64-row arithmetic census, corrected to 65 total by runtime inventory; vacuous positivity; `Lit::Nat` truncation; zero-fuzz baseline now closed for four current seams by T6.0.3, with future TL2.15 seams open. |
 | [`07-reconstruction-assets.md`](research/07-reconstruction-assets.md) | The kernel is a real, theory-neutral asset. Above it is greenfield. |
 | [`08-solver-automation-assets.md`](research/08-solver-automation-assets.md) | The IR mismatch: **zero CIC→IR functions**. `sat` has no trust story. |
 | [`09-P0-kernel-unsoundness.md`](research/09-P0-kernel-unsoundness.md) | The `False` incident, and why three gates missed it. |

@@ -5,6 +5,14 @@ under `bench-results/local/`, which is gitignored.
 
 ## Current authoritative record (2026-06-25)
 
+- [`smtcomp-repro-20260721/`](smtcomp-repro-20260721/README.md) (2026-07-21) is
+  the in-tree replica of the **entire SMT-COMP 2026 scoring pipeline** plus the
+  first **complete capability + soundness inventory** of axeyum over a real
+  SMT-LIB set (228 files on the quiet host `s4`): **0 wrong** everywhere, 36 %
+  decided on that slice (100 % on UFBV/UFIDL/UFNRA, dragged down by the hard
+  QF_BV `p4dfa` family), and a QF_BV head-to-head vs cvc5 1.3.4 / bitwuzla 0.9.1
+  (all sound, same 19/24, axeyum ~3 % slower). Committed JSON + PNG + a
+  `chart.py` regenerator; harness in [`scripts/smtcomp_repro/`](../scripts/smtcomp_repro/README.md).
 - [`glaurung-paired-dptf-20260717/`](glaurung-paired-dptf-20260717/README.md)
   is ADR-0214's first clean real-driver paired-trace mechanism exercise: three
   independently analyzed five-process timeout cells, stable 561/561

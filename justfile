@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code links
+check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code parity-docs links
 
 fmt:
     cargo fmt --all --check
@@ -21,6 +21,12 @@ test:
 # paths. Override the cap with MEM_LIMIT_GB=N.
 test-guarded:
     MEM_LIMIT_GB=64 ./scripts/mem-run.sh cargo test --workspace --all-features
+
+# T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
+# representable Lean-kernel seams. The workspace `test` recipe also discovers
+# this integration test; this target is the bounded fast reproduction path.
+lean-kernel-seams:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test -p axeyum-lean-kernel --test kernel_seam_fuzz
 
 # Corpus-scale ADR-0134/0135 Lean reconstruction.  This is deliberately a
 # release-only scheduled stress gate: on the current reference host it takes
@@ -96,6 +102,47 @@ rules-as-code:
     python3 scripts/query-rules-as-code.py families --text adjacent --require-any
     python3 scripts/query-rules-as-code.py rows --pack procurement_scoring_v0 --family quality_monotonicity_adjacent --limit 3 --require-any
     git diff --exit-code docs/rules-as-code/generated
+
+# Guard live parity prose against the committed scoreboard, dominance audits,
+# and paired p4dfa controls. This is intentionally much cheaper than rerunning
+# the measurements it checks.
+parity-docs:
+    python3 -m unittest scripts.tests.test_parity_evidence
+    python3 -m unittest scripts.tests.test_prototype_lean4export_reader
+    python3 -m unittest scripts.tests.test_lean_compatibility
+    python3 -m unittest scripts.tests.test_lean_official_construct_matrix
+    python3 scripts/check-lean-official-construct-matrix.py --check
+    python3 -m unittest scripts.tests.test_lean_strict_positivity
+    python3 scripts/check-lean-strict-positivity.py --check
+    python3 -m unittest scripts.tests.test_lean_strict_positivity_m3
+    python3 scripts/check-lean-strict-positivity-m3.py --check
+    python3 -m unittest scripts.tests.test_lean_recursive_induction_hypotheses
+    python3 scripts/check-lean-recursive-induction-hypotheses.py --check
+    python3 -m unittest scripts.tests.test_lean_mutual_inductive_groups
+    python3 scripts/check-lean-mutual-inductive-groups.py --check
+    python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
+    python3 scripts/freeze-lean-official-construct-matrix-product.py --check
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 -m unittest scripts.tests.test_lean_axiom_ledger
+    python3 scripts/gen-lean-compatibility.py --check
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 scripts/gen-lean-axiom-ledger.py --check
+    python3 scripts/gen-gap-ownership.py --check
+    python3 scripts/gen-measurement-provenance.py --check
+    python3 scripts/gen-smtcomp-resume-contract.py --check
+    python3 scripts/gen-proof-gap-matrix.py --check
+    python3 scripts/gen-proof-gap-shape-census.py --check
+    python3 scripts/gen-smtlib-api-conformance.py --check
+    python3 scripts/gen-smtlib-session-contract.py --check
+    python3 scripts/check-parity-docs.py
+
+# Current official construct-matrix product boundary: the direct-recursive
+# control precedes each remaining typed decline, and all five rows repeat.
+lean-construct-matrix-product:
+    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=1 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_construct_matrix
+
+# TL2.13 M4: exact ordered-group import, named recursor comparison, selected
+# non-indexed/indexed cross-family computation, and publication mutations.
+lean-mutual-inductive-groups-product:
+    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=1 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_mutual_inductive_groups
 
 deny:
     cargo deny check
