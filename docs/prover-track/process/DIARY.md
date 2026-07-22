@@ -1405,3 +1405,26 @@ projection closure remains untranslated and unadmitted because constructor
 projection reduction is still absent. TL2.4 is next; TL2.5 eta stays separate,
 and importer enablement follows only after the committed closure independently
 admits and computes.
+
+## 2026-07-21 — TL2.4 computes and imports the exact projection root
+
+Projection reduction now sits beside beta, zeta, and recursor iota in the
+weak-head reducer. Once the projected value normalizes to a constructor, the
+kernel skips its checked parameter prefix, selects the requested field, and
+re-applies any outer application spine. Universe-polymorphic, parameterized,
+dependent-field, transparent-definition, opaque/neutral, under-applied, and
+wrong-name separation controls pass.
+
+Only after that native gate passed did the untrusted format-3.1 reader begin
+translating `proj`. The committed official stream now translates 61 expressions,
+admits nine declarations with zero axioms, and computes
+`importPairLeft (ImportPair.mk 0 1)` to `0`. Wrong name/index mutations reach
+the trusted declaration gate and reject. The Nat root consequently moves from
+its old projection decline to the exact line-125
+`literal-nat-bignum-and-typing` boundary.
+
+This closes TL2.4 and one exact K1 root, not general Lean compatibility.
+Structure eta remains TL2.5, and the generated projection/reduction/eta fuzz
+family still remains open under TL2.15. The large String stream was not retained
+in the tree, so its historical line-184 projection decline is retired without
+inventing a replacement blocker from its syntax inventory.

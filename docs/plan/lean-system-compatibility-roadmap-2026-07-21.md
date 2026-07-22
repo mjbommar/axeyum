@@ -262,28 +262,30 @@ export. The measured result is:
 LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
 ```
 
-Eleven Rust integration tests include flat and direct-recursive positive fixtures,
-theorem-body and recursor-rule tampering, determinism, format drift, topology,
-safety, synthetic and official projection/quotient declines, and resource
-controls.
+Fourteen Rust integration tests include flat, direct-recursive, and projection
+positive fixtures; theorem-body, recursor-rule, and projection tampering;
+determinism, format drift, topology, safety, literal/quotient declines, and
+resource controls.
 See the full
 [`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
 The second official fixture independently admits direct-recursive `MiniNat` and
 parametric-recursive `MiniList` as 11 declarations with no axioms. It exposed
 alpha-equivalent recursor universe binders (`u_1` versus `u.1`), now compared
 after explicit level substitution. These results grant independent admission
-credit only to the exact flat and direct-recursive fixtures. They do not grant
-`Init`, `Std`, mathlib, literal, projection, quotient, recursive-indexed,
-mutual, nested, or reflexive-inductive credit.
+credit to the exact flat, direct-recursive, and now projection fixtures. They do
+not grant `Init`, `Std`, mathlib, literal, quotient, recursive-indexed, mutual,
+nested, or reflexive-inductive credit.
 
 The follow-on
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)
-freezes four dependency closures. Projection is the sole blocker in the
-four-declaration structure root and the first importer decline for both the Nat
-and String literal roots. The String root spans 290 declaration records and
-also reaches Nat literals and recursive-indexed inductives; quotient is a
-separate five-record closure. This selects projection as L2 slice 2 with real
-dependency evidence, not estimated ecosystem frequency.
+freezes four dependency closures. Projection was the sole blocker in the
+four-declaration structure root and is now cleared by TL2.2-TL2.4. The committed
+Nat root advances to line-125 literal typing. The unretained String root spans
+290 declaration records and also reaches Nat literals and recursive-indexed
+inductives, but its post-projection first blocker remains unmeasured; quotient is
+a separate five-record closure. This selected projection as L2 slice 2 with real
+dependency evidence and now records its closure, not estimated ecosystem
+frequency.
 
 ## 5. Architecture
 
@@ -349,7 +351,7 @@ Tasks:
    runtime fields.
 4. Correct stale kernel documentation and add a generated kernel feature
    matrix tied to executable tests.
-5. **Partial:** ten current importer decline codes are source-bound; the
+5. **Partial:** nine current importer decline codes are source-bound; the
    expected-axiom allowlist/ledger is TL0.4.
 
 Current result: the
@@ -672,12 +674,13 @@ Non-claims until their gates are met:
 ## 9. Immediate next eleven actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
-2. Keep the eight Python and eleven Rust fixture/mutation/census tests in normal
+2. Keep the eight Python and fourteen Rust fixture/mutation/census tests in normal
    checks.
-3. **TL2.2/TL2.3 DONE:** preserve first-class projection representation and add
-   checked dependent inference. Execute TL2.4 constructor reduction and its
-   computation controls before translating the official root; keep TL2.5 eta a
-   separate definitional-equality gate.
+3. **TL2.2-TL2.4 DONE:** preserve first-class projection representation, add
+   checked dependent inference and constructor reduction, translate the wire
+   form, and close the exact official projection root. Execute TL2.5 eta as a
+   separate definitional-equality gate; do not generalize one K1 root to broader
+   native or ecosystem compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
    nested, and reflexive fixtures.

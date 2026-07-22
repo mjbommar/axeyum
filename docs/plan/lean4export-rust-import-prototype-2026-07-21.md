@@ -172,7 +172,7 @@ returns successfully.
 | `succ`, `max`, `imax`, `param` levels | translated | dense/backward references required |
 | `bvar`, `sort`, `const`, `app`, `lam`, `forallE`, `letE` | translated | binder mode and every child reference validated |
 | `mdata` | semantically erased to its referenced expression | metadata object still shape-checked |
-| `proj` | typed decline `expr-projection` | TL2.2 representation and TL2.3 native inference exist; wire translation and constructor reduction remain deliberately declined |
+| `proj` | translated and kernel checked | TL2.2-TL2.4 representation/inference/reduction are live; official root admits and computes, while TL2.5 eta remains separate |
 | `natVal` | typed decline `literal-nat-bignum-and-typing` | bignum must precede literal typing |
 | `strVal` | typed decline `literal-string-typing` | kernel currently rejects literal inference |
 | safe `axiom` | kernel admitted and axiom name reported | type must check; proposition remains an assumption |
@@ -217,7 +217,7 @@ object and compare results.
 
 ## Negative matrix
 
-The eleven Rust integration tests in
+The fourteen Rust integration tests in
 [`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
 cover:
 
@@ -225,20 +225,22 @@ cover:
 |---|---|---|
 | official flat fixture | 5 records / 8 declarations admitted | first end-to-end import slice |
 | official direct-recursive fixture | 5 records / 11 declarations, zero axioms | direct and parametric recursion cross the official seam |
-| three official blocker fixtures | projection/Nat closures decline first on projection; quotient declines on its package | real dependency closures preserve stable first blockers |
+| official projection fixture | 61 expressions / 9 declarations admitted; imported selector computes | exact K1 projection root closes |
+| remaining official blocker fixtures | Nat now declines on literal typing at line 125; quotient declines on its package | clearing projection exposes the next exact blocker |
 | repeated import | identical report and declaration debug projection | deterministic construction |
 | unknown record | malformed rejection at line 2 | no open-world guessing |
 | forward expression reference | malformed rejection at line 2 | topological stream contract |
-| projection | stable unsupported decline | missing kernel feature is not erased |
+| projection wire mutations | oversized index and forward structure reject | wire width/topology stay bounded |
+| official projection mutations | wrong structure name and field index reject at the kernel gate | translation cannot grant semantic credit |
 | format 4.0.0 mutation | stable unsupported decline | version changes fail closed |
 | theorem-body mutation | kernel rejects `identity` | parsing cannot grant theorem credit |
 | exported recursor-rule mutation | importer rejects the group | generated computation is compared |
 | partial definition | stable unsupported decline | unsafe/partial code cannot enter default profile |
 | line/record limits (two cells in one test) | resource rejection | bounded input contract |
 
-The Rust test count is eleven because the official blocker-fixture test contains
-three cells and the final resource test contains both line
-and record cells.
+The Rust test count is fourteen; the remaining blocker-fixture test contains two
+cells, both projection mutation classes share one test, and the final resource
+test contains both line and record cells.
 
 The earlier Python probe remains useful as an implementation-independent
 inventory oracle. Six reader tests plus two exact census/hash tests and the Rust
@@ -295,9 +297,10 @@ mutual, nested, and reflexive groups remain explicit declines.
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. **Representation and inference DONE (TL2.2/TL2.3):** implement TL2.4
-   constructor projection reduction, then enable wire translation and rerun the
-   projection/literal closures before choosing the next slice.
+6. **Projection slice DONE (TL2.2-TL2.4):** representation, dependent
+   inference, constructor reduction, wire translation, exact projection-root
+   admission/computation, and literal-root rerun are complete. Execute TL2.5 eta
+   separately, then TL2.6 bignum storage before Nat literal typing.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

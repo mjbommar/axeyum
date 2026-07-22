@@ -41,12 +41,13 @@ Last updated: 2026-07-21
 > covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
 > fail-closed literals/reduction, with deterministic replay and 768 rejected
 > `False` admissions. TL2.2 represents projections throughout the kernel's
-> structural operations, and TL2.3 now infers parameterized, indexed,
+> structural operations, and TL2.3 infers parameterized, indexed,
 > universe-polymorphic, and dependent field types with typed rejection controls.
-> Wire translation and constructor reduction remain fail-closed, so the
-> official projection root still earns no import credit. Generated
-> projection/eta and quotient semantic seams remain uncredited; TL2.4
-> constructor projection reduction is next, followed separately by TL2.5 eta.
+> TL2.4 now reduces constructor projections, translates the wire form, and
+> independently admits/computes the exact official projection root; the Nat
+> root advances to its line-125 literal decline. Generated
+> projection/reduction/eta and quotient semantic seams remain uncredited; TL2.5
+> structure eta is next as a separate definitional-equality gate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
@@ -618,9 +619,11 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   official flat fixture as eight checked declarations and the direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with no axioms. It compares
   independently generated recursors after binder-correct universe alpha-renaming
-  under eleven mutation/negative tests. A four-root official dependency census
-  makes projection the first product decline for the structure, Nat-literal,
-  and String-literal roots and isolates quotient as a separate closure. Broader
+  under a now-fourteen-test importer matrix. A four-root official dependency
+  census made projection the first product decline; TL2.2-TL2.4 now close its
+  exact nine-declaration root, and the committed Nat root advances to line-125
+  literal typing. Quotient remains a separate closure; the unretained String
+  root awaits a post-projection rerun. Broader
   dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Native source,
   elaboration, modules/Lake, a version-specific untrusted `.olean` reader, LSP,

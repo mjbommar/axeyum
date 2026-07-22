@@ -19,9 +19,9 @@
 //! admission gate.
 //!
 //! **Deferred to a later slice** (and erroring cleanly if reached): literal
-//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]), structure-
-//! projection reduction/eta, and `Quotient` reduction. Projection inference
-//! and inductive/recursor ι-reduction are implemented. An
+//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]), structure eta,
+//! and `Quotient` reduction. Projection inference/reduction and
+//! inductive/recursor ι-reduction are implemented. An
 //! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
@@ -471,6 +471,13 @@ impl Kernel {
                     let instd = self.instantiate(body, &[val]);
                     cursor = self.foldl_apps(instd, args.iter().copied());
                 }
+                // Projection: normalize the projected value; when it becomes a
+                // constructor application, select the requested field after
+                // the constructor parameters and re-apply any outer spine.
+                ExprNode::Proj(..) => match self.reduce_projection(cursor) {
+                    Some(reduced) => cursor = reduced,
+                    None => return cursor,
+                },
                 // ι: a recursor `Const(I.rec, _)` applied to its premises and a
                 // constructor-headed major reduces to the matching minor applied
                 // to the constructor's fields (ADR-0036, slice 4).
@@ -484,11 +491,44 @@ impl Kernel {
                     return self.sort(level);
                 }
                 // All other heads are already weak-head-normal here: FVar,
-                // Const, Sort (applied — ill-typed but inert), Pi, BVar (loose —
+                // Sort (applied — ill-typed but inert), Pi, BVar (loose —
                 // inert), Lit, and Lam with no args.
                 _ => return cursor,
             }
         }
+    }
+
+    /// Try one constructor-projection reduction step.
+    ///
+    /// This mirrors Lean's `reduce_proj_core`: normalize the projected value,
+    /// require a constructor head, obtain the constructor's checked parameter
+    /// count from its parent inductive, and select argument
+    /// `num_params + field_index`. Reduction intentionally follows the actual
+    /// constructor and does not re-check the structure name stored in the
+    /// projection node; projection inference owns that well-typedness check,
+    /// matching Lean's separation between reduction and inference.
+    fn reduce_projection(&mut self, expression: ExprId) -> Option<ExprId> {
+        let (head, trailing) = self.unfold_apps(expression);
+        let ExprNode::Proj(_, field_index, structure) = self.expr_node(head).clone() else {
+            return None;
+        };
+
+        let structure = self.whnf(structure);
+        let (ctor_head, ctor_args) = self.unfold_apps(structure);
+        let ExprNode::Const(ctor_name, _) = self.expr_node(ctor_head) else {
+            return None;
+        };
+        let inductive = match self.env.get(*ctor_name) {
+            Some(Declaration::Constructor { inductive, .. }) => *inductive,
+            _ => return None,
+        };
+        let num_params = match self.env.get(inductive) {
+            Some(Declaration::Inductive { num_params, .. }) => usize::from(*num_params),
+            _ => return None,
+        };
+        let selected_index = num_params.checked_add(usize::try_from(field_index).ok()?)?;
+        let selected = ctor_args.get(selected_index).copied()?;
+        Some(self.foldl_apps(selected, trailing))
     }
 
     /// Weak head normal form for the in-scope fragment.
@@ -502,8 +542,8 @@ impl Kernel {
     /// matching nanoda.
     ///
     /// `Opaque` and `Axiom` `Const` heads do **not** δ-unfold (matching
-    /// nanoda's `get_declar_val`). There is no ι (recursor/inductive) or
-    /// projection reduction in this slice.
+    /// nanoda's `get_declar_val`). Inductive ι and constructor-projection
+    /// reduction are included; quotient reduction remains deferred.
     ///
     /// # Panics
     ///

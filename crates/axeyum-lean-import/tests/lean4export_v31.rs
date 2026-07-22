@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use axeyum_lean_import::{ImportError, ImportLimits, import_ndjson};
-use axeyum_lean_kernel::Kernel;
+use axeyum_lean_kernel::{Kernel, KernelError};
 
 const FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson");
@@ -108,13 +108,71 @@ fn official_direct_recursive_families_are_independently_admitted() {
 }
 
 #[test]
+fn official_projection_fixture_is_independently_admitted_and_computes() {
+    let (mut kernel, report) = import(PROJECTION_FIXTURE).expect("projection fixture admits");
+    assert_eq!(
+        (
+            report.names,
+            report.levels,
+            report.expressions,
+            report.declaration_records,
+            report.admitted_declarations,
+        ),
+        (21, 2, 61, 4, 9)
+    );
+    assert!(report.axioms.is_empty());
+    let admitted: Vec<_> = kernel
+        .environment()
+        .iter()
+        .map(|(_, declaration)| kernel.display_name(declaration.name()).to_string())
+        .collect();
+    assert_eq!(
+        admitted,
+        [
+            "Nat",
+            "Nat.zero",
+            "Nat.succ",
+            "Nat.rec",
+            "ImportPair",
+            "ImportPair.mk",
+            "ImportPair.rec",
+            "ImportPair.left",
+            "importPairLeft",
+        ]
+    );
+
+    let anon = kernel.anon();
+    let nat = kernel.name_str(anon, "Nat");
+    let nat_zero = kernel.name_str(nat, "zero");
+    let nat_succ = kernel.name_str(nat, "succ");
+    let pair = kernel.name_str(anon, "ImportPair");
+    let pair_mk = kernel.name_str(pair, "mk");
+    let import_pair_left = kernel.name_str(anon, "importPairLeft");
+    let zero = kernel.const_(nat_zero, vec![]);
+    let one = {
+        let succ = kernel.const_(nat_succ, vec![]);
+        kernel.app(succ, zero)
+    };
+    let value = {
+        let ctor = kernel.const_(pair_mk, vec![]);
+        let with_left = kernel.app(ctor, zero);
+        kernel.app(with_left, one)
+    };
+    let imported_call = {
+        let function = kernel.const_(import_pair_left, vec![]);
+        kernel.app(function, value)
+    };
+    assert_eq!(kernel.whnf(imported_call), zero);
+    let right = kernel.proj(pair, 1, value);
+    assert_eq!(kernel.whnf(right), one);
+}
+
+#[test]
 fn official_blocker_fixtures_have_stable_first_declines() {
     let cases = [
-        (PROJECTION_FIXTURE, 81, "expr-projection"),
-        // `Nat`'s dependency closure reaches a structure projection before the
-        // literal record, making projection the measured first implementation
-        // slice rather than an ordering guess.
-        (NAT_LITERAL_FIXTURE, 106, "expr-projection"),
+        // Projection is now translated/admitted, exposing the literal record as
+        // the exact next blocker in this dependency closure.
+        (NAT_LITERAL_FIXTURE, 125, "literal-nat-bignum-and-typing"),
         (QUOTIENT_FIXTURE, 65, "quotient-package"),
     ];
     for (fixture, expected_line, expected_code) in cases {
@@ -172,7 +230,7 @@ fn forward_expression_reference_fails_closed() {
 }
 
 #[test]
-fn projection_and_unknown_format_have_stable_declines() {
+fn projection_records_translate_and_malformed_shapes_reject() {
     let projection = format!(
         concat!(
             "{}\n",
@@ -182,15 +240,51 @@ fn projection_and_unknown_format_have_stable_declines() {
         ),
         metadata()
     );
-    let error = import(&projection).unwrap_err();
+    let (_, report) = import(&projection).expect("well-shaped projection record translates");
+    assert_eq!(report.expressions, 2);
+
+    let oversized_index = projection.replace(r#""idx":0"#, r#""idx":4294967296"#);
+    let error = import(&oversized_index).unwrap_err();
+    assert!(matches!(error, ImportError::Malformed { line: 4, .. }));
+
+    let forward_structure = projection.replace(r#""struct":0"#, r#""struct":2"#);
+    let error = import(&forward_structure).unwrap_err();
+    assert!(matches!(error, ImportError::Malformed { line: 4, .. }));
+}
+
+#[test]
+fn official_projection_name_and_index_mutations_reject_at_the_kernel_gate() {
+    let wrong_name = PROJECTION_FIXTURE.replace(
+        r#"{"ie":56,"proj":{"idx":0,"struct":5,"typeName":12}}"#,
+        r#"{"ie":56,"proj":{"idx":0,"struct":5,"typeName":1}}"#,
+    );
+    let error = import(&wrong_name).unwrap_err();
     assert!(matches!(
         error,
-        ImportError::Unsupported {
-            line: 4,
-            code: "expr-projection"
+        ImportError::Kernel {
+            line: 83,
+            source: KernelError::ProjectionTypeMismatch { .. },
+            ..
         }
     ));
 
+    let wrong_index = PROJECTION_FIXTURE.replace(
+        r#"{"ie":56,"proj":{"idx":0,"struct":5,"typeName":12}}"#,
+        r#"{"ie":56,"proj":{"idx":2,"struct":5,"typeName":12}}"#,
+    );
+    let error = import(&wrong_index).unwrap_err();
+    assert!(matches!(
+        error,
+        ImportError::Kernel {
+            line: 83,
+            source: KernelError::ProjectionFieldOutOfBounds { .. },
+            ..
+        }
+    ));
+}
+
+#[test]
+fn unknown_format_has_a_stable_decline() {
     let wrong_format = metadata().replace("3.1.0", "4.0.0");
     let error = import(&wrong_format).unwrap_err();
     assert!(matches!(

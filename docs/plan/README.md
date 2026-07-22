@@ -65,6 +65,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   TL2.3 result: checked structure metadata and dependent projection inference,
   including malformed-shape and Prop-elimination controls, while reduction,
   eta, and importer translation remain explicitly uncredited.
+- [`lean-projection-reduction-tl2.4-2026-07-21.md`](lean-projection-reduction-tl2.4-2026-07-21.md) —
+  TL2.4 result: constructor projection computation, validated wire translation,
+  exact official-root admission/computation, mutation controls, and the explicit
+  separation from TL2.5 structure eta.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local
@@ -75,8 +79,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   first independent declaration-import results: separate Rust wire crate, exact
   format/topology/resource contract, 5-record to 8-declaration flat admission,
   5-record to 11-declaration direct-recursive admission, binder-correct
-  generated-recursor comparison, eleven-test negative matrix, and explicit
-  projection/literal/quotient/harder-inductive declines.
+  generated-recursor comparison, exact 9-declaration projection-root
+  admission/computation, fourteen-test mutation matrix, and explicit
+  literal/quotient/harder-inductive declines.
 - [`lean4export-official-blocker-census-2026-07-21.md`](lean4export-official-blocker-census-2026-07-21.md) —
   exact official projection/Nat/String/quotient dependency closures, committed
   small streams and hashes, assurance-separated admission matrix, and the

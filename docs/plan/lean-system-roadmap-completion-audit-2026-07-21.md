@@ -141,10 +141,12 @@ The roadmap is backed by implementation rather than only a feature list:
 5. Axeyum independently regenerates recursors and definitionally compares their
    types and iota rules after universe-binder alpha-renaming;
 6. theorem-body and recursor-rule mutations reject;
-7. exact projection, Nat, String, and quotient closures preserve typed first
-   declines and establish projection as the next measured kernel slice;
-8. focused current validation passes 177 kernel unit tests, four kernel
-   integration tests, one kernel doctest, and eleven importer tests under the
+7. exact projection, Nat, String, and quotient closures established projection
+   as the first measured kernel slice; TL2.2-TL2.4 now close its exact K1 root,
+   while the committed Nat root advances to literal typing and the unretained
+   String root awaits a refreshed first-blocker measurement;
+8. focused current validation passes 179 kernel unit tests, 17 kernel
+   integration cases, one kernel doctest, and fourteen importer tests under the
    repository's 4 GiB cap;
 9. the separate official-source lane has a committed fail-closed 71/71 Lean
    4.30 representative-family result, without converting it into broad import,

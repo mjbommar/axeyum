@@ -86,3 +86,9 @@ applications, test parameterized and universe-polymorphic cases, then enable the
 wire translation only when the pinned official projection closure independently
 admits and computes. TL2.5 structure eta remains a separate semantic change and
 gate.
+
+Historical checkpoint: this document records the deliberate TL2.3 boundary.
+TL2.4 subsequently landed constructor reduction and validated wire translation;
+the exact official projection root now admits and computes. See
+[the TL2.4 result](lean-projection-reduction-tl2.4-2026-07-21.md). TL2.5
+structure eta is the next ordered kernel slice.

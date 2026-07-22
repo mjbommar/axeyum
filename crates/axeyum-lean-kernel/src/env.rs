@@ -17,11 +17,10 @@
 //! step live on [`super::Kernel`] (see `tc.rs`).
 //!
 //! The inductive, constructor, and recursor variants plus ι-reduction are now
-//! implemented by `inductive.rs`. **Deferred to later slices** (and erroring
-//! cleanly if reached): structure projection reduction/structure eta and
-//! `Quotient` reduction. Projection inference uses the checked inductive
-//! metadata recorded here; unsupported semantic paths reject rather than
-//! guess.
+//! implemented by `inductive.rs`. Projection inference and constructor
+//! reduction use the checked inductive metadata recorded here. **Deferred to
+//! later slices**: structure eta and `Quotient` reduction; unsupported semantic
+//! paths reject rather than guess.
 //!
 //! ## Determinism
 //!

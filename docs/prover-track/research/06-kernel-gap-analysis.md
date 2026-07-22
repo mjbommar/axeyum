@@ -11,10 +11,10 @@ Every claim below is `file:line` against the code, not the doc comments.
 
 > **2026-07-21 refresh.** The stale `src/lib.rs` scope comment identified by the
 > original audit is corrected, and row #14's initial import path has landed.
-> TL2.2 has also since added first-class structural `Proj` representation, and
-> TL2.3 adds checked dependent projection inference; statements below that
-> projection is wholly unrepresentable describe the audit point. Constructor
-> reduction, structure eta, and importer translation remain open. §3 records
+> TL2.2-TL2.4 have since added first-class structural `Proj` representation,
+> checked dependent inference, constructor reduction, and validated importer
+> translation; statements below that projection is wholly unrepresentable
+> describe the audit point. Structure eta remains open. §3 records
 > the exact import boundary and links the superseding interoperability
 > measurements.
 
@@ -282,7 +282,7 @@ which changes what "implementing" them means for us.
 | 9 | Well-founded recursion | **Elaborator-level.** `WellFounded.fix` + `WF.fix_eq`; the kernel only ever sees the resulting term. The kernel's real obligation is reducing `Acc.rec` — an inductive with a **reflexive** field. | **Re-sizes #9 as kernel work — to zero, but re-points it**: what we actually need is #6, since `Acc` is reflexive. `Acc.rec` is the hidden dependency behind every well-founded definition in a real export. |
 | 10 | Structure eta | `isDefEqEtaStruct` in `type_checker.cpp`: if one side is a constructor application of a single-constructor non-recursive structure and the other is not, expand the other via projections and retry. | Confirms **M**, strictly behind #1 as stated. |
 | 12 | Positivity | `inductive.cpp` checks `I` occurs **strictly positively** in every constructor argument — a real check, run at admission, on which #5–#8 all depend. | Confirms **M** and confirms the hazard: in Lean this check is *load-bearing from day one*. In ours it is vacuous only because the admitted fragment is so narrow. |
-| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | The initial reader now confirms the seam: flat and direct-recursive fixtures admit independently, while projection/literal/quotient records decline structurally. Broad dependency-closed admission remains the L-sized target. |
+| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | The reader now admits flat, direct-recursive, and exact projection fixtures independently; Nat literal and quotient records retain typed declines. Broad dependency-closed admission remains the L-sized target. |
 
 **Three corrections to §2.1 fall out of this comparison**, all in the same
 direction — we have over-sized the inductive work by mis-attributing
@@ -572,11 +572,11 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
    accompanied by a negative-test corpus (`Bad : Type | mk : (Bad → Bad) → Bad`
    and friends) that fails loudly. **M, ~300-500 LoC.**
 3. **`Proj` inference/reduction + structure eta** (gaps #1 + #10).
-   **TL2.2/TL2.3 update:** the first-class node, every structural traversal,
-   checked structure metadata, and dependent field-type inference now exist.
-   TL2.4-TL2.5 still own constructor reduction and eta. **L, ~800-1300 LoC for
-   the original complete slice; representation and inference are now retired
-   from that estimate.**
+   **TL2.2-TL2.4 update:** the first-class node, every structural traversal,
+   checked structure metadata, dependent field-type inference, constructor
+   reduction, and exact official-root import/computation now exist. TL2.5 alone
+   still owns eta. **L, ~800-1300 LoC for the original complete slice; only eta
+   remains from that estimate.**
 4. **A performance baseline** (§6). The kernel would sit in the goal layer's
    inner loop and `bv_decide`'s bottleneck is precisely kernel reduction speed.
    Building a goal layer on an un-benchmarked kernel means discovering it is too

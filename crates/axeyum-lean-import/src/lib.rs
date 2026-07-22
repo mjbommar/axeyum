@@ -10,11 +10,11 @@
 //! The initial profile is official `lean4export` format 3.1.0. It translates
 //! names, universe levels, the expression forms already represented by the
 //! kernel, safe non-inductive declarations, and one-family inductive groups.
-//! It rejects unsupported projections, literals, quotient packages, unsafe or
-//! partial declarations, mutual/nested/reflexive groups, unknown records, and
-//! malformed/forward references. Importing is transactional at declaration
-//! granularity, not whole-stream transactional; use a fresh [`Kernel`] for an
-//! untrusted stream.
+//! It translates projections and rejects unsupported literals, quotient
+//! packages, unsafe or partial declarations, mutual/nested/reflexive groups,
+//! unknown records, and malformed/forward references. Importing is
+//! transactional at declaration granularity, not whole-stream transactional;
+//! use a fresh [`Kernel`] for an untrusted stream.
 
 #![forbid(unsafe_code)]
 
@@ -446,7 +446,18 @@ impl<'kernel> ImportState<'kernel> {
                 object(required(value, "data", line)?, line, "mdata.data")?;
                 self.expression(required(value, "expr", line)?, line, "mdata.expr")?
             }
-            "proj" => return Err(unsupported(line, "expr-projection")),
+            "proj" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(value, &["typeName", "idx", "struct"], line, kind)?;
+                let type_name =
+                    self.name(required(value, "typeName", line)?, line, "proj.typeName")?;
+                let raw_index = u64_value(required(value, "idx", line)?, line, "proj.idx")?;
+                let field_index = u32::try_from(raw_index)
+                    .map_err(|_| malformed(line, "proj.idx exceeds the kernel field width"))?;
+                let structure =
+                    self.expression(required(value, "struct", line)?, line, "proj.struct")?;
+                self.kernel.proj(type_name, field_index, structure)
+            }
             "natVal" => return Err(unsupported(line, "literal-nat-bignum-and-typing")),
             "strVal" => return Err(unsupported(line, "literal-string-typing")),
             _ => unreachable!(),

@@ -147,10 +147,11 @@ Again, there are distinct targets:
   seam-fuzz seed now covers the four representable kernel interactions and
   rejects `False` admission in every case; this is adversarial regression
   evidence, not a consistency proof. Projection terms are structurally
-  represented and rendered, and the native kernel now infers dependent field
-  types for checked single-constructor structures. Constructor reduction, eta,
-  and importer translation remain fail-closed, so the official projection root
-  is still unadmitted; quotient is still absent.
+  represented and rendered; the native kernel infers dependent field types and
+  reduces constructor projections. The exact official projection root now
+  translates, independently admits nine declarations, and computes. Structure
+  eta remains open as a separate gate; quotient is still absent, and the Nat
+  root now stops at arbitrary-precision literal storage/typing.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
   rather than dismissed. Axeyum does not currently reproduce Lean's parser,
   macros, elaborator, unifier, tactic language, compiler, package ecosystem,

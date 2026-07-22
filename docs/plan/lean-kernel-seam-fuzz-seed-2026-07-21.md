@@ -86,10 +86,10 @@ Validation on the recorded slice:
 
 TL2.15 remains **PARTIAL**:
 
-- projection × structure eta had no expression form at this seed. TL2.2 now
-  supplies structural `Proj` terms and TL2.3 supplies checked dependent
-  inference positives/mutations, but reduction, eta, and the generated semantic
-  fuzz family remain TL2.4–TL2.5;
+- projection × structure eta had no expression form at this seed. TL2.2-TL2.4
+  now supply structural `Proj` terms, checked dependent inference, constructor
+  reduction, and direct positive/mutation suites, but eta and the generated
+  projection/reduction/eta semantic fuzz family remain TL2.5/TL2.15;
 - quotient reduction has no kernel package before TL2.10;
 - literals are deliberately tested only as fail-closed declines; arbitrary-
   precision storage and typed reduction remain TL2.6–TL2.9;
@@ -98,6 +98,6 @@ TL2.15 remains **PARTIAL**:
   land under TL2.11 before recursive-indexed/reflexive admission broadens.
 
 The immediate implementation order therefore advances to projection
-TL2.4–TL2.5 after the now-landed TL2.2 representation and TL2.3 inference. Each newly admitted seam must add generated positive, negative,
+TL2.5/TL2.15 after the now-landed TL2.2-TL2.4 projection slice. Each newly admitted seam must add generated positive, negative,
 `False`-admission, mutation, and official-comparison cases to this harness before
 receiving TL2.15 credit.

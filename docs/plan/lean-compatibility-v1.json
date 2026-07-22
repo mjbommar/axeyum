@@ -79,13 +79,6 @@
       "source_marker": "\"declaration-unsafe-or-partial\""
     },
     {
-      "code": "expr-projection",
-      "meaning": "Wire projection translation remains declined until TL2.4 constructor reduction lands; TL2.2 representation and TL2.3 native inference alone earn no K1 credit.",
-      "owner": "axeyum-lean-kernel",
-      "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"expr-projection\""
-    },
-    {
       "code": "format-version",
       "meaning": "The export stream is not the pinned format version.",
       "owner": "axeyum-lean-import",
@@ -172,9 +165,14 @@
           "kind": "test",
           "path": "crates/axeyum-lean-kernel/tests/projection_inference.rs",
           "detail": "TL2.3 checks parameterized, indexed, universe-polymorphic, dependent, malformed-shape, and Prop-elimination projection inference."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/projection_reduction.rs",
+          "detail": "TL2.4 checks constructor-field selection, parameter skipping, universe polymorphism, dependent fields, delta/neutral behavior, and outer-spine reduction."
         }
       ],
-      "residual": "K0 includes native dependent projection inference but does not imply official declaration import or native source support; TL2.4 reduction, TL2.5 eta, and importer translation remain."
+      "residual": "K0 includes native projection inference/reduction but does not imply native source support; TL2.5 structure eta and broader kernel constructs remain."
     },
     {
       "id": "lean4export-direct-recursive-fixture",
@@ -251,7 +249,7 @@
         "workflow_reproduced": "not_attempted",
         "runtime_reproduced": "not_attempted"
       },
-      "decline_codes": ["expr-projection"],
+      "decline_codes": ["literal-nat-bignum-and-typing"],
       "evidence": [
         {
           "kind": "fixture",
@@ -261,10 +259,10 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
-          "detail": "Stable first decline is expr-projection at line 106."
+          "detail": "After projection translation, the stable first decline is literal-nat-bignum-and-typing at line 125."
         }
       ],
-      "residual": "Projection is reached before the literal record; bignum storage and Nat literal typing remain later blockers."
+      "residual": "Projection is cleared; arbitrary-precision Nat storage and literal typing are now the exact first blockers."
     },
     {
       "id": "lean4export-projection-root",
@@ -273,15 +271,15 @@
       "profile": "K1-import",
       "states": {
         "parsed": "succeeded",
-        "translated": "declined",
-        "admitted": "not_attempted",
+        "translated": "succeeded",
+        "admitted": "succeeded",
         "official_admitted": "succeeded",
         "source_elaborated": "succeeded",
         "proof_checked": "not_attempted",
         "workflow_reproduced": "not_attempted",
         "runtime_reproduced": "not_attempted"
       },
-      "decline_codes": ["expr-projection"],
+      "decline_codes": [],
       "evidence": [
         {
           "kind": "fixture",
@@ -291,10 +289,10 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
-          "detail": "Stable first decline is expr-projection at line 81."
+          "detail": "TL2.4 translates all 61 expressions, admits nine declarations, rejects name/index mutations, and computes importPairLeft over ImportPair.mk."
         }
       ],
-      "residual": "TL2.2 representation and TL2.3 native inference are landed; TL2.4 reduction, TL2.5 structure eta, and importer translation remain."
+      "residual": "This exact K1 projection root passes; TL2.5 structure eta and broader structures remain separate compatibility work."
     },
     {
       "id": "lean4export-quotient-root",

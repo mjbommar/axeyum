@@ -70,10 +70,11 @@ Seams, in priority order:
    raises `LitTooWide`.
 
 The negative class is now live: **"the kernel accepts `False`."** TL2.2
-represents projections structurally and TL2.3 infers checked dependent field
-types; generated projection/reduction/eta and quotient semantic cases remain
-explicit TL2.15 follow-ups. Next implementation work is TL2.4 constructor
-projection reduction, with each new admitted seam required to join the same
+represents projections structurally, TL2.3 infers checked dependent field types,
+and TL2.4 reduces/imports the exact official root; generated
+projection/reduction/eta and quotient semantic cases remain explicit TL2.15
+follow-ups. Next implementation work is TL2.5 structure eta, with each new
+admitted seam required to join the same
 negative class.
 
 ## The five things not to get wrong

@@ -34,7 +34,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         second = GEN.render(copy.deepcopy(self.data))
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
-        self.assertIn("`expr-projection`", first)
+        self.assertIn("`literal-nat-bignum-and-typing`", first)
 
     def test_translation_cannot_receive_credit_without_parsing(self) -> None:
         row = self.row("lean4export-flat-fixture")
@@ -51,14 +51,14 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         )
 
     def test_proof_credit_requires_independent_admission(self) -> None:
-        row = self.row("lean4export-projection-root")
+        row = self.row("lean4export-nat-literal-root")
         row["states"]["proof_checked"] = "succeeded"
         self.assertTrue(
             any("proof checking requires admitted=succeeded" in failure for failure in self.failures())
         )
 
     def test_declines_require_registered_codes_and_codes_require_declines(self) -> None:
-        row = self.row("lean4export-projection-root")
+        row = self.row("lean4export-nat-literal-root")
         row["decline_codes"] = []
         self.assertTrue(
             any("declined assurance requires a decline code" in failure for failure in self.failures())
@@ -66,13 +66,13 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
         self.data = GEN.load_manifest()
         row = self.row("lean4export-flat-fixture")
-        row["decline_codes"] = ["expr-projection"]
+        row["decline_codes"] = ["literal-nat-bignum-and-typing"]
         self.assertTrue(
             any("decline code without a declined assurance" in failure for failure in self.failures())
         )
 
         self.data = GEN.load_manifest()
-        row = self.row("lean4export-projection-root")
+        row = self.row("lean4export-nat-literal-root")
         row["decline_codes"] = ["invented-code"]
         self.assertTrue(
             any("unregistered decline codes" in failure for failure in self.failures())
