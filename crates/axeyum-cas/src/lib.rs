@@ -10040,9 +10040,16 @@ fn improper_fourier_quadratic(
     lower: LimitPoint,
     upper: LimitPoint,
 ) -> Option<DefiniteIntegral> {
-    if !matches!((&lower, &upper), (LimitPoint::NegInfinity, LimitPoint::PosInfinity)) {
-        return None;
-    }
+    // Full line `(−∞,∞)`, or `[0,∞)` for an even integrand (then halve).
+    let half = match (&lower, &upper) {
+        (LimitPoint::NegInfinity, LimitPoint::PosInfinity) => false,
+        (LimitPoint::Finite(z), LimitPoint::PosInfinity)
+            if z.is_zero() && function_parity(expr, var) == Parity::Even =>
+        {
+            true
+        }
+        _ => return None,
+    };
     let (head, a) = find_linear_trig(expr, var)?;
     if a <= Rational::integer(0) {
         return None; // need a > 0 (Jordan's lemma closes in the upper half-plane)
@@ -10085,7 +10092,9 @@ fn improper_fourier_quadratic(
         UnaryFunc::Sin => real_n * sin_part + imag_n * cos_part,
         _ => return None,
     };
-    let value = prefactor * envelope * bracket;
+    let full_line = prefactor * envelope * bracket;
+    // `[0,∞)` for an even integrand is half the symmetric integral.
+    let value = if half { full_line / CasExpr::int(2) } else { full_line };
     Some(DefiniteIntegral {
         value: simplify(&evaluate_trig(&simplify_radicals(&value))),
         antiderivative: CasExpr::zero(),
@@ -14825,6 +14834,17 @@ mod tests {
         ));
         // Odd part vanishes: ∫ sin x/(x²+1) = 0.
         assert_equal(&gauss(x().sin() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &CasExpr::zero());
+        // Half-line `[0,∞)` for an EVEN integrand is half the symmetric value:
+        // ∫₀^∞ cos x/(x²+1) = π/(2e), and ∫₀^∞ x·sin x/(x²+1) = π/(2e) (x·sin x
+        // is even, so the [0,∞) integral is also half the full line).
+        assert!(matches!(
+            equal(&gauss(x().cos() / (x().pow(2) + CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi") / (CasExpr::int(2) * e()))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(x() * x().sin() / (x().pow(2) + CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi") / (CasExpr::int(2) * e()))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
         assert!(matches!(

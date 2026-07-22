@@ -1356,6 +1356,8 @@ scoped effort rather than a risky mid-session refactor.
 
 **Cholesky** (Entry 37s): `cholesky_decomposition` — `A=L·Lᵀ` for symmetric positive-definite `A` (diagonal `√`, checked `>0` via `evalf`), certified `L·Lᵀ=A`. `[[4,2],[2,2]]→[[2,0],[1,1]]`; surds; non-PD/non-symmetric decline.
 
+**Half-line Fourier integrals** (Entry 37t): extended `improper_fourier_quadratic` to the half-line `[0,∞)` when the integrand is **even** (`function_parity == Even`) — then `∫₀^∞ = ½∫_{−∞}^∞`. So `∫₀^∞ cos x/(x²+1)=π/(2e)`, `∫₀^∞ cos2x/(x²+1)=π/(2e²)`, and `∫₀^∞ x·sin x/(x²+1)=π/(2e)` (`x·sin x` is even). Parity is the exact soundness guard: an odd/asymmetric integrand still declines on `[0,∞)` (its half-line value is *not* half the symmetric one). Certified by construction (residue theorem) + the zero-test.
+
 **Session tally (Entries 37–37s): 39 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
