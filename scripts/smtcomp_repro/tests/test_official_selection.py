@@ -301,13 +301,56 @@ class OfficialSelectionTests(unittest.TestCase):
 
     def test_streamed_gzip_object_array_mutations_reject(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            path = Path(temporary) / "stream.json.gz"
+            temporary_path = Path(temporary)
+            path = temporary_path / "stream.json.gz"
             path.write_bytes(gzip.compress(b'{"other":[]}\n'))
             with self.assertRaises(self.input_audit["InputAuditError"]):
                 list(self.input_audit["iter_gzip_object_array"](path, "target"))
             path.write_bytes(gzip.compress(b'{"target":[{"id":1}'))
             with self.assertRaises(self.input_audit["InputAuditError"]):
                 list(self.input_audit["iter_gzip_object_array"](path, "target"))
+
+            def benchmark(family: str, name: str) -> dict[str, object]:
+                return {
+                    "asserts": 1,
+                    "file": {
+                        "family": [family],
+                        "incremental": False,
+                        "logic": "QF_BV",
+                        "name": name,
+                    },
+                    "status": "unknown",
+                }
+
+            path.write_bytes(
+                gzip.compress(
+                    canonical_json_bytes(
+                        {
+                            "incremental": [],
+                            "non_incremental": [
+                                benchmark("z-family", "last.smt2"),
+                                benchmark("a-family", "first.smt2"),
+                            ],
+                        }
+                    )
+                )
+            )
+            sorted_rows = list(
+                self.input_audit["iter_sorted_benchmarks"](
+                    path,
+                    temporary_path,
+                    chunk_rows=1,
+                )
+            )
+            self.assertEqual(
+                [row["benchmark_id"] for row in sorted_rows],
+                [
+                    "non-incremental/QF_BV/a-family/first.smt2",
+                    "non-incremental/QF_BV/z-family/last.smt2",
+                ],
+            )
+            with self.assertRaises(self.input_audit["InputAuditError"]):
+                list(self.input_audit["iter_sorted_benchmarks"](path, temporary_path, chunk_rows=0))
 
     def test_fixture_selection_reconstructs_all_terminal_reasons(self) -> None:
         result = self.audit_fixture()

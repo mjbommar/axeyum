@@ -175,6 +175,9 @@ result is credited by this decision alone.
 - Both configured explicit-removal IDs are absent from the pinned 450,472-row
   metadata. The producer still performs the anti-join before eligibility; the
   independent ledger records two configured and zero matched removals.
+- The pinned metadata array is not in normalized path order. The independent
+  auditor accepts its byte-frozen input order but uses a bounded external merge
+  sort before emitting the canonical path-ordered eligibility ledger.
 
 ## Alternatives
 
