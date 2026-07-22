@@ -10364,6 +10364,71 @@ fn improper_bose_einstein_integral(
     })
 }
 
+/// The **squared-sinc** integral `∫₀^∞ c·(sin(a x)/x)² dx = c·π|a|/2` (and the full
+/// line `∫_{−∞}^∞ = c·π|a|`, an even integrand) — a Dirichlet-kernel classic with no
+/// elementary antiderivative. The frequency `a` is read off the `sin(a·var)` factor;
+/// the proportionality constant `c` is recovered numerically (at points avoiding the
+/// kernel's zeros) then **proven** by the zero-test `equal(expr, c·(sin(a x)/x)²)`;
+/// a numeric quadrature on the (non-singular) half line guards the value. `∫₀^∞
+/// (sin x/x)² = π/2`, `∫_{−∞}^∞ (sin x/x)² = π`, `∫₀^∞ (sin 2x/x)² = π`.
+fn improper_sinc_squared_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let half = match (&lower, &upper) {
+        (LimitPoint::NegInfinity, LimitPoint::PosInfinity) => false,
+        (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero() => true,
+        _ => return None,
+    };
+    let (head, a) = find_linear_trig(expr, var)?;
+    if head != UnaryFunc::Sin || a.is_zero() {
+        return None;
+    }
+    let a_abs = if a < Rational::zero() { a.checked_neg()? } else { a };
+    let kernel = ((CasExpr::Const(a) * CasExpr::var(var)).sin() / CasExpr::var(var)).pow(2);
+    let a_f = evalf(&CasExpr::Const(a_abs), &[])?;
+    // Sample `expr/kernel` at `x = c/|a|` for `c` avoiding multiples of π (kernel zeros).
+    let ratio = |c: f64| -> Option<f64> {
+        let point = c / a_f;
+        let den = evalf(&kernel, &[(var, point)])?;
+        if den.abs() < 1e-9 {
+            return None;
+        }
+        Some(evalf(expr, &[(var, point)])? / den)
+    };
+    let (Some(r1), Some(r2), Some(r3)) = (ratio(0.5), ratio(1.3), ratio(2.1)) else {
+        return None;
+    };
+    if (r1 - r2).abs() > 1e-6 || (r1 - r3).abs() > 1e-6 {
+        return None;
+    }
+    let coeff = rationalize(r1, 10_000)?;
+    let scaled = simplify(&(CasExpr::Const(coeff) * kernel));
+    if !matches!(equal(&simplify(expr), &scaled), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    // `∫₀^∞ = c·π|a|/2`, full line doubles it.
+    let mut value = CasExpr::Const(coeff) * CasExpr::var("pi") * CasExpr::Const(a_abs);
+    if half {
+        value = value / CasExpr::int(2);
+    }
+    let value = simplify(&value);
+    // Guard on the half line (`x = 0` is a removable point of the squared sinc, but
+    // avoiding it keeps the quadrature clean); the tail past 200 averages to `~c/2R`.
+    let approx = numeric_integrate(expr, var, 1e-6, 200.0, 100_000)?;
+    let exact_half = if half { evalf(&value, &[])? } else { evalf(&value, &[])? / 2.0 };
+    if (approx - exact_half).abs() > 2e-2 * (1.0 + exact_half.abs()) {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// Find a single `cos(a·var)` or `sin(a·var)` factor anywhere in `expr` (a linear
 /// argument, `a` a nonzero rational), returning the head and `a` — used to peel the
 /// oscillatory factor of a Fourier integral.
@@ -10581,6 +10646,9 @@ pub fn improper_integrate(
     }
     if let Some(bose) = improper_bose_einstein_integral(expr, var, lower, upper) {
         return Some(bose);
+    }
+    if let Some(sinc) = improper_sinc_squared_integral(expr, var, lower, upper) {
+        return Some(sinc);
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
@@ -15247,6 +15315,13 @@ mod tests {
         // Odd n (ζ(3), no closed form) declines; the divergent m=0 case declines.
         assert!(improper_integrate(&(x().pow(2) / (x().exp() - CasExpr::int(1))), "x", zero(), LimitPoint::PosInfinity).is_none());
         assert!(improper_integrate(&(CasExpr::int(1) / (x().exp() - CasExpr::int(1))), "x", zero(), LimitPoint::PosInfinity).is_none());
+        // Squared-sinc: ∫₀^∞ (sin ax/x)² = π|a|/2, full line doubles it.
+        assert_equal(&gauss((x().sin() / x()).pow(2), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(2)));
+        assert_equal(&gauss((x().sin() / x()).pow(2), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &v("pi"));
+        assert_equal(&gauss(((CasExpr::int(2) * x()).sin() / x()).pow(2), zero(), LimitPoint::PosInfinity), &v("pi"));
+        // Alternate spelling sin²x/x², and the divergent (cos x/x)² declines.
+        assert_equal(&gauss(x().sin().pow(2) / x().pow(2), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(2)));
+        assert!(improper_integrate(&(x().cos() / x()).pow(2), "x", zero(), LimitPoint::PosInfinity).is_none());
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
         assert!(matches!(
