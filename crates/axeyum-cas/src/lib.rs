@@ -2006,9 +2006,19 @@ pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
             linear.pow(multiplicity)
         });
     }
-    // A non-unit remaining factor (leading constant or an irreducible ≥2).
+    // The remaining factor: a leading constant, or a degree-≥2 part with no
+    // rational roots. Route the latter through the complete Berlekamp–Zassenhaus
+    // factorizer so irreducible factors of degree ≥ 2 split — e.g. the residual
+    // `x⁴+x²+1 = (x²+x+1)(x²−x+1)`, which rational-root peeling leaves whole.
     if remaining != vec![Rational::integer(1)] {
-        factors.push(MultiPoly::from_univariate(var, &remaining).to_expr());
+        let remainder_expr = MultiPoly::from_univariate(var, &remaining).to_expr();
+        if poly::rat_degree(&remaining).unwrap_or(0) >= 2
+            && let Some(split) = factor_expr(&remainder_expr, var)
+        {
+            factors.push(split);
+        } else {
+            factors.push(remainder_expr);
+        }
     }
     let factored = match factors.len() {
         0 => return Some(CasExpr::one()),
@@ -13929,6 +13939,23 @@ mod tests {
         assert_equal(
             &factor(&h, "x").expect("factorable"),
             &(x() - CasExpr::int(1)).pow(2),
+        );
+        // Irreducible quadratic factors (no rational roots) — the residual is
+        // split by the complete factorizer, not dumped whole:
+        // x⁴+x²+1 = (x²+x+1)(x²−x+1), x⁴+4 = (x²+2x+2)(x²−2x+2).
+        assert_equal(
+            &factor(&(x().pow(4) + x().pow(2) + CasExpr::int(1)), "x").expect("factorable"),
+            &((x().pow(2) + x() + CasExpr::int(1)) * (x().pow(2) - x() + CasExpr::int(1))),
+        );
+        assert_equal(
+            &factor(&(x().pow(4) + CasExpr::int(4)), "x").expect("factorable"),
+            &((x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(2))
+                * (x().pow(2) - CasExpr::int(2) * x() + CasExpr::int(2))),
+        );
+        // Mixed: x⁵ − x = x(x−1)(x+1)(x²+1) — linear roots peeled, quadratic kept.
+        assert_equal(
+            &factor(&(x().pow(5) - x()), "x").expect("factorable"),
+            &(x().pow(5) - x()),
         );
         // 4th derivative of x⁴ is 24
         assert_equal(&x().pow(4).differentiate_n("x", 4), &CasExpr::int(24));
