@@ -10727,6 +10727,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         // Last resort: power-reduce even trig powers (`eˣsin²x`) — placed here so the
         // direct trig/rational-trig finders keep their canonical forms.
         integrate_power_reduced_trig(expr, var),
+        integrate_ln_argument_substitution(expr, var),
         // Final fallback: expand the integrand and integrate the expansion. Closes
         // powers of exponential/trig sums the direct finders miss — `∫sinh²x`,
         // `∫1/cosh²x` (even powers of `(eˣ±e^{−x})`) reduce to sums of exponentials.
@@ -12676,6 +12677,69 @@ pub fn improper_integrate(
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
+/// Whether `expr` contains any `exp(·)` head anywhere.
+fn contains_exp_head(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, _) => true,
+        CasExpr::Unary(_, arg) => contains_exp_head(arg),
+        CasExpr::Neg(inner) => contains_exp_head(inner),
+        CasExpr::Pow(base, _) => contains_exp_head(base),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_exp_head),
+        CasExpr::Div(a, b) => contains_exp_head(a) || contains_exp_head(b),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// Whether `expr` contains a `ln(g)` head whose argument `g` involves `var`.
+fn contains_ln_of_var(expr: &CasExpr, var: &str) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, arg) if expr_contains_var(arg, var) => true,
+        CasExpr::Unary(_, arg) => contains_ln_of_var(arg, var),
+        CasExpr::Neg(inner) => contains_ln_of_var(inner, var),
+        CasExpr::Pow(base, _) => contains_ln_of_var(base, var),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().any(|e| contains_ln_of_var(e, var))
+        }
+        CasExpr::Div(a, b) => contains_ln_of_var(a, var) || contains_ln_of_var(b, var),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// `∫ F(ln x) dx` via the substitution `u = ln x` (`x = eᵘ`, `dx = eᵘ du`): the
+/// integrand becomes `F(u)·eᵘ`, which the exp×{polynomial,sinusoid} finders handle.
+/// Closes `∫cos(ln x) = x(sin(ln x)+cos(ln x))/2`, `∫sin(ln x)`, `∫ln(x)·(ln x)ⁿ`-free
+/// composites of `ln x`. Fires only when replacing `x` leaves a pure function of `u`
+/// (no residual `x`), so a genuine `F(ln x)` form. Certified downstream (the check
+/// folds `e^{ln x}=x`).
+fn integrate_ln_argument_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Only meaningful when a `ln(x)` head is actually present — otherwise the `x→eᵘ`
+    // substitution invents structure and the finder would recurse without bound.
+    if !contains_ln_of_var(expr, var) {
+        return None;
+    }
+    let u = if var == "u" { "w" } else { "u" };
+    // F(e^u): substitute x → e^u and collapse `ln(e^u) → u`.
+    let substituted = rewrite_log_exp(&expr.substitute(var, &CasExpr::var(u).exp()));
+    let as_u = simplify(&substituted);
+    // Must be a genuine function of `ln x`: depends on `u`, no residual `x`, and — the
+    // key termination guard — no residual `exp(u)` (which would mean the `x`-dependence
+    // did not collapse to `u` alone, e.g. `ln(x²+1) → ln(e^{2u}+1)`; integrating
+    // `·eᵘ` would re-enter this finder and recurse without bound).
+    if expr_contains_var(&as_u, var)
+        || !expr_contains_var(&as_u, u)
+        || contains_exp_head(&as_u)
+    {
+        return None;
+    }
+    // ∫ F(u)·eᵘ du, then back-substitute. Replace the whole `eᵘ` factor with `x`
+    // *before* `u → ln x` (so the result carries `x`, not the positivity-dependent
+    // `e^{ln x}` the zero-test cannot fold), then map any residual `u → ln x`.
+    let integrand_u = as_u * CasExpr::var(u).exp();
+    let anti_u = integrate(&integrand_u, u).filter(CertifiedIntegral::is_certified)?.antiderivative;
+    let with_x = replace_subexpr(&anti_u, &CasExpr::var(u).exp(), &CasExpr::var(var));
+    Some(with_x.substitute(u, &CasExpr::var(var).ln()))
+}
+
 /// Final integration fallback: `expand` the integrand and integrate the expansion.
 /// A power of an exponential/trig **sum** — `sinh²x = (eˣ−e^{−x})²/4`, `1/cosh²x` —
 /// expands to a sum of terms the direct finders each handle, then closes by
@@ -21110,6 +21174,22 @@ mod tests {
             let result = integrate(&integrand, "x").expect("hyperbolic-power integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
         }
+    }
+
+    #[test]
+    fn integrate_functions_of_log() {
+        let x = || v("x");
+        // ∫F(ln x) dx via u=ln x → ∫F(u)eᵘ du: ∫cos(ln x)=x(cos(ln x)+sin(ln x))/2,
+        // ∫sin(ln x)=x(sin(ln x)−cos(ln x))/2. Certified by differentiate-and-check.
+        let c = integrate(&x().ln().cos(), "x").expect("∫cos(ln x)");
+        assert!(c.is_certified());
+        assert_equal(&c.antiderivative.differentiate("x"), &x().ln().cos());
+        let s = integrate(&x().ln().sin(), "x").expect("∫sin(ln x)");
+        assert!(s.is_certified());
+        assert_equal(&s.antiderivative.differentiate("x"), &x().ln().sin());
+        // Termination guard: `∫ln(x²+1)` (not a pure function of ln x) must not send
+        // the u=ln x finder into unbounded recursion — it routes elsewhere, certified.
+        assert!(integrate(&(x().pow(2) + CasExpr::int(1)).ln(), "x").unwrap().is_certified());
     }
 
     #[test]
