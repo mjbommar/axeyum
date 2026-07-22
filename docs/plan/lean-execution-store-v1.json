@@ -1,0 +1,1553 @@
+{
+  "schema": "axeyum-lean-execution-store-result-v1",
+  "as_of": "2026-07-22",
+  "scope": "synthetic-local-process-interruption-store-controls-no-power-loss-lean-u2-or-parity-credit",
+  "preregistration": {
+    "plan_commit": "8bad614645137164eafec6ab6cf068e5035695b5",
+    "plan_sha256": "77b9af8ad012d907c2aa8297008066117d476f0e8018a33278a5104892044263",
+    "implementation_revision": "c4b59d862383bf35a1e1c47f50172893313809d8",
+    "plan_published_before_implementation": true,
+    "implementation_published_before_kill_matrix": true
+  },
+  "source_inputs": [
+    {
+      "path": "docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md",
+      "sha256": "77b9af8ad012d907c2aa8297008066117d476f0e8018a33278a5104892044263"
+    },
+    {
+      "path": "scripts/lean_execution_store.py",
+      "sha256": "01d4b6b3cc45f08a748478835215fce45e6dd08f535e461106f33e6e80a9de4a"
+    },
+    {
+      "path": "scripts/tests/test_lean_execution_store.py",
+      "sha256": "5a386e04006de9bbc9d10c71993a00099c56e2b9781df78631b7455ca292ba6c"
+    },
+    {
+      "path": "scripts/smtcomp_repro/resume_fs.py",
+      "sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec"
+    },
+    {
+      "path": "scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+      "sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+    },
+    {
+      "path": "scripts/gen-lean-execution-evidence.py",
+      "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418"
+    },
+    {
+      "path": "docs/plan/lean-execution-evidence-v1.json",
+      "sha256": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a"
+    },
+    {
+      "path": "docs/plan/lean-execution-process-v1.json",
+      "sha256": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf"
+    }
+  ],
+  "evidence_root": "docs/plan/evidence/lean-execution-store-tl0.7.3",
+  "evidence_files": [
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/storage-classes.json",
+      "bytes": 1954,
+      "sha256": "e7eec5d0da88c6fa1490ec7e3f1d457fe1438b88ba1f6e5165fa3f8e8494b042"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/cell.json",
+      "bytes": 2498,
+      "sha256": "d47ef41fd9ab20fb6bc0db2c137998d4c8b5c57cf4939656bd732d62d6541fc4"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/marker.bin",
+      "bytes": 13,
+      "sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/cell.json",
+      "bytes": 2599,
+      "sha256": "8f147884faab84c8099986c82fa93a709038b5d9c19028cb9f9e49cb6739790d"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/marker.bin",
+      "bytes": 17,
+      "sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/cell.json",
+      "bytes": 2594,
+      "sha256": "307aa6c5c6ea8debffe1a9937f170a1a434801bf7b8adb60698f9b4fe9f5f20a"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/marker.bin",
+      "bytes": 17,
+      "sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/cell.json",
+      "bytes": 2505,
+      "sha256": "5f663ec94461156fe44e8c8427c8c58b35e9153b5fc1def06eb825e52a850ed3"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/marker.bin",
+      "bytes": 17,
+      "sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/cell.json",
+      "bytes": 2480,
+      "sha256": "1daf51f2a56d7a6aae699d0850ac49a1ce40a7a29c1d8d3db554611f6b1ee5e2"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/marker.bin",
+      "bytes": 13,
+      "sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/cell.json",
+      "bytes": 2581,
+      "sha256": "83b2ae2801e0bc316495a4b3d307d444ea98d7e4948899616f3544c3278fbfae"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/marker.bin",
+      "bytes": 17,
+      "sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/cell.json",
+      "bytes": 2576,
+      "sha256": "5a9b5e1b62b05ff3aa6727efa5044b647a22f8069534212e92928bb65c1b41ed"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/marker.bin",
+      "bytes": 17,
+      "sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/cell.json",
+      "bytes": 2487,
+      "sha256": "36c66dcbb1307d3f13c2d9fa336453fd37cc972a08a4ac68839d87875a0d8800"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/marker.bin",
+      "bytes": 17,
+      "sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/cell.json",
+      "bytes": 2639,
+      "sha256": "c3e385cf14f676b258f366a34766a6c6feeb8b062150c328bc9e84444d7911be"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/marker.bin",
+      "bytes": 13,
+      "sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/cell.json",
+      "bytes": 2740,
+      "sha256": "440efc9ce22a36149a713e650e7a406982c880a24b181e9ffa0138bf011583ac"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/marker.bin",
+      "bytes": 17,
+      "sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/cell.json",
+      "bytes": 2735,
+      "sha256": "d1209b96f9d1eb84632f79f4d9a42be4ff9b0a185f1f4db540254589abaa0e90"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/marker.bin",
+      "bytes": 17,
+      "sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/cell.json",
+      "bytes": 2646,
+      "sha256": "004ddd9f38809867be17b3c5cab254f1a7b5bea9711afe2fd815f53ea8df9893"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/marker.bin",
+      "bytes": 17,
+      "sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/cell.json",
+      "bytes": 2621,
+      "sha256": "7cf2c84a1c53a22fbb3c3384274d8b0bf64c80e36d0f3fc68f560311db96217c"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/marker.bin",
+      "bytes": 13,
+      "sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/cell.json",
+      "bytes": 2722,
+      "sha256": "611018554b4154d38bcaab2baa22cbb76f97cf7373d132a3bc7e861891c83dc8"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/marker.bin",
+      "bytes": 17,
+      "sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/cell.json",
+      "bytes": 2717,
+      "sha256": "05cb855402688011c304235d52b312a79dbb03072e1a95dfe73e1392031f813e"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/marker.bin",
+      "bytes": 17,
+      "sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/cell.json",
+      "bytes": 2628,
+      "sha256": "0d24488a3d02002fb5adefd1ea338873f93e837d26b520c0ef7c946de1dd432d"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/marker.bin",
+      "bytes": 17,
+      "sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/stderr.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "storage_classes": [
+    {
+      "block_size": 4096,
+      "class_root": "/home/mjbommar/projects/personal/axeyum-lean-parity",
+      "fragment_size": 4096,
+      "host_loss_proven": false,
+      "id": "linux-local-worktree-hardlink-fsync-v1",
+      "identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "kernel": "7.0.0-27-generic",
+      "mechanism": "o-excl-temp-file-fsync-hardlink-no-replace-directory-fsync-v1",
+      "mount": {
+        "fs_type": "ext4",
+        "mount_id": 44,
+        "mount_major_minor": "259:1",
+        "mount_options": [
+          "relatime",
+          "rw"
+        ],
+        "mount_point": "/",
+        "mount_root": "/",
+        "mount_source": "/dev/nvme0n1p1",
+        "parent_mount_id": 1,
+        "super_options": [
+          "rw"
+        ]
+      },
+      "name_max": 255,
+      "network_storage_proven": false,
+      "power_loss_proven": false,
+      "process_interruption_proven": false,
+      "stat_device": 66305,
+      "stat_fsid": 3418105475752902630,
+      "statfs_magic": "ef53"
+    },
+    {
+      "block_size": 4096,
+      "class_root": "/dev/shm",
+      "fragment_size": 4096,
+      "host_loss_proven": false,
+      "id": "linux-tmpfs-hardlink-fsync-v1",
+      "identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "kernel": "7.0.0-27-generic",
+      "mechanism": "o-excl-temp-file-fsync-hardlink-no-replace-directory-fsync-v1",
+      "mount": {
+        "fs_type": "tmpfs",
+        "mount_id": 43,
+        "mount_major_minor": "0:27",
+        "mount_options": [
+          "nodev",
+          "nosuid",
+          "rw"
+        ],
+        "mount_point": "/dev/shm",
+        "mount_root": "/",
+        "mount_source": "tmpfs",
+        "parent_mount_id": 41,
+        "super_options": [
+          "inode64",
+          "rw",
+          "usrquota"
+        ]
+      },
+      "name_max": 255,
+      "network_storage_proven": false,
+      "power_loss_proven": false,
+      "process_interruption_proven": false,
+      "stat_device": 27,
+      "stat_fsid": 1686043105588314553,
+      "statfs_magic": "1021994"
+    }
+  ],
+  "baseline_projection_sha256": {
+    "linux-local-worktree-hardlink-fsync-v1": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+    "linux-tmpfs-hardlink-fsync-v1": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193"
+  },
+  "cells": [
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--dependency--before-temp-open",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "before_temp_open",
+      "post_kill_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "pre_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/payload.json",
+          "--stop-phase",
+          "before_temp_open",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/phase.marker"
+        ],
+        "command_sha256": "1093138ff59944dce75453dbf515480eccf1b425b2e15de45ffa1864b7357862",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
+        "pid": 3473493,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473493,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "8506177594db48c3668e89ab0a48535830711065ea01e0edfd02586497bcb0ca",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--dependency--after-temp-fsync",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 270,
+          "sha256": "590971c33fb5e7a03c4a41b8ad550df8e12c537700e16560fac9f74ec7133845"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_temp_fsync",
+      "post_kill_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "pre_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/payload.json",
+          "--stop-phase",
+          "after_temp_fsync",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/phase.marker"
+        ],
+        "command_sha256": "74d7c6437262ecd2ef7a9de2a060971cc4bd2bdb8486104992794f27bbf6adfe",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
+        "pid": 3473495,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473495,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "66acafba446dfa2998f8af37ed2b740d85082932a0a1880cd0a6d2c709f90cbd",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--dependency--after-final-link",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 270,
+          "sha256": "590971c33fb5e7a03c4a41b8ad550df8e12c537700e16560fac9f74ec7133845"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_final_link",
+      "post_kill_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "pre_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/payload.json",
+          "--stop-phase",
+          "after_final_link",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/phase.marker"
+        ],
+        "command_sha256": "8d4551868e66dfcfc5aa17727a59b392f3164b460296fbfd18d5af0edff36d8f",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
+        "pid": 3473496,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473496,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "c870ddbe89af31c66d91c83e6453c9fa2a1e0998f3c808417f3f711416bba888",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--dependency--after-commit",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "after_commit",
+      "post_kill_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "pre_inventory_sha256": "c5afba903a8437329c1660de710b101804bb6c7f35ff10f5d235e0553115fb96",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/payload.json",
+          "--stop-phase",
+          "after_commit",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/phase.marker"
+        ],
+        "command_sha256": "d96b1feced1c339031c68748d3c291a511e2e5e9de2a2b505ee13f6cb1ede1da",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
+        "pid": 3473519,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473519,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "e31d1d7cb2baec1b1b23246a411af82a05ddff7608176f6edf6cd2067cc96ee7",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--completion--before-temp-open",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "before_temp_open",
+      "post_kill_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "pre_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/payload.json",
+          "--stop-phase",
+          "before_temp_open",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/phase.marker"
+        ],
+        "command_sha256": "1660b40fdacd0b449ba87b3dcfb3e915071e916e71e33067dcda6dffcc36246d",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
+        "pid": 3473520,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473520,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "b7f0a221acc264956b28f59286cfbe3263b9d437fc4f7d181c1b3783b715d82a",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--completion--after-temp-fsync",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 521,
+          "sha256": "1756c1d7389605dd1ff6a3f4239ee3edfeef39741a77c5d4882f982a4e1525f7"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_temp_fsync",
+      "post_kill_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "pre_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/payload.json",
+          "--stop-phase",
+          "after_temp_fsync",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/phase.marker"
+        ],
+        "command_sha256": "cee050ff1441470c8fff01de1b7773bc697316b1bfe376b014cc32df897f0f79",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
+        "pid": 3473521,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473521,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "175dd8653b2fbbf95444338d09fbe30b5d4d41e3cebf99d1064d26186bb8ad21",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--completion--after-final-link",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 521,
+          "sha256": "1756c1d7389605dd1ff6a3f4239ee3edfeef39741a77c5d4882f982a4e1525f7"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_final_link",
+      "post_kill_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "pre_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/payload.json",
+          "--stop-phase",
+          "after_final_link",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/phase.marker"
+        ],
+        "command_sha256": "409eb08c1d2a06c5eabf8bb5c2a543fb911868272aea634b1240a456bd308d07",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
+        "pid": 3473541,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473541,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "76990a4b6181910f2f93887eecfbf2b21025b14535351b627fc2589626e332b2",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "canonical_projection_sha256": "c6d92ea6bfa01d6202fd9523c4d8e81f0548d11127c3e5e5328f253b60b84d1e",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "worktree--completion--after-commit",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "after_commit",
+      "post_kill_inventory_sha256": "252702203a695adae7d58147320e6e6a6056efa00ccd11491fc35f0158478038",
+      "pre_inventory_sha256": "5d3b08bc35f91baf4adfe5ae2fb7ef2e7a2b0c197a9a8cce5a2ff143ad438d91",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/payload.json",
+          "--stop-phase",
+          "after_commit",
+          "--marker",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/phase.marker"
+        ],
+        "command_sha256": "ca86e6d75ad6d244bc79f8540d13d4c21b56cb4335ad2ed5ee464120f84c3b84",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
+        "pid": 3473545,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473545,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "a6663d35719e1f63b04274cf63587886d6fe770505cee76277ac459458459550",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
+      "storage_identity_sha256": "f84fca0b265075d1ab9dbe3a0b1d3681532f582e6e3f47b7a61f3bd7730f07be",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--dependency--before-temp-open",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "before_temp_open",
+      "post_kill_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "pre_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/payload.json",
+          "--stop-phase",
+          "before_temp_open",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/phase.marker"
+        ],
+        "command_sha256": "309377f14e456159b782b68152a248a69d0d20400981c47b210fd88d94c04838",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
+        "pid": 3473546,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473546,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "1d6d2cf2794035654abbc809525c2cbaf3863f79ca24976d5289ec9c43237ad6",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--dependency--after-temp-fsync",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 270,
+          "sha256": "590971c33fb5e7a03c4a41b8ad550df8e12c537700e16560fac9f74ec7133845"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_temp_fsync",
+      "post_kill_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "pre_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-vzzprass/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-vzzprass/payload.json",
+          "--stop-phase",
+          "after_temp_fsync",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-vzzprass/phase.marker"
+        ],
+        "command_sha256": "f155ae7d4fe6e6bb0cf6ede5b49983f3ffeb2b935056eba6da27dbefb4258f93",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
+        "pid": 3473547,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473547,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "f3a99d53de68270e1c0b9f1c85565e3bbcbb36f097d2cb97fd11341f51067ed6",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--dependency--after-final-link",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 270,
+          "sha256": "590971c33fb5e7a03c4a41b8ad550df8e12c537700e16560fac9f74ec7133845"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_final_link",
+      "post_kill_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "pre_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/payload.json",
+          "--stop-phase",
+          "after_final_link",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/phase.marker"
+        ],
+        "command_sha256": "da204008f94e94c3679fd6cc1b896ee14d98665ceac741f5139360e2e34e17d4",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
+        "pid": 3473548,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473548,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "600b1141d21e1e0b2b9a0a655812a7d2cd39d40e11ad614093c87e78dc8030fd",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--dependency--after-commit",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "after_commit",
+      "post_kill_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "pre_inventory_sha256": "80d1571bfce6a300d3adb4188e44c38a0d03a86b90456785a9f6a5ea9d6a1fa5",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/store/cases",
+          "--filename",
+          "case-a.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/payload.json",
+          "--stop-phase",
+          "after_commit",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/phase.marker"
+        ],
+        "command_sha256": "6961fe0354ba0dc9522727256bbc4cb24dbf543a3003a7f18dfd004ad2a514e4",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
+        "pid": 3473549,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473549,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "9e4ff0fc5858224955965b5dd9f3e2a3768dbb40b1c031a52570ceb62aeaa9b6",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "cases/case-a.json",
+      "target_role": "dependency"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--completion--before-temp-open",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "before_temp_open",
+      "post_kill_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "pre_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/payload.json",
+          "--stop-phase",
+          "before_temp_open",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/phase.marker"
+        ],
+        "command_sha256": "78f069480ef920121ac60cc42d6a33c565ea517b177d5475196534e6dc437e8a",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
+        "pid": 3473550,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473550,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "d527cc69487b3c7c03c2c956cb56daea14b2495831985162229cf0c331bf0515",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--completion--after-temp-fsync",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 521,
+          "sha256": "1756c1d7389605dd1ff6a3f4239ee3edfeef39741a77c5d4882f982a4e1525f7"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_temp_fsync",
+      "post_kill_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "pre_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/payload.json",
+          "--stop-phase",
+          "after_temp_fsync",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/phase.marker"
+        ],
+        "command_sha256": "53812f90685ebc8569d044b8af290016bc121fe38325b8c439c878790268bb8d",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
+        "pid": 3473551,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473551,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "042999282438ff6dd6758959abff38523d2dd3e4b465f3857e8e77577f4b32d2",
+      "resume_outcome": "installed",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--completion--after-final-link",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 1,
+      "orphan_records": [
+        {
+          "bytes": 521,
+          "sha256": "1756c1d7389605dd1ff6a3f4239ee3edfeef39741a77c5d4882f982a4e1525f7"
+        }
+      ],
+      "parity_credit": 0,
+      "phase": "after_final_link",
+      "post_kill_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "pre_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/payload.json",
+          "--stop-phase",
+          "after_final_link",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/phase.marker"
+        ],
+        "command_sha256": "ee14c06b3a96b7b5ed782e47ef77e5e40dec08096a41363b8900c5159870545b",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
+        "pid": 3473552,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473552,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "32b677ad98fdf934e2780965d5535acd3d108150fd38caaa64732c4eb4189e7e",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    },
+    {
+      "baseline_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "canonical_projection_sha256": "06d5a035db1e50b7bf7e8edfaf9cfe74d760f3701d50f72d14a0ed3e1ee3a193",
+      "completion_sha256": "13b235c3c0ad4e7c5f4e7420a92239810d7777fae172b9f354f29870c3591395",
+      "control_id": "tmpfs--completion--after-commit",
+      "credit_class": "synthetic-no-credit",
+      "final_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "fixture_id": "interrupted-resumed",
+      "orphan_count": 0,
+      "orphan_records": [],
+      "parity_credit": 0,
+      "phase": "after_commit",
+      "post_kill_inventory_sha256": "c6e6cdb9b3b78c96bb4176319fdd144763a993263f2922db46a296611df8ac76",
+      "pre_inventory_sha256": "94b6856547d8e705dd95ca155ca4201a0a6c1c69e166cebaab2452f3483c6340",
+      "process": {
+        "command": [
+          "/usr/bin/python3.14",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
+          "--directory",
+          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/store/completion",
+          "--filename",
+          "completion.json",
+          "--payload",
+          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/payload.json",
+          "--stop-phase",
+          "after_commit",
+          "--marker",
+          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/phase.marker"
+        ],
+        "command_sha256": "8fb69bd7ff48163ec06ef4fc190147ef6820dc5dbf1e3fcebab5600f190a7ebc",
+        "environment": {
+          "LANG": "C.UTF-8",
+          "PYTHONHASHSEED": "0",
+          "PYTHONPATH": "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro"
+        },
+        "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
+        "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
+        "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
+        "pid": 3473553,
+        "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
+        "process_group_id": 3473553,
+        "return_code": -9,
+        "signal": 9,
+        "stderr": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "stdout": {
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
+      },
+      "real_outcomes": 0,
+      "record_sha256": "dfc94a45ab34b88522a6853789063b5067263a746eab103268b22dd52719c26a",
+      "resume_outcome": "existing-valid",
+      "schema": "axeyum-lean-execution-store-kill-cell-v1",
+      "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
+      "storage_identity_sha256": "9dd1f09f7a07a5b7f8a9a2bb147367cee6a901968f890676df37276f0a84c421",
+      "target_path": "completion/completion.json",
+      "target_role": "completion"
+    }
+  ],
+  "summary": {
+    "storage_classes": 2,
+    "uninterrupted_baselines": 2,
+    "kill_cells": 16,
+    "phase_counts": {
+      "before_temp_open": 4,
+      "after_temp_fsync": 4,
+      "after_final_link": 4,
+      "after_commit": 4
+    },
+    "target_counts": {
+      "dependency": 8,
+      "completion": 8
+    },
+    "storage_class_counts": {
+      "linux-local-worktree-hardlink-fsync-v1": 8,
+      "linux-tmpfs-hardlink-fsync-v1": 8
+    },
+    "sigkill_cells": 16,
+    "projection_equal_cells": 16,
+    "resume_outcome_counts": {
+      "installed": 8,
+      "existing-valid": 8
+    },
+    "orphan_cells": 8,
+    "evidence_files": 65,
+    "evidence_bytes": 43978,
+    "real_outcomes": 0,
+    "completed_u2_cases": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "parity_credit": 0
+  },
+  "claims": {
+    "atomic_no_replace_local": true,
+    "process_sigkill_recovery": true,
+    "completion_last_closure": true,
+    "power_loss_recovery": false,
+    "host_loss_recovery": false,
+    "network_or_object_durability": false,
+    "official_or_axeyum_execution": false
+  },
+  "milestones": [
+    {
+      "id": "TL0.7.1",
+      "state": "done"
+    },
+    {
+      "id": "TL0.7.2",
+      "state": "done"
+    },
+    {
+      "id": "TL0.7.3",
+      "state": "local-process-interruption-controls-complete"
+    },
+    {
+      "id": "TL0.7.4",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.6.3",
+      "state": "blocked-on-tl0.7"
+    }
+  ],
+  "residual": [
+    "Run one pinned-Lean preflight and one official-export control through this store with zero U2/parity credit in TL0.7.4.",
+    "Do not generalize local process SIGKILL evidence to power loss, host loss, NFS, provider artifacts, or distributed durability.",
+    "Keep TL0.6.3 blocked until TL0.7.4 accepts or revises the complete policy."
+  ],
+  "authority_sha256": "4e0cfc607db651722f062404c86d594c006ac00562048395cb1acd8b4fb652eb"
+}
