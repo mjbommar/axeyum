@@ -243,6 +243,27 @@ artifact roots. `selection_observed=false`; S3 is next.
 Any non-identical repetition is a selection blocker, not an invitation to pick
 one output.
 
+**S3 implementation:** must be committed and pushed before live use. The
+producer copies exactly 88 authority-listed source, data, and submission files
+from the completed S1 audit into each of two independent no-Git bundles. It
+rehashes the copy before execution, derives the minimal 14-package runtime
+closure from the pinned Poetry lock, and installs only lockfile artifacts under
+`--require-hashes --no-deps`. The registered runtime is CPython 3.11.15
+(`9ba4d70...db52f`) installed by uv 0.11.1
+(`d86fc276...e4f53c`), with Polars 1.39.2, `PYTHONHASHSEED=0`, and one Polars
+thread.
+
+The worker extracts the exact `create_cache` function AST from the pinned
+`smtcomp/main.py` (stripping only its Typer decorator), requires AST identity
+`ca792a12...d2009617` under CPython 3.11.15, creates all three official Feather
+caches, and invokes
+the pinned `smtcomp.selection.helper` for Single Query. The already-observed S1
+eligibility ledger freezes the expected aggregate count at 45,905 without
+revealing membership. Each run emits a sorted LF-terminated selected list,
+per-logic new/old counts, cache hashes, and runtime facts. Completion is
+published only if fresh bundles, venvs, caches, normalized selected bytes, and
+per-logic bytes are exactly equal.
+
 ### S4 — full independent audit and publication
 
 - Join official output, corpus bytes, metadata, submissions, and historical
@@ -279,9 +300,7 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Implement, test, commit, and push the S3 pinned official producer before its
-first live invocation. It must materialize and verify the frozen organizer
-bundle, derive exact package identities from `poetry.lock`, create caches and
-export Single Query selection with Polars 1.39.2, then repeat in a second fresh
-environment. Treat any repetition drift as a blocker; do not choose between
-outputs.
+Finish the bounded S3 tests, commit and push the pinned producer before its
+first live invocation, then run it into a fresh attempt directory. Treat any
+bundle, lock, runtime, cache, count, selected-byte, or per-logic repetition
+drift as a blocker; do not choose between outputs.

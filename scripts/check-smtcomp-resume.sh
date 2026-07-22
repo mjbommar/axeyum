@@ -12,6 +12,7 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_multi_host \
   scripts.tests.test_smtcomp_multi_host_live \
   scripts.smtcomp_repro.tests.test_corpus_acquisition \
+  scripts.smtcomp_repro.tests.test_official_producer \
   scripts.smtcomp_repro.tests.test_official_selection
 python3 scripts/smtcomp_repro/tests/test_runner.py
 for test in test_scoring test_pipeline test_selection test_provenance; do

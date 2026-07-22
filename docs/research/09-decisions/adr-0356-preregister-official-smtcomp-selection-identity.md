@@ -122,9 +122,14 @@ The implementation must pass all of these gates in order:
    regular benchmark files matching the official metadata, before the two
    explicit selection removals. Each file's digest is computed from its bytes,
    not inferred from archive metadata.
-5. **Official production:** the pinned organizer code runs twice in isolated
-   locked environments with Polars 1.39.2 and seed `22,731,074`; normalized
-   selections and per-logic counts are byte-identical.
+5. **Official production:** exactly 88 authority-listed files are copied into
+   each of two no-Git bundles and rehashed. A minimal 14-package runtime closure
+   is derived from the pinned Poetry lock and installed with artifact hashes
+   required and dependency resolution disabled. CPython 3.11.15, uv 0.11.1,
+   Polars 1.39.2, one Polars thread, seed `22,731,074`, and the exact decorated-
+   free `create_cache` AST are frozen before use. The pinned organizer code
+   runs twice in isolated bundles/venvs/caches; normalized selections and
+   per-logic counts are byte-identical.
 6. **Independent audit:** a separate standard-library checker reconstructs the
    metadata IDs, competitive logics, historical difficulty facts, eligibility,
    caps, new/old quotas, and complete decision partition, then validates the

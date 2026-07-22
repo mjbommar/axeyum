@@ -48,6 +48,11 @@ unexpected corpus roots. The resumable full acquisition entry point is
 adds local SHA-256, extracts regular files only, and writes completion last.
 The completed full acquisition and fresh all-file rehash are recorded in
 [`smtcomp-official-selection-corpus-s2-2026-07-22.md`](../../docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md).
+The S3 entry point, `scripts/produce-smtcomp-official-selection.py`, copies and
+rehashes the exact 88-file organizer bundle twice, derives a hash-required
+14-package runtime closure from the pinned Poetry lock, executes the pinned
+cache-builder AST and official Polars sampler in two fresh one-thread venvs,
+and rejects any normalized selection or per-logic repetition drift.
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.
