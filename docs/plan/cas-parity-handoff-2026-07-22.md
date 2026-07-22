@@ -16,7 +16,7 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37ado**). Keep both in sync when landing features.
+  latest is **Entry 37adp**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -310,6 +310,15 @@ checking, so larger requests decline immediately.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
+
+### Strict rustdoc is green again
+
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-cas --no-deps` now passes on
+both stable and the local nightly. The failures were pre-existing documentation
+links outside the moment code: an unescaped `𝔽ₚ[x]`, public docs linking private
+helpers, one unqualified crate-level link, and redundant explicit link targets.
+The cleanup changes documentation markup only; no API or implementation
+semantics changed.
 
 ---
 

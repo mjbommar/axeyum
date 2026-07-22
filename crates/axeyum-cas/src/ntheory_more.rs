@@ -435,7 +435,7 @@ pub fn perfect_power(n: i128) -> Option<(i128, u32)> {
 ///
 /// The exponent of the unit group `(Z/nZ)^x`: the least `m > 0` with `a^m ≡ 1
 /// (mod n)` for every `a` coprime to `n`. Computed as the least common multiple
-/// of [`carmichael_prime_power`] over the prime-power factors. `lambda(1) ==
+/// of `carmichael_prime_power` over the prime-power factors. `lambda(1) ==
 /// Some(1)`; `lambda(0) == None`.
 ///
 /// # Examples

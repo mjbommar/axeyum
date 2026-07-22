@@ -374,6 +374,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — strict CAS rustdoc is green on stable and nightly.** Cleared
+  ten pre-existing `-D warnings` failures: escaped the `𝔽ₚ[x]` spelling, changed
+  links to private helpers into code spans, qualified the crate-level `equal`
+  link, and removed redundant explicit targets. This is documentation-only;
+  public APIs and runtime semantics are unchanged. Both
+  `RUSTDOCFLAGS="-D warnings" cargo +stable doc -p axeyum-cas --no-deps` and the
+  local-nightly equivalent pass. Next: retain strict rustdoc in every CAS branch
+  gate alongside tests, Clippy, WASM, and link validation.
+
 - **2026-07-22 — direct falling-factorial composition reaches the sixth raw
   squared-binomial moment.** `prove_squared_binomial_falling_moment(order)` now
   constructs one parameterized rational WZ certificate and replays it through

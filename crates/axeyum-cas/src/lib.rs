@@ -5911,7 +5911,7 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
 ///
 /// The expression is normalized to a rational function over `sin`/`cos` atoms and
 /// reduced in both directions — eliminating `cos²` in favour of `sin²` and vice
-/// versa (see [`MultiPoly::fold_pythagorean`] and its mirror) — and the smallest
+/// versa (see `MultiPoly::fold_pythagorean` and its mirror) — and the smallest
 /// candidate that [`equal`] certifies value-equal to the input is chosen (the
 /// input itself in the worst case). So `sin²x + cos²x → 1`, `1 − cos²x → sin²x`,
 /// `2sin²x + 2cos²x → 2`, while an already-minimal form is returned unchanged.
