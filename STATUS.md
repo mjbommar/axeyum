@@ -491,8 +491,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   complete kernel/importer suites, retained 720/768/840 populations, strict
   Clippy/rustdoc, M0 contracts, and local/tracking/remote semantic ref equality
   pass. Importer policy and all M0 computation streams remain untouched. This
-  stream is paused cleanly after M2; resume M3's >=640-case deterministic
-  grammar and mutation work from the authoritative
+  M3's
+  [pre-run grammar plan](docs/plan/lean-nested-inductive-elimination-m3-plan-2026-07-22.md)
+  now freezes schema `axeyum-lean-nested-inductive-grammar-v1`, seed
+  `0x4158_4e45_5354_4d33`, an exact 640-case construction covering every
+  registered range endpoint, the independent observer, private forced
+  mutations, retained descriptors, resources, and stop conditions. No
+  generated run or importer observation occurred at this checkpoint. Resume
+  M3 implementation from the authoritative
   [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md).
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13

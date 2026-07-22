@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: paused cleanly after M2; M3 deterministic nested grammar is next
+Status: M3 grammar and mutation design frozen; implementation is next
 
 Date paused: 2026-07-22
 
@@ -155,7 +155,12 @@ the M1 nested decline and no M0 computation stream was observed.
 
 ## Exact next milestone: M3 deterministic nested grammar
 
-M3 must preregister and run at least 640 unique public-path nested profiles
+M3's [generated-grammar plan](lean-nested-inductive-elimination-m3-plan-2026-07-22.md)
+freezes schema `axeyum-lean-nested-inductive-grammar-v1`, seed
+`0x4158_4e45_5354_4d33`, the exact 640-case construction, full registered range
+coverage, public observer, private mutation registry, resources, and stop
+conditions before the first generated run. M3 must now run those 640 unique
+public-path nested profiles
 twice, retain a byte-identical summary, and add independent expansion,
 deduplication, restoration, leakage, metadata, rule, and late-publication
 mutation teeth. It must retain exact 720/768/840 populations and direct
