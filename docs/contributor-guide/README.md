@@ -17,7 +17,9 @@ evidence, executable gates, decision anchors, and the next safe action.
 5. The foundational DAG before adding operators/encodings/logics:
    [foundational-dag.md](../research/08-planning/foundational-dag.md).
 6. When multiple agents are active, follow the
-   [multi-agent worktree protocol](multi-agent-worktrees.md).
+   [multi-agent worktree protocol](multi-agent-worktrees.md) (the model) and
+   [multi-agent operations](multi-agent-operations.md) (the operating discipline:
+   green-before-merge gate + cross-worktree resource rules).
 
 ## Obligations for new public surface
 
