@@ -7832,7 +7832,8 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
         // sinusoid, when the frequency `b` is rational.
         inverse_laplace_quadratic(&num, &den, t)?
     } else {
-        return None;
+        // Repeated real poles (`1/s² → t`, `1/(s−1)² → t·e^t`).
+        inverse_laplace_repeated_poles(f, s, t)?
     };
     // Round-trip certificate: L{result} = F.
     match equal(&laplace_transform(&result, t, s)?, f) {
@@ -7881,6 +7882,69 @@ fn inverse_laplace_quadratic(num: &[Rational], den: &[Rational], t: &str) -> Opt
         0 => Some(CasExpr::zero()),
         1 => terms.into_iter().next(),
         _ => Some(CasExpr::Add(terms)),
+    }
+}
+
+/// `L⁻¹` for a rational function with **repeated real poles**: partial-fraction via
+/// [`apart`], then map each term `A/(s−a)^k → A·t^{k−1}/(k−1)!·e^{at}`. Closes
+/// `1/s² → t`, `1/(s−1)² → t·e^t`, `1/s³ → t²/2`. `None` if any `apart` term is not
+/// `constant/(s−a)^k` for a rational pole `a` (e.g. a residual irreducible
+/// quadratic). Certified by the caller's round trip.
+fn inverse_laplace_repeated_poles(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let decomposed = apart(f, s)?;
+    let mut term_list = Vec::new();
+    flatten_add_terms(&decomposed, s, &mut term_list);
+    let tvar = CasExpr::var(t);
+    let mut out: Vec<CasExpr> = Vec::new();
+    for term in &term_list {
+        let rf = normalize_rational(term)?;
+        let numerator = rf.num.to_univariate(s)?;
+        let denominator = rf.den.to_univariate(s)?;
+        // Numerator must be a constant `C`; denominator a pure power `lead·(s−a)^k`.
+        if poly::rat_degree(&numerator)? != 0 {
+            return None;
+        }
+        let num_const = numerator.first().copied()?;
+        let k = poly::rat_degree(&denominator)?;
+        let lead = *denominator.last()?;
+        let pole = *ratint::rational_roots(&denominator).unwrap_or_default().first()?;
+        // Verify `denominator = lead·(s−a)^k` (a single pole of full multiplicity).
+        let mut reconstructed = vec![lead];
+        for _ in 0..k {
+            reconstructed = poly::ratpoly_mul(&reconstructed, &[pole.checked_neg()?, Rational::integer(1)])?;
+        }
+        if poly::rat_trim(reconstructed) != poly::rat_trim(denominator) {
+            return None;
+        }
+        // A = C/lead; term = A · t^{k−1}/(k−1)! · e^{at}.
+        let mut factorial = Rational::integer(1);
+        for j in 1..k {
+            factorial = factorial.checked_mul(Rational::integer(i128::try_from(j).ok()?))?;
+        }
+        let coeff = num_const.checked_div(lead)?.checked_div(factorial)?;
+        let power = u32::try_from(k - 1).ok()?;
+        let mut factors: Vec<CasExpr> = Vec::new();
+        if coeff != Rational::integer(1) {
+            factors.push(CasExpr::Const(coeff));
+        }
+        match power {
+            0 => {}
+            1 => factors.push(tvar.clone()),
+            _ => factors.push(tvar.clone().pow(power)),
+        }
+        if !pole.is_zero() {
+            factors.push(scaled_term(pole, tvar.clone()).exp()); // e^{at}, clean when a = 1
+        }
+        out.push(match factors.len() {
+            0 => CasExpr::Const(coeff),
+            1 => factors.into_iter().next()?,
+            _ => CasExpr::Mul(factors),
+        });
+    }
+    match out.len() {
+        0 => None,
+        1 => out.into_iter().next(),
+        _ => Some(CasExpr::Add(out)),
     }
 }
 
@@ -12425,6 +12489,21 @@ mod tests {
         );
         // A surd frequency (√2) can't round-trip through the forward transform → declines.
         assert!(inverse_laplace(&(CasExpr::int(1) / (s().pow(2) + CasExpr::int(2))), "s", "t").is_none());
+        // Repeated real poles: L⁻¹{1/s²}=t, L⁻¹{1/s³}=t²/2, L⁻¹{1/(s−1)²}=t·e^t,
+        // and a mixed decomposition L⁻¹{1/(s²(s−1))}=e^t − 1 − t.
+        assert_equal(&inverse_laplace(&(CasExpr::int(1) / s().pow(2)), "s", "t").unwrap(), &t());
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / s().pow(3)), "s", "t").unwrap(),
+            &(CasExpr::rat(1, 2) * t().pow(2)),
+        );
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / (s() - CasExpr::int(1)).pow(2)), "s", "t").unwrap(),
+            &(t() * t().exp()),
+        );
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / (s().pow(2) * (s() - CasExpr::int(1)))), "s", "t").unwrap(),
+            &(t().exp() - CasExpr::int(1) - t()),
+        );
     }
 
     #[test]
