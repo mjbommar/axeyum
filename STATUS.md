@@ -374,6 +374,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — fixed-shift Vandermonde is now a checked public family route.**
+  `prove_fixed_shift_binomial_convolution(shift)` constructs the closed
+  certificate `k(k+r)(2k−3n+r−3)/(2(2n+1)(k−n−1)(k−n+r−1))` for a concrete
+  nonnegative shift and returns it only after the same fully symbolic WZ check
+  and exact base-case check used by discovery. The checker is shared with
+  `prove_wz_sum`; no interpolation or answer table is trusted. Regressions prove
+  `r=0..7` and reject a zero certificate; larger exact-growth cases retain
+  fail-closed `None` semantics. The CAS topic stack passes 519 unit tests, 147
+  doctests, warning-denied all-target Clippy, `wasm32-unknown-unknown`, links,
+  and `git diff --check`. Next: derive a similarly explicit squared-binomial
+  moment-family boundary rather than adding isolated moments indefinitely.
+
 - **2026-07-22 — proof-carrying CAS closes fixed-shift four and the fifth
   squared-binomial moment.** `prove_wz_sum` now certifies
   `∑C(n,k)C(n,k+4)=C(2n,n−4)` and

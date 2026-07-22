@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `518` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `519` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adl**). Keep both in sync when landing features.
+  latest is **Entry 37adm**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -266,18 +266,31 @@ certificate, so the target and scan bounds are now 16 and 32. The existing
 dimension-16 bignum cap is unchanged. The exact returned certificates and fully
 symbolic WZ equality pass, while both `rhs+1` controls decline.
 
+### The fixed-shift convolution is a checked family route
+
+`prove_fixed_shift_binomial_convolution(shift)` now constructs
+
+`R=k(k+r)(2k−3n+r−3)/(2(2n+1)(k−n−1)(k−n+r−1))`
+
+for the requested concrete nonnegative `r`, then accepts it only after the same
+fully symbolic WZ equality checker used by `prove_wz_sum` and the exact base
+case at `n=r`. It does no interpolation and trusts no table. The shared checker
+was extracted so discovery and direct-family candidates cannot drift. Regressions
+cover `r=0..7` and reject a zero certificate; larger shifts may still decline on
+exact coefficient growth. The public API therefore preserves `Option` semantics
+rather than claiming an unbounded completeness result.
+
 ---
 
 ## 6. Known-open items / candidate next work
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond the closed first tiers.** Turn
-   the observed fixed-shift `r=0..4` certificate pattern into a checked family
-   route (or probe `r=5` first), and derive the squared-binomial moment family
-   from falling-factorial moments before deciding whether a sixth isolated
-   interpolation target adds value. Retain only identities whose exact discovery
-   and fully symbolic WZ check both close.
+1. **Broaden certified creative telescoping beyond the closed first tiers.** Derive
+   the squared-binomial moment family from falling-factorial moments, with an
+   explicit checker boundary, before deciding whether a sixth isolated
+   interpolation target adds value. For fixed shifts, investigate the `r=8`
+   exact-growth decline only if a concrete use needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -335,7 +348,7 @@ AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXX
 export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 518 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 519 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

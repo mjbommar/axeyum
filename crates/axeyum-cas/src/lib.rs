@@ -5066,6 +5066,84 @@ fn wz_symbolic_ratios(
     (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
 }
 
+/// Check a proposed WZ certificate symbolically, then check the finite base case.
+#[allow(clippy::many_single_char_names, clippy::too_many_arguments)]
+fn certifies_wz_sum(
+    summand: &CasExpr,
+    rhs: &CasExpr,
+    certificate: &CasExpr,
+    n: &str,
+    k: &str,
+    base: i128,
+    k_lo: i128,
+    k_hi: i128,
+) -> bool {
+    let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
+    let g = certificate.clone() * f.clone();
+    let g_shift = g.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
+    let h = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f;
+    if !matches!(
+        equal(&(g_shift - g), &h),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return false;
+    }
+
+    let mut total = CasExpr::zero();
+    for kk in k_lo..=k_hi {
+        total = total
+            + summand
+                .substitute(n, &CasExpr::int(base))
+                .substitute(k, &CasExpr::int(kk));
+    }
+    let rhs_base = rhs.substitute(n, &CasExpr::int(base));
+    matches!(
+        equal(&total, &rhs_base),
+        ZeroTest::Certified { equal: true, .. }
+    )
+}
+
+/// Prove the fixed-shift Vandermonde family
+/// `∑_k C(n,k) C(n,k+shift) = C(2n,n−shift)` for one concrete nonnegative
+/// `shift`, returning its rational Wilf–Zeilberger certificate.
+///
+/// This is a checked family route, not a table of answers: it constructs the
+/// closed-form certificate for the requested shift and accepts it only after
+/// the internal checker verifies the fully symbolic telescoping identity in
+/// `n,k` and the exact base case at `n=shift`. Out-of-fragment coefficient
+/// growth therefore returns `None`, never an unchecked identity.
+#[must_use]
+pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
+    let n = CasExpr::var("n");
+    let k = CasExpr::var("k");
+    let r = CasExpr::int(i128::from(shift));
+    let summand = binomial_coefficient(&n, &k)
+        * binomial_coefficient(&n, &(k.clone() + r.clone()));
+    let rhs = binomial_coefficient(
+        &(CasExpr::int(2) * n.clone()),
+        &(n.clone() - r.clone()),
+    );
+    let certificate = k.clone()
+        * (k.clone() + r.clone())
+        * (CasExpr::int(2) * k.clone() - CasExpr::int(3) * n.clone() + r.clone()
+            - CasExpr::int(3))
+        / (CasExpr::int(2)
+            * (CasExpr::int(2) * n.clone() + CasExpr::int(1))
+            * (k.clone() - n.clone() - CasExpr::int(1))
+            * (k.clone() - n + r - CasExpr::int(1)));
+    certifies_wz_sum(
+        &summand,
+        &rhs,
+        &certificate,
+        "n",
+        "k",
+        i128::from(shift),
+        0,
+        0,
+    )
+    .then_some(certificate)
+}
+
 /// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
 /// **Wilf–Zeilberger** method, returning the certificate `R(n,k)` when the proof
 /// succeeds. With `f = F/rhs`, a rational **certificate** `R(n,k)` gives the
@@ -5101,7 +5179,6 @@ pub fn prove_wz_sum(
     // remain a completeness loss rather than a soundness concern.
     const TARGET: usize = 16;
     const SCAN: i128 = 32;
-    let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
     // Derive the two small rational quotients while `n` is still symbolic, then
     // specialize them per sample. This avoids rebuilding their equivalent gamma
     // towers with rapidly growing concrete factorial constants.
@@ -5186,25 +5263,7 @@ pub fn prove_wz_sum(
     let r_den = interpolate_coeffs_over_n(&den_rows, n, k)?;
     let big_r = CasExpr::Div(Box::new(r_num), Box::new(r_den));
 
-    // Symbolic soundness gate: G(n,k+1) − G(n,k) = f(n+1,k) − f(n,k), with n,k symbolic.
-    let g_sym = CasExpr::Mul(vec![big_r.clone(), f.clone()]);
-    let g_shift = g_sym.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
-    let h_sym = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f.clone();
-    let symbolic_certifies = matches!(
-        equal(&(g_shift - g_sym), &h_sym),
-        ZeroTest::Certified { equal: true, .. }
-    );
-    if !symbolic_certifies {
-        return None;
-    }
-
-    // Base case: `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` by exact finite summation.
-    let mut total = CasExpr::zero();
-    for kk in k_lo..=k_hi {
-        total = total + summand.substitute(n, &CasExpr::int(base)).substitute(k, &CasExpr::int(kk));
-    }
-    let rhs_base = rhs.substitute(n, &CasExpr::int(base));
-    matches!(equal(&total, &rhs_base), ZeroTest::Certified { equal: true, .. }).then_some(big_r)
+    certifies_wz_sum(summand, rhs, &big_r, n, k, base, k_lo, k_hi).then_some(big_r)
 }
 
 /// Interpolate a `k`-polynomial whose coefficients are **rational functions of `n`**,
@@ -17175,6 +17234,30 @@ mod tests {
             ZeroTest::Certified { equal: true, .. }
         ));
         assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 0).is_none());
+    }
+
+    #[test]
+    fn fixed_shift_binomial_convolution_family_is_checked() {
+        for shift in 0..=7 {
+            prove_fixed_shift_binomial_convolution(shift)
+                .unwrap_or_else(|| panic!("fixed-shift certificate {shift} must verify"));
+        }
+
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(4)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(4)));
+        assert!(!certifies_wz_sum(
+            &term,
+            &rhs,
+            &CasExpr::zero(),
+            "n",
+            "k",
+            4,
+            0,
+            0,
+        ));
     }
 
     #[test]
