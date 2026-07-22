@@ -5527,6 +5527,10 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
         // Double-angle contraction `2 sin x cos x → sin 2x`, `cos²x − sin²x → cos 2x`
         // (reverse of `expand_trig`). Value-preserving; chosen only when it shrinks.
         Some(fold_double_angle(expr)),
+        // `(s−3)/(s−3)⁴ → 1/(s−3)³` — reduce a shared-base power quotient *without*
+        // expanding the base (which `cancel` does, producing a larger form `simplify`
+        // would then discard). Keeps Laplace/partial-fraction denominators factored.
+        fold_power_quotient(expr),
     ]
     .into_iter()
     .flatten()
@@ -13668,6 +13672,97 @@ fn flatten_mul(expr: &CasExpr) -> Vec<CasExpr> {
     }
 }
 
+/// Decompose an expression into `(rational coefficient, base, exponent)` for the shape
+/// `c·G^e` — flattening nested powers (`(G²)² → G⁴`) and pulling a rational constant
+/// factor out of a product. `e ≥ 1` and the base is the non-constant kernel. `None`
+/// when there is no single non-constant base (e.g. a genuine polynomial sum of terms,
+/// or a pure constant).
+fn as_scaled_power(expr: &CasExpr) -> Option<(Rational, CasExpr, u32)> {
+    // `G^e`, flattening `(Gᵃ)ᵇ → G^{a·b}`.
+    fn base_and_exp(e: &CasExpr) -> (CasExpr, u32) {
+        match e {
+            CasExpr::Pow(base, exp) => {
+                let (inner, e2) = base_and_exp(base);
+                (inner, exp.saturating_mul(e2))
+            }
+            other => (other.clone(), 1),
+        }
+    }
+    // Strip leading `Neg`s into the sign, *without* distributing (so the base factor
+    // survives — `fold_trivial` would expand `−(−2·G) → 2·(polynomial)`).
+    let mut coeff = Rational::integer(1);
+    let mut inner = expr;
+    while let CasExpr::Neg(next) = inner {
+        coeff = coeff.checked_neg()?;
+        inner = next;
+    }
+    let mut base_exp: Option<(CasExpr, u32)> = None;
+    for factor in flatten_mul(inner) {
+        if let CasExpr::Const(c) = factor {
+            coeff = coeff.checked_mul(c)?;
+        } else {
+            if base_exp.is_some() {
+                return None; // more than one non-constant factor
+            }
+            base_exp = Some(base_and_exp(&factor));
+        }
+    }
+    let (base, exp) = base_exp?;
+    Some((coeff, base, exp))
+}
+
+/// The signed rational value of `expr` when it is a constant possibly wrapped in
+/// `Neg`s (`−(−1) → 1`), else `None`.
+fn signed_constant(expr: &CasExpr) -> Option<Rational> {
+    let mut sign = Rational::integer(1);
+    let mut inner = expr;
+    while let CasExpr::Neg(next) = inner {
+        sign = sign.checked_neg()?;
+        inner = next;
+    }
+    match inner {
+        CasExpr::Const(c) => sign.checked_mul(*c),
+        _ => None,
+    }
+}
+
+/// `(c·Gᵐ)/(d·Gⁿ) → (c/d)·G^{m−n}` for a **shared base** `G` — reducing the exponent
+/// difference *without* expanding `G` (so `(s−3)/(s−3)⁴ → 1/(s−3)³` stays factored
+/// rather than becoming `1/(s³−9s²+27s−27)`, which `cancel` produces but is larger,
+/// so `simplify` discards it). `None` unless both sides are `constant·(same base)^k`.
+fn fold_power_quotient(expr: &CasExpr) -> Option<CasExpr> {
+    // Pull off a leading `Neg` (`L{t·eᵗ} = −(−1/(s−1)²)`) so the quotient underneath is
+    // reached; the sign rides along.
+    let mut sign = Rational::integer(1);
+    let mut here = expr;
+    while let CasExpr::Neg(next) = here {
+        sign = sign.checked_neg()?;
+        here = next;
+    }
+    let CasExpr::Div(num, den) = here else {
+        return None;
+    };
+    let (c_den, base_den, n) = as_scaled_power(den)?;
+    // The numerator is either `c·(same base)^m` or a **pure constant** (`m = 0`, e.g.
+    // `L{t·eᵗ} = −1/(s−1)²`), so a constant over a power still folds its sign away.
+    let (c_num, m) = match as_scaled_power(num) {
+        Some((c, base_num, m)) if base_num == base_den => (c, m),
+        Some(_) => return None,
+        None => (signed_constant(num)?, 0),
+    };
+    let coeff = sign.checked_mul(c_num.checked_div(c_den)?)?;
+    let result = match m.cmp(&n) {
+        std::cmp::Ordering::Equal => CasExpr::Const(coeff),
+        std::cmp::Ordering::Greater => {
+            CasExpr::Const(coeff) * CasExpr::Pow(Box::new(base_den), m - n)
+        }
+        std::cmp::Ordering::Less => {
+            CasExpr::Const(coeff) / CasExpr::Pow(Box::new(base_den), n - m)
+        }
+    };
+    Some(fold_trivial(&result))
+}
+
 /// Integrate `p(x)·e^{a·x+c}·trig(b·x+d)` (`trig ∈ {sin, cos}`) for a polynomial
 /// `p` and linear exponent/argument. The antiderivative has the form
 /// `e^{ax+c}·(A(x)·cos(bx+d) + B(x)·sin(bx+d))`, whose polynomial coefficients
@@ -16108,6 +16203,35 @@ mod tests {
         // Multivariate denominators fold likewise: (3/8·π·√2)/2 → (3/16)·√2·π.
         let mv = cancel(&((CasExpr::rat(3, 8) * pi() * CasExpr::int(2).sqrt()) / CasExpr::int(2))).expect("reduces");
         assert_equal(&mv, &(CasExpr::rat(3, 16) * CasExpr::int(2).sqrt() * pi()));
+    }
+
+    #[test]
+    fn simplify_shared_base_power_quotient() {
+        let s = || v("s");
+        // `(s−3)/(s−3)⁴ → 1/(s−3)³` — and crucially the simplified form stays *factored*
+        // (its rendering must not expand to the `s³−9s²+…` denominator).
+        let q = simplify(&((s() - CasExpr::int(3)) / (s() - CasExpr::int(3)).pow(4)));
+        assert_equal(&q, &(CasExpr::int(1) / (s() - CasExpr::int(3)).pow(3)));
+        assert!(!format!("{q}").contains("s^2"), "denominator was expanded: {q}");
+        // Nested power + a leading constant: `2(s−3)/((s−3)²)² → 2/(s−3)³`.
+        assert_equal(
+            &simplify(&(CasExpr::int(2) * (s() - CasExpr::int(3)) / (s() - CasExpr::int(3)).pow(2).pow(2))),
+            &(CasExpr::int(2) / (s() - CasExpr::int(3)).pow(3)),
+        );
+        // Larger numerator power: `(s−3)⁴/(s−3)² → (s−3)²`.
+        assert_equal(
+            &simplify(&((s() - CasExpr::int(3)).pow(4) / (s() - CasExpr::int(3)).pow(2))),
+            &(s() - CasExpr::int(3)).pow(2),
+        );
+        // A leading `Neg` and a constant numerator fold their signs: `−(−1/(s−1)²) →
+        // 1/(s−1)²` (the Laplace `L{t·eᵗ}` shape).
+        let neg = CasExpr::Neg(Box::new(CasExpr::int(-1) / (s() - CasExpr::int(1)).pow(2)));
+        assert_equal(&simplify(&neg), &(CasExpr::int(1) / (s() - CasExpr::int(1)).pow(2)));
+        // Genuine rationals are unaffected: (x²−1)/(x−1) still cancels to x+1.
+        assert_equal(
+            &simplify(&((v("x").pow(2) - CasExpr::int(1)) / (v("x") - CasExpr::int(1)))),
+            &(v("x") + CasExpr::int(1)),
+        );
     }
 
     #[test]
