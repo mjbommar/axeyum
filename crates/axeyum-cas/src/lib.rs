@@ -9426,6 +9426,27 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
                     });
                 }
             }
+    // Symbolic constant-multiple rule: `∫ c·g = c·∫g` for a var-free factor `c` that
+    // is not purely rational (`π`, `√2`, …) — the rational case is handled above.
+    if matches!(expr, CasExpr::Mul(_) | CasExpr::Div(_, _)) {
+        let (free, core) = split_var_free_factor(expr, var);
+        if !matches!(free, CasExpr::Const(_))
+            && !matches!(&free, CasExpr::Var(name) if name == var)
+            && !expr_contains_var(&free, var)
+            && expr_contains_var(&core, var)
+            && let Some(inner) = integrate(&core, var)
+            && inner.is_certified()
+        {
+            let antiderivative = fold_trivial(&(free * inner.antiderivative));
+            let certificate = prove_derivative(&antiderivative, var, expr);
+            if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+                return Some(CertifiedIntegral {
+                    antiderivative,
+                    certificate,
+                });
+            }
+        }
+    }
     // Additive linearity: ∫(f + g) = ∫f + ∫g, so a sum integrates if every term
     // does. Certified as usual by differentiate-and-check on the assembled sum.
     if let CasExpr::Add(terms) = expr {
@@ -11203,6 +11224,45 @@ fn integrate_poly_times_sinusoid(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 /// `(c, g)` with `expr = c·g` and `c ≠ 1` — for a `Div`-by-constant (`g/c`), a
 /// `Neg` (`−1·g`), or a `Mul` carrying constant factors. `None` if there is no
 /// non-trivial constant to factor out (so `∫` recursion terminates).
+/// Split `expr` into `(var-free factor, var-dependent factor)` whose product is
+/// `expr`. Unlike the rational-only [`split_constant_factor`], this pulls out
+/// **symbolic** constants (`π`, `√2`, …), enabling `∫ c·g = c·∫ g` for them.
+fn split_var_free_factor(expr: &CasExpr, var: &str) -> (CasExpr, CasExpr) {
+    match expr {
+        CasExpr::Mul(factors) => {
+            let mut free = Vec::new();
+            let mut dependent = Vec::new();
+            for factor in factors {
+                if expr_contains_var(factor, var) {
+                    dependent.push(factor.clone());
+                } else {
+                    free.push(factor.clone());
+                }
+            }
+            let mul_or_one = |mut parts: Vec<CasExpr>| match parts.len() {
+                0 => CasExpr::one(),
+                1 => parts.pop().unwrap(),
+                _ => CasExpr::Mul(parts),
+            };
+            (mul_or_one(free), mul_or_one(dependent))
+        }
+        CasExpr::Div(num, den) => {
+            let (num_free, num_dep) = split_var_free_factor(num, var);
+            if expr_contains_var(den, var) {
+                (num_free, CasExpr::Div(Box::new(num_dep), den.clone()))
+            } else {
+                (CasExpr::Div(Box::new(num_free), den.clone()), num_dep)
+            }
+        }
+        CasExpr::Neg(inner) => {
+            let (free, dependent) = split_var_free_factor(inner, var);
+            (CasExpr::Neg(Box::new(free)), dependent)
+        }
+        _ if expr_contains_var(expr, var) => (CasExpr::one(), expr.clone()),
+        _ => (expr.clone(), CasExpr::one()),
+    }
+}
+
 fn split_constant_factor(expr: &CasExpr) -> Option<(Rational, CasExpr)> {
     match expr {
         CasExpr::Div(a, b) => {
@@ -18328,6 +18388,32 @@ mod tests {
             CasExpr::zero()
         );
         assert!((evalf(&CasExpr::int(1).erf(), &[]).unwrap() - 0.842_700_79).abs() < 1e-6);
+    }
+
+    #[test]
+    fn integrate_symbolic_constant_factor() {
+        let x = || v("x");
+        // ∫ c·g = c·∫g for a var-free symbolic constant `c` (π, √2), or a parameter.
+        for (integrand, _label) in [
+            (v("pi") * x().sin(), "π·sin x"),
+            (v("pi") * x().sin() / (CasExpr::int(1) + x().cos().pow(2)), "π·sin/(1+cos²)"),
+            (CasExpr::int(2).sqrt() * x().pow(2), "√2·x²"),
+            (v("pi") * x().exp(), "π·eˣ"),
+            (v("y") * x().cos(), "y·cos x (parameter)"),
+        ] {
+            let result = integrate(&integrand, "x").expect("symbolic-constant factor pulls out");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert!(matches!(
+                equal(&result.antiderivative.differentiate("x"), &integrand),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
+        // Concrete: ∫₀^π π·sin x/(1+cos²x) = π·(π/2) = π²/2.
+        let d = definite_integrate(&(v("pi") * x().sin() / (CasExpr::int(1) + x().cos().pow(2))), "x", &CasExpr::int(0), &v("pi")).unwrap();
+        assert!(matches!(
+            equal(&d.value, &(v("pi").pow(2) / CasExpr::int(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
