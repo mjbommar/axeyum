@@ -1385,15 +1385,21 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
         ))))
     };
     // Use the rational-function normal form so transcendental atoms (e.g. `ln`) in the
-    // argument are handled; the argument must reduce to a polynomial (denominator 1)
-    // to decompose it term-by-term — a genuine fraction like `exp(1/x)` stays opaque.
+    // argument are handled; the argument must reduce to a **polynomial** to decompose
+    // it term-by-term. A *constant* denominator (`x/2 = num x / den 2`) is absorbed
+    // into the coefficients so `exp(x/2)` decomposes (and `exp(x/2)·exp(−x/2) = 1`
+    // decides); a variable denominator (`exp(1/x)`) stays opaque.
     let Some(ratio) = normalize_rational(arg) else {
         return opaque();
     };
-    if ratio.den != MultiPoly::constant(Rational::integer(1)) {
+    let Some(den_const) = multipoly_as_constant(&ratio.den) else {
+        return opaque(); // non-constant denominator — a genuine fraction argument
+    };
+    if den_const.is_zero() {
         return opaque();
     }
-    let arg_poly = ratio.num;
+    let inverse_den = Rational::integer(1).checked_div(den_const)?;
+    let arg_poly = ratio.num.mul(&MultiPoly::constant(inverse_den))?;
     if arg_poly.is_zero() {
         return Some(RatFunc::from_poly(MultiPoly::constant(Rational::integer(
             1,
@@ -10287,6 +10293,28 @@ mod tests {
             &(CasExpr::int(2) * v("x") + CasExpr::int(1)),
             &(CasExpr::int(2) * v("x")),
         );
+    }
+
+    #[test]
+    fn exp_tower_handles_fractional_argument_coefficients() {
+        let x = || v("x");
+        let half = || x() / CasExpr::int(2);
+        let certified_true = |a: &CasExpr, b: &CasExpr| {
+            matches!(equal(a, b), ZeroTest::Certified { equal: true, .. })
+        };
+        // Soundness regression: exp(x/2)·exp(−x/2) = 1 (a fractional-coefficient exp
+        // argument previously fell to distinct opaque atoms → certified FALSE).
+        assert!(certified_true(&(half().exp() * (CasExpr::int(-1) * half()).exp()), &CasExpr::int(1)));
+        // 1 + tan²(x/2) = sec²(x/2) at the half-angle now decides (like the full angle).
+        assert!(certified_true(
+            &(CasExpr::int(1) + half().tan().pow(2)),
+            &(CasExpr::int(1) / half().cos().pow(2)),
+        ));
+        // exp(x/3)·exp(−x/3) = 1 too (any rational coefficient).
+        assert!(certified_true(
+            &((x() / CasExpr::int(3)).exp() * (CasExpr::int(-1) * x() / CasExpr::int(3)).exp()),
+            &CasExpr::int(1),
+        ));
     }
 
     #[test]
