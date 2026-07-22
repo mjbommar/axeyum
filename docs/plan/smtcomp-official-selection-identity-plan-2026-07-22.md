@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: preregistered; implementation not started
+Status: S0 complete; S1 independent eligibility auditor next
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -101,6 +101,15 @@ Stop if any pinned hash, submission count, derived seed, release count, or
 fixture expectation differs. Correct the plan in a new pre-implementation
 commit; do not explain drift away after observing a selection.
 
+**Result:** complete. The canonical
+[`authority-v1.json`](smtcomp-official-selection-authority-v1.json) freezes 29
+organizer source/config files, 53 submissions, seven historical result inputs,
+90 Zenodo entries, 450,472 metadata rows, and seed `22,731,158`. The
+[`contract-v1.json`](smtcomp-official-selection-contract-v1.json) freezes 18
+invariants and 18 rejecting mutations. Nine exact fixture files plus generated
+300/450/800/1200-row populations exercise the registered policy without
+observing the official sample. Eight tests pass.
+
 ### S1 — independent eligibility auditor
 
 - Implement metadata/path normalization and duplicate rejection.
@@ -175,7 +184,7 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Implement S0 only: the authority manifest, fixture corpus/results/submissions,
-canonical schema, and rejecting mutation tests. Do not download/extract the
-full release or observe the official selected population until S0 is committed
-and pushed.
+Commit and push S0, then implement S1's official-submission adapter and complete
+historical/eligibility auditor. Do not download/extract the full release or
+observe the official selected population until S1's full fixture mutation gate
+is committed and pushed.

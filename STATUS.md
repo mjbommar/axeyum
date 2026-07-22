@@ -404,9 +404,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   all 2018--2024 Single Query inputs, and official seed `22,731,158`. The
   organizer remains the sampler producer; a separate standard-library auditor
   must prove release-byte closure, competitive-logics/difficulty eligibility,
-  per-logic caps, complete decision reasons, and selected-file hashes. S0's
-  authority manifest and adversarial fixture are next. No solver run or
-  selection credit is granted yet.
+  per-logic caps, complete decision reasons, and selected-file hashes. S0 now
+  freezes 29 source/config files, 53 submissions, seven historical result
+  inputs, 90 archives, 18 invariants, 18 mutations, and nine exact fixture
+  files; eight offline tests pass. S1's full official-format eligibility
+  adapter is next. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7148,6 +7150,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed ADR-0356 S0 authority and fixture freeze.** The
+  canonical authority manifest derives and cross-checks the exact organizer,
+  result, submission, Zenodo, population, and seed facts without network access
+  during ordinary checks. A standard-library auditor now validates normalized
+  identities, competitive-logics expansion, old-criteria=false historical
+  triviality, all four cap regions, new-before-old quotas, complete terminal
+  decisions, and an exact nine-file corpus bijection. Eight tests cover the
+  registered source/seed/release/path/corpus/eligibility/quota/decision
+  mutations and are part of `check-smtcomp-resume.sh`. This is fixture contract
+  credit only; S1 official-format inputs and the full producer remain open.
 
 - **2026-07-22 — Preregistered official SMT-COMP 2026 Single Query selection
   identity.** Proposed ADR-0356 separates pinned upstream Polars production

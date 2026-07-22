@@ -38,9 +38,12 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   recovery, different-host retry, central completion, raw-export gating, and
   repeated outcome equivalence are executable.
 - The independent official eligibility/status/difficulty selection ledger is
-  preregistered under proposed ADR-0356 but not implemented. The authority is
-  the pinned 2026 organizer code plus matching SMT-LIB 2025.08.04 release;
-  E1b's exact ordered per-file digest ledger does not substitute for it.
+  preregistered under proposed ADR-0356. S0 now freezes the 29-source,
+  53-submission, seven-result, 90-archive authority plus an 18-invariant/
+  18-mutation contract and exact synthetic fixture. Full official-input audit
+  and production are still open. The authority is the pinned 2026 organizer
+  code plus matching SMT-LIB 2025.08.04 release; E1b's exact ordered per-file
+  digest ledger does not substitute for it.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -257,6 +260,8 @@ Repository:
 - E3 result: `docs/plan/smtcomp-multi-host-durability-e3-2026-07-22.md`;
 - official selection plan:
   `docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md`;
+- official selection S0 authority/contract:
+  `docs/plan/smtcomp-official-selection-{authority,contract}-v1.json`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -288,8 +293,9 @@ NAS (shared, corpus read-only in practice):
    treating the stale run as evidence.
 4. Take the independent official selection-identity ledger next. Keep the v2
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
-   necessary correction. Execute ADR-0356 S0 first; do not observe the official
-   selection before the fixture contract is committed and pushed.
+   necessary correction. S0 is complete; execute ADR-0356 S1 next and do not
+   observe the official selection before its fixture mutation gate is committed
+   and pushed.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
