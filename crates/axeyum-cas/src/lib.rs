@@ -1645,9 +1645,11 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
         return direct;
     }
-    // Otherwise re-check on the Euler canonical form so hidden trig relations
-    // are resolved before we would assert `≠`.
-    match equal_core(&rewrite_exp(a), &rewrite_exp(b)) {
+    // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`)
+    // so hidden trig / log-exp relations are resolved before we would assert `≠`.
+    let ca = rewrite_log_exp(&rewrite_exp(a));
+    let cb = rewrite_log_exp(&rewrite_exp(b));
+    match equal_core(&ca, &cb) {
         certified @ ZeroTest::Certified { .. } => certified,
         // The Euler form could not decide. Never surface a relation-blind
         // inequality: downgrade a core `≠` to `Unknown`, else keep `Unknown`.
@@ -1955,7 +1957,9 @@ fn match_scaled_unary(term: &CasExpr, var: &str) -> Option<(UnaryFunc, Rational,
     for factor in flatten_mul(term) {
         match factor {
             CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
-            CasExpr::Unary(func @ (UnaryFunc::Exp | UnaryFunc::Ln), arg) if head.is_none() => {
+            CasExpr::Unary(func @ (UnaryFunc::Exp | UnaryFunc::Ln | UnaryFunc::Sqrt), arg)
+                if head.is_none() =>
+            {
                 let arg_poly = normalize(&arg)?.to_univariate(var)?;
                 if poly::rat_degree(&arg_poly)? != 1 {
                     return None;
@@ -2023,6 +2027,12 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
             CasExpr::Const(target).ln() // u = ln(target)
         }
         UnaryFunc::Ln => CasExpr::Const(target).exp(), // u = exp(target)
+        UnaryFunc::Sqrt => {
+            if target.numerator() < 0 {
+                return None; // √· ≥ 0 — no real solution for a negative target
+            }
+            CasExpr::Const(target.checked_mul(target)?) // u = target²
+        }
         _ => return None,
     };
     // a·var + b = inner  ⇒  var = (inner − b)/a.
@@ -2043,11 +2053,12 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Together with `target = −C/A` these give `A·f(a·root+b)+C = A·target+C = 0`.
     // The exp-tower reduces `exp(ln target)=target`; the inverse `ln(exp target)`
     // is not reduced, so `ln` roots honestly fail here and are declined.
+    // `simplify_radicals` first collapses a perfect-square constant under a root
+    // (`√9 → 3`), which the bare zero-test does not fold at power 1 — needed for the
+    // `Sqrt` head (`√(target²) = target`); harmless for `exp`/`ln`.
+    let head_applied = simplify_radicals(&CasExpr::Unary(func, Box::new(inner.clone())));
     let head_reduces = matches!(
-        equal(
-            &CasExpr::Unary(func, Box::new(inner.clone())),
-            &CasExpr::Const(target)
-        ),
+        equal(&head_applied, &CasExpr::Const(target)),
         ZeroTest::Certified { equal: true, .. }
     );
     let recovered = fold_trivial(&(CasExpr::Const(a) * root.clone() + CasExpr::Const(b)));
@@ -5369,6 +5380,32 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
             CasExpr::Pow(Box::new(fold_elementary_constants(base)), *exponent)
         }
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Rewrite `ln(exp(u)) → u` everywhere (the exp→ln left inverse), a fold sound for
+/// all real `u` since `exp: ℝ→ℝ⁺` and `ln∘exp = id`. Complements the exp tower's
+/// `exp(ln v)=v` (its right inverse, valid for `v>0`) so the zero-test can relate
+/// `ln`-of-`exp` forms — e.g. solving `ln x = 2 ⇒ x = e²` certifies. Applied inside
+/// [`equal`]'s canonicalization; does **not** touch `exp(ln u)` (handled elsewhere).
+fn rewrite_log_exp(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            if let CasExpr::Unary(UnaryFunc::Exp, inner) = arg.as_ref() {
+                return rewrite_log_exp(inner);
+            }
+            CasExpr::Unary(UnaryFunc::Ln, Box::new(rewrite_log_exp(arg)))
+        }
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(rewrite_log_exp).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(rewrite_log_exp).collect()),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(rewrite_log_exp(a))),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(rewrite_log_exp(a)),
+            Box::new(rewrite_log_exp(b)),
+        ),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(rewrite_log_exp(a)), *e),
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(rewrite_log_exp(a))),
+        other => other.clone(),
     }
 }
 
@@ -11499,8 +11536,13 @@ mod tests {
         assert_equal(&r3[0], &CasExpr::int(1));
         // eˣ + 1 = 0 has no real root (exp > 0) — declined.
         assert!(solve(&(x().exp() + CasExpr::int(1)), "x").is_none());
-        // ln roots (`ln x − 2`) are not yet certifiable (ln∘exp unreduced) — declined.
-        assert!(solve(&(x().ln() - CasExpr::int(2)), "x").is_none());
+        // ln roots now certify (the `ln(exp u)=u` fold): ln x − 2 ⇒ x = e².
+        let rln = solve(&(x().ln() - CasExpr::int(2)), "x").expect("solvable");
+        assert_equal(&rln[0], &CasExpr::int(2).exp());
+        // √ roots: √x − 3 ⇒ x = 9 (square the target); no real root for √x + 1.
+        let rsq = solve(&(x().sqrt() - CasExpr::int(3)), "x").expect("solvable");
+        assert_equal(&rsq[0], &CasExpr::int(9));
+        assert!(solve(&(x().sqrt() + CasExpr::int(1)), "x").is_none());
         // A polynomial still routes to the polynomial solver.
         assert_eq!(
             solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
