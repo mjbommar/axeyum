@@ -7765,6 +7765,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_quadratic_usub(expr, var),
         integrate_odd_rational_usub(expr, var),
         integrate_exp_substitution(expr, var),
+        integrate_trig_inner_substitution(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -8861,6 +8862,89 @@ fn poly_proportion(a: &[Rational], b: &[Rational]) -> Option<Rational> {
         }
     }
     Some(k)
+}
+
+/// Replace every `Unary(head, var)` subexpression with the variable `replacement`
+/// (`sin x → u`), recursing structurally.
+fn replace_head_with_var(expr: &CasExpr, head: UnaryFunc, var: &str, replacement: &str) -> CasExpr {
+    if let CasExpr::Unary(func, arg) = expr
+        && *func == head
+        && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+    {
+        return CasExpr::var(replacement);
+    }
+    match expr {
+        CasExpr::Unary(func, a) => {
+            CasExpr::Unary(*func, Box::new(replace_head_with_var(a, head, var, replacement)))
+        }
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(replace_head_with_var(a, head, var, replacement))),
+        CasExpr::Pow(a, e) => {
+            CasExpr::Pow(Box::new(replace_head_with_var(a, head, var, replacement)), *e)
+        }
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(replace_head_with_var(a, head, var, replacement)),
+            Box::new(replace_head_with_var(b, head, var, replacement)),
+        ),
+        CasExpr::Add(items) => CasExpr::Add(
+            items.iter().map(|t| replace_head_with_var(t, head, var, replacement)).collect(),
+        ),
+        CasExpr::Mul(items) => CasExpr::Mul(
+            items.iter().map(|t| replace_head_with_var(t, head, var, replacement)).collect(),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// ∫ cos(x)·R(sin x) dx = [∫R(u)du]_{u=sin x} and ∫ sin(x)·R(cos x) dx =
+/// −[∫R(u)du]_{u=cos x}, for a **rational** `R` — the `u = sin x`/`u = cos x`
+/// substitution. Covers `∫cos x/(1+sin²x) = atan(sin x)`, `∫sin x·cos²x`. The
+/// cofactor (after removing the `g′` factor) must become a rational function of the
+/// single new variable. Certified downstream.
+fn integrate_trig_inner_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (num_factors, denom): (Vec<CasExpr>, Option<CasExpr>) = match expr {
+        CasExpr::Div(num, den) => (flatten_mul(num), Some(den.as_ref().clone())),
+        _ => (flatten_mul(expr), None),
+    };
+    // (g, g′-head, sign of ∫): u=sin x pairs with a cos factor (+); u=cos x with sin (−).
+    for (inner_head, derivative_head, sign) in [
+        (UnaryFunc::Sin, UnaryFunc::Cos, Rational::integer(1)),
+        (UnaryFunc::Cos, UnaryFunc::Sin, Rational::integer(-1)),
+    ] {
+        // Remove exactly one `g′(x)` factor from the numerator.
+        let position = num_factors.iter().position(|f| {
+            matches!(f, CasExpr::Unary(h, a) if *h == derivative_head
+                && matches!(a.as_ref(), CasExpr::Var(v) if v == var))
+        });
+        let Some(position) = position else { continue };
+        let mut others: Vec<CasExpr> = num_factors
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i != position)
+            .map(|(_, f)| f.clone())
+            .collect();
+        let num_rest = match others.len() {
+            0 => CasExpr::int(1),
+            1 => others.pop().unwrap_or_else(|| CasExpr::int(1)),
+            _ => CasExpr::Mul(others),
+        };
+        let rest = match &denom {
+            Some(d) => CasExpr::Div(Box::new(num_rest), Box::new(d.clone())),
+            None => num_rest,
+        };
+        // Substitute g(x) → u; the result must be a rational function of `u` alone.
+        let u = if var == "u" { "w" } else { "u" };
+        let in_u = replace_head_with_var(&rest, inner_head, var, u);
+        if expr_contains_var(&in_u, var) || contains_sin_or_cos(&in_u) {
+            continue; // still depends on x or another trig — not a clean substitution
+        }
+        let Some(inner) = integrate(&in_u, u) else { continue };
+        if !inner.is_certified() {
+            continue;
+        }
+        let back = inner.antiderivative.substitute(u, &CasExpr::Unary(inner_head, Box::new(CasExpr::var(var))));
+        return Some(scaled_term(sign, back));
+    }
+    None
 }
 
 /// ∫ R(eˣ) dx for a **rational** `R` — the `u = eˣ` substitution (`dx = du/u`):
@@ -13818,6 +13902,26 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn trig_inner_substitution_integrals() {
+        let x = || v("x");
+        // u=sin x / u=cos x substitutions: ∫cos x·R(sin x), ∫sin x·R(cos x).
+        for integrand in [
+            x().cos() / (CasExpr::int(1) + x().sin().pow(2)), // atan(sin x)
+            x().sin() / (CasExpr::int(1) + x().cos().pow(2)), // −atan(cos x)
+            x().cos() / (CasExpr::int(2) + x().sin()),        // ln(sin x + 2)
+        ] {
+            let r = integrate(&integrand, "x").expect("trig-inner substitution");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫cos x/(1+sin²x) closed form.
+        assert_equal(
+            &integrate(&(x().cos() / (CasExpr::int(1) + x().sin().pow(2))), "x").unwrap().antiderivative,
+            &CasExpr::Unary(UnaryFunc::Atan, Box::new(x().sin())),
+        );
     }
 
     #[test]
