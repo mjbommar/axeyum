@@ -5840,7 +5840,22 @@ pub fn simplify_radicals(expr: &CasExpr) -> CasExpr {
                 CasExpr::Div(Box::new(num), Box::new(den))
             }
         }
-        CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(simplify_radicals(base)), *exponent),
+        CasExpr::Pow(base, exponent) => {
+            let simplified_base = simplify_radicals(base);
+            // `(√u)^{2k} = u^k` (sound: `√u` is defined only for `u ≥ 0`), so
+            // `(√π)² → π`.
+            if let CasExpr::Unary(UnaryFunc::Sqrt, inner) = &simplified_base
+                && exponent.is_multiple_of(2)
+            {
+                let half = exponent / 2;
+                return if half == 1 {
+                    (**inner).clone()
+                } else {
+                    CasExpr::Pow(inner.clone(), half)
+                };
+            }
+            CasExpr::Pow(Box::new(simplified_base), *exponent)
+        }
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
 }
