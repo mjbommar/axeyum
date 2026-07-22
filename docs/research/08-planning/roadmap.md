@@ -198,7 +198,13 @@ Last updated: 2026-07-22
 > six-case corpus, including content-bound source reuse, exact fault/recovery,
 > E1/E2/E3 completion, and byte-identical timing-free outcomes. The
 > official-style selection identity remains independently open before the
-> 64,345-file candidate may be rerun. This is measurement
+> 64,345-file candidate may be rerun. Proposed
+> [ADR-0356](../09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
+> and its
+> [execution plan](../../../docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md)
+> now pin the exact organizer commit, matching SMT-LIB 2025.08.04 release,
+> producer/auditor split, complete decision ledger, and mutation gates before
+> implementation. This is measurement
 > infrastructure under G1, not a new solver or foundation phase.
 
 ## Purpose

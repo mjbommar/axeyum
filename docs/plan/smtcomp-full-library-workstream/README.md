@@ -38,7 +38,9 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   recovery, different-host retry, central completion, raw-export gating, and
   repeated outcome equivalence are executable.
 - The independent official eligibility/status/difficulty selection ledger is
-  open. E1b's exact ordered per-file digest ledger does not substitute for it.
+  preregistered under proposed ADR-0356 but not implemented. The authority is
+  the pinned 2026 organizer code plus matching SMT-LIB 2025.08.04 release;
+  E1b's exact ordered per-file digest ledger does not substitute for it.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -221,7 +223,10 @@ gate.
 
 1. **Selection identity.** Implement the official eligibility, status,
    difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
-   Keep this policy artifact separate from the E1b execution ledger.
+   Keep this policy artifact separate from the E1b execution ledger. Follow
+   [the preregistered plan](../smtcomp-official-selection-identity-plan-2026-07-22.md)
+   under proposed
+   [ADR-0356](../../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md).
 2. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0.
@@ -250,6 +255,8 @@ Repository:
 - E2 result: `docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`;
 - E3 plan: `docs/plan/smtcomp-multi-host-durability-e3-plan-2026-07-22.md`;
 - E3 result: `docs/plan/smtcomp-multi-host-durability-e3-2026-07-22.md`;
+- official selection plan:
+  `docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -281,7 +288,8 @@ NAS (shared, corpus read-only in practice):
    treating the stale run as evidence.
 4. Take the independent official selection-identity ledger next. Keep the v2
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
-   necessary correction.
+   necessary correction. Execute ADR-0356 S0 first; do not observe the official
+   selection before the fixture contract is committed and pushed.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 

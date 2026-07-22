@@ -662,9 +662,13 @@ Out of scope:
     service, immutable controller evidence, fail-before-launch overcommit and
     environment rejection, and destructive host-runner kill/resume with an
     explicit terminal-less resource session. The question remains open until
-    E3 proves multi-host allocation, loss/retry, and transfer durability;
-    official eligibility/status/difficulty selection identity is a separate
-    prerequisite. The 64,345-case candidate must not be rerun first.
+    E3 now proves multi-host allocation, loss/retry, and transfer durability.
+    The remaining independent selection prerequisite is preregistered in
+    [ADR-0356](../09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md):
+    pin the exact organizer implementation and matching SMT-LIB 2025 release,
+    retain its Polars sample as external producer output, and independently
+    audit every eligibility, exclusion, cap, and selected-file byte identity.
+    The 64,345-case candidate must not be rerun first.
 
 ### Horizon: General Reasoning And Proving
 

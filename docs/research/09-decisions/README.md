@@ -410,3 +410,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0353](adr-0353-preregister-lean-recursive-induction-hypotheses.md) | Accept one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields | accepted |
 | [0354](adr-0354-preregister-lean-mutual-inductive-groups.md) | Preregister atomic ordered mutual-inductive groups with group-wide positivity, shared motives/minors, and target-family recursion | accepted |
 | [0355](adr-0355-preregister-lean-nested-inductive-elimination.md) | Preregister kernel-side nested-inductive expansion, checking, restoration, and auxiliary recursors | proposed |
+| [0356](adr-0356-preregister-official-smtcomp-selection-identity.md) | Preregister content-addressed official SMT-COMP selection production plus independent eligibility and corpus-byte audit | proposed |
