@@ -1342,7 +1342,9 @@ a `Piecewise` data model, and symbolic `Gamma`/`digamma`/`polygamma` — both ne
 (a new `CasExpr` variant / a 2-arg indexed head), touching every match site; deferred as a deliberate,
 scoped effort rather than a risky mid-session refactor.
 
-**Session tally (Entries 37–37l): 29 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Frullani integrals + a soundness fix** (Entry 37m): `∫₀^∞(cos x−cos 2x)/x` wrongly returned `0` — the antiderivative `Ci(x)−Ci(2x)` at the lower bound `0` unsoundly cancelled `Ci(0)−Ci(0)`, but `Ci(z)~γ+ln|z|` so the combination is `−ln2`. Added `limit_singular_integral_sum_at_zero` (`Σcᵢ·Hᵢ(aᵢx)`, `H∈{Ci,Ei,Chi}`, converges iff `Σcᵢ=0` → `Σcᵢ·ln|aᵢ|`) and routed the improper/definite finite boundary through `limit` when the antiderivative has a log-singular head (`contains_singular_integral_head`). Plus `Ei(−∞)=0`. Closes the Frullani family. **(This is the kind of ∞−∞ cancellation a proof-carrying CAS must get right — declining, not guessing 0.)**
+
+**Session tally (Entries 37–37m): 30 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
