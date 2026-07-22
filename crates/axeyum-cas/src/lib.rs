@@ -3061,7 +3061,10 @@ pub fn dsolve_inhomogeneous(
 ) -> Option<CasExpr> {
     let trimmed = poly::rat_trim(char_coeffs.to_vec());
     poly::rat_degree(&trimmed)?; // reject the zero operator
-    let forcing_coeffs = poly::rat_trim(univariate_coeffs(forcing, var)?);
+    // Non-polynomial forcing (exp, trig, products) → variation of parameters.
+    let Some(forcing_coeffs) = univariate_coeffs(forcing, var).map(poly::rat_trim) else {
+        return dsolve_variation_of_parameters(char_coeffs, forcing, var);
+    };
 
     // Zero forcing → the pure homogeneous problem.
     let Some(forcing_degree) = poly::rat_degree(&forcing_coeffs) else {
@@ -3117,6 +3120,84 @@ pub fn dsolve_inhomogeneous(
         ZeroTest::Certified { equal: true, .. } => Some(solution),
         _ => None,
     }
+}
+
+/// Second-order **variation of parameters** for `a·y″ + b·y′ + c·y = g(x)` with an
+/// arbitrary integrable forcing `g` (exp, trig, products). From the homogeneous
+/// basis `y₁, y₂` (extracted from [`dsolve_homogeneous`] by setting `C0,C1`) and the
+/// Wronskian `W = y₁y₂′ − y₂y₁′`, the particular solution is
+/// `y_p = y₁·∫(−y₂·g/(aW)) + y₂·∫(y₁·g/(aW))`. Certified by substituting into the
+/// operator. `None` for a non-quadratic operator, or when a required integral is not
+/// found (e.g. a trig forcing over a real-exponential basis — where `simplify` pushes
+/// `e^{−x}` into a denominator the integrator cannot invert).
+fn dsolve_variation_of_parameters(
+    char_coeffs: &[Rational],
+    forcing: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    if poly::rat_degree(&poly::rat_trim(char_coeffs.to_vec()))? != 2 {
+        return None; // second order only
+    }
+    let leading = *char_coeffs.get(2)?;
+    let homogeneous = dsolve_homogeneous(char_coeffs, var)?;
+    // Basis: y₁ = y_h|_{C0=1,C1=0}, y₂ = y_h|_{C0=0,C1=1}.
+    let basis = |c0: i128, c1: i128| {
+        homogeneous
+            .substitute("C0", &CasExpr::int(c0))
+            .substitute("C1", &CasExpr::int(c1))
+    };
+    // Do **not** `simplify` the basis: it rewrites `e^{−x} → 1/e^x`, which the
+    // integrator does not recognise as `e^{−x}·g`. `fold_trivial` only drops the
+    // `0·e^{…}`/`1·e^{…}` cruft from the constant substitution.
+    let y1 = fold_trivial(&basis(1, 0));
+    let y2 = fold_trivial(&basis(0, 1));
+    let wronskian =
+        simplify(&(y1.clone() * y2.differentiate(var) - y2.clone() * y1.differentiate(var)));
+    let denom = CasExpr::Const(leading) * wronskian;
+    // Integrate `−y₂·g/(aW)` and `y₁·g/(aW)`. Try the raw integrand first, then the
+    // simplified form (which collapses `e^{−x}·eˣ = 1` but may rewrite `exp(2x) →
+    // exp(x)²`, so raw wins when it works — cf. `dsolve_first_order_linear`).
+    let solve_u = |integrand: CasExpr| -> Option<CasExpr> {
+        // Different foldings suit different bases: `simplify` cleans trig/constant
+        // integrands and cancels `e^{−x}·eˣ = 1` (but rewrites `e^{2x} → exp(x)²`);
+        // `merge_exp_products` keeps `e^{2x}` and combines `e^{2x}/e^{3x} → e^{−x}`.
+        // Take the first folding whose integral certifies.
+        [
+            integrate(&simplify(&integrand), var),
+            integrate(&merge_exp_products(&integrand), var),
+            integrate(&integrand, var),
+        ]
+        .into_iter()
+        .flatten()
+        .find(CertifiedIntegral::is_certified)
+        .map(|c| c.antiderivative)
+    };
+    let u1 = solve_u(CasExpr::Neg(Box::new(y2.clone())) * forcing.clone() / denom.clone())?;
+    let u2 = solve_u(y1.clone() * forcing.clone() / denom)?;
+    let raw_particular = y1 * u1 + y2 * u2;
+    // Fold the particular solution to closed form. `merge_exp_products` collapses
+    // `e^x·e^{2x}` (poly×exp resonance) that `simplify` alone rewrites to `exp(x)²`;
+    // plain `simplify` handles `e^x·e^{−x}·trig` that merge leaves. Try both and
+    // return the first whose full-solution certificate passes.
+    for particular in [
+        simplify(&merge_exp_products(&raw_particular)),
+        simplify(&raw_particular),
+    ] {
+        let solution = particular + homogeneous.clone();
+        let mut operator = CasExpr::zero();
+        let mut derivative = solution.clone();
+        for coeff in char_coeffs {
+            operator = operator + CasExpr::Const(*coeff) * derivative.clone();
+            derivative = derivative.differentiate(var);
+        }
+        if matches!(
+            equal(&simplify_radicals(&merge_exp_products(&simplify(&operator))), forcing),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return Some(solution);
+        }
+    }
+    None
 }
 
 /// Solve a **first-order linear ODE** `y′ + p(x)·y = q(x)` by the integrating-factor
@@ -5900,6 +5981,69 @@ fn rewrite_log_exp(expr: &CasExpr) -> CasExpr {
         ),
         CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(rewrite_log_exp(a)), *e),
         CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(rewrite_log_exp(a))),
+        other => other.clone(),
+    }
+}
+
+/// Combine products of exponentials into a single exp of a sum:
+/// `exp(u)·exp(v) → exp(u+v)` (so `e^{−x}·eˣ → e⁰ = 1`, `eˣ·eˣ → e^{2x}` — **not**
+/// `exp(x)²`, which the integrator does not recognise). Recurses structurally.
+fn merge_exp_products(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Mul(factors) => {
+            let mut exp_args: Vec<CasExpr> = Vec::new();
+            let mut others: Vec<CasExpr> = Vec::new();
+            let mut negate = false;
+            // Flatten nested products (`e^x·(e^{−x}·f)`) so exponentials at any depth
+            // combine.
+            let mut stack: Vec<CasExpr> = factors.clone();
+            while let Some(factor) = stack.pop() {
+                let mut merged = merge_exp_products(&factor);
+                while let CasExpr::Neg(inner) = merged {
+                    negate = !negate;
+                    merged = *inner;
+                }
+                match merged {
+                    CasExpr::Mul(inner) => stack.extend(inner),
+                    CasExpr::Unary(UnaryFunc::Exp, arg) => exp_args.push(*arg),
+                    other => others.push(other),
+                }
+            }
+            if !exp_args.is_empty() {
+                let sum = match exp_args.len() {
+                    1 => exp_args.into_iter().next().unwrap_or_else(CasExpr::zero),
+                    _ => CasExpr::Add(exp_args),
+                };
+                // `fold_elementary_constants` collapses `exp(0) → 1`.
+                others.push(fold_elementary_constants(&simplify(&sum).exp()));
+            }
+            let product = match others.len() {
+                0 => CasExpr::one(),
+                1 => others.into_iter().next().unwrap_or_else(CasExpr::one),
+                _ => CasExpr::Mul(others),
+            };
+            if negate {
+                CasExpr::Neg(Box::new(product))
+            } else {
+                product
+            }
+        }
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(merge_exp_products).collect()),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(merge_exp_products(a))),
+        CasExpr::Div(a, b) => {
+            let numerator = merge_exp_products(a);
+            let denominator = merge_exp_products(b);
+            // A denominator `exp(v)` moves into the numerator as `·exp(−v)` so
+            // `e^{2x}/e^{3x} → e^{−x}` (Wronskian denominators of exponential bases).
+            if let CasExpr::Unary(UnaryFunc::Exp, v) = &denominator {
+                return merge_exp_products(
+                    &(numerator * CasExpr::Neg(Box::new((**v).clone())).exp()),
+                );
+            }
+            CasExpr::Div(Box::new(numerator), Box::new(denominator))
+        }
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(merge_exp_products(a)), *e),
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(merge_exp_products(a))),
         other => other.clone(),
     }
 }
@@ -12125,6 +12269,49 @@ mod tests {
             - CasExpr::int(3) * sol4.differentiate("x")
             + CasExpr::int(2) * sol4.clone();
         assert_equal(&residual4, &x());
+    }
+
+    #[test]
+    fn dsolve_inhomogeneous_variation_of_parameters() {
+        let ig = Rational::integer;
+        let x = || v("x");
+        // Non-polynomial forcing via variation of parameters — the returned solution
+        // is certified inside the call (`is_some`), and re-verified here against the
+        // ODE residual. Exponential forcing over a real basis (incl. resonance):
+        // y″ − y = eˣ, y″ − 3y′ + 2y = eˣ (eˣ a homogeneous mode), y″ − 2y′ + y = eˣ.
+        for coeffs in [
+            vec![ig(-1), ig(0), ig(1)],
+            vec![ig(2), ig(-3), ig(1)],
+            vec![ig(1), ig(-2), ig(1)],
+        ] {
+            let sol = dsolve_inhomogeneous(&coeffs, &x().exp(), "x").expect("exp forcing");
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            assert!(matches!(
+                equal(&simplify_radicals(&simplify(&residual)), &x().exp()),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
+        // Trigonometric forcing over a complex (cos/sin) basis: y″ + y = sin x,
+        // y″ + 4y = sin 3x.
+        for (coeffs, freq) in [(vec![ig(1), ig(0), ig(1)], 1), (vec![ig(4), ig(0), ig(1)], 3)] {
+            let forcing = (CasExpr::int(freq) * x()).sin();
+            let sol = dsolve_inhomogeneous(&coeffs, &forcing, "x").expect("trig forcing");
+            let residual = coeffs
+                .iter()
+                .enumerate()
+                .fold(CasExpr::zero(), |acc, (k, &c)| {
+                    acc + CasExpr::Const(c) * sol.differentiate_n("x", k)
+                });
+            assert!(matches!(
+                equal(&simplify_radicals(&simplify(&residual)), &forcing),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
     }
 
     #[test]
