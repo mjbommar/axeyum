@@ -25,6 +25,7 @@ from multi_host import (  # noqa: E402
     host_registration,
     install_host_command,
     kill_remote_launcher,
+    prepare_run_directory,
     recover_failed_shard,
     remote_liveness,
     remote_probe,
@@ -346,7 +347,6 @@ class E3LiveGate(unittest.TestCase):
         completions = {}
         for mode in ("control", "loss-retry"):
             run_dir = gate_root / mode
-            run_dir.mkdir()
             fault = {"kind": "none"}
             marker = marker_root / "case-a-kill.smt2.marker"
             if mode == "loss-retry":
@@ -364,6 +364,7 @@ class E3LiveGate(unittest.TestCase):
                 allocations=allocations,
                 fault_injection=fault,
             )
+            prepare_run_directory(plan=plan, run=run, run_dir=run_dir)
             plan_path = run_dir / "multi-host-plan.json"
             atomic_install_json(run_dir, plan_path.name, plan)
             prefix = "ctl" if mode == "control" else "loss"
