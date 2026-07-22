@@ -7764,6 +7764,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_sqrt_power(expr, var),
         integrate_exp_quadratic_usub(expr, var),
         integrate_odd_rational_usub(expr, var),
+        integrate_exp_substitution(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -8860,6 +8861,27 @@ fn poly_proportion(a: &[Rational], b: &[Rational]) -> Option<Rational> {
         }
     }
     Some(k)
+}
+
+/// ∫ R(eˣ) dx for a **rational** `R` — the `u = eˣ` substitution (`dx = du/u`):
+/// `∫ R(u)/u du`, mapped back with `u = eˣ` (and `ln(eˣ) → x`). Covers
+/// `∫1/(eˣ+1) = x − ln(eˣ+1)`, `∫1/(eˣ−1)`. Declines if the integrand has a bare
+/// `x` (that's poly×exp, handled elsewhere). Certified downstream.
+fn integrate_exp_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let u = if var == "u" { "w" } else { "u" };
+    // Rewrite exp(k·x) → uᵏ throughout; `None` if a bare `x` remains.
+    let r_u = exp_to_power(expr, var, u)?;
+    // ∫R(eˣ)dx = ∫R(u)·(1/u)du.
+    let integrand = r_u / CasExpr::var(u);
+    let inner = integrate(&integrand, u)?;
+    if !inner.is_certified() {
+        return None;
+    }
+    // Map back u = eˣ and collapse ln(eˣ) → x.
+    let substituted = inner
+        .antiderivative
+        .substitute(u, &CasExpr::var(var).exp());
+    Some(simplify(&rewrite_log_exp(&substituted)))
 }
 
 /// ∫ x·R(x²) dx = ½·[∫ R(u) du]_{u=x²} for a **rational** `R` — the `u = x²`
@@ -13796,6 +13818,25 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn exp_substitution_integrals() {
+        let x = || v("x");
+        // ∫R(eˣ)dx via u=eˣ: ∫1/(eˣ+1)=x−ln(eˣ+1), ∫1/(eˣ−1)=ln(eˣ−1)−x.
+        for integrand in [
+            CasExpr::int(1) / (x().exp() + CasExpr::int(1)),
+            CasExpr::int(1) / (x().exp() - CasExpr::int(1)),
+        ] {
+            let r = integrate(&integrand, "x").expect("u=eˣ substitution");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫1/(eˣ+1) closed form.
+        assert_equal(
+            &integrate(&(CasExpr::int(1) / (x().exp() + CasExpr::int(1))), "x").unwrap().antiderivative,
+            &(x() - (x().exp() + CasExpr::int(1)).ln()),
+        );
     }
 
     #[test]
