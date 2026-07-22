@@ -217,7 +217,7 @@ object and compare results.
 
 ## Negative matrix
 
-The ten Rust integration tests in
+The eleven Rust integration tests in
 [`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
 cover:
 
@@ -225,6 +225,7 @@ cover:
 |---|---|---|
 | official flat fixture | 5 records / 8 declarations admitted | first end-to-end import slice |
 | official direct-recursive fixture | 5 records / 11 declarations, zero axioms | direct and parametric recursion cross the official seam |
+| three official blocker fixtures | projection/Nat closures decline first on projection; quotient declines on its package | real dependency closures preserve stable first blockers |
 | repeated import | identical report and declaration debug projection | deterministic construction |
 | unknown record | malformed rejection at line 2 | no open-world guessing |
 | forward expression reference | malformed rejection at line 2 | topological stream contract |
@@ -235,12 +236,13 @@ cover:
 | partial definition | stable unsupported decline | unsafe/partial code cannot enter default profile |
 | line/record limits (two cells in one test) | resource rejection | bounded input contract |
 
-The Rust test count is ten because the final resource test contains both line
+The Rust test count is eleven because the official blocker-fixture test contains
+three cells and the final resource test contains both line
 and record cells.
 
 The earlier Python probe remains useful as an implementation-independent
-inventory oracle. Its six tests and the Rust tests consume the same official
-fixtures but exercise separate code paths.
+inventory oracle. Six reader tests plus two exact census/hash tests and the Rust
+tests consume the same official fixtures but exercise separate code paths.
 
 ## Commands and result
 
@@ -255,7 +257,7 @@ cargo run -q -p axeyum-lean-import --example lean4export_import -- \
 
 Measured local result under the repository's 4 GiB process cap:
 
-- ten integration tests pass;
+- eleven integration tests pass;
 - warning-denied all-target Clippy passes;
 - the example prints the exact result at the top of this page;
 - the existing 181 kernel unit/integration tests and kernel doctest remain
@@ -281,9 +283,9 @@ mutual, nested, and reflexive groups remain explicit declines.
 
 ## Next evidence-bearing increments
 
-1. Generate official positive and negative fixtures for projection, Nat/string
-   literals, quotient, recursive-indexed Vector,
-   mutual, nested, and reflexive families.
+1. Preserve the landed projection/Nat/quotient streams and source/command/hash-
+   bound String closure; generate recursive-indexed Vector, mutual, nested, and
+   reflexive families.
 2. Add a generated parsed/translated/admitted/dual-admitted matrix from those
    fixtures.
 3. Add duplicate-ID, truncation-at-every-record, oversized integer, deep JSON,
@@ -292,8 +294,14 @@ mutual, nested, and reflexive groups remain explicit declines.
    against that stable identity.
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. Implement projection or bignum/literal support based on those dependency
-   gains, not on a guessed feature order.
+6. Implement projection representation/inference/constructor reduction, then
+   rerun the literal closures before choosing the next slice.
+
+The four-root
+[`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)
+resolves the first implementation choice for the measured roots: projection is
+the first slice. It does not replace the broader `Init` dependency-closure
+census.
 
 Do not begin a native Lean parser, Lake clone, standalone LSP, compiler, or
 mathlib breadth campaign before this import matrix shows which core constructs

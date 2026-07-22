@@ -39,8 +39,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   first independent declaration-import results: separate Rust wire crate, exact
   format/topology/resource contract, 5-record to 8-declaration flat admission,
   5-record to 11-declaration direct-recursive admission, binder-correct
-  generated-recursor comparison, ten-test negative matrix, and explicit
+  generated-recursor comparison, eleven-test negative matrix, and explicit
   projection/literal/quotient/harder-inductive declines.
+- [`lean4export-official-blocker-census-2026-07-21.md`](lean4export-official-blocker-census-2026-07-21.md) —
+  exact official projection/Nat/String/quotient dependency closures, committed
+  small streams and hashes, assurance-separated admission matrix, and the
+  measured decision to implement projection before literals.
 - [`gap-ownership-v1.json`](gap-ownership-v1.json) and the generated
   [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
   routing from each research question to owning code, committed evidence,

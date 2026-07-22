@@ -138,7 +138,10 @@ Again, there are distinct targets:
   flat fixture as eight kernel declarations and one direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
   those exact profiles, but `Init`/`Std`/mathlib and the declined kernel
-  constructs remain open. The arithmetic reconstruction preludes also have an explicitly
+  constructs remain open. A four-root official export census now makes
+  projection the measured first kernel blocker for structure, Nat-literal, and
+  String-literal closures; this orders work but is not broad `Init` coverage.
+  The arithmetic reconstruction preludes also have an explicitly
   audited axiom surface whose types are checked but whose statements have not
   yet been discharged against mathlib.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

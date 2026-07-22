@@ -59,13 +59,21 @@ state.
 > axioms. The importer independently regenerates and compares each recursor;
 > the recursive fixture exposed alpha-renamed universe binders (`u_1` versus
 > `u.1`), now compared after explicit level substitution. Theorem-body and
-> recursor-rule mutations reject among ten Rust tests. This is exact flat and
+> recursor-rule mutations reject among eleven Rust tests. This is exact flat and
 > direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
-> credit. Direct
-> `.olean` parsing and full ecosystem cloning remain non-goals. Resume by
-> generating the projection/literal/quotient/recursive-indexed/mutual/nested/
-> reflexive fixture matrix and type-digesting the 64 prelude axioms before native
-> frontend, Lake, LSP, or compiler work. See the
+> credit. Direct `.olean` parsing and full ecosystem cloning remain non-goals. A
+> four-root
+> [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md)
+> now freezes exact projection, Nat, String, and quotient dependency closures.
+> Projection is the sole blocker for its four-declaration closure and the first
+> Rust decline for both literal roots; the String closure already spans 290
+> declarations and also reaches Nat literals and recursive-indexed inductives.
+> Three small streams are committed, the 570,807-byte String stream is bound by
+> source/command/hash, and 11 Rust plus eight Python tests hold the boundary.
+> Resume with projection representation/inference/reduction, the remaining
+> recursive-indexed/mutual/nested/reflexive fixture matrix, and type-digesting
+> the 64 prelude axioms before native frontend, Lake, LSP, or compiler work. See
+> the
 > [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and

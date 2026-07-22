@@ -396,16 +396,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   (`u_1` from official Lean versus `u.1` from Axeyum); the importer now
   alpha-renames exported universe binders before definitionally comparing the
   recursor type and iota-rule RHSs. Theorem-body and recursor-rule tampering
-  reject among ten Rust tests. The flat result still reports `axioms=P`, so the
-  assumption is not converted into a theorem. This is exact flat and
+  reject among eleven Rust tests. The flat result still reports `axioms=P`, so
+  the assumption is not converted into a theorem. This is exact flat and
   direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
   credit. Direct `.olean` reading remains rejected; official Lean is an optional
   sandboxed frontend/workflow adapter while the default checker remains pure
-  Rust. **Next:** review ADR-0345 and the crate/TCB boundary, generate
-  projection/literal/quotient/recursive-indexed/mutual/nested/reflexive fixtures
-  plus the assurance matrix, then type-digest the 64
-  prelude axioms before any native parser, Lake, LSP, or compiler work. See the
-  [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
+  Rust. A new four-root official census freezes exact projection, Nat, String,
+  and quotient closures. Projection is the only blocker in its four-declaration
+  closure and the first product decline for both literal roots. The String root
+  expands to 290 declarations and also contains 27 projections, 20 Nat
+  literals, one String literal, and recursive-indexed inductives; quotient is an
+  isolated five-record closure. Three small streams are committed, the 570,807-
+  byte String stream is source/command/hash bound, consecutive exports are
+  byte-identical, and eight Python tests hash/inventory the evidence. **Next:**
+  review ADR-0345 and the crate/TCB boundary, implement projection
+  representation/inference/constructor reduction, generate the remaining
+  recursive-indexed/mutual/nested/reflexive fixtures plus the assurance matrix,
+  then type-digest the 64 prelude axioms before any native parser, Lake, LSP, or
+  compiler work. See the
+  [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md)
+  and [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md).
 
 - **2026-07-21 — the representative official-Lean gate is now locally real and
   fail-closed.** Primary-source inspection showed that `leanprover/lean-action`

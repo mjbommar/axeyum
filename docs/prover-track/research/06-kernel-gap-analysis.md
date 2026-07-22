@@ -9,10 +9,10 @@ pattern (deferred-by-*permission* rather than deferred-by-*rejection*).
 
 Every claim below is `file:line` against the code, not the doc comments.
 
-> **Doc-comment health warning.** `src/lib.rs:6-7` still says "WHNF reduction,
-> definitional equality, and type checking are the **next** slice and are
-> intentionally absent here." This is false: `src/tc.rs` implements all three.
-> Treat module docs in this crate as lagging indicators; the code is the truth.
+> **2026-07-21 refresh.** The stale `src/lib.rs` scope comment identified by the
+> original audit is corrected, and row #14's initial import path has landed.
+> The kernel-feature findings below remain current; §3 records the new exact
+> import boundary and links the superseding interoperability measurements.
 
 ---
 
@@ -160,7 +160,7 @@ accepts something it cannot justify; the P0 pattern).
 | 11 | **Ill-shaped recursive self-ref** | `RecursiveInductiveNotSupported` (`tc.rs:162`, raised `inductive.rs:522`) | parametric/indexed self-refs | — | — | Yes | **REJECTION** |
 | 12 | **Positivity checker** | *not needed for admitted fragment* (`inductive.rs:26-28`) | Prerequisite for #5-#8 | **M** | ~300-500 | **Yes — critical** | **REJECTION (vacuous today)** |
 | 13 | **Prelude axioms undischarged** | *none — asserted* (`arith_prelude.rs`, `int_prelude.rs`) | — | **XL** | ~2000+ | **Yes** | **⚠ PERMISSION — see §2.2** |
-| 14 | **Export-format (`.olean`/`lean4export`) reader** | *none exists* | Ingesting real Lean/mathlib | **L** | ~600-900 | No (kernel re-checks) | **REJECTION (by absence)** |
+| 14 | **Broad export-format admission** | initial fail-closed `lean4export` 3.1 reader admits two exact fixture profiles | Ingesting dependency-closed `Init`/`Std`/mathlib | **L, WIP** | reader landed; kernel breadth open | No (kernel re-checks) | **REJECTION with typed declines** |
 
 > **Sizing caveat — read §2.3 before costing this table.** Checked against the
 > Lean 4 kernel, rows **#7 (nested)** and **#9 (well-founded)** are *elaborator*
@@ -278,7 +278,7 @@ which changes what "implementing" them means for us.
 | 9 | Well-founded recursion | **Elaborator-level.** `WellFounded.fix` + `WF.fix_eq`; the kernel only ever sees the resulting term. The kernel's real obligation is reducing `Acc.rec` — an inductive with a **reflexive** field. | **Re-sizes #9 as kernel work — to zero, but re-points it**: what we actually need is #6, since `Acc` is reflexive. `Acc.rec` is the hidden dependency behind every well-founded definition in a real export. |
 | 10 | Structure eta | `isDefEqEtaStruct` in `type_checker.cpp`: if one side is a constructor application of a single-constructor non-recursive structure and the other is not, expand the other via projections and retry. | Confirms **M**, strictly behind #1 as stated. |
 | 12 | Positivity | `inductive.cpp` checks `I` occurs **strictly positively** in every constructor argument — a real check, run at admission, on which #5–#8 all depend. | Confirms **M** and confirms the hazard: in Lean this check is *load-bearing from day one*. In ours it is vacuous only because the admitted fragment is so narrow. |
-| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | Confirms **L** and confirms the goal: nanoda — already our porting reference — has a reader we can mirror. This is the intended integration point, not an exotic ask. |
+| 14 | Export reader | Lean itself does not read the export format — `lean4export` *writes* it; independent checkers (`trepplein`, `nanoda`, `lean4lean`) read it. **The format exists precisely for third-party kernels like ours.** | The initial reader now confirms the seam: flat and direct-recursive fixtures admit independently, while projection/literal/quotient records decline structurally. Broad dependency-closed admission remains the L-sized target. |
 
 **Three corrections to §2.1 fall out of this comparison**, all in the same
 direction — we have over-sized the inductive work by mis-attributing
@@ -301,11 +301,21 @@ elaborator features to the kernel:
 
 ## 3. The export-format reader and the real-Lean cross-check
 
-**There is no export-format reader.** No `.olean`, `lean4export`, or
-`Environment.export` ingest path exists (row #14). The kernel is
-*construction-only*: terms are built through Rust builder APIs. The traffic
-flows the other way — `lean_pp.rs` (1598 lines) **renders** kernel terms *out*
-as Lean source.
+**2026-07-21 update:** there is now a separate, fail-closed
+`axeyum-lean-import` reader for pinned `lean4export` 3.1 NDJSON. It keeps JSON
+and malformed-input handling outside the zero-dependency kernel, then admits
+supported records only through `Kernel::add_declaration` and
+`Kernel::add_inductive`. The exact flat fixture becomes eight checked
+declarations; direct-recursive `MiniNat`/`MiniList` becomes 11 with zero axioms.
+Projection, literal, quotient, and harder-inductive constructs remain explicit
+declines. Direct `.olean` parsing remains absent by design.
+
+The [interoperability roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md),
+[Rust import result](../../plan/lean4export-rust-import-prototype-2026-07-21.md),
+and [official blocker census](../../plan/lean4export-official-blocker-census-2026-07-21.md)
+supersede the original construction-only status. The architectural conclusion
+survives: the interchange is the intended third-party seam, and parsing alone
+never grants theorem credit.
 
 ### Does the cross-check actually run, or skip-and-pass?
 

@@ -109,11 +109,20 @@ levels, 130 expressions, and five declaration records become 11 independently
 checked declarations with no axioms. The official and generated recursors use
 different fresh universe binder names (`u_1` and `u.1`); explicit alpha-renaming
 before type/rule comparison admits the semantic match without weakening the
-arity or definitional-equality checks. Ten tests reject theorem-body and
+arity or definitional-equality checks. Eleven tests reject theorem-body and
 recursor-rule mutations, forward references, unknown records, projections,
 version drift, partial definitions, and resource-limit violations; repeated
 import is deterministic. See the
 [measured prototype](../../plan/lean4export-rust-import-prototype-2026-07-21.md).
+
+The next official census exports structure projection, Nat literal, String
+literal, and quotient roots with exact source/tool/stream identities. Projection
+is the only blocker in its four-declaration closure and the first Rust decline
+in both literal closures. The 290-declaration String closure additionally
+contains Nat literals and recursive-indexed inductives; quotient is isolated.
+ADR-0345 therefore orders projection before literal work while retaining the
+bignum-before-typing rule. See the
+[blocker census](../../plan/lean4export-official-blocker-census-2026-07-21.md).
 
 JSON and format handling live in `axeyum-lean-import`, which depends on the
 zero-dependency kernel. The kernel does not depend on `serde_json` or the

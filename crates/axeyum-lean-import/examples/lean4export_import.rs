@@ -2,7 +2,7 @@
 //! inventory.
 
 use std::fs::File;
-use std::io::BufReader;
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use axeyum_lean_import::{ImportLimits, import_ndjson};
@@ -12,10 +12,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args_os()
         .nth(1)
         .map(PathBuf::from)
-        .ok_or("usage: lean4export_import <export.ndjson>")?;
-    let file = File::open(&path)?;
+        .ok_or("usage: lean4export_import <export.ndjson|->")?;
+    let reader: Box<dyn BufRead> = if path.as_os_str() == "-" {
+        Box::new(BufReader::new(std::io::stdin()))
+    } else {
+        Box::new(BufReader::new(File::open(&path)?))
+    };
     let mut kernel = Kernel::new();
-    let report = import_ndjson(BufReader::new(file), &mut kernel, ImportLimits::default())?;
+    let report = import_ndjson(reader, &mut kernel, ImportLimits::default())?;
     let axioms = if report.axioms.is_empty() {
         "none".to_owned()
     } else {

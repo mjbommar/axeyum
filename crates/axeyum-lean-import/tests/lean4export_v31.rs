@@ -9,6 +9,12 @@ const FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson");
 const RECURSIVE_FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson");
+const PROJECTION_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-projection.ndjson");
+const NAT_LITERAL_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-nat-literal.ndjson");
+const QUOTIENT_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-quotient.ndjson");
 
 fn import(text: &str) -> Result<(Kernel, axeyum_lean_import::ImportReport), ImportError> {
     let mut kernel = Kernel::new();
@@ -99,6 +105,29 @@ fn official_direct_recursive_families_are_independently_admitted() {
             "MiniNat.recOn",
         ]
     );
+}
+
+#[test]
+fn official_blocker_fixtures_have_stable_first_declines() {
+    let cases = [
+        (PROJECTION_FIXTURE, 81, "expr-projection"),
+        // `Nat`'s dependency closure reaches a structure projection before the
+        // literal record, making projection the measured first implementation
+        // slice rather than an ordering guess.
+        (NAT_LITERAL_FIXTURE, 106, "expr-projection"),
+        (QUOTIENT_FIXTURE, 65, "quotient-package"),
+    ];
+    for (fixture, expected_line, expected_code) in cases {
+        let error = import(fixture).unwrap_err();
+        assert!(
+            matches!(
+                error,
+                ImportError::Unsupported { line, code }
+                    if line == expected_line && code == expected_code
+            ),
+            "{error:?}",
+        );
+    }
 }
 
 #[test]

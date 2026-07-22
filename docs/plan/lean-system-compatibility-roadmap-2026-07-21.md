@@ -253,9 +253,10 @@ export. The measured result is:
 LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
 ```
 
-Ten Rust integration tests include flat and direct-recursive positive fixtures,
+Eleven Rust integration tests include flat and direct-recursive positive fixtures,
 theorem-body and recursor-rule tampering, determinism, format drift, topology,
-safety, projection, and resource controls.
+safety, synthetic and official projection/quotient declines, and resource
+controls.
 See the full
 [`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
 The second official fixture independently admits direct-recursive `MiniNat` and
@@ -265,6 +266,15 @@ after explicit level substitution. These results grant independent admission
 credit only to the exact flat and direct-recursive fixtures. They do not grant
 `Init`, `Std`, mathlib, literal, projection, quotient, recursive-indexed,
 mutual, nested, or reflexive-inductive credit.
+
+The follow-on
+[`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)
+freezes four dependency closures. Projection is the sole blocker in the
+four-declaration structure root and the first importer decline for both the Nat
+and String literal roots. The String root spans 290 declaration records and
+also reaches Nat literals and recursive-indexed inductives; quotient is a
+separate five-record closure. This selects projection as L2 slice 2 with real
+dependency evidence, not estimated ecosystem frequency.
 
 ## 5. Architecture
 
@@ -628,13 +638,16 @@ Non-claims until their gates are met:
 ## 9. Immediate next ten actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
-2. Keep the six Python and ten Rust fixture/mutation tests in normal checks.
-3. Generate one official fixture each for projection, wide Nat/string literals,
-   quotient, recursive indexed, mutual, nested, and reflexive inductives.
+2. Keep the eight Python and eleven Rust fixture/mutation/census tests in normal
+   checks.
+3. Preserve the landed projection/Nat/quotient streams and the source/command/
+   hash-bound String closure; generate the remaining recursive-indexed, mutual,
+   nested, and reflexive fixtures.
 4. Preserve byte-identical regeneration of both committed official fixtures and
    carry the direct-recursive positive control beside every recursive-indexed
    negative so the boundary is attributed to indices, not recursion alone.
-5. Produce the parsed/translated/admitted/dual-admitted feature matrix.
+5. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
+   current hand-checked six-profile seed.
 6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
    completed-environment publication mutations.
 7. Inventory and type-digest the 64 prelude axioms; choose the first five to

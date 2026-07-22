@@ -595,7 +595,9 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   official flat fixture as eight checked declarations and the direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with no axioms. It compares
   independently generated recursors after binder-correct universe alpha-renaming
-  under ten mutation/negative tests. Broader
+  under eleven mutation/negative tests. A four-root official dependency census
+  makes projection the first product decline for the structure, Nat-literal,
+  and String-literal roots and isolates quotient as a separate closure. Broader
   dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
   parsing and full frontend/compiler/ecosystem cloning are non-goals absent a

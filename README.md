@@ -95,10 +95,14 @@ carry a **machine-checkable proof** a Lean-grade kernel would accept:
 lifetime-free interned terms and universes, WHNF, definitional equality, type
 checking, proof irrelevance, inductives, recursors, and iota reduction. Supported
 solver proofs already reconstruct to kernel-checked terms and self-contained
-Lean modules. It is not a complete Lean kernel or ecosystem: projections,
-quotients, literal/bignum handling, the full recursive-inductive spine, import
-formats, and a fail-closed tactic bridge remain open. See
-[Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean).
+Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
+admits exact flat and direct-recursive official fixtures; a four-root census
+makes projection the measured next kernel blocker. It is not a complete Lean
+kernel or ecosystem: projections, quotients, literal/bignum handling,
+recursive-indexed/mutual breadth, dependency-closed `Init`/`Std`/mathlib imports,
+and a fail-closed tactic bridge remain open. See
+[Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
+[Lean-system roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md).
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
