@@ -113,6 +113,7 @@ impl AbstractionState<'_> {
             Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }

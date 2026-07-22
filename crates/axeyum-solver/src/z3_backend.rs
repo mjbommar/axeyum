@@ -274,6 +274,14 @@ fn lift_model(arena: &TermArena, solver: &Solver) -> Result<Model, SolverError> 
                     "z3 oracle does not lift real models yet (ADR-0015)".to_owned(),
                 ));
             }
+            Sort::RoundingMode => {
+                let ast = BV::new_const(name, 3);
+                let v = lift_bv(&z3_model, &ast, 3).ok_or_else(|| model_error(name))?;
+                Value::Bv {
+                    width: 3,
+                    value: if v <= 4 { v } else { 4 },
+                }
+            }
             Sort::Datatype(_) => {
                 return Err(SolverError::Unsupported(
                     "z3 oracle does not lift datatype models yet (ADR-0022)".to_owned(),
@@ -370,6 +378,9 @@ fn translate(
                 let term = match sort {
                     Sort::Bool => Z3Term::B(Bool::new_const(name)),
                     Sort::BitVec(w) => Z3Term::V(BV::new_const(name, w)),
+                    Sort::RoundingMode => {
+                        Z3Term::V(canonical_rounding_mode_bv(&BV::new_const(name, 3)))
+                    }
                     Sort::Array { .. } => {
                         return Err(SolverError::Unsupported(
                             "z3 oracle does not support array symbols".to_owned(),
@@ -485,6 +496,7 @@ fn bv_constant(width: u32, value: u128) -> Result<BV, SolverError> {
 
 /// Applies an operator over already-translated children. Sort correctness
 /// is guaranteed by the arena builders, so mismatches are unreachable.
+#[allow(clippy::too_many_lines)]
 fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
     let b = |i: usize| cache[&args[i]].as_bool();
     let v = |i: usize| cache[&args[i]].as_bv();
@@ -544,6 +556,7 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
             let w = v(0).get_size();
             Z3Term::V(rotate_left(v(0), (w - by) % w))
         }
+        Op::RoundingModeFromBits => Z3Term::V(canonical_rounding_mode_bv(v(0))),
         // Array, uninterpreted-function, integer, real, quantifier, and datatype
         // terms are rejected during translation before any select/store/apply/int/
         // datatype op is reached (ADR-0010, ADR-0013, ADR-0014, ADR-0022), so this
@@ -594,6 +607,11 @@ fn apply(op: Op, args: &[TermId], cache: &HashMap<TermId, Z3Term>) -> Z3Term {
             )
         }
     }
+}
+
+fn canonical_rounding_mode_bv(value: &BV) -> BV {
+    let max = BV::from_u64(4, 3);
+    value.bvule(&max).ite(value, &max)
 }
 
 /// Rotate left via extract/concat: `x[w-k-1:0] ++ x[w-1:w-k]`.

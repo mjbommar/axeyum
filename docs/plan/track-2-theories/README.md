@@ -20,7 +20,7 @@ Reference reading: [`../references/z3-theories.md`](../references/z3-theories.md
 | [P2.5](P2.5-nra-cad.md) | Nonlinear arithmetic: incr. linearization → ICP → NLSAT/CAC (+NIA) | XL | — | independent; the hard completeness gap — **expanded sub-program** [`P2.5-nra/`](P2.5-nra/) |
 | [P2.6](P2.6-quantifiers.md) | Quantifiers (MAM e-matching, triggers, MBQI, QE/MBP) | L–XL | P1.4, P1.5 | e-matching walks the e-graph |
 | [P2.7](P2.7-strings.md) | Strings (unbounded, length-aware, full `str.*`, regex) | L–XL | P1.6 (BV+LIA), P2.6 | needs combination + quantifier-ish reasoning — **expanded sub-program** [`P2.7-strings/`](P2.7-strings/) |
-| [P2.8](P2.8-fp-polish.md) | FP polish (unspecified values, min/max ±0, lazy conversion) | S–M | — | already near parity |
+| [P2.8](P2.8-fp-polish.md) | FP semantic repair and completeness | M | — | broad surface; audited semantic and assurance gaps remain |
 | [P2.9](P2.9-datatypes-lazy.md) | Datatypes lazy (e-graph splitting + occurs-check) | M | P1.4, P1.5 | lower priority |
 | [P2.10](P2.10-breadth-backlog.md) | Breadth backlog (sequences, sets/bags, sep logic, finite fields, co-datatypes, rec-fun, NIA gap) | per-item M–XL | P1.4, P1.5 | enumerated; the remaining theory *columns* Z3/cvc5 have and we don't |
 

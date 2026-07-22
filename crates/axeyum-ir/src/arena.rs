@@ -33,6 +33,9 @@ pub struct TermArena {
     internal_lookup: HashMap<String, SymbolId>,
     functions: Vec<FuncDecl>,
     function_lookup: HashMap<String, FuncId>,
+    /// Disjoint namespace for total functions introduced by reductions (for
+    /// example SMT-LIB-underspecified FP conversions).
+    internal_function_lookup: HashMap<String, FuncId>,
     uninterpreted_sorts: Vec<String>,
     uninterpreted_sort_lookup: HashMap<String, SortId>,
     nodes: Vec<TermNode>,
@@ -157,6 +160,11 @@ impl TermArena {
     /// Looks up a declared uninterpreted function by name.
     pub fn find_function(&self, name: &str) -> Option<FuncId> {
         self.function_lookup.get(name).copied()
+    }
+
+    /// Looks up a reduction-internal function without consulting user names.
+    pub fn find_internal_function(&self, name: &str) -> Option<FuncId> {
+        self.internal_function_lookup.get(name).copied()
     }
 
     /// The name, parameter sorts, and result sort of a declared function.
@@ -417,6 +425,7 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -438,6 +447,7 @@ impl TermArena {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Seq(_)) => Err(IrError::SortMismatch {
@@ -1478,6 +1488,23 @@ impl TermArena {
         Ok(self.app(Op::FpFromBits { exp, sig }, &[x], Sort::Float { exp, sig }))
     }
 
+    /// Reinterprets a three-bit code as the five-element SMT-LIB
+    /// `RoundingMode` sort.  The lowering/evaluator canonicalize unused codes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IrError::SortMismatch`] unless `x` has sort `BitVec(3)`.
+    pub fn rounding_mode_from_bits(&mut self, x: TermId) -> Result<TermId, IrError> {
+        let found = self.sort_of(x);
+        if found != Sort::BitVec(3) {
+            return Err(IrError::SortMismatch {
+                expected: "BitVec(3)",
+                found,
+            });
+        }
+        Ok(self.app(Op::RoundingModeFromBits, &[x], Sort::RoundingMode))
+    }
+
     // ----- sequences (ADR-0051, P2.7) -----------------------------------
 
     /// `str.len`: the length of a sequence, as an `Int`.
@@ -1551,6 +1578,7 @@ impl TermArena {
             | Sort::BitVec(_)
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -1603,6 +1631,47 @@ impl TermArena {
             result,
         });
         self.function_lookup.insert(name.to_owned(), id);
+        Ok(id)
+    }
+
+    /// Declares a reduction-internal uninterpreted function in a namespace
+    /// disjoint from user declarations.  Repeated declarations of the same
+    /// internal name/signature share one [`FuncId`], preserving congruence.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for unsupported parameter/result sorts or when an
+    /// existing internal name has a different signature.
+    ///
+    /// # Panics
+    ///
+    /// Panics on arena corruption (function count exceeding `u32`).
+    pub fn declare_internal_fun(
+        &mut self,
+        name: &str,
+        params: &[Sort],
+        result: Sort,
+    ) -> Result<FuncId, IrError> {
+        for &sort in params {
+            check_uf_param_sort(sort)?;
+        }
+        check_uf_result_sort(result)?;
+        if let Some(&existing) = self.internal_function_lookup.get(name) {
+            let decl = &self.functions[existing.index()];
+            if decl.params == params && decl.result == result {
+                return Ok(existing);
+            }
+            return Err(IrError::FunctionSignatureConflict {
+                name: name.to_owned(),
+            });
+        }
+        let id = FuncId(u32::try_from(self.functions.len()).expect("function count fits u32"));
+        self.functions.push(FuncDecl {
+            name: name.to_owned(),
+            params: params.to_vec(),
+            result,
+        });
+        self.internal_function_lookup.insert(name.to_owned(), id);
         Ok(id)
     }
 
@@ -1663,6 +1732,7 @@ impl TermArena {
             | Sort::BitVec(_)
             | Sort::Array { .. }
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -1847,6 +1917,7 @@ impl TermArena {
             | Sort::BitVec(_)
             | Sort::Array { .. }
             | Sort::Int
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -2031,6 +2102,7 @@ fn check_array_key(sort: ArraySortKey) -> Result<(), IrError> {
         ArraySortKey::Bool
         | ArraySortKey::Int
         | ArraySortKey::Real
+        | ArraySortKey::RoundingMode
         | ArraySortKey::Datatype(_)
         | ArraySortKey::Uninterpreted(_) => Ok(()),
     }
@@ -2044,7 +2116,12 @@ fn check_sort(sort: Sort) -> Result<(), IrError> {
             check_array_key(index)?;
             check_array_key(element)
         }
-        Sort::Bool | Sort::Int | Sort::Real | Sort::Datatype(_) | Sort::Uninterpreted(_) => Ok(()),
+        Sort::Bool
+        | Sort::Int
+        | Sort::Real
+        | Sort::RoundingMode
+        | Sort::Datatype(_)
+        | Sort::Uninterpreted(_) => Ok(()),
         // Deferred (P2.7): validate the element key like an array component; no
         // sequence capability is added by this slice.
         Sort::Seq(element) => check_array_key(element),
@@ -2056,7 +2133,7 @@ fn check_sort(sort: Sort) -> Result<(), IrError> {
 /// over integers are not in the bit-blasted fragment yet, ADR-0014).
 fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
     match sort {
-        Sort::Bool => Ok(()),
+        Sort::Bool | Sort::RoundingMode => Ok(()),
         Sort::BitVec(w) => check_width(w),
         // A floating-point sort is a finite scalar of `exp + sig` bits.
         Sort::Float { exp, sig } => check_width(exp + sig),
@@ -2080,7 +2157,9 @@ fn check_scalar_width(sort: Sort) -> Result<(), IrError> {
 fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) | Sort::Array { .. } => Ok(()),
-        Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
+        Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
+            check_scalar_width(sort)
+        }
         found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
             expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",
             found,
@@ -2094,7 +2173,9 @@ fn check_uf_param_sort(sort: Sort) -> Result<(), IrError> {
 fn check_uf_result_sort(sort: Sort) -> Result<(), IrError> {
     match sort {
         Sort::Int | Sort::Real | Sort::Uninterpreted(_) => Ok(()),
-        Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => check_scalar_width(sort),
+        Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
+            check_scalar_width(sort)
+        }
         Sort::Array { .. } => check_sort(sort),
         found @ (Sort::Datatype(_) | Sort::Seq(_)) => Err(IrError::SortMismatch {
             expected: "Bool, BitVec, Float, Int, Real, array, or uninterpreted sort",

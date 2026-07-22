@@ -5888,7 +5888,7 @@ impl Features {
                 self.has_bitblast = true;
                 self.has_int = true;
             }
-            Sort::BitVec(_) | Sort::Float { .. } => {
+            Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
                 self.has_bitblast = true;
                 self.has_bv_or_float = true;
             }

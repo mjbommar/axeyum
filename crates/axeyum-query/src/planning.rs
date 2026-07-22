@@ -539,6 +539,7 @@ fn update_sort(hash: &mut u64, sort: Sort) {
         }
         Sort::Int => update_u64(hash, 4),
         Sort::Real => update_u64(hash, 5),
+        Sort::RoundingMode => update_u64(hash, 10),
         Sort::Datatype(id) => {
             update_u64(hash, 6);
             update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));
@@ -692,6 +693,7 @@ fn update_op(hash: &mut u64, op: Op) {
         }
         Op::SeqUnit => update_u64(hash, 78),
         Op::SeqConcat => update_u64(hash, 79),
+        Op::RoundingModeFromBits => update_u64(hash, 81),
     }
 }
 
@@ -704,6 +706,7 @@ fn update_array_sort_key(hash: &mut u64, sort: ArraySortKey) {
         }
         ArraySortKey::Int => update_u64(hash, 3),
         ArraySortKey::Real => update_u64(hash, 4),
+        ArraySortKey::RoundingMode => update_u64(hash, 8),
         ArraySortKey::Datatype(id) => {
             update_u64(hash, 5);
             update_u64(hash, u64::try_from(id.index()).unwrap_or(u64::MAX));

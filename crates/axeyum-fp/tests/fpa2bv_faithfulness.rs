@@ -46,10 +46,11 @@
 //!
 //! - **`fp.min`/`fp.max` over opposite-sign zeros** (`min(+0,−0)` etc.) is
 //!   *unspecified* in SMT-LIB — the result may be `+0` **or** `−0`. Axeyum encodes
-//!   this with a fresh per-application sign bit (commit `af6c8bf`). The miter
+//!   this with semantic selector bits for each operation, format, and ordered
+//!   zero orientation. The miter
 //!   therefore accepts **either** zero sign for that one case (it asserts only that
 //!   the result is *a* zero), evaluating the circuit under both settings of the
-//!   fresh bit to confirm both are reachable.
+//!   active selector to confirm both are reachable.
 //! - **NaN bit patterns**: `fp.eq`/`fp.lt` treat all NaNs as unordered; arithmetic
 //!   producing a NaN is compared NaN-to-NaN (any NaN matches), since SMT-LIB does
 //!   not pin the NaN payload.
@@ -354,11 +355,11 @@ fn smtlib_minmax_ref(xb: u128, yb: u128, want_min: bool) -> Option<u128> {
 /// the result bits — used for the deterministic (non-opposite-sign-zero) cases.
 ///
 /// When BOTH operands are constant zeros of the *same* sign, Axeyum still
-/// allocates the per-application fresh sign bit (the override is gated only on
+/// references the semantic sign selectors (the override is gated only on
 /// *static non-zeroness*, not on the runtime opposite-sign test), but it sits in a
 /// dead `ite` branch — the `opposite_sign_zero` predicate is runtime-false, so the
-/// result is the deterministic same-sign zero regardless of the fresh bit. We bind
-/// that fresh symbol (if present) to `0` so the strict evaluator never hits an
+/// result is the deterministic same-sign zero regardless of the selectors. We bind
+/// those internal symbols (if present) to `0` so the strict evaluator never hits an
 /// unbound symbol; the bound value is immaterial to the (dead-branch) result.
 fn minmax_const_bits(build_min: bool, xb: u128, yb: u128) -> u128 {
     let mut arena = TermArena::new();
@@ -371,12 +372,11 @@ fn minmax_const_bits(build_min: bool, xb: u128, yb: u128) -> u128 {
     };
     let op = if build_min { "min" } else { "max" };
     let mut asg = Assignment::new();
-    if let Some(sym) = arena.find_internal_symbol(&format!(
-        "axeyum_fp.{op}.signzero.{}.{}",
-        xc.index(),
-        yc.index()
-    )) {
-        asg.set(sym, Value::Bv { width: 1, value: 0 });
+    let base = format!("axeyum_fp.{op}.signzero.{}.{}", FMT.exp_bits, FMT.sig_bits);
+    for suffix in ["pos_neg", "neg_pos"] {
+        if let Some(sym) = arena.find_internal_symbol(&format!("{base}.{suffix}")) {
+            asg.set(sym, Value::Bv { width: 1, value: 0 });
+        }
     }
     match eval(&arena, t, &asg).unwrap() {
         Value::Bv { value, .. } => value,
@@ -384,9 +384,9 @@ fn minmax_const_bits(build_min: bool, xb: u128, yb: u128) -> u128 {
     }
 }
 
-/// For the opposite-sign-zero case: build the constant `min`/`max`, find the fresh
-/// per-application sign bit Axeyum allocated, and confirm the circuit yields **a
-/// zero** under BOTH settings of that bit (both signs reachable — the documented
+/// For the opposite-sign-zero case: build the constant `min`/`max`, find the
+/// semantic selector for that ordered pair, and confirm the circuit yields **a
+/// zero** under BOTH settings of that selector (both signs reachable — the documented
 /// SMT-LIB unspecified behavior). Asserts the magnitude is always zero so the
 /// nondeterminism is confined to the sign, never to a wrong value.
 fn assert_opposite_zero_minmax(build_min: bool, xb: u128, yb: u128) {
@@ -399,21 +399,32 @@ fn assert_opposite_zero_minmax(build_min: bool, xb: u128, yb: u128) {
         max(&mut arena, FMT, xc, yc).unwrap()
     };
     let op = if build_min { "min" } else { "max" };
-    let sym_name = format!("axeyum_fp.{op}.signzero.{}.{}", xc.index(), yc.index());
-    let sym = arena
-        .find_internal_symbol(&sym_name)
-        .unwrap_or_else(|| panic!("opposite-sign-zero fp.{op} must allocate {sym_name}"));
+    let base = format!("axeyum_fp.{op}.signzero.{}.{}", FMT.exp_bits, FMT.sig_bits);
+    let (active_suffix, inactive_suffix) = if is_ref_neg(xb) {
+        ("neg_pos", "pos_neg")
+    } else {
+        ("pos_neg", "neg_pos")
+    };
+    let active_name = format!("{base}.{active_suffix}");
+    let inactive_name = format!("{base}.{inactive_suffix}");
+    let active = arena
+        .find_internal_symbol(&active_name)
+        .unwrap_or_else(|| panic!("opposite-sign-zero fp.{op} must allocate {active_name}"));
+    let inactive = arena
+        .find_internal_symbol(&inactive_name)
+        .unwrap_or_else(|| panic!("opposite-sign-zero fp.{op} must allocate {inactive_name}"));
     let mut saw_pos = false;
     let mut saw_neg = false;
     for bit in [0u128, 1u128] {
         let mut asg = Assignment::new();
         asg.set(
-            sym,
+            active,
             Value::Bv {
                 width: 1,
                 value: bit,
             },
         );
+        asg.set(inactive, Value::Bv { width: 1, value: 0 });
         let got = match eval(&arena, t, &asg).unwrap() {
             Value::Bv { value, .. } => value,
             other => panic!("expected BV, got {other:?}"),

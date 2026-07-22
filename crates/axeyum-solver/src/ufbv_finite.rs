@@ -314,8 +314,13 @@ fn finite_tuple_cardinality(params: &[Sort]) -> Option<u128> {
 fn finite_sort_cardinality(sort: Sort) -> Option<u128> {
     match sort {
         Sort::Bool => Some(2),
+        Sort::RoundingMode => Some(5),
         Sort::BitVec(width) if width < 128 => Some(1_u128 << width),
-        Sort::Float { exp, sig } if exp + sig < 128 => Some(1_u128 << (exp + sig)),
+        Sort::Float { exp, sig } if exp + sig < 128 => {
+            let encodings = 1_u128 << (exp + sig);
+            let nan_encodings = 2 * ((1_u128 << (sig - 1)) - 1);
+            Some(encodings - nan_encodings + 1)
+        }
         Sort::BitVec(_)
         | Sort::Float { .. }
         | Sort::Int

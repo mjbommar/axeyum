@@ -158,6 +158,7 @@ fn enumeration_bits(sort: Sort) -> Option<u32> {
     match sort {
         Sort::Bool => Some(1),
         Sort::BitVec(width) => Some(width),
+        Sort::RoundingMode => Some(3),
         Sort::Float { exp, sig } => Some(exp + sig),
         Sort::Int
         | Sort::Real

@@ -320,6 +320,9 @@ pub enum Op {
         /// Significand bits (including the hidden bit) of the result float.
         sig: u32,
     },
+    /// Stamps the five-element `RoundingMode` sort onto a three-bit code.  Codes
+    /// `5..=7` canonicalize to RTZ at lowering/evaluation boundaries.
+    RoundingModeFromBits,
     // --- sequences (ADR-0051, P2.7) ----------------------------------------
     /// `str.len`: the length of a sequence, as an `Int`. The single argument is
     /// any `Sort::Seq`; the result is `Sort::Int` (the shared `len` term that

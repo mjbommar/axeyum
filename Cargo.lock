@@ -106,6 +106,7 @@ name = "axeyum-fp"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "num-bigint",
  "rustc_apfloat",
 ]
 

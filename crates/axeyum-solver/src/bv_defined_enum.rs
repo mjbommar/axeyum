@@ -812,15 +812,14 @@ mod tests {
     }
 
     #[test]
-    fn certifies_qf_fp_misc_with_single_symbol_restriction() {
+    fn declines_qf_fp_misc_without_certified_fpa2bv() {
         let script = parse_script(include_str!(
             "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
         ))
         .expect("fp_misc parses");
-        let cert = bv_defined_enum_refutation(&script.arena, &script.assertions)
-            .expect("definition-aware enumeration certifies fp_misc");
-        assert!(cert.cases <= 10);
-        assert_eq!(cert.defined_symbols.len(), 1);
-        assert!(cert.restricted_symbols.len() >= 2);
+        assert!(
+            bv_defined_enum_refutation(&script.arena, &script.assertions).is_none(),
+            "an FP-arithmetic row must decline while its Fpa2Bv reduction is uncertified"
+        );
     }
 }

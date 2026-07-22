@@ -11,7 +11,7 @@ use crate::error::IrError;
 use crate::rational::Rational;
 use crate::sort::{ArraySortKey, Sort, mask};
 use crate::term::{DatatypeId, FuncId, Op, SymbolId, TermId, TermNode};
-use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value};
+use crate::value::{ArrayValue, FuncValue, GenericArrayValue, Value, canonicalize_for_sort};
 
 /// A binding of symbols to concrete values (and uninterpreted functions to
 /// interpretations), used as evaluator input.
@@ -144,6 +144,7 @@ fn well_founded_default_rec(
         }),
         Sort::Int => Some(Value::Int(0)),
         Sort::Real => Some(Value::Real(Rational::zero())),
+        Sort::RoundingMode => Some(Value::Bv { width: 3, value: 0 }),
         Sort::Uninterpreted(sort) => Some(Value::Uninterpreted { sort, value: 0 }),
         Sort::Array { index, element } => {
             if let Some((index_width, element_width)) = sort.array_widths()
@@ -234,7 +235,7 @@ pub fn eval(arena: &TermArena, term: TermId, assignment: &Assignment) -> Result<
 /// # Panics
 ///
 /// Same as [`eval`].
-#[allow(clippy::implicit_hasher)] // callers pass the default-hasher `HashMap<TermId, Value>`.
+#[allow(clippy::implicit_hasher, clippy::too_many_lines)] // default-hasher memo; explicit evaluator.
 pub fn eval_with_memo(
     arena: &TermArena,
     term: TermId,
@@ -273,7 +274,7 @@ pub fn eval_with_memo(
             }
             TermNode::Symbol(s) => {
                 let v = assignment.get(*s).ok_or(IrError::UnboundSymbol(*s))?;
-                memo.insert(t, v);
+                memo.insert(t, canonicalize_for_sort(arena.symbol(*s).1, v));
             }
             TermNode::App { op, args } => match op {
                 // Quantifiers bind a symbol and range over its domain, so their
@@ -301,7 +302,7 @@ pub fn eval_with_memo(
                                 // (`Int`/`Real`) functions compare full `Value`
                                 // keys — so `QF_UFLIA`/`QF_UFLRA` interpretations
                                 // replay through the same path.
-                                interp.apply_value(&vals)
+                                canonicalize_for_sort(arena.sort_of(t), interp.apply_value(&vals))
                             }
                             // Model-interpreted real division-by-zero (P2.5
                             // free-division witnesses, see [`real_div_zero_hit`]);
@@ -350,6 +351,13 @@ pub fn eval_with_memo(
                                 } => Value::Bool(built == constructor),
                                 _ => unreachable!("builder guaranteed datatype operand"),
                             },
+                            Op::Eq if matches!(arena.sort_of(args[0]), Sort::Float { .. }) => {
+                                let sort = arena.sort_of(args[0]);
+                                Value::Bool(
+                                    canonicalize_for_sort(sort, vals[0].clone())
+                                        == canonicalize_for_sort(sort, vals[1].clone()),
+                                )
+                            }
                             _ => apply(*op, &vals)?,
                         };
                         memo.insert(t, value);
@@ -437,7 +445,12 @@ fn eval_quantifier(
         Sort::Float { exp, sig } if exp + sig <= QUANTIFIER_EVAL_BIT_LIMIT => {
             let width = exp + sig;
             for value in 0..(1u128 << width) {
-                if let Some(decisive) = check(Value::Bv { width, value })? {
+                let raw = Value::Bv { width, value };
+                let canonical = canonicalize_for_sort(sort, raw.clone());
+                if canonical != raw {
+                    continue;
+                }
+                if let Some(decisive) = check(canonical)? {
                     return Ok(Value::Bool(decisive));
                 }
             }
@@ -727,14 +740,19 @@ fn apply(op: Op, vals: &[Value]) -> Result<Value, IrError> {
             let value = (x as u128) & mask(width);
             Value::Bv { width, value }
         }
-        // A pure bit reinterpret: the floating-point value is the operand's bits.
+        // Float's concrete representation is canonicalized because SMT-LIB has
+        // one NaN value per format, not one value per IEEE NaN payload.
         Op::FpFromBits { exp, sig } => {
             let (_, value) = bv(&vals[0]);
-            Value::Bv {
-                width: exp + sig,
-                value,
-            }
+            canonicalize_for_sort(
+                Sort::Float { exp, sig },
+                Value::Bv {
+                    width: exp + sig,
+                    value,
+                },
+            )
         }
+        Op::RoundingModeFromBits => canonicalize_for_sort(Sort::RoundingMode, vals[0].clone()),
         // Handled in `eval` (needs the model interpretation and result sort).
         Op::Apply(_) => unreachable!("Op::Apply is evaluated against the model in `eval`"),
         // --- linear integer arithmetic (ADR-0014) --------------------------------
@@ -1256,8 +1274,9 @@ fn apply_wide(op: Op, vals: &[Value]) -> Value {
             let k = by % a.width().max(1);
             pack(a.lshr(k).or(&a.shl(a.width() - k)))
         }
-        // A floating-point reinterpret is identity on the bits.
-        Op::FpFromBits { .. } => pack(w(&vals[0])),
+        Op::FpFromBits { exp, sig } => {
+            canonicalize_for_sort(Sort::Float { exp, sig }, pack(w(&vals[0])))
+        }
         // `(_ int2bv width)` with width > 128: the integer mod 2^width as a
         // two's-complement wide value (low 128 bits, sign-extended).
         Op::Int2Bv { width } => {

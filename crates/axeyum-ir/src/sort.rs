@@ -31,6 +31,8 @@ pub enum ArraySortKey {
     Int,
     /// The mathematical real sort.
     Real,
+    /// The five-element SMT-LIB floating-point rounding-mode sort.
+    RoundingMode,
     /// A declared datatype sort.
     Datatype(DatatypeId),
     /// A declared uninterpreted carrier sort.
@@ -55,6 +57,7 @@ impl ArraySortKey {
             Sort::BitVec(w) => Some(ArraySortKey::BitVec(w)),
             Sort::Int => Some(ArraySortKey::Int),
             Sort::Real => Some(ArraySortKey::Real),
+            Sort::RoundingMode => Some(ArraySortKey::RoundingMode),
             Sort::Datatype(id) => Some(ArraySortKey::Datatype(id)),
             Sort::Uninterpreted(id) => Some(ArraySortKey::Uninterpreted(id)),
             Sort::Float { exp, sig } => Some(ArraySortKey::Float { exp, sig }),
@@ -69,6 +72,7 @@ impl ArraySortKey {
             ArraySortKey::BitVec(w) => Sort::BitVec(w),
             ArraySortKey::Int => Sort::Int,
             ArraySortKey::Real => Sort::Real,
+            ArraySortKey::RoundingMode => Sort::RoundingMode,
             ArraySortKey::Datatype(id) => Sort::Datatype(id),
             ArraySortKey::Uninterpreted(id) => Sort::Uninterpreted(id),
             ArraySortKey::Float { exp, sig } => Sort::Float { exp, sig },
@@ -82,6 +86,7 @@ impl ArraySortKey {
             ArraySortKey::Bool
             | ArraySortKey::Int
             | ArraySortKey::Real
+            | ArraySortKey::RoundingMode
             | ArraySortKey::Datatype(_)
             | ArraySortKey::Uninterpreted(_)
             | ArraySortKey::Float { .. } => None,
@@ -96,6 +101,7 @@ impl core::fmt::Display for ArraySortKey {
             ArraySortKey::BitVec(w) => write!(f, "(_ BitVec {w})"),
             ArraySortKey::Int => write!(f, "Int"),
             ArraySortKey::Real => write!(f, "Real"),
+            ArraySortKey::RoundingMode => write!(f, "RoundingMode"),
             ArraySortKey::Datatype(id) => write!(f, "(Datatype {})", id.index()),
             ArraySortKey::Uninterpreted(id) => write!(f, "(Uninterpreted {})", id.index()),
             ArraySortKey::Float { exp, sig } => write!(f, "(_ FloatingPoint {exp} {sig})"),
@@ -134,6 +140,9 @@ pub enum Sort {
     Int,
     /// The mathematical real sort (linear real arithmetic, ADR-0015).
     Real,
+    /// The five-element SMT-LIB rounding-mode sort.  It lowers to a canonical
+    /// three-bit code (`0..=4`); encodings `5..=7` are not carrier values.
+    RoundingMode,
     /// A first-class (possibly recursive) datatype sort (ADR-0022); recursion
     /// lives behind the interned id, so `Sort` stays `Copy`.
     Datatype(DatatypeId),
@@ -186,6 +195,7 @@ impl Sort {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -200,6 +210,7 @@ impl Sort {
         match self {
             Sort::BitVec(w) => Some(w),
             Sort::Float { exp, sig } => Some(exp + sig),
+            Sort::RoundingMode => Some(3),
             Sort::Bool
             | Sort::Array { .. }
             | Sort::Int
@@ -224,6 +235,7 @@ impl Sort {
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Seq(_) => None,
@@ -241,6 +253,7 @@ impl Sort {
             | Sort::BitVec(_)
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -256,6 +269,7 @@ impl Sort {
             | Sort::BitVec(_)
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -274,6 +288,7 @@ impl core::fmt::Display for Sort {
             }
             Sort::Int => write!(f, "Int"),
             Sort::Real => write!(f, "Real"),
+            Sort::RoundingMode => write!(f, "RoundingMode"),
             Sort::Datatype(id) => write!(f, "(Datatype {})", id.index()),
             Sort::Uninterpreted(id) => write!(f, "(Uninterpreted {})", id.index()),
             Sort::Float { exp, sig } => write!(f, "(_ FloatingPoint {exp} {sig})"),
