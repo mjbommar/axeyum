@@ -45,9 +45,12 @@ Last updated: 2026-07-21
 > universe-polymorphic, and dependent field types with typed rejection controls.
 > TL2.4 now reduces constructor projections, translates the wire form, and
 > independently admits/computes the exact official projection root; the Nat
-> root advances to its line-125 literal decline. Generated
-> projection/reduction/eta and quotient semantic seams remain uncredited; TL2.5
-> structure eta is next as a separate definitional-equality gate.
+> root advances to its line-125 literal decline. TL2.5 now implements symmetric
+> structure eta for exactly saturated constructors of checked one-constructor,
+> zero-index, non-recursive inductives. Seven native control families pass, and
+> pinned Lean 4.30 accepts the reconstruction while rejecting its duplicated-
+> field mutation. Generated projection/reduction/eta and quotient semantic
+> seams remain uncredited; TL2.6 arbitrary-precision Nat storage is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

@@ -572,11 +572,12 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
    accompanied by a negative-test corpus (`Bad : Type | mk : (Bad → Bad) → Bad`
    and friends) that fails loudly. **M, ~300-500 LoC.**
 3. **`Proj` inference/reduction + structure eta** (gaps #1 + #10).
-   **TL2.2-TL2.4 update:** the first-class node, every structural traversal,
+   **TL2.2-TL2.5 update:** the first-class node, every structural traversal,
    checked structure metadata, dependent field-type inference, constructor
-   reduction, and exact official-root import/computation now exist. TL2.5 alone
-   still owns eta. **L, ~800-1300 LoC for the original complete slice; only eta
-   remains from that estimate.**
+   reduction, exact official-root import/computation, and separately tested
+   structure eta now exist. **L, ~800-1300 LoC was the original complete-slice
+   estimate; the direct slice is now closed, while generated TL2.15 seam fuzz
+   remains.**
 4. **A performance baseline** (§6). The kernel would sit in the goal layer's
    inner loop and `bv_decide`'s bottleneck is precisely kernel reduction speed.
    Building a goal layer on an un-benchmarked kernel means discovering it is too

@@ -84,11 +84,12 @@ must be extended alongside TL2.4/TL2.5 before projection/eta fuzz credit closes.
 The next critical-path task is **TL2.4**: reduce projections of constructor
 applications, test parameterized and universe-polymorphic cases, then enable the
 wire translation only when the pinned official projection closure independently
-admits and computes. TL2.5 structure eta remains a separate semantic change and
-gate.
+admits and computes. TL2.5 structure eta subsequently lands as its separate
+semantic change and gate.
 
 Historical checkpoint: this document records the deliberate TL2.3 boundary.
 TL2.4 subsequently landed constructor reduction and validated wire translation;
 the exact official projection root now admits and computes. See
 [the TL2.4 result](lean-projection-reduction-tl2.4-2026-07-21.md). TL2.5
-structure eta is the next ordered kernel slice.
+structure eta is now complete; TL2.6 arbitrary-precision Nat storage is the
+next ordered kernel slice.

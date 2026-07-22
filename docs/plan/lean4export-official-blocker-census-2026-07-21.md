@@ -132,7 +132,8 @@ complete under TL2.2-TL2.4, including structural/de Bruijn operations, both
 renderers, checked parameter/index metadata, dependent telescope inference,
 constructor reduction, validated wire translation, and malformed-shape
 mutations. The exact projection root now independently admits and computes.
-Item 5 remains TL2.5 and deliberately receives no credit from this slice.
+TL2.5 subsequently closes item 5 as its own commit and gate; that later result
+does not retroactively broaden this census's exact K1 import population.
 
 The census establishes priority, not implementation simplicity. Projection is
 a first-class Lean core expression, so it changes more than the importer:
@@ -145,7 +146,8 @@ a first-class Lean core expression, so it changes more than the importer:
 3. **DONE (TL2.3):** infer a dependent field type by substituting parameters and earlier field
    projections into the selected field's type;
 4. **DONE (TL2.4):** reduce a projection of a constructor application to the selected field;
-5. add structure eta only as a separately tested definitional-equality slice;
+5. **DONE (TL2.5):** add structure eta only as a separately tested
+   definitional-equality slice;
 6. **DONE (TL2.4):** translate the wire `proj` only after the kernel can reject malformed names,
    indices, constructor shapes, and dependent-field substitutions;
 7. **DONE for TL2.4:** mutation-test wrong structure names, out-of-range fields, under/over-applied
@@ -159,10 +161,10 @@ and identified the same official-kernel algorithm. The new contribution here is
 that official dependency closures now prove it is the first blocker, not merely
 the most invasive missing enum variant.
 
-Projection and structure eta should be separate commits and gates. Constructor
-projection reduction and type inference can unlock the measured closure without
-immediately expanding definitional equality with eta; eta earns credit only
-after positive and false-equality controls pass both kernels.
+Projection and structure eta are separate commits and gates. Constructor
+projection reduction and type inference unlocked the measured closure before
+definitional equality expanded; TL2.5 now earns its own credit after positive
+and false-equality controls passed both the Rust kernel and pinned Lean 4.30.
 
 ## Updated next order
 
@@ -173,9 +175,10 @@ after positive and false-equality controls pass both kernels.
 3. **Nat rerun DONE:** its first decline is now line 125 literal typing. The
    unretained String stream must be retrieved/regenerated before its new first
    blocker can be measured; do not infer it from syntax counts.
-4. **NEXT:** add TL2.5 structure eta as its own definitional-equality gate, then
-   replace `Lit::Nat(u128)` with an arbitrary-precision representation before
-   admitting any `natVal`; then add typing and bounded accelerated reductions.
+4. **TL2.5 DONE / TL2.6 NEXT:** retain structure eta as its own
+   definitional-equality gate, then replace `Lit::Nat(u128)` with an
+   arbitrary-precision representation before admitting any `natVal`; then add
+   typing and bounded accelerated reductions.
 5. Land positivity before recursive-indexed/reflexive admission, then re-run the
    String closure.
 6. Treat quotient as an independent fixed-package slice; do not let it reorder

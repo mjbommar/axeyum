@@ -590,6 +590,7 @@ fn projection_rejects_inconsistent_constructor_telescope_metadata() {
         ty: sort_one,
         num_params: 0,
         num_indices: 0,
+        is_recursive: false,
         ctor_names: vec![ctor_name],
     });
     k.env.insert_unchecked(Declaration::Constructor {

@@ -59,16 +59,18 @@ state.
 > axioms. The importer independently regenerates and compares each recursor;
 > the recursive fixture exposed alpha-renamed universe binders (`u_1` versus
 > `u.1`), now compared after explicit level substitution. Theorem-body and
-> recursor-rule plus projection mutations reject among fourteen Rust tests. This is exact flat and
-> direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
+> recursor-rule plus projection mutations reject among fourteen Rust tests.
+> This is exact flat and direct-recursive fixture credit, not
+> `Init`/`Std`/mathlib or general kernel
 > credit. A direct `.olean` reader and full native ecosystem compatibility are
 > late, untrusted-adapter/native-system phases rather than checker
 > prerequisites. A four-root
 > [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md)
 > now freezes exact projection, Nat, String, and quotient dependency closures.
-> Projection is the sole blocker for its four-declaration closure and the first
-> Rust decline for both literal roots; the String closure already spans 290
-> declarations and also reaches Nat literals and recursive-indexed inductives.
+> The census initially found projection as the sole blocker for its
+> four-declaration closure and the first Rust decline for both literal roots;
+> the String closure already spans 290 declarations and also reaches Nat
+> literals and recursive-indexed inductives.
 > Three small streams are committed, the 570,807-byte String stream is bound by
 > source/command/hash, and 14 Rust plus eight Python tests hold the boundary.
 > TL2.2 now lands first-class projection representation across interning,
@@ -83,9 +85,15 @@ state.
 > projection root: 61 expressions become nine admitted declarations and
 > `importPairLeft (ImportPair.mk 0 1)` computes to `0`; wrong name/index
 > mutations reject at the kernel gate. The Nat root's exact first decline moves
-> to `literal-nat-bignum-and-typing` at line 125. Resume with TL2.5 structure
-> eta as a separate gate, then TL2.6 arbitrary-precision Nat storage before
-> literal typing, and the remaining
+> to `literal-nat-bignum-and-typing` at line 125. TL2.5 now adds symmetric
+> structure eta for exactly saturated constructors of checked one-constructor,
+> zero-index, non-recursive inductives. Seven native families cover false
+> equality, universes, parameters, dependencies, and indexed/recursive
+> exclusions; a required local run against pinned Lean 4.30 accepts the
+> reconstruction by `rfl` and rejects the duplicated-field mutation. The
+> bounded kernel gate now records 179 unit tests and 25 integration cases
+> across nine binaries. Resume with TL2.6 arbitrary-precision Nat storage
+> before literal typing, and the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -118,8 +126,9 @@ state.
 > seams, repeats the complete summary deterministically, and rejects every
 > attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
 > partial until generated projection/reduction/eta and quotient semantic
-> families exist. TL2.2 representation, TL2.3 dependent inference, and TL2.4
-> constructor reduction/import are complete; execute TL2.5 eta next. Native parser/macros,
+> families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
+> constructor reduction/import, and TL2.5 structure eta are complete; execute
+> TL2.6 arbitrary-precision Nat storage next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

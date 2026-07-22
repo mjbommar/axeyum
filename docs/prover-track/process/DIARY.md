@@ -1428,3 +1428,27 @@ Structure eta remains TL2.5, and the generated projection/reduction/eta fuzz
 family still remains open under TL2.15. The large String stream was not retained
 in the tree, so its historical line-184 projection decline is retired without
 inventing a replacement blocker from its syntax inventory.
+
+## 2026-07-21 — TL2.5 adds structure eta without widening inductive admission
+
+Definitional equality now applies Lean's symmetric structure-eta rule only when
+one side is an exactly saturated constructor application and the checked parent
+inductive has one constructor, zero indices, and no recursive fields. Admission
+persists the aggregate recursive-field bit after constructor checking; eta does
+not infer eligibility from a weak syntactic proxy. Both operand types must be
+definitionally equal, then every constructor field must equal the corresponding
+projection from the other operand.
+
+Seven native families cover symmetry, duplicated-field and wrong-type false
+equalities, universe parameters, dependent fields, and indexed/recursive
+exclusions. A fail-closed wrapper runs the positive and mutated controls through
+pinned Lean 4.30: official Lean accepts the reconstruction by `rfl` and rejects
+the duplicated-field equality. Under 4 GiB the kernel records 179 unit tests and
+25 integration cases across nine binaries; warning-denied Clippy and the
+repository-local-TMP doctest pass. The shared `/tmp` path hit its host disk
+quota during the first doctest link, so the successful rerun used `target/` as
+`TMPDIR`; no semantic failure was hidden.
+
+This closes direct TL2.5 credit, not TL2.15's generated projection/eta seam and
+not broader Lean compatibility. TL2.6 arbitrary-precision Nat storage is next,
+before any Nat literal typing can make the current `u128` bound live.

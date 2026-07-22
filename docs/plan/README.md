@@ -69,6 +69,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   TL2.4 result: constructor projection computation, validated wire translation,
   exact official-root admission/computation, mutation controls, and the explicit
   separation from TL2.5 structure eta.
+- [`lean-structure-eta-tl2.5-2026-07-21.md`](lean-structure-eta-tl2.5-2026-07-21.md) —
+  TL2.5 result: checked one-constructor/zero-index/non-recursive eligibility,
+  symmetric native structure eta, false-equality and malformed-family controls,
+  and a required positive/rejecting differential against pinned Lean 4.30.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

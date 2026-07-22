@@ -17,9 +17,9 @@
 //! step live on [`super::Kernel`] (see `tc.rs`).
 //!
 //! The inductive, constructor, and recursor variants plus ι-reduction are now
-//! implemented by `inductive.rs`. Projection inference and constructor
-//! reduction use the checked inductive metadata recorded here. **Deferred to
-//! later slices**: structure eta and `Quotient` reduction; unsupported semantic
+//! implemented by `inductive.rs`. Projection inference, constructor reduction,
+//! and structure eta use the checked inductive metadata recorded here.
+//! **Deferred to later slices**: `Quotient` reduction; unsupported semantic
 //! paths reject rather than guess.
 //!
 //! ## Determinism
@@ -172,6 +172,10 @@ pub enum Declaration {
         /// Number of index binders after the parameters. Projection inference
         /// validates the projected value's complete parameter/index spine.
         num_indices: u16,
+        /// Whether any checked constructor has a direct recursive field.
+        /// Structure eta is legal only when this is false, matching Lean's
+        /// `is_non_rec_structure` predicate.
+        is_recursive: bool,
         /// The names of this type's constructors, in declaration order.
         ctor_names: Vec<NameId>,
     },

@@ -73,9 +73,10 @@ The negative class is now live: **"the kernel accepts `False`."** TL2.2
 represents projections structurally, TL2.3 infers checked dependent field types,
 and TL2.4 reduces/imports the exact official root; generated
 projection/reduction/eta and quotient semantic cases remain explicit TL2.15
-follow-ups. Next implementation work is TL2.5 structure eta, with each new
-admitted seam required to join the same
-negative class.
+follow-ups. TL2.5 separately adds structure eta with native and pinned-Lean
+positive/rejecting controls. Next kernel implementation work is TL2.6
+arbitrary-precision Nat storage, with each new admitted seam required to join
+the same negative class.
 
 ## The five things not to get wrong
 

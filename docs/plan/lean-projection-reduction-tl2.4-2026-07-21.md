@@ -42,8 +42,8 @@ and Prop elimination; reduction is a computation rule over the constructor
 payload. A dedicated control proves that a wrong-name projection can reduce as
 an untyped term while `infer` still rejects it with `ProjectionTypeMismatch`.
 
-No structure eta is added here. TL2.5 remains a separate definitional-equality
-change and differential gate.
+No structure eta is added by TL2.4. TL2.5 subsequently lands it as a separate
+definitional-equality change and differential gate.
 
 ## Evidence
 
@@ -80,9 +80,9 @@ Under the repository's hard 4 GiB wrapper, the final bounded gates record:
 
 The algorithm is cross-checked against the pinned upstream
 [Lean 4.30 type checker](https://github.com/leanprover/lean4/blob/d024af099ca4bf2c86f649261ebf59565dc8c622/src/kernel/type_checker.cpp).
-The committed stream is official-source/export evidence; this host still has no
-Lean executable, so this slice does not claim a fresh local official-Lean
-differential run.
+The committed stream is official-source/export evidence; TL2.4 itself did not
+claim a fresh local official-Lean differential run. TL2.5 subsequently uses the
+installed pinned Lean 4.30 toolchain for its own eta positive/rejecting gate.
 
 ## Credit boundary and next step
 
@@ -92,9 +92,10 @@ runtime compatibility. It also does not close generated projection/eta seam
 fuzzing: the direct positive/mutation matrix is live, but TL2.15 remains partial
 until the generated projection/reduction/eta family is added.
 
-The next ordered kernel task is **TL2.5 structure eta**, kept separate from
-constructor reduction. After that, TL2.6 must replace `Lit::Nat(u128)` with
-arbitrary-precision storage before TL2.7 enables Nat literal typing. The
+The next ordered kernel task at this checkpoint was **TL2.5 structure eta**,
+kept separate from constructor reduction. TL2.5 is now complete; TL2.6 must
+replace `Lit::Nat(u128)` with arbitrary-precision storage before TL2.7 enables
+Nat literal typing. The
 570,807-byte String stream was never committed locally; its old line-184
 projection decline is retired but its new first blocker must remain unmeasured
 until the exact bound artifact is retrieved or regenerated and retained.

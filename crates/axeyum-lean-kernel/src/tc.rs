@@ -827,6 +827,72 @@ impl Kernel {
         self.def_eq_core(x, new_lam, ctx)
     }
 
+    /// Structure eta (Lean's `try_eta_struct`): recognize one side as an
+    /// exactly saturated constructor of a non-recursive, non-indexed,
+    /// one-constructor inductive, require both sides to have definitionally
+    /// equal types, and compare each constructor field with the corresponding
+    /// projection from the other side.
+    fn try_eta_structure(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
+        self.try_eta_structure_aux(x, y, ctx) || self.try_eta_structure_aux(y, x, ctx)
+    }
+
+    fn try_eta_structure_aux(
+        &mut self,
+        structure: ExprId,
+        constructor_app: ExprId,
+        ctx: &mut LocalContext,
+    ) -> bool {
+        let (head, args) = self.unfold_apps(constructor_app);
+        let ExprNode::Const(ctor_name, _) = self.expr_node(head) else {
+            return false;
+        };
+        let (inductive, num_fields) = match self.env.get(*ctor_name) {
+            Some(Declaration::Constructor {
+                inductive,
+                num_fields,
+                ..
+            }) => (*inductive, usize::from(*num_fields)),
+            _ => return false,
+        };
+        let (num_params, eligible) = match self.env.get(inductive) {
+            Some(Declaration::Inductive {
+                num_params,
+                num_indices,
+                is_recursive,
+                ctor_names,
+                ..
+            }) => (
+                usize::from(*num_params),
+                *num_indices == 0 && !*is_recursive && ctor_names.as_slice() == [*ctor_name],
+            ),
+            _ => return false,
+        };
+        if !eligible || args.len() != num_params + num_fields {
+            return false;
+        }
+
+        let Ok(structure_type) = self.infer_core(structure, ctx) else {
+            return false;
+        };
+        let Ok(constructor_type) = self.infer_core(constructor_app, ctx) else {
+            return false;
+        };
+        if !self.def_eq_core(structure_type, constructor_type, ctx) {
+            return false;
+        }
+
+        for (field_index, &field) in args.iter().skip(num_params).enumerate() {
+            let Ok(field_index) = u32::try_from(field_index) else {
+                return false;
+            };
+            let projection = self.proj(inductive, field_index, structure);
+            if !self.def_eq_core(projection, field, ctx) {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Proof irrelevance (nanoda's `proof_irrel_eq`): if both `x` and `y` are
     /// proofs (their inferred type is a `Prop`, i.e. inhabits `Sort 0`), they
     /// are def-eq when their types are def-eq.
@@ -985,7 +1051,7 @@ impl Kernel {
     /// check, WHNF-without-δ both sides, quick check again, proof irrelevance,
     /// then the **lazy-delta step** (δ-unfolding with height-driven side
     /// choice), and finally the structural checks (`Const`, `FVar`, `App`
-    /// spine, eta-expansion) on the delta-exhausted heads.
+    /// spine, function eta, structure eta) on the delta-exhausted heads.
     fn def_eq_core(&mut self, x: ExprId, y: ExprId, ctx: &mut LocalContext) -> bool {
         if let Some(quick) = self.def_eq_quick(x, y, ctx) {
             return quick;
@@ -1028,6 +1094,9 @@ impl Kernel {
                     return true;
                 }
                 if self.try_eta_expansion(x_n, y_n, ctx) {
+                    return true;
+                }
+                if self.try_eta_structure(x_n, y_n, ctx) {
                     return true;
                 }
                 false

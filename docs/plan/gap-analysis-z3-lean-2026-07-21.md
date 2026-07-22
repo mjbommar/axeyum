@@ -397,12 +397,14 @@ silent skips or `sorryAx`.
 
 The in-tree kernel already implements dependent core terms, declarations,
 reduction, proof irrelevance, and useful inductives. Explicit gaps include
-projections, arbitrary-precision/literal typing, quotient reduction, recursive
-indexed families, and nested/mutual inductives.
+arbitrary-precision/literal typing, quotient reduction, recursive indexed
+families, and nested/mutual inductives. Projection representation, dependent
+inference, constructor reduction/import, and separately gated structure eta
+have since landed under TL2.2-TL2.5.
 
-**Research order:** bignum literals before literal typing; projections and
-structure eta; recursive-indexed/positivity spine; quotient computation; import
-format. Keep arithmetic-prelude axioms separately enumerated and discharged.
+**Research order:** TL2.6 bignum storage before literal typing; recursive-
+indexed/positivity spine; quotient computation; broader import format. Keep
+arithmetic-prelude axioms separately enumerated and discharged.
 
 **Exit:** a versioned Lean-core compatibility profile and differential kernel
 corpus replace the ambiguous phrase “Lean parity.”

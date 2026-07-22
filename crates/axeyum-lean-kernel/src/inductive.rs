@@ -222,7 +222,8 @@ impl Kernel {
             ty,
             num_params: u16::try_from(num_params).expect("parameter count fits u16"),
             num_indices: u16::try_from(num_indices).expect("index count fits u16"),
-            ctor_names,
+            is_recursive: false,
+            ctor_names: ctor_names.clone(),
         });
 
         // The inductive's shared parameter locals, threaded into each
@@ -258,6 +259,23 @@ impl Kernel {
                 }
             }
         }
+
+        // Constructor checking is the trusted point at which direct recursive
+        // fields are classified. Persist the aggregate bit on the inductive so
+        // structure eta can implement Lean's exact `is_non_rec_structure`
+        // predicate without re-scanning raw constructor syntax later.
+        let is_recursive = checked
+            .iter()
+            .any(|constructor| !constructor.recursive_fields.is_empty());
+        self.env.insert_unchecked(Declaration::Inductive {
+            name,
+            uparams: uparams.to_vec(),
+            ty,
+            num_params: u16::try_from(num_params).expect("parameter count fits u16"),
+            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
+            is_recursive,
+            ctor_names,
+        });
 
         // Register the constructors. `num_fields` excludes the parameters (the
         // ι-rule and recursor strip the params before the fields).

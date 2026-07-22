@@ -172,7 +172,7 @@ returns successfully.
 | `succ`, `max`, `imax`, `param` levels | translated | dense/backward references required |
 | `bvar`, `sort`, `const`, `app`, `lam`, `forallE`, `letE` | translated | binder mode and every child reference validated |
 | `mdata` | semantically erased to its referenced expression | metadata object still shape-checked |
-| `proj` | translated and kernel checked | TL2.2-TL2.4 representation/inference/reduction are live; official root admits and computes, while TL2.5 eta remains separate |
+| `proj` | translated and kernel checked | TL2.2-TL2.4 representation/inference/reduction admit and compute the official root; TL2.5 structure eta is now separately live and does not change this import population |
 | `natVal` | typed decline `literal-nat-bignum-and-typing` | bignum must precede literal typing |
 | `strVal` | typed decline `literal-string-typing` | kernel currently rejects literal inference |
 | safe `axiom` | kernel admitted and axiom name reported | type must check; proposition remains an assumption |
@@ -297,10 +297,10 @@ mutual, nested, and reflexive groups remain explicit declines.
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. **Projection slice DONE (TL2.2-TL2.4):** representation, dependent
+6. **Projection/eta slices DONE (TL2.2-TL2.5):** representation, dependent
    inference, constructor reduction, wire translation, exact projection-root
-   admission/computation, and literal-root rerun are complete. Execute TL2.5 eta
-   separately, then TL2.6 bignum storage before Nat literal typing.
+   admission/computation, literal-root rerun, and separately gated structure eta
+   are complete. Execute TL2.6 bignum storage before Nat literal typing.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

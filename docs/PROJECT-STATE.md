@@ -131,10 +131,11 @@ Again, there are distinct targets:
   pending. The exhaustive every-module sweep is not a required per-change gate.
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof
-  irrelevance, useful inductives, recursors, and iota reduction. Major residuals
-  include projections/structure eta, arbitrary-precision literal support,
-  quotient computation, recursive indexed families, and mutual/nested/reflexive
-  inductives. A new format-3.1 Rust importer independently admits one official
+  irrelevance, useful inductives, recursors, iota reduction, dependent
+  projections, constructor projection reduction, and structure eta. Major
+  residuals include arbitrary-precision literal support, quotient computation,
+  recursive indexed families, and mutual/nested/reflexive inductives. A new
+  format-3.1 Rust importer independently admits one official
   flat fixture as eight kernel declarations and one direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
   those exact profiles, but `Init`/`Std`/mathlib and the declined kernel
@@ -150,8 +151,10 @@ Again, there are distinct targets:
   represented and rendered; the native kernel infers dependent field types and
   reduces constructor projections. The exact official projection root now
   translates, independently admits nine declarations, and computes. Structure
-  eta remains open as a separate gate; quotient is still absent, and the Nat
-  root now stops at arbitrary-precision literal storage/typing.
+  eta now passes seven native control families plus a pinned-Lean 4.30 positive/
+  rejecting differential; quotient is still absent, and the Nat root now stops
+  at arbitrary-precision literal storage/typing. This is one K0 semantic rule,
+  not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
   rather than dismissed. Axeyum does not currently reproduce Lean's parser,
   macros, elaborator, unifier, tactic language, compiler, package ecosystem,

@@ -194,7 +194,7 @@ official comparison.
 | TL2.2 | DONE | Add first-class `Proj` representation to interning, metadata, de Bruijn operations, substitution, level substitution, traversal, hashing, and printers. Importer translation remains deliberately fail-closed. | TL0.2, TL1.2 | L | [Four integration tests plus renderer coverage](lean-projection-representation-tl2.2-2026-07-21.md) exhaust the structural payloads/operations and rollback boundary. |
 | TL2.3 | DONE | Preserve checked single-constructor parameter/index metadata and infer universe-polymorphic, indexed, and dependent projection types with Lean's Prop-elimination restriction. | TL2.2 | L | [Four integration families plus an injected-metadata mutation](lean-projection-inference-tl2.3-2026-07-21.md) reject wrong names/shapes/arity/fields and infer dependent second fields. |
 | TL2.4 | DONE | Reduce projections of constructor applications, including universe-polymorphic and parameterized structures; translate validated format-3.1 projection records. | TL2.3 | M | [Native reduction tests plus the exact official projection closure](lean-projection-reduction-tl2.4-2026-07-21.md) independently admit nine declarations, compute the selected field, and reject name/index mutations. |
-| TL2.5 | TODO | Add structure eta as a separate definitional-equality slice. | TL2.4 | M | Positive eta and false-equality controls agree with official Lean. |
+| TL2.5 | DONE | Add structure eta as a separate definitional-equality slice, restricted to exactly saturated constructors of checked one-constructor, zero-index, non-recursive inductives. | TL2.4 | M | [Seven native families plus the required pinned-Lean positive/rejecting differential](lean-structure-eta-tl2.5-2026-07-21.md) cover symmetry, zero-field and multi-constructor boundaries, wrong fields/types, parameters, universes, dependencies, and indexed/recursive exclusions. |
 | TL2.6 | TODO | Replace `Lit::Nat(u128)` with arbitrary-precision storage before enabling literal typing. | TL1.7 | M | Values below/at/above 2^128 round-trip; no narrowing path exists. |
 | TL2.7 | TODO | Type Nat literals and implement constructor/literal conversion. | TL2.6, TL2.4 | M | Official Nat-literal closure admits; unary and literal forms are definitionally equal. |
 | TL2.8 | TODO | Implement accelerated Nat operations behind independently checked reductions or guarded trusted primitives. | TL2.7, TL0.4 | L | Per-operation mutation tests and large-value differential corpus pass. |
@@ -204,7 +204,7 @@ official comparison.
 | TL2.12 | TODO | Generalize induction hypotheses for recursive-indexed and reflexive/higher-order fields. | TL2.11 | L | `Vector`- and `Acc`-shaped official fixtures admit and compute. |
 | TL2.13 | TODO | Admit mutual inductive groups with multiple motives and shared minors. | TL2.12 | L | Two-family mutual fixture and recursors agree with official Lean. |
 | TL2.14 | TODO | Implement frontend lowering for nested and well-founded definitions to mutual/reflexive core forms. | TL2.13, TL4.12 | XL | Exported and native-source forms elaborate to definitionally equal core declarations. |
-| TL2.15 | PARTIAL | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. The [T6.0.3 seed](lean-kernel-seam-fuzz-seed-2026-07-21.md) covers four semantic seams with 768 unique generated cases and deterministic summary replay. TL2.3/TL2.4 add semantic projection-inference/reduction positives and mutations, but not the generated projection/reduction/eta family. | TL2.2-TL2.13 as applicable | L | Current four-seam `kernel accepts False` class is live; generated projection/reduction/eta and quotient semantic cases remain mandatory as those constructs land. |
+| TL2.15 | PARTIAL | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. The [T6.0.3 seed](lean-kernel-seam-fuzz-seed-2026-07-21.md) covers four semantic seams with 768 unique generated cases and deterministic summary replay. TL2.3-TL2.5 add direct semantic projection-inference/reduction/eta positives and mutations, but not the generated projection/reduction/eta family. | TL2.2-TL2.13 as applicable | L | Current four-seam `kernel accepts False` class is live; generated projection/reduction/eta and quotient semantic cases remain mandatory as those constructs land. |
 | TL2.16 | TODO | Generate the parsed/translated/admitted/dual-admitted construct and root matrix. | TL0.6 | M | Matrix is generated from tests and exact fixtures, never hand-maintained. |
 
 L2 exits when the pinned construct matrix has no accidental parser-to-checker
@@ -448,13 +448,13 @@ parallel lane:
 6. **DONE:** TL2.3 — add checked structure metadata and dependent projection inference.
 7. **DONE:** TL2.4 — add constructor projection reduction.
 8. **DONE:** translate official projection records and close the committed projection root; the Nat root now declines on literal typing at line 125.
-9. **NEXT:** TL2.5 — add structure eta as its own differential slice.
+9. **DONE:** TL2.5 — add structure eta as its own differential slice.
 10. TL1.3 — make completed-environment publication transactional.
 11. TL1.4 — generate record-by-record and structural mutation corpora.
 12. TL1.7 — add axiom and declaration dependency digests.
 13. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
     official fixtures while the importer lane is independent.
-14. TL2.6 — replace `u128` Nat storage with arbitrary precision.
+14. **NEXT:** TL2.6 — replace `u128` Nat storage with arbitrary precision.
 15. TL2.7 — type Nat literals and rerun the literal closures.
 16. TL2.11 — implement positivity before widening inductive admission.
 17. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.

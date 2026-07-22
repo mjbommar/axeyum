@@ -170,9 +170,19 @@
           "kind": "test",
           "path": "crates/axeyum-lean-kernel/tests/projection_reduction.rs",
           "detail": "TL2.4 checks constructor-field selection, parameter skipping, universe polymorphism, dependent fields, delta/neutral behavior, and outer-spine reduction."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/structure_eta.rs",
+          "detail": "TL2.5 checks symmetric structure eta, false equalities, parameter/universe/dependent fields, and indexed/recursive exclusions."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/real_lean_structure_eta_crosscheck.rs",
+          "detail": "Pinned Lean 4.30 accepts the reconstruction by rfl and rejects the duplicated-field mutation under the required gate."
         }
       ],
-      "residual": "K0 includes native projection inference/reduction but does not imply native source support; TL2.5 structure eta and broader kernel constructs remain."
+      "residual": "K0 includes native projection inference, reduction, and structure eta but does not imply native source support or broader kernel compatibility."
     },
     {
       "id": "lean4export-direct-recursive-fixture",
@@ -292,7 +302,7 @@
           "detail": "TL2.4 translates all 61 expressions, admits nine declarations, rejects name/index mutations, and computes importPairLeft over ImportPair.mk."
         }
       ],
-      "residual": "This exact K1 projection root passes; TL2.5 structure eta and broader structures remain separate compatibility work."
+      "residual": "This exact K1 projection root passes; TL2.5 structure eta is separately live at K0 and does not broaden this K1 import population."
     },
     {
       "id": "lean4export-quotient-root",
