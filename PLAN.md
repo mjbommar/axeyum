@@ -340,16 +340,24 @@ state.
 > dataflow. The complete kernel/importer suites, strict tooling, M0 no-
 > observation contract, and retained 720/768/840 populations pass. Semantic
 > commit `6a2afdd5` is pushed with local/tracking/remote equality. Importer
-> policy and all M0 computation streams remain untouched. Resume from the
-> authoritative [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md),
-> which records M4's exact official-import task, remaining M4--M6 work,
+> policy and all M0 computation streams remain untouched. The authoritative
+> [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md)
+> now records M5's computation/assurance task, remaining M5--M6 work,
 > ownership constraints, commands, and stop conditions.
 > The [M4 importer plan](docs/plan/lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
-> is now frozen before Rust edits: derive the auxiliary population from checked
+> froze the requirements to derive the auxiliary population from checked
 > main-recursor motives, compare the complete wire surface by generated name,
 > import four exact official streams twice, and close 20 rejecting mutations
 > plus order non-authority without changing kernel, fixtures, identity,
 > assurance, or the live decline.
+> The [M4 result](docs/plan/lean-nested-inductive-elimination-m4-2026-07-22.md)
+> now imports those streams twice at 22/34/34/34 declarations and zero axioms,
+> compares exact main/auxiliary types, counts, indices, constructors, and rules,
+> and closes every registered wire/publication tooth. Complete kernel/importer
+> suites and exact 640/720/768/840 plus well-founded 35/0 controls pass at
+> semantic commit `f03dfcdf`. M4 is the planned first product observation of
+> the immutable M0 streams; it records no selected normal form and does not
+> change assurance or the live decline. M5 is next.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

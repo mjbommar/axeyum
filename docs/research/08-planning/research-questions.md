@@ -908,8 +908,12 @@ Out of scope:
     repeats the exact 640-case grammar twice at descriptor digest
     `a20fe056c9443a37`, independently observes the exact public declaration,
     dependency, and typed iota surface, and closes 16 transactional restoration
-    mutations plus the bounded temporary-integrity stop-review amendment. M4
-    exact official import is next. Close this question only when ADR-0355's
+    mutations plus the bounded temporary-integrity stop-review amendment. The
+    [M4 result](../../plan/lean-nested-inductive-elimination-m4-2026-07-22.md)
+    derives auxiliary identity from checked motives, imports four official
+    streams twice at 22/34/34/34 declarations and zero axioms, and closes 20
+    wire/publication classes plus order non-authority. M5 explicit normal forms
+    and assurance are next. Close this question only when ADR-0355's
     native, generated, import, computation, mutation, retention, and final
     gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import

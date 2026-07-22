@@ -2,7 +2,7 @@
 
 Date: 2026-07-22
 
-Status: preregistered before the first M4 successful nested stream import
+Status: complete
 
 Parent:
 [TL2.14 P0--M6 plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
@@ -16,6 +16,11 @@ Decision gate:
 Baseline documentation checkpoint: `bed1614a2403757f4c615d58a9a231624f9d2692`
 
 Native semantic checkpoint: `6a2afdd57c969bc1a847d77a85cc99552fa935b1`
+
+Importer semantic checkpoint: `f03dfcdf2b3e49d86a5bb9ad00aeef20c99926ee`
+
+Result:
+[M4 exact official import](lean-nested-inductive-elimination-m4-2026-07-22.md)
 
 ## Boundary and ownership
 

@@ -241,8 +241,13 @@ Again, there are distinct targets:
   stop-review amendment validates the already-checked temporary surface after
   copied-constructor metadata mutants survived M2 restoration. Complete
   kernel/importer suites, strict tooling, M0 contracts, and retained
-  720/768/840 populations pass. M4 exact official import is next; importer
-  policy and all frozen M0 computation streams remain untouched.
+  720/768/840 populations pass. M4 now derives auxiliary identity from checked
+  motives, imports the construct and all three frozen computation streams twice
+  at 22/34/34/34 declarations and zero axioms, compares exact main/auxiliary
+  contracts, and closes 20 wire/publication classes plus order non-authority.
+  Exact 640/720/768/840 and well-founded 35/0 controls remain green. Explicit
+  selected normal forms, the assurance overlay, and live-decline removal remain
+  M5 work.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

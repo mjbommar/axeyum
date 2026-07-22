@@ -148,9 +148,13 @@ Last updated: 2026-07-22
 > `a20fe056c9443a37`, independently checks the complete public declaration,
 > recursor-dependency, and typed iota surface, and closes 16 transactional
 > restoration mutations plus a bounded stop-review temporary-integrity
-> amendment. Complete suites and retained 720/768/840 populations pass. M4
-> exact official import is next; importer policy and M0 streams remain
-> untouched.
+> amendment. Complete suites and retained 720/768/840 populations pass. The
+> [M4 result](../../../docs/plan/lean-nested-inductive-elimination-m4-2026-07-22.md)
+> now derives auxiliary identity from checked motives, imports four official
+> streams twice at 22/34/34/34 declarations and zero axioms, compares exact
+> main/auxiliary contracts, and closes 20 wire/publication classes plus order
+> non-authority. M5 explicit registered normal forms, assurance, and live-
+> decline removal are next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
