@@ -539,6 +539,57 @@ checked WZ certificates — territory most CAS systems don't reach at all, let a
 with a proof. The order-34 "first decline" is the honest ceiling: it proves what
 it can certify and declines beyond, never guesses.
 
+### Cycles 23–28 — 2026-07-22 (~15:40–18:00 EDT) — new Lean worktree, CAS order-255, and the strategic gap finding
+
+**New Lean worktree (user-flagged) + monitor overhaul.** The Lean agent finished
+the nested-inductive arc and spun up a **whole new worktree** `axeyum-lean-parity`
+(branch `agent/docs/lean4-complete-parity`) for **full Lean 4 parity** — a 428-line
+parity contract + a registry that starts at **honestly zero** terminal credit
+(can't affirm parity until the gates pass). My fixed-worktree monitor would have
+missed it (same class as the cycle-20 CAS branch blindness, one level up). Fix:
+monitor **and** digest now **auto-discover** agent worktrees from `git worktree
+list` (any `refs/heads/agent/*`) — new worktrees/branches picked up with zero config,
+`NEW-WORKTREE` announced. Also hardened the digest runaway detector twice (it was
+self-matching my own monitor's worktree-path args, then my Claude shell-snapshot
+wrappers — now excludes both; real runaways only). Memory updated.
+
+**CAS to order 255.** `bignum-wz-base` → `broad-gap-probe-next`: bounded exact
+`BigRational` base checking (runs only after the `i128` route returns `Unknown`,
+fail-closed above Γ(256)/pow(1024)) carries **direct squared-binomial moments
+through order 255, raw through 35** — 525 unit tests; order-256 declines cleanly at
+`Γ(257)`. CAS gate now ~13–15 min (order-255 proofs are heavy) → background-gated
+by default.
+
+**SMT: S0→S4, still zero solver execution.** Merged the full official-selection
+chain — S0 authority → S1 audit → S2 verified corpus (450,472 files) → S3 producer
+→ S4 auditor. All green. But the STATUS entry literally ends *"No solver execution
+is admitted yet."* Five rounds of selection provenance.
+
+**★ STRATEGIC FINDING — the QF_\* decide-rate gap is unworked, and the SMT lane
+isn't pointed at it.** Pressed on this (user asked directly). The entire session's
+solver-code delta is **one file** (`abv.rs`, the AUFLIA decline); no quantifier
+code moved (the ~35 `quant_*.rs` subsystem is untouched). Live run: **~50% decided
+/ ~46% unknown** — sound but low-coverage; and it will *drop* when the run reaches
+strings (~24% of the library, axeyum's weakest, not yet measured). Per
+`full-library-gap-closing-plan-2026-07-22.md`: Rank 0 (soundness) ✅, but the
+gap-closing patterns are **Ranks 2–6** (strings P2.7, quantifier MBQI P2.6,
+CDCL(T) keystone, nonlinear P2.5, QF_BV/FP perf) — **all untouched**, and the plan
+gates them behind **Rank 1 (finish the official measurement)**, which also isn't
+done. The SMT lane has been building measurement *apparatus*, not closing the gap.
+Drafted a pivot directive for the user to relay (finish Rank-1 measurement on the
+S2 corpus with the sound binary → then Rank 2 strings; hold Rank 3 quantifiers,
+gated on the keystone). **This is the honest headline: soundness parity delivered
+& verified; coverage/quantifier parity measured, planned, blocker-cleared — but
+the climb itself is unstarted and currently unassigned.**
+
+**Housekeeping.** Corrected a sloppy host claim: the full-library run is on **s4**
+(verified via `distribute_run.sh` config + live `ssh` ps; s5/6/7 idle) — my earlier
+"s5" was a substring false-match. Re-armed the soundness alarm correctly labeled s4
+(`b4qirg8ky`); the re-stage keeps holding (WRONG stable at 56, no new post-swap).
+Two WIP-preservation slips earlier (`add -u`, `reset --hard`) both recovered; safe
+merge pattern (`--no-commit`→gate→commit/abort) + a Python STATUS union-resolver now
+standard. `main` `48fece10 → 2f40ed82`; ~130 commits; WIP intact throughout.
+
 ---
 
 ## Cycle log
