@@ -454,7 +454,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Thirteen fail-closed tests and both aggregate documentation gates enforce the
   no-product-observation boundary. M1 changes only diagnostic preflight next:
   move the existing row from accidental `Malformed` to registered
-  `Unsupported(inductive-nested)` without admission or `CompletedImport`.
+  `Unsupported(inductive-nested)` without admission or `CompletedImport`. This
+  stream is paused cleanly after M0; resume from the single authoritative
+  [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md).
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**

@@ -202,6 +202,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — source-backed correction separating kernel-side nested-inductive
   elimination from elaborator-side well-founded source recursion, with the
   exact current nested and already-passing well-founded product boundaries.
+- [`lean-nested-inductive-elimination-resume.md`](lean-nested-inductive-elimination-resume.md)
+  — **single resume entry point** for paused TL2.14 work: exact pushed state,
+  completed P0/M0 evidence, M1's bounded first edit, remaining M2--M6 work,
+  validation commands, ownership rules, resource caps, and stop conditions.
 - [`lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md`](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
   — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
   native/importer/mutation/generated gates, P0-M6 milestones, resource bounds,

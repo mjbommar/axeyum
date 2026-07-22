@@ -1,8 +1,11 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: preregistered; P0 and M0 complete; M1 diagnostic preflight next
+Status: paused cleanly after M0; M1 diagnostic preflight next
 
 Date: 2026-07-22
+
+Resume this stream from the single authoritative
+[TL2.14 handoff](lean-nested-inductive-elimination-resume.md).
 
 Decision gate:
 [proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)

@@ -314,6 +314,10 @@ state.
 > no-product-observation boundary. M1 corrects only the current nested
 > recursor-count diagnostic preflight next; no admission is authorized. One
 > Lean/Rust worker and 4 GiB caps remain mandatory.
+> This stream is paused cleanly after M0. Resume from the single authoritative
+> [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md), which
+> records the exact pushed state, M1's first edit, remaining M2--M6 work,
+> ownership constraints, commands, and stop conditions.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
