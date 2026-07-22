@@ -1004,6 +1004,36 @@ resolves each sqrt atom's radicand from the compared expressions and passes the 
 (`u≥0`). This is what makes the half-integer power rule certify (the derivative check folds
 `u/√u=√u`), and fixes radical arithmetic generally.
 
-**421 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining unchanged:
-Gamma/digamma heads, multivariate factorization, Puiseux, Zeilberger, general Gruntz/Risch,
-arbitrary-precision N[expr,d].
+**421 unit + 142 doctests, clippy-pedantic clean, WASM-green.**
+
+## 2026-07-21 — Entry 31: rational-integration completeness + by-parts family (425 tests)
+
+Pushed the integrator to **complete univariate rational integration over ℚ** and rounded out the
+by-parts family. All certified by differentiate-and-check.
+
+- **Mixed ℚ-factor denominators** (`integrate_log_part_by_factoring`): the Rothstein–Trager
+  rational-root scan returns only *rational-residue* logs, so a squarefree denominator mixing a
+  linear and an irreducible-quadratic factor got an incomplete (cert-failing) result. Now factor
+  the squarefree denominator over ℚ (via `apart`) and integrate each partial fraction directly —
+  linear→log, quadratic→ln+atan — tried *before* `log_terms` since it is complete-or-declines.
+  Closes `∫1/(x³±1)`, `∫x/(x³+1)`, `∫1/((x+1)(x²+1))`, `∫(3x+2)/((x−1)(x²+4))`.
+- **Surd atan** for irreducible quadratics whose `√(4ad−b²)` isn't a perfect square:
+  `∫1/(x²+x+1) = (2/√3)atan((2x+1)/√3)` — built with a symbolic surd (squares away in the
+  cert). Previously declined.
+- **Real-irrational-root quadratics** (`integrate_real_irrational_quadratic`, disc>0 non-square):
+  algebraic surd-logs `∫1/(x²−2) = (1/2√2)ln((x−√2)/(x+√2))`. The disc<0/disc>0 pair now covers
+  every ℚ-irreducible quadratic factor.
+- **By-parts**: `∫P·(ln x)ᵐ` (`integrate_log_power`, repeated by-parts), and `∫P·f` for inverse
+  `f ∈ {atan,asin,acos,asinh,acosh}` (`integrate_poly_times_inverse`, residual `∫Q·f′` run
+  through `cancel` then re-integrated) — `∫x·atan x`, `∫asin x`, `∫ln²x`.
+- **Substitution/power-rule** (from earlier in the wave): reverse power rule `∫k·g′·gⁿ`,
+  log-derivative `∫k·g′/g`, radical u-sub `∫k·f′/√f`, half-integer `∫√(ax+b)`, `u=x²` for
+  odd·{exp,sin,cos}(x²).
+
+What still declines (honestly): trig substitution (`∫x²/√(1−x²)`, hence `∫x·asin`), Weierstrass
+(`∫1/(1+cos x)`), degree-≥3 irreducible-over-ℚ denominators (`∫1/(x⁴+1)`), and genuinely
+non-elementary integrands (`∫e^{x²}`).
+
+**425 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
+heads, multivariate factorization, Puiseux, Zeilberger, trig-substitution/Weierstrass, general
+Gruntz/Risch, arbitrary-precision N[expr,d].

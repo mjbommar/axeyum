@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 421 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 425 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -20,7 +20,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation (definite) | `definite_sum` (Σ over bounds), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
-| Integration | `integrate` → `CertifiedIntegral`: polynomials, full rational (Horowitz + Rothstein–Trager logs + `atan`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ` (odd + even powers), `∫f+g` (linearity), `∫ln x/x`, `∫1/(x ln x)`, `∫tan`, `∫atan`, `∫p·ln`; **substitution/power-rule family**: `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` (reverse power rule — `∫(ln x)²/x`, `∫eˣ(eˣ+1)²`, `∫sin·cos³`), `∫k·f′/√f = 2k√f`, half-integer power rule `∫√(ax+b)`/`∫xᵐ√x`, `u=x²` for `∫x·S(x²)·{eˣ²,sin,cos}`; `definite_integrate` (FTC, folds exact constants), `improper_integrate` (±∞ bounds — `∫₀^∞ e^{−x}=1`, divergence declined) | ✓ (differentiate-and-check / FTC) |
+| Integration | `integrate` → `CertifiedIntegral`: polynomials, **complete univariate rational over ℚ** (Horowitz rational part + partial-fractions over ℚ-irreducible factors → logs, `atan` for irreducible quadratics **incl. surd** `∫1/(x²+x+1)`, and algebraic surd-logs for real-irrational-root quadratics `∫1/(x²−2)`; mixed factors `∫1/(x³+1)`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ`, `∫f+g` (linearity); **by-parts**: `∫p·ln`, `∫p·(ln x)ᵐ`, `∫p·{atan,asin,acos,asinh,acosh}`; **substitution/power-rule**: `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` (`∫(ln x)²/x`, `∫eˣ(eˣ+1)²`, `∫sin·cos³`), `∫k·g′/g = k·ln g` (`∫cos/sin`), `∫k·f′/√f = 2k√f`, half-integer power rule `∫√(ax+b)`/`∫xᵐ√x`, `u=x²` for `∫x·S(x²)·{eˣ²,sin,cos}`; special-function antiderivatives (erf/Si/Ci/Ei/li/Shi/Fresnel); `definite_integrate` (FTC), `improper_integrate` (±∞ bounds) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`), `series`/`series_at`/`laurent_series` (incl. `tan`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` + `inverse_laplace`, `z_transform` + `inverse_z_transform` (discrete; simple poles, round-trip-certified) | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `dsolve_separable`, `dsolve_exact`, `dsolve_bernoulli`, `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
