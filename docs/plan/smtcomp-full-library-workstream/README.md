@@ -58,7 +58,9 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   order is not canonical path order. S1b is now complete: the fifth fresh run
   verified 89 inputs, 450,472 metadata rows, and 5,345,294 historical rows,
   then published a 256,182,191-byte path-sorted eligibility ledger with
-  `selection_observed=false`. S2 verified corpus acquisition is next.
+  `selection_observed=false`. The S2 resumable downloader, safe streamed
+  extractor, and disk-backed 450,472-row metadata/tree join are fixture-green
+  and committed before live use. Fresh verified corpus acquisition is next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
