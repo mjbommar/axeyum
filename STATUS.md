@@ -374,6 +374,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — bounded polynomial-geometric Z transforms and repeated-pole
+  inverses.** A timeout-bounded cross-area probe found the standard transform
+  declines at `Z{n·2ⁿ}`, `Z{n²·2ⁿ}`, and repeated inverse-Z poles while Fourier,
+  ODE, assumption, and Laplace controls already succeeded. `z_transform` now
+  admits exact linear combinations of `P(n)aⁿ` for rational `P` of degree at
+  most 32 and positive rational `a`, using a falling-factorial basis and private
+  `BigRational` composition before mandatory conversion to public checked-`i128`
+  coefficients. `inverse_z_transform` reconstructs positive-rational poles of
+  multiplicity at most 32 from exact principal-part derivatives and returns a
+  sequence only after the existing forward zero-test round trip certifies it.
+  Independent reciprocal-series checks cover several bases and degrees; an
+  Eulerian-row check freezes the degree-32 ceiling; multiplicities 1 through 32
+  round-trip. Nonlinear exponents, non-positive/irrational poles, improper
+  inputs, degree 33, multiplicity 33, and final coefficient overflow decline.
+  The CAS topic stack passes 527 unit tests, 147 doctests, warning-denied
+  workspace all-target/all-feature Clippy, strict stable/nightly rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`.
+
 - **2026-07-22 — bounded bignum base checking carries direct moments through
   order 255 and raw moments through 35.** `certifies_wz_sum` retains its
   checked-`i128` finite-base route first, then only on `Unknown` evaluates the
@@ -7311,6 +7329,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Extended the exact Z-transform pair to bounded
+  polynomial-geometric families.** Forward transforms use
+  `P(n)=Σqᵣ(n)ᵣ` and `Z{(n)ᵣaⁿ}=r!aʳz/(z−a)ʳ⁺¹`; inverse transforms recover the
+  principal parts of `X(z)/z` at repeated positive-rational poles and accept the
+  reconstructed sequence only after an exact forward round trip. Explicit
+  degree/multiplicity ceilings of 32, independent series/Eulerian controls, and
+  fail-closed negative cases bring the CAS gate to 527 units and 147 doctests.
 
 - **2026-07-22 — Added bounded exact bignum WZ base checking.** A private
   rational/positive-integer-Gamma evaluator runs only after the existing base
