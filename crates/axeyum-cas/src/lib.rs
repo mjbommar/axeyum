@@ -425,6 +425,13 @@ impl CasExpr {
         CasExpr::Unary(UnaryFunc::PolyGamma(n), Box::new(self))
     }
 
+    /// The **factorial** `self! = Γ(self + 1)` (the gamma extension of the
+    /// factorial). Folds to the integer factorial for a non-negative integer.
+    #[must_use]
+    pub fn factorial(self) -> Self {
+        (self + CasExpr::int(1)).gamma()
+    }
+
     /// The **sine integral** `Si(self)` as a symbolic head.
     #[must_use]
     pub fn si(self) -> Self {
@@ -5810,6 +5817,13 @@ pub fn heaviside(x: &CasExpr) -> CasExpr {
     simplify(&((CasExpr::int(1) + x.clone().sign()) / CasExpr::int(2)))
 }
 
+/// The **beta function** `B(a, b) = Γ(a)·Γ(b)/Γ(a+b)`, built from the gamma head so
+/// it inherits the closed-form folds: `B(2,3) = 1·2/24 = 1/12`, `B(½,½) = π/1 = π`.
+#[must_use]
+pub fn beta_function(a: &CasExpr, b: &CasExpr) -> CasExpr {
+    simplify(&(a.clone().gamma() * b.clone().gamma() / (a.clone() + b.clone()).gamma()))
+}
+
 /// The **forward difference** `Δf = f(var+1) − f(var)`, expanded to canonical form —
 /// the discrete analogue of the derivative.
 #[must_use]
@@ -6947,12 +6961,14 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(UnaryFunc::Gamma, arg) => {
             let inner = fold_gamma(arg);
-            match &inner {
-                CasExpr::Const(c) => {
-                    gamma_of_rational(*c).unwrap_or(CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner)))
-                }
-                _ => CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner)),
+            // Fold when the argument is a rational constant *after arithmetic*
+            // (`Γ(5+1) → Γ(6) → 120`), not only a literal `Const`.
+            if let Some(constant) = normalize(&inner).and_then(|p| multipoly_as_constant(&p))
+                && let Some(value) = gamma_of_rational(constant)
+            {
+                return value;
             }
+            CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner))
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_gamma(arg))),
         CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_gamma(inner))),
@@ -19498,6 +19514,13 @@ mod tests {
         assert!((evalf(&CasExpr::rat(5, 2).gamma(), &[]).unwrap() - 1.329_340).abs() < 1e-4);
         assert!((evalf(&CasExpr::int(1).digamma(), &[]).unwrap() + 0.577_216).abs() < 1e-4);
         assert!((evalf(&CasExpr::int(1).polygamma(1), &[]).unwrap() - std::f64::consts::PI.powi(2) / 6.0).abs() < 1e-4);
+        // Factorial as Γ(n+1): 5! = 120, symbolic x! stays Γ(x+1).
+        assert!(certified(&CasExpr::int(5).factorial(), &CasExpr::int(120)));
+        assert_eq!(simplify(&x().factorial()), simplify(&(x() + CasExpr::int(1)).gamma()));
+        // Beta B(a,b)=Γ(a)Γ(b)/Γ(a+b): B(2,3)=1/12, B(½,½)=π, symmetric.
+        assert!(certified(&beta_function(&CasExpr::int(2), &CasExpr::int(3)), &CasExpr::rat(1, 12)));
+        assert!(certified(&beta_function(&CasExpr::rat(1, 2), &CasExpr::rat(1, 2)), &v("pi")));
+        assert!(certified(&beta_function(&CasExpr::int(3), &CasExpr::int(5)), &beta_function(&CasExpr::int(5), &CasExpr::int(3))));
     }
 
     #[test]
