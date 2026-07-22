@@ -5687,6 +5687,33 @@ pub fn rising_factorial(base: &CasExpr, n: u32) -> CasExpr {
     expand(&product).unwrap_or(product)
 }
 
+/// The **minimum** `min(a, b) = (a + b − |a − b|)/2`, built from the `abs` head so it
+/// composes with the rest of the system — in particular, definite integrals of
+/// `min(f, g)` with `f − g` affine reduce to the piecewise `abs` integrator
+/// (`∫₀^2 min(x, 1) dx = 3/2`). Folds to the smaller value on two constants.
+#[must_use]
+pub fn minimum(a: &CasExpr, b: &CasExpr) -> CasExpr {
+    let difference = a.clone() - b.clone();
+    let raw = (a.clone() + b.clone() - difference.abs()) / CasExpr::int(2);
+    simplify(&fold_elementary_constants(&raw)) // fold `abs` of a constant difference
+}
+
+/// The **maximum** `max(a, b) = (a + b + |a − b|)/2` — the `abs`-based dual of
+/// [`minimum`], likewise composing with the piecewise `abs` integrator.
+#[must_use]
+pub fn maximum(a: &CasExpr, b: &CasExpr) -> CasExpr {
+    let difference = a.clone() - b.clone();
+    let raw = (a.clone() + b.clone() + difference.abs()) / CasExpr::int(2);
+    simplify(&fold_elementary_constants(&raw))
+}
+
+/// The **Heaviside step** `H(x) = (1 + sign(x))/2` (with `H(0) = 1/2`), built from the
+/// `sign` head. `H(c)` folds to `0`/`1`/`½` for a negative/positive/zero constant.
+#[must_use]
+pub fn heaviside(x: &CasExpr) -> CasExpr {
+    simplify(&((CasExpr::int(1) + x.clone().sign()) / CasExpr::int(2)))
+}
+
 /// The **forward difference** `Δf = f(var+1) − f(var)`, expanded to canonical form —
 /// the discrete analogue of the derivative.
 #[must_use]
@@ -18818,6 +18845,32 @@ mod tests {
         check((x() / CasExpr::int(3)).floor(), 0, 6, CasExpr::int(3));
         // Polynomial × step: ∫₀^3 x·floor(x) = 0 + ∫₁^2 x + ∫₂^3 2x = 3/2 + 5 = 13/2.
         check(x() * x().floor(), 0, 3, CasExpr::rat(13, 2));
+    }
+
+    #[test]
+    fn minimum_maximum_heaviside() {
+        let x = || v("x");
+        // Constant folds: min/max pick the value; Heaviside is 0/1/½ by sign.
+        assert_eq!(minimum(&CasExpr::int(3), &CasExpr::int(5)), CasExpr::int(3));
+        assert_eq!(maximum(&CasExpr::int(3), &CasExpr::int(5)), CasExpr::int(5));
+        assert_eq!(minimum(&CasExpr::int(-2), &CasExpr::int(7)), CasExpr::int(-2));
+        assert_eq!(heaviside(&CasExpr::int(3)), CasExpr::int(1));
+        assert_eq!(heaviside(&CasExpr::int(-2)), CasExpr::int(0));
+        assert_eq!(heaviside(&CasExpr::int(0)), CasExpr::rat(1, 2));
+        // Symbolic min/max are abs-based; evaluated at a point (folding abs of the
+        // constant difference) they pick the correct branch: min(½,1)=½, min(3,1)=1.
+        let m = minimum(&x(), &CasExpr::int(1));
+        assert_eq!(simplify(&fold_elementary_constants(&m.substitute("x", &CasExpr::rat(1, 2)))), CasExpr::rat(1, 2));
+        assert_eq!(simplify(&fold_elementary_constants(&m.substitute("x", &CasExpr::int(3)))), CasExpr::int(1));
+        // They compose with the abs integrator: ∫₀^2 min(x,1)=3/2, ∫₀^2 max(x,1)=5/2.
+        assert_equal(
+            &definite_integrate(&minimum(&x(), &CasExpr::int(1)), "x", &CasExpr::int(0), &CasExpr::int(2)).unwrap().value,
+            &CasExpr::rat(3, 2),
+        );
+        assert_equal(
+            &definite_integrate(&maximum(&x(), &CasExpr::int(1)), "x", &CasExpr::int(0), &CasExpr::int(2)).unwrap().value,
+            &CasExpr::rat(5, 2),
+        );
     }
 
     #[test]
