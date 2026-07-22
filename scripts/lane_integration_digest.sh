@@ -18,12 +18,17 @@ set -u
 
 R="${1:-$HOME/projects/personal/axeyum}"
 
-# Default lane table: name : branch : worktree
-DEFAULT_LANES="\
-lean:agent/lean/nested-inductive-elimination:$HOME/projects/personal/axeyum-lean-nested,\
-smtcomp:agent/smtcomp/full-library-resume:$HOME/projects/personal/axeyum-smtcomp,\
-cas:agent/cas/vandermonde-wz:/nas4/data/workspace-infosec/claude-axeyum-cas-work"
-LANES="${LANES:-$DEFAULT_LANES}"
+# Lane table: name:branch:worktree. Auto-DISCOVERED from `git worktree list` for
+# any branch under refs/heads/agent/* — so a new agent worktree (e.g. the Lean
+# lane spinning up axeyum-lean-parity for its next round) or a topic-branch switch
+# is picked up with no edit here. Override with LANES=... if needed.
+if [ -z "${LANES:-}" ]; then
+  LANES=$(git -C "$R" worktree list --porcelain 2>/dev/null | awk '
+    /^worktree /{p=$2} /^branch /{b=$2}
+    /^$/{ if(b ~ /refs\/heads\/agent\//){ sub(/refs\/heads\//,"",b); n=p; sub(/.*\//,"",n); print n":"b":"p } p="";b="" }
+    END{ if(b ~ /refs\/heads\/agent\//){ sub(/refs\/heads\//,"",b); n=p; sub(/.*\//,"",n); print n":"b":"p } }' \
+    | paste -sd,)
+fi
 
 main_short=$(git -C "$R" rev-parse --short main 2>/dev/null)
 printf '════ LANE DIGEST — main @ %s (%s) ════\n' \
