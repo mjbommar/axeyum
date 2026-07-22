@@ -1346,7 +1346,9 @@ scoped effort rather than a risky mid-session refactor.
 
 **Limit polish** (Entry 37n): (1) `limit_via_series` now `cancel`s first so the `(1/g)·f` (Mul) spelling reduces like `f/g` (Div) — `(1/x²)ln(cos x)→−½`, hence `(cos x)^{1/x²}→e^{−½}`. (2) `limit_lhopital` — a 0/0 quotient with `f(a)=g(a)=0` returns `lim f′/g′` (up to depth 4), reaching forms the rational-coefficient series can't: `(aˣ−1)/x→ln a` (the numerator's derivative carries a transcendental `ln a`). Uses the *raw* quotient (cancel atomizes exp/ln). Non-0/0 and `g′(a)=0` poles decline.
 
-**Session tally (Entries 37–37n): 32 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Log arithmetic in the zero-test** (Entry 37o): many integral results are sums of `ln(rational)` that didn't certify against a compact form (`∫₁² 1/(x(x+1)) = 2ln2−ln3` vs `ln(4/3)`, read as distinct atoms). `expand_log_over_primes` rewrites `ln(p/q)` into its prime basis `Σeᵢln(pᵢ)−Σfⱼln(qⱼ)` (`ntheory::factorize`), applied in `equal`'s canonicalization. So `ln6=ln2+ln3`, `3ln2=ln8`, `ln(1/2)=−ln2` decide — while distinct logs (`ln2` vs `ln3`) still don't certify (sound).
+
+**Session tally (Entries 37–37o): 33 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
