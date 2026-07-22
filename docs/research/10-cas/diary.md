@@ -1350,7 +1350,9 @@ scoped effort rather than a risky mid-session refactor.
 
 **Transcendental residues** (Entry 37p): `residue` handled only rational functions; `residue_meromorphic` computes `Res f(x)/(x−a)ⁿ = f^{(n−1)}(a)/(n−1)!` for an analytic (transcendental) numerator over a pure power — `Res₀ cos x/x=1`, `eˣ/x²=1`, `sin x/x⁴=−1/6`, `Res₁ eˣ/(x−1)²=e`.
 
-**Session tally (Entries 37–37p): 35 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Fourier integrals via residues** (Entry 37q): `improper_fourier_quadratic` — `∫_{−∞}^∞ N(x)·{cos,sin}(ax)/(x²+q)` (`q>0`, `a>0`, `deg N≤1`) via the residue theorem (pole at `i√q`); by parity `∫(c₁x+c₀)cos(ax)/(x²+q)=c₀(π/√q)e^{−a√q}`, `·sin=c₁·π·e^{−a√q}`. `find_linear_trig` peels the oscillatory factor. Certified by construction (residue theorem exact; cross-checked numerically). `∫cos x/(x²+1)=π/e`, `∫x sin x/(x²+1)=π/e`, `∫cos2x/(x²+1)=π/e²`. **First genuine contour-integration capability.**
+
+**Session tally (Entries 37–37q): 36 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
