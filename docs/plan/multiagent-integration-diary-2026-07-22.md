@@ -167,6 +167,23 @@ soundness on the full library.
 
 **Health:** `/tmp` 8%, `/nas4` 68%, no runaways, 29 °C — all green.
 
+### Cycle 6 — 2026-07-22 (~12:20 EDT) — trigger: SMT commit
+
+**Micro.** SMT `e8908381 enforce one-host aggregate resources` (ff → main). The
+§4 thermal/host-cooking discipline made **executable**: `resource_enforcement.py`
+(one-host aggregate cgroup limits) + fixtures (`fake_solver.py`, `kill-after-start.smt2`)
++ two Python test modules; extends the `smtcomp-resume` gate to E2. No Rust
+source (only `justfile` gate wiring). **Gate: GREEN** — new Python tests 7/7 OK;
+official `./scripts/check-smtcomp-resume.sh` all sub-checks pass
+(`invariants=18 scenarios=28 accept=5 reject=23 resume_byte_equal=true`). Pushed.
+Gate note: Python-tooling change → gated with Python tests + the workstream's own
+gate script, not cargo (correct tool for the change).
+
+**Macro.** The SMT lane is hardening the *measurement harness itself* (resumable,
+resource-bounded, cgroup-enforced) before scaling the full-library run — infra
+that makes the decide/decline/WRONG numbers trustworthy and the run safe to leave
+unattended on shared hot hosts. Complements the pending s4 re-stage action.
+
 ---
 
 ## Cycle log
