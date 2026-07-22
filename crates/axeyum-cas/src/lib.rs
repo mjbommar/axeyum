@@ -5552,7 +5552,6 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
 /// `acos(−1)=π`, … (and `f(0)` where finite). Surd arguments (`√3/2`, …) are not
 /// tabulated here. `None` for a non-tabulated argument.
 fn inverse_trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
-    let value = constant_term(arg).filter(|_| matches!(arg, CasExpr::Const(_)))?;
     let pi = CasExpr::var("pi");
     // Returns `k·π` (folded: 0, π, or a rational multiple).
     let pi_multiple = |k: Rational| -> CasExpr {
@@ -5564,33 +5563,50 @@ fn inverse_trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr>
             scaled_term(k, pi.clone())
         }
     };
-    let table: &[(Rational, Rational)] = match func {
-        // atan: value → k with atan(value) = k·π.
-        UnaryFunc::Atan => &[
-            (Rational::integer(0), Rational::integer(0)),
-            (Rational::integer(1), Rational::new(1, 4)),
-            (Rational::integer(-1), Rational::new(-1, 4)),
+    // Argument value → k with f(value) = k·π. The value is a `CasExpr` so surd
+    // arguments (`√3/2`, `√3`, …) are matched via the certified zero-test.
+    let half = |sqrt_of: i128| scaled_term(Rational::new(1, 2), CasExpr::int(sqrt_of).sqrt());
+    let neg_half = |sqrt_of: i128| scaled_term(Rational::new(-1, 2), CasExpr::int(sqrt_of).sqrt());
+    let table: Vec<(CasExpr, Rational)> = match func {
+        UnaryFunc::Atan => vec![
+            (CasExpr::int(0), Rational::integer(0)),
+            (CasExpr::int(1), Rational::new(1, 4)),
+            (CasExpr::int(-1), Rational::new(-1, 4)),
+            (CasExpr::int(3).sqrt(), Rational::new(1, 3)), // atan(√3)=π/3
+            (CasExpr::Neg(Box::new(CasExpr::int(3).sqrt())), Rational::new(-1, 3)),
+            (scaled_term(Rational::new(1, 3), CasExpr::int(3).sqrt()), Rational::new(1, 6)), // atan(√3/3)=π/6
+            (scaled_term(Rational::new(-1, 3), CasExpr::int(3).sqrt()), Rational::new(-1, 6)),
         ],
-        UnaryFunc::Asin => &[
-            (Rational::integer(0), Rational::integer(0)),
-            (Rational::new(1, 2), Rational::new(1, 6)),
-            (Rational::new(-1, 2), Rational::new(-1, 6)),
-            (Rational::integer(1), Rational::new(1, 2)),
-            (Rational::integer(-1), Rational::new(-1, 2)),
+        UnaryFunc::Asin => vec![
+            (CasExpr::int(0), Rational::integer(0)),
+            (CasExpr::rat(1, 2), Rational::new(1, 6)),
+            (CasExpr::rat(-1, 2), Rational::new(-1, 6)),
+            (CasExpr::int(1), Rational::new(1, 2)),
+            (CasExpr::int(-1), Rational::new(-1, 2)),
+            (half(2), Rational::new(1, 4)), // asin(√2/2)=π/4
+            (neg_half(2), Rational::new(-1, 4)),
+            (half(3), Rational::new(1, 3)), // asin(√3/2)=π/3
+            (neg_half(3), Rational::new(-1, 3)),
         ],
-        UnaryFunc::Acos => &[
-            (Rational::integer(1), Rational::integer(0)),
-            (Rational::integer(0), Rational::new(1, 2)),
-            (Rational::new(1, 2), Rational::new(1, 3)),
-            (Rational::new(-1, 2), Rational::new(2, 3)),
-            (Rational::integer(-1), Rational::integer(1)),
+        UnaryFunc::Acos => vec![
+            (CasExpr::int(1), Rational::integer(0)),
+            (CasExpr::int(0), Rational::new(1, 2)),
+            (CasExpr::rat(1, 2), Rational::new(1, 3)),
+            (CasExpr::rat(-1, 2), Rational::new(2, 3)),
+            (CasExpr::int(-1), Rational::integer(1)),
+            (half(2), Rational::new(1, 4)), // acos(√2/2)=π/4
+            (neg_half(2), Rational::new(3, 4)),
+            (half(3), Rational::new(1, 6)), // acos(√3/2)=π/6
+            (neg_half(3), Rational::new(5, 6)),
         ],
         _ => return None,
     };
     table
-        .iter()
-        .find(|(arg_value, _)| *arg_value == value)
-        .map(|(_, k)| pi_multiple(*k))
+        .into_iter()
+        .find(|(candidate, _)| {
+            matches!(equal(arg, candidate), ZeroTest::Certified { equal: true, .. })
+        })
+        .map(|(_, k)| pi_multiple(k))
 }
 
 /// The **Bernoulli polynomial** `Bₙ(x) = Σ_{k=0}^n C(n,k)·B_k·x^{n−k}` (with `B_k`
@@ -11769,6 +11785,25 @@ mod tests {
         assert_equal(&inv(UnaryFunc::Acos, CasExpr::int(1)), &CasExpr::zero());
         assert_equal(&inv(UnaryFunc::Acos, CasExpr::rat(1, 2)), &(CasExpr::rat(1, 3) * pi()));
         assert_equal(&inv(UnaryFunc::Acos, CasExpr::int(-1)), &pi());
+        // Surd arguments matched via the zero-test: atan(√3)=π/3, atan(√3/3)=π/6,
+        // asin(√3/2)=π/3, asin(√2/2)=π/4, acos(√3/2)=π/6.
+        assert_equal(&inv(UnaryFunc::Atan, CasExpr::int(3).sqrt()), &(CasExpr::rat(1, 3) * pi()));
+        assert_equal(
+            &inv(UnaryFunc::Atan, CasExpr::rat(1, 3) * CasExpr::int(3).sqrt()),
+            &(CasExpr::rat(1, 6) * pi()),
+        );
+        assert_equal(
+            &inv(UnaryFunc::Asin, CasExpr::rat(1, 2) * CasExpr::int(3).sqrt()),
+            &(CasExpr::rat(1, 3) * pi()),
+        );
+        assert_equal(
+            &inv(UnaryFunc::Asin, CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()),
+            &(CasExpr::rat(1, 4) * pi()),
+        );
+        assert_equal(
+            &inv(UnaryFunc::Acos, CasExpr::rat(1, 2) * CasExpr::int(3).sqrt()),
+            &(CasExpr::rat(1, 6) * pi()),
+        );
         // A non-tabulated argument is left unevaluated.
         assert!(matches!(
             inv(UnaryFunc::Asin, CasExpr::rat(3, 7)),
