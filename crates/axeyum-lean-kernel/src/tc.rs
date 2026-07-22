@@ -18,10 +18,11 @@
 //! trusted [`Kernel::add_declaration`](crate::Kernel::add_declaration)
 //! admission gate.
 //!
-//! **Deferred to a later slice** (and erroring cleanly if reached): literal
-//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]), structure eta,
-//! and `Quotient` reduction. Projection inference/reduction and
-//! inductive/recursor ι-reduction are implemented. An
+//! **Deferred to a later slice** (and erroring cleanly if reached):
+//! String-literal typing/reduction (`Lit::Str` →
+//! [`KernelError::UnsupportedLit`]) and `Quotient` reduction. Projection
+//! inference/reduction, structure eta, and inductive/recursor ι-reduction are
+//! implemented. An
 //! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
@@ -48,7 +49,7 @@
 use std::collections::HashMap;
 
 use crate::env::{Declaration, ReducibilityHint};
-use crate::expr::{ExprId, ExprNode};
+use crate::expr::{ExprId, ExprNode, Lit};
 use crate::level::LevelId;
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
@@ -116,9 +117,16 @@ pub enum KernelError {
         /// The number of universe arguments the `Const` supplied.
         got: usize,
     },
-    /// A `Lit` reached inference. Literal typing needs inductive `Nat`/`String`
-    /// declarations and their reduction rules, deferred to a later slice.
+    /// A literal outside the currently typed Nat profile reached inference.
+    /// String literal typing/reduction remains deferred to TL2.9.
     UnsupportedLit,
+    /// A Nat literal was used before the checked environment contained the
+    /// canonical non-polymorphic `Nat`/`Nat.zero`/`Nat.succ` bootstrap.
+    NatLiteralBootstrapMismatch {
+        /// The reserved `Nat` name whose checked declaration was absent or
+        /// malformed.
+        nat: crate::name::NameId,
+    },
     /// The inferred type of a projected value did not have the structure name
     /// carried by the `Proj` node as its constant head.
     ProjectionTypeMismatch {
@@ -481,10 +489,15 @@ impl Kernel {
                 // ι: a recursor `Const(I.rec, _)` applied to its premises and a
                 // constructor-headed major reduces to the matching minor applied
                 // to the constructor's fields (ADR-0036, slice 4).
-                ExprNode::Const(..) => match self.reduce_rec(cursor) {
-                    Some(reduced) => cursor = reduced,
-                    None => return cursor,
-                },
+                ExprNode::Const(..) => {
+                    if let Some(reduced) = self.reduce_rec(cursor) {
+                        cursor = reduced;
+                    } else if let Some(reduced) = self.reduce_nat_succ(cursor) {
+                        cursor = reduced;
+                    } else {
+                        return cursor;
+                    }
+                }
                 // A bare `Sort` is normal; simplify its level for canonicity.
                 ExprNode::Sort(level) if args.is_empty() => {
                     let level = self.simplify(level);
@@ -720,6 +733,10 @@ impl Kernel {
         }
         if let Some(r) = self.def_eq_binder(x, y, ctx) {
             return Some(r);
+        }
+        if let (ExprNode::Lit(left), ExprNode::Lit(right)) = (self.expr_node(x), self.expr_node(y))
+        {
+            return Some(left == right);
         }
         None
     }
@@ -1019,6 +1036,9 @@ impl Kernel {
         ctx: &mut LocalContext,
     ) -> DeltaResult {
         loop {
+            if let Some(result) = self.def_eq_nat_offset(x, y, ctx) {
+                return DeltaResult::FoundEqResult(result);
+            }
             let r1 = self.get_applied_def(x);
             let r2 = self.get_applied_def(y);
             match (r1, r2) {
@@ -1149,6 +1169,178 @@ struct ProjectionInferenceData {
     type_args: Vec<ExprId>,
 }
 
+/// Checked reserved declarations used by primitive Nat literal semantics.
+#[derive(Debug, Clone, Copy)]
+struct NatLiteralBootstrap {
+    zero: NameId,
+    succ: NameId,
+    nat_type: ExprId,
+}
+
+/// One constructor layer of a compact Nat value.
+enum NatOffset {
+    Zero,
+    Succ(ExprId),
+}
+
+impl Kernel {
+    /// Validate the reserved declarations on which primitive Nat literals
+    /// depend. Official Lean inherits these from its bootstrap; Axeyum imports
+    /// into a fresh environment and therefore checks the shape explicitly.
+    fn nat_literal_bootstrap(&mut self) -> Result<NatLiteralBootstrap, KernelError> {
+        let anon = self.anon();
+        let nat = self.name_str(anon, "Nat");
+        let zero = self.name_str(nat, "zero");
+        let succ = self.name_str(nat, "succ");
+        let level_zero = self.level_zero();
+        let level_one = self.level_succ(level_zero);
+        let expected_inductive_type = self.sort(level_one);
+        let nat_type = self.const_(nat, vec![]);
+
+        let inductive_ok = matches!(
+            self.env.get(nat),
+            Some(Declaration::Inductive {
+                uparams,
+                ty,
+                num_params: 0,
+                num_indices: 0,
+                is_recursive: true,
+                ctor_names,
+                ..
+            }) if uparams.is_empty()
+                && *ty == expected_inductive_type
+                && ctor_names.as_slice() == [zero, succ]
+        );
+        let zero_ok = matches!(
+            self.env.get(zero),
+            Some(Declaration::Constructor {
+                uparams,
+                ty,
+                inductive,
+                idx: 0,
+                num_fields: 0,
+                ..
+            }) if uparams.is_empty() && *ty == nat_type && *inductive == nat
+        );
+        let succ_type = match self.env.get(succ) {
+            Some(Declaration::Constructor {
+                uparams,
+                ty,
+                inductive,
+                idx: 1,
+                num_fields: 1,
+                ..
+            }) if uparams.is_empty() && *inductive == nat => Some(*ty),
+            _ => None,
+        };
+        let succ_ok = succ_type.is_some_and(|ty| {
+            matches!(
+                self.expr_node(ty),
+                ExprNode::Pi(_, domain, body, BinderInfo::Default)
+                    if *domain == nat_type && *body == nat_type
+            )
+        });
+
+        if !(inductive_ok && zero_ok && succ_ok) {
+            return Err(KernelError::NatLiteralBootstrapMismatch { nat });
+        }
+        Ok(NatLiteralBootstrap {
+            zero,
+            succ,
+            nat_type,
+        })
+    }
+
+    fn infer_nat_literal(&mut self) -> Result<ExprId, KernelError> {
+        Ok(self.nat_literal_bootstrap()?.nat_type)
+    }
+
+    fn nat_offset(
+        &mut self,
+        expression: ExprId,
+        bootstrap: NatLiteralBootstrap,
+    ) -> Option<NatOffset> {
+        if let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(expression).clone() {
+            return match value.predecessor() {
+                Some(predecessor) => Some(NatOffset::Succ(self.lit(Lit::Nat(predecessor)))),
+                None => Some(NatOffset::Zero),
+            };
+        }
+
+        let (head, arguments) = self.unfold_apps(expression);
+        let ExprNode::Const(name, levels) = self.expr_node(head) else {
+            return None;
+        };
+        if !levels.is_empty() {
+            return None;
+        }
+        if *name == bootstrap.zero && arguments.is_empty() {
+            Some(NatOffset::Zero)
+        } else if *name == bootstrap.succ && arguments.len() == 1 {
+            Some(NatOffset::Succ(arguments[0]))
+        } else {
+            None
+        }
+    }
+
+    /// Lean's offset equality: compact literals and unary constructors expose
+    /// one zero/successor layer, then ordinary definitional equality compares
+    /// the predecessors.
+    fn def_eq_nat_offset(
+        &mut self,
+        left: ExprId,
+        right: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Option<bool> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        match (
+            self.nat_offset(left, bootstrap)?,
+            self.nat_offset(right, bootstrap)?,
+        ) {
+            (NatOffset::Zero, NatOffset::Zero) => Some(true),
+            (NatOffset::Succ(left), NatOffset::Succ(right)) => {
+                Some(self.def_eq_core(left, right, ctx))
+            }
+            _ => None,
+        }
+    }
+
+    /// The TL2.7 constructor conversion subset of Lean's Nat reducer.
+    /// General arithmetic operations remain TL2.8.
+    fn reduce_nat_succ(&mut self, expression: ExprId) -> Option<ExprId> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        let (head, arguments) = self.unfold_apps(expression);
+        let ExprNode::Const(name, levels) = self.expr_node(head) else {
+            return None;
+        };
+        if *name != bootstrap.succ || !levels.is_empty() || arguments.len() != 1 {
+            return None;
+        }
+        let argument = self.whnf(arguments[0]);
+        let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(argument).clone() else {
+            return None;
+        };
+        Some(self.lit(Lit::Nat(value.successor())))
+    }
+
+    /// Expose one constructor layer for Nat recursor reduction, matching
+    /// Lean's `nat_lit_to_constructor` helper.
+    pub(crate) fn nat_literal_to_constructor(&mut self, expression: ExprId) -> Option<ExprId> {
+        let bootstrap = self.nat_literal_bootstrap().ok()?;
+        let ExprNode::Lit(Lit::Nat(value)) = self.expr_node(expression).clone() else {
+            return None;
+        };
+        match value.predecessor() {
+            None => Some(self.const_(bootstrap.zero, vec![])),
+            Some(predecessor) => {
+                let succ = self.const_(bootstrap.succ, vec![]);
+                let predecessor = self.lit(Lit::Nat(predecessor));
+                Some(self.app(succ, predecessor))
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Type inference
 // ---------------------------------------------------------------------------
@@ -1168,7 +1360,8 @@ impl Kernel {
     /// ([`KernelError::LooseBVar`]), an unbound `FVar`
     /// ([`KernelError::UnboundFVar`]), an unknown `Const`
     /// ([`KernelError::UnknownConst`]), or a `Lit`
-    /// ([`KernelError::UnsupportedLit`]).
+    /// ([`KernelError::UnsupportedLit`]) or an invalid Nat-literal bootstrap
+    /// ([`KernelError::NatLiteralBootstrapMismatch`]).
     pub fn infer(&mut self, e: ExprId) -> Result<ExprId, KernelError> {
         let mut ctx = LocalContext::new();
         self.infer_core(e, &mut ctx)
@@ -1317,7 +1510,8 @@ impl Kernel {
             ExprNode::Proj(type_name, field_index, structure) => {
                 self.infer_projection(type_name, field_index, structure, ctx)
             }
-            ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
+            ExprNode::Lit(Lit::Nat(_)) => self.infer_nat_literal(),
+            ExprNode::Lit(Lit::Str(_)) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => {
                 self.infer_lambda(e, name, dom, body, info, ctx)

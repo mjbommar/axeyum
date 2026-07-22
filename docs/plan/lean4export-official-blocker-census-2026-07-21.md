@@ -19,10 +19,11 @@ a guessed feature list to an observed dependency order:
 1. **Projection was first and is now cleared.** TL2.2-TL2.4 represent, infer,
    reduce, and translate it; the four-record official structure closure now
    admits nine declarations and computes its selector.
-2. **Bignum Nat plus literal typing is now the exact next blocker.** Re-running
-   the committed Nat root advances its first decline to line 125
-   `literal-nat-bignum-and-typing`. Literal typing must not land while the kernel
-   still stores only `u128`.
+2. **The measured Nat blocker is now cleared.** The census originally advanced
+   the committed root to line-125 bignum storage and literal typing. TL2.6
+   replaced the `u128` payload with `NatLit(BigUint)`; TL2.7 added checked
+   constructor/literal semantics. The same root now translates 90 expressions,
+   admits ten declarations with zero axioms, and computes to `37`.
 3. **String remains a mixed, unrefreshed closure.** Its 290 declaration records
    contain recursive-indexed inductives plus Nat/String literals, but the exact
    post-projection first blocker is unmeasured until the bound large stream is

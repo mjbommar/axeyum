@@ -1103,6 +1103,7 @@ impl Kernel {
 
         let major = *args.get(major_idx)?;
         let major = self.whnf(major);
+        let major = self.nat_literal_to_constructor(major).unwrap_or(major);
         let (major_ctor, major_ctor_args) = self.unfold_apps(major);
         let ExprNode::Const(major_ctor_name, _) = self.expr_node(major_ctor).clone() else {
             return None;

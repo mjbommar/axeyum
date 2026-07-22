@@ -332,12 +332,12 @@ fn error_const_unknown() {
     );
 }
 
-/// Error: a `Lit` reaching inference is unsupported in this slice.
+/// String literals remain outside the typed TL2.7 Nat profile.
 #[test]
 fn error_lit_unsupported() {
     let mut k = Kernel::new();
-    let n = k.lit(Lit::nat(7_u8));
-    let err = k.infer(n).unwrap_err();
+    let string = k.lit(Lit::Str("deferred".into()));
+    let err = k.infer(string).unwrap_err();
     assert!(matches!(err, KernelError::UnsupportedLit), "got {err:?}");
 }
 

@@ -709,6 +709,14 @@ Out of scope:
     TL2.7 slice. Values around and far above `2^128` must round-trip through
     interning, structural operations, rendering, and importer validation. See
     [ADR-0346](../09-decisions/adr-0346-arbitrary-precision-lean-nat-literals.md).
+- [x] When may raw Lean Nat literals receive a type, and how much constructor
+      conversion belongs before accelerated Nat operations?
+  - Answer (2026-07-22): only after the fresh checked environment contains the
+    canonical `Nat`/`Nat.zero`/`Nat.succ` bootstrap. Type raw values as `Nat`,
+    reproduce Lean's zero/successor offset equality, one-step successor
+    reduction, and literal-major recursor conversion, but leave every other Nat
+    operation to TL2.8. See
+    [ADR-0347](../09-decisions/adr-0347-checked-lean-nat-literal-semantics.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

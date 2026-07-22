@@ -71,6 +71,25 @@ impl NatLit {
         }
         BigUint::parse_bytes(value.as_bytes(), 10).map(Self)
     }
+
+    /// Whether this natural is zero.
+    pub(crate) fn is_zero(&self) -> bool {
+        self.0 == BigUint::default()
+    }
+
+    /// The predecessor of a positive natural.
+    pub(crate) fn predecessor(&self) -> Option<Self> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(Self(&self.0 - BigUint::from(1_u8)))
+        }
+    }
+
+    /// The successor of this natural.
+    pub(crate) fn successor(&self) -> Self {
+        Self(&self.0 + BigUint::from(1_u8))
+    }
 }
 
 impl fmt::Display for NatLit {

@@ -369,8 +369,36 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL2.7 checked Nat literal semantics is complete; TL1.3
+  transactional publication is next.** Natural literals now infer as `Nat`
+  only after the independent kernel has admitted the exact canonical `Nat`,
+  `Nat.zero`, and `Nat.succ` bootstrap. Definitional equality peels literal/
+  constructor offsets in either direction, transparent wrappers do not obscure
+  the comparison, `Nat.succ` over a literal reduces without narrowing, and
+  `Nat.rec` exposes one literal constructor layer before ordinary iota. Missing,
+  renamed, reordered, malformed, and Prop-valued bootstraps reject with a typed
+  error; String literals and general accelerated Nat operations remain
+  fail-closed. The official format-3.1 Nat root translates all 90 expressions,
+  admits ten declarations from five records with zero axioms, and reduces
+  `importNatLiteral` to `37`. Boundary replacements at and above `2^128` admit
+  exactly, while a renamed `Nat.zero` mutation rejects. A required pinned-Lean
+  4.30 differential agrees on zero, unary three, an above-`u128` successor,
+  recursor computation, and a false adjacent-value control. The kernel passes
+  179 unit tests and 35 integration cases across twelve binaries; the importer
+  passes 18 cases; 14 compatibility/prototype tests pass. The generated
+  compatibility matrix now records 12 rows, five profile passes, one declined
+  row, eight source-bound decline codes, and eight assurance fields. Focused
+  rustfmt, warning-denied Clippy/rustdoc, doctest, parity-document,
+  foundational-resource, and link gates pass; the unavailable `just` wrapper
+  was replaced by its exact constituent commands. See
+  [ADR-0347](docs/research/09-decisions/adr-0347-checked-lean-nat-literal-semantics.md)
+  and the [TL2.7 result](docs/plan/lean-nat-literal-semantics-tl2.7-2026-07-22.md).
+  **Next:** TL1.3 makes completed-environment publication transactional; TL1.4
+  mutation corpora and TL1.7 dependency digests follow. TL2.8 still owns
+  accelerated Nat operations and TL2.9 owns String literals.
+
 - **2026-07-22 — TL2.6 arbitrary-precision Nat storage is complete; TL2.7
-  literal typing is next.** `Lit::Nat` now carries canonical `NatLit(BigUint)`
+  literal typing was next at this checkpoint.** `Lit::Nat` now carries canonical `NatLit(BigUint)`
   storage, and the official format-3.1 decimal path validates directly into
   that representation without a `u64`/`u128` intermediate. Values at
   `2^128 - 1`, `2^128`, `2^128 + 1`, and a much larger decimal round-trip
@@ -379,14 +407,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   seed now includes explicit above-`u128` corners while preserving 768 total
   deterministic cases and rejecting every attempted `False` admission.
   Inference remains `UnsupportedLit`; no Nat typing, reduction, or official
-  declaration admission is claimed. The Nat root now declines at line 125 with
+  declaration admission is claimed. At this checkpoint the Nat root declines at line 125 with
   the narrower `literal-nat-typing` code. The kernel passes 179 unit tests and
   29 integration cases across ten binaries, the importer passes 16 tests, and
   focused doctest, warning-denied Clippy, and warning-denied rustdoc gates pass.
   See [ADR-0346](docs/research/09-decisions/adr-0346-arbitrary-precision-lean-nat-literals.md)
   and the [TL2.6 result](docs/plan/lean-nat-literal-storage-tl2.6-2026-07-22.md).
-  **Next:** TL2.7 types Nat literals, implements constructor/literal conversion,
-  and reruns the exact official Nat closure with positive/rejecting controls.
+  **Then:** TL2.7 subsequently typed Nat literals, implemented checked
+  constructor/literal conversion, and closed the exact official Nat closure.
 
 - **2026-07-21 — TL2.5 structure eta is complete; this records the prior
   definitional-equality boundary.** Definitional equality now mirrors Lean's
@@ -406,8 +434,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   doctest pass. The generated TL2.15 projection/reduction/eta fuzz family
   remains open, and no new K1 import population is claimed. See the
   [TL2.5 result](docs/plan/lean-structure-eta-tl2.5-2026-07-21.md).
-  TL2.6 arbitrary-precision storage has since landed; TL2.7 now owns literal
-  typing and the next exact-root rerun.
+  TL2.6 arbitrary-precision storage and TL2.7 checked literal semantics have
+  since landed; the exact Nat root now admits and computes.
 
 - **2026-07-21 — TL2.4 constructor projection reduction and the exact official
   K1 projection root are complete; this records the prior computation/import
@@ -429,9 +457,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   root, not `Init`/`Std`/mathlib or native-source parity; the unretained String
   stream's old projection decline is retired without guessing its next blocker.
   See the [TL2.4 result](docs/plan/lean-projection-reduction-tl2.4-2026-07-21.md).
-  TL2.5 structure eta and TL2.6 arbitrary-precision Nat storage have since
-  landed separately. The historical combined decline above is retired;
-  `literal-nat-typing` is current, and TL2.7 owns that remaining boundary.
+  TL2.5 structure eta, TL2.6 arbitrary-precision Nat storage, and TL2.7 checked
+  literal semantics have since landed separately. Both historical Nat decline
+  codes above are retired; the exact Nat root now admits and computes.
 
 - **2026-07-21 — TL2.3 dependent projection inference is complete; this records
   the prior typing boundary.** Checked inductive declarations now retain
@@ -542,10 +570,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   separates `parsed`, `translated`, `admitted`, `official_admitted`,
   `source_elaborated`, `proof_checked`, `workflow_reproduced`, and
   `runtime_reproduced`. Its generated
-  [12-row matrix](docs/plan/generated/lean-compatibility.md) now reports four
+  [12-row matrix](docs/plan/generated/lean-compatibility.md) reported four
   profile-passing exact rows (native K0 plus three K1 fixtures), two fail-closed
-  K1 declines, and zero completed K2-K6 native profiles. Nine current importer
-  decline codes are source-bound; six tests reject missing assurance fields or
+  K1 declines, and zero completed K2-K6 native profiles at that checkpoint.
+  Six tests reject missing assurance fields or
   evidence, translation without parsing, official-oracle credit laundering,
   proof credit without admission, and missing/unregistered/misapplied decline
   codes. `parity-docs` now checks the contract and byte-identical generated
@@ -556,7 +584,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   slice does not rewrite them. TL0.4 follows immediately above; next is the
   now-landed T6.0.3/TL2.15 seam-fuzz harness, now-landed TL2.2-TL2.5
   projection representation/inference/reduction/eta sequence, and now-landed
-  TL2.6 arbitrary-precision Nat storage. TL2.7 now owns the next kernel change.
+  TL2.6 arbitrary-precision Nat storage. TL2.7 has since closed checked literal
+  semantics; TL1.3 now owns the next queue item.
 
 - **2026-07-21 — the complete Lean-system implementation program is now an
   executable plan, not a list of missing subsystems.** The active
@@ -572,8 +601,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   execution slice is TL0.1/TL0.2 contract reconciliation and capability schema,
   through the now-landed T6.0.3/TL2.15 fuzz seed; kernel semantics advance one
   measured slice at a time, and TL2.2-TL2.5 projection representation,
-  inference, reduction/import, structure eta, and arbitrary-precision Nat
-  storage are now complete before TL2.7 literal typing. The plan removes
+  inference, reduction/import, structure eta, arbitrary-precision Nat storage,
+  and checked Nat literal semantics are now complete. The plan removes
   the rewrite-provenance/`simp` dependency cycle and makes selected mathlib
   imports and native source/workflow compatibility explicit owners rather than
   contradictions in Track 6 scope prose.
@@ -6614,7 +6643,7 @@ plan is built and committed on the current branch:
 | P3.4 | Embedded Alethe checker subset (self-checking) | TODO |
 | P3.5 | Alethe for reductions (arrays → Ackermann → int-blast) | WIP — direct select consistency and equal-array same-index congruence now use standard Alethe equality rules; ADR-0075 makes the latter one artifact accepted in-tree, by Carcara (forward/reverse + tamper rejection), and by real Lean with no array-elimination trust step. ROW same/diff collapse reasoning is externally checked modulo an asserted ROW rewrite instance. Remaining: certify the ROW axiom itself, disequality/diff-witness extensionality, portable equality chains, canonical online proof logging, and the broader Ackermann/int-blast ledger |
 | P3.6 | In-tree Rust Lean kernel (`axeyum-lean-kernel`, from nanoda) | WIP — **crate started (ADR-0036, commit db18886)**: destination-3 (Lean parity) foundation. `Name`/`Level`/`Expr` + de Bruijn ops (instantiate/abstract/lift) ported from `references/nanoda_lib`, adapted to axeyum's **lifetime-free Copy-id interning** (no `'a` leaks). Faithful level `leq`/`is_equiv`/`simplify` + param subst; Expr with `BinderInfo`; cached `num_loose_bvars`/`has_fvars`. 27 tests incl. translated nanoda level tests + de Bruijn laws. **Type-theory core landed (slice 2, commit e37da7b)**: `whnf` (beta/zeta), `def_eq` (lazy structural + Pi/Lam congruence + eta + proof irrelevance), and checking-mode `infer` (Sort/FVar/App/Lam/Pi/Let, IMax impredicativity) over the **environment-free fragment** — the kernel now TYPE-CHECKS terms (polymorphic identity infers `Π(α:Sort 0),α→α`, etc.). Faithful nanoda port; the env boundary (`Const`/δ, inductives/ι, projections, literal typing) errors explicitly (`KernelError`), never a wrong accept. 52 kernel tests. **Environment + Const δ landed (slice 3, commit f0f6e0d)**: non-inductive declarations (Axiom/Definition/Theorem/Opaque) with `ReducibilityHint`; `Environment` (deterministic `BTreeMap`); `add_declaration` is the trusted gate (type-checks each decl's type-is-a-sort + value `def_eq` declared type); universe instantiation; `infer(Const)`; δ-unfolding in `whnf`; faithful `lazy_delta_step` (height-based side choice, same-const short-circuit, Opaque/Axiom non-unfolding). The kernel now type-checks terms referencing globals (`id := λαx,x` admits + δ+β-reduces under application). 68 kernel tests. **Inductive layer started (slice 4, commit 4457594)**: `Declaration::{Inductive,Constructor,Recursor}` + `RecRule`; `add_inductive` (trusted gate: type whnf's to a Sort, constructor telescopes type-check + end in `I` + **non-recursive** field restriction); **recursor generation** (`I.rec : Π {motive}(minors…)(major), motive major`, with the generated type infer-self-checked) + **ι-reduction** (`I.rec … (c_i flds) → m_i flds`). Scoped to **non-recursive, non-parametric, non-indexed** inductives — enums (`Bool.rec` ι picks the right minor) + structures (`P.rec C m (mk x y) → m x y`); param/indexed/mutual + Prop-subsingleton large-elim DEFERRED (reject explicitly). **Recursive inductives landed (slice 5, commit 24607a9)**: DIRECT recursive fields (field type exactly `I`, e.g. `Nat.succ : Nat→Nat`) now admitted; `mk_recursor` adds one IH binder `motive f_j` per recursive field to each minor (`Nat.succ`'s minor = `Π(n:Nat)(ih:motive n), motive (succ n)`); recursive ι appends a recursive `I.rec … f_j` call per recursive field (`Nat.rec C z s (succ k) → s k (Nat.rec C z s k)`). **The kernel checks AND computes with `Nat` and binary trees** (end-to-end recursive normalization verified; recursor type infer-self-checks). Higher-order/reflexive fields, params, indices still rejected. 82 kernel tests. **Parametric inductives landed (slice 6, commit bc95c21)**: `add_inductive(num_params)` — leading binders are params (fixed across the family), recursive field = `I params` (generalizing bare `I`); recursor abstracts params before the motive and threads them through minors/IH/ctor-apps + recursive ι calls. **`List`/`Option`/`Prod`/`Sum` check + compute** (`List.rec α C cnil ccons (cons α a l) → ccons a l (List.rec … l)`; a length recursion normalizes; recursor types infer-self-check). Indices (`Eq`/`Vector`, a binder between params and the `Sort`) → `IndicesNotSupported` (deferred). 92 kernel tests. **Indexed inductives landed (slice 7, commit 223e81c)**: indices after params; the dependent motive ranges over indices + major; each minor applies the motive to the constructor's OWN index exprs; index-matching ι. **`Eq.rec` (the dependent eliminator used in every equality proof) generates, infer-self-checks, and ι-reduces on `refl`** (`Eq.rec α a motive m a (refl α a) → m`); an end-to-end transport/symmetry normalizes; a 2-ctor indexed family picks the right minor by index. Recursive-indexed (`Vector.cons`) → `RecursiveIndexedNotSupported` (deferred). 97 kernel tests. **The inductive layer now covers non-recursive + recursive + parametric + indexed — essentially all of Lean's inductive families** (bar recursive-indexed/nested/mutual + projections + literal typing + Prop-subsingleton elim). Next: **P3.7 Alethe→Lean reconstruction** (where this kernel finally checks reconstructed solver proofs — the destination-3 payoff) + the remaining minor inductive cases. |
-| P3.6 / TL2.2-TL2.6 | Projection representation, inference, reduction, exact K1 import, structure eta, and arbitrary-precision Nat storage | **DONE for the direct slices** — `Proj(NameId,u32,ExprId)` is structurally complete; checked metadata drives dependent inference and eta eligibility; WHNF selects constructor fields; format-3.1 translation admits/computes the exact official projection root with mutation rejection; symmetric eta passes native and pinned-Lean positive/rejecting controls; `NatLit(BigUint)` removes the fixed-width ceiling while literal typing remains fail-closed for TL2.7. Generated TL2.15 projection/reduction/eta fuzzing remains. The kernel gate passes 179 unit tests plus 29 integration cases across ten binaries; 16 importer tests pass. |
+| P3.6 / TL2.2-TL2.7 | Projection representation, inference, reduction, exact K1 import, structure eta, and checked arbitrary-precision Nat literals | **DONE for the direct slices** — `Proj(NameId,u32,ExprId)` is structurally complete; checked metadata drives dependent inference and eta eligibility; WHNF selects constructor fields; format-3.1 translation admits/computes the exact official projection root with mutation rejection; symmetric eta passes native and pinned-Lean controls; `NatLit(BigUint)` removes the width ceiling; checked bootstrap typing, constructor-offset equality, successor reduction, and recursor conversion admit/compute the exact official Nat root. Generated TL2.15 projection/reduction/eta and quotient semantics remain. The kernel gate passes 179 unit tests plus 35 integration cases across twelve binaries; 18 importer tests pass. |
 | P3.7 | Alethe→Lean reconstruction (proof terms) | WIP — **foundation laid (commit ab2e615)**: `axeyum_lean_kernel::build_logic_prelude` declares the standard Lean logical foundation (`True`/`False`/`And`/`Or`/`Iff`/`Eq`/`Not`) through the trusted gates, and the kernel **type-checks real proof terms** — And.intro, and-elim (via And.rec), Or case analysis, Eq symmetry transport (checks + ι-reduces on refl), modus ponens, ex-falso (False.rec), and a composite `And A B → And B A`. 15 proof tests. The kernel is a Lean-grade checker of real proofs. **Reconstruction started — Eq fragment (slice 1, commit 56709ef)**: `axeyum-solver` gained a dep on the leaf `axeyum-lean-kernel`; the new `reconstruct` module translates Alethe equality terms to Lean `Expr` (`(= a b)` → `Eq.{1} α a b`) and the **`eq_reflexive`/`eq_symmetric`/`eq_transitive`** Alethe rules into `Eq.rec` proof terms the **kernel type-checks** (`def_eq` against the translated conclusion — the kernel is the checker; a wrong term is rejected). End-to-end transitivity chain reconstructs + kernel-checks; 2 negative soundness tests (wrong conclusion rejected). 11 tests. **End-to-end EUF refutation reconstructed (slice 2, commit 7267b2d):** `reconstruct_qf_uf_proof` walks a REAL `prove_qf_uf_unsat_alethe` proof — `assume` (eq → `h:Eq`, diseq → `h:Not(Eq)`), `eq_transitive`/`eq_symmetric` (n-ary fold + reversed-edge flip), `eq_congruent` (unary, congrArg via `Eq.rec`), and the closing resolution to the empty clause → `h_ne h_eq : False` — into a Lean term the **kernel checks to `False`**. 7 end-to-end instances (transitivity `a=b∧b=c∧a≠c`, longer chain, reversed edge, depth-1 congruence `f(a)≠f(b)`) + 2 negative tests. 17 tests. **Propositional resolution reconstructed (slice 3, commit fc23d4c):** the clausal layer — atom → opaque `Prop`, `(cl l…)` → right-nested `Or`, `(cl)` → `False`; `reconstruct_resolution_proof` builds the resolvent via iterated `Or.rec` (constructive case-split; `em` declared for the classical commitment but unconsumed), pivot-scheduled for the emitter's arbitrary-order RUP hints. **A REAL emitted clausal proof reconstructs end-to-end** (UNSAT CNF → `solve_with_drat_proof` → LRAT → Alethe → kernel-checked `False`). 26 tests. **Both the EUF and the clausal-resolution fragments now close to kernel-checked `False`.** **Tseitin CNF-intro rules reconstructed (slice 4, commit 237d13b):** `reconstruct_cnf_intro_rule` builds all 12 gate-definitional tautologies (`and_pos/neg`, `or_pos/neg`, `equiv_pos1/2`+`neg1/2`, `xor_pos1/2`+`neg1/2`; `xor a b := Not(Iff a b)`) as kernel-checked classical-tautology proofs (em + Or.rec case-split + prelude eliminators); a composite feeds a reconstructed `and_neg` clause through the slice-3 resolution to `False`. 43 reconstruct tests. **P3.7 now covers EUF + clausal resolution + the Tseitin Boolean-gate layer.** **Bitwise QF_BV bitblast reconstructed (slice 5, commit 4b356b3):** bit model — each bit a Lean Prop, variable bit → opaque `((_ @bit_of i) x)`, const → `True`/`False`, `bvnot/and/or/xor` pointwise (`xor` = `Not(Iff)`), `@bit_of i (@bbterm bs)` → `bs[i]`. `reconstruct_bitblast_step` kernel-checks all 7 bitwise rules (`var`/`const`/`not`/`and`/`or`/`xor`/`equal`; the bit-iffs are reflexive under the pointwise model); non-bitwise → `UnsupportedRule`. `reconstruct_qf_bv_proof` walks a REAL `prove_qf_bv_unsat_alethe` bitwise proof → **kernel-checked `False`** (1-bit bvand w/ full cong/trans/`@bbterm` plumbing + width-2 eq). 55 reconstruct tests. **HONEST soundness boundary:** the bit-level Boolean refutation + each bitblast step's bit-iffs are GENUINELY kernel-checked, but the term-level `cong`/`trans`/`equiv` bridge (`(= bvterm @bbterm)` transport) enters resolution as out-of-band-verified clause hypotheses, not yet fused into the single `False` term. **Eq-transport bridge FUSED (slice 6, commit 8c19e23):** the bitwise QF_BV reconstruction is now a CLOSED proof — `False` derived from ONLY the input assumptions + prelude + `em`, **no bridge axioms** (asserted via `declared_axiom_roles()` = `[assume,assume,em]`). Input `(= s t)` → hypothesis `h:⟦B⟧` directly; equiv1/2 → genuine `¬B∨B` tautologies (not assumed); term-level cong/trans deferred (never load-bearing); bit-iffs kernel-checked up front. 58 reconstruct tests. **The bitwise QF_BV unsat fragment reconstructs to a fully-kernel-checked, axiom-free Lean `False` proof.** Remaining for full QF_BV: arithmetic bitblast (`bvadd`/`bvmul` carries). **LRA arithmetic prelude built (commit 6869e49):** `axeyum_lean_kernel::build_arith_prelude` declares an axiomatized linear ordered field (carrier `R`, `add/mul/neg/zero/one`, `le/lt`, order+additive+scaling axioms) through the trusted gate; a **baby-Farkas refutation kernel-checks to `False`** (`le a 0 ∧ le 1 a` → `lt 1 1` → `lt_irrefl` → False). 119 kernel tests. **VERIFIED CURRENT STATE (2026-06-20 — the above history understated coverage; confirmed by reading the dispatch at `reconstruct.rs:1334`):** the `prove_unsat_to_lean` dispatch now reconstructs **8 fragments** to kernel-checked `False` — **QF_BV (bitwise AND arithmetic: `bitblast_add` ripple-carry + `bvneg`/`bvmul`/`bvsub`/concat/extend, memoized-linear carry, closed over assume+em), QF_UF (EUF congruence), QF_UFBV, QF_ABV (via array elimination), datatypes (via simplification), ∀ (quantifier unsat), ∃ (skolem), and QF_LRA (general n-constraint arbitrary-rational `la_generic` Farkas — `try_general_farkas`/`try_mixed_farkas`/`try_strict_cycle`, λ-denominators cleared, ring cancellation via explicit kernel-checked `Eq` rewrites)**. Since `has_arith→Lra`, QF_LIA whose LP-relaxation is Farkas-infeasible ALSO reconstructs (ℤ⊂ℝ). **Integer equality-system infeasibility is ALSO reconstructed** — `int_reconstruct::reconstruct_diophantine_to_lean_module` (ADR-0042, wired into the dispatch at `reconstruct.rs:3723`) turns the `DiophantineCertificate` (P2.4) into a kernel-checked Lean `False` over the discretely-ordered ring `IntPrelude` (encode each `Eᵢ` as `h:Eq Z`, derive `Σλᵢ·Eᵢ`, reduce to `g·m'=r, 0<r<g`, close on the discreteness axiom `no_int_between`); `diophantine_lean_reconstruct.rs` covers it. **Genuine remaining proof gaps (the hard frontier):** integer *inequality* cutting-plane QF_LIA (LP-feasible-but-no-integer-point over inequalities via Gomory/cube cuts — the Diophantine route above is equality-systems only), NIA/NRA proofs (bar the degree-2 SOS fragment, which reconstructs), strings, FP-arith — each genuinely hard. |
 
 > P3.7 update (2026-06-27): `prove_unsat_to_lean_module` and
@@ -6652,6 +6681,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.7 checked Lean Nat literal semantics.** Accepted
+  ADR-0347; required an independently checked canonical `Nat` bootstrap before
+  literal typing; implemented arbitrary-precision constructor-offset equality,
+  successor reduction, and one-layer recursor conversion; admitted and computed
+  the exact official Nat root as ten declarations with zero axioms; added
+  bootstrap, above-`u128`, false-equality, recursor, importer, seam-fuzz, and
+  pinned-Lean controls. Kernel 179+35, importer 18, compatibility/prototype 14,
+  and the required official Lean differential pass. The compatibility contract
+  advances to five passing profiles, one decline, and eight codes. TL1.3
+  transactional publication is next.
 
 - **2026-07-22 — Completed TL2.6 arbitrary-precision Lean Nat literal
   storage.** Accepted ADR-0346; replaced the public `u128` payload with

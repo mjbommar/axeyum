@@ -91,15 +91,17 @@ state.
 > exclusions; a required local run against pinned Lean 4.30 accepts the
 > reconstruction by `rfl` and rejects the duplicated-field mutation. The
 > bounded kernel gate at that checkpoint recorded 179 unit tests and 25
-> integration cases across nine binaries. TL2.6 now replaces `Lit::Nat(u128)`
-> with canonical `NatLit(BigUint)` storage. Values below, at, and above `2^128`
-> plus a much larger decimal survive parsing, interning, structural operations,
-> Lean rendering, importer validation, and the expanded deterministic seam-fuzz
-> family. Inference still fails closed, and the Nat root's exact first decline
-> is now `literal-nat-typing` at line 125. The kernel gate records 179 unit
-> tests and 29 integration cases across ten binaries; 16 importer tests pass.
-> Resume with TL2.7 literal typing and constructor/literal conversion, plus the
-> remaining
+> integration cases across nine binaries. TL2.6 replaces `Lit::Nat(u128)` with
+> canonical `NatLit(BigUint)` storage. TL2.7 now types those literals only
+> against a structurally checked canonical `Nat` bootstrap and implements
+> Lean-compatible constructor-offset equality, successor reduction, and one-
+> layer recursor conversion. The exact official Nat root translates all 90
+> expressions, admits ten declarations with zero axioms, and computes to `37`;
+> renamed/reordered/malformed bootstraps reject, values above `u128` stay exact,
+> and a required pinned-Lean 4.30 differential agrees on positive and false
+> controls. The kernel gate passes 179 unit tests and 35 integration cases
+> across twelve binaries; 18 importer tests pass. Resume with TL1.3
+> transactional completed-environment publication, plus the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -120,8 +122,8 @@ state.
 > exits to L0-L10. TL0.1 is now closed with ADR-0167/ADR-0345 accepted. TL0.2's
 > [machine-readable assurance contract](docs/plan/lean-compatibility-v1.json)
 > and [generated matrix](docs/plan/generated/lean-compatibility.md) retain 12
-> exact rows across eight independent assurance fields, four currently passing
-> profile rows, two explicit import declines, and nine source-bound decline
+> exact rows across eight independent assurance fields, five currently passing
+> profile rows, one explicit import decline, and eight source-bound decline
 > codes; six mutation/contract tests reject illegal parser/oracle-to-admission
 > credit. TL0.4 is now closed by the 65-row runtime-derived
 > [axiom ledger](docs/plan/generated/lean-axiom-ledger.md): seven tests and the
@@ -134,8 +136,8 @@ state.
 > partial until generated projection/reduction/eta and quotient semantic
 > families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
-> arbitrary-precision Nat storage are complete; execute TL2.7 Nat literal
-> typing next. Native parser/macros,
+> arbitrary-precision Nat storage and TL2.7 checked Nat literal semantics are
+> complete; execute TL1.3 transactional publication next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

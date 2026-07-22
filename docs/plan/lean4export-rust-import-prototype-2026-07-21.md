@@ -173,7 +173,7 @@ returns successfully.
 | `bvar`, `sort`, `const`, `app`, `lam`, `forallE`, `letE` | translated | binder mode and every child reference validated |
 | `mdata` | semantically erased to its referenced expression | metadata object still shape-checked |
 | `proj` | translated and kernel checked | TL2.2-TL2.4 representation/inference/reduction admit and compute the official root; TL2.5 structure eta is now separately live and does not change this import population |
-| `natVal` | typed decline `literal-nat-bignum-and-typing` | bignum must precede literal typing |
+| `natVal` | translated and kernel checked | TL2.6 provides arbitrary-precision storage; TL2.7 types only against the checked canonical `Nat` bootstrap and implements constructor/literal conversion |
 | `strVal` | typed decline `literal-string-typing` | kernel currently rejects literal inference |
 | safe `axiom` | kernel admitted and axiom name reported | type must check; proposition remains an assumption |
 | safe `def` | kernel admitted | hint translated; value must check against type |
@@ -226,7 +226,8 @@ cover:
 | official flat fixture | 5 records / 8 declarations admitted | first end-to-end import slice |
 | official direct-recursive fixture | 5 records / 11 declarations, zero axioms | direct and parametric recursion cross the official seam |
 | official projection fixture | 61 expressions / 9 declarations admitted; imported selector computes | exact K1 projection root closes |
-| remaining official blocker fixtures | Nat now declines on literal typing at line 125; quotient declines on its package | clearing projection exposes the next exact blocker |
+| official Nat fixture | 90 expressions / 10 declarations admitted, zero axioms; imported definition computes to `37` | exact K1 Nat-literal root closes under bootstrap and above-`u128` mutation controls |
+| remaining official blocker fixtures | quotient declines on its package; the large String closure needs a refreshed current blocker | no broader closure credit |
 | repeated import | identical report and declaration debug projection | deterministic construction |
 | unknown record | malformed rejection at line 2 | no open-world guessing |
 | forward expression reference | malformed rejection at line 2 | topological stream contract |
@@ -280,8 +281,8 @@ The initial parts of L1 and L2 are now implemented together:
 L1 is not complete because there is no fuzz target, axiom type digest, completed
 wire-model separation for every unsupported variant, truncation/duplicate-ID/
 deep-nesting matrix, or large-stream checkpoint/publication protocol. L2 is not
-complete because projections, literal typing, quotients, recursive-indexed,
-mutual, nested, and reflexive groups remain explicit declines.
+complete because String literals, quotients, recursive-indexed, mutual, nested,
+and reflexive groups remain explicit declines.
 
 ## Next evidence-bearing increments
 
@@ -297,10 +298,11 @@ mutual, nested, and reflexive groups remain explicit declines.
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. **Projection/eta slices DONE (TL2.2-TL2.5):** representation, dependent
+6. **Projection/eta/Nat slices DONE (TL2.2-TL2.7):** representation, dependent
    inference, constructor reduction, wire translation, exact projection-root
-   admission/computation, literal-root rerun, and separately gated structure eta
-   are complete. Execute TL2.6 bignum storage before Nat literal typing.
+   admission/computation, separately gated structure eta, arbitrary-precision
+   Nat storage, checked literal semantics, and exact Nat-root admission/
+   computation are complete. Execute TL1.3 transactional publication next.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

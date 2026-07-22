@@ -142,12 +142,14 @@ The roadmap is backed by implementation rather than only a feature list:
    types and iota rules after universe-binder alpha-renaming;
 6. theorem-body and recursor-rule mutations reject;
 7. exact projection, Nat, String, and quotient closures established projection
-   as the first measured kernel slice; TL2.2-TL2.4 now close its exact K1 root,
-   while the committed Nat root advances to literal typing and the unretained
-   String root awaits a refreshed first-blocker measurement;
-8. focused current validation passes 179 kernel unit tests, 17 kernel
-   integration cases, one kernel doctest, and fourteen importer tests under the
-   repository's 4 GiB cap;
+   as the first measured kernel slice; TL2.2-TL2.4 close its exact K1 root and
+   TL2.6-TL2.7 close the committed Nat root with checked arbitrary-precision
+   constructor/literal semantics, while the unretained String root awaits a
+   refreshed first-blocker measurement;
+8. focused current validation passes 179 kernel unit tests, 35 kernel
+   integration cases across twelve binaries, and eighteen importer tests under
+   the repository's 4 GiB cap, including a required pinned-Lean Nat-literal
+   differential;
 9. the separate official-source lane has a committed fail-closed 71/71 Lean
    4.30 representative-family result, without converting it into broad import,
    mathlib, or ecosystem credit.

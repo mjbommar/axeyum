@@ -62,7 +62,7 @@ class ProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(PROBE.ProbeError, "forward or missing reference"):
             PROBE.probe_lines(lines(META, {"ie": 0, "app": {"fn": 1, "arg": 1}}))
 
-    def test_projection_literal_and_quotient_are_blockers(self) -> None:
+    def test_projection_string_literal_and_quotient_are_blockers(self) -> None:
         records = lines(
             META,
             {"in": 1, "str": {"pre": 0, "str": "T"}},
@@ -77,7 +77,6 @@ class ProbeTests(unittest.TestCase):
             set(result.blockers),
             {
                 "expr-projection",
-                "literal-nat-typing",
                 "literal-string-typing",
                 "quotient-package",
             },

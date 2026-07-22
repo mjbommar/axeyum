@@ -49,13 +49,13 @@ fn interning_and_structural_operations_preserve_the_exact_bignum() {
 }
 
 #[test]
-fn representation_does_not_preempt_tl2_7_literal_typing() {
+fn representation_does_not_self_authorize_the_nat_bootstrap() {
     let mut kernel = Kernel::new();
     let literal = kernel.lit(Lit::Nat(
         NatLit::from_decimal(AT_2_128).expect("valid decimal natural"),
     ));
     assert!(matches!(
         kernel.infer(literal),
-        Err(KernelError::UnsupportedLit)
+        Err(KernelError::NatLiteralBootstrapMismatch { .. })
     ));
 }

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "title": "Axeyum Lean 4.30 compatibility assurance contract",
-  "as_of": "2026-07-21",
+  "as_of": "2026-07-22",
   "target": {
     "lean_version": "4.30.0",
     "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
@@ -105,13 +105,6 @@
       "owner": "axeyum-lean-kernel",
       "source_path": "crates/axeyum-lean-import/src/lib.rs",
       "source_marker": "\"inductive-reflexive\""
-    },
-    {
-      "code": "literal-nat-typing",
-      "meaning": "Natural literals have arbitrary-precision storage but await kernel typing and reduction.",
-      "owner": "axeyum-lean-kernel",
-      "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"literal-nat-typing\""
     },
     {
       "code": "literal-string-typing",
@@ -251,15 +244,15 @@
       "profile": "K1-import",
       "states": {
         "parsed": "succeeded",
-        "translated": "declined",
-        "admitted": "not_attempted",
+        "translated": "succeeded",
+        "admitted": "succeeded",
         "official_admitted": "succeeded",
         "source_elaborated": "succeeded",
         "proof_checked": "not_attempted",
         "workflow_reproduced": "not_attempted",
         "runtime_reproduced": "not_attempted"
       },
-      "decline_codes": ["literal-nat-typing"],
+      "decline_codes": [],
       "evidence": [
         {
           "kind": "fixture",
@@ -269,10 +262,10 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
-          "detail": "After arbitrary-precision decimal validation, the stable first decline is literal-nat-typing at line 125."
+          "detail": "TL2.7 translates all 90 expressions, admits ten declarations with zero axioms, reduces importNatLiteral to 37, preserves values above u128, and rejects a renamed Nat.zero bootstrap."
         }
       ],
-      "residual": "Projection and arbitrary-precision Nat storage are cleared; literal typing is now the exact first blocker."
+      "residual": "This exact K1 Nat-literal root passes. General accelerated Nat operations remain TL2.8, string literals remain TL2.9, and no broader Init, Std, or mathlib closure receives credit."
     },
     {
       "id": "lean4export-projection-root",

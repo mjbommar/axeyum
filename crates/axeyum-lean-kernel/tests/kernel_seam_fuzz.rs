@@ -81,6 +81,8 @@ struct FuzzSummary {
     data_field_hits: [usize; 3],
     literal_kind_hits: [usize; 2],
     literal_corner_hits: [usize; LiteralCorner::COUNT],
+    typed_nat_literal_hits: usize,
+    rejected_string_literal_hits: usize,
 }
 
 impl Default for FuzzSummary {
@@ -99,6 +101,8 @@ impl Default for FuzzSummary {
             data_field_hits: [0; 3],
             literal_kind_hits: [0; 2],
             literal_corner_hits: [0; LiteralCorner::COUNT],
+            typed_nat_literal_hits: 0,
+            rejected_string_literal_hits: 0,
         }
     }
 }
@@ -148,6 +152,13 @@ impl FuzzSummary {
         assert!(
             self.literal_corner_hits.iter().all(|&hits| hits > 0),
             "{self:#?}"
+        );
+        assert!(self.typed_nat_literal_hits > 0, "{self:#?}");
+        assert!(self.rejected_string_literal_hits > 0, "{self:#?}");
+        assert_eq!(
+            self.typed_nat_literal_hits + self.rejected_string_literal_hits,
+            self.literal_cases,
+            "every generated literal must reach exactly one typed boundary: {self:#?}"
         );
     }
 }
@@ -618,12 +629,11 @@ impl LiteralCorner {
     }
 }
 
-/// Wrap an intentionally untyped literal beneath beta/zeta redexes. WHNF may
-/// reduce the wrapper structurally, but inference/admission must still reach the
-/// literal and return `UnsupportedLit` until TL2.7 lands.
-fn wrap_untyped_literal(k: &mut Kernel, literal: ExprId, depth: usize) -> ExprId {
+/// Wrap a literal beneath beta/zeta redexes whose annotation is its expected
+/// type for the current profile. String inference still fails at the literal;
+/// Nat inference must traverse a well-typed wrapper and return `Nat`.
+fn wrap_literal(k: &mut Kernel, literal: ExprId, annotation: ExprId, depth: usize) -> ExprId {
     let anon = k.anon();
-    let annotation = k.sort_zero();
     let mut current = literal;
     for step in 0..depth {
         let body = k.bvar(0);
@@ -674,16 +684,28 @@ fn fuzz_literals_and_reduction(summary: &mut FuzzSummary) {
             "{case_name}"
         );
 
-        let wrapped = wrap_untyped_literal(&mut k, literal, wrapper_depth);
+        let annotation = if kind_index == 0 {
+            k.const_(logic.nat, vec![])
+        } else {
+            k.sort_zero()
+        };
+        let wrapped = wrap_literal(&mut k, literal, annotation, wrapper_depth);
         assert_eq!(
             k.whnf(wrapped),
             literal,
             "reduction lost literal for {case_name}"
         );
-        assert!(
-            matches!(k.infer(wrapped), Err(KernelError::UnsupportedLit)),
-            "literal escaped fail-closed inference for {case_name}"
-        );
+        if kind_index == 0 {
+            let inferred = k.infer(wrapped).expect("Nat literal must infer");
+            assert_eq!(inferred, annotation, "wrong Nat type for {case_name}");
+            summary.typed_nat_literal_hits += 1;
+        } else {
+            assert!(
+                matches!(k.infer(wrapped), Err(KernelError::UnsupportedLit)),
+                "String literal escaped fail-closed inference for {case_name}"
+            );
+            summary.rejected_string_literal_hits += 1;
+        }
 
         let false_type = k.const_(logic.false_, vec![]);
         assert_false_admission_rejected(&mut k, false_type, wrapped, &case_name);

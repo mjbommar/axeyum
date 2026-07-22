@@ -22,7 +22,7 @@ use std::fmt;
 use std::io::{self, BufRead, Read};
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, KernelError, LevelId, NameId, NatLit, RecRule,
+    BinderInfo, Declaration, ExprId, Kernel, KernelError, LevelId, Lit, NameId, NatLit, RecRule,
     ReducibilityHint,
 };
 use serde_json::{Map, Value};
@@ -460,13 +460,13 @@ impl<'kernel> ImportState<'kernel> {
             }
             "natVal" => {
                 let digits = string(required(record, kind, line)?, line, kind)?;
-                NatLit::from_decimal(digits).ok_or_else(|| {
+                let value = NatLit::from_decimal(digits).ok_or_else(|| {
                     malformed(
                         line,
                         "natVal: expected a non-empty decimal natural-number string",
                     )
                 })?;
-                return Err(unsupported(line, "literal-nat-typing"));
+                self.kernel.lit(Lit::Nat(value))
             }
             "strVal" => return Err(unsupported(line, "literal-string-typing")),
             _ => unreachable!(),

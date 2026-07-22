@@ -2,7 +2,7 @@
 
 Status: **foundation phases (0–7) landed**; active execution has moved to the
 multi-track Z3 + Lean parity plan.
-Last updated: 2026-07-21
+Last updated: 2026-07-22
 
 > **Where the live plan is now.** This file is the *research/foundation* roadmap
 > (Phases 0–7 — the decidable finite-domain + arithmetic foundation, now built).
@@ -49,13 +49,14 @@ Last updated: 2026-07-21
 > structure eta for exactly saturated constructors of checked one-constructor,
 > zero-index, non-recursive inductives. Seven native control families pass, and
 > pinned Lean 4.30 accepts the reconstruction while rejecting its duplicated-
-> field mutation. TL2.6 now replaces the `u128` ceiling with canonical
-> `NatLit(BigUint)` storage: below/at/above-`2^128` values and a much larger
-> decimal survive interning, structural operations, rendering, importer
-> validation, and the expanded seam-fuzz family without granting typing credit.
-> The official Nat root now reaches `literal-nat-typing` at line 125.
-> Generated projection/reduction/eta and quotient semantic seams remain
-> uncredited; TL2.7 Nat literal typing is next.
+> field mutation. TL2.6 replaces the `u128` ceiling with canonical
+> `NatLit(BigUint)` storage. TL2.7 types literals only against a checked
+> canonical `Nat` bootstrap and adds constructor-offset equality, successor
+> reduction, and one-layer recursor conversion. The exact official Nat root now
+> admits ten declarations with zero axioms and computes to `37`; bootstrap
+> mutations reject and a pinned-Lean 4.30 differential passes. Generated
+> projection/reduction/eta and quotient semantic seams remain uncredited;
+> TL1.3 transactional completed-environment publication is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
@@ -627,11 +628,12 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   official flat fixture as eight checked declarations and the direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with no axioms. It compares
   independently generated recursors after binder-correct universe alpha-renaming
-  under a now-fourteen-test importer matrix. A four-root official dependency
+  under the importer mutation matrix. A four-root official dependency
   census made projection the first product decline; TL2.2-TL2.4 now close its
-  exact nine-declaration root, and the committed Nat root advances to line-125
-  literal typing. Quotient remains a separate closure; the unretained String
-  root awaits a post-projection rerun. Broader
+  exact nine-declaration root, and TL2.6-TL2.7 close the committed Nat root as
+  ten declarations with zero axioms and checked arbitrary-precision
+  constructor/literal semantics. Quotient remains a separate closure; the
+  unretained String root awaits a refreshed rerun. Broader
   dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Native source,
   elaboration, modules/Lake, a version-specific untrusted `.olean` reader, LSP,

@@ -168,24 +168,60 @@ fn official_projection_fixture_is_independently_admitted_and_computes() {
 }
 
 #[test]
-fn official_blocker_fixtures_have_stable_first_declines() {
-    let cases = [
-        // Projection is now translated/admitted, exposing the literal record as
-        // the exact next blocker in this dependency closure.
-        (NAT_LITERAL_FIXTURE, 125, "literal-nat-typing"),
-        (QUOTIENT_FIXTURE, 65, "quotient-package"),
-    ];
-    for (fixture, expected_line, expected_code) in cases {
-        let error = import(fixture).unwrap_err();
-        assert!(
-            matches!(
-                error,
-                ImportError::Unsupported { line, code }
-                    if line == expected_line && code == expected_code
-            ),
-            "{error:?}",
-        );
-    }
+fn official_nat_literal_fixture_is_independently_admitted_and_computes() {
+    let (mut kernel, report) = import(NAT_LITERAL_FIXTURE).expect("Nat literal closure admits");
+    assert_eq!(
+        (
+            report.names,
+            report.levels,
+            report.expressions,
+            report.declaration_records,
+            report.admitted_declarations,
+        ),
+        (30, 4, 90, 5, 10)
+    );
+    assert!(report.axioms.is_empty());
+    let admitted: Vec<_> = kernel
+        .environment()
+        .iter()
+        .map(|(_, declaration)| kernel.display_name(declaration.name()).to_string())
+        .collect();
+    assert_eq!(
+        admitted,
+        [
+            "Nat",
+            "Nat.zero",
+            "Nat.succ",
+            "Nat.rec",
+            "OfNat",
+            "OfNat.mk",
+            "OfNat.rec",
+            "OfNat.ofNat",
+            "instOfNatNat",
+            "importNatLiteral",
+        ]
+    );
+
+    let anon = kernel.anon();
+    let imported_name = kernel.name_str(anon, "importNatLiteral");
+    let imported = kernel.const_(imported_name, vec![]);
+    let reduced = kernel.whnf(imported);
+    assert_eq!(kernel.render_lean(reduced), "37");
+}
+
+#[test]
+fn quotient_fixture_retains_its_stable_first_decline() {
+    let error = import(QUOTIENT_FIXTURE).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            ImportError::Unsupported {
+                line: 65,
+                code: "quotient-package"
+            }
+        ),
+        "{error:?}",
+    );
 }
 
 #[test]
@@ -197,18 +233,17 @@ fn nat_literal_wire_values_are_validated_without_fixed_width_narrowing() {
         "13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031",
     ];
     for value in values {
-        let text = format!("{}\n{{\"ie\":0,\"natVal\":\"{value}\"}}\n", metadata());
-        let error = import(&text).unwrap_err();
-        assert!(
-            matches!(
-                error,
-                ImportError::Unsupported {
-                    line: 2,
-                    code: "literal-nat-typing"
-                }
-            ),
-            "{value}: {error:?}"
-        );
+        let fixture =
+            NAT_LITERAL_FIXTURE.replace(r#""natVal":"37""#, &format!(r#""natVal":"{value}""#));
+        assert_ne!(fixture, NAT_LITERAL_FIXTURE);
+        let (mut kernel, report) =
+            import(&fixture).expect("arbitrary-precision Nat closure admits");
+        assert_eq!(report.admitted_declarations, 10);
+        let anon = kernel.anon();
+        let imported_name = kernel.name_str(anon, "importNatLiteral");
+        let imported = kernel.const_(imported_name, vec![]);
+        let reduced = kernel.whnf(imported);
+        assert_eq!(kernel.render_lean(reduced), value);
     }
 }
 
@@ -226,6 +261,27 @@ fn malformed_nat_literal_wire_values_reject_before_the_typing_boundary() {
     let text = format!("{}\n{{\"ie\":0,\"natVal\":1}}\n", metadata());
     let error = import(&text).unwrap_err();
     assert!(matches!(error, ImportError::Malformed { line: 2, .. }));
+}
+
+#[test]
+fn renamed_nat_bootstrap_rejects_literal_use_at_the_kernel_gate() {
+    let mutated = NAT_LITERAL_FIXTURE.replace(
+        r#"{"in":2,"str":{"pre":1,"str":"zero"}}"#,
+        r#"{"in":2,"str":{"pre":1,"str":"zeroRenamed"}}"#,
+    );
+    assert_ne!(mutated, NAT_LITERAL_FIXTURE);
+    let error = import(&mutated).unwrap_err();
+    assert!(
+        matches!(
+            error,
+            ImportError::Kernel {
+                line: 130,
+                ref declaration,
+                source: KernelError::NatLiteralBootstrapMismatch { .. },
+            } if declaration == "importNatLiteral"
+        ),
+        "{error:?}"
+    );
 }
 
 #[test]

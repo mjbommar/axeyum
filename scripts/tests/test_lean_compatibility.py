@@ -34,7 +34,8 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         second = GEN.render(copy.deepcopy(self.data))
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
-        self.assertIn("`literal-nat-typing`", first)
+        self.assertIn("`literal-string-typing`", first)
+        self.assertNotIn("`literal-nat-typing`", first)
 
     def test_translation_cannot_receive_credit_without_parsing(self) -> None:
         row = self.row("lean4export-flat-fixture")
@@ -51,14 +52,14 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         )
 
     def test_proof_credit_requires_independent_admission(self) -> None:
-        row = self.row("lean4export-nat-literal-root")
+        row = self.row("planned-native-proof-profile")
         row["states"]["proof_checked"] = "succeeded"
         self.assertTrue(
             any("proof checking requires admitted=succeeded" in failure for failure in self.failures())
         )
 
     def test_declines_require_registered_codes_and_codes_require_declines(self) -> None:
-        row = self.row("lean4export-nat-literal-root")
+        row = self.row("lean4export-quotient-root")
         row["decline_codes"] = []
         self.assertTrue(
             any("declined assurance requires a decline code" in failure for failure in self.failures())
@@ -66,13 +67,13 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
         self.data = GEN.load_manifest()
         row = self.row("lean4export-flat-fixture")
-        row["decline_codes"] = ["literal-nat-typing"]
+        row["decline_codes"] = ["quotient-package"]
         self.assertTrue(
             any("decline code without a declined assurance" in failure for failure in self.failures())
         )
 
         self.data = GEN.load_manifest()
-        row = self.row("lean4export-nat-literal-root")
+        row = self.row("lean4export-quotient-root")
         row["decline_codes"] = ["invented-code"]
         self.assertTrue(
             any("unregistered decline codes" in failure for failure in self.failures())
