@@ -1188,9 +1188,29 @@ covers that we declined on:
    through `evaluate_trig` so special-angle inverse-trig endpoints fold (`atan(−1/√3)→−π/6`). Closes
    `∫₀^∞ 1/(1+x³)=2π/(3√3)`, `∫₀^∞ 1/((x+1)(x+2))=ln 2`, `∫₀^{√3} 1/(1+x²)=π/3`.
 
-**454 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Known next gaps: general-`a` Gaussian
-(non-square `a` needs the erf antiderivative with a surd `√a`), and surd-coefficient combining-logs
-(`∫_{−∞}^∞ 1/(x⁴+1)`, whose real factorization has `√2` coefficients — needs an atom-aware polynomial
-in the log-sum handler). Non-integration frontier unchanged: multivariate factorization, Puiseux,
-Zeilberger, ℚ(i) as a first-class type, Gamma/digamma heads (polygamma tower), the Abs/sign
-assumptions layer, and the Lean/Mathlib theorem-proving axis.
+**454 unit + 143 doctests, clippy-pedantic clean, WASM-green.**
+
+**Entry 37b — quartic denominators + the surd combining-log completion (same 454-test count; +3 features):**
+- **`factor` now returns the full ℚ-irreducible factorization.** It peeled rational-root linear
+  factors then dumped the degree-≥2 residual whole; now that residual is routed through the complete
+  Berlekamp–Zassenhaus `factor_expr`, so `x⁴+x²+1=(x²+x+1)(x²−x+1)`, `x⁴+4=(x²+2x+2)(x²−2x+2)`.
+- **`∫ k/(x⁴+px²+q)` via the real (surd) quadratic factorization** (`integrate_even_quartic_denominator`),
+  which lies beyond the ℚ-partial-fraction path. Case A (`p²<4q`): `D=(x²+αx+β)(x²−αx+β)`, `β=√q`,
+  `α=√(2β−p)`, decomposition `A=1/(2αβ), B=1/(2β)` → `ln`+`atan` (shared `√(2β+p)`). Case B (`p²>4q`,
+  `p>0`): `D=(x²+β₁)(x²+β₂)` → `atan/√βᵢ`. Constant numerator, backed by `prove_derivative` (the surd
+  zero-test verifies the `√`-atoms; a nested-surd `α=√(2√q−p)` case like `x⁴+2` declines honestly). The
+  constructed antiderivative is `fold_elementary_constants`+`simplify_radicals`'d so `√(2·√1−0)` keys as
+  the canonical `√2` atom (else the zero-test sees an opaque unrelated atom and rejects). Closes
+  `∫1/(x⁴+1)`, `∫1/(x⁴+9)`, `∫1/(x⁴+16)`.
+- **Surd-coefficient combining-logs** → the famous `∫_{−∞}^∞ 1/(x⁴+1)=π/√2`. Generalized
+  `limit_log_sum_at_infinity` from rational to symbolic coefficients: the real factors give log terms
+  whose polynomials (`x²±√2x+1`) have surd middle coefficients but *rational leading coeff* (=1). New
+  `poly_leading_in_var` (degree+leading via `monomial_degree_coeff`, surd-tolerant) and
+  `parse_log_polynomial_term` (CasExpr coefficient); the convergence test `Σcᵢ·degᵢ=0` is now the
+  symbolic zero-test. `flatten_add_terms` gained `Neg`/constant-`Div` distribution and the handler
+  `expand`s first, so `c·(lnP−lnQ)` and `(…)/c` split into per-log terms.
+
+Known next gaps: general-`a` Gaussian (surd `√a` erf antiderivative), even-numerator quartics
+(`∫x²/(x⁴+1)` — the finder is constant-numerator), nested-surd quartics (`x⁴+2`). Non-integration
+frontier unchanged: multivariate factorization, Puiseux, Zeilberger, ℚ(i) as a first-class type,
+Gamma/digamma heads (polygamma tower), the Abs/sign assumptions layer, and the Lean/Mathlib axis.
