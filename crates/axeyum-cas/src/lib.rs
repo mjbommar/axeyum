@@ -6385,6 +6385,35 @@ fn trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
     }
 }
 
+/// If `expr` carries an overall negative sign — a `Neg`, a negative `Const`, or a
+/// product with an odd number of negative constant/`Neg` factors — return its
+/// non-negated form; otherwise `None`. Used for even/odd trig argument folding.
+fn strip_negation(expr: &CasExpr) -> Option<CasExpr> {
+    match expr {
+        CasExpr::Neg(inner) => Some((**inner).clone()),
+        CasExpr::Const(c) if *c < Rational::zero() => Some(CasExpr::Const(c.checked_neg()?)),
+        CasExpr::Mul(factors) => {
+            let mut negative = false;
+            let mut rebuilt = Vec::with_capacity(factors.len());
+            for factor in factors {
+                match factor {
+                    CasExpr::Const(c) if *c < Rational::zero() => {
+                        negative = !negative;
+                        rebuilt.push(CasExpr::Const(c.checked_neg()?));
+                    }
+                    CasExpr::Neg(inner) => {
+                        negative = !negative;
+                        rebuilt.push((**inner).clone());
+                    }
+                    other => rebuilt.push(other.clone()),
+                }
+            }
+            negative.then_some(CasExpr::Mul(rebuilt))
+        }
+        _ => None,
+    }
+}
+
 /// Evaluate the trigonometric heads `sin`, `cos`, `tan` at rational multiples of
 /// the reserved constant `pi` to their **exact** values (`sin(π/6) = 1/2`,
 /// `cos(π/4) = √2/2`, `tan(π/3) = √3`), throughout an expression. Every multiple of
@@ -6408,13 +6437,30 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) => {
             let inner = evaluate_trig(arg);
-            trig_special_value(*func, &inner)
-                .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+            // Even/odd argument folding: `cos(−u)=cos u`, `sin(−u)=−sin u`,
+            // `tan(−u)=−tan u` — canonicalize to a non-negated argument.
+            if let Some(positive) = strip_negation(&inner) {
+                let folded = evaluate_trig(&CasExpr::Unary(*func, Box::new(positive)));
+                if *func == UnaryFunc::Cos {
+                    folded
+                } else {
+                    CasExpr::Neg(Box::new(folded))
+                }
+            } else {
+                trig_special_value(*func, &inner)
+                    .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+            }
         }
         CasExpr::Unary(func @ (UnaryFunc::Atan | UnaryFunc::Asin | UnaryFunc::Acos), arg) => {
             let inner = evaluate_trig(arg);
-            inverse_trig_special_value(*func, &inner)
-                .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+            // `atan`/`asin` are odd; fold out a negated argument (`acos` is not odd).
+            match strip_negation(&inner) {
+                Some(positive) if *func != UnaryFunc::Acos => {
+                    CasExpr::Neg(Box::new(evaluate_trig(&CasExpr::Unary(*func, Box::new(positive)))))
+                }
+                _ => inverse_trig_special_value(*func, &inner)
+                    .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner))),
+            }
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(evaluate_trig(arg))),
         CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(evaluate_trig).collect()),
@@ -9746,6 +9792,107 @@ fn definite_log_trig_integral(
     None
 }
 
+/// Rewrite every `tan(u)` head to `sin(u)/cos(u)` throughout `expr` (a
+/// denotation-preserving identity), leaving other heads untouched.
+fn rewrite_tan_as_sin_cos(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Tan, arg) => {
+            let inner = rewrite_tan_as_sin_cos(arg);
+            CasExpr::Unary(UnaryFunc::Sin, Box::new(inner.clone()))
+                / CasExpr::Unary(UnaryFunc::Cos, Box::new(inner))
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(rewrite_tan_as_sin_cos(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(rewrite_tan_as_sin_cos(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(rewrite_tan_as_sin_cos(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(rewrite_tan_as_sin_cos).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(rewrite_tan_as_sin_cos).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(rewrite_tan_as_sin_cos(a)),
+            Box::new(rewrite_tan_as_sin_cos(b)),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Distribute a constant denominator inside every trig argument so that
+/// [`expand_trig`] can decompose it: `sin((π−2x)/2) → sin(π/2 − x)`. Converts a
+/// trig argument `n/c` (`c` constant) to `(1/c)·n` and [`expand`]s it into a sum.
+fn distribute_trig_args(expr: &CasExpr) -> CasExpr {
+    let fix_arg = |arg: &CasExpr| -> CasExpr {
+        let inner = distribute_trig_args(arg);
+        let scaled = match &inner {
+            CasExpr::Div(num, den) => match &**den {
+                CasExpr::Const(c) if !c.is_zero() => {
+                    match Rational::integer(1).checked_div(*c) {
+                        Some(inv) => CasExpr::Mul(vec![CasExpr::Const(inv), (**num).clone()]),
+                        None => inner.clone(),
+                    }
+                }
+                _ => inner.clone(),
+            },
+            _ => inner.clone(),
+        };
+        expand(&scaled).unwrap_or(scaled)
+    };
+    match expr {
+        CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) => {
+            CasExpr::Unary(*func, Box::new(fix_arg(arg)))
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(distribute_trig_args(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(distribute_trig_args(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(distribute_trig_args(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(distribute_trig_args).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(distribute_trig_args).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(distribute_trig_args(a)),
+            Box::new(distribute_trig_args(b)),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// **Reflection / King's-rule** definite integrals: `∫_a^b f dx = ∫_a^b f(a+b−x) dx`
+/// (the substitution `u = a+b−x`), so when `f(x) + f(a+b−x)` reduces to a **constant**
+/// `C`, the integral equals `C·(b−a)/2`. This is a genuine proof, not a lookup: the
+/// reflected sum is reduced by identity-preserving transforms only (`tan→sin/cos`,
+/// angle-addition `expand_trig`, exact `evaluate_trig` with even/odd argument folding,
+/// `simplify`); a **var-free** reduced form certifies the sum is constant.
+///
+/// Handles the symmetric-denominator classics `∫₀^{π/2} 1/(1+tanⁿ x) = π/4`,
+/// `∫₀^{π/2} sinⁿx/(sinⁿx+cosⁿx) = π/4`. A numeric quadrature cross-check guards
+/// against a formally-symmetric but non-integrable integrand.
+fn definite_reflection_symmetry(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    // Reflected integrand `f(a + b − x)`.
+    let reflected_point = simplify(&(lower.clone() + upper.clone() - CasExpr::var(var)));
+    let reflected = expr.substitute(var, &reflected_point);
+    let sum = expr.clone() + reflected;
+    // Reduce trig by sound identities; two passes settle nested angle-addition.
+    let reduce = |e: &CasExpr| {
+        simplify(&evaluate_trig(&expand_trig(&distribute_trig_args(&rewrite_tan_as_sin_cos(e)))))
+    };
+    let reduced = reduce(&reduce(&sum));
+    if expr_contains_var(&reduced, var) {
+        return None; // not provably constant → decline
+    }
+    // `∫ f = C·(b−a)/2`.
+    let value = simplify(&(reduced * (upper.clone() - lower.clone()) / CasExpr::int(2)));
+    // Guard: confirm against quadrature over the interior (rejects a formal symmetry
+    // whose integrand is actually non-integrable on `[a,b]`).
+    let (lo_f, hi_f) = (evalf(lower, &[])?, evalf(upper, &[])?);
+    let span = hi_f - lo_f;
+    let approx = numeric_integrate(expr, var, lo_f + 1e-7 * span, hi_f - 1e-7 * span, 4000)?;
+    let exact = evalf(&value, &[])?;
+    if (approx - exact).abs() > 1e-2 * (1.0 + exact.abs()) {
+        return None;
+    }
+    Some(value)
+}
+
 /// The definite integral of `expr` in `var` from `lower` to `upper`, via the
 /// fundamental theorem of calculus: find a certified antiderivative `F` with
 /// [`integrate`], then return `F(upper) − F(lower)`.
@@ -9799,6 +9946,15 @@ pub fn definite_integrate(
     }
     // Log-trig integrals `∫₀^{π/2} ln(sin x) = −(π/2)ln2`, `∫₀^{π/2} ln(tan x) = 0`, …
     if let Some(value) = definite_log_trig_integral(expr, var, lower, upper) {
+        return Some(DefiniteIntegral {
+            value,
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+        });
+    }
+    // Reflection / King's rule: `∫₀^{π/2} 1/(1+tanⁿ x) = π/4`, etc. — fires only when
+    // `f(x)+f(a+b−x)` provably reduces to a constant.
+    if let Some(value) = definite_reflection_symmetry(expr, var, lower, upper) {
         return Some(DefiniteIntegral {
             value,
             antiderivative: CasExpr::zero(),
@@ -17735,6 +17891,48 @@ mod tests {
         // reach it), i.e. no false certificate for the wrong closed form.
         let non_kernel = (one() + x().pow(2)).ln() / x();
         assert!(super::definite_dilog_integral(&non_kernel, "x", &zero(), &one()).is_none());
+    }
+
+    #[test]
+    fn trig_even_odd_argument_folding() {
+        let x = || v("x");
+        let pi = || v("pi");
+        let reduce = |e: &CasExpr| simplify(&evaluate_trig(&expand_trig(e)));
+        // cos is even, sin/tan odd: fold negated arguments.
+        assert_equal(&evaluate_trig(&CasExpr::Neg(Box::new(x())).cos()), &x().cos());
+        assert!(matches!(
+            equal(&evaluate_trig(&CasExpr::Neg(Box::new(x())).sin()), &CasExpr::Neg(Box::new(x().sin()))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&evaluate_trig(&CasExpr::Neg(Box::new(x())).atan()), &CasExpr::Neg(Box::new(x().atan()))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Co-function identities via angle addition + folding: sin(π/2−x)=cos x.
+        assert_equal(&reduce(&(pi() / CasExpr::int(2) - x()).sin()), &x().cos());
+        assert_equal(&reduce(&(pi() / CasExpr::int(2) - x()).cos()), &x().sin());
+    }
+
+    #[test]
+    fn reflection_symmetry_definite_integrals() {
+        let x = || v("x");
+        let pi = || v("pi");
+        let one = || CasExpr::int(1);
+        let half_pi = || pi() / CasExpr::int(2);
+        let check = |integrand: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &CasExpr::int(0), &half_pi()).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert!(
+                matches!(equal(&got.value, &(pi() / CasExpr::int(4))), ZeroTest::Certified { equal: true, .. }),
+                "{integrand} → {} (want π/4)",
+                got.value
+            );
+        };
+        // King's rule: f(x)+f(π/2−x) = 1 ⇒ ∫₀^{π/2} f = π/4.
+        check(one() / (one() + x().tan()));
+        check(one() / (one() + x().tan().pow(2)));
+        check(x().sin() / (x().sin() + x().cos()));
+        check(x().sin().pow(3) / (x().sin().pow(3) + x().cos().pow(3)));
     }
 
     #[test]
