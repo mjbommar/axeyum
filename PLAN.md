@@ -88,8 +88,15 @@ state.
 > resume implementation through the new
 > [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md),
 > which assigns task IDs, dependencies, owners, gates, milestones, and concrete
-> exits to L0-L10. Start at TL0.1/TL0.2, seed T6.0.3/TL2.15, and then execute the
-> projection slice TL2.2-TL2.5. Native parser/macros, elaboration, tactics,
+> exits to L0-L10. TL0.1 is now closed with ADR-0167/ADR-0345 accepted. TL0.2's
+> [machine-readable assurance contract](docs/plan/lean-compatibility-v1.json)
+> and [generated matrix](docs/plan/generated/lean-compatibility.md) retain 12
+> exact rows across eight independent assurance fields, three currently passing
+> profile rows, three explicit import declines, and ten source-bound decline
+> codes; six mutation/contract tests reject illegal parser/oracle-to-admission
+> credit. Continue with TL0.4's 65-row axiom ledger while seeding
+> T6.0.3/TL2.15, then execute projection TL2.2-TL2.5. Native parser/macros,
+> elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the
 > destination.

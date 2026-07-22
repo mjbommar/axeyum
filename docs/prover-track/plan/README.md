@@ -117,7 +117,7 @@ Each slice pays alone:
 
 | Item | Status |
 |---|---|
-| **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `proposed` |
+| **[ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md)** — entry; supersedes the stale "implementing dependent type theory is out of scope" | filed, `accepted` |
 | **[ADR-0166](../../research/09-decisions/adr-0166-alethe-target-reassessment.md)** — `lean-smt` uses **CPC, not Alethe**; cvc5's Alethe has **no bit-vectors** | filed, `proposed` — **urgent, and independent of this track** |
 | The prelude-axiom boundary — **64** axioms, none proved | T6.0.6 |
 | The `sat` trust story | P6.1c |

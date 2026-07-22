@@ -40,6 +40,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   profiles, common gates, ownership boundaries, dependency graph, TL task IDs,
   milestones, native parser/elaborator/tactics/Lake/LSP/compiler/`.olean` and
   full pinned-mathlib paths, plus the exact resume queue.
+- [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
+  [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
+  executable eight-field assurance contract, K0-K6 profile gates, registered
+  importer decline codes, exact current artifacts, and fail-closed implication
+  checks preventing parser/oracle evidence from becoming independent admission.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

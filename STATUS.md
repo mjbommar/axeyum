@@ -369,6 +369,30 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — TL0.1/TL0.2 close the Lean ownership and assurance
+  boundary.** ADR-0167 and ADR-0345 are accepted together: Track 6 owns the one
+  goal/tactic engine; the Lean-system program owns versioned import,
+  source/workflow/runtime compatibility, and pinned-mathlib build work; neither
+  expands the kernel's admission authority. The new
+  [`lean-compatibility-v1.json`](docs/plan/lean-compatibility-v1.json) contract
+  separates `parsed`, `translated`, `admitted`, `official_admitted`,
+  `source_elaborated`, `proof_checked`, `workflow_reproduced`, and
+  `runtime_reproduced`. Its generated
+  [12-row matrix](docs/plan/generated/lean-compatibility.md) reports three
+  profile-passing exact rows (native K0 plus two K1 fixtures), three fail-closed
+  K1 declines, and zero completed K2-K6 native profiles. Ten current importer
+  decline codes are source-bound; six tests reject missing assurance fields or
+  evidence, translation without parsing, official-oracle credit laundering,
+  proof credit without admission, and missing/unregistered/misapplied decline
+  codes. `parity-docs` now checks the contract and byte-identical generated
+  matrix. Eleven importer tests pass under the 4 GiB cap; the six contract
+  tests, full parity-doc suite, JSON check, generated-file check, and docs links
+  are green. `cargo fmt --all --check` remains red on pre-existing committed
+  formatting drift in unrelated `axeyum-bench`/`axeyum-cas` Rust files; this
+  slice does not rewrite them. Next: TL0.4 inventories and type-digests all 65
+  current prelude assumptions while T6.0.3/TL2.15 establishes the seam-fuzz
+  harness before projection TL2.2-TL2.5 changes kernel semantics.
+
 - **2026-07-21 — the complete Lean-system implementation program is now an
   executable plan, not a list of missing subsystems.** The active
   [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
@@ -401,7 +425,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Focused kernel/import validation passes 177 kernel unit tests, four kernel
   integration tests, one doctest, and eleven importer tests under 4 GiB. This
   completes the requested research/design/prototype/documentation deliverable,
-  not Lean parity: ADR-0345 remains proposed and L0-L10 implementation resumes
+  not Lean parity: ADR-0345 is accepted and L0-L10 implementation resumes
   with projection-first L2, axiom contracts, and the remaining fixture matrix.
 
 - **2026-07-21 — Lean-system distance is now decomposed and a real import seam

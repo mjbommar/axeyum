@@ -1,0 +1,470 @@
+{
+  "version": 1,
+  "title": "Axeyum Lean 4.30 compatibility assurance contract",
+  "as_of": "2026-07-21",
+  "target": {
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "exporter": "lean4export",
+    "exporter_version": "3.1.0",
+    "exporter_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf"
+  },
+  "assurance_fields": [
+    "parsed",
+    "translated",
+    "admitted",
+    "official_admitted",
+    "source_elaborated",
+    "proof_checked",
+    "workflow_reproduced",
+    "runtime_reproduced"
+  ],
+  "state_definitions": {
+    "not_applicable": "The assurance step has no semantic role for this exact artifact kind.",
+    "not_attempted": "No retained evidence establishes an attempt at this assurance step.",
+    "succeeded": "Pinned retained evidence establishes that the assurance step passed.",
+    "declined": "The implementation stopped fail-closed at a registered unsupported boundary.",
+    "failed": "The assurance step ran and contradicted its required result; this is not compatibility credit."
+  },
+  "profiles": [
+    {
+      "id": "K0-checker",
+      "label": "Independent checker",
+      "requires": ["admitted"]
+    },
+    {
+      "id": "K1-import",
+      "label": "Versioned declaration import",
+      "requires": ["parsed", "translated", "admitted"]
+    },
+    {
+      "id": "K2-source",
+      "label": "Native source",
+      "requires": ["parsed", "source_elaborated", "admitted"]
+    },
+    {
+      "id": "K3-proof",
+      "label": "Goals and checked tactics",
+      "requires": ["admitted", "proof_checked"]
+    },
+    {
+      "id": "K4-workflow",
+      "label": "Project and editor workflow",
+      "requires": ["workflow_reproduced"]
+    },
+    {
+      "id": "K5-runtime",
+      "label": "Native runtime",
+      "requires": ["runtime_reproduced"]
+    },
+    {
+      "id": "K6-ecosystem",
+      "label": "Pinned ecosystem",
+      "requires": ["admitted", "proof_checked", "workflow_reproduced", "runtime_reproduced"]
+    }
+  ],
+  "decline_codes": [
+    {
+      "code": "declaration-unsafe",
+      "meaning": "The exported declaration is marked unsafe.",
+      "owner": "axeyum-lean-import",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"declaration-unsafe\""
+    },
+    {
+      "code": "declaration-unsafe-or-partial",
+      "meaning": "The exported definition is unsafe or partial.",
+      "owner": "axeyum-lean-import",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"declaration-unsafe-or-partial\""
+    },
+    {
+      "code": "expr-projection",
+      "meaning": "Projection expressions are outside the current translated core.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"expr-projection\""
+    },
+    {
+      "code": "format-version",
+      "meaning": "The export stream is not the pinned format version.",
+      "owner": "axeyum-lean-import",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"format-version\""
+    },
+    {
+      "code": "inductive-mutual",
+      "meaning": "A mutual inductive group is outside the current admission profile.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"inductive-mutual\""
+    },
+    {
+      "code": "inductive-nested",
+      "meaning": "Nested recursion is outside the current admission profile.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"inductive-nested\""
+    },
+    {
+      "code": "inductive-reflexive",
+      "meaning": "Reflexive or higher-order recursion is outside the current admission profile.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"inductive-reflexive\""
+    },
+    {
+      "code": "literal-nat-bignum-and-typing",
+      "meaning": "Natural literals await arbitrary-precision storage and kernel typing.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"literal-nat-bignum-and-typing\""
+    },
+    {
+      "code": "literal-string-typing",
+      "meaning": "String literals await kernel typing and reduction support.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"literal-string-typing\""
+    },
+    {
+      "code": "quotient-package",
+      "meaning": "The fixed quotient package is outside the current admission profile.",
+      "owner": "axeyum-lean-kernel",
+      "source_path": "crates/axeyum-lean-import/src/lib.rs",
+      "source_marker": "\"quotient-package\""
+    }
+  ],
+  "rows": [
+    {
+      "id": "kernel-native-regression-profile",
+      "subject": "Native kernel regression profile",
+      "artifact_kind": "native-core",
+      "profile": "K0-checker",
+      "states": {
+        "parsed": "not_applicable",
+        "translated": "not_applicable",
+        "admitted": "succeeded",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_applicable",
+        "proof_checked": "succeeded",
+        "workflow_reproduced": "not_applicable",
+        "runtime_reproduced": "not_applicable"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/prop_large_elim_soundness.rs",
+          "detail": "Generated positive and negative elimination-boundary matrix."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/prop_large_elim_derives_false.rs",
+          "detail": "The historical False-admission exploit is retained as a rejecting regression."
+        }
+      ],
+      "residual": "K0 is real but does not imply official declaration import or native source support."
+    },
+    {
+      "id": "lean4export-direct-recursive-fixture",
+      "subject": "Official direct-recursive MiniNat/MiniList fixture",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "succeeded",
+        "admitted": "succeeded",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "succeeded",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson",
+          "detail": "Pinned format-3.1 stream."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
+          "detail": "official_direct_recursive_families_are_independently_admitted checks 11 declarations and zero axioms."
+        }
+      ],
+      "residual": "Recursive-indexed, reflexive, nested, and mutual families remain outside this exact fixture."
+    },
+    {
+      "id": "lean4export-flat-fixture",
+      "subject": "Official flat declaration fixture",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "succeeded",
+        "admitted": "succeeded",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "succeeded",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson",
+          "detail": "Pinned format-3.1 stream."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
+          "detail": "official_flat_fixture_is_independently_admitted checks eight declarations and retains axiom P."
+        }
+      ],
+      "residual": "The retained axiom P is explicit; this fixture is not dependency-closed Init or mathlib evidence."
+    },
+    {
+      "id": "lean4export-nat-literal-root",
+      "subject": "Official Nat-literal dependency root",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "declined",
+        "admitted": "not_attempted",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": ["expr-projection"],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-nat-literal.ndjson",
+          "detail": "Pinned official dependency closure."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
+          "detail": "Stable first decline is expr-projection at line 106."
+        }
+      ],
+      "residual": "Projection is reached before the literal record; bignum storage and Nat literal typing remain later blockers."
+    },
+    {
+      "id": "lean4export-projection-root",
+      "subject": "Official structure-projection dependency root",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "declined",
+        "admitted": "not_attempted",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": ["expr-projection"],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-projection.ndjson",
+          "detail": "Pinned official four-declaration closure."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
+          "detail": "Stable first decline is expr-projection at line 81."
+        }
+      ],
+      "residual": "TL2.2-TL2.5 must add representation, inference, reduction, and structure eta."
+    },
+    {
+      "id": "lean4export-quotient-root",
+      "subject": "Official quotient dependency root",
+      "artifact_kind": "lean4export-stream",
+      "profile": "K1-import",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "declined",
+        "admitted": "not_attempted",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": ["quotient-package"],
+      "evidence": [
+        {
+          "kind": "fixture",
+          "path": "docs/plan/fixtures/lean4export-v4.30-quotient.ndjson",
+          "detail": "Pinned official quotient closure."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
+          "detail": "Stable first decline is quotient-package at line 65."
+        }
+      ],
+      "residual": "TL2.10 owns the fixed quotient package and reductions."
+    },
+    {
+      "id": "official-source-selected-reconstruction",
+      "subject": "Selected 71-module official-source reconstruction gate",
+      "artifact_kind": "lean-source-family",
+      "profile": "K2-source",
+      "states": {
+        "parsed": "succeeded",
+        "translated": "not_applicable",
+        "admitted": "not_attempted",
+        "official_admitted": "succeeded",
+        "source_elaborated": "succeeded",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "document",
+          "path": "docs/plan/official-lean-ci-gate-audit-2026-07-21.md",
+          "detail": "Bounded local Lean 4.30 result is 71 accepted, zero skipped, zero failed."
+        }
+      ],
+      "residual": "Official elaboration is oracle evidence only; no native-source or independent-admission credit follows."
+    },
+    {
+      "id": "planned-native-proof-profile",
+      "subject": "Native goal, hole, unification, and tactic profile",
+      "artifact_kind": "planned-system-profile",
+      "profile": "K3-proof",
+      "states": {
+        "parsed": "not_attempted",
+        "translated": "not_attempted",
+        "admitted": "not_attempted",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_attempted",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "plan",
+          "path": "docs/prover-track/plan/README.md",
+          "detail": "Track 6 owns the one native goal and tactic engine."
+        }
+      ],
+      "residual": "P6.2/P6.3 and TL5 remain implementation work."
+    },
+    {
+      "id": "planned-native-runtime-profile",
+      "subject": "Native evaluator, compiler, runtime, and metaprogram profile",
+      "artifact_kind": "planned-system-profile",
+      "profile": "K5-runtime",
+      "states": {
+        "parsed": "not_attempted",
+        "translated": "not_attempted",
+        "admitted": "not_attempted",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_attempted",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "plan",
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "TL9.1-TL9.13 define the runtime sequence and gates."
+        }
+      ],
+      "residual": "No native Lean runtime profile is implemented today."
+    },
+    {
+      "id": "planned-native-source-profile",
+      "subject": "Native parser, macros, and elaborator profile",
+      "artifact_kind": "planned-system-profile",
+      "profile": "K2-source",
+      "states": {
+        "parsed": "not_attempted",
+        "translated": "not_attempted",
+        "admitted": "not_attempted",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_attempted",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "plan",
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "TL6 and L4B define the native source sequence and gates."
+        }
+      ],
+      "residual": "Official source acceptance does not implement this profile."
+    },
+    {
+      "id": "planned-native-workflow-profile",
+      "subject": "Native modules, packages, Lake, cache, and editor profile",
+      "artifact_kind": "planned-system-profile",
+      "profile": "K4-workflow",
+      "states": {
+        "parsed": "not_attempted",
+        "translated": "not_attempted",
+        "admitted": "not_attempted",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_attempted",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "plan",
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "TL7 and TL8 define project and editor reproduction."
+        }
+      ],
+      "residual": "No native project/editor compatibility result exists today."
+    },
+    {
+      "id": "planned-pinned-mathlib-profile",
+      "subject": "Full pinned mathlib build and compatibility profile",
+      "artifact_kind": "planned-system-profile",
+      "profile": "K6-ecosystem",
+      "states": {
+        "parsed": "not_attempted",
+        "translated": "not_attempted",
+        "admitted": "not_attempted",
+        "official_admitted": "not_attempted",
+        "source_elaborated": "not_attempted",
+        "proof_checked": "not_attempted",
+        "workflow_reproduced": "not_attempted",
+        "runtime_reproduced": "not_attempted"
+      },
+      "decline_codes": [],
+      "evidence": [
+        {
+          "kind": "plan",
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "TL10.1-TL10.9 define the full pinned release gate."
+        }
+      ],
+      "residual": "The pinned 8,606-file inventory is not a build or compatibility result."
+    }
+  ]
+}

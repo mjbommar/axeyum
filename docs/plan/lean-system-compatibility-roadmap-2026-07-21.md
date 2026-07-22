@@ -1,10 +1,10 @@
 # Lean-system compatibility: evidence audit and staged roadmap
 
-Status: proposed implementation program
+Status: accepted strategy; implementation active
 
 Date: 2026-07-21
 
-Decision gate: [proposed ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
+Decision: [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
 Active execution breakdown:
 [`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md)
@@ -339,14 +339,23 @@ collapsing independent axes.
 
 Tasks:
 
-1. Accept or revise ADR-0345.
+1. **Done:** accept ADR-0345 together with ADR-0167's single goal/tactic owner.
 2. Pin Lean and `lean4export` versions, commit export metadata, source hash,
    module list, command, and resource limits.
-3. Publish a capability object with separate `parse`, `admit`, `official_check`,
-   `source_elaborate`, and `workflow` fields.
+3. **Done:** publish a capability object with eight separate parser,
+   translation, independent/official admission, source, proof, workflow, and
+   runtime fields.
 4. Correct stale kernel documentation and add a generated kernel feature
    matrix tied to executable tests.
-5. Freeze decline codes and the expected-axiom allowlist format.
+5. **Partial:** ten current importer decline codes are source-bound; the
+   expected-axiom allowlist/ledger is TL0.4.
+
+Current result: the
+[`lean-compatibility-v1.json`](lean-compatibility-v1.json) contract and generated
+[matrix](generated/lean-compatibility.md) hold 12 exact rows. Six mutation tests
+reject illegal assurance combinations, absent evidence, and unregistered or
+misapplied declines. Three rows satisfy their exact K0/K1 target; no row claims
+a completed K2-K6 native profile.
 
 Exit: the same artifact cannot be called “supported” by one path because it was
 merely parsed and by another because it was independently type-checked.

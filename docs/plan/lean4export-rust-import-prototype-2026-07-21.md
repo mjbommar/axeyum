@@ -8,7 +8,7 @@ Parent roadmap:
 [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md)
 
 Decision gate:
-[proposed ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
+[ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
 ## Result
 

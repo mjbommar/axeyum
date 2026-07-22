@@ -701,10 +701,10 @@ Out of scope:
     `Sort 0`. A generated adversarial matrix and a mandatory real-Lean
     flat-inductive/iota CI test guard the boundary. See
     [ADR-0165](../09-decisions/adr-0165-lean-compatible-prop-large-elimination.md).
-- [ ] Should the proof-assistant bridge export obligations to Lean, import
+- [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
-  - Proposed answer (2026-07-21): **both, sequenced**. Preserve the existing
+  - Answer (2026-07-21): **both, sequenced**. Preserve the existing
     fail-closed source-export/official-check lane, then import pinned official
     `lean4export` NDJSON and independently admit supported declarations.
     Selected theorem-backed rewrite/CAS tactic slices follow the importer and
@@ -712,7 +712,7 @@ Out of scope:
     modules/Lake, a late untrusted version-specific `.olean` reader, LSP,
     compiler/runtime, and full pinned-mathlib compatibility are separately
     gated later phases rather than permanent exclusions. See
-    [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md),
+    [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md),
     [compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md),
     and [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md).
 - [x] When two theories exist, is Nelson-Oppen combination implemented

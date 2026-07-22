@@ -24,7 +24,7 @@ Last updated: 2026-07-21
 > import, certificate tactics, and optional workflow adapters remain the first
 > value-bearing stages in the
 > [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
-> under proposed ADR-0345. The complete native work breakdown is the
+> under accepted ADR-0345. The complete native work breakdown is the
 > [Lean-system implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md).
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
@@ -614,7 +614,7 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   [implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md),
   [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md),
   [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
-  and [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
+  and [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
 - **Categorical-engine depth, not green-field breadth:** the
   [source-backed audit](../../../docs/plan/categorical-engine-depth-audit-2026-07-21.md)
   confirms 125/125 focused tests across six interpolation families, a substantial

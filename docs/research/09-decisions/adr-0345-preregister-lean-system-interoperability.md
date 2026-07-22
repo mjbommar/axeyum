@@ -1,6 +1,6 @@
 # ADR-0345: Preregister adapter-first, full Lean-system compatibility through versioned trust boundaries
 
-Status: proposed
+Status: accepted
 
 Date: 2026-07-21
 
@@ -72,11 +72,11 @@ The interchange rules are:
 - keep compiler output outside the proof TCB.
 
 The Rust reader/admission prototype and its first negative matrix are now
-landed in a separate workspace crate. The decision remains proposed until the
-crate boundary, ADR-0167 ownership reconciliation, and the broader
-projection/literal/quotient/inductive fixture matrix are reviewed. The exact
-flat and direct-recursive fixtures earn independent-admission credit; the
-Python inventory by itself still earns none.
+landed in a separate workspace crate. The crate boundary and ADR-0167 ownership
+are accepted here; the broader projection/literal/quotient/inductive fixture
+matrix remains an implementation gate, not a reason to leave ownership
+undefined. The exact flat and direct-recursive fixtures earn
+independent-admission credit; the Python inventory by itself still earns none.
 
 ## Evidence
 

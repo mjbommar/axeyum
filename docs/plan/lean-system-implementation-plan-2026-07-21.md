@@ -17,7 +17,7 @@ Current evidence:
 and
 [`lean4export-official-blocker-census-2026-07-21.md`](lean4export-official-blocker-census-2026-07-21.md)
 
-Decision gates:
+Accepted decisions:
 [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 and [ADR-0167](../research/09-decisions/adr-0167-prover-track-entry.md)
 
@@ -150,8 +150,8 @@ the interoperability and Track 6 plans.
 
 | ID | Status | Task | Depends | Size | Exit artifact/gate |
 |---|---|---|---|---|---|
-| TL0.1 | TODO | Accept or revise ADR-0345 and ADR-0167 together; record ownership of imports, mathlib, source, goals, and tactics. | — | S | Both ADRs use the ownership table in this plan; research question closes. |
-| TL0.2 | TODO | Add `lean-compatibility-v1.json` schema with the eight assurance states and stable decline codes. | TL0.1 | M | Invalid state combinations reject; generated Markdown matrix is byte-stable. |
+| TL0.1 | DONE | Accept or revise ADR-0345 and ADR-0167 together; record ownership of imports, mathlib, source, goals, and tactics. | — | S | Both ADRs use the ownership table in this plan; research question is closed. |
+| TL0.2 | DONE | Add `lean-compatibility-v1.json` schema with the eight assurance states and stable decline codes. | TL0.1 | M | Six mutation/contract tests reject illegal credit; the 12-row [generated matrix](generated/lean-compatibility.md) is byte-stable. |
 | TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, and host-independent options. | — | S | One manifest drives exporter, importer, and official-check tests. |
 | TL0.4 | TODO | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | Adding or changing an axiom fails CI until the ledger changes. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
@@ -440,8 +440,8 @@ receive the full exit label.
 Execute in this order unless a task's explicit dependency says it may run in a
 parallel lane:
 
-1. TL0.1 — reconcile and accept/revise ADR-0345 and ADR-0167.
-2. TL0.2 — land the machine-readable capability schema and generated matrix.
+1. **DONE:** TL0.1 — reconcile and accept ADR-0345 and ADR-0167.
+2. **DONE:** TL0.2 — land the machine-readable capability schema and generated matrix.
 3. TL0.4 — land the axiom ledger schema and current 65-row inventory.
 4. T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
 5. TL2.2 — add `Proj` representation and exhaustive traversal tests.

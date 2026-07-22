@@ -103,6 +103,8 @@ rules-as-code:
 parity-docs:
     python3 -m unittest scripts.tests.test_parity_evidence
     python3 -m unittest scripts.tests.test_prototype_lean4export_reader
+    python3 -m unittest scripts.tests.test_lean_compatibility
+    python3 scripts/gen-lean-compatibility.py --check
     python3 scripts/gen-gap-ownership.py --check
     python3 scripts/gen-measurement-provenance.py --check
     python3 scripts/gen-smtcomp-resume-contract.py --check

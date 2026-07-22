@@ -11,8 +11,8 @@ Roadmap:
 Active execution plan:
 [`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md)
 
-Decision gate:
-[proposed ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
+Decision:
+[ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
 ## 1. Scope of this audit
 
