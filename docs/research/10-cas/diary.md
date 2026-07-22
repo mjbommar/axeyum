@@ -1210,7 +1210,31 @@ covers that we declined on:
   symbolic zero-test. `flatten_add_terms` gained `Neg`/constant-`Div` distribution and the handler
   `expand`s first, so `c·(lnP−lnQ)` and `(…)/c` split into per-log terms.
 
-Known next gaps: general-`a` Gaussian (surd `√a` erf antiderivative), even-numerator quartics
-(`∫x²/(x⁴+1)` — the finder is constant-numerator), nested-surd quartics (`x⁴+2`). Non-integration
-frontier unchanged: multivariate factorization, Puiseux, Zeilberger, ℚ(i) as a first-class type,
-Gamma/digamma heads (polygamma tower), the Abs/sign assumptions layer, and the Lean/Mathlib axis.
+Known next gaps: general-`a` Gaussian (surd `√a` erf antiderivative), nested-surd quartics (`x⁴+2`).
+Non-integration frontier unchanged: multivariate factorization, Puiseux, Zeilberger, ℚ(i) as a
+first-class type, Gamma/digamma heads (polygamma tower), the Abs/sign assumptions layer, and the
+Lean/Mathlib axis.
+
+---
+
+## 2026-07-21 — Entry 37c: even-numerator quartics, summation & limit polish (455 tests)
+
+Continuing the breadth push across three branches:
+- **Even-numerator quartics** — generalized `integrate_even_quartic_denominator` from constant to
+  `n₂x²+n₀`: Case A gets `B=n₀/(2β)`, `A=(n₀/β−n₂)/(2α)`; Case B gets `P=(n₀−n₂β₁)/(β₂−β₁)`,
+  `Q=(n₂β₂−n₀)/(β₂−β₁)`. Closes `∫x²/(x⁴+1)` and the improper `∫_{−∞}^∞ x²/(x⁴+1)=π/√2`. Odd
+  numerators still decline (handled by `u=x²`).
+- **Geometric base from any exponent spelling** (`gosper::geometric_base`) — it required the exponent
+  to be literally `var·ln(Const)`, so `2^{−k}=exp(−k·ln2)` and other `Neg`/multiplier spellings were
+  rejected. Now recovers the coefficient `a` of `var` by differentiation (**simplified** — the raw
+  derivative carries `var·(…·0)` noise that structurally still mentions `var`) and sets `base=exp(a)`,
+  accepting any equivalent exponent when `exp(a)` is a positive rational. Closes `Σ_{k≥0}2^{−k}=2`,
+  `Σ 3^{−k}=3/2`, `Σ k·2^{−k}=2`.
+- **Limit log-vs-power at +∞** (`limit_log_at_infinity`, dual of `limit_log_at_zero`) — a positive
+  power of `x` beats any power of `ln x`, so `ln x/x→0`, `(ln x)²/x→0`, `1/ln x→0`, and
+  `x^{1/x}=exp((ln x)/x)→1` via the exp-of-limit path. Divergent forms (`x/ln x`, `x·ln x`) decline.
+
+**455 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Deferred (needs a real
+asymptotic-expansion-at-∞ / Puiseux-at-∞ engine): conjugate limits like `√(x²+x)−x=½`, where the
+leading `x` terms cancel and the ½ lives in the sub-leading term — the reciprocal substitution `x=1/t`
+stalls because `√((1/t)²+1/t)` doesn't simplify to `√(1+t)/t` (sqrt-of-Laurent).
