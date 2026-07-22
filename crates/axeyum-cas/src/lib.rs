@@ -2434,11 +2434,13 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     };
     let mut func: Option<UnaryFunc> = None;
     let mut coeff = Rational::integer(1);
-    let mut constant = Rational::zero();
+    // The non-trig part accumulates as a `CasExpr` so a **surd** right-hand side is
+    // allowed (`2·cos x − √3 = 0`, `cos x = √3/2`).
+    let mut constant = CasExpr::zero();
     for term in &terms {
-        // A variable-free constant term (`5`, `−1`, `3/2`, …) goes to the constant.
-        if let Some(c) = constant_term(term) {
-            constant = constant.checked_add(c)?;
+        // Any variable-free term goes to the constant (rational or surd).
+        if !expr_contains_var(term, var) {
+            constant = constant + term.clone();
             continue;
         }
         // Otherwise the term must be `A·f(var)` with a single trig head.
@@ -2462,7 +2464,8 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
         coeff = term_coeff;
     }
     let func = func?;
-    let target = constant.checked_neg()?.checked_div(coeff)?; // f(var) = −C/A
+    // f(var) = −C/A (`C` a possibly-surd constant expression).
+    let target = simplify(&(CasExpr::Neg(Box::new(constant)) / CasExpr::Const(coeff)));
     let pi = CasExpr::var("pi");
     let mut roots: Vec<CasExpr> = Vec::new();
     // Scan the tabulated angles k·π/12 in [0, 2π): k = 0..24.
@@ -2474,7 +2477,7 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
             continue;
         }
         if matches!(
-            equal(&value, &CasExpr::Const(target)),
+            equal(&value, &target),
             ZeroTest::Certified { equal: true, .. }
         ) {
             // Certify against the original equation.
@@ -15126,6 +15129,14 @@ mod tests {
         assert!(t.contains(&(CasExpr::rat(5, 4) * pi())));
         // 2sin x − 3 = 0 has no solution (|sin| ≤ 1) — declined.
         assert!(solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(3)), "x").is_none());
+        // Surd right-hand side: 2cos x − √3 = 0 ⇒ cos x = √3/2 ⇒ {π/6, 11π/6};
+        // 2sin x − √2 = 0 ⇒ {π/4, 3π/4}.
+        let surd = solve(&(CasExpr::int(2) * x().cos() - CasExpr::int(3).sqrt()), "x").unwrap();
+        assert!(surd.contains(&(CasExpr::rat(1, 6) * pi())));
+        assert!(surd.contains(&(CasExpr::rat(11, 6) * pi())));
+        let surd_sin = solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(2).sqrt()), "x").unwrap();
+        assert!(surd_sin.contains(&(CasExpr::rat(1, 4) * pi())));
+        assert!(surd_sin.contains(&(CasExpr::rat(3, 4) * pi())));
     }
 
     #[test]
