@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -168,12 +169,14 @@ class LeanMutualInductiveGroupsM0Tests(unittest.TestCase):
             any("baseline identity/outcome" in item for item in self.failures())
         )
 
-    def test_tl2_13_assurance_overlay_preserves_m0_baseline_binding(self) -> None:
+    def test_later_assurance_overlays_preserve_m0_baseline_binding(self) -> None:
         row = self.data["baseline"]["construct_matrix"]
-        digest = CHECK.baseline_artifact_sha256(
-            CHECK.ROOT / row["path"], "construct_matrix"
-        )
+        path = CHECK.ROOT / row["path"]
+        digest = CHECK.baseline_artifact_sha256(path, "construct_matrix")
         self.assertEqual(digest, row["sha256"])
+        current = json.loads(path.read_text(encoding="utf-8"))
+        self.assertIn("tl2_13_update", current)
+        self.assertIn("tl2_14_update", current)
 
     def test_premature_axeyum_observation_rejects(self) -> None:
         self.data["kernel_results"] = {"cross-family-computation": "accepted"}

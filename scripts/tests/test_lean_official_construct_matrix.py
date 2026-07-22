@@ -97,14 +97,18 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
                 "recursive-indexed": "dual-admitted-computation-checked",
                 "reflexive-higher-order": "dual-admitted-computation-checked",
                 "mutual": "dual-admitted-computation-checked",
-                "nested": "official-export-inventory-only",
+                "nested": "dual-admitted-computation-checked",
                 "well-founded": "independently-admitted",
                 "non-positive-source-negative": "official-source-rejected",
             },
         )
-        self.assertIn("misclassified as malformed", first)
+        self.assertNotIn("misclassified as malformed", first)
         self.assertIn("pre-elaborated root admitted through Acc.rec", first)
         self.assertIn("indexedCrossFamilyComputes", first)
+        self.assertIn("roseAuxiliaryRecursorComputes", first)
+        self.assertIn("indexedAuxiliaryRecursorComputes", first)
+        self.assertIn("repeatedContainerReusesAuxiliaryRecursor", first)
+        self.assertIn("current transactional declines: 0", first)
 
     def test_tl212_computation_and_outcome_drift_reject(self) -> None:
         self.data["tl2_12_update"]["outcomes"]["recursive-indexed"]["report"][
@@ -135,6 +139,46 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         self.assertTrue(any("computation hash drift" in failure for failure in failures))
         self.assertTrue(any("two checked TL2.13 computations" in failure for failure in failures))
         self.assertTrue(any("rust_test_threads drift" in failure for failure in failures))
+
+    def test_tl214_computation_outcome_resource_and_normal_form_drift_reject(self) -> None:
+        self.data["tl2_14_update"]["outcomes"]["nested"]["report"][
+            "admitted_declarations"
+        ] = 21
+        self.data["tl2_14_update"]["computations"][
+            "auxiliary-recursion-computation"
+        ]["sha256"] = "0" * 64
+        repeated = self.data["tl2_14_update"]["computations"][
+            "repeated-container-reuse-computation"
+        ]
+        repeated["normal_form"] = "MiniNat.zero"
+        repeated["reduction_checked"] = False
+        self.data["tl2_14_update"]["rust_test_threads"] = 2
+        failures = self.failures()
+        self.assertTrue(any("typed outcome/report drift" in failure for failure in failures))
+        self.assertTrue(any("computation contract drift" in failure for failure in failures))
+        self.assertTrue(any("computation hash drift" in failure for failure in failures))
+        self.assertTrue(any("two checked TL2.14 computations" in failure for failure in failures))
+        self.assertTrue(any("rust_test_threads drift" in failure for failure in failures))
+
+    def test_tl214_schema_and_population_order_drift_reject(self) -> None:
+        del self.data["tl2_14_update"]["source_revision"]
+        self.assertTrue(any("fields drift" in failure for failure in self.failures()))
+
+        self.data = CHECK.load_manifest()
+        computations = self.data["tl2_14_update"]["computations"]
+        auxiliary = computations.pop("auxiliary-recursion-computation")
+        computations["auxiliary-recursion-computation"] = auxiliary
+        self.assertTrue(
+            any("population/order drift" in failure for failure in self.failures())
+        )
+
+        self.data = CHECK.load_manifest()
+        update = self.data["tl2_14_update"]
+        measured_date = update.pop("measured_date")
+        update["measured_date"] = measured_date
+        self.assertTrue(
+            any("update field order drift" in failure for failure in self.failures())
+        )
 
     def test_impossible_assurance_promotions_reject(self) -> None:
         rows = {row["id"]: row for row in CHECK.derive_matrix_rows(self.data)}

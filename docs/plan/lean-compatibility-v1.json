@@ -86,13 +86,6 @@
       "source_marker": "\"format-version\""
     },
     {
-      "code": "inductive-nested",
-      "meaning": "Nested recursion is outside the current admission profile.",
-      "owner": "axeyum-lean-kernel",
-      "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"inductive-nested\""
-    },
-    {
       "code": "literal-string-typing",
       "meaning": "String literals await kernel typing and reduction support.",
       "owner": "axeyum-lean-kernel",

@@ -396,6 +396,7 @@ def baseline_artifact_sha256(path: Path, key: str) -> str:
         return sha256(path)
     registration = json.loads(path.read_text(encoding="utf-8"))
     registration.pop("tl2_13_update", None)
+    registration.pop("tl2_14_update", None)
     encoded = (json.dumps(registration, indent=2) + "\n").encode()
     return hashlib.sha256(encoded).hexdigest()
 

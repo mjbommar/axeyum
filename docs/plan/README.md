@@ -204,8 +204,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   exact current nested and already-passing well-founded product boundaries.
 - [`lean-nested-inductive-elimination-resume.md`](lean-nested-inductive-elimination-resume.md)
   — **single resume entry point** for TL2.14 work: exact pushed state,
-  completed P0/M0/M1/M2/M3/M4 evidence, M5's computation and assurance task,
-  remaining M5--M6 work,
+  completed P0/M0/M1/M2/M3/M4/M5 evidence, M6's final-closure task and
+  remaining work,
   validation commands, ownership rules, resource caps, and stop conditions.
 - [`lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md`](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
   — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
@@ -248,6 +248,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M5's preimplementation freeze for three explicit normal forms, repeated
   pinned-Lean confirmation, an append-only TL2.14 assurance overlay, historical
   hash preservation, and truthful removal of the obsolete live decline.
+- [`lean-nested-inductive-elimination-m5-2026-07-22.md`](lean-nested-inductive-elimination-m5-2026-07-22.md)
+  — M5's twice-reproduced pinned-Lean digest, explicit 3/3/5-successor Axeyum
+  normal forms, append-only TL2.14 overlay, 7/6/4/0 current matrix, five-code
+  compatibility state, historical hashes, bounded gates, and M6 handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

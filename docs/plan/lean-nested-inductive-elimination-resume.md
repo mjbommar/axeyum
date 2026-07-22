@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: M4 complete; M5 computation and assurance next
+Status: M5 complete; M6 final closure next
 
 Date paused: 2026-07-22
 
@@ -27,10 +27,12 @@ and the decision gate remains
   `6a2afdd57c969bc1a847d77a85cc99552fa935b1`.
 - M4's exact official importer implementation is
   `f03dfcdf2b3e49d86a5bb9ad00aeef20c99926ee`.
+- M5's exact computation test checkpoint is
+  `edfa7924adde416393db74325bf29ce280e3f8a7`.
 - Reverify the current branch, local HEAD, tracking ref, and remote ref before
   editing. Do not switch, reset, restore, or force any other live worktree.
-- No partial M5 edits exist at this checkpoint. Inspect ownership again before
-  adding explicit normal-form or assurance observations.
+- No partial M6 edits exist at this checkpoint. Inspect final reconciliation
+  ownership again before accepting ADR-0355 or marking TL2.14 complete.
 - The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
   unrelated dirty benchmark/corpus/review artifacts and remains untouched by
   this lane.
@@ -63,6 +65,9 @@ preflight are complete and pushed:
 7. M4 derived auxiliary identity from checked recursor motives, imported the
    construct plus all three frozen computation streams twice, and closed 20
    wire/publication rejection classes at `f03dfcdf`.
+8. M5 reproduced the pinned OLEAN digest twice, checked all three registered
+   normal forms twice at `edfa7924`, appended the TL2.14 assurance overlay, and
+   removed the obsolete live nested decline after every support gate passed.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
@@ -76,6 +81,8 @@ The complete M3 result is
 [lean-nested-inductive-elimination-m3-2026-07-22.md](lean-nested-inductive-elimination-m3-2026-07-22.md).
 The complete M4 result is
 [lean-nested-inductive-elimination-m4-2026-07-22.md](lean-nested-inductive-elimination-m4-2026-07-22.md).
+The complete M5 result is
+[lean-nested-inductive-elimination-m5-2026-07-22.md](lean-nested-inductive-elimination-m5-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -198,23 +205,24 @@ immutable no-observation snapshot; M4 is its planned first product import. The
 live assurance decline remains because no explicit registered normal form has
 yet been recorded.
 
-## Exact next milestone: M5 computation and assurance
+## M5 result
 
-M5 must repeat pinned-Lean compilation and explicitly inspect each selected
-theorem in the completed Axeyum imports. It must extract the equality sides,
-infer the proof, require definitional equality, normalize the registered side,
-and compare the exact three-successor, indexed, and five-successor normal forms
-from M0. It then appends a TL2.14 assurance overlay without rewriting history
-and removes the live nested decline only after all retained controls pass.
-The exact ownership, observations, mutation contract, and checkpoint sequence
-are frozen in the
-[M5 computation and assurance plan](lean-nested-inductive-elimination-m5-plan-2026-07-22.md).
+M5 reproduces the exact pinned OLEAN digest twice and checks each imported
+theorem as an inferred `Eq` proof with definitionally equal sides and the
+registered 3/3/5-successor normal form. The history-preserving TL2.14 overlay
+advances the current matrix to seven rows, six admitted, four computation-
+checked, and zero current declines. The obsolete live `inductive-nested` code
+is removed; all five unrelated codes and every historical view remain exact.
 
-## Remaining milestones after M4
+## Exact next milestone: M6 final closure
 
-- **M5 — computation and assurance:** reproduce the pinned-Lean computations,
-  require the registered cross-nested normal forms in Axeyum, append a
-  history-preserving assurance overlay, and only then remove the live decline.
+M6 must run every final bounded gate, audit all ADR-0355 exits, decide the ADR,
+and reconcile every live project-state surface without changing the accepted
+M0--M5 evidence. It may mark TL2.14 complete only if the complete aggregate is
+green and every registered exit is evidenced.
+
+## Remaining milestone after M5
+
 - **M6 — final closure:** run every bounded final gate, decide ADR-0355 from its
   preregistered exits, and synchronize PLAN, STATUS, roadmaps, generated docs,
   and the final handoff.
@@ -238,9 +246,8 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then inspect M5 assurance/generated-document ownership and preregister the
-exact normal-form and overlay transition if the parent plan is not sufficiently
-concrete. Do not rewrite M0 history or claim final closure before M6.
+Then audit the ADR-0355 exits and M6 reconciliation ownership. Do not rewrite
+M0--M5 history or accept the ADR before the final aggregate is green.
 
 ## Tools and resource envelope
 
@@ -264,9 +271,10 @@ condition. Preserve the evidence and amend ADR-0355 before broadening scope.
 ## Claims that remain false
 
 Axeyum's native kernel now admits the structurally registered nested-inductive
-container shapes covered by M2. The official nested importer row still declines,
-and TL2.14 does not establish native Lean source parsing, inductive-command
-elaboration, pattern/equation
+container shapes covered by M2. The frozen official nested row now imports and
+the three registered theorem roots compute to their exact checked normal forms;
+that bounded result does not establish native Lean source parsing, inductive-
+command elaboration, pattern/equation
 compilation, structural or well-founded recursion elaboration, termination
 checking, broad `Init`/`Std`/mathlib admission, full Lean-kernel parity, or a
 replacement for official Lean.
