@@ -383,6 +383,26 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — bounded bignum base checking carries direct moments through
+  order 255 and raw moments through 35.** `certifies_wz_sum` retains its
+  checked-`i128` finite-base route first, then only on `Unknown` evaluates the
+  fully concrete rational/positive-integer-Gamma fragment with exact
+  `BigRational`; variables, other unary heads, poles, Gamma arguments above 256,
+  and powers above 1024 decline. The symbolic telescoping or quotient identity
+  remains mandatory and a certified-false result never falls back. Exact
+  bignum product-scalar accumulation plus a Gamma-shift span of 256 remove the
+  order-128 and order-130 representation artifacts. Falling moments 0 through
+  255 now pass symbolic checking, bounded exact bases, BigInt concrete samples,
+  tamper rejection, and the ceiling; order 256 still passes the compact symbolic
+  identity, then deliberately declines at `Γ(257)`. Bignum monic normalization
+  also closes raw orders 34 and 35 while requiring every final coefficient to
+  fit public `Rational`; raw order 36 is the first measured decline because its
+  monic numerator needs coefficients beyond `i128`. The CAS topic stack passes
+  525 unit tests, 147 doctests, warning-denied all-target Clippy, strict
+  stable/nightly rustdoc, `wasm32-unknown-unknown`, links, and
+  `git diff --check`. Next: return to broad timeout-bounded gap probing, with
+  fixed-shift `r=8` retained as a focused exact-growth candidate if demanded.
+
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
   `(2n)ₘ` denominator is now removed from each Stirling term before polynomial
@@ -7717,6 +7737,15 @@ plan is built and committed on the current branch:
   contracts pass under the one-worker/4 GiB policy. M3's >=640-case generated
   grammar and forced mutation teeth are next; importer policy and M0 streams
   remain untouched.
+- **2026-07-22 — Added bounded exact bignum WZ base checking.** A private
+  rational/positive-integer-Gamma evaluator runs only after the existing base
+  equality returns `Unknown`, with explicit Gamma/power limits and fail-closed
+  unsupported cases. Bignum product scalars and monic coefficient division
+  remove two further intermediate-overflow artifacts. The direct
+  squared-binomial family now certifies through 255 and the raw family through
+  35; focused limit/overflow tests plus full family samples, tamper checks, and
+  ceiling checks bring the CAS gate to 525 units and 147 doctests.
+
 - **2026-07-22 — Extended Stirling-composed squared-binomial moments through
   order 33.** Exact even-factor pre-cancellation plus bignum-only polynomial
   intermediates remove the raw order-20 representation overflow while keeping
