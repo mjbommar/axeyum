@@ -6115,6 +6115,57 @@ fn simplify_sqrt_const(value: Rational) -> Option<CasExpr> {
     }
 }
 
+/// The `exp`/`ln` inverse-and-decomposition identities used by
+/// [`simplify_under_assumptions`], gated on positivity where the real branch
+/// requires it: `exp(ln u)=u` and `ln(uᵏ)=k·ln u`, `ln(u·v)=ln u+ln v`,
+/// `ln(u/v)=ln u−ln v` all need `u,v>0`; `ln(exp u)=u` holds always.
+fn refine_log_exp(expr: &CasExpr, assumptions: &Assumptions) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // exp(ln u) = u when u > 0 (the inverse only holds on the positive reals).
+            if let CasExpr::Unary(UnaryFunc::Ln, u) = &inner
+                && assumptions.is_positive(u)
+            {
+                return (**u).clone();
+            }
+            inner.exp()
+        }
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // ln(exp u) = u — always valid on the reals.
+            if let CasExpr::Unary(UnaryFunc::Exp, u) = &inner {
+                return (**u).clone();
+            }
+            // ln(uᵏ) = k·ln u when u > 0 (the log power rule, real branch).
+            if let CasExpr::Pow(base, exponent) = &inner
+                && assumptions.is_positive(base)
+            {
+                return CasExpr::int(i128::from(*exponent)) * base.as_ref().clone().ln();
+            }
+            // ln(u·v·…) = ln u + ln v + … when every factor is positive.
+            if let CasExpr::Mul(factors) = &inner
+                && factors.iter().all(|f| assumptions.is_positive(f))
+            {
+                let mut sum = CasExpr::zero();
+                for factor in factors {
+                    sum = sum + factor.clone().ln();
+                }
+                return simplify(&sum);
+            }
+            // ln(u/v) = ln u − ln v when both are positive.
+            if let CasExpr::Div(numerator, denominator) = &inner
+                && assumptions.is_positive(numerator)
+                && assumptions.is_positive(denominator)
+            {
+                return numerator.as_ref().clone().ln() - denominator.as_ref().clone().ln();
+            }
+            inner.ln()
+        }
+        _ => expr.clone(),
+    }
+}
+
 /// Simplify an expression **under sign assumptions**, applying rewrites that are
 /// only sound given the assumed signs: `|u| → u` when `u ≥ 0` (or `−u` when `u ≤ 0`),
 /// and `√(b²ᵏ) → bᵏ` (rather than `|bᵏ|`) when `b ≥ 0`. Recurses structurally; parts
@@ -6168,29 +6219,8 @@ pub fn simplify_under_assumptions(expr: &CasExpr, assumptions: &Assumptions) -> 
             }
             simplify_radicals(&inner.sqrt())
         }
-        CasExpr::Unary(UnaryFunc::Exp, arg) => {
-            let inner = simplify_under_assumptions(arg, assumptions);
-            // exp(ln u) = u when u > 0 (the inverse only holds on the positive reals).
-            if let CasExpr::Unary(UnaryFunc::Ln, u) = &inner
-                && assumptions.is_positive(u)
-            {
-                return (**u).clone();
-            }
-            inner.exp()
-        }
-        CasExpr::Unary(UnaryFunc::Ln, arg) => {
-            let inner = simplify_under_assumptions(arg, assumptions);
-            // ln(exp u) = u — always valid on the reals.
-            if let CasExpr::Unary(UnaryFunc::Exp, u) = &inner {
-                return (**u).clone();
-            }
-            // ln(uᵏ) = k·ln u when u > 0 (the log power rule, real branch).
-            if let CasExpr::Pow(base, exponent) = &inner
-                && assumptions.is_positive(base)
-            {
-                return CasExpr::int(i128::from(*exponent)) * base.as_ref().clone().ln();
-            }
-            inner.ln()
+        CasExpr::Unary(UnaryFunc::Exp | UnaryFunc::Ln, _) => {
+            refine_log_exp(expr, assumptions)
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(
             *func,
@@ -16129,6 +16159,9 @@ mod tests {
         assert_equal(&simplify_under_assumptions(&x().ln().exp(), &pos), &x());
         assert_equal(&simplify_under_assumptions(&x().pow(3).ln(), &pos), &(CasExpr::int(3) * x().ln()));
         assert_equal(&simplify_under_assumptions(&x().exp().ln(), &none), &x());
+        // ln(x·y) = ln x + ln y and ln(x/y) = ln x − ln y under both positive.
+        assert_equal(&simplify_under_assumptions(&(x() * v("y")).ln(), &both), &(x().ln() + v("y").ln()));
+        assert_equal(&simplify_under_assumptions(&(x() / v("y")).ln(), &both), &(x().ln() - v("y").ln()));
         // Without positivity, exp(ln x) and ln(x²) are left intact (unsound to fold).
         assert_eq!(simplify_under_assumptions(&x().ln().exp(), &none), x().ln().exp());
         assert_eq!(simplify_under_assumptions(&x().pow(2).ln(), &none), x().pow(2).ln());
