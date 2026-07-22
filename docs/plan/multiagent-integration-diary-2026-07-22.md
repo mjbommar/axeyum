@@ -492,6 +492,32 @@ the **worktree HEAD**, not a branch name. A fixed-branch watcher silently goes
 blind the moment the agent branches — and "no commits on the branch I watch" reads
 identically to "the lane is stuck," which is exactly the wrong conclusion I drew.
 
+### Cycle 21 — 2026-07-22 (~16:40 EDT) — ★ s4 RE-STAGE: measured WRONG→0 (user-directed)
+
+The user (rightly) flagged that I'd gone passive while lanes were heads-down, and
+directed me to drive the long-pending s4 re-stage. Done, carefully (§4 thermal:
+release build capped at `--jobs 8`, watched temp ≤77 °C; targeted runs with 120 s
+caps, no fleet, no orphans; did not disturb the SMT lane's concurrent corpus job):
+
+1. **Built** release `smtcomp_cli` from current `main` (33.9 s).
+2. **Verified WRONG→0** on all **55** stale-binary WRONG cases the live s4 run had
+   recorded: **53 CORRECT + 2 sound-decline (unknown) + 0 still-wrong + 0 missing.**
+   The merged FP fixes (div/mul/fma exact-zero, add/fma, `to_fp` conversion) +
+   AUFLIA sound-decline eliminate *every* one. This *proves* — not asserts — that
+   the WRONG count was pure stale-binary lag; current `main` is sound on all of them.
+3. **Staged atomically:** backed up the Jul-21 stale binary
+   (`axeyum-smtcomp.stale-20260721.bak`), `cp`+`mv`'d the fresh one over
+   `/nas3/.../harness/bin/axeyum-smtcomp` (atomic on one fs → safe for the running
+   fork/exec loop). Sanity: staged binary returns correct `unsat` on a former-WRONG case.
+
+**Note for the SMT lane:** the 55 already-*recorded* WRONG are historical (written
+by the stale binary before the swap); newly-processed benchmarks now use the sound
+binary. A fully clean board requires re-running the affected shards — the lane's call.
+
+**This is the payoff loop closed end-to-end:** proof-carrying soundness fix on a
+branch → green-gated merge to `main` → rebuilt binary → **measured 55 wrong
+answers → 0** on the real SMT-LIB selection. Exactly the compass: never wrong.
+
 ---
 
 ## Cycle log
