@@ -6681,47 +6681,137 @@ fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 
 /// Collect the additive terms of `expr`, recursing into nested `Add` nodes so the
 /// result is a flat list of non-`Add` summands.
-fn flatten_add_terms(expr: &CasExpr, out: &mut Vec<CasExpr>) {
-    if let CasExpr::Add(terms) = expr {
-        for term in terms {
-            flatten_add_terms(term, out);
+fn flatten_add_terms(expr: &CasExpr, var: &str, out: &mut Vec<CasExpr>) {
+    match expr {
+        CasExpr::Add(terms) => {
+            for term in terms {
+                flatten_add_terms(term, var, out);
+            }
         }
-    } else {
-        out.push(expr.clone());
+        // Distribute a negation over the sum: `−(a+b) → −a, −b`.
+        CasExpr::Neg(inner) => {
+            let start = out.len();
+            flatten_add_terms(inner, var, out);
+            for term in &mut out[start..] {
+                *term = CasExpr::Neg(Box::new(term.clone()));
+            }
+        }
+        // Distribute division by a `var`-free constant: `(a+b)/c → a/c, b/c` — the
+        // shape `expand` produces for a sum over a common (surd) denominator.
+        CasExpr::Div(numerator, denominator) if !expr_contains_var(denominator, var) => {
+            let start = out.len();
+            flatten_add_terms(numerator, var, out);
+            for term in &mut out[start..] {
+                *term = CasExpr::Div(Box::new(term.clone()), denominator.clone());
+            }
+        }
+        _ => out.push(expr.clone()),
     }
 }
 
-/// Extract `(c, P)` from a term `c·ln(P(x))`: a rational constant coefficient `c`
-/// times a natural log of a polynomial `P` (returned as its coefficient vector).
-/// Handles the `Mul([const…, ln])`, bare `ln`, and `Neg` shapes that rational
-/// integration emits. `None` if the term is not of this form.
-fn as_rational_times_log(term: &CasExpr, var: &str) -> Option<(Rational, Vec<Rational>)> {
+/// The `(degree, coefficient)` of a single monomial `coeff·varᵏ` where `coeff` is
+/// `var`-free (but may be any constant expression, e.g. a surd). `None` if `term`
+/// mentions `var` in any non-monomial way.
+fn monomial_degree_coeff(term: &CasExpr, var: &str) -> Option<(usize, CasExpr)> {
     match term {
-        CasExpr::Unary(UnaryFunc::Ln, arg) => {
-            Some((Rational::integer(1), normalize(arg)?.to_univariate(var)?))
+        CasExpr::Var(name) if name == var => Some((1, CasExpr::one())),
+        CasExpr::Pow(base, exp) if matches!(base.as_ref(), CasExpr::Var(n) if n == var) => {
+            Some((usize::try_from(*exp).ok()?, CasExpr::one()))
         }
         CasExpr::Neg(inner) => {
-            let (c, poly) = as_rational_times_log(inner, var)?;
-            Some((c.checked_neg()?, poly))
+            let (degree, coeff) = monomial_degree_coeff(inner, var)?;
+            Some((degree, CasExpr::Neg(Box::new(coeff))))
         }
         CasExpr::Mul(factors) => {
-            let mut coefficient = Rational::integer(1);
-            let mut log_poly: Option<Vec<Rational>> = None;
+            let mut degree = 0;
+            let mut coeff_factors: Vec<CasExpr> = Vec::new();
             for factor in factors {
-                if let CasExpr::Unary(UnaryFunc::Ln, arg) = factor {
-                    if log_poly.is_some() {
-                        return None; // more than one log factor
+                if expr_contains_var(factor, var) {
+                    let (d, c) = monomial_degree_coeff(factor, var)?;
+                    degree += d;
+                    if !matches!(&c, CasExpr::Const(k) if *k == Rational::integer(1)) {
+                        coeff_factors.push(c);
                     }
-                    log_poly = Some(normalize(arg)?.to_univariate(var)?);
                 } else {
-                    // A `var`-free constant coefficient (`Const`, `Div` of
-                    // constants, `Neg`, …) — extract it via the polynomial
-                    // normalizer.
-                    let k = multipoly_as_constant(&normalize(factor)?)?;
-                    coefficient = coefficient.checked_mul(k)?;
+                    coeff_factors.push(factor.clone());
                 }
             }
-            Some((coefficient, log_poly?))
+            let coeff = match coeff_factors.len() {
+                0 => CasExpr::one(),
+                1 => coeff_factors.into_iter().next()?,
+                _ => CasExpr::Mul(coeff_factors),
+            };
+            Some((degree, coeff))
+        }
+        _ if !expr_contains_var(term, var) => Some((0, term.clone())),
+        _ => None,
+    }
+}
+
+/// The `(degree, leading coefficient)` of a polynomial in `var` with arbitrary
+/// `var`-free (possibly surd) coefficients — e.g. `x²+√2·x+1 → (2, 1)`. Handles the
+/// surd-coefficient factors of a real quartic factorization that the rational
+/// `to_univariate` cannot. `None` if `expr` is not such a polynomial.
+fn poly_leading_in_var(expr: &CasExpr, var: &str) -> Option<(usize, CasExpr)> {
+    let mut terms = Vec::new();
+    flatten_add_terms(expr, var, &mut terms);
+    let mut best_degree = 0;
+    let mut leading = CasExpr::zero();
+    let mut any = false;
+    for term in &terms {
+        let (degree, coeff) = monomial_degree_coeff(term, var)?;
+        if !any || degree > best_degree {
+            best_degree = degree;
+            leading = coeff;
+            any = true;
+        } else if degree == best_degree {
+            leading = leading + coeff;
+        }
+    }
+    any.then_some((best_degree, simplify(&leading)))
+}
+
+/// Extract `(c, degree, leading)` from a term `c·ln(P(x))`: a `var`-free (possibly
+/// surd) coefficient `c` times a natural log of a polynomial `P` in `var`.
+/// Handles `Mul([const…, ln])`, bare `ln`, and `Neg`. `None` otherwise.
+fn parse_log_polynomial_term(term: &CasExpr, var: &str) -> Option<(CasExpr, usize, CasExpr)> {
+    match term {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            let (degree, leading) = poly_leading_in_var(arg, var)?;
+            Some((CasExpr::one(), degree, leading))
+        }
+        CasExpr::Neg(inner) => {
+            let (c, degree, leading) = parse_log_polynomial_term(inner, var)?;
+            Some((CasExpr::Neg(Box::new(c)), degree, leading))
+        }
+        // A log term over a `var`-free denominator (`ln(P)·k / c`, the shape
+        // `expand` leaves after clearing a common surd denominator).
+        CasExpr::Div(numerator, denominator) if !expr_contains_var(denominator, var) => {
+            let (c, degree, leading) = parse_log_polynomial_term(numerator, var)?;
+            Some((c / (**denominator).clone(), degree, leading))
+        }
+        CasExpr::Mul(factors) => {
+            let mut coeff_factors: Vec<CasExpr> = Vec::new();
+            let mut log_part: Option<(usize, CasExpr)> = None;
+            for factor in factors {
+                if let CasExpr::Unary(UnaryFunc::Ln, arg) = factor {
+                    if log_part.is_some() {
+                        return None; // more than one log factor
+                    }
+                    log_part = Some(poly_leading_in_var(arg, var)?);
+                } else if expr_contains_var(factor, var) {
+                    return None; // non-constant, non-log factor
+                } else {
+                    coeff_factors.push(factor.clone());
+                }
+            }
+            let (degree, leading) = log_part?;
+            let coeff = match coeff_factors.len() {
+                0 => CasExpr::one(),
+                1 => coeff_factors.into_iter().next()?,
+                _ => CasExpr::Mul(coeff_factors),
+            };
+            Some((coeff, degree, leading))
         }
         _ => None,
     }
@@ -6731,52 +6821,53 @@ fn as_rational_times_log(term: &CasExpr, var: &str) -> Option<(Rational, Vec<Rat
 /// (other finite terms)`. Each `ln(Pᵢ) = degᵢ·ln|x| + ln|leadᵢ| + o(1)` at `±∞`,
 /// so the sum converges **iff** `Σ cᵢ·degᵢ = 0` (the `ln x` coefficients cancel),
 /// with value `Σ cᵢ·ln|leadᵢ|` plus the ordinary limits of the non-log terms.
-/// Resolves `∞ − ∞` boundary forms like `⅓ln(x+1) − ⅙ln(x²−x+1) → 0`. Returns
-/// `None` when the log part genuinely diverges (`Σ cᵢ·degᵢ ≠ 0`) or a non-log
-/// term has no finite limit.
+/// Coefficients and polynomial coefficients may be surds, so the real quadratic
+/// factors of a quartic combine here too (`∫_{−∞}^∞ 1/(x⁴+1)`). Resolves `∞ − ∞`
+/// forms like `⅓ln(x+1) − ⅙ln(x²−x+1) → 0`; returns `None` when the log part
+/// genuinely diverges or a non-log term has no finite limit.
 fn limit_log_sum_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
-    if !matches!(expr, CasExpr::Add(_)) {
-        return None;
-    }
-    // Flatten nested sums so log terms buried in an inner `Add` (as rational
-    // integration nests them) are seen at the top level.
+    // `expand` clears constant multipliers/denominators over the sum (`c·(lnP−lnQ)
+    // → c·lnP − c·lnQ`, `(…)/c`); `flatten_add_terms` then distributes any residual
+    // `Neg`/constant-`Div` so each log appears as its own additive term.
+    let expanded = expand(expr).unwrap_or_else(|| expr.clone());
     let mut terms = Vec::new();
-    flatten_add_terms(expr, &mut terms);
-    let mut log_degree_sum = Rational::integer(0); // Σ cᵢ·degᵢ
+    flatten_add_terms(&expanded, var, &mut terms);
+    if terms.len() < 2 {
+        return None; // nothing to combine
+    }
+    let mut log_degree_sum = CasExpr::zero(); // Σ cᵢ·degᵢ (symbolic — may be surd)
     let mut finite_from_logs = CasExpr::zero(); // Σ cᵢ·ln|leadᵢ|
     let mut other = CasExpr::zero();
     let mut saw_log = false;
     for term in &terms {
-        if let Some((coefficient, poly)) = as_rational_times_log(term, var) {
-            let degree = poly::rat_degree(&poly)?;
-            if degree == 0 {
-                // ln of a constant — a finite contribution, no `ln x` growth.
-                let value = poly.first().copied()?;
-                if value <= Rational::integer(0) {
-                    return None;
-                }
-                finite_from_logs = finite_from_logs
-                    + CasExpr::Const(coefficient) * CasExpr::Const(value).ln();
-                saw_log = true;
-                continue;
+        if let Some((coefficient, degree, leading)) = parse_log_polynomial_term(term, var) {
+            // `ln|leadᵢ|` requires a positive leading coefficient; decide its sign
+            // numerically (leading is a `var`-free constant).
+            let sign = evalf(&leading, &[])?;
+            if !sign.is_finite() || sign == 0.0 {
+                return None;
             }
-            let leading = poly[degree];
-            let magnitude = if leading < Rational::integer(0) {
-                leading.checked_neg()?
+            let magnitude = if sign < 0.0 {
+                CasExpr::Neg(Box::new(leading))
             } else {
                 leading
             };
             log_degree_sum = log_degree_sum
-                .checked_add(coefficient.checked_mul(Rational::integer(i128::try_from(degree).ok()?))?)?;
-            finite_from_logs =
-                finite_from_logs + CasExpr::Const(coefficient) * CasExpr::Const(magnitude).ln();
+                + coefficient.clone() * CasExpr::Const(Rational::integer(i128::try_from(degree).ok()?));
+            finite_from_logs = finite_from_logs + coefficient * magnitude.ln();
             saw_log = true;
         } else {
             other = other + limit(term, var, point)?;
         }
     }
-    if !saw_log || !log_degree_sum.is_zero() {
-        return None; // no logs to combine, or the log part diverges
+    // The `ln x` coefficient `Σ cᵢ·degᵢ` must vanish for convergence.
+    if !saw_log
+        || !matches!(
+            equal(&log_degree_sum, &CasExpr::zero()),
+            ZeroTest::Certified { equal: true, .. }
+        )
+    {
+        return None;
     }
     Some(simplify(&fold_elementary_constants(&(finite_from_logs + other))))
 }
@@ -12911,6 +13002,17 @@ mod tests {
             equal(
                 &gauss(CasExpr::int(1) / ((x() + CasExpr::int(1)) * (x() + CasExpr::int(2))), zero(), LimitPoint::PosInfinity),
                 &CasExpr::int(2).ln(),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // ∫_{−∞}^∞ 1/(x⁴+1) = π/√2 — the antiderivative's real (surd) quadratic
+        // factorization has log terms `(1/4√2)(ln(x²+√2x+1)−ln(x²−√2x+1))` that
+        // each diverge but combine to 0 (surd-coefficient combining-logs), plus
+        // atan asymptotes.
+        assert!(matches!(
+            equal(
+                &gauss(CasExpr::int(1) / (x().pow(4) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity),
+                &(v("pi") / CasExpr::int(2).sqrt()),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
