@@ -3042,8 +3042,11 @@ pub fn solve_polynomial_system(
     let mut solutions: Vec<(CasExpr, CasExpr)> = Vec::new();
     for x_root in x_roots {
         // Only x-roots we can substitute exactly (rational or exact surd) are useful;
-        // substitute and solve the (now univariate) equation in y.
-        let f_at = simplify(&f.substitute(xvar, &x_root));
+        // substitute and solve the (now univariate) equation in y. `simplify` first
+        // expands `((½)√2)² → (¼)(√2)²`, then `simplify_radicals` folds `(√2)² → 2` so
+        // the coefficients become the clean rationals `solve` needs — otherwise a surd
+        // `x`-root leaves `(√2)²` unreduced and the y-solve declines.
+        let f_at = simplify(&simplify_radicals(&simplify(&f.substitute(xvar, &x_root))));
         let Some(y_candidates) = solve(&f_at, yvar) else {
             continue;
         };
@@ -20148,6 +20151,20 @@ mod tests {
         assert!(
             solve_polynomial_system(&(x() + y() + v("z")), &(x() - y()), "x", "y").is_none()
         );
+        // **Surd** solutions: x²+y²=1 ∩ x=y ⇒ (±√2/2, ±√2/2). Needs the surd `x`-root's
+        // square to fold (`(√2)²→2`) before the y-solve; both pairs certify on both eqs.
+        let surd = solve_polynomial_system(
+            &(x().pow(2) + y().pow(2) - CasExpr::int(1)),
+            &(x() - y()),
+            "x",
+            "y",
+        )
+        .expect("solvable");
+        assert_eq!(surd.len(), 2);
+        for (xr, yr) in &surd {
+            assert_equal(&(xr.clone().pow(2) + yr.clone().pow(2) - CasExpr::int(1)), &CasExpr::zero());
+            assert_equal(&(xr.clone() - yr.clone()), &CasExpr::zero());
+        }
     }
 
     #[test]
