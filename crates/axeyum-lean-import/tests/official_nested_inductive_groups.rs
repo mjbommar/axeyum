@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use axeyum_lean_import::{ImportError, ImportLimits, ImportReport, import_ndjson};
-use axeyum_lean_kernel::{Declaration, Kernel, KernelError, NameId};
+use axeyum_lean_kernel::{Declaration, ExprId, ExprNode, Kernel, KernelError, NameId};
 use serde_json::{Value, json};
 
 const CONTROL: &str =
@@ -38,6 +38,7 @@ struct OfficialCase {
     source_fields: u16,
     auxiliary_indices: u16,
     auxiliary_fields: &'static [u16],
+    computation: Option<(&'static str, usize)>,
     required: &'static [&'static str],
 }
 
@@ -52,6 +53,7 @@ const CASES: &[OfficialCase] = &[
         source_fields: 2,
         auxiliary_indices: 0,
         auxiliary_fields: &[0, 2],
+        computation: None,
         required: &[
             "AxeyumConstructMatrix.Rose",
             "AxeyumConstructMatrix.Rose.node",
@@ -70,6 +72,7 @@ const CASES: &[OfficialCase] = &[
         source_fields: 2,
         auxiliary_indices: 0,
         auxiliary_fields: &[0, 2],
+        computation: Some(("roseAuxiliaryRecursorComputes", 3)),
         required: &[
             "AxeyumNestedInductiveComputation.Rose.rec",
             "AxeyumNestedInductiveComputation.Rose.rec_1",
@@ -86,6 +89,7 @@ const CASES: &[OfficialCase] = &[
         source_fields: 3,
         auxiliary_indices: 1,
         auxiliary_fields: &[0, 3],
+        computation: Some(("indexedAuxiliaryRecursorComputes", 3)),
         required: &[
             "AxeyumNestedInductiveComputation.IndexedRose.rec",
             "AxeyumNestedInductiveComputation.IndexedRose.rec_1",
@@ -93,7 +97,7 @@ const CASES: &[OfficialCase] = &[
         ],
     },
     OfficialCase {
-        label: "repeated-container-computation",
+        label: "repeated-container-reuse-computation",
         fixture: REPEATED,
         counts: (122, 8, 518, 17, 34),
         namespace: "AxeyumNestedInductiveComputation",
@@ -102,6 +106,7 @@ const CASES: &[OfficialCase] = &[
         source_fields: 3,
         auxiliary_indices: 0,
         auxiliary_fields: &[0, 2],
+        computation: Some(("repeatedContainerReusesAuxiliaryRecursor", 5)),
         required: &[
             "AxeyumNestedInductiveComputation.RepeatRose.rec",
             "AxeyumNestedInductiveComputation.RepeatRose.rec_1",
@@ -116,6 +121,71 @@ fn qualified(kernel: &mut Kernel, components: &[&str]) -> NameId {
         name = kernel.name_str(name, *component);
     }
     name
+}
+
+fn unfold_apps(kernel: &Kernel, mut expression: ExprId) -> (ExprId, Vec<ExprId>) {
+    let mut arguments = Vec::new();
+    while let ExprNode::App(function, argument) = kernel.expr_node(expression) {
+        arguments.push(*argument);
+        expression = *function;
+    }
+    arguments.reverse();
+    (expression, arguments)
+}
+
+fn normalize_application_spine(kernel: &mut Kernel, expression: ExprId) -> ExprId {
+    let expression = kernel.whnf(expression);
+    let ExprNode::App(function, argument) = kernel.expr_node(expression).clone() else {
+        return expression;
+    };
+    let function = normalize_application_spine(kernel, function);
+    let argument = normalize_application_spine(kernel, argument);
+    kernel.app(function, argument)
+}
+
+fn assert_computation_theorem(
+    kernel: &mut Kernel,
+    namespace: &str,
+    theorem: &str,
+    expected_successors: usize,
+) {
+    let theorem_name = qualified(kernel, &[namespace, theorem]);
+    let declaration = kernel
+        .environment()
+        .get(theorem_name)
+        .unwrap_or_else(|| panic!("missing theorem {namespace}.{theorem}"))
+        .clone();
+    let Declaration::Theorem { ty, value, .. } = declaration else {
+        panic!("selected computation result is not a theorem");
+    };
+    let inferred = kernel.infer(value).expect("computation proof must infer");
+    assert!(kernel.def_eq(inferred, ty));
+
+    let (head, arguments) = unfold_apps(kernel, ty);
+    let ExprNode::Const(eq_name, _) = kernel.expr_node(head) else {
+        panic!("computation theorem type is not headed by Eq");
+    };
+    assert_eq!(kernel.display_name(*eq_name).to_string(), "Eq");
+    assert_eq!(arguments.len(), 3, "Eq must have type, lhs, and rhs");
+    let lhs = arguments[1];
+    let rhs = arguments[2];
+    assert!(kernel.def_eq(lhs, rhs), "rfl theorem sides must be def-eq");
+
+    let zero_name = qualified(kernel, &[namespace, "MiniNat", "zero"]);
+    let succ_name = qualified(kernel, &[namespace, "MiniNat", "succ"]);
+    let mut expected = kernel.const_(zero_name, vec![]);
+    let succ = kernel.const_(succ_name, vec![]);
+    for _ in 0..expected_successors {
+        expected = kernel.app(succ, expected);
+    }
+    assert!(
+        kernel.def_eq(rhs, expected),
+        "registered normal form drifted"
+    );
+    assert_eq!(
+        normalize_application_spine(kernel, lhs),
+        normalize_application_spine(kernel, expected)
+    );
 }
 
 fn assert_control() {
@@ -149,6 +219,7 @@ fn assert_report(report: &ImportReport, case: OfficialCase) {
         case.label
     );
     assert!(report.axioms.is_empty(), "{}", case.label);
+    assert!(report.axiom_identities.is_empty(), "{}", case.label);
     assert_eq!(
         report.declaration_identities.len(),
         report.admitted_declarations,
@@ -302,6 +373,14 @@ fn official_nested_streams_import_twice_with_exact_public_declarations() {
             let (mut kernel, report) = completed.into_parts();
             assert_report(&report, case);
             assert_nested_surface(&mut kernel, case);
+            if let Some((theorem, expected_successors)) = case.computation {
+                assert_computation_theorem(
+                    &mut kernel,
+                    case.namespace,
+                    theorem,
+                    expected_successors,
+                );
+            }
             reports.push(report);
         }
         assert_eq!(reports[0], reports[1], "{}", case.label);
