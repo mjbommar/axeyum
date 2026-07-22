@@ -8917,6 +8917,90 @@ impl DefiniteIntegral {
     }
 }
 
+/// Decompose `expr` into `(c, p, q)` for the form `c · x^p · (1−x)^q` (`c` rational,
+/// `p, q` rational powers built from `x`, `1−x`, `√x`, `√(1−x)` and reciprocals).
+/// Recognises a Beta integral `∫₀^1 x^p (1−x)^q = B(p+1, q+1)`. `None` outside form.
+fn extract_beta_form(expr: &CasExpr, var: &str) -> Option<(Rational, Rational, Rational)> {
+    // A pure polynomial atom: constant, `x`, or `1−x`.
+    if let Some(poly) = normalize(expr).and_then(|p| p.to_univariate(var)) {
+        match poly::rat_degree(&poly)? {
+            0 => return Some((poly.first().copied().unwrap_or_else(Rational::zero), Rational::zero(), Rational::zero())),
+            1 if poly[0].is_zero() && poly[1] == Rational::integer(1) => {
+                return Some((Rational::integer(1), Rational::integer(1), Rational::zero())); // x
+            }
+            1 if poly[0] == Rational::integer(1) && poly[1] == Rational::integer(-1) => {
+                return Some((Rational::integer(1), Rational::zero(), Rational::integer(1))); // 1−x
+            }
+            _ => {} // a general polynomial — fall through to the structural cases
+        }
+    }
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
+            // `√(x^a·(1−x)^b) = x^{a/2}·(1−x)^{b/2}` — recurse into the radicand so
+            // `√(x(1−x))` is recognised too.
+            let (c, p, q) = extract_beta_form(arg, var)?;
+            let root_c = rational_sqrt(c)?; // radicand coefficient must be a square
+            Some((root_c, p.checked_div(Rational::integer(2))?, q.checked_div(Rational::integer(2))?))
+        }
+        CasExpr::Pow(base, exp) => {
+            let (c, p, q) = extract_beta_form(base, var)?;
+            let power = Rational::integer(i128::from(*exp));
+            let mut c_pow = Rational::integer(1);
+            for _ in 0..*exp {
+                c_pow = c_pow.checked_mul(c)?;
+            }
+            Some((c_pow, p.checked_mul(power)?, q.checked_mul(power)?))
+        }
+        CasExpr::Neg(inner) => {
+            let (c, p, q) = extract_beta_form(inner, var)?;
+            Some((c.checked_neg()?, p, q))
+        }
+        CasExpr::Mul(factors) => {
+            let mut c = Rational::integer(1);
+            let (mut p, mut q) = (Rational::zero(), Rational::zero());
+            for factor in factors {
+                let (fc, fp, fq) = extract_beta_form(factor, var)?;
+                c = c.checked_mul(fc)?;
+                p = p.checked_add(fp)?;
+                q = q.checked_add(fq)?;
+            }
+            Some((c, p, q))
+        }
+        CasExpr::Div(a, b) => {
+            let (ca, pa, qa) = extract_beta_form(a, var)?;
+            let (cb, pb, qb) = extract_beta_form(b, var)?;
+            Some((ca.checked_div(cb)?, pa.checked_sub(pb)?, qa.checked_sub(qb)?))
+        }
+        _ => None,
+    }
+}
+
+/// `∫₀^1 x^p·(1−x)^q dx = B(p+1, q+1) = Γ(p+1)Γ(q+1)/Γ(p+q+2)` for half-integer or
+/// integer powers — e.g. `∫₀^1 1/√(x(1−x)) = B(1/2,1/2) = π`. Reuses
+/// [`special::beta`]. `None` outside `[0,1]` or when a Gamma value has no closed form.
+fn definite_beta_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+        || !matches!(equal(upper, &CasExpr::int(1)), ZeroTest::Certified { equal: true, .. })
+    {
+        return None;
+    }
+    let (coefficient, p, q) = extract_beta_form(expr, var)?;
+    // A pure polynomial (`p, q` non-negative integers) is handled exactly by FTC;
+    // only take over when a fractional power makes it a genuine Beta integral.
+    if p.denominator() == 1 && q.denominator() == 1 && p.numerator() >= 0 && q.numerator() >= 0 {
+        return None;
+    }
+    let beta = special::beta(p.checked_add(Rational::integer(1))?, q.checked_add(Rational::integer(1))?)?;
+    // `simplify` first combines `√π·√π → (√π)²`, then `simplify_radicals` folds it
+    // to `π` in `B(½,½) = Γ(½)²/Γ(1)`.
+    Some(simplify(&simplify_radicals(&simplify(&(CasExpr::Const(coefficient) * beta)))))
+}
+
 /// The definite integral of `expr` in `var` from `lower` to `upper`, via the
 /// fundamental theorem of calculus: find a certified antiderivative `F` with
 /// [`integrate`], then return `F(upper) − F(lower)`.
@@ -8950,6 +9034,15 @@ pub fn definite_integrate(
     lower: &CasExpr,
     upper: &CasExpr,
 ) -> Option<DefiniteIntegral> {
+    // Beta integral `∫₀^1 x^p(1−x)^q = B(p+1,q+1)` (fractional powers, no elementary
+    // antiderivative) — before the FTC path, which can't reach it.
+    if let Some(value) = definite_beta_integral(expr, var, lower, upper) {
+        return Some(DefiniteIntegral {
+            value,
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+        });
+    }
     // Full-period rational-trig closed form: `∫₀^{2π} k/(a+b·cos x) dx =
     // 2πk/√(a²−b²)` (and the `sin` variant). The Weierstrass antiderivative
     // `tan(x/2)` is discontinuous at π, so FTC would give a wrong value — this exact
@@ -14124,6 +14217,23 @@ mod tests {
         let c = definite_integrate(&x().cos(), "x", &CasExpr::int(0), &(pi() / CasExpr::int(2)))
             .unwrap();
         assert_equal(&c.value, &CasExpr::int(1));
+        // Beta integrals ∫₀^1 x^p(1−x)^q = B(p+1,q+1) with half-integer powers (no
+        // elementary antiderivative): ∫₀^1 1/√(x(1−x)) = B(½,½) = π,
+        // ∫₀^1 √x/√(1−x) = B(3/2,½) = π/2.
+        assert!(matches!(
+            equal(
+                &definite_integrate(&(CasExpr::int(1) / (x() * (CasExpr::int(1) - x())).sqrt()), "x", &CasExpr::int(0), &CasExpr::int(1)).unwrap().value,
+                &pi(),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(
+                &definite_integrate(&(x().sqrt() / (CasExpr::int(1) - x()).sqrt()), "x", &CasExpr::int(0), &CasExpr::int(1)).unwrap().value,
+                &(pi() / CasExpr::int(2)),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // Special-angle inverse-trig boundary: ∫₀^{√3} 1/(1+x²) = atan(√3) = π/3.
         let atan_bound = definite_integrate(
             &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
