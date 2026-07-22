@@ -391,6 +391,29 @@ shared NAS/temp fixtures. **Integrator rule added: on a RED that doesn't reprodu
 re-run twice before believing it; a single transient fail is not a red branch.**
 (Had I trusted the first fail, I'd have wrongly held back a green commit.)
 
+**Interim SMT merges (batched, all gated green via safe pattern):** `32ecd649`
+preserve idempotent removals, `41ee9b34`/`5051dfbc` external-sort eligibility
+ledger (memory-bounded S1 producer over the 450k population).
+
+### Cycle 17 (heartbeat ~14:30 EDT, 3.5 h) — CAS is soaring, not stuck
+
+Re-examined the CAS lane (4 h uncommitted, WIP *churning* not growing — looked
+like a possible block). **It is not blocked — it is doing exceptional work.**
+Current WIP: `MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT = 33` (up from 15 at
+cycle 15) via a new **nested-product-quotient compaction** — a WZ-ratio method
+that cancels shared `(n)_j` factors *before* expansion, unlocking far higher
+orders. New `nested_product_quotients_compact_order_nineteen_wz_ratios` test; a
+live `cargo test` (isolated `/nas4/.../axeyum-cas-target.*` per §2) is validating
+order-19 + the moment-family right now. The insertion "churn" was a *refactor*
+generalizing past the order-15 code, not thrashing. **Lesson: WIP diffstat
+shrinking ≠ stalling — for a proof engine it can mean a stronger, more compact
+method replacing a weaker one. Read the actual functions before calling a block.**
+A very high-value CAS merge (order-33 squared-binomial moments — well past typical
+CAS reach) is queued.
+
+**Others:** Lean 14-file WIP (M6 closure work incoming). SMT S1 producer active.
+**s4:** WRONG=16 stable (all verified stale, cycle 15). **Health:** 36 °C, no runaways.
+
 ---
 
 ## Cycle log
