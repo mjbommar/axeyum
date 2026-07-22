@@ -4507,7 +4507,57 @@ pub fn apart(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 pub fn residue(expr: &CasExpr, var: &str, point: Rational) -> Option<CasExpr> {
     // Reduce to lowest terms so cancellable factors do not inflate the pole order.
     let reduced = cancel(expr)?;
-    let ratio = normalize_rational(&reduced)?;
+    // Rational functions go through the exact partial-fraction machinery; a
+    // transcendental numerator over a pure power `(x−a)ⁿ` uses the derivative form.
+    if let Some(value) = residue_rational(&reduced, var, point) {
+        return Some(value);
+    }
+    residue_meromorphic(&reduced, var, point)
+}
+
+/// Residue of `f(x)/(x−a)ⁿ` with an **analytic** (possibly transcendental)
+/// numerator `f` over a pure power denominator: `Res = f^{(n−1)}(a)/(n−1)!`. Closes
+/// `Res_{0} cos x/x = 1`, `Res_{0} eˣ/x² = 1`, `Res_{0} sin x/x⁴ = −1/6`. `None`
+/// unless the denominator is `c·(x−a)ⁿ` and the derivative resolves at `a`.
+fn residue_meromorphic(expr: &CasExpr, var: &str, point: Rational) -> Option<CasExpr> {
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    let den_poly = normalize(denominator)?.to_univariate(var)?;
+    let n = poly::rat_degree(&den_poly)?;
+    if n < 1 {
+        return None;
+    }
+    let lead = *den_poly.last()?;
+    // The denominator must be exactly `lead·(x−point)ⁿ`.
+    let mut expected = vec![lead];
+    for _ in 0..n {
+        expected =
+            poly::ratpoly_mul(&expected, &[point.checked_neg()?, Rational::integer(1)])?;
+    }
+    if poly::rat_trim(expected) != poly::rat_trim(den_poly) {
+        return None;
+    }
+    // Res = (1/(n−1)!)·[d^{n−1}(numerator/lead)]_{x=point}.
+    let scaled = (**numerator).clone() / CasExpr::Const(lead);
+    let derivative = scaled.differentiate_n(var, n - 1);
+    let at_point = simplify(&fold_elementary_constants(
+        &derivative.substitute(var, &CasExpr::Const(point)),
+    ));
+    if expr_contains_var(&at_point, var) {
+        return None; // numerator not analytic at the point (its own singularity)
+    }
+    let mut factorial = Rational::integer(1);
+    for k in 1..n {
+        factorial = factorial.checked_mul(Rational::integer(i128::try_from(k).ok()?))?;
+    }
+    Some(simplify(&(at_point / CasExpr::Const(factorial))))
+}
+
+/// Residue via the exact rational partial-fraction machinery (`None` if the
+/// numerator/denominator are not polynomials in `var`).
+fn residue_rational(reduced: &CasExpr, var: &str, point: Rational) -> Option<CasExpr> {
+    let ratio = normalize_rational(reduced)?;
     let numerator = ratio.num.to_univariate(var)?;
     let mut denominator = ratio.den.to_univariate(var)?;
 
@@ -13388,6 +13438,18 @@ mod tests {
             (x().pow(2) + CasExpr::int(1)) / ((x() - CasExpr::int(2)) * (x() - CasExpr::int(3)));
         assert_equal(&residue(&h, "x", ig(2)).unwrap(), &CasExpr::int(-5));
         assert_equal(&residue(&h, "x", ig(3)).unwrap(), &CasExpr::int(10));
+        // Transcendental numerator over a pure power `(x−a)ⁿ`: Res = f^{(n−1)}(a)/(n−1)!.
+        // Res₀ cos x/x = 1, Res₀ eˣ/x² = 1, Res₀ sin x/x⁴ = −1/6, Res₁ eˣ/(x−1)² = e.
+        assert_equal(&residue(&(x().cos() / x()), "x", ig(0)).unwrap(), &CasExpr::int(1));
+        assert_equal(&residue(&(x().exp() / x().pow(2)), "x", ig(0)).unwrap(), &CasExpr::int(1));
+        assert_equal(
+            &residue(&(x().sin() / x().pow(4)), "x", ig(0)).unwrap(),
+            &CasExpr::rat(-1, 6),
+        );
+        assert_equal(
+            &residue(&(x().exp() / (x() - CasExpr::int(1)).pow(2)), "x", ig(1)).unwrap(),
+            &CasExpr::int(1).exp(),
+        );
     }
 
     #[test]
