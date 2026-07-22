@@ -100,10 +100,12 @@
   },
   "construct_matrix_regression": {
     "registration": "docs/plan/lean-official-construct-matrix-v1.json",
-    "registration_sha256": "e76d334f4354eac297d447ae31b3f6f2b3460f99d0817af14e95faf30e8ef0d1",
+    "historical_registration_sha256": "e76d334f4354eac297d447ae31b3f6f2b3460f99d0817af14e95faf30e8ef0d1",
+    "current_registration_sha256": "f6c11499ab38130de75c7acbd7ad1db79afcd080ab405a7233087f8f67c3ac3e",
     "test": "cargo test -p axeyum-lean-import --test official_construct_matrix",
     "control_repetitions": 10,
     "decline_observations": 10,
-    "outcomes_unchanged": true
+    "outcomes_unchanged_at_m3": true,
+    "superseded_by_tl2_12": true
   }
 }

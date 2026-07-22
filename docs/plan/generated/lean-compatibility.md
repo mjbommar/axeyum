@@ -8,7 +8,7 @@ This matrix refuses to collapse parsing, translation, independent kernel admissi
 
 - Lean `4.30.0` at `d024af099ca4bf2c86f649261ebf59565dc8c622`.
 - `lean4export` `3.1.0` at `a3e35a584f59b390667db7269cd37fca8575e4bf`.
-- 12 exact artifact/profile rows and 8 registered unsupported-construct codes.
+- 12 exact artifact/profile rows and 7 registered unsupported-construct codes.
 
 ## Profile gates
 
@@ -65,7 +65,6 @@ These are fail-closed unsupported-construct results, not failed proofs and not p
 | `format-version` | `axeyum-lean-import` | The export stream is not the pinned format version. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
 | `inductive-mutual` | `axeyum-lean-kernel` | A mutual inductive group is outside the current admission profile. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
 | `inductive-nested` | `axeyum-lean-kernel` | Nested recursion is outside the current admission profile. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
-| `inductive-reflexive` | `axeyum-lean-kernel` | Reflexive or higher-order recursion is outside the current admission profile. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
 | `literal-string-typing` | `axeyum-lean-kernel` | String literals await kernel typing and reduction support. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
 | `quotient-package` | `axeyum-lean-kernel` | The fixed quotient package is outside the current admission profile. | [source](../../../crates/axeyum-lean-import/src/lib.rs) |
 

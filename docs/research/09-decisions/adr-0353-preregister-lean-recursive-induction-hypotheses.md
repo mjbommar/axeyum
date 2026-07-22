@@ -1,19 +1,22 @@
 # ADR-0353: Preregister one Lean recursive induction-hypothesis rule for indexed and higher-order fields
 
-Status: proposed
+Status: accepted
 
 Date: 2026-07-22
 
 Execution plan:
 [TL2.12 recursive induction-hypothesis plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
 
-Implementation checkpoint:
-[M1](../../plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md) now routes
-direct recursion through the shared WHNF classifier/reopener and stable field
-metadata without changing admission. Exact direct declaration identities,
-computation controls, both feature declines, and the 840-case positivity
-summary remain unchanged. M2 generalized native semantics is next; neither M0
-computation stream has received Axeyum product observation.
+Implementation result:
+[M5](../../plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+closes every preregistered exit. One shared WHNF classifier/reopener now drives
+direct, indexed, higher-order, and combined recursive fields; the two frozen
+official construct streams complete twice with exact recursor comparison; and
+the two separately frozen computation streams normalize to their registered
+Vector/Acc results. Native and generated mutations, direct-recursive identity,
+the 840-case positivity population, completion-only publication, pinned-Lean
+differentials, and all bounded final gates pass. TL2.12 is DONE; TL2.13 mutual
+groups are the next semantic widening.
 
 ## Context
 

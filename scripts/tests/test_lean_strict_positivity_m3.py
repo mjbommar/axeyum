@@ -61,11 +61,11 @@ class LeanStrictPositivityM3Tests(unittest.TestCase):
         self.assertTrue(any("synthetic importer" in item for item in self.failures()))
 
     def test_construct_matrix_regression_cannot_be_promoted_or_rebound(self) -> None:
-        self.data["construct_matrix_regression"]["outcomes_unchanged"] = False
+        self.data["construct_matrix_regression"]["outcomes_unchanged_at_m3"] = False
         self.assertTrue(any("construct-matrix observation" in item for item in self.failures()))
 
         mutated = copy.deepcopy(CHECK.load_manifest())
-        mutated["construct_matrix_regression"]["registration_sha256"] = "0" * 64
+        mutated["construct_matrix_regression"]["current_registration_sha256"] = "0" * 64
         self.data = mutated
         self.assertTrue(any("construct-matrix observation" in item for item in self.failures()))
 

@@ -407,4 +407,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0350](adr-0350-canonical-lean-declaration-identity.md) | Publish ledger-compatible axiom identities plus canonical structural declaration and direct-dependency digests | accepted |
 | [0351](adr-0351-preregister-official-lean-construct-matrix.md) | Preregister source-first and wire-second official Lean construct measurement before widening recursive admission | accepted |
 | [0352](adr-0352-preregister-lean-strict-positivity.md) | Reproduce Lean 4.30 strict positivity before recursive-indexed or reflexive admission widens | accepted |
-| [0353](adr-0353-preregister-lean-recursive-induction-hypotheses.md) | Preregister one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields | proposed |
+| [0353](adr-0353-preregister-lean-recursive-induction-hypotheses.md) | Accept one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields | accepted |

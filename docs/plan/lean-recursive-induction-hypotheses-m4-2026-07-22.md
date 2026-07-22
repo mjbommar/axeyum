@@ -11,7 +11,7 @@ Importer prerequisite:
 [M3 result](lean-recursive-induction-hypotheses-m3-2026-07-22.md)
 
 Decision gate:
-[proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+[ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 ## 1. Result
 

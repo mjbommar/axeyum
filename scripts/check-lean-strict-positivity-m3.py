@@ -160,22 +160,28 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     matrix = data.get("construct_matrix_regression", {})
     expected_matrix = {
         "registration": "docs/plan/lean-official-construct-matrix-v1.json",
-        "registration_sha256": (
+        "historical_registration_sha256": (
             "e76d334f4354eac297d447ae31b3f6f2b3460f99d0817af14e95faf30e8ef0d1"
+        ),
+        "current_registration_sha256": (
+            "f6c11499ab38130de75c7acbd7ad1db79afcd080ab405a7233087f8f67c3ac3e"
         ),
         "test": "cargo test -p axeyum-lean-import --test official_construct_matrix",
         "control_repetitions": 10,
         "decline_observations": 10,
-        "outcomes_unchanged": True,
+        "outcomes_unchanged_at_m3": True,
+        "superseded_by_tl2_12": True,
     }
     if matrix != expected_matrix:
         failures.append("construct-matrix observation drift")
     else:
         registration = ROOT / matrix["registration"]
         if not registration.is_file() or sha256(registration) != matrix[
-            "registration_sha256"
+            "current_registration_sha256"
         ]:
             failures.append("construct-matrix registration hash drift")
+        elif "tl2_12_update" not in json.loads(registration.read_text(encoding="utf-8")):
+            failures.append("construct-matrix TL2.12 update missing")
     return failures
 
 

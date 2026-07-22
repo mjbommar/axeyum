@@ -8,7 +8,7 @@ Parent:
 [TL2.12 execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
 
 Decision:
-[proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+[ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Machine registration:
 [`lean-recursive-induction-hypotheses-v1.json`](lean-recursive-induction-hypotheses-v1.json)

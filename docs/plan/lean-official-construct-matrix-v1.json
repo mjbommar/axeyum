@@ -1748,8 +1748,14 @@
     "lean_jobs": 1,
     "lean_source_runs": 2,
     "lean_olean_sha256": "8b5136f7e66b18c9ad00b7f67b732ebb0fd9ff437128a80bdce831f011c7f573",
-    "lean_elapsed_ms": [220, 210],
-    "lean_max_rss_kib": [462632, 462832],
+    "lean_elapsed_ms": [
+      220,
+      210
+    ],
+    "lean_max_rss_kib": [
+      462632,
+      462832
+    ],
     "rust_gate_elapsed_ms": 430,
     "rust_gate_max_rss_kib": 144304,
     "outcomes": {

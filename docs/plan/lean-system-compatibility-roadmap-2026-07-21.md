@@ -714,8 +714,8 @@ Non-claims until their gates are met:
    matrix and two byte-identical runs of a frozen 840-case grammar. M3 now adds
    eight pinned-Lean observations, mandatory CI, synthetic importer
    propagation, and the immutable construct-matrix regression. Final bounded
-   gates pass and no recursive admission widened. **TL2.12 is now
-   preregistered under proposed ADR-0353:** direct, indexed, higher-order, and
+   gates pass and no recursive admission widened. **TL2.12 is now DONE under
+   accepted ADR-0353:** direct, indexed, higher-order, and
    combined fields use one `Pi telescope, motive indices (field args)` IH/rule
    construction. [M0 is complete](lean-recursive-induction-hypotheses-m0-2026-07-22.md):
    one explicit-recursor source compiles twice, two root-specific official
@@ -736,7 +736,9 @@ Non-claims until their gates are met:
    [M4 result](lean-recursive-induction-hypotheses-m4-2026-07-22.md) now
    confirms pinned Lean and Axeyum computations twice at the exact Vector/Acc
    normal forms and regenerates a machine-validated matrix with four admitted,
-   two computation-checked, and two declined rows. M5 final disposition remains.
+   two computation-checked, and two declined rows. The
+   [M5 result](lean-recursive-induction-hypotheses-final-2026-07-22.md) closes
+   every registered gate, accepts ADR-0353, and hands off to TL2.13.
    The
    [execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
    requires both frozen official streams, exact generated-recursor comparison,
@@ -746,7 +748,8 @@ Non-claims until their gates are met:
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path is TL2.12 M5, with every TL2.11 guard retained.
+   primary semantic path is TL2.13 mutual groups, with every TL2.11/TL2.12
+   guard retained.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

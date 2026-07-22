@@ -83,8 +83,8 @@ Last updated: 2026-07-22
 > [M4 assurance result](../../../docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
 > now generates seven implication-checked rows; M5 and TL2.11 strict positivity
 > are complete. TL2.16 is PARTIAL for this selected population. TL1.5 property
-> fuzzing is dependency-ready. TL2.12 is now preregistered under
-> [proposed ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md):
+> fuzzing is dependency-ready. TL2.12 is complete under
+> [accepted ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md):
 > one telescope-based rule covers direct, indexed, and higher-order recursive
 > fields. [M0](../../../docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
 > now freezes the twice-compiled explicit-recursor source, two byte-identical
@@ -92,8 +92,11 @@ Last updated: 2026-07-22
 > contract with no Axeyum product observation. The
 > [M1 result](../../../docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
 > now routes direct recursion through the shared classifier/reopener with exact
-> identities and all existing declines unchanged. M2 native semantics is next,
-> and the completed TL2.11 guard remains mandatory throughout.
+> identities and all existing declines unchanged. M2-M4 then close native
+> semantics, official imports, and selected computation. The
+> [M5 result](../../../docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+> accepts the decision after every bounded gate and hands the semantic path to
+> TL2.13 mutual groups; the completed TL2.11 guard remains mandatory.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

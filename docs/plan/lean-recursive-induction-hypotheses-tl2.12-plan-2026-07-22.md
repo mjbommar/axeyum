@@ -1,14 +1,14 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: M4 computation differential and assurance update complete; M5 final bounded gates and disposition are next
+Status: complete; M5 accepted ADR-0353 and handed off to TL2.13
 
 Date: 2026-07-22
 
 Decision gate:
-[proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+[accepted ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Current checkpoint:
-[M4 computation/assurance result](lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+[M5 final result](lean-recursive-induction-hypotheses-final-2026-07-22.md)
 
 Parents:
 
@@ -325,13 +325,12 @@ recorded as validation measurements, not a speed comparison. See the
 
 ### M5 — closure and TL2.13 handoff
 
-- run all final bounded gates;
-- accept, reject, or defer ADR-0353 from its preregistered exits;
-- close the research question and mark TL2.12 DONE only if every gate passes;
-- synchronize PLAN, STATUS, both Lean roadmaps, P6.0, project state, and docs;
-- hand the semantic spine to TL2.13 mutual groups, retaining TL2.14 frontend
-  lowering as dependency-gated;
-- commit, push, and verify local/tracking/remote equality.
+**Complete.** Every final bounded gate passes. ADR-0353 is accepted, the
+research question is closed, and TL2.12 is DONE. PLAN, STATUS, both Lean
+roadmaps, P6.0, project state, and the documentation index are synchronized.
+The primary semantic path is TL2.13 mutual groups; TL2.14 frontend nested and
+well-founded lowering remains dependency-gated. See the
+[M5 final result](lean-recursive-induction-hypotheses-final-2026-07-22.md).
 
 Each milestone is independently reviewable. Stage only milestone-owned files;
 preserve unrelated dirty work. A failed observation is documented and pushed

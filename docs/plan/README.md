@@ -139,7 +139,7 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M4 final bounded gates, accepted ADR-0352, completed TL2.11/T6.0.2, exact
   non-claims, and the preregistration-first TL2.12 handoff.
 - [`lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md`](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
-  — proposed ADR-0353's unified `Pi telescope, motive indices (field args)`
+  — accepted ADR-0353's unified `Pi telescope, motive indices (field args)`
   rule, native/official computation gates, mutation grammar, resource bounds,
   stop conditions, and M0--M5 commit/push sequence for TL2.12.
 - [`lean-recursive-induction-hypotheses-m0-2026-07-22.md`](lean-recursive-induction-hypotheses-m0-2026-07-22.md)
@@ -151,6 +151,18 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — shared WHNF classifier/reopener, stable recursive-field metadata, exact
   direct-recursive identities, unchanged feature declines, retained negative
   observations, and the M2 native-semantics handoff.
+- [`lean-recursive-induction-hypotheses-m2-2026-07-22.md`](lean-recursive-induction-hypotheses-m2-2026-07-22.md)
+  — unified native IH/iota semantics, fourteen named rows, ten native mutation
+  classes, the 768-case recursive grammar, and the retained positivity control.
+- [`lean-recursive-induction-hypotheses-m3-2026-07-22.md`](lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+  — exact official Vector/Acc recursor comparison, descriptive reflexive
+  metadata, completion-only publication, and retained mutual/nested boundaries.
+- [`lean-recursive-induction-hypotheses-m4-2026-07-22.md`](lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+  — pinned-Lean and independent Axeyum computation at the registered Vector/Acc
+  normal forms plus the machine-validated current assurance overlay.
+- [`lean-recursive-induction-hypotheses-final-2026-07-22.md`](lean-recursive-induction-hypotheses-final-2026-07-22.md)
+  — M5 final bounded gates, accepted ADR-0353, completed TL2.12, exact
+  non-claims, and the TL2.13 mutual-group handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

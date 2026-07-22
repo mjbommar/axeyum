@@ -8,7 +8,7 @@ Parent:
 [TL2.12 execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
 
 Decision gate:
-[proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+[ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Baseline: `f819db227b4e8a21a77905fcf87df36127b181f7`
 

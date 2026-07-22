@@ -148,8 +148,9 @@ state.
 > closes the bounded kernel/importer, contract, parity, foundational-resource,
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
-> TL2.11 strict positivity is now complete as the first semantic widening
-> prerequisite; TL2.12 is the next preregistration-first admission slice.
+> TL2.11 strict positivity and TL2.12 recursive induction-hypothesis generation
+> are now complete; TL2.13 mutual groups are the next preregistration-first
+> admission slice.
 > Accepted ADR-0352 and the
 > [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
@@ -181,8 +182,8 @@ state.
 > reflexive induction-hypothesis generation. No inductive admission widened in
 > TL2.11; all direct-recursive, non-positive, generated, importer-publication,
 > and construct-matrix controls remain mandatory for TL2.12.
-> TL2.12 is now concretely preregistered by
-> [proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+> TL2.12 is now complete under
+> [accepted ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 > and its
 > [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
 > The trusted rule is singular: a positive recursive field
@@ -224,12 +225,14 @@ state.
 > computation streams twice, and normalizes their registered theorem sides to
 > `MiniNat.succ MiniNat.zero` and `True`. The machine-derived matrix now records
 > four admitted rows, two separate computation-checked rows, and two typed
-> declines while preserving the historical product observation. M5 final gates
-> and ADR/TL2.12 disposition are next. The new >=512-case
+> declines while preserving the historical product observation. The
+> [M5 final result](docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+> closes all registered gates, accepts ADR-0353, and marks TL2.12 DONE. The new
+> >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
-> Mutual groups remain TL2.13; nested/well-founded frontend lowering remains
-> TL2.14.
+> Mutual groups are now the primary TL2.13 semantic path; nested/well-founded
+> frontend lowering remains TL2.14.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

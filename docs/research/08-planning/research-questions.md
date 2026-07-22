@@ -783,10 +783,10 @@ Out of scope:
     [accepted ADR-0352](../09-decisions/adr-0352-preregister-lean-strict-positivity.md),
     the [TL2.11 execution plan](../../plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md),
     and the [final result](../../plan/lean-strict-positivity-final-2026-07-22.md).
-- [ ] What exact induction-hypothesis and computation-rule construction should
+- [x] What exact induction-hypothesis and computation-rule construction should
       admit recursive-indexed and reflexive/higher-order fields without
       duplicating trusted semantics?
-  - Proposed answer (2026-07-22): treat direct, indexed, higher-order, and
+  - Answer (2026-07-22): treat direct, indexed, higher-order, and
     combined indexed+higher-order recursive fields as empty/nonempty cases of
     one rule. If `u : Pi xs, I P indices`, generate
     `u_ih : Pi xs, motive indices (u xs)` and pass
@@ -796,7 +796,7 @@ Out of scope:
     remove the importer's reflexive policy decline only after native support.
     Mutual groups remain TL2.13 and frontend nested/well-founded lowering
     remains TL2.14. See
-    [proposed ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+    [accepted ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
     and the
     [TL2.12 execution plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
     [M0](../../plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
@@ -804,8 +804,11 @@ Out of scope:
     exact metadata/claim boundary before product implementation. The
     [M1 result](../../plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
     routes direct recursion through the shared classifier/reopener with exact
-    declaration/computation identity and both declines unchanged; M2 native
-    semantics is next.
+    declaration/computation identity and both declines unchanged. M2-M4 close
+    native semantics, official import, and selected computation; the
+    [M5 result](../../plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
+    closes all bounded gates and marks TL2.12 DONE. TL2.13 mutual groups are
+    the next atomic semantic widening.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

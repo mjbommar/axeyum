@@ -134,8 +134,9 @@ Again, there are distinct targets:
   irrelevance, useful inductives, recursors, iota reduction, dependent
   projections, constructor projection reduction, arbitrary-precision checked
   Nat literals, and structure eta. Major residuals include String literals,
-  quotient computation, recursive indexed families, and mutual/nested/reflexive
-  inductives. A new
+  quotient computation and mutual/nested inductives. Recursive-indexed and
+  higher-order/reflexive fields are now supported for the bounded
+  single-family profile described below. A new
   format-3.1 Rust importer independently admits one official
   flat fixture as eight kernel declarations and one direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
@@ -168,21 +169,23 @@ Again, there are distinct targets:
   content and direct-dependency digests for every admitted declaration. Five
   focused tests freeze the exact flat-fixture identities and prove record-order
   invariance plus type/body/dependency mutation sensitivity.
-  A completed source-first/wire-second official construct matrix now freezes
+  A completed source-first/wire-second official construct matrix freezes
   recursive-indexed, reflexive, mutual, nested, and well-founded exports before
-  measuring the product. Its seven selected-family rows contain one admitted
-  direct-recursive control, one translated/kernel decline, three parsed/policy
-  declines, one valid nested export retained at inventory-only because of a
-  diagnostic misclassification, one official source rejection, and zero
-  computation-checked new families. TL2.11 now closes the next semantic
-  prerequisite: a pre-insertion Lean 4.30 single-family strict-positivity guard
+  product measurement. Its current TL2.12 overlay records four independently
+  admitted rows, two separately computation-checked rows, and two typed
+  declines while retaining the historical pre-widening observation. TL2.11
+  supplies the semantic prerequisite: a pre-insertion Lean 4.30 single-family
+  strict-positivity guard
   with exact typed failures, twelve public rows, a twice-repeated 840-case
   grammar, eight pinned-Lean observations, mandatory CI, and synthetic importer
-  propagation without publication. It deliberately does not admit the positive
-  recursive-indexed or reflexive rows. Generalizing induction hypotheses for
-  those two shapes together is TL2.12's next preregistered slice; mutual-group
-  positivity, nested/well-founded lowering, and broad Lean admission remain
-  open.
+  propagation without publication. Accepted ADR-0353 and TL2.12 then implement
+  one telescope/index-aware induction-hypothesis and iota-rule construction for
+  direct, recursive-indexed, higher-order/reflexive, and combined fields. The
+  frozen `MiniVector` and `MiniAcc` construct streams complete twice with exact
+  generated/exported recursor comparison; separate computation streams reduce
+  to the registered Vector and Acc normal forms in both official Lean and
+  Axeyum. Mutual-group positivity/recursors, nested/well-founded frontend
+  lowering, and broad Lean admission remain open.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
