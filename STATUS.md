@@ -557,6 +557,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   retained populations, strict tooling, and M0 contracts pass. Importer policy
   and all M0 streams remain untouched. Resume M4 from the authoritative
   [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md).
+  The
+  [M4 importer plan](docs/plan/lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
+  is frozen before implementation: derive auxiliary count from checked
+  main-recursor motives, compare name-keyed main/auxiliary declarations, import
+  four exact official streams twice, and close 20 wire/publication rejection
+  classes plus order non-authority. Kernel, fixtures, identity, assurance, and
+  the live decline remain outside M4 ownership.
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**

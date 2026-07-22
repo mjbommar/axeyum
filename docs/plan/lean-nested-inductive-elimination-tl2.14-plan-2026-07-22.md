@@ -326,6 +326,9 @@ Importer policy and all frozen M0 computation streams remain untouched.
 
 ### M4 — importer and exact official declarations
 
+Status: **design frozen; implementation next**. See the
+[M4 exact importer plan](lean-nested-inductive-elimination-m4-plan-2026-07-22.md).
+
 - remove only the structural nested policy decline after native support;
 - derive and compare `numNested`, main/auxiliary recursors, and every contract;
 - import the existing construct and new computation streams twice;
