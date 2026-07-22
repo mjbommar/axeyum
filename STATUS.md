@@ -660,12 +660,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   89 inputs, 450,472 metadata rows, 5,345,294 historical rows, and a
   256,182,191-byte eligibility ledger were independently rehashed and
   recounted. The resulting aggregate cap is 45,905 with 2,709 new and 43,196
-  old quota slots. `selection_observed=false`; S2 verified corpus acquisition
-  is next. Its resumable 90-file downloader, safe streamed extractor,
-  per-logic atomic promotion, and disk-backed exact metadata/tree join are now
-  committed and covered by three focused tests; the full bounded gate is 41
-  tests with one live-only skip. No solver run or selection credit is granted
-  yet.
+  old quota slots. S2 is complete on a fresh acquisition: all 90 release files
+  and 4,890,207,406 compressed bytes verified, 89 logic trees promoted, and the
+  exact 450,472-file / 82,270,961,563-byte metadata-tree bijection published.
+  A separate fresh process rehashed every archive and extracted file and
+  reconstructed the canonical ledger and completion dependencies.
+  `selection_observed=false`; the committed twice-repeated S3 pinned producer
+  is next. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7434,6 +7435,19 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-22 — Completed ADR-0356 S2 verified corpus acquisition.** The
+  fresh retained attempt verified all 90 SMT-LIB 2025.08.04 release files,
+  4,890,207,406 compressed bytes, and 89 safely extracted logic trees. Its
+  disk-backed join proves exactly 450,472 regular corpus files totaling
+  82,270,961,563 bytes with no missing, extra, duplicate, linked, traversing,
+  or cross-logic entry. Canonical `archives.json`, `corpus.jsonl`, and
+  `summary.json` hashes are rooted by completion payload
+  `1d22d99635587f2ac743af85a30ff753ee60ad1f81f31ac911cb8c5932b998d1`.
+  A separate fresh process rehashed all archives and all 450,472 extracted
+  files and reconstructed every count. The compact result is
+  [recorded here](docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md).
+  `selection_observed=false`; S3 is next.
+
 - **2026-07-22 — Implemented ADR-0356 S2 verified corpus acquisition.** The
   new resumable runner binds the completed S1 audit, downloads all 90 release
   files with published size/MD5 and local SHA-256, records redirects, rejects
@@ -7452,7 +7466,7 @@ plan is built and committed on the current branch:
   every input and completion dependency and reconstructed the counts. The
   compact result is
   [recorded here](docs/plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md).
-  `selection_observed=false`; S2 is next.
+  `selection_observed=false`; S2 has since completed.
 
 - **2026-07-22 — Added bounded canonical ordering for the S1b ledger.** The
   fourth retained attempt passed the 89-input and 450,472-row metadata gates,

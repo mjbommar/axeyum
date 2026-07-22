@@ -182,6 +182,11 @@ result is credited by this decision alone.
   [`smtcomp-official-selection-input-audit-s1b-2026-07-22.md`](../../plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md).
   Its fifth fresh run verified 89 inputs, 450,472 metadata rows, and 5,345,294
   historical rows while keeping `selection_observed=false`.
+- The completed S2 acquisition is recorded in
+  [`smtcomp-official-selection-corpus-s2-2026-07-22.md`](../../plan/smtcomp-official-selection-corpus-s2-2026-07-22.md).
+  It verified all 90 release files and 4,890,207,406 compressed bytes, proved
+  the exact 450,472-file / 82,270,961,563-byte metadata-tree bijection, and
+  passed a fresh all-archive/all-file rehash with `selection_observed=false`.
 
 ## Alternatives
 
