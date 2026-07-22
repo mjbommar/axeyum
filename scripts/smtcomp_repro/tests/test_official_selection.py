@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import gzip
 import json
 import runpy
 import shutil
@@ -12,10 +13,15 @@ from pathlib import Path
 
 from scripts.smtcomp_repro.official_selection import (
     SelectionAuditError,
+    adapt_official_benchmarks,
+    adapt_official_results,
+    adapt_official_submissions,
     audit_corpus,
     audit_selection,
     canonical_json_bytes,
     division_cap,
+    extract_single_query_divisions,
+    historical_facts,
     normalize_benchmark,
     validate_decisions,
 )
@@ -97,6 +103,150 @@ class OfficialSelectionTests(unittest.TestCase):
         self.assertEqual(len(invariant_ids), len(set(invariant_ids)))
         self.assertEqual(len(mutation_ids), 18)
         self.assertEqual(len(mutation_ids), len(set(mutation_ids)))
+
+    def test_official_defs_ast_and_submission_adapter(self) -> None:
+        divisions = extract_single_query_divisions((FIXTURE_ROOT / "official_defs.py").read_bytes())
+        self.assertEqual(
+            divisions,
+            {
+                "QF_Bitvec": ["QF_BV"],
+                "QF_LinearIntArith": ["QF_IDL", "QF_LIA"],
+            },
+        )
+        documents = [
+            {
+                "name": "division-solver",
+                "participations": [
+                    {"divisions": ["QF_LinearIntArith"], "tracks": ["SingleQuery"]},
+                    {"logics": ["QF_BV"], "tracks": ["Parallel"]},
+                ],
+                "seed": "17",
+            },
+            {
+                "competitive": False,
+                "name": "explicit-solver",
+                "participations": [
+                    {"logics": ["QF_BV"], "tracks": ["SingleQuery"]},
+                ],
+            },
+        ]
+        normalized = adapt_official_submissions(documents, divisions)
+        self.assertEqual(normalized[0]["seed"], 17)
+        self.assertEqual(
+            normalized[0]["participations"],
+            [{"logics": ["QF_IDL", "QF_LIA"], "track": "single-query"}],
+        )
+        self.assertFalse(normalized[1]["competitive"])
+        self.assertIsNone(normalized[1]["seed"])
+
+    def test_official_benchmark_and_result_adapters(self) -> None:
+        file_identity = {
+            "family": ["2025-fixture", "nested"],
+            "incremental": False,
+            "logic": "QF_BV",
+            "name": "case.smt2",
+        }
+        benchmark_document = {
+            "incremental": [],
+            "non_incremental": [
+                {"asserts": 1, "file": file_identity, "status": "unknown"},
+            ],
+        }
+        benchmarks = adapt_official_benchmarks(gzip.compress(canonical_json_bytes(benchmark_document)))
+        self.assertEqual(
+            normalize_benchmark(benchmarks[0])["benchmark_id"],
+            "non-incremental/QF_BV/2025-fixture/nested/case.smt2",
+        )
+
+        result_document = {
+            "results": [
+                {
+                    "cpu_time": 0.25,
+                    "file": file_identity,
+                    "memory_usage": 10.0,
+                    "result": "OutOfMemory",
+                    "solver": solver,
+                    "track": "SingleQuery",
+                    "wallclock_time": 0.3,
+                }
+                for solver in ("solver-a", "solver-b")
+            ]
+        }
+        results = adapt_official_results(
+            gzip.compress(canonical_json_bytes(result_document)),
+            year=2024,
+        )
+        facts = historical_facts(results, {results[0]["benchmark_id"]})
+        # This looks odd, but it is the pinned executable criterion:
+        # result != Unknown and cpu_time <= 1.0, not the prose comment.
+        self.assertTrue(facts[results[0]["benchmark_id"]]["trivial"])
+
+    def test_official_format_mutations_reject(self) -> None:
+        divisions = extract_single_query_divisions((FIXTURE_ROOT / "official_defs.py").read_bytes())
+        with self.assertRaises(SelectionAuditError):
+            adapt_official_submissions(
+                [
+                    {
+                        "name": "bad-division",
+                        "participations": [
+                            {"divisions": ["missing"], "tracks": ["SingleQuery"]},
+                        ],
+                        "seed": 1,
+                    }
+                ],
+                divisions,
+            )
+        with self.assertRaises(SelectionAuditError):
+            adapt_official_submissions(
+                [
+                    {
+                        "name": "bad-logic",
+                        "participations": [
+                            {"logics": ["QF_UNKNOWN"], "tracks": ["SingleQuery"]},
+                        ],
+                        "seed": 1,
+                    }
+                ],
+                divisions,
+            )
+        bad_benchmark = {
+            "incremental": [],
+            "non_incremental": [
+                {
+                    "asserts": 1,
+                    "file": {
+                        "family": ["2025-fixture"],
+                        "incremental": True,
+                        "logic": "QF_BV",
+                        "name": "case.smt2",
+                    },
+                    "status": "unknown",
+                }
+            ],
+        }
+        with self.assertRaises(SelectionAuditError):
+            adapt_official_benchmarks(gzip.compress(canonical_json_bytes(bad_benchmark)))
+
+        bad_result = {
+            "results": [
+                {
+                    "cpu_time": 0.1,
+                    "file": {
+                        "family": ["2025-fixture"],
+                        "incremental": False,
+                        "logic": "QF_BV",
+                        "name": "case.smt2",
+                    },
+                    "memory_usage": 10.0,
+                    "result": "new-unregistered-answer",
+                    "solver": "solver-a",
+                    "track": "SingleQuery",
+                    "wallclock_time": 0.1,
+                }
+            ]
+        }
+        with self.assertRaises(SelectionAuditError):
+            adapt_official_results(gzip.compress(canonical_json_bytes(bad_result)), year=2024)
 
     def test_fixture_selection_reconstructs_all_terminal_reasons(self) -> None:
         result = self.audit_fixture()

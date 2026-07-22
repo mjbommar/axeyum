@@ -31,11 +31,13 @@ Legacy scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
 `tests/test_pipeline.py` (6, full aggregation/ranking plus duplicate rejection),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
-Eight ADR-0356 tests separately validate the pinned 29-source/53-submission/
+Eleven ADR-0356 tests separately validate the pinned 29-source/53-submission/
 90-archive authority, complete synthetic eligibility/decision partition, all
 four cap regions, the inclusive 1.0-second boundary, incoherence and
 single-solver-year handling, exact fixture bytes, and rejecting mutations. The
 legacy sampler never substitutes for the pinned official Polars producer.
+They also parse a real-shaped `defs.py` division table and official compressed
+benchmark/result/submission documents without importing organizer code.
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.

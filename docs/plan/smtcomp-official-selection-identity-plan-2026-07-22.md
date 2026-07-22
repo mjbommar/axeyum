@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0 complete; S1 independent eligibility auditor next
+Status: S0 and S1a fixture adapter complete; S1b official-input audit next
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -123,6 +123,16 @@ observing the official sample. Eight tests pass.
 The auditor may validate selected-set membership, counts, and completeness. It
 must not generate a replacement pseudorandom sample.
 
+**S1a result:** fixture-complete. A standard-library AST reader extracts the
+Single Query division/logic table from pinned `defs.py` without importing it.
+Strict gzip/JSON adapters normalize official benchmark and historical-result
+documents, including all organizer answer enums, and expand official
+submission divisions plus explicit logics with Pydantic-compatible integer seed
+coercion. Eleven tests now include unknown division/logic, wrong incremental
+identity, unknown answer, and the executable's non-`Unknown` (rather than
+sat/unsat-only) historical predicate. No official selected set has been
+produced or observed.
+
 ### S2 — verified corpus acquisition
 
 - Download all 90 files from Zenodo record `16740866` into a fresh staging
@@ -184,7 +194,7 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Commit and push S0, then implement S1's official-submission adapter and complete
-historical/eligibility auditor. Do not download/extract the full release or
-observe the official selected population until S1's full fixture mutation gate
-is committed and pushed.
+Commit and push S1a, then verify the adapters against every pinned official
+source/data/submission input and publish the selection-free S1b eligibility
+summary. Do not download/extract the full Zenodo release or observe the official
+selected population until that audit passes.

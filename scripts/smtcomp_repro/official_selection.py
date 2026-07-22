@@ -8,6 +8,8 @@ required per-logic shape.
 
 from __future__ import annotations
 
+import ast
+import gzip
 import hashlib
 import json
 import math
@@ -30,7 +32,25 @@ TERMINAL_REASONS = frozenset(
         "excluded-cap-old",
     }
 )
-RESULTS = frozenset({"sat", "unsat", "unknown"})
+RESULTS = frozenset(
+    {
+        "IncrementalError",
+        "ModelNotValidated",
+        "ModelParsingError",
+        "ModelPartialFunctionMissing",
+        "ModelUnsat",
+        "ModelValidatorBenchmarkStrictTyping",
+        "ModelValidatorException",
+        "ModelValidatorTimeout",
+        "OutOfMemory",
+        "Timeout",
+        "UnsatCoreNotValidated",
+        "incremental",
+        "sat",
+        "unknown",
+        "unsat",
+    }
+)
 STATUSES = frozenset({"sat", "unsat", "unknown"})
 
 
@@ -108,6 +128,200 @@ def normalize_benchmark(row: Mapping[str, Any]) -> dict[str, Any]:
         "name": name,
         "status": status,
     }
+
+
+def adapt_official_benchmarks(compressed: bytes) -> list[dict[str, Any]]:
+    """Decode the pinned organizer benchmark JSON into normalized SQ rows."""
+    document = _gzip_json(compressed, "benchmark metadata")
+    if set(document) != {"incremental", "non_incremental"}:
+        raise SelectionAuditError("official benchmark top-level fields differ")
+    if not isinstance(document["incremental"], list) or not isinstance(
+        document["non_incremental"], list
+    ):
+        raise SelectionAuditError("official benchmark populations must be lists")
+    normalized = []
+    ids = []
+    for row in document["non_incremental"]:
+        if not isinstance(row, dict) or set(row) != {"file", "status", "asserts"}:
+            raise SelectionAuditError("official non-incremental benchmark fields differ")
+        file_row = _official_file(row["file"], incremental=False)
+        adapted = {
+            "asserts": row["asserts"],
+            "family": file_row["family"],
+            "logic": file_row["logic"],
+            "name": file_row["name"],
+            "status": row["status"],
+        }
+        ids.append(normalize_benchmark(adapted)["benchmark_id"])
+        normalized.append(adapted)
+    if len(ids) != len(set(ids)):
+        raise SelectionAuditError("official benchmark metadata contains a duplicate")
+    return normalized
+
+
+def adapt_official_results(compressed: bytes, *, year: int) -> list[dict[str, Any]]:
+    """Decode one official historical Single Query result file."""
+    if isinstance(year, bool) or not isinstance(year, int) or not 2018 <= year <= 2024:
+        raise SelectionAuditError("official historical year is outside 2018-2024")
+    document = _gzip_json(compressed, f"historical results {year}")
+    if set(document) != {"results"} or not isinstance(document["results"], list):
+        raise SelectionAuditError("official result top-level fields differ")
+    required = {"track", "solver", "file", "result", "cpu_time", "wallclock_time", "memory_usage"}
+    allowed = required | {"nb_answers"}
+    normalized = []
+    for row in document["results"]:
+        if not isinstance(row, dict) or not required <= set(row) or not set(row) <= allowed:
+            raise SelectionAuditError("official historical-result fields differ")
+        if row["track"] != "SingleQuery":
+            raise SelectionAuditError("non-SingleQuery row in historical SQ input")
+        file_row = _official_file(row["file"], incremental=False)
+        result = row["result"]
+        if result not in RESULTS:
+            raise SelectionAuditError(f"unsupported official answer: {result!r}")
+        cpu_time = row["cpu_time"]
+        if isinstance(cpu_time, bool) or not isinstance(cpu_time, (int, float)) or cpu_time < 0:
+            raise SelectionAuditError("official CPU time must be nonnegative")
+        normalized.append(
+            {
+                "benchmark_id": file_row["benchmark_id"],
+                "cpu_seconds": cpu_time,
+                "result": result,
+                "solver": _component(row["solver"], "solver"),
+                "year": year,
+            }
+        )
+    return normalized
+
+
+def extract_single_query_divisions(defs_source: bytes) -> dict[str, list[str]]:
+    """Extract the SQ division map from pinned ``defs.py`` without importing it."""
+    try:
+        module = ast.parse(defs_source.decode("utf-8"), filename="pinned-smtcomp-defs.py")
+    except (UnicodeDecodeError, SyntaxError) as error:
+        raise SelectionAuditError("cannot parse pinned organizer definitions") from error
+
+    enum_values: dict[str, dict[str, str]] = {}
+    for node in module.body:
+        if isinstance(node, ast.ClassDef) and node.name in {"Track", "Division", "Logic"}:
+            values: dict[str, str] = {}
+            for statement in node.body:
+                if (
+                    isinstance(statement, ast.Assign)
+                    and len(statement.targets) == 1
+                    and isinstance(statement.targets[0], ast.Name)
+                    and isinstance(statement.value, ast.Constant)
+                    and isinstance(statement.value.value, str)
+                ):
+                    values[statement.targets[0].id] = statement.value.value
+            enum_values[node.name] = values
+    if set(enum_values) != {"Track", "Division", "Logic"}:
+        raise SelectionAuditError("pinned organizer enum definitions are incomplete")
+
+    tracks_value: ast.expr | None = None
+    for node in module.body:
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == "tracks":
+            tracks_value = node.value
+        elif isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "tracks" for target in node.targets
+        ):
+            tracks_value = node.value
+    if not isinstance(tracks_value, ast.Dict):
+        raise SelectionAuditError("pinned organizer tracks table is missing")
+
+    single_query: ast.expr | None = None
+    for key, value in zip(tracks_value.keys, tracks_value.values, strict=True):
+        if _enum_attribute(key, "Track") == "SingleQuery":
+            single_query = value
+            break
+    if not isinstance(single_query, ast.Dict):
+        raise SelectionAuditError("pinned organizer SingleQuery table is missing")
+
+    output: dict[str, list[str]] = {}
+    for division_node, logic_nodes in zip(single_query.keys, single_query.values, strict=True):
+        division_name = _enum_attribute(division_node, "Division")
+        if division_name is None or division_name not in enum_values["Division"]:
+            raise SelectionAuditError("invalid division key in pinned organizer table")
+        if not isinstance(logic_nodes, (ast.Set, ast.List, ast.Tuple)):
+            raise SelectionAuditError("invalid logic collection in pinned organizer table")
+        logics = []
+        for logic_node in logic_nodes.elts:
+            logic_name = _enum_attribute(logic_node, "Logic")
+            if logic_name is None or logic_name not in enum_values["Logic"]:
+                raise SelectionAuditError("invalid logic in pinned organizer table")
+            logics.append(enum_values["Logic"][logic_name])
+        division = enum_values["Division"][division_name]
+        if division in output:
+            raise SelectionAuditError("duplicate SingleQuery division")
+        output[division] = sorted(logics)
+    return dict(sorted(output.items()))
+
+
+def adapt_official_submissions(
+    documents: Sequence[Mapping[str, Any]],
+    divisions: Mapping[str, Sequence[str]],
+) -> list[dict[str, Any]]:
+    """Expand official submission divisions/logics into normalized SQ rows."""
+    valid_logics = {logic for logics in divisions.values() for logic in logics}
+    normalized = []
+    for document in documents:
+        if not isinstance(document, Mapping):
+            raise SelectionAuditError("official submission is not an object")
+        if "name" not in document or "participations" not in document:
+            raise SelectionAuditError("official submission lacks name or participations")
+        competitive = document.get("competitive", True)
+        if not isinstance(competitive, bool):
+            raise SelectionAuditError("official submission competitive flag is not Boolean")
+        seed_value = document.get("seed")
+        if seed_value is None:
+            seed = None
+        else:
+            if isinstance(seed_value, bool):
+                raise SelectionAuditError("official submission seed is Boolean")
+            try:
+                seed = int(seed_value)
+            except (TypeError, ValueError) as error:
+                raise SelectionAuditError("official submission seed is not integer-like") from error
+        participations = document["participations"]
+        if not isinstance(participations, list):
+            raise SelectionAuditError("official submission participations are not a list")
+        normalized_participations = []
+        for participation in participations:
+            if not isinstance(participation, Mapping):
+                raise SelectionAuditError("official participation is not an object")
+            allowed = {"archive", "command", "divisions", "experimental", "logics", "tracks"}
+            if not set(participation) <= allowed or "tracks" not in participation:
+                raise SelectionAuditError("official participation fields differ")
+            tracks = participation["tracks"]
+            if not isinstance(tracks, list) or not all(isinstance(track, str) for track in tracks):
+                raise SelectionAuditError("official participation tracks are invalid")
+            if "SingleQuery" not in tracks:
+                continue
+            expanded: set[str] = set()
+            division_names = participation.get("divisions", [])
+            explicit_logics = participation.get("logics", [])
+            if not isinstance(division_names, list) or not isinstance(explicit_logics, list):
+                raise SelectionAuditError("official divisions/logics are not lists")
+            for division in division_names:
+                if division not in divisions:
+                    raise SelectionAuditError(f"unknown official division: {division!r}")
+                expanded.update(divisions[division])
+            for logic in explicit_logics:
+                if logic not in valid_logics:
+                    raise SelectionAuditError(f"unknown official SingleQuery logic: {logic!r}")
+                expanded.add(logic)
+            if expanded:
+                normalized_participations.append(
+                    {"logics": sorted(expanded), "track": "single-query"}
+                )
+        normalized.append(
+            {
+                "competitive": competitive,
+                "name": _component(document["name"], "solver"),
+                "participations": normalized_participations,
+                "seed": seed,
+            }
+        )
+    return normalized
 
 
 def competitive_logics(submissions: Sequence[Mapping[str, Any]]) -> set[str]:
@@ -414,3 +628,43 @@ def _component(value: Any, label: str) -> str:
     if "/" in value or "\\" in value or "\x00" in value:
         raise SelectionAuditError(f"path separator in {label} component")
     return value
+
+
+def _gzip_json(compressed: bytes, label: str) -> dict[str, Any]:
+    try:
+        value = json.loads(gzip.decompress(compressed))
+    except (gzip.BadGzipFile, json.JSONDecodeError, UnicodeDecodeError, OSError) as error:
+        raise SelectionAuditError(f"cannot decode {label}") from error
+    if not isinstance(value, dict):
+        raise SelectionAuditError(f"{label} is not a JSON object")
+    return value
+
+
+def _official_file(value: Any, *, incremental: bool) -> dict[str, Any]:
+    if not isinstance(value, Mapping) or set(value) != {"incremental", "logic", "family", "name"}:
+        raise SelectionAuditError("official file identity fields differ")
+    if value["incremental"] is not incremental:
+        raise SelectionAuditError("official file incremental flag differs")
+    family = value["family"]
+    if not isinstance(family, list) or not family:
+        raise SelectionAuditError("official file family is invalid")
+    logic = _component(value["logic"], "logic")
+    name = _component(value["name"], "name")
+    normalized_family = [_component(component, "family") for component in family]
+    prefix = "incremental" if incremental else "non-incremental"
+    return {
+        "benchmark_id": str(PurePosixPath(prefix, logic, *normalized_family, name)),
+        "family": normalized_family,
+        "logic": logic,
+        "name": name,
+    }
+
+
+def _enum_attribute(node: ast.expr | None, enum_name: str) -> str | None:
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == enum_name
+    ):
+        return node.attr
+    return None
