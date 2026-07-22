@@ -113,6 +113,7 @@ parity-docs:
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py
     python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
+    python3 scripts/freeze-lean-official-construct-matrix-product.py --check
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 -m unittest scripts.tests.test_lean_axiom_ledger
     python3 scripts/gen-lean-compatibility.py --check
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 scripts/gen-lean-axiom-ledger.py --check
@@ -124,6 +125,11 @@ parity-docs:
     python3 scripts/gen-smtlib-api-conformance.py --check
     python3 scripts/gen-smtlib-session-contract.py --check
     python3 scripts/check-parity-docs.py
+
+# M3 official construct-matrix product boundary: the direct-recursive control
+# precedes each typed decline, and the complete five-row sequence repeats.
+lean-construct-matrix-product:
+    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=2 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_construct_matrix
 
 deny:
     cargo deny check

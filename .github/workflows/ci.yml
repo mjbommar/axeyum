@@ -231,6 +231,7 @@ jobs:
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix
       - run: python3 scripts/check-lean-official-construct-matrix.py
       - run: python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
+      - run: python3 scripts/freeze-lean-official-construct-matrix-product.py --check
       - run: python3 scripts/gen-smtlib-api-conformance.py --check
       - run: python3 scripts/gen-smtlib-session-contract.py --check
       - run: ./scripts/check-links.sh

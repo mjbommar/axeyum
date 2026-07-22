@@ -1,6 +1,6 @@
 {
   "schema": "axeyum-lean-official-construct-matrix-v1",
-  "stage": "wire-frozen",
+  "stage": "product-measured",
   "date": "2026-07-22",
   "decision": "docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md",
   "pins": {
@@ -127,7 +127,7 @@
       "computation_witness": "miniOne",
       "expected_official_source": "accepted",
       "stage_b_wire": "historical-direct-recursive-control",
-      "product_measurement": null
+      "product_measurement": "direct-recursive-control"
     },
     {
       "id": "recursive-indexed",
@@ -139,7 +139,7 @@
       "computation_witness": "AxeyumConstructMatrix.recursiveIndexedWitness",
       "expected_official_source": "accepted",
       "stage_b_wire": "recursive-indexed",
-      "product_measurement": null
+      "product_measurement": "recursive-indexed"
     },
     {
       "id": "reflexive-higher-order",
@@ -151,7 +151,7 @@
       "computation_witness": "AxeyumConstructMatrix.reflexiveWitness",
       "expected_official_source": "accepted",
       "stage_b_wire": "reflexive-higher-order",
-      "product_measurement": null
+      "product_measurement": "reflexive-higher-order"
     },
     {
       "id": "mutual",
@@ -163,7 +163,7 @@
       "computation_witness": "AxeyumConstructMatrix.mutualWitness",
       "expected_official_source": "accepted",
       "stage_b_wire": "mutual",
-      "product_measurement": null
+      "product_measurement": "mutual"
     },
     {
       "id": "nested",
@@ -175,7 +175,7 @@
       "computation_witness": "AxeyumConstructMatrix.nestedWitness",
       "expected_official_source": "accepted",
       "stage_b_wire": "nested",
-      "product_measurement": null
+      "product_measurement": "nested"
     },
     {
       "id": "well-founded",
@@ -187,7 +187,7 @@
       "computation_witness": "AxeyumConstructMatrix.wellFoundedWitness",
       "expected_official_source": "accepted",
       "stage_b_wire": "well-founded",
-      "product_measurement": null
+      "product_measurement": "well-founded"
     },
     {
       "id": "non-positive-source-negative",
@@ -1651,5 +1651,89 @@
       }
     }
   },
-  "product_measurement": null
+  "product_measurement": {
+    "measured_date": "2026-07-22",
+    "source_revision": "22f51b4b0a94a1ae4d1c18b3f0dee6f56005edf4",
+    "crate": "axeyum-lean-import",
+    "example": "lean4export_import",
+    "memory_max": "4G",
+    "rust_jobs": 2,
+    "runs_per_case": 2,
+    "control_before_each_run": true,
+    "control_runs": 10,
+    "control": {
+      "id": "direct-recursive-control",
+      "all_passed": true,
+      "names": 30,
+      "levels": 4,
+      "expressions": 130,
+      "declaration_records": 5,
+      "admitted_declarations": 11,
+      "axioms": 0,
+      "axiom_identities": 0,
+      "declaration_identities": 11
+    },
+    "outcomes": {
+      "recursive-indexed": {
+        "runs": 2,
+        "repeatable": true,
+        "outcome_layer": "kernel",
+        "variant": "Kernel",
+        "line": 148,
+        "declaration": "AxeyumConstructMatrix.MiniVector",
+        "source_variant": "RecursiveIndexedNotSupported",
+        "code": null,
+        "message": null,
+        "completed_import_published": false
+      },
+      "reflexive-higher-order": {
+        "runs": 2,
+        "repeatable": true,
+        "outcome_layer": "import-policy",
+        "variant": "Unsupported",
+        "line": 117,
+        "declaration": null,
+        "source_variant": null,
+        "code": "inductive-reflexive",
+        "message": null,
+        "completed_import_published": false
+      },
+      "mutual": {
+        "runs": 2,
+        "repeatable": true,
+        "outcome_layer": "import-policy",
+        "variant": "Unsupported",
+        "line": 233,
+        "declaration": null,
+        "source_variant": null,
+        "code": "inductive-mutual",
+        "message": null,
+        "completed_import_published": false
+      },
+      "nested": {
+        "runs": 2,
+        "repeatable": true,
+        "outcome_layer": "format-misclassification",
+        "variant": "Malformed",
+        "line": 248,
+        "declaration": null,
+        "source_variant": null,
+        "code": null,
+        "message": "single-family inductive must export one recursor",
+        "completed_import_published": false
+      },
+      "well-founded": {
+        "runs": 2,
+        "repeatable": true,
+        "outcome_layer": "import-policy",
+        "variant": "Unsupported",
+        "line": 208,
+        "declaration": null,
+        "source_variant": null,
+        "code": "inductive-reflexive",
+        "message": null,
+        "completed_import_published": false
+      }
+    }
+  }
 }

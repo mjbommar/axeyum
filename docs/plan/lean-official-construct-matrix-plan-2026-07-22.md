@@ -1,7 +1,7 @@
 # Official Lean construct-matrix execution plan
 
-Status: M0, Stage A source freeze, and Stage B export/inventory freeze complete;
-product measurement not yet executed
+Status: M0 through M3 source, wire, and current-product freezes complete; M4
+generated assurance matrix next
 
 Date: 2026-07-22
 
@@ -18,10 +18,12 @@ Parent plans:
 Current checkpoints:
 [M0 and Stage A result](lean-official-construct-matrix-stage-a-2026-07-22.md)
 and [Stage B result](lean-official-construct-matrix-stage-b-2026-07-22.md),
+followed by the
+[M3 current-product result](lean-official-construct-matrix-product-2026-07-22.md),
 with the canonical source/wire registration in
 [`lean-official-construct-matrix-v1.json`](lean-official-construct-matrix-v1.json).
-No Rust product outcome exists at this checkpoint; M3 is next after the Stage B
-commit is pushed and remote-verified.
+The registration now includes exact typed current-product outcomes; M4 must
+generate the public assurance matrix from it without changing those outcomes.
 
 ## 1. Decision and outcome
 

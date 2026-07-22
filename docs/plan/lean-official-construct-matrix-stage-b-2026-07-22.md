@@ -112,6 +112,10 @@ byte-for-byte from the official fixtures.
 
 ## Next gate
 
+This section records the successor known at the Stage B checkpoint. It has now
+been completed by the
+[M3 current-product result](lean-official-construct-matrix-product-2026-07-22.md).
+
 M3 may start only after this Stage B commit is pushed and local, tracking, and
 remote refs agree. It must then:
 

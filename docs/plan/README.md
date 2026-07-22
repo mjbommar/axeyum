@@ -103,6 +103,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   inventories for recursive-indexed, reflexive, mutual, nested, and well-
   founded roots, with 116,636 retained bytes and every Rust product field still
   absent.
+- [`lean-official-construct-matrix-product-2026-07-22.md`](lean-official-construct-matrix-product-2026-07-22.md) —
+  M3's unmodified current-importer measurement: ten passing direct-recursive
+  controls, two exact typed outcomes per new row, no partial publication, and
+  the explicit nested-format misclassification and well-founded `Acc`
+  dependency stop.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

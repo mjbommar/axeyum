@@ -25,7 +25,7 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
     def failures(self) -> list[str]:
         return CHECK.validate_manifest(self.data)
 
-    def test_committed_stage_b_registration_is_valid(self) -> None:
+    def test_committed_product_registration_is_valid(self) -> None:
         self.assertEqual(self.failures(), [])
 
     def test_source_hash_drift_rejects(self) -> None:
@@ -73,6 +73,16 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         failures = self.failures()
         self.assertTrue(any("aggregate byte count drift" in failure for failure in failures))
         self.assertTrue(any("two byte-identical" in failure for failure in failures))
+
+    def test_typed_product_outcome_and_publication_drift_reject(self) -> None:
+        outcome = self.data["product_measurement"]["outcomes"]["nested"]
+        outcome["variant"] = "Unsupported"
+        outcome["completed_import_published"] = True
+        self.data["cases"][4]["product_measurement"] = None
+        failures = self.failures()
+        self.assertTrue(any("typed product outcome drift" in failure for failure in failures))
+        self.assertTrue(any("must not publish CompletedImport" in failure for failure in failures))
+        self.assertTrue(any("product measurement link drift" in failure for failure in failures))
 
     def test_unknown_fields_reject(self) -> None:
         self.data["cases"][0]["claim"] = "full Lean parity"

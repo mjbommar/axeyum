@@ -80,6 +80,31 @@ STREAM_KEYS = {
     "retained",
     "inventory",
 }
+PRODUCT_KEYS = {
+    "measured_date",
+    "source_revision",
+    "crate",
+    "example",
+    "memory_max",
+    "rust_jobs",
+    "runs_per_case",
+    "control_before_each_run",
+    "control_runs",
+    "control",
+    "outcomes",
+}
+OUTCOME_KEYS = {
+    "runs",
+    "repeatable",
+    "outcome_layer",
+    "variant",
+    "line",
+    "declaration",
+    "source_variant",
+    "code",
+    "message",
+    "completed_import_published",
+}
 EXPECTED_PINS = {
     "lean": {
         "toolchain": "leanprover/lean4:v4.30.0",
@@ -135,6 +160,65 @@ EXPECTED_STAGE_B_PATHS = {
     "nested": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson",
     "well-founded": (
         "docs/plan/fixtures/lean4export-v4.30-construct-matrix-well-founded.ndjson"
+    ),
+}
+EXPECTED_PRODUCT_CONTROL = {
+    "id": "direct-recursive-control",
+    "all_passed": True,
+    "names": 30,
+    "levels": 4,
+    "expressions": 130,
+    "declaration_records": 5,
+    "admitted_declarations": 11,
+    "axioms": 0,
+    "axiom_identities": 0,
+    "declaration_identities": 11,
+}
+EXPECTED_PRODUCT_OUTCOMES = {
+    "recursive-indexed": (
+        "kernel",
+        "Kernel",
+        148,
+        "AxeyumConstructMatrix.MiniVector",
+        "RecursiveIndexedNotSupported",
+        None,
+        None,
+    ),
+    "reflexive-higher-order": (
+        "import-policy",
+        "Unsupported",
+        117,
+        None,
+        None,
+        "inductive-reflexive",
+        None,
+    ),
+    "mutual": (
+        "import-policy",
+        "Unsupported",
+        233,
+        None,
+        None,
+        "inductive-mutual",
+        None,
+    ),
+    "nested": (
+        "format-misclassification",
+        "Malformed",
+        248,
+        None,
+        None,
+        None,
+        "single-family inductive must export one recursor",
+    ),
+    "well-founded": (
+        "import-policy",
+        "Unsupported",
+        208,
+        None,
+        None,
+        "inductive-reflexive",
+        None,
     ),
 }
 EXPECTED_CASES = [
@@ -350,6 +434,56 @@ def validate_stage_b(data: dict[str, Any], failures: list[str]) -> None:
         failures.append("Stage B aggregate byte count drift")
 
 
+def validate_product(data: dict[str, Any], failures: list[str]) -> None:
+    product = data.get("product_measurement")
+    check_exact_keys(product, PRODUCT_KEYS, "product_measurement", failures)
+    if not isinstance(product, dict):
+        return
+    expected_scalars = {
+        "measured_date": "2026-07-22",
+        "source_revision": "22f51b4b0a94a1ae4d1c18b3f0dee6f56005edf4",
+        "crate": "axeyum-lean-import",
+        "example": "lean4export_import",
+        "memory_max": "4G",
+        "rust_jobs": 2,
+        "runs_per_case": 2,
+        "control_before_each_run": True,
+        "control_runs": 10,
+    }
+    for key, expected in expected_scalars.items():
+        if product.get(key) != expected:
+            failures.append(f"product measurement {key} drift")
+    if product.get("control") != EXPECTED_PRODUCT_CONTROL:
+        failures.append("product direct-recursive control report drift")
+
+    outcomes = product.get("outcomes")
+    if not isinstance(outcomes, dict):
+        failures.append("product outcomes must be an object")
+        return
+    if list(outcomes) != list(EXPECTED_PRODUCT_OUTCOMES):
+        failures.append("product outcome population/order drift")
+    for case_id, expected in EXPECTED_PRODUCT_OUTCOMES.items():
+        outcome = outcomes.get(case_id)
+        check_exact_keys(outcome, OUTCOME_KEYS, f"product.outcomes.{case_id}", failures)
+        if not isinstance(outcome, dict):
+            continue
+        actual = (
+            outcome.get("outcome_layer"),
+            outcome.get("variant"),
+            outcome.get("line"),
+            outcome.get("declaration"),
+            outcome.get("source_variant"),
+            outcome.get("code"),
+            outcome.get("message"),
+        )
+        if actual != expected:
+            failures.append(f"{case_id}: typed product outcome drift")
+        if outcome.get("runs") != 2 or outcome.get("repeatable") is not True:
+            failures.append(f"{case_id}: product outcome must repeat twice")
+        if outcome.get("completed_import_published") is not False:
+            failures.append(f"{case_id}: a decline must not publish CompletedImport")
+
+
 def validate_manifest(data: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     check_exact_keys(data, TOP_LEVEL_KEYS, "manifest", failures)
@@ -357,8 +491,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     if data.get("schema") != SCHEMA:
         failures.append(f"schema must be {SCHEMA!r}")
     stage = data.get("stage")
-    if stage not in {"source-frozen", "wire-frozen"}:
-        failures.append("manifest stage must be source-frozen or wire-frozen")
+    if stage not in {"source-frozen", "wire-frozen", "product-measured"}:
+        failures.append("manifest stage must be source-frozen, wire-frozen, or product-measured")
     if data.get("date") != "2026-07-22":
         failures.append("Stage A date drift")
     if data.get("decision") != (
@@ -372,13 +506,18 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         failures.append("resource policy drift")
     if data.get("retention_policy") != EXPECTED_RETENTION:
         failures.append("retention policy drift")
-    if data.get("product_measurement") is not None:
-        failures.append("pre-product manifest must not contain product measurements")
     if stage == "source-frozen":
         if data.get("stage_b") is not None:
             failures.append("Stage A must not contain Stage B wire observations")
+        if data.get("product_measurement") is not None:
+            failures.append("pre-product manifest must not contain product measurements")
     elif stage == "wire-frozen":
         validate_stage_b(data, failures)
+        if data.get("product_measurement") is not None:
+            failures.append("pre-product manifest must not contain product measurements")
+    elif stage == "product-measured":
+        validate_stage_b(data, failures)
+        validate_product(data, failures)
 
     toolchain_path = ROOT / "lean-toolchain"
     if toolchain_path.read_text(encoding="utf-8").strip() != EXPECTED_PINS["lean"]["toolchain"]:
@@ -521,11 +660,11 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             check_exact_keys(case, CASE_KEYS, f"cases[{index}]", failures)
             if not isinstance(case, dict):
                 continue
-            if case.get("product_measurement") is not None:
+            if stage != "product-measured" and case.get("product_measurement") is not None:
                 failures.append(f"cases[{index}] contains premature product data")
             if stage == "source-frozen" and case.get("stage_b_wire") is not None:
                 failures.append(f"cases[{index}] contains premature Stage B wire data")
-            if stage == "wire-frozen":
+            if stage in {"wire-frozen", "product-measured"}:
                 case_id = case.get("id")
                 if case_id == "direct-recursive-control":
                     expected_wire = "historical-direct-recursive-control"
@@ -535,6 +674,11 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
                     expected_wire = case_id
                 if case.get("stage_b_wire") != expected_wire:
                     failures.append(f"cases[{index}] Stage B wire link drift")
+            if stage == "product-measured":
+                case_id = case.get("id")
+                expected_product = None if case_id == "non-positive-source-negative" else case_id
+                if case.get("product_measurement") != expected_product:
+                    failures.append(f"cases[{index}] product measurement link drift")
             if index < len(EXPECTED_CASES):
                 actual = (
                     case.get("id"),
@@ -567,8 +711,8 @@ def main() -> int:
         f"lean construct matrix {data['stage']} valid: "
         f"{len(data['cases'])} cases, 2 source outcomes, "
         f"{len(data['historical_controls'])} reproduced controls, "
-        f"Stage B={'frozen' if data['stage'] == 'wire-frozen' else 'absent'}, "
-        "product observations absent"
+        f"Stage B={'frozen' if data['stage'] != 'source-frozen' else 'absent'}, "
+        f"product={'frozen' if data['stage'] == 'product-measured' else 'absent'}"
     )
     return 0
 

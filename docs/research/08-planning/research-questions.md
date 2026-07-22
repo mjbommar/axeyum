@@ -752,9 +752,9 @@ Out of scope:
     assurance-separated matrix. Source family and elaborated core form remain
     separate facts. M0 and Stage A now freeze the exact seven-case source
     population. Stage B now freezes five byte-identical official streams and
-    their full independent group metadata while enforcing the absence of
-    product observations; product measurement and the generated matrix remain
-    open. See
+    their full independent group metadata. M3 now freezes two current-product
+    outcomes per row beside ten passing direct-recursive controls, without
+    changing semantics; the generated matrix remains open. See
     [proposed ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
     and the
     [execution plan](../../plan/lean-official-construct-matrix-plan-2026-07-22.md)
@@ -762,6 +762,8 @@ Out of scope:
     [Stage A result](../../plan/lean-official-construct-matrix-stage-a-2026-07-22.md).
     The measured wire forms are in the
     [Stage B result](../../plan/lean-official-construct-matrix-stage-b-2026-07-22.md).
+    The typed declines are in the
+    [M3 product result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

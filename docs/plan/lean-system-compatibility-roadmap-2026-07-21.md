@@ -698,10 +698,10 @@ Non-claims until their gates are met:
    product observation; its [Stage B checkpoint](lean-official-construct-matrix-stage-b-2026-07-22.md)
    now freezes five byte-identical official streams and complete independent
    wire-group inventories, still with no Rust product result.
-5. Execute M3 only after the Stage B commit is remote: carry the exact direct-
-   recursive positive control beside two current-importer runs for every new
-   row, record exact typed completion-only outcomes, and do not change importer
-   or kernel semantics inside the measurement.
+5. **M3 DONE:** the [current-product result](lean-official-construct-matrix-product-2026-07-22.md)
+   carries ten exact direct-recursive controls beside two stable outcomes for
+   every new row. It records kernel/policy declines, the nested format
+   misclassification, and completion-only failure without changing semantics.
 6. Generate the assurance-separated parsed/translated/admitted/dual-admitted
    matrix from tests and exact fixtures; the selected-family seed advances but
    does not complete TL2.16.

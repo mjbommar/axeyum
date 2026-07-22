@@ -54,8 +54,11 @@ STREAMS = (
 
 def render() -> str:
     data = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    if data.get("product_measurement") is not None:
-        raise ValueError("input registration already contains product observations")
+    if data.get("stage") == "product-measured":
+        data["stage"] = "wire-frozen"
+        data["product_measurement"] = None
+        for case in data["cases"]:
+            case["product_measurement"] = None
     if data.get("stage") == "wire-frozen":
         data["stage"] = "source-frozen"
         data["stage_b"] = None
@@ -117,7 +120,13 @@ def main() -> int:
         print(f"lean construct matrix Stage B freeze: {error}", file=sys.stderr)
         return 1
     if args.check:
-        committed = MANIFEST.read_text(encoding="utf-8")
+        committed_data = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        if committed_data.get("stage") == "product-measured":
+            committed_data["stage"] = "wire-frozen"
+            committed_data["product_measurement"] = None
+            for case in committed_data["cases"]:
+                case["product_measurement"] = None
+        committed = json.dumps(committed_data, indent=2, sort_keys=False) + "\n"
         if committed != rendered:
             print("lean construct matrix Stage B freeze: committed registration drift", file=sys.stderr)
             return 1

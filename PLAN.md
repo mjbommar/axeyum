@@ -136,10 +136,13 @@ state.
 > [Stage B wire freeze](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
 > is now also complete: five retained streams total 116,636 bytes, every
 > official pair is byte-identical, and the independent reader freezes complete
-> declaration/group metadata without invoking the Rust importer. M3 is next,
-> only after the Stage B commit is remote: pair the immutable direct-recursive
-> pass with two current-product runs per row and record typed completion-only
-> outcomes without changing importer or kernel semantics.
+> declaration/group metadata without invoking the Rust importer. The subsequent
+> [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
+> is now frozen against the remote Stage B revision: ten direct-recursive
+> controls pass, all five declines repeat twice with exact typed payloads, and
+> no error publishes `CompletedImport`. It also exposes the valid nested stream's
+> current `Malformed` misclassification. M4 is next: generate the assurance
+> matrix from the registration without changing importer or kernel semantics.
 > TL2.11 strict positivity remains the first semantic widening prerequisite.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
@@ -181,8 +184,11 @@ state.
 > [proposed official construct matrix](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
 > next from its completed [M0/Stage A](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
 > and [Stage B](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
-> checkpoints: current-product measurement, then a generated assurance matrix.
-> Do not modify admission semantics inside M3. TL1.5 property
+> checkpoints and the completed
+> [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md):
+> generate the assurance-separated matrix, then complete M5 documentation and
+> gates. Do not repair the nested classification inside this measurement
+> milestone. TL1.5 property
 > fuzzing is dependency-ready, but TL2.11 positivity remains mandatory before
 > recursive admission widens. Native
 > parser/macros,

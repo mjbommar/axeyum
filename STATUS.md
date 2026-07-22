@@ -369,12 +369,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — official Lean construct-matrix M0, Stage A, and Stage B are
-  complete; current-product measurement is next.** The milestone remains explicitly
+- **2026-07-22 — official Lean construct-matrix M0 through M3 are complete;
+  the generated assurance matrix is next.** The milestone remains explicitly
   a measurement artifact, not kernel implementation. The
   [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
   and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
   and [Stage B result](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
+  and [M3 product result](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
   and [proposed ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
   define six positive/control families (existing direct recursion,
   recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
@@ -401,11 +402,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   reflexive `MiniAcc`, a two-type/two-motive mutual group, `Rose` with
   `numNested=1` and two recursors, and a well-founded source whose ordinary
   definition depends on recursive-indexed/reflexive `Acc`. All ten exports stay
-  below 701 MiB RSS; the generated 53,210-byte registration reproduces exactly
-  and still contains no product outcome. **Next:** after the Stage B commit is
-  remote, M3 runs the current importer twice per row beside the immutable
-  direct-recursive pass, records typed completion-only outcomes, and makes no
-  semantic changes. After the matrix, TL2.11 strict positivity is the primary
+  below 701 MiB RSS. M3 at remote Stage B revision `22f51b4b` then repeats all
+  five current-product declines twice, with the 11-declaration/zero-axiom
+  direct-recursive control passing before all ten runs. Recursive-indexed
+  reaches `KernelError::RecursiveIndexedNotSupported`; reflexive, mutual, and
+  the well-founded `Acc` closure stop at stable policy codes; nested exposes a
+  transactional but incorrect `Malformed` classification for its valid two-
+  recursor official group. The product freezer, 11 contract tests, and Rust
+  integration test bind every payload and forbid a published `CompletedImport`.
+  **Next:** M4 generates the assurance-separated matrix and must preserve the
+  nested misclassification and well-founded dependency stop. After the matrix,
+  TL2.11 strict positivity is the primary
   trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
   lane.
 
@@ -6806,6 +6813,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed official Lean construct-matrix M3 current-product
+  measurement.** At the pushed Stage B revision, ran the immutable direct-
+  recursive positive control before every one of ten measurements and repeated
+  all five new outcomes exactly. Recursive-indexed reaches the trusted kernel's
+  typed decline; reflexive, mutual, and the well-founded `Acc` dependency stop
+  at typed importer policy boundaries; nested reveals that the current importer
+  misclassifies its valid two-recursor official group as malformed. Added a
+  bounded Rust regression and machine product freezer/validator without changing
+  importer or kernel semantics. Every decline publishes no `CompletedImport`;
+  M4 generated assurance matrix is next.
 
 - **2026-07-22 — Completed the official Lean construct-matrix Stage B wire
   freeze.** Exported each of five frozen roots twice under the 4 GiB cgroup;
