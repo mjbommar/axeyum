@@ -4907,14 +4907,18 @@ pub fn finite_product(
     // Symbolic upper bound with a **unit-slope affine** term `k + c`:
     // `∏_{k=a}^n (k+c) = Γ(n+c+1)/Γ(a+c)`. Closes `∏_{k=1}^n k = Γ(n+1) = n!`.
     if integer_constant(upper).is_none() {
-        let [intercept, slope] = univariate_affine(f, var)?;
-        if slope != Rational::integer(1) {
-            return None;
+        if let Some([intercept, slope]) = univariate_affine(f, var)
+            && slope == Rational::integer(1)
+        {
+            let upper_gamma = (upper.clone() + CasExpr::Const(intercept) + CasExpr::int(1)).gamma();
+            let lower_gamma = CasExpr::Const(Rational::integer(a).checked_add(intercept)?).gamma();
+            return Some(simplify(&(upper_gamma / lower_gamma)));
         }
-        let upper_gamma = (upper.clone() + CasExpr::Const(intercept) + CasExpr::int(1)).gamma();
-        let lower_gamma =
-            CasExpr::Const(Rational::integer(a).checked_add(intercept)?).gamma();
-        return Some(simplify(&(upper_gamma / lower_gamma)));
+        // A rational term fully splitting over ℚ telescopes to a rational function of
+        // the symbolic bound (`∏_{k=2}^n (1−1/k²) = (n+1)/(2n)`), via the same Γ
+        // product rule per linear factor and the `Γ(z+1)=z·Γ(z)` lowering in
+        // `simplify`. Declines otherwise.
+        return finite_product_symbolic_rational(f, var, a, upper);
     }
     let b = integer_constant(upper)?;
     if b < a {
@@ -4926,6 +4930,75 @@ pub fn finite_product(
         product = product * term;
     }
     Some(simplify(&product))
+}
+
+/// `∏_{k=a}^n f(k)` for a **rational** `f` (constant coefficients) that **splits
+/// completely into linear factors over ℚ**, as a closed form in the symbolic upper
+/// bound `n`. Each factor `(k+c)` contributes `∏(k+c) = Γ(n+c+1)/Γ(a+c)` (a root `r`
+/// means `c = −r`), the leading-coefficient ratio `L` contributes `L^{n−a+1}`, and
+/// `simplify` (with its `Γ(z+1)=z·Γ(z)` lowering) collapses the Γ tower to a rational
+/// function when the roots are integer-spaced. `None` if `f` is not such a rational
+/// function, does not fully split, or `L ≤ 0`. So `∏_{k=2}^n (1−1/k²) = (n+1)/(2n)`.
+fn finite_product_symbolic_rational(
+    f: &CasExpr,
+    var: &str,
+    a: i128,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    let rf = normalize_rational(f)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    let (num_lead, num_roots) = split_linear_over_q(&num)?;
+    let (den_lead, den_roots) = split_linear_over_q(&den)?;
+
+    // `∏(k+c) = Γ(n+c+1)/Γ(a+c)` for a factor with root `r` (`c = −r`).
+    let gamma_factor = |r: Rational| -> Option<(CasExpr, CasExpr)> {
+        let upper_arg = upper.clone() - CasExpr::Const(r) + CasExpr::int(1); // n − r + 1
+        let lower_arg = Rational::integer(a).checked_sub(r)?; // a − r
+        Some((upper_arg.gamma(), CasExpr::Const(lower_arg).gamma()))
+    };
+
+    let mut result = CasExpr::one();
+    for r in num_roots {
+        let (g_up, g_lo) = gamma_factor(r)?;
+        result = result * g_up / g_lo;
+    }
+    for r in den_roots {
+        let (g_up, g_lo) = gamma_factor(r)?;
+        result = result * g_lo / g_up; // denominator factor → reciprocal
+    }
+    // Leading-coefficient ratio to the power of the factor count: `L^{n−a+1}`.
+    let lead_ratio = num_lead.checked_div(den_lead)?;
+    if lead_ratio != Rational::integer(1) {
+        if lead_ratio.numerator() <= 0 {
+            return None; // `ln L` undefined for `L ≤ 0`
+        }
+        let count = upper.clone() - CasExpr::int(a) + CasExpr::int(1); // n − a + 1
+        result = result * (count * CasExpr::Const(lead_ratio).ln()).exp();
+    }
+    Some(simplify(&result))
+}
+
+/// Split a univariate rational polynomial completely into linear factors over ℚ:
+/// returns `(leading_coeff, roots_with_multiplicity)` with
+/// `poly = leading_coeff · ∏ (x − rᵢ)`. `None` on the zero polynomial, on overflow,
+/// or when a degree-≥1 factor with no rational root remains (does not fully split).
+fn split_linear_over_q(poly: &[Rational]) -> Option<(Rational, Vec<Rational>)> {
+    let mut work = poly::rat_trim(poly.to_vec());
+    if work.is_empty() {
+        return None; // the zero polynomial has no leading coefficient
+    }
+    let mut roots = Vec::new();
+    loop {
+        if poly::rat_degree(&work)? == 0 {
+            return Some((*work.first()?, roots)); // constant = leading coefficient
+        }
+        // Peel one rational root (repetition handles multiplicity).
+        let r = *ratint::rational_roots(&work)?.first()?;
+        let divisor = vec![r.checked_neg()?, Rational::integer(1)]; // (x − r)
+        work = poly::rat_exact_div(&work, &divisor)?;
+        roots.push(r);
+    }
 }
 
 /// The exact integer value of `expr` if it is an integer [`CasExpr::Const`], else
@@ -15991,6 +16064,38 @@ mod tests {
         );
         // Non-integer bound is declined.
         assert!(finite_product(&k(), "k", &CasExpr::rat(1, 2), &CasExpr::int(3)).is_none());
+    }
+
+    #[test]
+    fn telescoping_rational_products_symbolic() {
+        let k = || v("k");
+        let n = || v("n");
+        // ∏_{k=2}^n (1 − 1/k²) = (n+1)/(2n) — a rational term splitting over ℚ,
+        // reduced by the Γ product rule + `Γ(z+1)=z·Γ(z)` lowering. Validated against
+        // the concrete product at several n (the symbolic form must agree).
+        let telescope = finite_product(
+            &(CasExpr::int(1) - CasExpr::int(1) / k().pow(2)),
+            "k",
+            &CasExpr::int(2),
+            &n(),
+        )
+        .unwrap();
+        assert_equal(&simplify(&telescope), &((n() + CasExpr::int(1)) / (CasExpr::int(2) * n())));
+        for m in [2i128, 3, 5, 8] {
+            let concrete = finite_product(
+                &(CasExpr::int(1) - CasExpr::int(1) / k().pow(2)),
+                "k",
+                &CasExpr::int(2),
+                &CasExpr::int(m),
+            )
+            .unwrap();
+            assert_equal(&simplify(&telescope.substitute("n", &CasExpr::int(m))), &concrete);
+        }
+        // ∏_{k=1}^n k/(k+1) = 1/(n+1) (a purely telescoping rational product).
+        let tele2 = finite_product(&(k() / (k() + CasExpr::int(1))), "k", &CasExpr::int(1), &n()).unwrap();
+        assert_equal(&simplify(&tele2), &(CasExpr::int(1) / (n() + CasExpr::int(1))));
+        // A non-splitting rational term (irreducible quadratic factor) is declined.
+        assert!(finite_product(&(CasExpr::int(1) / (k().pow(2) + CasExpr::int(1))), "k", &CasExpr::int(1), &n()).is_none());
     }
 
     #[test]
