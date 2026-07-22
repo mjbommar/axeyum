@@ -313,6 +313,26 @@ nested inductives soundly but *receive them from the outside world* — the whol
 point of a proof importer. Lean-import parity on nested inductives: functionally
 there, end-to-end.
 
+### Cycle 14 — 2026-07-22 (~13:55 EDT) — first doc conflict + a self-inflicted slip
+
+**Merges:** SMT `bb72bd2c` (ADR-0356 preregister official selection identity,
+docs) + Lean `5d3e8333` (M4 completion, docs).
+
+**First real conflict** — Lean M4 completion vs SMT selection-identity both
+prepended a `STATUS.md` changelog entry at the same anchor. Resolved by **union**
+(kept both entries, no lane's lines clobbered), per the watch-item plan.
+
+**⚠ Self-inflicted slip (caught + fixed):** while staging the conflict
+resolution I ran `git add -u`, which **swept the pre-existing `bench-results/
+frontier/*.json` WIP** (not mine — present since session start) into merge commit
+`ff96ef4b`. Caught it immediately on post-merge verification, then restored the
+files to baseline in a follow-up commit (`dbe21c5d`) and rewrote the modified
+content back into the worktree **unstaged** — so `main` HEAD is clean and the
+user's WIP is preserved exactly as before. **Lesson (already in
+`multi-agent-operations.md` §2): pathspec commits ONLY — never `git add -u`**,
+even for a merge resolution. Reverting to explicit `git add <files>` for all
+future conflict merges.
+
 ---
 
 ## Cycle log
