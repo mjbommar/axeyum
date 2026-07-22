@@ -385,29 +385,29 @@ fn split_geometric(term: &CasExpr, var: &str) -> Option<(RatVec, Rational)> {
     Some((coeffs, base))
 }
 
-/// Extract the base `c` from a geometric exponent `arg = var·ln c`, i.e. the
-/// argument of the `exp` head in [`geometric_power`]. `None` if `arg` is not
-/// exactly `var` times `ln(c)` for a rational constant `c`.
+/// Extract the base `c` from a geometric exponent `arg = a·var` (a linear-in-`var`
+/// exponent with zero constant term), where the base is `c = exp(a)`. The
+/// coefficient `a` is recovered by differentiation, so every equivalent spelling of
+/// the exponent is accepted — `var·ln(2)`, `−var·ln(2)` (= `2^{−var}`, base `½`),
+/// `var·ln(½)`, `3·var·ln(2)` (base `8`) — as long as `c = exp(a)` is a positive
+/// rational. `None` if `arg` is not `a·var` for a `var`-free `a`, or if `exp(a)` is
+/// not a rational constant.
 fn geometric_base(arg: &CasExpr, var: &str) -> Option<Rational> {
-    let factors = match arg {
-        CasExpr::Mul(fs) => fs.clone(),
-        other => vec![other.clone()],
-    };
-    let mut saw_var = false;
-    let mut base: Option<Rational> = None;
-    for factor in factors {
-        match factor {
-            CasExpr::Var(v) if v == var && !saw_var => saw_var = true,
-            CasExpr::Unary(UnaryFunc::Ln, inner) if base.is_none() => {
-                let CasExpr::Const(value) = *inner else {
-                    return None;
-                };
-                base = Some(value);
-            }
-            _ => return None,
-        }
+    // The coefficient of `var`; for a linear exponent it is `var`-free. Simplify
+    // first — the raw derivative carries `var·(…·0)` terms that structurally still
+    // mention `var`.
+    let coefficient = crate::simplify(&arg.differentiate(var));
+    if crate::expr_contains_var(&coefficient, var) {
+        return None; // exponent is not linear in `var`
     }
-    if saw_var { base } else { None }
+    // The exponent must have no constant term: `arg ≡ coefficient·var`.
+    let reconstructed = coefficient.clone() * CasExpr::var(var);
+    if !matches!(equal(arg, &reconstructed), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    // base = exp(coefficient); accept only a rational constant (`exp(−ln2)=½`, …).
+    let base_expr = crate::simplify(&coefficient.exp());
+    crate::multipoly_as_constant(&normalize(&base_expr)?)
 }
 
 /// Solve the exact-rational linear system `Σⱼ xⱼ·columnⱼ = rhs`, where
@@ -685,6 +685,33 @@ mod tests {
             let rhs = Rational::integer(k).checked_mul(pow2(k)).unwrap(); // k·2^k
             assert_eq!(delta, rhs, "geometric telescoping mismatch at k = {k}");
         }
+    }
+
+    #[test]
+    fn geometric_base_from_any_exponent_spelling() {
+        use crate::infinite_sum;
+        let k = || CasExpr::var("k");
+        let zero = || CasExpr::int(0);
+        // `2^{−k} = exp(−k·ln2)`: base is recovered as `exp(−ln2) = ½`, so the
+        // decaying geometric series ∑_{k≥0} 2^{−k} = 2 converges (previously the
+        // `Neg`-wrapped exponent was not recognised as a rational base).
+        let two_pow_neg_k = CasExpr::Neg(Box::new(k() * CasExpr::int(2).ln())).exp();
+        assert!(matches!(
+            equal(&infinite_sum(&two_pow_neg_k, "k", &zero()).unwrap(), &CasExpr::int(2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Same value via the `(1/2)^k` spelling `exp(k·ln(½))`.
+        let half_pow_k = (k() * CasExpr::rat(1, 2).ln()).exp();
+        assert!(matches!(
+            equal(&infinite_sum(&half_pow_k, "k", &zero()).unwrap(), &CasExpr::int(2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // With a polynomial factor: ∑_{k≥1} k·2^{−k} = 2.
+        let k_two_pow_neg_k = k() * CasExpr::Neg(Box::new(k() * CasExpr::int(2).ln())).exp();
+        assert!(matches!(
+            equal(&infinite_sum(&k_two_pow_neg_k, "k", &CasExpr::int(1)).unwrap(), &CasExpr::int(2)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
