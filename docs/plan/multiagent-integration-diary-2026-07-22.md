@@ -439,6 +439,25 @@ importable end-to-end, and formally closed. The scoping caveat is the *right*
 proof-carrying posture: it claims exactly what's verified (nested inductives) and
 nothing more (not full Lean parity). One leg of the compass, genuinely delivered.
 
+### Cycle 19 (heartbeat ~15:00 EDT, 4 h) — status + WRONG re-verified
+
+- **Lean** — arc DONE, lane idle (0 WIP). Natural next frontier per M6 scope:
+  native source / elaboration (explicitly *not* claimed yet).
+- **SMT** — merged S2 `d48fb0dc acquire verified official corpus` (gated green).
+  With S0/S1 selection frozen+audited and S2 corpus acquired, the full-library
+  run is close to executable on a provably-official verified corpus.
+- **CAS** — order-33 moment machinery now **accumulating** (203+/49− in `lib.rs`,
+  up from churn) — converging toward the big commit. Still uncommitted (careful
+  hard work; ~4 h).
+- **s4 soundness — WRONG 16→23, re-verified all stale.** 22 are the known FP
+  Wintersteiger (div/mul/fma) + AUFLIA classes; the 1 genuinely new class,
+  `Double-to-float-no-simp1-main` (QF_BVFP `to_fp` conversion, wrong-sat on the
+  stale binary), I checked against current `main` → **correct (unsat)**. So the
+  FP fixes cover conversion too; **all 23 WRONG remain stale-binary lag, `main`
+  sound.** (Method: always verify a *new* WRONG family against current `main`,
+  never assume it's covered.)
+- **Health:** 30 °C, no runaways, disk fine.
+
 ---
 
 ## Cycle log
