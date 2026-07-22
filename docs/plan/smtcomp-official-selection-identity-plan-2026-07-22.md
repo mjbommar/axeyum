@@ -155,6 +155,16 @@ examples. S0 is corrected to 51 submissions, 36 competitive submissions, and
 seed `22,731,074` before any official sample was generated or observed. A
 fresh-directory rerun is required.
 
+**S1b second live attempt:** retained negative. The audit at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744315286061407-0c81f06d`
+verified all 89 corrected inputs, then stopped before metadata reduction on
+`QF_AUFBVLIA`. It is a valid organizer `Logic` but does not occur in the
+Single Query division table. The exact producer first expands list/regexp
+values against every `Logic`, then `Participation.get` filters them through
+the selected track's divisions. The independent adapter and fixture now
+reproduce that two-stage behavior. No official sample was generated or
+observed; another fresh-directory rerun is required.
+
 ### S2 — verified corpus acquisition
 
 - Download all 90 files from Zenodo record `16740866` into a fresh staging

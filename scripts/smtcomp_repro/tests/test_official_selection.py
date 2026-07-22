@@ -21,8 +21,9 @@ from scripts.smtcomp_repro.official_selection import (
     audit_selection,
     canonical_json_bytes,
     division_cap,
-    extract_single_query_divisions,
+    extract_official_logics,
     extract_removed_benchmark_ids,
+    extract_single_query_divisions,
     historical_facts,
     normalize_benchmark,
     validate_decisions,
@@ -111,6 +112,7 @@ class OfficialSelectionTests(unittest.TestCase):
     def test_official_defs_ast_and_submission_adapter(self) -> None:
         defs_source = (FIXTURE_ROOT / "official_defs.py").read_bytes()
         divisions = extract_single_query_divisions(defs_source)
+        all_logics = extract_official_logics(defs_source)
         self.assertEqual(
             divisions,
             {
@@ -137,12 +139,12 @@ class OfficialSelectionTests(unittest.TestCase):
             {
                 "name": "regexp-solver",
                 "participations": [
-                    {"logics": "QF_(BV|LIA)", "tracks": ["SingleQuery"]},
+                    {"logics": "QF_(BV|LIA|AUFBVLIA)", "tracks": ["SingleQuery"]},
                 ],
                 "seed": 23,
             },
         ]
-        normalized = adapt_official_submissions(documents, divisions)
+        normalized = adapt_official_submissions(documents, divisions, all_logics)
         self.assertEqual(normalized[0]["seed"], 17)
         self.assertEqual(
             normalized[0]["participations"],
@@ -202,7 +204,9 @@ class OfficialSelectionTests(unittest.TestCase):
         self.assertTrue(facts[results[0]["benchmark_id"]]["trivial"])
 
     def test_official_format_mutations_reject(self) -> None:
-        divisions = extract_single_query_divisions((FIXTURE_ROOT / "official_defs.py").read_bytes())
+        defs_source = (FIXTURE_ROOT / "official_defs.py").read_bytes()
+        divisions = extract_single_query_divisions(defs_source)
+        all_logics = extract_official_logics(defs_source)
         with self.assertRaises(SelectionAuditError):
             adapt_official_submissions(
                 [
@@ -215,6 +219,7 @@ class OfficialSelectionTests(unittest.TestCase):
                     }
                 ],
                 divisions,
+                all_logics,
             )
         with self.assertRaises(SelectionAuditError):
             adapt_official_submissions(
@@ -228,6 +233,7 @@ class OfficialSelectionTests(unittest.TestCase):
                     }
                 ],
                 divisions,
+                all_logics,
             )
         with self.assertRaises(SelectionAuditError):
             adapt_official_submissions(
@@ -241,6 +247,7 @@ class OfficialSelectionTests(unittest.TestCase):
                     }
                 ],
                 divisions,
+                all_logics,
             )
         bad_benchmark = {
             "incremental": [],

@@ -417,8 +417,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   failure also exposed the organizer's non-recursive submission glob, excluding
   two template examples and correcting the competitive count from 38 to 36 and
   seed from `22,731,158` to `22,731,074` before any official sample was
-  observed. A corrected fresh-input rerun is next. No solver run or selection
-  credit is granted yet.
+  observed. The next retained attempt reached the exact follow-on boundary:
+  regexp expansion ranges over every organizer `Logic`, then
+  `Participation.get` silently filters non-Single-Query matches through the
+  Single Query division table. That behavior is now fixture-covered; another
+  fresh-input rerun is next. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7181,6 +7184,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Matched the organizer's two-stage logic expansion.** The
+  second retained S1b attempt verified all 89 corrected inputs, then stopped
+  before metadata reduction on `QF_AUFBVLIA`: it is a valid organizer logic but
+  not a Single Query logic. The independent adapter now expands list/regexp
+  values against the complete `Logic` enum and then filters through the chosen
+  track's division table, exactly following `Participation.get`. The retained
+  negative is
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744315286061407-0c81f06d`;
+  no official selected set was generated or inspected.
 
 - **2026-07-22 — Corrected the ADR-0356 authority before observing a sample.**
   The first S1b live attempt stopped before metadata reduction because official
