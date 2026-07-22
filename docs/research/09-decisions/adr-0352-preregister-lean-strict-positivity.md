@@ -4,11 +4,12 @@ Status: proposed
 
 Date: 2026-07-22
 
-Implementation checkpoint: the
-[M0 source freeze](../../plan/lean-strict-positivity-m0-2026-07-22.md) binds four
-source hashes, six ordered rule classes, exact resources/commands, and eight
-fail-closed contract tests without new official or product observation. M1
-trusted preflight remains next, so this ADR stays proposed.
+Implementation checkpoint: [M1](../../plan/lean-strict-positivity-m1-2026-07-22.md)
+lands the trusted pre-insertion rule and typed failures;
+[M2](../../plan/lean-strict-positivity-m2-2026-07-22.md) closes the twelve-row
+public contract plus two byte-identical runs of a frozen 840-case grammar.
+Pinned-Lean/importer differential and final closure remain, so this ADR stays
+proposed.
 
 ## Context
 

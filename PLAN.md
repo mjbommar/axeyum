@@ -163,8 +163,13 @@ state.
 > before provisional environment insertion. The bounded kernel gate passes
 > 182 unit tests; focused clippy and rustdoc are clean; direct-recursive
 > computation and the positive recursive-indexed/reflexive feature declines
-> remain unchanged. M2's twelve-row public matrix and deterministic >=256-case
-> grammar are next;
+> remain unchanged. The
+> [M2 result](docs/plan/lean-strict-positivity-m2-2026-07-22.md) now closes all
+> twelve public rows and repeats a frozen 840-case fixed-seed grammar
+> byte-identically across `0p0i`/`1p0i`/`1p1i`, `Prop`/`Type`, depths zero
+> through four, and first/later constructor/field positions. M3's mandatory
+> pinned-Lean/import boundary and immutable construct-matrix regression are
+> next;
 > TL2.12 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

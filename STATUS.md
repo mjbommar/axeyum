@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.11/T6.0.2 strict positivity M1 is complete; M2's public
-  matrix and generated grammar are next.** Proposed
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity M2 is complete; M3's
+  official/import boundary is next.** Proposed
   [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
   and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
   bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
@@ -392,9 +392,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   provisional environment insertion. It returns stable non-positive and
   invalid-occurrence payloads, preserves direct recursion and the positive
   recursive-indexed/reflexive feature declines, and passes 182 kernel unit
-  tests plus focused clippy/rustdoc under the 4 GiB cap. It does not widen
-  admission or complete TL2.11: M2 must close all twelve public rows and the
-  deterministic >=256-case grammar before the official M3 differential.
+  tests plus focused clippy/rustdoc under the 4 GiB cap. The
+  [M2 result](docs/plan/lean-strict-positivity-m2-2026-07-22.md) adds all twelve
+  public contract rows and a seed-frozen 840-case grammar, repeated twice with
+  exact summary identity across three parameter/index profiles, both result
+  sorts, depths zero through four, and constructor/field ordering. Exact typed
+  failures compare the complete environment before/after. It does not widen
+  admission or complete TL2.11: M3 must run the immutable sources twice under
+  pinned Lean, add the mandatory official/import differential, and rerun the
+  frozen construct matrix.
 
 - **2026-07-22 — the official Lean construct-matrix selected-family milestone
   is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
@@ -6852,6 +6858,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M2 public/generated gate.**
+  Added a twelve-row `add_inductive` contract matrix and a fixed-seed 840-case
+  structural grammar with independently assigned outcomes. Two complete runs
+  reproduce the frozen summary byte-for-byte: 174 admissions, 42 recursive-
+  indexed declines, 144 reflexive declines, 270 non-positive rejections, and
+  210 invalid-application rejections. All package unit/integration tests pass;
+  the known `/tmp` LLD doctest fault passes when temporary linker output is
+  redirected under `target/`. Focused clippy/rustdoc are clean. M3 official and
+  importer evidence remains.
 
 - **2026-07-22 — Completed TL2.11 strict-positivity M1 trusted preflight.**
   Added Lean 4.30's single-family WHNF/`Pi`/valid-family-application rule before

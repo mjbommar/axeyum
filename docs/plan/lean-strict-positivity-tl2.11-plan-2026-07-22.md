@@ -1,7 +1,7 @@
 # Lean strict positivity: TL2.11 execution plan
 
-Status: M1 trusted preflight complete; M2 public-family matrix and generated
-grammar next
+Status: M2 public-family matrix and generated grammar complete; M3
+official/import boundary next
 
 Date: 2026-07-22
 
@@ -9,7 +9,7 @@ Decision gate:
 [proposed ADR-0352](../research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
 
 Current checkpoint:
-[M1 trusted-preflight result](lean-strict-positivity-m1-2026-07-22.md)
+[M2 public-matrix/generated-grammar result](lean-strict-positivity-m2-2026-07-22.md)
 
 Parents:
 
