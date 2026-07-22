@@ -180,7 +180,7 @@ Last updated: 2026-07-22
 > conformance.
 
 > **Current measurement-durability checkpoint.** G1's failed 52-shard
-> candidate run receives zero result credit, and proposed ADR-0344 now freezes
+> candidate run receives zero result credit, and accepted ADR-0344 now freezes
 > the prerequisite resume protocol. The generated v2 contract checks 18
 > invariants across 28 scenarios and proves deterministic interrupted/resumed
 > scoring-projection equivalence. V2 supersedes the thin v1 process schema
@@ -193,9 +193,12 @@ Last updated: 2026-07-22
 > delegated user-systemd/cgroup-v2 gate for exact one-host aggregate memory,
 > swap, CPU, and PID enforcement, bounded workers, immutable controller
 > evidence, fail-before-launch mutations, and destructive host-runner
-> kill/resume. E3 must still prove multi-host loss/retry and transfer durability
-> on a tiny corpus before the 64,345-file candidate may be rerun; the official-style
-> selection identity remains independently open. This is measurement
+> kill/resume. E3 now passes its repeated `s5`/`s6`/`s7` shared-NFSv4.1
+> uninterrupted and exact host-runner-loss/retry controls on the committed
+> six-case corpus, including content-bound source reuse, exact fault/recovery,
+> E1/E2/E3 completion, and byte-identical timing-free outcomes. The
+> official-style selection identity remains independently open before the
+> 64,345-file candidate may be rerun. This is measurement
 > infrastructure under G1, not a new solver or foundation phase.
 
 ## Purpose

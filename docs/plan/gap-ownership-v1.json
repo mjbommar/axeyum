@@ -70,7 +70,7 @@
         "docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md",
         "docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md"
       ],
-      "next_action": "Review ADR-0343/0344 and the accepted E1b/E2 results; then implement E3 multi-host allocation, loss/recovery, and transfer durability before rerunning the 64,345-file candidate. The independent official eligibility/status/difficulty selection ledger also remains required."
+      "next_action": "Retain accepted ADR-0344 and its completed E1-E3 gates; implement the independent official eligibility/status/difficulty/release/seed/corpus/file selection ledger before rerunning the 64,345-file candidate."
     },
     {
       "id": "G2",

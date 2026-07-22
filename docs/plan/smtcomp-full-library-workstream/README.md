@@ -1,8 +1,8 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
 **This folder is the single entry point for the SMT-COMP measurement,
-full-library inventory, and gap-closing lane.** Updated 2026-07-22 after E2
-one-host aggregate enforcement and the second full-library soundness finding.
+full-library inventory, and gap-closing lane.** Updated 2026-07-22 after E3
+three-host loss/retry durability and the second full-library soundness finding.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -14,7 +14,7 @@ The ranked program is
 [`../full-library-gap-closing-plan-2026-07-22.md`](../full-library-gap-closing-plan-2026-07-22.md).
 The active durability design is
 [`../smtcomp-resumable-run-design-2026-07-21.md`](../smtcomp-resumable-run-design-2026-07-21.md)
-under proposed
+under accepted
 [ADR-0344](../../research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md).
 
 ---
@@ -33,8 +33,10 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   memory/swap/CPU/PID limits, bounded shard concurrency, immutable controller
   evidence, host-runner kill, explicit unclosed-session recovery, overcommit,
   environment drift, and evidence tamper are executable gates.
-- E3 multi-host allocation, host-loss recovery, and shared-storage durability
-  are preregistered; implementation and destructive N>=3 gates are open.
+- E3 is complete on the registered `s5`/`s6`/`s7` NFSv4.1 class: exact
+  allocation, source staging, per-host cgroups, host-runner loss, stale-lease
+  recovery, different-host retry, central completion, raw-export gating, and
+  repeated outcome equivalence are executable.
 - The independent official eligibility/status/difficulty selection ledger is
   open. E1b's exact ordered per-file digest ledger does not substitute for it.
 
@@ -100,6 +102,26 @@ requires self-hashed resource completion as well as the E1 result bundle.
 Detailed result:
 [`../smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`](../smtcomp-one-host-resource-enforcement-e2-2026-07-22.md).
 
+### E3 multi-host durability
+
+The coordinator now preregisters at least three equivalent hosts, exact
+initial/retry shard ownership, one normalized NFSv4.1 filesystem class, and
+canonical host commands. It stages content-addressed source/fixture bytes,
+precreates the shared namespace, launches only the allocated shards, records
+outer allocation attempts and per-host E2 sessions, and refuses central
+completion or raw export without complete E1/E2/E3 evidence.
+
+The required live gate ran the same six-case/three-shard identity on `s5`,
+`s6`, and `s7`. Its uninterrupted control completed directly. Its loss control
+sealed the solver marker and exact cgroup/launcher/SIGKILL observation, retained
+one terminal-less resource session and shard attempt, quarantined only the
+matching stale shard-0 lease after the unit and PID were dead, and completed the
+preregistered retry on `s6`. Both timing-free outcome projections have SHA-256
+`411fb218896ba36ef45852235c05a3ef1dd95cfef5d2b6ea26c8c8ea09671055`.
+
+Detailed result:
+[`../smtcomp-multi-host-durability-e3-2026-07-22.md`](../smtcomp-multi-host-durability-e3-2026-07-22.md).
+
 ### QF_AUFLIA soundness gate
 
 The old run's second WRONG marker was not FP-family noise:
@@ -126,9 +148,9 @@ curated QF_AUFLIA corpus with a no-wrong-verdict regression.
 
 ## 3. Live stale run snapshot
 
-At the latest audit, the eight s4 shards had written 20,657 progress lines
-(about 32% of 64,345) and were processing QF_BV. No `raw_*.json` shard had been
-published. The exact two WRONG markers were:
+At the bounded 2026-07-22 13:14 EDT audit, the eight s4 shards had written
+21,564 progress lines (about 34% of 64,345) and were processing QF_BV. No
+`raw_*.json` shard had been published. The exact two WRONG markers were:
 
 1. QF_ABVFP KLEE `query.26.smt2`: expected `unsat`, stale binary returned
    `sat`; the exact-cancellation FP repair is on main.
@@ -152,11 +174,12 @@ is needed.
 
 ## 4. Executable gates
 
-The bounded E0-E2 gate is:
+The bounded E0-E3 gate is:
 
 ```sh
 ./scripts/check-smtcomp-resume.sh
 AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
+AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
 AXEYUM_FS_FIXTURE_PARENT=. PYTHONWARNINGS=error \
   python3 -m unittest scripts.tests.test_smtcomp_resume_fs
 ```
@@ -177,6 +200,9 @@ Together they cover:
 - output-sidecar mutation and duplicate raw-cell rejection;
 - exact cgroup descriptor/controller validation, two-worker bounded execution,
   resource-evidence mutation, and killed-host-runner recovery; and
+- three-host plan/source/command mutation gates, complete E3 export gating,
+  exact fault/recovery evidence, and repeated live uninterrupted/loss controls;
+  and
 - scoring, selection, provenance, and generated-contract checks.
 
 The QF_AUFLIA regression is:
@@ -193,22 +219,17 @@ gate.
 
 ## 5. Remaining work, in dependency order
 
-1. **E3 — multi-host recovery.** Preallocate host/shard/resource ownership for
-   N>=3 hosts; prove host loss, retry, spool/shared-storage transfer, lease
-   recovery, complete-set validation, and canonical equivalence to an
-   uninterrupted control. Follow the frozen
-   [E3 plan](../smtcomp-multi-host-durability-e3-plan-2026-07-22.md).
-2. **Selection identity.** Implement the official eligibility, status,
+1. **Selection identity.** Implement the official eligibility, status,
    difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
    Keep this policy artifact separate from the E1b execution ledger.
-3. **Fresh P0 slices.** Stage the repaired binary and rerun
+2. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0.
-4. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
+3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
 
-The implementation rule for E3 is the same as E1-E2: build the mechanism and
+The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
 population.
 
@@ -228,6 +249,7 @@ Repository:
   `docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md`;
 - E2 result: `docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`;
 - E3 plan: `docs/plan/smtcomp-multi-host-durability-e3-plan-2026-07-22.md`;
+- E3 result: `docs/plan/smtcomp-multi-host-durability-e3-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -241,22 +263,27 @@ NAS (shared, corpus read-only in practice):
 - SMT-LIB 2024 corpus: `/nas3/data/axeyum/corpus/smtlib-2024/`;
 - old candidate identity: `/nas3/data/axeyum/harness/full-inventory/`;
 - stale run logs: `/nas3/data/axeyum/harness/full-inventory/raw_selection/`;
-- staged binaries: `/nas3/data/axeyum/harness/bin/`.
+- staged binaries: `/nas3/data/axeyum/harness/bin/`;
+- accepted E3 repeated live evidence:
+  `/nas3/data/axeyum/harness/e3-gate/live-1784740048714236679-84b40626d845/`;
+- accepted E3 source bundle:
+  `/nas3/data/axeyum/harness/e3-gate/source-bundles/83e9f5e5ec37c0ecb0a62b0da730c6ed99c465bcfd6fab76a7086b07423b8b05/`.
 
 ---
 
 ## 7. Resume protocol
 
-1. Read `PLAN.md`, this file, the roadmap, foundational DAG, and proposed
+1. Read `PLAN.md`, this file, the roadmap, foundational DAG, and accepted
    ADR-0344.
 2. Work in a dedicated `agent/smtcomp/*` worktree; never mutate the integration
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Take E3 next. Keep the v2 result schema and E1-E2 gates fixed unless a failing
-   mutation demonstrates a necessary correction.
+4. Take the independent official selection-identity ledger next. Keep the v2
+   result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
+   necessary correction.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
-*Owner: SMT-COMP measurement/full-library lane. Next milestone: E3 N>=3
-multi-host loss/retry and transfer durability, not another large run.*
+*Owner: SMT-COMP measurement/full-library lane. Next milestone: independent
+official selection identity, not another large run.*

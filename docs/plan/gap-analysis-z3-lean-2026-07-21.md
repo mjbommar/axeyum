@@ -195,15 +195,15 @@ and no structured footer. Remote `dmesg` is permission-denied, so OOM is unverif
 is frozen incomplete with zero result credit. End-of-shard-only raw
 serialization makes it non-resumable; an atomic
 checkpoint/resume protocol and terminal shard manifest are prerequisites to a
-rerun. Proposed ADR-0344 and the generated v2 contract now close the E0 design
+rerun. Accepted ADR-0344 and the generated v2 contract now close the E0 design
 slice with 18 invariants and 28 executable scenarios, including byte-identical
 deterministic interruption/restart scoring projection. V2 supersedes v1 before
 integration because the runner audit exposed missing process/attempt evidence.
 E1a further passes 8/8 real local
-`SIGKILL` recovery cells over tmpfs and ext-family storage. Production
-durability remains open: E1b-E3 must integrate the writer/solver/lifecycle,
-strict duplicate rejection, leases, aggregate enforcement, and multi-host recovery before a
-rerun. This is not yet a third measured regime or an official selection. No result is committed,
+`SIGKILL` recovery cells over tmpfs and ext-family storage. E1b-E3 now
+integrate the writer/solver/lifecycle, strict duplicate rejection, leases,
+aggregate enforcement, and repeated three-host recovery. This is not yet a
+third measured regime or an official selection. No full-population result is committed,
 and the selector does not yet bind the complete eligibility/status/difficulty
 filters, official release and seed, corpus-tree digest, or per-selected-file
 hashes. Preserve the run, but grant no matrix or representativeness credit until
@@ -508,13 +508,10 @@ reported as parity before it climbs the measured and certifying rungs.
 1. Review proposed ADR-0343 and retain the landed shared provenance generator;
    never merge the two current scores or describe the 228-file view as an
    independent sample.
-2. Review proposed ADR-0344 and retain its landed E0/E1a contract and local
-   filesystem result and v2 runner audit. Implement E1b-E3: one-solver active-
-   runner/fake-solver integration, typed termination, timeout-response
-   preservation, output sidecars, attempt/completion manifests, strict
-   duplicate rejection, single-owner
-   leases, aggregate resource enforcement, and multi-host loss recovery before
-   rerunning the 64,345-file candidate.
+2. Retain accepted ADR-0344 and its complete E0-E3 gates: immutable records,
+   strict resume identity, typed outcomes, output sidecars, attempts,
+   completion, single-owner leases, aggregate resources, and three-host
+   loss/retry. Do not weaken them for the 64,345-file candidate.
 3. Extend the selector registration with the complete eligibility/status/
    difficulty exclusions, official release and seed, corpus-tree digest, and
    per-selected-file hashes before publishing an official-style view.

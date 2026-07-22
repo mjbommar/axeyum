@@ -394,7 +394,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   handoff docs are synchronized. Next: probe adjacent-binomial convolution and
   weighted squared-binomial identities through the same concrete-discovery plus
   symbolic-certificate gate.
-- **2026-07-22 — G1 E2 one-host resource enforcement is complete, and the
+- **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
   validates the exact ordered benchmark ledger and the
   corpus/selection/environment/solver/runner/toolchain
@@ -408,10 +408,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   solvers, and descendants in one transient user-systemd/cgroup-v2 service;
   exact memory/swap/CPU/PID limits, controller counters, overcommit/environment
   rejection, evidence tamper, and destructive host-runner kill/resume pass with
-  `AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh`. This
-  completes E2 but grants no large-run measurement credit: E3 multi-host
-  loss/retry, shared-storage/spool durability, and official selection identity
-  remain. Separately, the live
+  `AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh`. E3 now
+  adds content-addressed source staging, exact three-host allocation,
+  normalized NFSv4.1/environment registration, per-host cgroups, immutable
+  outer allocation/fault/recovery evidence, dead-unit/launcher-gated stale
+  lease quarantine, different-host retry, and completion-gated central export.
+  The repeated committed `s5`/`s6`/`s7` six-case gate passes with identical
+  timing-free outcomes; the final evidence root is
+  `/nas3/data/axeyum/harness/e3-gate/live-1784740048714236679-84b40626d845`.
+  E3 is complete but still grants no large-run measurement credit: the
+  independent official eligibility/status/difficulty/release/seed/corpus/file
+  selection identity remains open. Separately, the live
   stale run has exactly two WRONG markers: the repaired FP case and
   QF_AUFLIA `pipeline-invalid.smt2` (declared/cvc5 `sat`, Axeyum `unsat`). The
   latter reproduces on current code because the scalar UFLIA abstraction search
@@ -1143,7 +1150,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   a versioned complete result and those omissions are explicit. The exact
   selection hashes, failure snapshot, and safe resume checks are in the
   [candidate-run handoff](docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md).
-  Proposed ADR-0344 now supplies the v2 E0 contract: 18 invariants and 28
+  Accepted ADR-0344 now supplies the v2 E0 contract: 18 invariants and 28
   executable scenarios (five accepted controls, 23 rejected mutations), with
   deterministic interrupted/resumed and uninterrupted scoring projections
   byte-identical. V2 supersedes the committed v1 prototype before integration:
@@ -1166,9 +1173,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   user-systemd/cgroup-v2 envelope, records immutable preflight/counter/terminal
   evidence, rejects resource overcommit and environment drift before launch,
   and preserves terminal-less resource sessions through host-runner kill and
-  explicit lease recovery. Next: E3 proves multi-host allocation, loss/retry,
-  and transfer durability, while the official-style selection
-  ledger remains independently open. Do not rerun the 64,345-file candidate first.
+  explicit lease recovery. E3 now passes repeated three-host shared-NFSv4.1
+  uninterrupted and exact host-runner-loss controls with content-bound source,
+  preregistered different-host retry, exact fault/recovery evidence, central
+  completion, and identical timing-free outcome projections. Next: complete
+  the independently versioned official-style selection ledger. Do not rerun
+  the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle
   logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
@@ -7167,6 +7177,21 @@ plan is built and committed on the current branch:
   gates pass under the 4 GiB/one-worker policy. No M0 computation stream or
   generated assurance artifact was observed. M2 native expansion/restoration
   is next under proposed ADR-0355.
+- **2026-07-22 — Completed SMT-COMP E3 three-host loss/retry durability.**
+  The accepted ADR-0344 path now stages immutable content-addressed runner and
+  fixture bytes, registers one exact `s5`/`s6`/`s7` environment and NFSv4.1
+  class, preregisters disjoint initial plus different-host retry ownership,
+  launches canonical commands under per-host E2 cgroups, and gates raw export
+  on complete E1/E2/E3 evidence. The destructive six-case control seals its
+  marker, exact cgroup/launcher/SIGKILL, failed outer allocation, terminal-less
+  resource session and shard attempt, dead-unit/launcher proof, deterministic
+  stale-lease quarantine, and successful shard-0 retry on `s6`. Its timing-free
+  outcome projection is byte-identical to the uninterrupted control. The
+  mandatory aggregate gate and same-commit source-bundle reuse pass; final
+  evidence is under
+  `/nas3/data/axeyum/harness/e3-gate/live-1784740048714236679-84b40626d845`.
+  Official selection identity is next; no full-run credit is granted yet.
+
 - **2026-07-22 — Completed SMT-COMP E2 one-host aggregate resource
   enforcement.** `compete.py --host-run` now launches all registered shards in
   one transient user-systemd/cgroup-v2 service with exact memory/swap/CPU/PID

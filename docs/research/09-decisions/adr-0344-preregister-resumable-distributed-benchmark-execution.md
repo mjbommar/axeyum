@@ -1,7 +1,8 @@
 # ADR-0344: Preregister resumable distributed benchmark execution
 
-Status: proposed
+Status: accepted
 Date: 2026-07-21
+Accepted: 2026-07-22
 
 ## Context
 
@@ -78,7 +79,7 @@ framing, tail-recovery, fsync, conflict, and restart contract.
 5. Production stage E2 must demonstrate one-host aggregate enforcement and
    fail-before-launch overcommit/environment mutations.
 6. Production stage E3 must preserve records and account for attempts across a
-   simulated host loss under N>=3 tiny-corpus repetitions.
+   registered host-runner loss under N>=3 tiny-corpus repetitions.
 7. Only a new, complete E4 directory may run the 64,345-file candidate. The
    frozen failed attempt remains unchanged and receives zero result credit.
 8. All generated-contract, SMT-COMP reproduction, parity-documentation, link,
@@ -127,6 +128,13 @@ coverage, soundness, or OOM-cause claim.
   limits over a bounded worker pool; records controller counters; rejects
   overcommit and environment drift before launch; and preserves honest
   terminal-less resource sessions across destructive host-runner kill/resume.
+- The [E3 multi-host result](../../plan/smtcomp-multi-host-durability-e3-2026-07-22.md)
+  passes the required `s5`/`s6`/`s7` NFSv4.1 gate twice at one committed source
+  identity. Six results survive an exact marker-bound host-runner `SIGKILL`,
+  dead-unit/launcher proof, deterministic stale-lease quarantine, and
+  preregistered different-host retry. The interrupted and uninterrupted
+  timing-free outcome projections are byte-identical; lifecycle evidence
+  differs exactly as registered.
 
 ## Alternatives
 
@@ -156,11 +164,12 @@ failed attempts. E1a proves the local record primitive. The subsequent
 exact preflight, typed execution, sidecars, attempts, leases, completion-last
 export, and duplicate rejection into a fixture-only `compete.py` mode. E2 is
 now complete: the one-host adapter and its immutable resource evidence pass the
-required live cgroup-v2 gate. E3 still owns multi-host allocation, host-loss
-recovery, and shared-storage or spool-transfer durability.
+required live cgroup-v2 gate. E3 is now complete for the registered three-host
+shared-NFSv4.1 class; the independent official selection ledger is the next G1
+prerequisite.
 
 The cost is more artifact structure and a staged implementation before another
 large run. Result files must remain immutable, retries need fresh attempt IDs,
 environment classes need definition, and production filesystem durability must
-be tested rather than assumed. G1 advances E3 before corpus execution; the
+be tested rather than assumed. G1 retains the completed E3 gate before corpus execution; the
 official-style selection ledger and neutral-oracle runs remain separate work.

@@ -1,6 +1,6 @@
 # Resumable distributed benchmark execution
 
-Status: E0-E2 landed; E3 multi-host recovery open
+Status: E0-E3 landed; execution durability complete for the registered class
 Date: 2026-07-21
 
 ## Plain-English outcome
@@ -26,7 +26,9 @@ envelope. The subsequent
 [E2 result](smtcomp-one-host-resource-enforcement-e2-2026-07-22.md) binds the
 host runner, bounded shard workers, solvers, and descendants into one exact
 cgroup-v2 service and records immutable controller evidence. E3 multi-host
-recovery remains open.
+allocation, exact fault/recovery, source staging, and central completion now
+pass the repeated required three-host gate; see the
+[E3 result](smtcomp-multi-host-durability-e3-2026-07-22.md).
 
 ## Current implementation audit
 
@@ -244,6 +246,13 @@ official-selection credit.
 Exit: N>=3 interrupted and uninterrupted tiny-corpus runs are canonical-shape
 equivalent, every attempt is accounted, and central merge has zero missing,
 unexpected, or duplicate keys.
+
+**E3 result:** the registered `s5`/`s6`/`s7` NFSv4.1 class passes repeated
+uninterrupted and exact host-runner-loss controls. The loss path records its
+fault, retains the terminal-less session and shard attempt, proves the old
+owner dead, quarantines only the exact lease, and completes the preregistered
+different-host retry. Both timing-free outcome projections are byte-identical;
+see the [result](smtcomp-multi-host-durability-e3-2026-07-22.md).
 
 ### E4 — Candidate completeness run
 
