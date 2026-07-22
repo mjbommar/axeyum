@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.11/T6.0.2 strict positivity M3 is complete; M4 closure
-  and handoff are next.** Proposed
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity is complete; TL2.12 is
+  next.** Accepted
   [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
   and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
   bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
@@ -406,11 +406,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   population and fails closed when Lean is required but absent. An explicitly
   synthetic format mutation propagates `NonPositiveInductiveOccurrence` at
   `MiniNat`, field zero, without returning `CompletedImport`; the immutable
-  construct matrix preserves ten controls and ten declines. M4 final gates,
-  ADR closure, research-question closure, and TL2.12 handoff remain.
+  construct matrix preserves ten controls and ten declines. The
+  [M4 final result](docs/plan/lean-strict-positivity-final-2026-07-22.md) closes
+  182 kernel units, 38 kernel integrations, 30 importer integrations, both
+  doctests, focused clippy/rustdoc/rustfmt, 14 observation-validator tests,
+  foundational resources, parity artifacts, and links under the bounded
+  policy. ADR-0352 is accepted, the research question is closed, and
+  TL2.11/T6.0.2 are DONE without widening admission. TL2.12 recursive-indexed
+  plus reflexive/higher-order induction-hypothesis generation is the next
+  preregistration-first semantic slice.
 
 - **2026-07-22 — the official Lean construct-matrix selected-family milestone
-  is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
+  is complete; its TL2.11 handoff is now closed.** The milestone remains explicitly
   a measurement artifact, not kernel implementation. The
   [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
   and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
@@ -6865,6 +6872,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.11/T6.0.2 and accepted ADR-0352.** The final
+  bounded pass closes 182 kernel unit, 38 kernel integration, 30 importer
+  integration, and both doctest cases; required pinned Lean, the repeated
+  840-case grammar, focused clippy/rustdoc/rustfmt, 14 observation-validator
+  tests, foundational resources, parity artifacts, and links all pass. The
+  research question is closed. No inductive admission widened; TL2.12 is now
+  the preregistration-first recursive-indexed/reflexive IH handoff.
 
 - **2026-07-22 — Completed TL2.11 strict-positivity M3 official/import gate.**
   Ran four immutable sources twice at exact pinned Lean 4.30 under the 3/4 GiB

@@ -707,19 +707,21 @@ Non-claims until their gates are met:
    tests and exact fixtures, and the [final result](lean-official-construct-matrix-final-2026-07-22.md)
    closes bounded gates, ADR-0351, and handoff. The selected-family seed advances
    TL2.16 to PARTIAL but does not complete its full population.
-7. **WIP (M3 DONE; M4 NEXT) — TL2.11:** execute [ADR-0352 and its bounded plan](lean-strict-positivity-tl2.11-plan-2026-07-22.md).
+7. **DONE — TL2.11:** [accepted ADR-0352 and its bounded plan](lean-strict-positivity-final-2026-07-22.md)
+   close the trusted Lean 4.30 single-family positivity preflight.
    M0 froze negative sources and M1 landed the trusted Lean 4.30 single-family
    preflight before environment insertion. M2 now closes the twelve-row public
    matrix and two byte-identical runs of a frozen 840-case grammar. M3 now adds
    eight pinned-Lean observations, mandatory CI, synthetic importer
-   propagation, and the immutable construct-matrix regression. M4 closure and
-   TL2.12 handoff remain. The nested diagnostic classification is a
+   propagation, and the immutable construct-matrix regression. Final bounded
+   gates pass and no recursive admission widened. **TL2.12 is next:**
+   preregister and implement recursive-indexed plus reflexive/higher-order IH
+   generation as one semantic slice. The nested diagnostic classification is a
    separate bounded TL1.8 hygiene follow-up, not semantic nested support.
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path after the matrix is TL2.11 positivity, not admission
-   widening without it.
+   primary semantic path is now TL2.12, with every TL2.11 guard retained.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

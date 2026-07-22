@@ -149,7 +149,7 @@ state.
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
 > TL2.11 strict positivity remains the first semantic widening prerequisite.
-> Proposed ADR-0352 and the
+> Accepted ADR-0352 and the
 > [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
 > two typed occurrence failures, pre-insertion environment ordering, a generated
@@ -173,8 +173,13 @@ state.
 > matched rejects), makes that source population a required CI differential,
 > propagates the typed error through an explicitly synthetic importer mutation
 > without `CompletedImport`, and preserves all frozen construct-matrix
-> outcomes. M4 final gates, ADR closure, and TL2.12 handoff are next;
-> TL2.12 remains blocked.
+> outcomes. The
+> [M4 final result](docs/plan/lean-strict-positivity-final-2026-07-22.md)
+> closes every bounded gate, accepts ADR-0352, marks TL2.11/T6.0.2 DONE, and
+> hands the primary semantic path to preregistered TL2.12 recursive-indexed +
+> reflexive induction-hypothesis generation. No inductive admission widened in
+> TL2.11; all direct-recursive, non-positive, generated, importer-publication,
+> and construct-matrix controls remain mandatory for TL2.12.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

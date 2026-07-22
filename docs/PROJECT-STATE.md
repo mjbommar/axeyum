@@ -174,9 +174,15 @@ Again, there are distinct targets:
   direct-recursive control, one translated/kernel decline, three parsed/policy
   declines, one valid nested export retained at inventory-only because of a
   diagnostic misclassification, one official source rejection, and zero
-  computation-checked new families. This makes strict positivity the next
-  semantic prerequisite; it does not turn the selected matrix into broad Lean
-  admission credit.
+  computation-checked new families. TL2.11 now closes the next semantic
+  prerequisite: a pre-insertion Lean 4.30 single-family strict-positivity guard
+  with exact typed failures, twelve public rows, a twice-repeated 840-case
+  grammar, eight pinned-Lean observations, mandatory CI, and synthetic importer
+  propagation without publication. It deliberately does not admit the positive
+  recursive-indexed or reflexive rows. Generalizing induction hypotheses for
+  those two shapes together is TL2.12's next preregistered slice; mutual-group
+  positivity, nested/well-founded lowering, and broad Lean admission remain
+  open.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

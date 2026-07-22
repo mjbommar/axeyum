@@ -1,6 +1,6 @@
 # ADR-0352: Preregister Lean 4.30 strict positivity before recursive admission widens
 
-Status: proposed
+Status: accepted
 
 Date: 2026-07-22
 
@@ -10,8 +10,10 @@ lands the trusted pre-insertion rule and typed failures;
 public contract plus two byte-identical runs of a frozen 840-case grammar. The
 [M3 result](../../plan/lean-strict-positivity-m3-2026-07-22.md) adds eight
 bounded pinned-Lean observations, the mandatory CI differential, typed
-synthetic importer propagation, and an unchanged construct matrix. Final M4
-closure remains, so this ADR stays proposed.
+synthetic importer propagation, and an unchanged construct matrix. The
+[M4 final result](../../plan/lean-strict-positivity-final-2026-07-22.md) closes
+all bounded gates and roadmap/research-question synchronization, so this ADR is
+accepted.
 
 ## Context
 

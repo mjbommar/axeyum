@@ -1,14 +1,14 @@
 # Lean strict positivity: TL2.11 execution plan
 
-Status: M3 official/import boundary complete; M4 closure and handoff next
+Status: complete; M4 accepted ADR-0352 and handed off to TL2.12
 
 Date: 2026-07-22
 
 Decision gate:
-[proposed ADR-0352](../research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
+[accepted ADR-0352](../research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
 
 Current checkpoint:
-[M3 official/import-boundary result](lean-strict-positivity-m3-2026-07-22.md)
+[M4 final result](lean-strict-positivity-final-2026-07-22.md)
 
 Parents:
 
