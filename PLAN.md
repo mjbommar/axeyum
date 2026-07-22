@@ -429,6 +429,13 @@ state.
 > Eleven tests cover sixteen mutation families. Case/completion records, real
 > outcomes, paired cells, and parity credit remain zero. TL0.7.3 durable-store
 > kill/resume qualification is next; TL0.6.3 remains blocked.
+> TL0.7.3 now has a source-first
+> [checkpoint-store plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md)
+> for two observed local storage classes, the frozen ADR-0344 no-replace
+> primitive, exact Lean namespace/completion closure, eighteen mutation
+> families, and 16 dependency/completion persistence-boundary `SIGKILL` cells.
+> No store kill cell has run; this preregistration is neither power-loss nor
+> Lean/U2/parity evidence.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

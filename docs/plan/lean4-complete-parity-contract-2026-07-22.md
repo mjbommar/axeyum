@@ -341,6 +341,14 @@ no live group member after cleanup. The result still has zero case/completion
 records, U2 outcomes, paired cells, performance rows, and parity credit.
 TL0.7.3--TL0.7.4 remain mandatory before TL0.6.3.
 
+TL0.7.3 is now governed by a
+[source-first checkpoint-store plan](lean-execution-store-tl0.7.3-plan-2026-07-22.md).
+It freezes two local storage classes, exact Lean namespace/completion closure,
+conflict/orphan quarantine, and 16 dependency/completion persistence-boundary
+`SIGKILL` cells. This preregistration is not durability evidence and grants no
+Lean/U2/parity credit; process kill is explicitly weaker than power or host
+loss.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

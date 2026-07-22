@@ -108,6 +108,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   cleanup, evidence-backed 4/8 GiB memory classifications, and zero-case/
   zero-completion/zero-parity boundary. TL0.7.3 durable-store qualification is
   next.
+- [`lean-execution-store-tl0.7.3-plan-2026-07-22.md`](lean-execution-store-tl0.7.3-plan-2026-07-22.md) —
+  source-first durable-store plan for a strict Lean record namespace,
+  no-overwrite hard-link/fsync installation, conflict/orphan quarantine,
+  completion-last closure, and a 16-cell `SIGKILL` matrix across worktree-local
+  and `/dev/shm` storage. It freezes the process-kill/not-power-loss boundary
+  and zero Lean/U2/parity credit before implementation.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
