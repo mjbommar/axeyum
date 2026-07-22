@@ -1034,6 +1034,26 @@ What still declines (honestly): trig substitution (`∫x²/√(1−x²)`, hence 
 (`∫1/(1+cos x)`), degree-≥3 irreducible-over-ℚ denominators (`∫1/(x⁴+1)`), and genuinely
 non-elementary integrands (`∫e^{x²}`).
 
-**425 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
-heads, multivariate factorization, Puiseux, Zeilberger, trig-substitution/Weierstrass, general
-Gruntz/Risch, arbitrary-precision N[expr,d].
+**425 unit + 142 doctests, clippy-pedantic clean, WASM-green.**
+
+## 2026-07-21 — Entry 32: trig-sub radicals, solve (ln/√/eˣ-poly), limit log-at-0 (427 tests)
+
+Rounded out three surfaces beyond integration:
+
+- **Trig-substitution radicals** (`integrate_sqrt_quadratic`, a=1 forms): `∫√(1−x²)=½(x√(1−x²)+asin x)`,
+  `∫√(1+x²)`, `∫√(x²−1)`, and `∫(c·x²)/√(1±x²|x²−1)`. Allowing a constant-multiple numerator makes the
+  by-parts residual `∫(x²/2)/√(1−x²)` resolve — so **`∫x·asin x`, `∫x·acos`, `∫x·asinh`, `∫x·acosh`
+  now cascade** through `integrate_poly_times_inverse`.
+- **`solve` transcendentals**: `ln x = c ⇒ eᶜ` and `√x = c ⇒ c²` (new `Sqrt` arm; the `head_reduces`
+  certificate runs `simplify_radicals` so `√9→3`). Enabled by a new **`ln(exp u)=u` zero-test fold**
+  (`rewrite_log_exp`, the exp→ln left inverse, sound for real `u`) wired into `equal`'s
+  canonicalization. Plus **polynomials in eˣ** (`solve_exp_polynomial`/`exp_to_power`): rewrite
+  `P(eˣ)=0` to a polynomial in `u=eˣ`, solve, map positive rational roots back via `x=ln u` —
+  `e^{2x}−5e^x+6⇒{ln2,ln3}`, dropping non-positive/complex `u`.
+- **`limit` log-vs-power at 0** (`limit_log_at_zero`): a positive power of `x` beats any power of
+  `ln x`, resolving the `0·∞` form the series fallback can't (`x·ln x=0`, `1/ln x=0`); genuinely
+  divergent forms decline.
+
+**427 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
+heads, multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch,
+arbitrary-precision N[expr,d].
