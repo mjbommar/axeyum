@@ -11049,6 +11049,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         // direct trig/rational-trig finders keep their canonical forms.
         integrate_power_reduced_trig(expr, var),
         integrate_ln_argument_substitution(expr, var),
+        integrate_sqrt_rational_usub(expr, var),
         // Final fallback: expand the integrand and integrate the expansion. Closes
         // powers of exponential/trig sums the direct finders miss — `∫sinh²x`,
         // `∫1/cosh²x` (even powers of `(eˣ±e^{−x})`) reduce to sums of exponentials.
@@ -12999,6 +13000,49 @@ pub fn improper_integrate(
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
 /// Whether `expr` contains a `ln(g)` head whose argument `g` involves `var`.
+/// Whether `expr` contains the exact head `√(var)` anywhere.
+fn contains_sqrt_of_var(expr: &CasExpr, var: &str) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => true,
+        CasExpr::Unary(_, arg) => contains_sqrt_of_var(arg, var),
+        CasExpr::Neg(inner) => contains_sqrt_of_var(inner, var),
+        CasExpr::Pow(base, _) => contains_sqrt_of_var(base, var),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(|e| contains_sqrt_of_var(e, var)),
+        CasExpr::Div(a, b) => contains_sqrt_of_var(a, var) || contains_sqrt_of_var(b, var),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// `∫ F(√x) dx` via the substitution `u = √x` (`x = u²`, `dx = 2u du`): replace `√x`
+/// with `u` and `x` with `u²`, giving `∫ F(u)·2u du`, which the elementary finders
+/// handle when `F` is rational (or otherwise integrable). Closes `∫1/(√x+1) =
+/// 2√x − 2ln(√x+1)`, `∫√x/(1+√x)`, `∫atan(√x)`. Fires only when the whole `x`
+/// dependence is through `√x` (no residual `x`) and the `u`-integrand carries no
+/// `√u` (which would re-enter this finder). Certified downstream.
+fn integrate_sqrt_rational_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    if !contains_sqrt_of_var(expr, var) {
+        return None;
+    }
+    let u = if var == "u" { "w" } else { "u" };
+    // Replace `√x → u`, then any remaining `x → u²`.
+    let sqrt_x = CasExpr::Var(var.to_owned()).sqrt();
+    let replaced = replace_subexpr(expr, &sqrt_x, &CasExpr::var(u));
+    let in_u = replaced.substitute(var, &CasExpr::var(u).pow(2));
+    let integrand_u = simplify(&(in_u * CasExpr::int(2) * CasExpr::var(u)));
+    // Termination + validity guards: depends on `u`, no residual `x`, and no `√u`
+    // (which would send `integrate` back into this finder unboundedly).
+    if expr_contains_var(&integrand_u, var)
+        || !expr_contains_var(&integrand_u, u)
+        || contains_sqrt_of_var(&integrand_u, u)
+    {
+        return None;
+    }
+    let anti_u = integrate(&integrand_u, u)
+        .filter(CertifiedIntegral::is_certified)?
+        .antiderivative;
+    Some(anti_u.substitute(u, &CasExpr::Var(var.to_owned()).sqrt()))
+}
+
 fn contains_ln_of_var(expr: &CasExpr, var: &str) -> bool {
     match expr {
         CasExpr::Unary(UnaryFunc::Ln, arg) if expr_contains_var(arg, var) => true,
@@ -21096,6 +21140,28 @@ mod tests {
         }
         // The bare radical √(x+1) (constant cofactor) still routes to the sqrt-power path.
         assert!(integrate(&(x() + CasExpr::int(1)).sqrt(), "x").unwrap().is_certified());
+    }
+
+    #[test]
+    fn sqrt_rational_substitution_integrals() {
+        let x = || v("x");
+        // ∫F(√x) dx via u=√x (x=u², dx=2u du): a rational (or composite) function of √x.
+        // ∫1/(√x+1)=2√x−2ln(√x+1), ∫1/(√x(1+x))=2·atan(√x), ∫atan(√x)=(x+1)atan√x−√x.
+        for integrand in [
+            CasExpr::int(1) / (x().sqrt() + CasExpr::int(1)),
+            x().sqrt() / (x().sqrt() + CasExpr::int(1)),
+            CasExpr::int(1) / (x().sqrt() * (CasExpr::int(1) + x())),
+            CasExpr::Unary(UnaryFunc::Atan, Box::new(x().sqrt())),
+        ] {
+            let r = integrate(&integrand, "x").expect("∫F(√x)");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+        }
+        // Explicit: ∫1/(√x+1) = 2√x − 2ln(√x+1).
+        let anti = integrate(&(CasExpr::int(1) / (x().sqrt() + CasExpr::int(1))), "x").unwrap().antiderivative;
+        assert_equal(
+            &simplify(&anti),
+            &(CasExpr::int(2) * x().sqrt() - CasExpr::int(2) * (x().sqrt() + CasExpr::int(1)).ln()),
+        );
     }
 
     #[test]
