@@ -5141,14 +5141,26 @@ fn certifies_wz_sum(
 
     let mut total = CasExpr::zero();
     for kk in k_lo..=k_hi {
-        total = total
-            + simplify(
-                &summand
-                    .substitute(n, &CasExpr::int(base))
-                    .substitute(k, &CasExpr::int(kk)),
-            );
+        let concrete = simplify(
+            &summand
+                .substitute(n, &CasExpr::int(base))
+                .substitute(k, &CasExpr::int(kk)),
+        );
+        // Preserve expression order for fully concrete terms: the small exact
+        // evaluator can cancel a quotient such as `16!/16!` before multiplying
+        // it by another factorial, where flat rational normalization would
+        // overflow even though the final integer fits.
+        let concrete = match concrete.eval(&BTreeMap::new()) {
+            Some(value) => CasExpr::Const(value),
+            None => concrete,
+        };
+        total = total + concrete;
     }
     let rhs_base = simplify(&rhs.substitute(n, &CasExpr::int(base)));
+    let rhs_base = match rhs_base.eval(&BTreeMap::new()) {
+        Some(value) => CasExpr::Const(value),
+        None => rhs_base,
+    };
     let base_check = equal(&total, &rhs_base);
     matches!(base_check, ZeroTest::Certified { equal: true, .. })
 }
@@ -5196,7 +5208,7 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
 
 /// Largest falling-factorial squared-binomial moment currently accepted by
 /// [`prove_squared_binomial_falling_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 15;
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 18;
 
 /// A proved falling-factorial squared-binomial moment
 /// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
@@ -17680,7 +17692,7 @@ mod tests {
             proofs.push(proof);
         }
 
-        let mut false_proof = proofs.last().expect("order fifteen proof exists").clone();
+        let mut false_proof = proofs.last().expect("order eighteen proof exists").clone();
         false_proof.certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
         assert!(

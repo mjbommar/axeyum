@@ -16,7 +16,7 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37ads**). Keep both in sync when landing features.
+  latest is **Entry 37adt**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -130,8 +130,9 @@ green integration by the `main` owner:
 Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
-`r=0..7`), and a generated squared-binomial raw-moment family (regressed for
-orders `0..=7`). False near-misses correctly decline.
+`r=0..7`), a direct squared-binomial falling-factorial family (regressed for
+orders `0..=18`), and Stirling-composed raw moments (regressed for orders
+`0..=10`). False near-misses correctly decline.
 
 ---
 
@@ -307,16 +308,21 @@ quotient equation
 `R(n,k+1)f(n,k+1)/f(n,k)−R(n,k)=f(n+1,k)/f(n,k)−1`; consecutive gamma factors
 cancel before polynomial expansion. A certified-false direct equation never
 falls back. This exact product-aware route extends
-`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 15. The order-15 outer ratio
+`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 18. The order-15 outer ratio
 initially remained too large because both sides simplified their exact
 falling-factorial products before division. Product factors are now
 polynomial-canonicalized and identical factors cancelled before gamma/rational
-normalization; order 16 is the first measured symbolic decline.
+normalization. Order 16 then exposed a separate concrete-base artifact:
+normalizing the whole `(16)₁₆(16!/16!)²` term overflowed before the quotient
+cancelled. Fully substituted terms and RHSs now use the existing exact rational
+evaluator first, retaining the older normalizer as a fail-closed fallback.
+Orders 16 through 18 pass; order 19 is the first measured symbolic quotient
+decline.
 
 The raw compositor now forms all Stirling terms over the known common
 denominator `(2n)ₘ` and cancels a linear denominator factor only when exact
 polynomial division succeeds. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` is therefore
-10. Regressions cover falling-factorial orders `0..=15` and raw orders `0..=10`,
+10. Regressions cover falling-factorial orders `0..=18` and raw orders `0..=10`,
 direct-sum cross-check every member, recover the known compact fifth- through
 eighth-moment forms, and reject tampered results, certificates, and missing
 components. The eighth raw form is
@@ -344,7 +350,7 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Isolate the falling-factorial order-16 quotient-check decline and the raw
+   Isolate the falling-factorial order-19 quotient-check decline and the raw
    order-11 numerator-factorization limit without weakening either symbolic or
    compositional checking. For fixed shifts, investigate the `r=8` exact-growth
    decline only if a concrete use needs it.

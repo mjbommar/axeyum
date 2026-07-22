@@ -374,6 +374,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — structured exact base evaluation extends direct moments
+  through order 18.** Order 16 already passed the symbolic quotient identity;
+  its remaining `Unknown` was the exact base term
+  `(16)₁₆(16!/16!)²`, whose whole-expression rational normalization multiplied
+  through overflowing intermediates before cancelling the unit quotient.
+  `certifies_wz_sum` now asks the existing exact rational evaluator to reduce
+  each fully substituted summand and RHS first, retaining the prior normalizer
+  as a fail-closed fallback. This changes only concrete proof preprocessing;
+  the symbolic WZ gate and exact base equality remain unchanged. The direct
+  falling-factorial family now certifies through order 18; order 19 is the
+  first measured symbolic-quotient decline. Raw moments remain independently
+  certified through order 10. The CAS topic stack passes 521 unit tests, 147
+  doctests, warning-denied all-target Clippy, stable/nightly strict rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate order
+  19's quotient growth and raw order 11's bounded numerator-factorization
+  limit.
+
 - **2026-07-22 — pre-expansion factor cancellation closes direct moment 15.**
   The remaining order-15 WZ `Unknown` was isolated to the outer `n` quotient:
   its exact falling-factorial products were expanded before division, exceeding
