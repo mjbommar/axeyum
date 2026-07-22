@@ -1,0 +1,19 @@
+[package]
+name = "axeyum-lean-import"
+description = "Fail-closed lean4export NDJSON reader and independent Axeyum kernel admission"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+keywords.workspace = true
+categories.workspace = true
+publish = false
+
+[dependencies]
+axeyum-lean-kernel = { path = "../axeyum-lean-kernel" }
+serde_json = "1"
+
+[lints]
+workspace = true

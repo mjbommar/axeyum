@@ -106,6 +106,10 @@ but Phase 5 now exercises the first composed pure Rust BV backend boundary:
 - `axeyum-smtlib`: benchmark-slice parser and sharing-preserving writer.
 - `axeyum-bench`: corpus harness with backend selection and evidence-producing
   JSON artifacts.
+- `axeyum-lean-kernel`: independent zero-dependency Rust Lean-core checker.
+- `axeyum-lean-import`: fail-closed official `lean4export` 3.1 wire reader that
+  depends on the kernel and can reach only its checked public admission gates
+  ([proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md)).
 
 ## Risks
 

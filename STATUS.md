@@ -384,15 +384,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   official source validation, then consume pinned `lean4export` NDJSON and
   independently admit supported declarations. A fresh official Lean 4.30 /
   export-format 3.1 fixture contains 14 names, two nonzero universe levels, 43
-  expressions, and five declaration records; the research reader reports no
+  expressions, and five declaration records; the Python reader reports no
   inventory blockers on that flat slice and passes five fixture/mutation tests.
-  This is parsing evidence only, not kernel-import or mathlib credit. Direct
-  `.olean` reading is rejected; official Lean is an optional sandboxed
-  frontend/workflow adapter while the default checker remains pure Rust.
-  **Next:** review ADR-0345, port the wire reader to Rust, independently admit
-  the fixture in a fresh environment, generate blocker fixtures for projection,
-  literals, quotient and harder inductives, then inventory/type-digest the 64
-  prelude axioms before any native parser, Lake, LSP, or compiler work.
+  The new separate `axeyum-lean-import` Rust crate now independently admits the
+  same stream as eight kernel declarations through checked public gates. It
+  regenerates `Two.rec` and compares its universe parameters, type, counts, and
+  iota-rule RHSs with the export; theorem-body and recursor-rule tampering reject
+  among nine Rust tests. Its stable output reports `axioms=P`, so the assumption
+  is not converted into a theorem. This is exact flat-slice import credit, not
+  `Init`/`Std`/mathlib or general kernel credit. Direct `.olean` reading remains
+  rejected; official Lean is an optional sandboxed frontend/workflow adapter
+  while the default checker remains pure Rust. **Next:** review ADR-0345 and the
+  crate/TCB boundary, generate projection/literal/quotient/direct-recursive/
+  harder-inductive fixtures plus the assurance matrix, then type-digest the 64
+  prelude axioms before any native parser, Lake, LSP, or compiler work. See the
+  [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 
 - **2026-07-21 — the representative official-Lean gate is now locally real and
   fail-closed.** Primary-source inspection showed that `leanprover/lean-action`

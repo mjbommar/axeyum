@@ -58,9 +58,11 @@ The interchange rules are:
 - build source/Lake/editor adapters before considering native replacements;
 - keep compiler output outside the proof TCB.
 
-The decision remains proposed until the Rust reader/admission prototype and its
-negative matrix are reviewed. No product import claim follows from the Python
-research probe.
+The Rust reader/admission prototype and its first negative matrix are now
+landed in a separate workspace crate. The decision remains proposed until that
+crate boundary and the broader projection/literal/quotient/inductive fixture
+matrix are reviewed. The exact flat fixture earns independent-admission credit;
+the Python inventory by itself still earns none.
 
 ## Evidence
 
@@ -88,9 +90,28 @@ nonzero universe levels, 43 expressions, and 5 declaration records.
 
 The research reader validates dense indices and backward references, rejects
 unknown records, forward references, and unsafe/partial declarations, and
-classifies projection, literal, quotient, and harder inductive blockers. The exact flat fixture
-has no inventory blockers. This proves the seam is concrete, not that the Rust
-kernel has imported and admitted the declarations.
+classifies projection, literal, quotient, and harder inductive blockers. The
+exact flat fixture has no inventory blockers. That Python result proves only
+that the seam is concrete; the separate Rust result below supplies the first
+kernel-admission evidence.
+
+The follow-on `axeyum-lean-import` Rust crate now admits that exact official
+fixture through `Kernel::add_declaration` and `Kernel::add_inductive`. Five
+export records become eight checked environment declarations (`Two`, its two
+constructors and generated recursor, `Two.recOn`, `chooseLeft`, axiom `P`, and
+theorem `identity`). The importer independently generates `Two.rec` and checks
+its universe parameters, type, counts, constructors, field counts, and iota-rule
+RHSs against the export. Nine tests reject theorem-body and recursor-rule
+mutations, forward references, unknown records, projections, version drift,
+partial definitions, and resource-limit violations; repeated import is
+deterministic. See the
+[measured prototype](../../plan/lean4export-rust-import-prototype-2026-07-21.md).
+
+JSON and format handling live in `axeyum-lean-import`, which depends on the
+zero-dependency kernel. The kernel does not depend on `serde_json` or the
+importer, and importer code has no access to unchecked environment insertion.
+This is an exercised wire-format/checker boundary under ADR-0001 rather than a
+convenience module inside the TCB.
 
 ### Upstream boundaries
 
@@ -163,8 +184,11 @@ to define Axeyum's own admission, safety, axiom, and TCB contracts.
 - Parsing never earns checking credit; official acceptance never earns
   independent-admission credit.
 - The first implementation work is a Rust NDJSON wire reader and a tiny
-  end-to-end environment import, followed by projections/literals/quotients and
-  harder inductives as real exports require.
+  end-to-end environment import. That initial flat slice is now landed;
+  projections/literals/quotients and harder inductives follow as real exports
+  require.
+- The importer is a separate workspace crate so parser dependencies and
+  malformed-input logic do not enter `axeyum-lean-kernel`.
 - The 64 prelude axioms become a named discharge queue and new axioms fail
   closed.
 - Track 6 remains the native proof-assistant plan. Interoperability adds inputs,

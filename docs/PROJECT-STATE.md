@@ -133,8 +133,10 @@ Again, there are distinct targets:
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, and iota reduction. Major residuals
   include projections/structure eta, arbitrary-precision literal support,
-  quotient computation, the full recursive-inductive spine, and an import
-  format. The arithmetic reconstruction preludes also have an explicitly
+  quotient computation, and the full recursive-inductive spine. A new
+  format-3.1 Rust importer independently admits one official flat fixture as
+  eight kernel declarations, but `Init`/`Std`/mathlib and the declined kernel
+  constructs remain open. The arithmetic reconstruction preludes also have an explicitly
   audited axiom surface whose types are checked but whose statements have not
   yet been discharged against mathlib.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
@@ -148,6 +150,8 @@ Again, there are distinct targets:
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
 plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md).
+The exact first import result and negative matrix are in the
+[`lean4export` Rust prototype report](plan/lean4export-rust-import-prototype-2026-07-21.md).
 
 ## What is not claimed
 

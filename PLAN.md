@@ -50,13 +50,17 @@ state.
 > compiler, Lake, LSP, mathlib, and import surfaces. Proposed ADR-0345 sequences
 > both bridge directions: preserve fail-closed source export, then ingest pinned
 > official `lean4export` 3.1 NDJSON and independently admit supported
-> declarations. A real Lean 4.30 fixture and mutation-tested inventory probe
-> establish the seam (14 names, two nonzero levels, 43 expressions, five
-> declaration records); they grant no kernel-import or mathlib credit yet.
-> Direct `.olean` parsing and full ecosystem cloning remain non-goals. Resume at
-> L1: replace the probe with a Rust wire reader, import the flat fixture into a
-> fresh environment, and classify projections/literals/quotients/harder
-> inductives before native frontend, Lake, LSP, or compiler work.
+> declarations. The separate `axeyum-lean-import` crate now crosses that seam:
+> the real Lean 4.30 fixture's 14 names, two nonzero levels, 43 expressions, and
+> five declaration records become eight independently checked kernel
+> declarations. It regenerates and compares the recursor; theorem-body and
+> recursor-rule mutations reject among nine Rust tests. This is exact flat-slice
+> import credit, not `Init`/`Std`/mathlib or general kernel credit. Direct
+> `.olean` parsing and full ecosystem cloning remain non-goals. Resume by
+> generating the projection/literal/quotient/direct-recursive/harder-inductive
+> fixture matrix and type-digesting the 64 prelude axioms before native
+> frontend, Lake, LSP, or compiler work. See the
+> [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact

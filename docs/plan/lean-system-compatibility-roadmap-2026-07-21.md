@@ -50,7 +50,7 @@ must name which one it means.
 |---|---|---|---|
 | Lean-source output | Axeyum renders `.lean` modules that official Lean accepts | fail-closed 71/71 representative-family gate | implemented on a selected reconstruction slice |
 | Independent Lean-core checking | Rust code implements names, universes, expressions, environments, reduction, definitional equality, type checking, and selected inductives | `axeyum-lean-kernel`, no runtime dependencies or `unsafe` | substantial selected slice, not complete Lean kernel admission |
-| Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | official v4.30 `lean4export` fixture and inventory prototype in this change | prototype only |
+| Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | Rust format-3.1 reader admits the official flat fixture as 8 independently checked declarations from 5 export records | initial profile implemented; broad imports open |
 | Lean language compatibility | parse, expand macros, elaborate overloaded/implicit source, run tactics, produce information trees | no Lean frontend implementation | absent |
 | Lean workflow/ecosystem compatibility | Lake packages, `.olean` cache behavior, editor/LSP, mathlib project workflows, compiler/runtime | no compatible workflow today | absent; adapter-first roadmap below |
 
@@ -60,7 +60,7 @@ invalidates the other.
 
 ## 2. What Axeyum actually has
 
-This inventory was taken from the current 21-crate workspace, not inferred from
+This inventory was taken from the current 22-crate workspace, not inferred from
 the README.
 
 ### 2.1 Independent kernel and reconstruction
@@ -239,10 +239,27 @@ LEAN4EXPORT_PROBE|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decls=5|bl
 
 Five tests cover the real fixture, unknown-record rejection, forward-reference
 rejection, unsafe/partial-declaration rejection, and blocker classification for
-projections, literals, and quotient declarations. This only establishes that the proposed interchange is concrete
-and that its elementary fail-closed contract can be implemented. The Python
-probe is not product code, and `blockers=none` does not mean the Rust kernel has
-admitted the stream yet.
+projections, literals, and quotient declarations. The Python probe remains an
+inventory oracle; it is not product code.
+
+The follow-on Rust prototype now crosses the assurance boundary. The separate
+[`axeyum-lean-import`](../../crates/axeyum-lean-import/src/lib.rs) crate parses
+the same stream and sends every supported declaration through
+`Kernel::add_declaration` or `Kernel::add_inductive`. It independently generates
+the inductive recursor and compares its type and iota rules to the official
+export. The measured result is:
+
+```text
+LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
+```
+
+Nine Rust integration tests include theorem-body and recursor-rule tampering,
+determinism, format drift, topology, safety, projection, and resource controls.
+See the full
+[`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
+This grants independent admission credit only to the exact flat fixture. It
+does not grant `Init`, `Std`, mathlib, literal, projection, quotient, or harder
+inductive credit.
 
 ## 5. Architecture
 
@@ -250,8 +267,8 @@ admitted the stream yet.
 
 **Independent profile (default).** Pure Rust, no official Lean runtime, no C/C++
 dependency, WASM-compatible where the existing kernel is. It reads Axeyum's
-native proof artifacts and, eventually, pinned `lean4export` NDJSON. It owns all
-admission decisions and reports unsupported constructs structurally.
+native proof artifacts and the initial pinned `lean4export` NDJSON profile. It
+owns all admission decisions and reports unsupported constructs structurally.
 
 **Official-integration profile (optional).** A version-pinned Lean process or
 plugin performs source elaboration, module export, project discovery, editor
@@ -307,8 +324,14 @@ merely parsed and by another because it was independently type-checked.
 
 ### L1 — Product `lean4export` 3.1 reader (M)
 
-Goal: deterministic Rust ingestion of the official interchange, still without
-claiming declaration admission.
+Goal: deterministic Rust ingestion of the official interchange while keeping
+parsing distinct from the declarations that subsequently pass kernel admission.
+
+Current result: the separate Rust importer, exact version/field/topology checks,
+explicit line/record limits, supported expression translation, and safe flat
+declaration admission are landed. The Python and Rust readers agree on the
+fixture's 14/2/43/5 inventory. L1 remains WIP until the mutation/fuzz, axiom
+digest, large-stream publication, and broader wire-profile gates below land.
 
 Tasks:
 
@@ -332,6 +355,11 @@ rejects without panic; zero declaration receives `checked=true` from parsing.
 
 Goal: translate wire records into the existing environment and admit them with
 the independent type checker.
+
+Current result: slice 1 is landed on the official flat fixture. Five export
+records become eight checked environment declarations; the generated recursor
+type and rules match the export, and a tampered theorem or recursor rule rejects.
+This is one selected slice, not general kernel admission.
 
 Ordered slices:
 
@@ -590,15 +618,15 @@ Non-claims until their gates are met:
 
 ## 9. Immediate next ten actions
 
-1. Review ADR-0345 and freeze the two-profile architecture.
-2. Land this fixture/probe and keep its four mutations in a cheap docs gate.
-3. Replace the Python probe with the L1 Rust wire reader, without environment
-   mutation.
-4. Import the fixture into a fresh `Environment` and independently check its
-   axiom, theorem, definitions, and flat inductive.
-5. Generate one fixture each for projection, wide Nat/string literals,
+1. Review ADR-0345 and the landed separate-crate/TCB boundary.
+2. Keep the five Python and nine Rust fixture/mutation tests in normal checks.
+3. Generate one official fixture each for projection, wide Nat/string literals,
    quotient, recursive indexed, mutual, nested, and reflexive inductives.
-6. Produce the parsed/translated/admitted/dual-admitted feature matrix.
+4. Add direct-recursive Nat/List positive fixtures before the recursive-indexed
+   negative so existing kernel support receives import credit.
+5. Produce the parsed/translated/admitted/dual-admitted feature matrix.
+6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
+   completed-environment publication mutations.
 7. Inventory and type-digest the 64 prelude axioms; choose the first five to
    discharge from existing arithmetic/CAS evidence.
 8. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate

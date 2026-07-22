@@ -75,6 +75,10 @@ check. Edition 2024, resolver 3.
   sharing-preserving writer.
 - `crates/axeyum-bench` — corpus benchmark harness with backend selection,
   PAR-2 scoring, model replay, and JSON artifacts.
+- `crates/axeyum-lean-kernel` — independent zero-dependency Rust Lean-core
+  checker and reconstruction target.
+- `crates/axeyum-lean-import` — separate fail-closed `lean4export` NDJSON wire
+  reader; parsing and malformed-input handling stay outside the kernel TCB.
 - `docs/research/` — research notes; the design rationale for everything.
   Folder map in [docs/research/README.md](docs/research/README.md).
 - `references/` — gitignored shallow clones of reference solvers/checkers;
@@ -86,7 +90,8 @@ check. Edition 2024, resolver 3.
   contract boundaries accepted in ADR-0005; `axeyum-aig`, `axeyum-bv`, and
   `axeyum-cnf` are the Phase 4 circuit/lowering/CNF boundaries accepted in
   ADR-0006; `rustsat-batsat` is the first pure-Rust SAT adapter accepted in
-  ADR-0007).
+  ADR-0007; `axeyum-lean-import` is the exercised wire-format/checker boundary
+  proposed in ADR-0345).
 - The pure Rust stack including a custom CDCL SAT core is the product; the
   Z3 oracle is bootstrap scaffolding with a planned demotion path
   (ADR-0002). Never expand reliance on linked solvers beyond

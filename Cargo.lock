@@ -120,6 +120,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "axeyum-lean-import"
+version = "0.1.0"
+dependencies = [
+ "axeyum-lean-kernel",
+ "serde_json",
+]
+
+[[package]]
 name = "axeyum-lean-kernel"
 version = "0.1.0"
 

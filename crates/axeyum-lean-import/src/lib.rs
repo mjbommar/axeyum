@@ -1,0 +1,1241 @@
+//! Fail-closed import of official `lean4export` NDJSON into the independent
+//! Axeyum Lean kernel.
+//!
+//! This crate is deliberately separate from `axeyum-lean-kernel`: JSON parsing,
+//! format-version dispatch, resource limits, and malformed-input diagnostics are
+//! untrusted boundary code. Only [`Kernel::add_declaration`] and
+//! [`Kernel::add_inductive`] decide whether translated declarations enter the
+//! independently checked environment.
+//!
+//! The initial profile is official `lean4export` format 3.1.0. It translates
+//! names, universe levels, the expression forms already represented by the
+//! kernel, safe non-inductive declarations, and one-family inductive groups.
+//! It rejects unsupported projections, literals, quotient packages, unsafe or
+//! partial declarations, mutual/nested/reflexive groups, unknown records, and
+//! malformed/forward references. Importing is transactional at declaration
+//! granularity, not whole-stream transactional; use a fresh [`Kernel`] for an
+//! untrusted stream.
+
+#![forbid(unsafe_code)]
+
+use std::fmt;
+use std::io::{self, BufRead, Read};
+
+use axeyum_lean_kernel::{
+    BinderInfo, Declaration, ExprId, Kernel, KernelError, LevelId, NameId, RecRule,
+    ReducibilityHint,
+};
+use serde_json::{Map, Value};
+
+/// The only `lean4export` wire-format version admitted by this profile.
+pub const FORMAT_VERSION: &str = "3.1.0";
+
+/// Resource limits applied before a stream can grow the kernel arenas without
+/// bound.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ImportLimits {
+    /// Maximum bytes in one NDJSON record, including its trailing newline.
+    pub max_line_bytes: usize,
+    /// Maximum number of records, including the metadata record.
+    pub max_records: usize,
+}
+
+impl Default for ImportLimits {
+    fn default() -> Self {
+        Self {
+            max_line_bytes: 16 * 1024 * 1024,
+            max_records: 2_000_000,
+        }
+    }
+}
+
+/// Counts and provenance for a successfully admitted stream.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImportReport {
+    /// Export-format version from the first record.
+    pub format_version: String,
+    /// Official Lean version recorded by the exporter.
+    pub lean_version: String,
+    /// Official Lean source hash recorded by the exporter.
+    pub lean_githash: String,
+    /// Exporter version recorded by the stream.
+    pub exporter_version: String,
+    /// Number of non-anonymous exported names.
+    pub names: usize,
+    /// Number of nonzero exported universe-level records.
+    pub levels: usize,
+    /// Number of exported expression records.
+    pub expressions: usize,
+    /// Number of exported declaration records. An inductive group is one record.
+    pub declaration_records: usize,
+    /// Number of kernel declarations admitted. An inductive group contributes
+    /// its family, constructors, and generated recursor.
+    pub admitted_declarations: usize,
+    /// Imported axiom names. Their types were checked, but their propositions
+    /// remain assumptions until discharged separately.
+    pub axioms: Vec<String>,
+}
+
+/// A malformed, unsupported, resource-exhausting, or kernel-rejected import.
+#[derive(Debug)]
+pub enum ImportError {
+    /// I/O failed while reading the NDJSON stream.
+    Io(io::Error),
+    /// One record exceeds the configured byte limit.
+    LineLimit {
+        /// One-based line number.
+        line: usize,
+        /// Configured maximum.
+        limit: usize,
+    },
+    /// The stream exceeds the configured record limit.
+    RecordLimit {
+        /// Configured maximum.
+        limit: usize,
+    },
+    /// JSON syntax is invalid.
+    Json {
+        /// One-based line number.
+        line: usize,
+        /// Parser diagnostic.
+        message: String,
+    },
+    /// The JSON record violates format 3.1.0 structure or topology.
+    Malformed {
+        /// One-based line number.
+        line: usize,
+        /// Deterministic diagnostic.
+        message: String,
+    },
+    /// A well-formed format construct is outside the current admission profile.
+    Unsupported {
+        /// One-based line number.
+        line: usize,
+        /// Stable decline code.
+        code: &'static str,
+    },
+    /// The independent kernel rejected a translated declaration.
+    Kernel {
+        /// One-based line number containing the declaration record.
+        line: usize,
+        /// Rendered declaration name or group label.
+        declaration: String,
+        /// Trusted gate's rejection.
+        source: KernelError,
+    },
+}
+
+impl fmt::Display for ImportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Io(error) => write!(f, "lean4export I/O error: {error}"),
+            Self::LineLimit { line, limit } => {
+                write!(f, "line {line}: record exceeds {limit} bytes")
+            }
+            Self::RecordLimit { limit } => write!(f, "record count exceeds {limit}"),
+            Self::Json { line, message } => write!(f, "line {line}: invalid JSON: {message}"),
+            Self::Malformed { line, message } => write!(f, "line {line}: {message}"),
+            Self::Unsupported { line, code } => {
+                write!(f, "line {line}: unsupported lean4export construct: {code}")
+            }
+            Self::Kernel {
+                line,
+                declaration,
+                source,
+            } => write!(f, "line {line}: kernel rejected {declaration}: {source:?}"),
+        }
+    }
+}
+
+impl std::error::Error for ImportError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Io(error) => Some(error),
+            _ => None,
+        }
+    }
+}
+
+impl From<io::Error> for ImportError {
+    fn from(error: io::Error) -> Self {
+        Self::Io(error)
+    }
+}
+
+#[derive(Debug)]
+struct ImportState<'kernel> {
+    kernel: &'kernel mut Kernel,
+    names: Vec<NameId>,
+    levels: Vec<LevelId>,
+    expressions: Vec<ExprId>,
+    declaration_records: usize,
+    axioms: Vec<String>,
+}
+
+impl<'kernel> ImportState<'kernel> {
+    fn new(kernel: &'kernel mut Kernel) -> Self {
+        let anonymous = kernel.anon();
+        let zero = kernel.level_zero();
+        Self {
+            kernel,
+            names: vec![anonymous],
+            levels: vec![zero],
+            expressions: Vec::new(),
+            declaration_records: 0,
+            axioms: Vec::new(),
+        }
+    }
+
+    fn name(&self, raw: &Value, line: usize, field: &str) -> Result<NameId, ImportError> {
+        let index = index(raw, line, field)?;
+        self.names.get(index).copied().ok_or_else(|| {
+            malformed(
+                line,
+                format!("{field}: forward or missing name reference {index}"),
+            )
+        })
+    }
+
+    fn level(&self, raw: &Value, line: usize, field: &str) -> Result<LevelId, ImportError> {
+        let index = index(raw, line, field)?;
+        self.levels.get(index).copied().ok_or_else(|| {
+            malformed(
+                line,
+                format!("{field}: forward or missing level reference {index}"),
+            )
+        })
+    }
+
+    fn expression(&self, raw: &Value, line: usize, field: &str) -> Result<ExprId, ImportError> {
+        let index = index(raw, line, field)?;
+        self.expressions.get(index).copied().ok_or_else(|| {
+            malformed(
+                line,
+                format!("{field}: forward or missing expression reference {index}"),
+            )
+        })
+    }
+
+    fn name_array(
+        &self,
+        raw: &Value,
+        line: usize,
+        field: &str,
+    ) -> Result<Vec<NameId>, ImportError> {
+        array(raw, line, field)?
+            .iter()
+            .map(|value| self.name(value, line, field))
+            .collect()
+    }
+
+    fn level_array(
+        &self,
+        raw: &Value,
+        line: usize,
+        field: &str,
+    ) -> Result<Vec<LevelId>, ImportError> {
+        array(raw, line, field)?
+            .iter()
+            .map(|value| self.level(value, line, field))
+            .collect()
+    }
+
+    fn import_record(
+        &mut self,
+        record: &Map<String, Value>,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let markers = ["in", "il", "ie"]
+            .into_iter()
+            .filter(|key| record.contains_key(*key))
+            .count();
+        if markers > 1 {
+            return Err(malformed(line, "record has multiple index spaces"));
+        }
+        if record.contains_key("in") {
+            return self.import_name(record, line);
+        }
+        if record.contains_key("il") {
+            return self.import_level(record, line);
+        }
+        if record.contains_key("ie") {
+            return self.import_expression(record, line);
+        }
+        self.import_declaration(record, line)
+    }
+
+    fn import_name(&mut self, record: &Map<String, Value>, line: usize) -> Result<(), ImportError> {
+        let id = index(required(record, "in", line)?, line, "in")?;
+        if id != self.names.len() {
+            return Err(malformed(
+                line,
+                format!(
+                    "in: expected dense name index {}, got {id}",
+                    self.names.len()
+                ),
+            ));
+        }
+        let has_str = record.contains_key("str");
+        let has_num = record.contains_key("num");
+        if has_str == has_num || record.len() != 2 {
+            return Err(malformed(
+                line,
+                "name record must contain exactly in plus str or num",
+            ));
+        }
+        let name = if has_str {
+            let value = object(required(record, "str", line)?, line, "str")?;
+            exact_keys(value, &["pre", "str"], line, "str")?;
+            let parent = self.name(required(value, "pre", line)?, line, "str.pre")?;
+            let component = string(required(value, "str", line)?, line, "str.str")?;
+            self.kernel.name_str(parent, component)
+        } else {
+            let value = object(required(record, "num", line)?, line, "num")?;
+            exact_keys(value, &["pre", "i"], line, "num")?;
+            let parent = self.name(required(value, "pre", line)?, line, "num.pre")?;
+            let component = u64_value(required(value, "i", line)?, line, "num.i")?;
+            self.kernel.name_num(parent, component)
+        };
+        self.names.push(name);
+        Ok(())
+    }
+
+    fn import_level(
+        &mut self,
+        record: &Map<String, Value>,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let id = index(required(record, "il", line)?, line, "il")?;
+        if id != self.levels.len() {
+            return Err(malformed(
+                line,
+                format!(
+                    "il: expected dense level index {}, got {id}",
+                    self.levels.len()
+                ),
+            ));
+        }
+        let kinds: Vec<_> = ["succ", "max", "imax", "param"]
+            .into_iter()
+            .filter(|key| record.contains_key(*key))
+            .collect();
+        if kinds.len() != 1 || record.len() != 2 {
+            return Err(malformed(
+                line,
+                "level record must contain exactly il plus one level kind",
+            ));
+        }
+        let level = match kinds[0] {
+            "succ" => {
+                let prior = self.level(required(record, "succ", line)?, line, "succ")?;
+                self.kernel.level_succ(prior)
+            }
+            "max" | "imax" => {
+                let kind = kinds[0];
+                let pair = array(required(record, kind, line)?, line, kind)?;
+                if pair.len() != 2 {
+                    return Err(malformed(
+                        line,
+                        format!("{kind}: expected two level references"),
+                    ));
+                }
+                let left = self.level(&pair[0], line, kind)?;
+                let right = self.level(&pair[1], line, kind)?;
+                if kind == "max" {
+                    self.kernel.level_max(left, right)
+                } else {
+                    self.kernel.level_imax(left, right)
+                }
+            }
+            "param" => {
+                let name = self.name(required(record, "param", line)?, line, "param")?;
+                self.kernel.level_param(name)
+            }
+            _ => unreachable!(),
+        };
+        self.levels.push(level);
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn import_expression(
+        &mut self,
+        record: &Map<String, Value>,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let id = index(required(record, "ie", line)?, line, "ie")?;
+        if id != self.expressions.len() {
+            return Err(malformed(
+                line,
+                format!(
+                    "ie: expected dense expression index {}, got {id}",
+                    self.expressions.len()
+                ),
+            ));
+        }
+        let kinds: Vec<_> = [
+            "bvar", "sort", "const", "app", "lam", "forallE", "letE", "proj", "natVal", "strVal",
+            "mdata",
+        ]
+        .into_iter()
+        .filter(|key| record.contains_key(*key))
+        .collect();
+        if kinds.len() != 1 || record.len() != 2 {
+            return Err(malformed(
+                line,
+                "expression record must contain exactly ie plus one expression kind",
+            ));
+        }
+        let kind = kinds[0];
+        let expression = match kind {
+            "bvar" => {
+                let raw = u64_value(required(record, kind, line)?, line, kind)?;
+                let index = u32::try_from(raw)
+                    .map_err(|_| malformed(line, "bvar does not fit the kernel index width"))?;
+                self.kernel.bvar(index)
+            }
+            "sort" => {
+                let level = self.level(required(record, kind, line)?, line, kind)?;
+                self.kernel.sort(level)
+            }
+            "const" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(value, &["name", "us"], line, kind)?;
+                let name = self.name(required(value, "name", line)?, line, "const.name")?;
+                let levels = self.level_array(required(value, "us", line)?, line, "const.us")?;
+                self.kernel.const_(name, levels)
+            }
+            "app" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(value, &["fn", "arg"], line, kind)?;
+                let function = self.expression(required(value, "fn", line)?, line, "app.fn")?;
+                let argument = self.expression(required(value, "arg", line)?, line, "app.arg")?;
+                self.kernel.app(function, argument)
+            }
+            "lam" | "forallE" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(value, &["name", "type", "body", "binderInfo"], line, kind)?;
+                let name = self.name(required(value, "name", line)?, line, "binder.name")?;
+                let ty = self.expression(required(value, "type", line)?, line, "binder.type")?;
+                let body = self.expression(required(value, "body", line)?, line, "binder.body")?;
+                let info = binder_info(required(value, "binderInfo", line)?, line)?;
+                if kind == "lam" {
+                    self.kernel.lam(name, ty, body, info)
+                } else {
+                    self.kernel.pi(name, ty, body, info)
+                }
+            }
+            "letE" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(
+                    value,
+                    &["name", "type", "value", "body", "nondep"],
+                    line,
+                    kind,
+                )?;
+                let name = self.name(required(value, "name", line)?, line, "letE.name")?;
+                let ty = self.expression(required(value, "type", line)?, line, "letE.type")?;
+                let val = self.expression(required(value, "value", line)?, line, "letE.value")?;
+                let body = self.expression(required(value, "body", line)?, line, "letE.body")?;
+                boolean(required(value, "nondep", line)?, line, "letE.nondep")?;
+                self.kernel.let_(name, ty, val, body)
+            }
+            "mdata" => {
+                let value = object(required(record, kind, line)?, line, kind)?;
+                exact_keys(value, &["expr", "data"], line, kind)?;
+                object(required(value, "data", line)?, line, "mdata.data")?;
+                self.expression(required(value, "expr", line)?, line, "mdata.expr")?
+            }
+            "proj" => return Err(unsupported(line, "expr-projection")),
+            "natVal" => return Err(unsupported(line, "literal-nat-bignum-and-typing")),
+            "strVal" => return Err(unsupported(line, "literal-string-typing")),
+            _ => unreachable!(),
+        };
+        self.expressions.push(expression);
+        Ok(())
+    }
+
+    fn import_declaration(
+        &mut self,
+        record: &Map<String, Value>,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let kinds: Vec<_> = ["axiom", "def", "opaque", "thm", "quot", "inductive"]
+            .into_iter()
+            .filter(|key| record.contains_key(*key))
+            .collect();
+        if kinds.len() != 1 || record.len() != 1 {
+            return Err(malformed(
+                line,
+                "expected exactly one known declaration kind",
+            ));
+        }
+        self.declaration_records += 1;
+        match kinds[0] {
+            "axiom" => self.import_axiom(required(record, "axiom", line)?, line),
+            "def" => self.import_definition(required(record, "def", line)?, line),
+            "opaque" => self.import_opaque(required(record, "opaque", line)?, line),
+            "thm" => self.import_theorem(required(record, "thm", line)?, line),
+            "quot" => Err(unsupported(line, "quotient-package")),
+            "inductive" => self.import_inductive(required(record, "inductive", line)?, line),
+            _ => unreachable!(),
+        }
+    }
+
+    fn import_axiom(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        let value = object(raw, line, "axiom")?;
+        exact_keys(
+            value,
+            &["name", "levelParams", "type", "isUnsafe"],
+            line,
+            "axiom",
+        )?;
+        if boolean(required(value, "isUnsafe", line)?, line, "axiom.isUnsafe")? {
+            return Err(unsupported(line, "declaration-unsafe"));
+        }
+        let name = self.name(required(value, "name", line)?, line, "axiom.name")?;
+        let declaration = Declaration::Axiom {
+            name,
+            uparams: self.name_array(
+                required(value, "levelParams", line)?,
+                line,
+                "axiom.levelParams",
+            )?,
+            ty: self.expression(required(value, "type", line)?, line, "axiom.type")?,
+        };
+        self.admit(declaration, line)?;
+        self.axioms.push(self.kernel.display_name(name).to_string());
+        Ok(())
+    }
+
+    fn import_definition(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        let value = object(raw, line, "def")?;
+        exact_keys(
+            value,
+            &[
+                "name",
+                "levelParams",
+                "type",
+                "value",
+                "hints",
+                "safety",
+                "all",
+            ],
+            line,
+            "def",
+        )?;
+        if string(required(value, "safety", line)?, line, "def.safety")? != "safe" {
+            return Err(unsupported(line, "declaration-unsafe-or-partial"));
+        }
+        self.validate_all_names(required(value, "all", line)?, line, "def.all")?;
+        let hint = reducibility_hint(required(value, "hints", line)?, line)?;
+        let declaration = Declaration::Definition {
+            name: self.name(required(value, "name", line)?, line, "def.name")?,
+            uparams: self.name_array(
+                required(value, "levelParams", line)?,
+                line,
+                "def.levelParams",
+            )?,
+            ty: self.expression(required(value, "type", line)?, line, "def.type")?,
+            value: self.expression(required(value, "value", line)?, line, "def.value")?,
+            hint,
+        };
+        self.admit(declaration, line)
+    }
+
+    fn import_opaque(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        let value = object(raw, line, "opaque")?;
+        exact_keys(
+            value,
+            &["name", "levelParams", "type", "value", "isUnsafe", "all"],
+            line,
+            "opaque",
+        )?;
+        if boolean(required(value, "isUnsafe", line)?, line, "opaque.isUnsafe")? {
+            return Err(unsupported(line, "declaration-unsafe"));
+        }
+        self.validate_all_names(required(value, "all", line)?, line, "opaque.all")?;
+        let declaration = Declaration::Opaque {
+            name: self.name(required(value, "name", line)?, line, "opaque.name")?,
+            uparams: self.name_array(
+                required(value, "levelParams", line)?,
+                line,
+                "opaque.levelParams",
+            )?,
+            ty: self.expression(required(value, "type", line)?, line, "opaque.type")?,
+            value: self.expression(required(value, "value", line)?, line, "opaque.value")?,
+        };
+        self.admit(declaration, line)
+    }
+
+    fn import_theorem(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        let value = object(raw, line, "thm")?;
+        exact_keys(
+            value,
+            &["name", "levelParams", "type", "value", "all"],
+            line,
+            "thm",
+        )?;
+        self.validate_all_names(required(value, "all", line)?, line, "thm.all")?;
+        let declaration = Declaration::Theorem {
+            name: self.name(required(value, "name", line)?, line, "thm.name")?,
+            uparams: self.name_array(
+                required(value, "levelParams", line)?,
+                line,
+                "thm.levelParams",
+            )?,
+            ty: self.expression(required(value, "type", line)?, line, "thm.type")?,
+            value: self.expression(required(value, "value", line)?, line, "thm.value")?,
+        };
+        self.admit(declaration, line)
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn import_inductive(&mut self, raw: &Value, line: usize) -> Result<(), ImportError> {
+        let group = object(raw, line, "inductive")?;
+        exact_keys(group, &["types", "ctors", "recs"], line, "inductive")?;
+        let types = array(required(group, "types", line)?, line, "inductive.types")?;
+        let constructors = array(required(group, "ctors", line)?, line, "inductive.ctors")?;
+        let recursors = array(required(group, "recs", line)?, line, "inductive.recs")?;
+        if types.len() != 1 {
+            return Err(unsupported(line, "inductive-mutual"));
+        }
+        if recursors.len() != 1 {
+            return Err(malformed(
+                line,
+                "single-family inductive must export one recursor",
+            ));
+        }
+        let ty = object(&types[0], line, "inductive.type")?;
+        exact_keys(
+            ty,
+            &[
+                "name",
+                "levelParams",
+                "type",
+                "numParams",
+                "numIndices",
+                "all",
+                "ctors",
+                "numNested",
+                "isRec",
+                "isUnsafe",
+                "isReflexive",
+            ],
+            line,
+            "inductive.type",
+        )?;
+        if boolean(
+            required(ty, "isUnsafe", line)?,
+            line,
+            "inductive.type.isUnsafe",
+        )? {
+            return Err(unsupported(line, "declaration-unsafe"));
+        }
+        if boolean(
+            required(ty, "isReflexive", line)?,
+            line,
+            "inductive.type.isReflexive",
+        )? {
+            return Err(unsupported(line, "inductive-reflexive"));
+        }
+        if u64_value(
+            required(ty, "numNested", line)?,
+            line,
+            "inductive.type.numNested",
+        )? != 0
+        {
+            return Err(unsupported(line, "inductive-nested"));
+        }
+        boolean(required(ty, "isRec", line)?, line, "inductive.type.isRec")?;
+        self.validate_all_names(required(ty, "all", line)?, line, "inductive.type.all")?;
+
+        let name = self.name(required(ty, "name", line)?, line, "inductive.type.name")?;
+        let name_text = self.kernel.display_name(name).to_string();
+        let uparams = self.name_array(
+            required(ty, "levelParams", line)?,
+            line,
+            "inductive.type.levelParams",
+        )?;
+        let type_expression =
+            self.expression(required(ty, "type", line)?, line, "inductive.type.type")?;
+        let num_params = usize_value(
+            required(ty, "numParams", line)?,
+            line,
+            "inductive.type.numParams",
+        )?;
+        let exported_num_indices = usize_value(
+            required(ty, "numIndices", line)?,
+            line,
+            "inductive.type.numIndices",
+        )?;
+        let exported_ctor_names =
+            self.name_array(required(ty, "ctors", line)?, line, "inductive.type.ctors")?;
+        if exported_ctor_names.len() != constructors.len() {
+            return Err(malformed(
+                line,
+                "constructor-name list length does not match ctor records",
+            ));
+        }
+
+        let mut ctor_declarations = Vec::with_capacity(constructors.len());
+        let mut exported_constructor_fields = Vec::with_capacity(constructors.len());
+        for (expected_index, raw_ctor) in constructors.iter().enumerate() {
+            let ctor = object(raw_ctor, line, "inductive.ctor")?;
+            exact_keys(
+                ctor,
+                &[
+                    "name",
+                    "levelParams",
+                    "type",
+                    "induct",
+                    "cidx",
+                    "numParams",
+                    "numFields",
+                    "isUnsafe",
+                ],
+                line,
+                "inductive.ctor",
+            )?;
+            if boolean(
+                required(ctor, "isUnsafe", line)?,
+                line,
+                "inductive.ctor.isUnsafe",
+            )? {
+                return Err(unsupported(line, "declaration-unsafe"));
+            }
+            let ctor_name =
+                self.name(required(ctor, "name", line)?, line, "inductive.ctor.name")?;
+            let parent = self.name(
+                required(ctor, "induct", line)?,
+                line,
+                "inductive.ctor.induct",
+            )?;
+            if parent != name || exported_ctor_names[expected_index] != ctor_name {
+                return Err(malformed(
+                    line,
+                    "constructor parent/order does not match type record",
+                ));
+            }
+            let cidx = usize_value(required(ctor, "cidx", line)?, line, "inductive.ctor.cidx")?;
+            if cidx != expected_index {
+                return Err(malformed(
+                    line,
+                    "constructor indices are not dense and ordered",
+                ));
+            }
+            let constructor_parameter_count = usize_value(
+                required(ctor, "numParams", line)?,
+                line,
+                "inductive.ctor.numParams",
+            )?;
+            if constructor_parameter_count != num_params {
+                return Err(malformed(line, "constructor numParams differs from family"));
+            }
+            let ctor_uparams = self.name_array(
+                required(ctor, "levelParams", line)?,
+                line,
+                "inductive.ctor.levelParams",
+            )?;
+            if ctor_uparams != uparams {
+                return Err(malformed(
+                    line,
+                    "constructor universe parameters differ from family",
+                ));
+            }
+            let field_count = u64_value(
+                required(ctor, "numFields", line)?,
+                line,
+                "inductive.ctor.numFields",
+            )?;
+            let field_count = u16::try_from(field_count)
+                .map_err(|_| malformed(line, "constructor field count exceeds kernel width"))?;
+            let ctor_type =
+                self.expression(required(ctor, "type", line)?, line, "inductive.ctor.type")?;
+            ctor_declarations.push((ctor_name, ctor_type));
+            exported_constructor_fields.push(field_count);
+        }
+
+        self.kernel
+            .add_inductive(
+                name,
+                &uparams,
+                num_params,
+                type_expression,
+                &ctor_declarations,
+            )
+            .map_err(|source| ImportError::Kernel {
+                line,
+                declaration: name_text,
+                source,
+            })?;
+        self.validate_generated_constructors(
+            name,
+            &uparams,
+            &ctor_declarations,
+            &exported_constructor_fields,
+            line,
+        )?;
+        self.validate_generated_recursor(&recursors[0], name, exported_num_indices, line)
+    }
+
+    fn validate_generated_constructors(
+        &mut self,
+        inductive: NameId,
+        uparams: &[NameId],
+        constructors: &[(NameId, ExprId)],
+        field_counts: &[u16],
+        line: usize,
+    ) -> Result<(), ImportError> {
+        for (expected_index, ((name, exported_type), exported_fields)) in constructors
+            .iter()
+            .copied()
+            .zip(field_counts.iter().copied())
+            .enumerate()
+        {
+            let generated = self
+                .kernel
+                .environment()
+                .get(name)
+                .cloned()
+                .ok_or_else(|| malformed(line, "kernel did not generate exported constructor"))?;
+            let Declaration::Constructor {
+                uparams: generated_uparams,
+                ty,
+                inductive: generated_parent,
+                idx,
+                num_fields,
+                ..
+            } = generated
+            else {
+                return Err(malformed(
+                    line,
+                    "generated constructor name has wrong declaration kind",
+                ));
+            };
+            if generated_uparams != uparams
+                || generated_parent != inductive
+                || usize::from(idx) != expected_index
+                || num_fields != exported_fields
+                || !self.kernel.def_eq(ty, exported_type)
+            {
+                return Err(malformed(
+                    line,
+                    "generated/exported constructor metadata or type differs",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_generated_recursor(
+        &mut self,
+        raw: &Value,
+        inductive: NameId,
+        exported_num_indices: usize,
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let rec = object(raw, line, "inductive.rec")?;
+        exact_keys(
+            rec,
+            &[
+                "name",
+                "levelParams",
+                "type",
+                "all",
+                "numParams",
+                "numIndices",
+                "numMotives",
+                "numMinors",
+                "rules",
+                "k",
+                "isUnsafe",
+            ],
+            line,
+            "inductive.rec",
+        )?;
+        if boolean(
+            required(rec, "isUnsafe", line)?,
+            line,
+            "inductive.rec.isUnsafe",
+        )? {
+            return Err(unsupported(line, "declaration-unsafe"));
+        }
+        boolean(required(rec, "k", line)?, line, "inductive.rec.k")?;
+        self.validate_all_names(required(rec, "all", line)?, line, "inductive.rec.all")?;
+        let name = self.name(required(rec, "name", line)?, line, "inductive.rec.name")?;
+        let expected_name = self.kernel.name_str(inductive, "rec");
+        if name != expected_name {
+            return Err(malformed(
+                line,
+                "exported recursor name is not <inductive>.rec",
+            ));
+        }
+        let exported_type =
+            self.expression(required(rec, "type", line)?, line, "inductive.rec.type")?;
+        let exported_uparams = self.name_array(
+            required(rec, "levelParams", line)?,
+            line,
+            "inductive.rec.levelParams",
+        )?;
+        let generated = self
+            .kernel
+            .environment()
+            .get(name)
+            .cloned()
+            .ok_or_else(|| malformed(line, "kernel did not generate exported recursor"))?;
+        let Declaration::Recursor {
+            uparams,
+            ty,
+            rec_rules,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            ..
+        } = generated
+        else {
+            return Err(malformed(line, "generated name is not a recursor"));
+        };
+        if uparams != exported_uparams {
+            return Err(malformed(
+                line,
+                "generated/exported recursor universe parameters differ",
+            ));
+        }
+        if !self.kernel.def_eq(ty, exported_type) {
+            return Err(malformed(
+                line,
+                "generated/exported recursor types are not definitionally equal",
+            ));
+        }
+        let fields = [
+            ("numParams", usize::from(num_params)),
+            ("numIndices", usize::from(num_indices)),
+            ("numMotives", usize::from(num_motives)),
+            ("numMinors", usize::from(num_minors)),
+        ];
+        for (field, generated_value) in fields {
+            let exported = usize_value(required(rec, field, line)?, line, field)?;
+            if exported != generated_value {
+                return Err(malformed(
+                    line,
+                    format!("generated/exported recursor {field} differs"),
+                ));
+            }
+        }
+        if usize::from(num_indices) != exported_num_indices {
+            return Err(malformed(
+                line,
+                "generated family index count differs from export",
+            ));
+        }
+        self.validate_rec_rules(required(rec, "rules", line)?, &rec_rules, line)
+    }
+
+    fn validate_rec_rules(
+        &mut self,
+        raw: &Value,
+        generated: &[RecRule],
+        line: usize,
+    ) -> Result<(), ImportError> {
+        let exported = array(raw, line, "inductive.rec.rules")?;
+        if exported.len() != generated.len() {
+            return Err(malformed(
+                line,
+                "generated/exported recursor rule count differs",
+            ));
+        }
+        for (raw_rule, generated_rule) in exported.iter().zip(generated) {
+            let rule = object(raw_rule, line, "inductive.rec.rule")?;
+            exact_keys(
+                rule,
+                &["ctor", "nfields", "rhs"],
+                line,
+                "inductive.rec.rule",
+            )?;
+            let ctor = self.name(
+                required(rule, "ctor", line)?,
+                line,
+                "inductive.rec.rule.ctor",
+            )?;
+            let fields = u64_value(
+                required(rule, "nfields", line)?,
+                line,
+                "inductive.rec.rule.nfields",
+            )?;
+            let fields = u16::try_from(fields)
+                .map_err(|_| malformed(line, "recursor field count exceeds kernel width"))?;
+            let rhs =
+                self.expression(required(rule, "rhs", line)?, line, "inductive.rec.rule.rhs")?;
+            if generated_rule.ctor_name != ctor
+                || generated_rule.num_fields != fields
+                || !self.kernel.def_eq(generated_rule.value, rhs)
+            {
+                return Err(malformed(line, "generated/exported recursor rule differs"));
+            }
+        }
+        Ok(())
+    }
+
+    fn validate_all_names(&self, raw: &Value, line: usize, field: &str) -> Result<(), ImportError> {
+        self.name_array(raw, line, field).map(|_| ())
+    }
+
+    fn admit(&mut self, declaration: Declaration, line: usize) -> Result<(), ImportError> {
+        let name = self.kernel.display_name(declaration.name()).to_string();
+        self.kernel
+            .add_declaration(declaration)
+            .map_err(|source| ImportError::Kernel {
+                line,
+                declaration: name,
+                source,
+            })
+    }
+}
+
+/// Read, translate, and independently admit one `lean4export` NDJSON stream.
+///
+/// The first record must be metadata for format 3.1.0. All subsequent records
+/// are validated in stream order; name, level, and expression indices must be
+/// dense and may only refer backward. Declarations enter the supplied kernel
+/// only through its checked admission gates.
+///
+/// # Errors
+///
+/// Returns [`ImportError`] for I/O, resource, syntax, topology, unsupported
+/// profile, or independent-kernel admission failures.
+pub fn import_ndjson<R: BufRead>(
+    mut reader: R,
+    kernel: &mut Kernel,
+    limits: ImportLimits,
+) -> Result<ImportReport, ImportError> {
+    if limits.max_line_bytes == 0 || limits.max_records == 0 {
+        return Err(malformed(0, "import limits must be nonzero"));
+    }
+    let mut record_count = 0usize;
+    let mut line_bytes = Vec::new();
+    let mut metadata: Option<Metadata> = None;
+    let mut state = ImportState::new(kernel);
+    loop {
+        line_bytes.clear();
+        let read = {
+            let mut limited = reader
+                .by_ref()
+                .take(u64::try_from(limits.max_line_bytes).unwrap_or(u64::MAX) + 1);
+            limited.read_until(b'\n', &mut line_bytes)?
+        };
+        if read == 0 {
+            break;
+        }
+        let line = record_count + 1;
+        if read > limits.max_line_bytes {
+            return Err(ImportError::LineLimit {
+                line,
+                limit: limits.max_line_bytes,
+            });
+        }
+        record_count += 1;
+        if record_count > limits.max_records {
+            return Err(ImportError::RecordLimit {
+                limit: limits.max_records,
+            });
+        }
+        if line_bytes.last() == Some(&b'\n') {
+            line_bytes.pop();
+            if line_bytes.last() == Some(&b'\r') {
+                line_bytes.pop();
+            }
+        }
+        if line_bytes.is_empty() {
+            return Err(malformed(line, "blank line is not an NDJSON record"));
+        }
+        let value: Value =
+            serde_json::from_slice(&line_bytes).map_err(|error| ImportError::Json {
+                line,
+                message: error.to_string(),
+            })?;
+        let record = object(&value, line, "record")?;
+        if line == 1 {
+            metadata = Some(parse_metadata(record, line)?);
+        } else {
+            if record.contains_key("meta") {
+                return Err(malformed(line, "duplicate metadata record"));
+            }
+            state.import_record(record, line)?;
+        }
+    }
+    let metadata = metadata.ok_or_else(|| malformed(1, "empty stream; metadata is required"))?;
+    Ok(ImportReport {
+        format_version: metadata.format_version,
+        lean_version: metadata.lean_version,
+        lean_githash: metadata.lean_githash,
+        exporter_version: metadata.exporter_version,
+        names: state.names.len() - 1,
+        levels: state.levels.len() - 1,
+        expressions: state.expressions.len(),
+        declaration_records: state.declaration_records,
+        admitted_declarations: state.kernel.environment().len(),
+        axioms: state.axioms,
+    })
+}
+
+#[derive(Debug)]
+struct Metadata {
+    format_version: String,
+    lean_version: String,
+    lean_githash: String,
+    exporter_version: String,
+}
+
+fn parse_metadata(record: &Map<String, Value>, line: usize) -> Result<Metadata, ImportError> {
+    exact_keys(record, &["meta"], line, "metadata record")?;
+    let meta = object(required(record, "meta", line)?, line, "meta")?;
+    exact_keys(meta, &["exporter", "lean", "format"], line, "meta")?;
+    let exporter = object(required(meta, "exporter", line)?, line, "meta.exporter")?;
+    exact_keys(exporter, &["name", "version"], line, "meta.exporter")?;
+    if string(
+        required(exporter, "name", line)?,
+        line,
+        "meta.exporter.name",
+    )? != "lean4export"
+    {
+        return Err(malformed(line, "meta.exporter.name is not lean4export"));
+    }
+    let format = object(required(meta, "format", line)?, line, "meta.format")?;
+    exact_keys(format, &["version"], line, "meta.format")?;
+    let format_version = string(
+        required(format, "version", line)?,
+        line,
+        "meta.format.version",
+    )?;
+    if format_version != FORMAT_VERSION {
+        return Err(unsupported(line, "format-version"));
+    }
+    let lean = object(required(meta, "lean", line)?, line, "meta.lean")?;
+    exact_keys(lean, &["githash", "version"], line, "meta.lean")?;
+    Ok(Metadata {
+        format_version: format_version.to_owned(),
+        lean_version: string(required(lean, "version", line)?, line, "meta.lean.version")?
+            .to_owned(),
+        lean_githash: string(required(lean, "githash", line)?, line, "meta.lean.githash")?
+            .to_owned(),
+        exporter_version: string(
+            required(exporter, "version", line)?,
+            line,
+            "meta.exporter.version",
+        )?
+        .to_owned(),
+    })
+}
+
+fn reducibility_hint(raw: &Value, line: usize) -> Result<ReducibilityHint, ImportError> {
+    if let Some(value) = raw.as_str() {
+        return match value {
+            "opaque" => Ok(ReducibilityHint::Opaque),
+            "abbrev" => Ok(ReducibilityHint::Abbrev),
+            _ => Err(malformed(line, "def.hints: unknown string hint")),
+        };
+    }
+    let value = object(raw, line, "def.hints")?;
+    exact_keys(value, &["regular"], line, "def.hints")?;
+    let height = u64_value(required(value, "regular", line)?, line, "def.hints.regular")?;
+    let height = u16::try_from(height)
+        .map_err(|_| malformed(line, "def.hints.regular exceeds kernel width"))?;
+    Ok(ReducibilityHint::Regular(height))
+}
+
+fn binder_info(raw: &Value, line: usize) -> Result<BinderInfo, ImportError> {
+    match string(raw, line, "binderInfo")? {
+        "default" => Ok(BinderInfo::Default),
+        "implicit" => Ok(BinderInfo::Implicit),
+        "strictImplicit" => Ok(BinderInfo::StrictImplicit),
+        "instImplicit" => Ok(BinderInfo::InstImplicit),
+        _ => Err(malformed(line, "binderInfo: unknown binder mode")),
+    }
+}
+
+fn required<'value>(
+    object: &'value Map<String, Value>,
+    key: &str,
+    line: usize,
+) -> Result<&'value Value, ImportError> {
+    object
+        .get(key)
+        .ok_or_else(|| malformed(line, format!("missing required field {key}")))
+}
+
+fn exact_keys(
+    object: &Map<String, Value>,
+    keys: &[&str],
+    line: usize,
+    field: &str,
+) -> Result<(), ImportError> {
+    if object.len() == keys.len() && keys.iter().all(|key| object.contains_key(*key)) {
+        return Ok(());
+    }
+    let mut actual: Vec<_> = object.keys().cloned().collect();
+    actual.sort();
+    Err(malformed(
+        line,
+        format!("{field}: expected fields {keys:?}, got {actual:?}"),
+    ))
+}
+
+fn object<'value>(
+    raw: &'value Value,
+    line: usize,
+    field: &str,
+) -> Result<&'value Map<String, Value>, ImportError> {
+    raw.as_object()
+        .ok_or_else(|| malformed(line, format!("{field}: expected object")))
+}
+
+fn array<'value>(
+    raw: &'value Value,
+    line: usize,
+    field: &str,
+) -> Result<&'value [Value], ImportError> {
+    raw.as_array()
+        .map(Vec::as_slice)
+        .ok_or_else(|| malformed(line, format!("{field}: expected array")))
+}
+
+fn string<'value>(
+    raw: &'value Value,
+    line: usize,
+    field: &str,
+) -> Result<&'value str, ImportError> {
+    raw.as_str()
+        .ok_or_else(|| malformed(line, format!("{field}: expected string")))
+}
+
+fn boolean(raw: &Value, line: usize, field: &str) -> Result<bool, ImportError> {
+    raw.as_bool()
+        .ok_or_else(|| malformed(line, format!("{field}: expected Boolean")))
+}
+
+fn u64_value(raw: &Value, line: usize, field: &str) -> Result<u64, ImportError> {
+    raw.as_u64()
+        .ok_or_else(|| malformed(line, format!("{field}: expected non-negative integer")))
+}
+
+fn usize_value(raw: &Value, line: usize, field: &str) -> Result<usize, ImportError> {
+    let value = u64_value(raw, line, field)?;
+    usize::try_from(value).map_err(|_| malformed(line, format!("{field}: does not fit usize")))
+}
+
+fn index(raw: &Value, line: usize, field: &str) -> Result<usize, ImportError> {
+    usize_value(raw, line, field)
+}
+
+fn malformed(line: usize, message: impl Into<String>) -> ImportError {
+    ImportError::Malformed {
+        line,
+        message: message.into(),
+    }
+}
+
+const fn unsupported(line: usize, code: &'static str) -> ImportError {
+    ImportError::Unsupported { line, code }
+}

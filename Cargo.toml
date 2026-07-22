@@ -11,6 +11,7 @@ members = [
     "crates/axeyum-fp",
     "crates/axeyum-query",
     "crates/axeyum-ir",
+    "crates/axeyum-lean-import",
     "crates/axeyum-lean-kernel",
     "crates/axeyum-property",
     "crates/axeyum-property-macros",

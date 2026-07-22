@@ -591,12 +591,15 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   mechanism-specific profiling under the existing hard cap, not a new theorem
   family or a larger memory allowance.
 - Lean-system interoperability: the independent Rust checker remains the
-  default TCB; a pinned official `lean4export` NDJSON reader and
-  dependency-closed kernel admission precede selected Init/Std/mathlib slices,
+  default TCB; the separate pinned format-3.1 `lean4export` reader now admits the
+  official flat fixture as eight checked declarations and compares the
+  generated recursor under nine mutation/negative tests. Broader
+  dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
   parsing and full frontend/compiler/ecosystem cloning are non-goals absent a
   later measured ADR. See the
   [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+  [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
   and [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
 - **Categorical-engine depth, not green-field breadth:** the
   [source-backed audit](../../../docs/plan/categorical-engine-depth-audit-2026-07-21.md)
