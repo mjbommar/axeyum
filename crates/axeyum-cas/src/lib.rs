@@ -4535,6 +4535,18 @@ pub fn finite_product(
     upper: &CasExpr,
 ) -> Option<CasExpr> {
     let a = integer_constant(lower)?;
+    // Symbolic upper bound with a **unit-slope affine** term `k + c`:
+    // `∏_{k=a}^n (k+c) = Γ(n+c+1)/Γ(a+c)`. Closes `∏_{k=1}^n k = Γ(n+1) = n!`.
+    if integer_constant(upper).is_none() {
+        let [intercept, slope] = univariate_affine(f, var)?;
+        if slope != Rational::integer(1) {
+            return None;
+        }
+        let upper_gamma = (upper.clone() + CasExpr::Const(intercept) + CasExpr::int(1)).gamma();
+        let lower_gamma =
+            CasExpr::Const(Rational::integer(a).checked_add(intercept)?).gamma();
+        return Some(simplify(&(upper_gamma / lower_gamma)));
+    }
     let b = integer_constant(upper)?;
     if b < a {
         return Some(CasExpr::one()); // empty product
@@ -15147,6 +15159,14 @@ mod tests {
             &finite_product(&k(), "k", &CasExpr::int(1), &CasExpr::int(5)).unwrap(),
             &CasExpr::int(120),
         );
+        // Symbolic upper bound via the gamma head: ∏_{k=1}^n k = Γ(n+1) = n!, and it
+        // evaluates back to the concrete factorial when n is fixed.
+        let symbolic = finite_product(&k(), "k", &CasExpr::int(1), &v("n")).unwrap();
+        assert!(matches!(equal(&symbolic, &(v("n") + CasExpr::int(1)).gamma()), ZeroTest::Certified { equal: true, .. }));
+        assert_equal(&simplify(&symbolic.substitute("n", &CasExpr::int(5))), &CasExpr::int(120));
+        // ∏_{k=3}^n k = Γ(n+1)/Γ(3) = n!/2 (evaluates to 3·4·5 = 60 at n=5).
+        let shifted = finite_product(&k(), "k", &CasExpr::int(3), &v("n")).unwrap();
+        assert_equal(&simplify(&shifted.substitute("n", &CasExpr::int(5))), &CasExpr::int(60));
         // ∏_{k=1}^{4} (2k−1) = 1·3·5·7 = 105.
         assert_equal(
             &finite_product(
