@@ -10043,15 +10043,36 @@ fn definite_beta_integral(
     Some(simplify(&simplify_radicals(&simplify(&(CasExpr::Const(coefficient) * beta)))))
 }
 
+/// If `g` is **affine** in `var` — `slope·var + intercept` with a nonzero rational
+/// `slope`, possibly written over a constant denominator (`x/2`) — return
+/// `[intercept, slope]`. Uses `normalize_rational` so a `Div`-by-constant is handled
+/// (unlike the polynomial-only `normalize`).
+fn univariate_affine(g: &CasExpr, var: &str) -> Option<[Rational; 2]> {
+    let ratio = normalize_rational(g)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    if denominator.is_zero() {
+        return None;
+    }
+    let numerator = ratio.num.to_univariate(var)?;
+    if poly::rat_degree(&numerator)? != 1 {
+        return None;
+    }
+    let intercept = numerator.first().copied().unwrap_or_else(Rational::zero).checked_div(denominator)?;
+    let slope = (*numerator.get(1)?).checked_div(denominator)?;
+    if slope.is_zero() {
+        None
+    } else {
+        Some([intercept, slope])
+    }
+}
+
 /// Find the argument `g` of the first `abs(g)` subexpression whose argument is
 /// **affine** (degree 1) in `var` — the piece with a sign change (breakpoint) that a
 /// piecewise definite integral must split at.
 fn find_affine_abs(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     match expr {
         CasExpr::Unary(UnaryFunc::Abs, arg) if expr_contains_var(arg, var) => {
-            if let Some(poly) = normalize(arg).and_then(|p| p.to_univariate(var))
-                && poly::rat_degree(&poly) == Some(1)
-            {
+            if univariate_affine(arg, var).is_some() {
                 return Some((**arg).clone());
             }
             find_affine_abs(arg, var)
@@ -10063,6 +10084,86 @@ fn find_affine_abs(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         }
         CasExpr::Const(_) | CasExpr::Var(_) => None,
     }
+}
+
+/// Find `(head, g)` for the first `floor(g)`/`ceiling(g)` subexpression whose
+/// argument is **affine** in `var` — a step function with integer breakpoints.
+fn find_affine_step(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, CasExpr)> {
+    match expr {
+        CasExpr::Unary(head @ (UnaryFunc::Floor | UnaryFunc::Ceiling), arg)
+            if expr_contains_var(arg, var) =>
+        {
+            if univariate_affine(arg, var).is_some() {
+                return Some((*head, (**arg).clone()));
+            }
+            find_affine_step(arg, var)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => find_affine_step(a, var),
+        CasExpr::Div(a, b) => find_affine_step(a, var).or_else(|| find_affine_step(b, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_affine_step(t, var))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// A definite integral of an integrand containing a **step function** `floor(g)` or
+/// `ceiling(g)` with `g` affine in `var`: split the interval at every point where `g`
+/// crosses an integer, and on each piece replace the step head by its (constant)
+/// integer value there, integrating each piece exactly. So `∫₀^3 floor(x) = 3`
+/// (`0+1+2`), `∫₀^3 ceiling(x) = 6`, `∫₀^3 x·floor(x) = 5`. Each piece is certified.
+fn definite_integrate_step_function(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let (head, g) = find_affine_step(expr, var)?;
+    let [intercept, slope] = univariate_affine(&g, var)?;
+    let lo_f = evalf(lower, &[])?;
+    let hi_f = evalf(upper, &[])?;
+    let g_lo = evalf(&g, &[(var, lo_f)])?;
+    let g_hi = evalf(&g, &[(var, hi_f)])?;
+    let (g_min, g_max) = if g_lo < g_hi { (g_lo, g_hi) } else { (g_hi, g_lo) };
+    // Integer breakpoints `k` with `g(x)=k` at some `x` strictly inside the interval.
+    #[allow(clippy::cast_possible_truncation)]
+    let (k_start, k_end) = (g_min.floor() as i128 + 1, g_max.ceil() as i128 - 1);
+    let mut breakpoints: Vec<(Rational, f64)> = Vec::new();
+    for k in k_start..=k_end {
+        let x_k = Rational::integer(k).checked_sub(intercept)?.checked_div(slope)?;
+        let x_k_f = evalf(&CasExpr::Const(x_k), &[])?;
+        if x_k_f > lo_f + 1e-9 && x_k_f < hi_f - 1e-9 {
+            breakpoints.push((x_k, x_k_f));
+        }
+    }
+    breakpoints.sort_by(|a, b| a.1.total_cmp(&b.1));
+    // Piece boundaries: lower, sorted breakpoints, upper.
+    let mut bounds = vec![lower.clone()];
+    bounds.extend(breakpoints.iter().map(|(r, _)| CasExpr::Const(*r)));
+    bounds.push(upper.clone());
+    let target = CasExpr::Unary(head, Box::new(g.clone()));
+    let mut total = CasExpr::zero();
+    for window in bounds.windows(2) {
+        let midpoint = f64::midpoint(evalf(&window[0], &[])?, evalf(&window[1], &[])?);
+        let g_here = evalf(&g, &[(var, midpoint)])?;
+        #[allow(clippy::cast_possible_truncation)]
+        let step_value = match head {
+            UnaryFunc::Floor => g_here.floor() as i128,
+            UnaryFunc::Ceiling => g_here.ceil() as i128,
+            _ => return None,
+        };
+        let replaced = replace_subexpr(expr, &target, &CasExpr::int(step_value));
+        let definite = definite_integrate(&replaced, var, &window[0], &window[1])?;
+        if !definite.is_certified() {
+            return None;
+        }
+        total = total + definite.value;
+    }
+    Some(DefiniteIntegral {
+        value: simplify(&total),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
 }
 
 /// A definite integral of an integrand containing `abs(g)` with `g` **affine** in
@@ -10079,8 +10180,8 @@ fn definite_integrate_abs(
     upper: &CasExpr,
 ) -> Option<DefiniteIntegral> {
     let g = find_affine_abs(expr, var)?;
-    let poly = normalize(&g)?.to_univariate(var)?;
-    let root = poly.first()?.checked_neg()?.checked_div(*poly.get(1)?)?; // −b/a
+    let [intercept, slope] = univariate_affine(&g, var)?;
+    let root = intercept.checked_neg()?.checked_div(slope)?; // −b/a
     let target = CasExpr::Unary(UnaryFunc::Abs, Box::new(g.clone()));
     let lo_f = evalf(lower, &[])?;
     let hi_f = evalf(upper, &[])?;
@@ -10444,6 +10545,10 @@ pub fn definite_integrate(
     // Integrand with an `abs(affine)` — split at the breakpoint (piecewise), so the
     // FTC path never has to differentiate a non-smooth `|·|`.
     if let Some(result) = definite_integrate_abs(expr, var, lower, upper) {
+        return Some(result);
+    }
+    // Step function `floor(affine)`/`ceiling(affine)` — split at integer crossings.
+    if let Some(result) = definite_integrate_step_function(expr, var, lower, upper) {
         return Some(result);
     }
     // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
@@ -18596,6 +18701,27 @@ mod tests {
         check(x().abs(), 1, 2, CasExpr::rat(3, 2));
         // Mixed integrand ∫_{−1}^1 (|x| + x²) = 1 + 2/3 = 5/3.
         check(x().abs() + x().pow(2), -1, 1, CasExpr::rat(5, 3));
+        // abs of a scaled affine argument ∫₀^2 |x/2 − 1| = 1.
+        check((x() / CasExpr::int(2) - CasExpr::int(1)).abs(), 0, 2, CasExpr::int(1));
+    }
+
+    #[test]
+    fn definite_integrals_of_step_functions() {
+        let x = || v("x");
+        let check = |integrand: CasExpr, lower: i128, upper: i128, want: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &CasExpr::int(lower), &CasExpr::int(upper)).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert_equal(&got.value, &want);
+        };
+        // ∫₀^3 floor(x) = 0+1+2 = 3; ∫₀^3 ceil(x) = 1+2+3 = 6; ∫_{−2}^2 floor(x) = −2.
+        check(x().floor(), 0, 3, CasExpr::int(3));
+        check(x().ceiling(), 0, 3, CasExpr::int(6));
+        check(x().floor(), -2, 2, CasExpr::int(-2));
+        // Scaled argument ∫₀^4 floor(x/2) = 0·2 + 1·2 = 2; ∫₀^6 floor(x/3) = 3.
+        check((x() / CasExpr::int(2)).floor(), 0, 4, CasExpr::int(2));
+        check((x() / CasExpr::int(3)).floor(), 0, 6, CasExpr::int(3));
+        // Polynomial × step: ∫₀^3 x·floor(x) = 0 + ∫₁^2 x + ∫₂^3 2x = 3/2 + 5 = 13/2.
+        check(x() * x().floor(), 0, 3, CasExpr::rat(13, 2));
     }
 
     #[test]
