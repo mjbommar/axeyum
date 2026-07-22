@@ -89,7 +89,10 @@ Last updated: 2026-07-22
 > fields. [M0](../../../docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
 > now freezes the twice-compiled explicit-recursor source, two byte-identical
 > official root streams, independent inventories, and fail-closed machine
-> contract with no Axeyum product observation. M1 shared representation is next,
+> contract with no Axeyum product observation. The
+> [M1 result](../../../docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+> now routes direct recursion through the shared classifier/reopener with exact
+> identities and all existing declines unchanged. M2 native semantics is next,
 > and the completed TL2.11 guard remains mandatory throughout.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for

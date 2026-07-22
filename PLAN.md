@@ -194,9 +194,15 @@ state.
 > now binds the baseline revision, exact semantic/case/mutation/resource/stop
 > contract, a twice-compiled explicit-recursor source, and two root-specific
 > byte-identical official streams. Its ten fail-closed tests reject drift and
-> any premature Axeyum product observation. M1 next must route direct recursion
-> through the shared representation without identity drift while retaining both
-> feature declines; only M2 may widen native admission. Exact official recursor
+> any premature Axeyum product observation. The subsequent
+> [M1 shared-representation result](docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+> now routes direct recursion through one WHNF classifier/reopener used by both
+> minor types and rule right-hand sides. Checked metadata retains only stable
+> field position/telescope depth, reconstruction mismatch is a typed error, the
+> exact `MiniNat.rec`/`MiniList.rec` declaration identities and computations are
+> unchanged, and both feature declines plus the frozen 840-case summary remain
+> intact. M2 next may deliberately widen native admission; importer policy must
+> remain unchanged until M3. Exact official recursor
 > comparison, a new >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.

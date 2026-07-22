@@ -329,6 +329,7 @@ impl Kernel {
             };
         match self.mk_recursor(
             rec_name,
+            name,
             uparams,
             num_params,
             num_indices,
@@ -519,8 +520,9 @@ impl Kernel {
     /// and require the result head to be `I p_1…p_m e_1…e_k` (the inductive
     /// applied to the shared parameters then `num_indices` index argument
     /// expressions). Returns the opened **field** locals (outer-to-inner; the
-    /// parameters are *not* included) together with the recursive field positions
-    /// (ascending; always empty for an indexed family).
+    /// parameters are *not* included) together with stable recursive-field
+    /// descriptors (ascending by field position; always empty for an indexed
+    /// family while recursive-indexed admission is deferred).
     ///
     /// A field is a **direct recursive field** (recorded) only on a non-indexed
     /// family (`num_indices == 0`) and only if its type is exactly `I p_1…p_m`.
@@ -529,7 +531,7 @@ impl Kernel {
     /// `I` (reflexive/higher-order) ⇒
     /// [`KernelError::ReflexiveOrNestedNotSupported`]; a self-reference applied
     /// to the wrong arguments ⇒ [`KernelError::RecursiveInductiveNotSupported`].
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
     fn check_ctor(
         &mut self,
         ind_name: NameId,
@@ -539,7 +541,7 @@ impl Kernel {
         params: &[LocalDecl],
         ctor_name: NameId,
         ctor_ty: ExprId,
-    ) -> Result<(Vec<LocalDecl>, Vec<usize>, bool), KernelError> {
+    ) -> Result<(Vec<LocalDecl>, Vec<RecursiveField>, bool), KernelError> {
         // Open the constructor's telescope in a context seeded with the
         // inductive's **shared** parameter locals, so that dependent parameter
         // types (e.g. `Eq`'s `a : α` referencing the earlier param `α`) and the
@@ -589,9 +591,12 @@ impl Kernel {
             }
             app
         };
-
         let mut fields: Vec<LocalDecl> = Vec::new();
-        let mut recursive_fields: Vec<usize> = Vec::new();
+        let param_values: Vec<ExprId> = param_locals
+            .iter()
+            .map(|param| self.fvar(param.fvar))
+            .collect();
+        let mut recursive_fields: Vec<RecursiveField> = Vec::new();
         // Lean's large-elimination test records every non-parameter field whose
         // type does not inhabit Prop, then requires each such field itself to
         // occur as an exact argument of the constructor result. This is more
@@ -606,41 +611,33 @@ impl Kernel {
             };
             let field_is_proof = self.level_is_zero(*dom_level);
 
-            // Classify the field's occurrence of `I`, if any. A direct recursive
-            // field (`dom == I p_1…p_m`) is admitted and recorded **only for a
-            // non-indexed family** (slice 7 defers recursive constructors on an
-            // indexed inductive — recursion + indices together, e.g.
-            // `Vector.cons`); everything else mentioning `I` is rejected with a
-            // precise error.
-            if self.mentions_const(dom, ind_name) {
-                if num_indices != 0 {
-                    // For an **indexed** family any field mentioning `I` is a
-                    // recursive (or reflexive) occurrence carrying index
-                    // arguments. Recursion + indices together (e.g.
-                    // `Vector.cons`) needs IH-motive applications over the
-                    // recursive occurrence's indices and is deferred. A `Pi`
-                    // ending in `I` is still reflexive/nested; a bare `I …`
-                    // application is the recursive-indexed case.
-                    let (head, _args) = self.unfold_apps(dom);
-                    if matches!(self.expr_node(head), ExprNode::Const(n, _) if *n == ind_name) {
-                        return Err(KernelError::RecursiveIndexedNotSupported {
-                            inductive: ind_name,
-                            ctor: ctor_name,
-                        });
-                    }
-                    return Err(
-                        self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom)
-                    );
-                }
-                if dom == ind_applied {
-                    // Direct recursive field: exactly `I p_1…p_m` (the inductive
-                    // applied to the parameters, no indices).
-                    recursive_fields.push(fields.len());
-                } else {
-                    return Err(
-                        self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom)
-                    );
-                }
+            // M1 / ADR-0353: every positive recursive shape is inspected by one
+            // WHNF telescope-tail path. This checkpoint records only the stable
+            // descriptor for the already-supported zero-telescope/zero-index
+            // direct case; indexed and higher-order shapes retain their feature
+            // declines until M2.
+            let recursive_shape = self.open_recursive_field_shape(
+                ind_name,
+                ind_const,
+                num_indices,
+                &param_values,
+                dom,
+                None,
+                &mut ctx,
+            );
+            if self.mentions_const(dom, ind_name)
+                && let Some(recursive_field) = self.classify_recursive_field_under_m1_declines(
+                    ind_name,
+                    ind_const,
+                    num_indices,
+                    ctor_name,
+                    dom,
+                    ind_applied,
+                    fields.len(),
+                    recursive_shape,
+                )?
+            {
+                recursive_fields.push(recursive_field);
             }
             let fvar = ctx.fresh_fvar();
             let decl = LocalDecl {
@@ -691,6 +688,169 @@ impl Kernel {
             .iter()
             .all(|field| args.contains(field));
         Ok((fields, recursive_fields, exposes_non_prop_fields))
+    }
+
+    /// Apply M1's frozen admission policy to a structurally recursive field
+    /// after the shared WHNF helper has inspected it. Only the exact historical
+    /// direct surface form receives metadata. Every other surface form keeps
+    /// its pre-M1 feature-decline precedence until M2 explicitly widens it.
+    #[allow(clippy::too_many_arguments)]
+    fn classify_recursive_field_under_m1_declines(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        ctor_name: NameId,
+        dom: ExprId,
+        ind_applied: ExprId,
+        field_index: usize,
+        recursive_shape: Option<OpenedRecursiveField>,
+    ) -> Result<Option<RecursiveField>, KernelError> {
+        if dom == ind_applied {
+            let Some(shape) = recursive_shape else {
+                return Err(KernelError::RecursiveFieldShapeMismatch {
+                    inductive: ind_name,
+                    ctor: ctor_name,
+                    field_index: u32::try_from(field_index).unwrap_or(u32::MAX),
+                });
+            };
+            return Ok(Some(RecursiveField {
+                field_index,
+                telescope_depth: shape.telescope.len(),
+            }));
+        }
+        if matches!(self.expr_node(dom), ExprNode::Pi(..)) {
+            return Err(KernelError::ReflexiveOrNestedNotSupported {
+                inductive: ind_name,
+                ctor: ctor_name,
+            });
+        }
+        if num_indices != 0 {
+            let (head, _) = self.unfold_apps(dom);
+            if head == ind_const {
+                return Err(KernelError::RecursiveIndexedNotSupported {
+                    inductive: ind_name,
+                    ctor: ctor_name,
+                });
+            }
+        }
+        Err(self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom))
+    }
+
+    /// Open one field through Lean's shared recursive-argument shape: WHNF at
+    /// every step, open a possibly empty `Pi` telescope, then require the exact
+    /// family application with fixed parameters and complete occurrence-free
+    /// indices. When `recursive_value` is present, apply it to the opened
+    /// telescope in lockstep. All temporary locals are popped before return;
+    /// callers receive expressions to abstract, never a mutated context.
+    #[allow(clippy::too_many_arguments)]
+    fn open_recursive_field_shape(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        param_values: &[ExprId],
+        field_ty: ExprId,
+        recursive_value: Option<ExprId>,
+        ctx: &mut LocalContext,
+    ) -> Option<OpenedRecursiveField> {
+        let mut cursor = self.whnf(field_ty);
+        let mut telescope = Vec::new();
+        let mut applied_value = recursive_value;
+        let mut valid_domains = true;
+        while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
+            if self.mentions_const(domain, ind_name) {
+                valid_domains = false;
+                break;
+            }
+            let fvar = ctx.fresh_fvar();
+            let local = LocalDecl {
+                fvar,
+                name,
+                ty: domain,
+                info,
+            };
+            ctx.push(local);
+            telescope.push(local);
+            let value = self.fvar(fvar);
+            if let Some(applied) = applied_value {
+                applied_value = Some(self.app(applied, value));
+            }
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+
+        let (head, args) = self.unfold_apps(cursor);
+        let valid_tail = valid_domains
+            && head == ind_const
+            && args.len() == param_values.len() + num_indices
+            && args[..param_values.len()] == param_values[..]
+            && args[param_values.len()..]
+                .iter()
+                .all(|&index| !self.mentions_const(index, ind_name));
+        for _ in 0..telescope.len() {
+            ctx.pop();
+        }
+        if valid_tail {
+            Some(OpenedRecursiveField {
+                telescope,
+                indices: args[param_values.len()..].to_vec(),
+                applied_value,
+            })
+        } else {
+            None
+        }
+    }
+
+    /// Reopen a checked recursive field in the recursor's current local
+    /// context. Constructor metadata stores only a stable field position and
+    /// telescope depth; the dependent telescope, tail indices, and applied
+    /// recursive value are rederived by the same helper used for
+    /// classification. Any disagreement is a typed internal failure.
+    #[allow(clippy::too_many_arguments)]
+    fn reopen_recursive_field(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        param_values: &[ExprId],
+        ctor_name: NameId,
+        descriptor: RecursiveField,
+        fields: &[LocalDecl],
+        ctx: &mut LocalContext,
+    ) -> Result<OpenedRecursiveField, KernelError> {
+        let field_index = u32::try_from(descriptor.field_index).unwrap_or(u32::MAX);
+        let Some(field) = fields.get(descriptor.field_index).copied() else {
+            return Err(KernelError::RecursiveFieldShapeMismatch {
+                inductive: ind_name,
+                ctor: ctor_name,
+                field_index,
+            });
+        };
+        let field_value = self.fvar(field.fvar);
+        let Some(opened) = self.open_recursive_field_shape(
+            ind_name,
+            ind_const,
+            num_indices,
+            param_values,
+            field.ty,
+            Some(field_value),
+            ctx,
+        ) else {
+            return Err(KernelError::RecursiveFieldShapeMismatch {
+                inductive: ind_name,
+                ctor: ctor_name,
+                field_index,
+            });
+        };
+        if opened.telescope.len() != descriptor.telescope_depth || opened.applied_value.is_none() {
+            return Err(KernelError::RecursiveFieldShapeMismatch {
+                inductive: ind_name,
+                ctor: ctor_name,
+                field_index,
+            });
+        }
+        Ok(opened)
     }
 
     /// Classify a field type `dom` that mentions `I` but is **not** the direct
@@ -763,17 +923,38 @@ struct CheckedCtor {
     /// The opened **field** locals (outer-to-inner), each carrying name/type/info.
     /// The leading parameters are *not* included here.
     fields: Vec<LocalDecl>,
-    /// The 0-based field positions (within `fields`, parameters excluded) that
-    /// are **direct recursive fields** (type exactly `I p_1…p_m`), ascending.
+    /// Stable descriptors for the recursive fields, ascending by 0-based field
+    /// position (within `fields`, parameters excluded). M1 records only the
+    /// already-supported empty-telescope/empty-index direct shape; the
+    /// telescope depth is retained so M2 can generalize without replacing this
+    /// metadata boundary.
     /// One induction hypothesis (in the recursor's minor premise) and one
     /// recursive call (in the ι-rule) is generated per entry, in this order.
     /// Empty for an indexed inductive (recursive-indexed is deferred).
-    recursive_fields: Vec<usize>,
+    recursive_fields: Vec<RecursiveField>,
     /// Whether every non-`Prop` field is exposed as an exact argument of this
     /// constructor's result. For a sole constructor of a potentially-`Prop`
     /// family, this is Lean's final syntactic-subsingleton condition for large
     /// elimination.
     exposes_non_prop_fields: bool,
+}
+
+/// The context-independent part of a recursive field opened during constructor
+/// checking. Fresh telescope locals and tail indices never escape their local
+/// context.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct RecursiveField {
+    field_index: usize,
+    telescope_depth: usize,
+}
+
+/// A recursive field's validated WHNF telescope-tail shape before it receives a
+/// stable constructor-field position.
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct OpenedRecursiveField {
+    telescope: Vec<LocalDecl>,
+    indices: Vec<ExprId>,
+    applied_value: Option<ExprId>,
 }
 
 // ---------------------------------------------------------------------------
@@ -825,6 +1006,7 @@ impl Kernel {
     fn mk_recursor(
         &mut self,
         rec_name: NameId,
+        ind_name: NameId,
         uparams: &[NameId],
         num_params: usize,
         num_indices: usize,
@@ -881,6 +1063,7 @@ impl Kernel {
             }
             app
         };
+        let param_values: Vec<ExprId> = params.iter().map(|p| self.fvar(p.fvar)).collect();
 
         // motive : Π (idx_1…idx_k), (I p… idx…) → Sort v   (implicit). For a
         // non-indexed family this is the plain arrow `(I p…) → Sort v`.
@@ -939,7 +1122,16 @@ impl Kernel {
             // One induction-hypothesis binder `ih_j : motive f_j` per recursive
             // field `f_j`, in field order, opened *after* the field binders so
             // each IH's type references the already-bound field fvar.
-            let ih_locals = self.open_ih_locals(&mut ctx, motive, &fields, &c.recursive_fields);
+            let ih_locals = self.open_ih_locals(
+                &mut ctx,
+                ind_name,
+                ind_const,
+                num_indices,
+                &param_values,
+                c,
+                motive,
+                &fields,
+            )?;
             // Π fields… (ih…), motive (c_i p… fields…)
             let minor_body = self.abstr_pi_telescope(&ih_locals, motive_app);
             let minor_ty = self.abstr_pi_telescope(&fields, minor_body);
@@ -1012,8 +1204,17 @@ impl Kernel {
             }
             // … then one recursive call `I.rec params motive minors… f_j` per
             // recursive field `f_j`, in field order (the IH arguments).
-            for &rf in &c.recursive_fields {
-                let f = fields[rf];
+            for &recursive_field in &c.recursive_fields {
+                let opened = self.reopen_recursive_field(
+                    ind_name,
+                    ind_const,
+                    num_indices,
+                    &param_values,
+                    c.name,
+                    recursive_field,
+                    fields,
+                    &mut ctx,
+                )?;
                 let mut rec_call = self.const_(rec_name, rec_level_args.clone());
                 for p in &params {
                     let pv = self.fvar(p.fvar);
@@ -1024,8 +1225,18 @@ impl Kernel {
                     let mv = self.fvar(m.fvar);
                     rec_call = self.app(rec_call, mv);
                 }
-                let fv = self.fvar(f.fvar);
-                rec_call = self.app(rec_call, fv);
+                for &index in &opened.indices {
+                    rec_call = self.app(rec_call, index);
+                }
+                let Some(applied_value) = opened.applied_value else {
+                    return Err(KernelError::RecursiveFieldShapeMismatch {
+                        inductive: ind_name,
+                        ctor: c.name,
+                        field_index: u32::try_from(recursive_field.field_index).unwrap_or(u32::MAX),
+                    });
+                };
+                rec_call = self.app(rec_call, applied_value);
+                rec_call = self.abstr_lambda_telescope(&opened.telescope, rec_call);
                 body = self.app(body, rec_call);
             }
             // λ fields_i…, (m_i fields_i… ih…)
@@ -1171,23 +1382,47 @@ impl Kernel {
         args[start..].to_vec()
     }
 
-    /// Open one induction-hypothesis local `ih_j : motive f_j` in `ctx` (pushing
-    /// each) for every recursive field position in `recursive_fields`, in order.
-    /// `fields` are the already-opened constructor field locals; `motive` is the
-    /// motive fvar expression. Returns the IH locals outer-to-inner.
+    /// Open one induction-hypothesis local per checked recursive field, in field
+    /// order. Each IH type is rederived from the field's WHNF telescope tail by
+    /// the same helper used during constructor classification. Returns the IH
+    /// locals outer-to-inner.
+    #[allow(clippy::too_many_arguments)]
     fn open_ih_locals(
         &mut self,
         ctx: &mut LocalContext,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        param_values: &[ExprId],
+        ctor: &CheckedCtor,
         motive: ExprId,
         fields: &[LocalDecl],
-        recursive_fields: &[usize],
-    ) -> Vec<LocalDecl> {
-        let mut ihs = Vec::with_capacity(recursive_fields.len());
-        for &rf in recursive_fields {
-            let f = fields[rf];
-            let fv = self.fvar(f.fvar);
-            // ih_j : motive f_j
-            let ih_ty = self.app(motive, fv);
+    ) -> Result<Vec<LocalDecl>, KernelError> {
+        let mut ihs = Vec::with_capacity(ctor.recursive_fields.len());
+        for &recursive_field in &ctor.recursive_fields {
+            let opened = self.reopen_recursive_field(
+                ind_name,
+                ind_const,
+                num_indices,
+                param_values,
+                ctor.name,
+                recursive_field,
+                fields,
+                ctx,
+            )?;
+            let mut ih_body = motive;
+            for &index in &opened.indices {
+                ih_body = self.app(ih_body, index);
+            }
+            let Some(applied_value) = opened.applied_value else {
+                return Err(KernelError::RecursiveFieldShapeMismatch {
+                    inductive: ind_name,
+                    ctor: ctor.name,
+                    field_index: u32::try_from(recursive_field.field_index).unwrap_or(u32::MAX),
+                });
+            };
+            ih_body = self.app(ih_body, applied_value);
+            let ih_ty = self.abstr_pi_telescope(&opened.telescope, ih_body);
             let fvar = ctx.fresh_fvar();
             let name = self.name_str_anon("ih");
             let decl = LocalDecl {
@@ -1199,7 +1434,7 @@ impl Kernel {
             ctx.push(decl);
             ihs.push(decl);
         }
-        ihs
+        Ok(ihs)
     }
 
     /// A fresh universe parameter name for the recursor's motive level, not

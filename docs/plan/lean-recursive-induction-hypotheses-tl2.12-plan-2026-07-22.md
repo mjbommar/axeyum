@@ -1,6 +1,6 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: M0 source/wire freeze complete; M1 is next and no recursive admission has widened
+Status: M1 shared representation complete; M2 generalized native semantics is next and no recursive admission has widened
 
 Date: 2026-07-22
 
@@ -8,7 +8,7 @@ Decision gate:
 [proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Current checkpoint:
-[M0 source/wire freeze](lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+[M1 shared-representation result](lean-recursive-induction-hypotheses-m1-2026-07-22.md)
 
 Parents:
 
@@ -277,12 +277,14 @@ drift and premature Axeyum product observations. See the
 
 ### M1 — shared recursive-field representation under existing declines
 
-- add the one WHNF telescope-tail classifier/reopener and stable recursive-field
-  metadata;
-- route existing direct recursion through it without changing admitted
-  profiles;
-- prove direct recursor type/rule/computation identity and all TL2.11 controls;
-- commit and push before widening admission.
+**Complete.** One WHNF telescope-tail operation now classifies and reopens
+recursive fields; checked metadata retains only stable field position and
+telescope depth; both the minor and rule paths rederive context-local binders,
+indices, and applied values. `RecursiveFieldShapeMismatch` is the typed
+fail-closed reconstruction boundary. Direct-recursive declaration identities,
+Nat/List computation, the 182-test kernel suite, both feature declines, and the
+frozen 840-case positivity summary remain unchanged. See the
+[M1 result](lean-recursive-induction-hypotheses-m1-2026-07-22.md).
 
 ### M2 — generalized native IH and computation rules
 

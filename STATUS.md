@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.12 M0 source/wire freeze is complete; M1 shared
-  representation is next and no admission has widened.**
+- **2026-07-22 — TL2.12 M1 shared representation is complete; M2 generalized
+  native semantics is next and no admission has widened.**
   [Proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
   and the
   [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
@@ -389,9 +389,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fail-closed tests bind source/stream/baseline hashes, roots and normal forms,
   pins/resources/commands, semantic/claim/case/mutation/generated/stop
   contracts, and reject any premature Axeyum observation. The Rust product has
-  not run on either new stream. M1 must preserve direct-recursive identity under
-  one shared WHNF representation while retaining both current feature declines;
-  M2 alone may widen native admission. M3-M4 own
+  not run on either new stream. The
+  [M1 result](docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+  now routes direct recursion through one WHNF telescope-tail classifier and
+  reopener shared by minor types and rule right-hand sides. Stable metadata
+  retains only field position and telescope depth; reconstruction disagreement
+  returns `RecursiveFieldShapeMismatch`. Exact `MiniNat.rec`/`MiniList.rec`
+  declaration identities, Nat/List computations, both current feature
+  declines, 182 kernel units, and the byte-identical 840-case positivity summary
+  remain green. M2 alone may now widen native admission. M3-M4 own
   the narrow importer-policy change, both twice-complete official imports,
   mutations, and pinned computation differential. Every milestone is bounded
   to one Lean/two Rust workers and 4 GiB, then added, committed, pushed, and
@@ -6847,7 +6853,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
-| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M0 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined fields. M0 freezes the baseline, twice-compiled explicit-recursor source, two byte-identical official streams, independent metadata, and ten-test fail-closed contract with no Axeyum product observation. M1 next must preserve direct-recursive identity under the shared representation and existing declines; M2-M4 own native admission, exact official importer comparison, selected iota computation, >=512 generated profiles, and the unchanged 840-case positivity gate. Mutual/nested/well-founded remain TL2.13/TL2.14 |
+| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M1 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined fields. M0 freezes the baseline, twice-compiled explicit-recursor source, two byte-identical official streams, independent metadata, and ten-test fail-closed contract with no Axeyum product observation. M1 routes direct recursion through the shared classifier/reopener with exact declaration/computation identity, typed reconstruction mismatch, existing feature declines, and the 840-case positivity summary unchanged. M2-M4 own native admission, exact official importer comparison, selected iota computation, and >=512 generated profiles. Mutual/nested/well-founded remain TL2.13/TL2.14 |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6901,6 +6907,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.12 M1 shared recursive-field representation
+  without widening admission.** One WHNF telescope-tail operation now drives
+  constructor classification plus the independently reopened minor-IH and rule
+  RHS paths. Checked metadata stores stable field position/telescope depth;
+  mismatches return `RecursiveFieldShapeMismatch`. Canonical identities remain
+  `MiniNat.rec=dee04a36...f5ef` and `MiniList.rec=1087558f...7660`; Nat/List
+  computation, both feature declines, 182 kernel units, and the exact 840-case
+  positivity summary pass. The gate caught and rejected an eager-slice panic and
+  a reducible-let error-precedence drift before acceptance. M2 native semantics
+  is next; no new official stream has entered the Rust importer.
 
 - **2026-07-22 — Completed TL2.12 M0 source/wire freeze without product
   observation.** The final 1,422-byte explicit-recursor source compiles twice

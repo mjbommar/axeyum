@@ -147,6 +147,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M0's twice-compiled explicit-recursor source, two byte-identical official
   root streams, independent wire inventories, fail-closed ten-test contract,
   exact non-claims, and M1 shared-representation handoff.
+- [`lean-recursive-induction-hypotheses-m1-2026-07-22.md`](lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+  — shared WHNF classifier/reopener, stable recursive-field metadata, exact
+  direct-recursive identities, unchanged feature declines, retained negative
+  observations, and the M2 native-semantics handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

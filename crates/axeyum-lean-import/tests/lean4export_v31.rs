@@ -68,6 +68,23 @@ fn official_flat_fixture_is_independently_admitted() {
 #[test]
 fn official_direct_recursive_families_are_independently_admitted() {
     let (kernel, report) = import(RECURSIVE_FIXTURE).expect("direct-recursive fixture admits");
+    let recursor_identity = |name: &str| {
+        report
+            .declaration_identities
+            .iter()
+            .find(|identity| identity.name == name)
+            .unwrap_or_else(|| panic!("missing direct-recursive identity for {name}"))
+            .content_sha256
+            .as_str()
+    };
+    assert_eq!(
+        recursor_identity("MiniNat.rec"),
+        "dee04a36959066e63f15d5711a5a03de2ac91d71333c48135ef0fdc89cb0f5ef"
+    );
+    assert_eq!(
+        recursor_identity("MiniList.rec"),
+        "1087558f366706316eefaca0abc48a4b592da2a8496e5d6bbdaa7eea5b677660"
+    );
     assert_eq!(
         (
             report.names,

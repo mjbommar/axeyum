@@ -801,7 +801,11 @@ Out of scope:
     [TL2.12 execution plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
     [M0](../../plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
     now freezes the explicit-recursor source, two official root streams, and
-    exact metadata/claim boundary before product implementation; M1 is next.
+    exact metadata/claim boundary before product implementation. The
+    [M1 result](../../plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+    routes direct recursion through the shared classifier/reopener with exact
+    declaration/computation identity and both declines unchanged; M2 native
+    semantics is next.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

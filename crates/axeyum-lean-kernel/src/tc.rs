@@ -303,6 +303,18 @@ pub enum KernelError {
         /// The offending recursive constructor.
         ctor: crate::name::NameId,
     },
+    /// Constructor checking recorded a recursive field, but recursor
+    /// generation could not rederive the same WHNF telescope-tail shape in its
+    /// fresh local context. This is an internal checked-metadata mismatch, not
+    /// permission to treat the field as non-recursive.
+    RecursiveFieldShapeMismatch {
+        /// The inductive whose recursive-field metadata disagreed.
+        inductive: crate::name::NameId,
+        /// The constructor containing the field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
 }
 
 /// A single local declaration: an opened binder's name, type, and binder info.
