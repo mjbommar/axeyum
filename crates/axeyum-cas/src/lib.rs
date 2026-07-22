@@ -9878,12 +9878,14 @@ fn find_linear_trig(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, Rational)> 
     }
 }
 
-/// `∫_{−∞}^∞ R(x)·{cos(ax) | sin(ax)} dx` for a rational `R = N(x)/(x²+q)` with `q >
-/// 0` and a polynomial numerator `N` of degree ≤ 1 (Fourier integral via the
-/// residue theorem, pole at `x = i√q`). By parity only the matching part survives:
-/// `∫ (c₁x+c₀)cos(ax)/(x²+q) = c₀·(π/√q)·e^{−a√q}` and `∫ (c₁x+c₀)sin(ax)/(x²+q) =
-/// c₁·π·e^{−a√q}` (`a > 0`). Closes `∫ cos x/(x²+1) = π/e`, `∫ x·sin x/(x²+1) = π/e`.
-/// The residue theorem is exact; certified by construction. `None` outside the form.
+/// `∫_{−∞}^∞ R(x)·{cos(ax) | sin(ax)} dx` for a rational `R = N(x)/(x²+px+q)` with an
+/// **irreducible** quadratic denominator (`p²<4q`) and a polynomial numerator `N` of
+/// degree ≤ 1 — the Fourier integral via the residue theorem, single upper-half pole
+/// `z₀ = α + iβ` (`α = −p/2`, `β = √(q−p²/4)`). `∫ R e^{iax} = (π/β)·N(z₀)·e^{iaz₀}`;
+/// its real / imaginary part is the `cos` / `sin` integral. For `p = 0` this reduces
+/// to `∫ cos x/(x²+1) = π/e`; for `p ≠ 0` it yields damped oscillations,
+/// `∫ cos x/(x²+2x+2) = π·cos1/e`. Exact by the residue theorem; certified by
+/// construction. `None` outside the form or when the quadratic is not irreducible.
 fn improper_fourier_quadratic(
     expr: &CasExpr,
     var: &str,
@@ -9906,26 +9908,38 @@ fn improper_fourier_quadratic(
     let rf = normalize_rational(&rational)?;
     let num = rf.num.to_univariate(var)?;
     let den = rf.den.to_univariate(var)?;
-    // Denominator must be `d₂·(x² + q)` with `q > 0`; numerator degree ≤ 1.
-    if poly::rat_degree(&den)? != 2 || !den[1].is_zero() || poly::rat_degree(&num)? >= 2 {
+    if poly::rat_degree(&den)? != 2 || poly::rat_degree(&num)? >= 2 {
         return None;
     }
+    // Monic denominator `x² + p·x + q`; irreducible ⇔ `p² < 4q`.
+    let p = den[1].checked_div(den[2])?;
     let q = den[0].checked_div(den[2])?;
-    if q <= Rational::integer(0) {
+    let beta_sq = q.checked_sub(p.checked_mul(p)?.checked_div(Rational::integer(4))?)?;
+    if beta_sq <= Rational::integer(0) {
         return None; // real poles — not this contour
     }
+    let alpha = p.checked_div(Rational::integer(-2))?; // −p/2
     let c0 = num.first().copied().unwrap_or_else(Rational::zero).checked_div(den[2])?;
     let c1 = num.get(1).copied().unwrap_or_else(Rational::zero).checked_div(den[2])?;
-    let root = CasExpr::Const(q).sqrt(); // √q = b
-    let envelope = (CasExpr::Neg(Box::new(CasExpr::Const(a) * root.clone()))).exp(); // e^{−a√q}
-    // cos → even part `c₀/(x²+q)` survives; sin → odd part `c₁x/(x²+q)` survives.
-    let value = match head {
-        UnaryFunc::Cos => CasExpr::Const(c0) * (CasExpr::var("pi") / root) * envelope,
-        UnaryFunc::Sin => CasExpr::Const(c1) * CasExpr::var("pi") * envelope,
+    let beta = CasExpr::Const(beta_sq).sqrt();
+    let envelope = CasExpr::Neg(Box::new(CasExpr::Const(a) * beta.clone())).exp(); // e^{−aβ}
+    let a_alpha = CasExpr::Const(a.checked_mul(alpha)?);
+    let (cos_part, sin_part) = (a_alpha.clone().cos(), a_alpha.sin()); // cos(aα), sin(aα)
+    // `N(z₀) = (c₀ + c₁α) + i·c₁β`; `(π/β)·N(z₀)·e^{iaz₀}` with `e^{iaz₀} =
+    // e^{−aβ}(cos aα + i·sin aα)`. Take Re for `cos`, Im for `sin`.
+    let real_n = CasExpr::Const(c0.checked_add(c1.checked_mul(alpha)?)?); // c₀ + c₁α
+    let imag_n = CasExpr::Const(c1) * beta.clone(); // c₁β
+    let prefactor = CasExpr::var("pi") / beta;
+    let bracket = match head {
+        // Re[(A + iB)(cos + i sin)] = A·cos − B·sin.
+        UnaryFunc::Cos => real_n * cos_part - imag_n * sin_part,
+        // Im[(A + iB)(cos + i sin)] = A·sin + B·cos.
+        UnaryFunc::Sin => real_n * sin_part + imag_n * cos_part,
         _ => return None,
     };
+    let value = prefactor * envelope * bracket;
     Some(DefiniteIntegral {
-        value: simplify(&simplify_radicals(&value)),
+        value: simplify(&evaluate_trig(&simplify_radicals(&value))),
         antiderivative: CasExpr::zero(),
         certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
     })
