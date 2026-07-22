@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 427 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 428 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -17,11 +17,11 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Rational | `cancel` (uni+multivariate), `apart`, `factor`, `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus), `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `cyclotomic_polynomial`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
 | Equations | `solve` (rational, quadratic w/ simplified surds, **complex**, degree-≥3 factoring over ℚ; **elementary transcendental** `eˣ−5⇒ln5`, `ln x−2⇒e²`, `√x−3⇒9`; **polynomial in eˣ** `e^{2x}−3e^x+2⇒{0,ln2}`); `solve_polynomial_system` (bivariate, Sylvester resultant); `real_roots` → `AlgebraicReal` (RootOf, any degree), `real_root_intervals`/`count_real_roots` (Sturm), `approximate_real_roots`; `solve_polynomial_inequality` | rational + radical + transcendental + system ✓; Sturm-certified |
 | Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric) | ✓ |
-| Summation (definite) | `definite_sum` (Σ over bounds), `gosper_sum` | ✓ |
+| Summation (definite) | `definite_sum` (Σ over bounds — polynomial via telescoping, **geometric/hypergeometric via Gosper**: `Σ 2^k = 2^{n+1}−1`, `Σ k·2^k`), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, **complete univariate rational over ℚ** (Horowitz rational part + partial-fractions over ℚ-irreducible factors → logs, `atan` for irreducible quadratics **incl. surd** `∫1/(x²+x+1)`, and algebraic surd-logs for real-irrational-root quadratics `∫1/(x²−2)`; mixed factors `∫1/(x³+1)`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ`, `∫f+g` (linearity); **by-parts**: `∫p·ln`, `∫p·(ln x)ᵐ`, `∫p·{atan,asin,acos,asinh,acosh}`; **substitution/power-rule**: `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` (`∫(ln x)²/x`, `∫eˣ(eˣ+1)²`, `∫sin·cos³`), `∫k·g′/g = k·ln g` (`∫cos/sin`), `∫k·f′/√f = 2k√f`, half-integer power rule `∫√(ax+b)`/`∫xᵐ√x`, `u=x²` for `∫x·S(x²)·{eˣ²,sin,cos}`; special-function antiderivatives (erf/Si/Ci/Ei/li/Shi/Fresnel); `definite_integrate` (FTC), `improper_integrate` (±∞ bounds) | ✓ (differentiate-and-check / FTC) |
-| Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`; **log-vs-power** at 0 — `x·ln x=0`), `series`/`series_at`/`laurent_series` (incl. `tan`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
+| Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`; **log-vs-power** at 0 — `x·ln x=0`), `series`/`series_at`/`laurent_series` (incl. `tan`, `asin`, `asinh`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` + `inverse_laplace`, `z_transform` + `inverse_z_transform` (discrete; simple poles, round-trip-certified) | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `dsolve_separable`, `dsolve_exact`, `dsolve_bernoulli`, `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
 | Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable**; trig-equation solving via `solve` (`2sin x−1⇒π/6,5π/6`, principal in [0,2π)) | values compute; identities ✓ |
