@@ -336,9 +336,27 @@ fn coeffs_of(expr: &CasExpr, var: &str, order: usize) -> Option<Series> {
         }
         CasExpr::Pow(base, exponent) => coeffs_of(base, var, order)?.pow(*exponent),
         CasExpr::Div(numerator, denominator) => {
-            let top = coeffs_of(numerator, var, order)?;
             let bottom = coeffs_of(denominator, var, order)?;
-            top.div(&bottom)
+            // Lowest order at which the denominator is nonzero.
+            let m = bottom.coeffs.iter().position(|c| !c.is_zero())?;
+            if m == 0 {
+                let top = coeffs_of(numerator, var, order)?;
+                return top.div(&bottom);
+            }
+            // Removable singularity: `D = xᵐ·d(x)` with `d(0) ≠ 0`. Compute `order+m`
+            // coefficients so that after cancelling the common `xᵐ` factor from
+            // numerator and denominator, `order+1` terms of the quotient remain — e.g.
+            // `x/(eˣ−1) = 1 − x/2 + x²/12 − …` (the Bernoulli generating function).
+            let top = coeffs_of(numerator, var, order + m)?;
+            let bottom = coeffs_of(denominator, var, order + m)?;
+            // The numerator must vanish to at least order `m`, else it is a true pole
+            // (out of the Taylor fragment — a Laurent expansion would be needed).
+            if top.coeffs.iter().take(m).any(|c| !c.is_zero()) {
+                return None;
+            }
+            let top_shifted = Series { coeffs: top.coeffs[m..].to_vec() };
+            let bottom_shifted = Series { coeffs: bottom.coeffs[m..].to_vec() };
+            top_shifted.div(&bottom_shifted)
         }
         CasExpr::Unary(func, arg) => unary_series(*func, arg, var, order),
     }
@@ -578,6 +596,35 @@ mod tests {
         expand_series(expr, "x", order)
             .expect("expansion should exist")
             .coeffs
+    }
+
+    #[test]
+    fn removable_singularity_ratio_series() {
+        use crate::CasExpr as C;
+        // x/(eˣ−1) = 1 − x/2 + x²/12 − x⁴/720 (Bernoulli generating function): both
+        // numerator and denominator vanish at 0, but the ratio is regular.
+        let bernoulli = var() / (var().exp() - C::int(1));
+        assert_eq!(
+            coeffs(&bernoulli, 4),
+            vec![
+                Rational::integer(1),
+                Rational::new(-1, 2),
+                Rational::new(1, 12),
+                Rational::zero(),
+                Rational::new(-1, 720),
+            ]
+        );
+        // sin(x)/x = 1 − x²/6 + x⁴/120; (1−cos x)/x² = 1/2 − x²/24.
+        assert_eq!(
+            coeffs(&(var().sin() / var()), 4),
+            vec![Rational::integer(1), Rational::zero(), Rational::new(-1, 6), Rational::zero(), Rational::new(1, 120)]
+        );
+        assert_eq!(
+            coeffs(&((C::int(1) - var().cos()) / var().pow(2)), 2),
+            vec![Rational::new(1, 2), Rational::zero(), Rational::new(-1, 24)]
+        );
+        // A genuine pole (numerator does not vanish) declines — Taylor can't reach it.
+        assert!(series(&(C::int(1) / var()), "x", 4).is_none());
     }
 
     #[test]
