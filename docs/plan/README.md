@@ -244,6 +244,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   axioms, complete main/auxiliary declaration comparison, 20 rejecting
   wire/publication classes, retained controls, and M5 normal-form/assurance
   handoff.
+- [`lean-nested-inductive-elimination-m5-plan-2026-07-22.md`](lean-nested-inductive-elimination-m5-plan-2026-07-22.md)
+  — M5's preimplementation freeze for three explicit normal forms, repeated
+  pinned-Lean confirmation, an append-only TL2.14 assurance overlay, historical
+  hash preservation, and truthful removal of the obsolete live decline.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

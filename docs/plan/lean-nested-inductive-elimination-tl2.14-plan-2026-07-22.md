@@ -347,6 +347,10 @@ changed. M5 owns explicit registered normal forms and the assurance transition.
 
 ### M5 — computation and assurance
 
+Status: **design frozen by the pushed M5 plan checkpoint; implementation
+next**. See the
+[M5 computation and assurance plan](lean-nested-inductive-elimination-m5-plan-2026-07-22.md).
+
 - repeat pinned-Lean source compilation and Axeyum computations;
 - require registered cross-nested normal forms, not constructor witnesses;
 - append a TL2.14 assurance overlay without rewriting history;
