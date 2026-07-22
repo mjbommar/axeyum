@@ -7767,6 +7767,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_substitution(expr, var),
         integrate_trig_inner_substitution(expr, var),
         integrate_tan_substitution(expr, var),
+        integrate_poly_over_sqrt_linear(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -9021,6 +9022,61 @@ fn integrate_exp_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         .antiderivative
         .substitute(u, &CasExpr::var(var).exp());
     Some(simplify(&rewrite_log_exp(&substituted)))
+}
+
+/// ∫ P(x)/√(a·x+b) dx via the substitution `u = a·x+b` (`P` a polynomial): the
+/// integrand becomes `(1/a)·P((u−b)/a)/√u`, a sum of half-integer powers of `u`,
+/// integrated and mapped back. Covers `∫x/√(x+1) = (2/3)(x+1)√(x+1) − 2√(x+1)`.
+/// Certified downstream.
+fn integrate_poly_over_sqrt_linear(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(num, den) = expr else {
+        return None;
+    };
+    let CasExpr::Unary(UnaryFunc::Sqrt, arg) = den.as_ref() else {
+        return None;
+    };
+    // Numerator must be a polynomial; radicand a·x+b linear.
+    normalize(num)?.to_univariate(var)?;
+    let arg_poly = normalize(arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let (a, b) = (arg_poly[1], arg_poly.first().copied().unwrap_or_else(Rational::zero));
+    // Skip the identity radicand `√x` (a=1, b=0): the substitution is a no-op and
+    // would recurse — that case is handled by the sqrt-power / radical-usub finders.
+    if a == Rational::integer(1) && b.is_zero() {
+        return None;
+    }
+    // x = (u − b)/a = (1/a)·(u − b), so P((u−b)/a) is a polynomial in `u`. Build as
+    // a scaled term (not a `Div`) so the polynomial normalizer accepts it.
+    let u = if var == "u" { "w" } else { "u" };
+    let inv_a = Rational::integer(1).checked_div(a)?;
+    let x_of_u = scaled_term(inv_a, CasExpr::var(u) - CasExpr::Const(b));
+    let p_coeffs = normalize(&num.substitute(var, &x_of_u))?.to_univariate(u)?;
+    // ∫ (1/a)·Σ cₖ uᵏ · u^{−1/2} du = (1/a)·Σ cₖ·(2/(2k+1))·uᵏ·√u.
+    let sqrt_u = CasExpr::var(u).sqrt();
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (k, coeff) in p_coeffs.iter().enumerate() {
+        if coeff.is_zero() {
+            continue;
+        }
+        let scale = inv_a.checked_mul(*coeff)?.checked_mul(Rational::checked_new(
+            2,
+            i128::try_from(2 * k + 1).ok()?,
+        )?)?;
+        let power = if k == 0 {
+            sqrt_u.clone()
+        } else {
+            CasExpr::Mul(vec![CasExpr::var(u).pow(u32::try_from(k).ok()?), sqrt_u.clone()])
+        };
+        terms.push(scaled_term(scale, power));
+    }
+    let antiderivative_u = match terms.len() {
+        0 => return None,
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    };
+    Some(antiderivative_u.substitute(u, arg))
 }
 
 /// ∫ x·R(x²) dx = ½·[∫ R(u) du]_{u=x²} for a **rational** `R` — the `u = x²`
@@ -14104,6 +14160,24 @@ mod tests {
             &integrate(&(x() / (x().pow(4) + CasExpr::int(1))), "x").unwrap().antiderivative,
             &(CasExpr::rat(1, 2) * x().pow(2).atan()),
         );
+    }
+
+    #[test]
+    fn poly_over_sqrt_linear_integrals() {
+        let x = || v("x");
+        // ∫P(x)/√(ax+b) via u=ax+b: ∫x/√(x+1)=(2/3)(x+1)√(x+1)−2√(x+1).
+        for integrand in [
+            x() / (x() + CasExpr::int(1)).sqrt(),
+            x().pow(2) / (x() + CasExpr::int(1)).sqrt(),
+            x() / (CasExpr::int(2) * x() + CasExpr::int(1)).sqrt(),
+            (x() + CasExpr::int(1)) / (x() - CasExpr::int(1)).sqrt(),
+        ] {
+            let r = integrate(&integrand, "x").expect("poly/√(linear)");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // The identity radicand √x is not routed here (handled by the sqrt-power path).
+        assert!(integrate(&x().sqrt(), "x").unwrap().is_certified());
     }
 
     #[test]
