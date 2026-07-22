@@ -98,30 +98,40 @@ def _atomic_install_bytes(
     if phase_hook:
         phase_hook("before_temp_open")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
-    fd = os.open(temp, flags, 0o444)
+    # Keep the private temporary owner-writable through the hard-link commit.
+    # Some NFS identity mappings expose the server-side owner UID rather than
+    # the local credential; Linux protected-hardlink policy then rejects a link
+    # after mode 0444 removes write permission. The final link is frozen through
+    # the still-open descriptor before it is returned to any caller.
+    fd = os.open(temp, flags, 0o600)
     try:
         _write_all(fd, data)
+        os.fsync(fd)
+        if phase_hook:
+            phase_hook("after_temp_fsync")
+
+        try:
+            os.link(temp, final)
+        except FileExistsError as exc:
+            if final.read_bytes() == data:
+                if final.stat().st_mode & 0o777 != 0o444:
+                    final.chmod(0o444)
+                    with final.open("rb") as existing:
+                        os.fsync(existing.fileno())
+                temp.unlink()
+                _fsync_directory(directory)
+                return "existing-valid"
+            conflict = _quarantine(temp, "conflicts", quarantine_root)
+            raise CheckpointConflict(
+                f"immutable checkpoint conflict: {final}; incoming preserved at {conflict}"
+            ) from exc
+
         os.fchmod(fd, 0o444)
         os.fsync(fd)
+        if phase_hook:
+            phase_hook("after_final_link")
     finally:
         os.close(fd)
-    if phase_hook:
-        phase_hook("after_temp_fsync")
-
-    try:
-        os.link(temp, final)
-    except FileExistsError as exc:
-        if final.read_bytes() == data:
-            temp.unlink()
-            _fsync_directory(directory)
-            return "existing-valid"
-        conflict = _quarantine(temp, "conflicts", quarantine_root)
-        raise CheckpointConflict(
-            f"immutable checkpoint conflict: {final}; incoming preserved at {conflict}"
-        ) from exc
-
-    if phase_hook:
-        phase_hook("after_final_link")
     temp.unlink()
     _fsync_directory(directory)
     if phase_hook:
