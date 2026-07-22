@@ -58,9 +58,12 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   order is not canonical path order. S1b is now complete: the fifth fresh run
   verified 89 inputs, 450,472 metadata rows, and 5,345,294 historical rows,
   then published a 256,182,191-byte path-sorted eligibility ledger with
-  `selection_observed=false`. The S2 resumable downloader, safe streamed
-  extractor, and disk-backed 450,472-row metadata/tree join are fixture-green
-  and committed before live use. Fresh verified corpus acquisition is next.
+  `selection_observed=false`. S2 is also complete: the committed resumable
+  downloader and safe extractor verified all 90 release files and
+  4,890,207,406 compressed bytes, then proved an exact 450,472-file,
+  82,270,961,563-byte metadata/tree bijection across 89 logic trees. A fresh
+  process rehashed every retained archive and extracted file. The official
+  sample remains unobserved; S3's twice-repeated pinned Polars producer is next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -241,9 +244,10 @@ gate.
 
 ## 5. Remaining work, in dependency order
 
-1. **Selection identity.** Implement the official eligibility, status,
-   difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
-   Keep this policy artifact separate from the E1b execution ledger. Follow
+1. **Selection identity.** S0--S2 now close authority, eligibility, release,
+   and exact corpus bytes. Implement the twice-repeated official producer and
+   independent final decision/selected-file audit in S3--S4. Keep this policy
+   artifact separate from the E1b execution ledger. Follow
    [the preregistered plan](../smtcomp-official-selection-identity-plan-2026-07-22.md)
    under proposed
    [ADR-0356](../../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md).
@@ -279,6 +283,10 @@ Repository:
   `docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md`;
 - official selection S0 authority/contract:
   `docs/plan/smtcomp-official-selection-{authority,contract}-v1.json`;
+- official selection S1 input-audit result:
+  `docs/plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md`;
+- official selection S2 corpus result:
+  `docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -297,6 +305,8 @@ NAS (shared, corpus read-only in practice):
   `/nas3/data/axeyum/harness/e3-gate/live-1784740048714236679-84b40626d845/`;
 - accepted E3 source bundle:
   `/nas3/data/axeyum/harness/e3-gate/source-bundles/83e9f5e5ec37c0ecb0a62b0da730c6ed99c465bcfd6fab76a7086b07423b8b05/`.
+- verified SMT-LIB 2025.08.04 S2 corpus acquisition:
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/corpus-acquisition-1784745749642951377-d48fb0dc/`.
 
 ---
 
@@ -308,11 +318,11 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Take the independent official selection-identity ledger next. Keep the v2
+4. Continue the independent official selection-identity ledger. Keep the v2
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
-   necessary correction. S0 and S1a are complete; run the committed ADR-0356
-   S1b audit next and do not observe the official selection before that
-   selection-free full-input audit passes.
+   necessary correction. S0--S2 are complete and the official sample remains
+   unobserved. Commit and push the S3 producer and repetition gate before its
+   first live invocation, then close the independent S4 decision/file audit.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 

@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0/S1a complete; S1b live selection-free input audit pending
+Status: S0--S2 complete; S3 pinned official producer next
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -196,7 +196,7 @@ into 2,709 new and 43,196 old quota slots. A fresh-process audit rehashed every
 input and completion dependency and reconstructed all counts. The compact
 [S1b result](smtcomp-official-selection-input-audit-s1b-2026-07-22.md) records
 the artifact roots and retained negatives. `selection_observed=false`; S2 is
-next.
+now complete below.
 
 ### S2 — verified corpus acquisition
 
@@ -218,7 +218,17 @@ per-logic atomic promotion, and a disk-backed exact metadata/tree join. It
 emits `archives.json`, a path-sorted 450,472-row `corpus.jsonl`, summary, and
 completion last. Three focused tests reject traversal, absolute/cross-logic
 paths, symlinks, hardlinks, unexpected roots, and linked inventory entries.
-The 41-test bounded SMT-COMP gate passes. A fresh 4.89 GB acquisition is next.
+The 41-test bounded SMT-COMP gate passes.
+
+**S2 result:** complete. The fresh acquisition at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/corpus-acquisition-1784745749642951377-d48fb0dc`
+verified all 90 release files and 4,890,207,406 compressed bytes, safely
+materialized 89 logic trees, and proved an exact 450,472-file,
+82,270,961,563-byte metadata/tree bijection. A separate fresh process rehashed
+every retained archive and extracted file and reconstructed the canonical
+ledger and completion dependencies. The compact
+[S2 result](smtcomp-official-selection-corpus-s2-2026-07-22.md) records the
+artifact roots. `selection_observed=false`; S3 is next.
 
 ### S3 — pinned official producer
 
@@ -269,7 +279,9 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Commit and push the S1b runner, then execute it into a fresh directory below
-`/nas3/data/axeyum/harness/official-selection-2026-sq/` and publish the compact
-selection-free result. Do not download/extract the full Zenodo release or
-observe the official selected population until that audit passes.
+Implement, test, commit, and push the S3 pinned official producer before its
+first live invocation. It must materialize and verify the frozen organizer
+bundle, derive exact package identities from `poetry.lock`, create caches and
+export Single Query selection with Polars 1.39.2, then repeat in a second fresh
+environment. Treat any repetition drift as a blocker; do not choose between
+outputs.
