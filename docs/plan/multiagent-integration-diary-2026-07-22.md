@@ -236,6 +236,22 @@ are the failure modes that bite an unattended multi-host sweep. The lane is
 paying down operational risk before turning the full 64k-file run loose, so the
 resulting parity map is trustworthy rather than corrupted by harness faults.
 
+### Cycle 10 (heartbeat ~13:00 EDT) — no merge; two deep-work lanes
+
+- **Lean** → M3 grammar, **~899 lines in flight** (`inductive.rs` + `inductive_tests.rs`
+  + new `nested_inductive_grammar.rs`). A large commit is brewing; will get a
+  TL2.14-grade review (kernel soundness + negative/transactional coverage) on landing.
+- **CAS** → **WATCH-ITEM:** ~2 h on the next hypergeometric tier (`₃F₂`
+  Dixon/Saalschütz past Vandermonde); WIP churned **123→36 lines** (tried a
+  larger approach, backed it out, iterating leaner). Signature of a genuinely
+  hard problem, not a hang — WZ certificate discovery for `₃F₂`-class sums is a
+  real step up from the squared-Γ ratio. Not interfering (lane autonomy); will
+  review carefully when it commits. If it stays silent for another ~2 h I'll note
+  a possible block for your attention.
+- **SMT** → E3 hardening, at rest (0 WIP) after the batch.
+
+**s4:** `2667/8043`, WRONG=2 (stale binary). **Health:** green, 35 °C.
+
 ---
 
 ## Cycle log
