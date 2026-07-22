@@ -302,6 +302,43 @@ pub enum KernelError {
         /// The offending constructor.
         ctor: crate::name::NameId,
     },
+    /// An already admitted container application mentions the expanding
+    /// inductive group in its parameters but does not supply the container's
+    /// complete parameter prefix.
+    NestedInductiveIncompleteApplication {
+        /// The existing container family at the application head.
+        container: crate::name::NameId,
+    },
+    /// A nested container parameter contains a loose de Bruijn variable at the
+    /// discovery site. Pinned Lean rejects this before expanded admission.
+    NestedInductiveLooseParameter {
+        /// The existing container family at the application head.
+        container: crate::name::NameId,
+    },
+    /// Previously checked container metadata cannot be reconstructed into the
+    /// complete specialized auxiliary group required by nested elimination.
+    NestedInductiveMalformedContainer {
+        /// The existing container family that could not be copied exactly.
+        container: crate::name::NameId,
+    },
+    /// Deterministic fixed-point expansion exceeded its registered auxiliary-
+    /// family bound.
+    NestedInductiveExpansionLimit {
+        /// Maximum number of auxiliary families permitted in one declaration.
+        limit: usize,
+    },
+    /// A temporary auxiliary family, constructor, or recursor remained in a
+    /// restored public type or computation rule.
+    NestedInductiveRestorationLeak {
+        /// The leaked temporary declaration name.
+        name: crate::name::NameId,
+    },
+    /// Restoration produced a public constructor contract that is not
+    /// definitionally equal to the source declaration it is meant to expose.
+    NestedInductiveRestorationMismatch {
+        /// The public declaration whose restored contract changed.
+        name: crate::name::NameId,
+    },
     /// A constructor's type used a `Pi` whose result was not an application of
     /// the parent inductive's constant head, or was otherwise malformed for the
     /// parametric scope (e.g. a wrong parameter prefix or an indexed result).
