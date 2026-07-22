@@ -1,8 +1,8 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
 **This folder is the single entry point for the SMT-COMP measurement,
-full-library inventory, and gap-closing lane.** Updated 2026-07-22 after E3
-three-host loss/retry durability and the second full-library soundness finding.
+full-library inventory, and gap-closing lane.** Updated 2026-07-22 after the S4
+independent selection auditor was preregistered and before its first live use.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -66,8 +66,11 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   S3 is complete: after its implementation was committed and pushed, two fresh
   88-file no-Git bundles and hash-required 14-package environments generated
   byte-identical official 45,905-path selections (2,709 new / 43,196 old).
-  A fresh standard-library process rehashed both complete runs. S4's complete
-  independent decision and selected-file audit is next.
+  A fresh standard-library process rehashed both complete runs. The S4
+  standard-library auditor is implemented and live-blocked on commit/push. It
+  streams the full S1/S2 join, checks all terminal reasons and per-logic quotas,
+  rehashes all selected files, and requires a fresh reconstruction of the
+  content-addressed result; the live audit is next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -249,8 +252,9 @@ gate.
 ## 5. Remaining work, in dependency order
 
 1. **Selection identity.** S0--S3 now close authority, eligibility, release,
-   exact corpus bytes, and twice-repeated official production. Implement the
-   independent final decision/selected-file audit in S4. Keep this policy
+   exact corpus bytes, and twice-repeated official production. Commit and push
+   the implemented independent S4 auditor, then execute and freshly verify the
+   final decision/selected-file audit. Keep this policy
    artifact separate from the E1b execution ledger. Follow
    [the preregistered plan](../smtcomp-official-selection-identity-plan-2026-07-22.md)
    under proposed
@@ -330,9 +334,11 @@ NAS (shared, corpus read-only in practice):
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
    necessary correction. S0--S3 are complete and the official sample is now
    observed only through the twice-repeated pinned producer. Commit and push
-   the independent S4 auditor before closing the decision/file audit.
+   the independent S4 auditor before closing the decision/file audit. The
+   implementation and focused mutations are ready; the next action is its
+   preregistration commit/push followed by one fresh live build and verify.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
-*Owner: SMT-COMP measurement/full-library lane. Next milestone: independent
-official selection identity, not another large run.*
+*Owner: SMT-COMP measurement/full-library lane. Next milestone: commit/push,
+then execute and freshly verify S4; not another large run.*

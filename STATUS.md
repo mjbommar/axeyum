@@ -383,6 +383,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — the independent ADR-0356 S4 selection auditor is
+  preregistered and remains live-blocked on commit/push.** The standard-library
+  implementation streams all 450,472 S1 eligibility and S2 corpus rows in
+  lockstep, joins the twice-repeated S3 membership, checks the closed seven-
+  reason partition and exact per-logic new/old quotas, and physically rehashes
+  all 45,905 selected files. It publishes eleven required artifacts only after
+  the 18-invariant/18-mutation register passes, then requires a fresh-process
+  reconstruction of the complete corpus/history/decision join and a second
+  selected-file rehash. `QF_UFFP` is explicitly frozen at two
+  `excluded-trivial` rows, zero eligible rows, zero cap, and zero selections;
+  the earlier S3 note incorrectly attributed its absence to the competitive-
+  logic gate and is corrected. Next: pass the bounded repository gates, commit
+  and push this implementation, then perform the first live S4 build and fresh
+  verification. No solver execution is admitted yet.
+
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
   `(2n)ₘ` denominator is now removed from each Stirling term before polynomial
@@ -7469,6 +7484,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered the live-blocked ADR-0356 S4 auditor.** The new
+  independent standard-library path validates exact prior-stage artifact sets,
+  performs the full path-sorted decision/corpus/history join, checks per-logic
+  quotas against the official producer, and rehashes every selected file. It
+  publishes completion last to a completion-hash-addressed root; verify mode
+  reconstructs all 450,472 rows and rehashes the selected population again.
+  Six focused tests cover the closed terminal-reason map, cross-stage field and
+  byte identities, the zero-selected trivial `QF_UFFP` case, canonical selected
+  order, published-decision drift, and all 18 registered rejecting mutations.
+  The implementation remains live-blocked until this commit is pushed.
 
 - **2026-07-22 — Completed the twice-repeated ADR-0356 S3 official producer.**
   The first live attempt ran only after implementation commit `38c5f2af` was
