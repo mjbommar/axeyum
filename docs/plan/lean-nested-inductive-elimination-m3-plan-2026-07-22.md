@@ -34,6 +34,31 @@ Production code changes are forbidden unless a preregistered mutant survives
 both transactional rejection and independent observation. Any such change is
 a stop-and-review event, not an invitation to add a second checker.
 
+## Stop-and-review amendment: temporary-artifact integrity
+
+The independent M3 audit reached the preregistered stop condition before the
+semantic checkpoint was committed. Malformed temporary constructor
+owner/index/type metadata was not consumed by the M2 restoration path and
+therefore could survive without either transactional rejection or a public
+observer difference. M3 publication remains blocked until those mutations are
+rejected.
+
+The reviewed scope is amended to permit one bounded production change in
+`crates/axeyum-lean-kernel/src/inductive.rs`: preserve the expansion universe
+parameter list and validate the already-checked temporary declaration surface
+against the expansion artifact immediately before restoration. The validation
+is limited to exact family/constructor names and order, unique specialization
+keys, restoration-map completeness, temporary family/constructor metadata,
+and deterministic freshness state. It does not reimplement positivity,
+recursor construction, inference, or declaration admission; the ordinary
+inductive worker remains the only semantic checker.
+
+This amendment does not relax any M3 gate. Swapped/dropped/duplicated
+auxiliaries, shifted freshness, malformed temporary constructor metadata, and
+missing restoration maps must reject with complete environment rollback and a
+valid retry. All original public-observer, generated-grammar, resource, M4
+boundary, and retained-control requirements remain binding.
+
 ## Frozen generator identity
 
 - schema: `axeyum-lean-nested-inductive-grammar-v1`;
