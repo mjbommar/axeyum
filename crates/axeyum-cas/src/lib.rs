@@ -7377,9 +7377,47 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     // Series fallback for transcendental `0/0` forms at a finite point
     // (`sin x/x → 1`, `(1−cos x)/x² → 1/2`, `(eˣ−1)/x → 1`).
     if let LimitPoint::Finite(a) = point {
-        return limit_via_series(expr, var, a);
+        if let Some(value) = limit_via_series(expr, var, a) {
+            return Some(value);
+        }
+        // L'Hôpital for `0/0` forms the rational-coefficient series can't reach —
+        // e.g. `(aˣ−1)/x → ln a`, whose numerator has a transcendental `ln a` term.
+        return limit_lhopital(expr, var, a, 4);
     }
     None
+}
+
+/// **L'Hôpital's rule** for a `0/0` quotient at a finite point: if `f(a) = g(a) =
+/// 0`, then `lim f/g = lim f′/g′`. Applied up to `depth` times. Handles `0/0` forms
+/// beyond the rational-coefficient series fragment (`(aˣ−1)/x → ln a`). `None` if
+/// `expr` is not a `0/0` quotient or the derivative limit is not found within depth.
+fn limit_lhopital(expr: &CasExpr, var: &str, a: Rational, depth: u32) -> Option<CasExpr> {
+    if depth == 0 {
+        return None;
+    }
+    // Use the raw quotient (not `cancel`, which atomizes `exp`/`ln` into opaque
+    // atoms that `substitute` cannot evaluate for the vanishing check).
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    // Both numerator and denominator must vanish at `a` (a genuine 0/0 form).
+    let at_a = |f: &CasExpr| {
+        simplify(&fold_elementary_constants(&f.substitute(var, &CasExpr::Const(a))))
+    };
+    let vanishes = |f: &CasExpr| {
+        matches!(equal(&at_a(f), &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+    };
+    if !vanishes(numerator) || !vanishes(denominator) {
+        return None;
+    }
+    let ratio = numerator.differentiate(var) / denominator.differentiate(var);
+    // Try to evaluate the derivative ratio directly at `a`; if that is again `0/0`,
+    // recurse. Substitution (folded) resolves the common `f′(a)/g′(a)` closed form.
+    let direct = simplify(&fold_elementary_constants(&ratio.substitute(var, &CasExpr::Const(a))));
+    if !expr_contains_var(&direct, var) && evalf(&direct, &[]).is_some_and(f64::is_finite) {
+        return Some(direct);
+    }
+    limit(&ratio, var, LimitPoint::Finite(a)).or_else(|| limit_lhopital(&ratio, var, a, depth - 1))
 }
 
 /// Limit at `x → 0⁺` of a product/quotient of `x`-powers and `ln x`-powers: the
@@ -13516,6 +13554,15 @@ mod tests {
             &limit(&((CasExpr::int(3) * x()).sin() / x()), "x", at0).unwrap(),
             &CasExpr::int(3),
         );
+        // L'Hôpital for a 0/0 form beyond the rational-coefficient series fragment:
+        // (2ˣ − 1)/x → ln 2 (numerator's derivative carries the transcendental ln 2).
+        assert!(matches!(
+            equal(
+                &limit(&(((x() * CasExpr::int(2).ln()).exp() - CasExpr::int(1)) / x()), "x", at0).unwrap(),
+                &CasExpr::int(2).ln(),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // A `(1/g)·f` (Mul) spelling must reduce like `f/g` (Div): (1/x²)·ln(cos x)
         // → −1/2, so (cos x)^{1/x²} = exp((1/x²)ln cos x) → e^{−1/2}.
         assert_equal(
