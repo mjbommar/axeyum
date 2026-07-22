@@ -113,6 +113,10 @@ overlap. A later allocation may repeat only shards owned by the exact failed
 allocation it names. Retry capacity is preregistered; the coordinator cannot
 invent a new host after failure.
 
+Before any host launch, the coordinator creates the complete fixed run
+namespace on the shared filesystem. Hosts therefore contend only on immutable
+file installation, not on concurrent cross-client directory creation.
+
 ### Allocation attempt
 
 Schema: `axeyum.smtcomp-host-allocation-attempt.v1`

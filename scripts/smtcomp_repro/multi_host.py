@@ -190,6 +190,26 @@ COMPLETION_FIELDS = {
     "completed_at_ns",
     "record_sha256",
 }
+RUN_DIRECTORIES = (
+    "assignments",
+    "attempts",
+    "completions",
+    "records",
+    "terminals",
+    "outputs",
+    "outputs/stdout",
+    "outputs/stderr",
+    "leases",
+    "quarantine",
+    "resource-sessions",
+    "multi-host-commands",
+    "multi-host-attempts",
+    "multi-host-terminals",
+    "multi-host-outputs",
+    "multi-host-outputs/stdout",
+    "multi-host-outputs/stderr",
+    "multi-host-recoveries",
+)
 FILESYSTEM_FIELDS = {
     "source",
     "filesystem_type",
@@ -670,6 +690,26 @@ def validate_plan(
     elif set(fault) != {"kind"}:
         raise ContractError("none fault injection field set mismatch")
     return plan
+
+
+def prepare_run_directory(
+    *, plan: dict[str, Any], run: dict[str, Any], run_dir: Path
+) -> None:
+    """Create the exact shared namespace before concurrent hosts are launched."""
+
+    validate_plan(plan, run)
+    shared_root = Path(plan["shared_root"]).resolve(strict=True)
+    resolved = run_dir.resolve()
+    try:
+        resolved.relative_to(shared_root)
+    except ValueError as exc:
+        raise ContractError("multi-host run directory escapes the shared root") from exc
+    resolved.mkdir(mode=0o755, parents=True, exist_ok=True)
+    for relative in RUN_DIRECTORIES:
+        directory = resolved / relative
+        directory.mkdir(mode=0o755, parents=True, exist_ok=True)
+        if directory.is_symlink() or not directory.is_dir():
+            raise ContractError(f"invalid prepared multi-host directory: {relative}")
 
 
 def stage_execution_bundle(
@@ -1901,6 +1941,7 @@ __all__ = [
     "host_registration",
     "kill_remote_launcher",
     "local_host_observation",
+    "prepare_run_directory",
     "recover_failed_shard",
     "remote_probe",
     "shared_filesystem_observation",
