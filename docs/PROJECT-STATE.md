@@ -284,7 +284,11 @@ Again, there are distinct targets:
   compatibility. The next [workflow-profile result](plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md)
   derives 17 event contexts, 153 matrix cells, 111 declared CTest attempts, and
   eight exact selection sets. Every attempt remains `not-run`; this closes
-  configuration identity, not Lean execution or Axeyum parity.
+  configuration identity, not Lean execution or Axeyum parity. The subsequent
+  [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
+  defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
+  immutable completion-last evidence. Its five controls are synthetic and all
+  real execution counters remain zero.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

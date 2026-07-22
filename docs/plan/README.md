@@ -86,6 +86,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   nineteen mutation classes, and zero execution credit. It separates the
   machine contract, bounded process adapter, durable store, and no-credit
   controls before TL0.6.3 can begin.
+- [`lean-execution-evidence-tl0.7.1-2026-07-22.md`](lean-execution-evidence-tl0.7.1-2026-07-22.md),
+  [`lean-execution-evidence-v1.json`](lean-execution-evidence-v1.json), and
+  generated [Markdown](generated/lean-execution-evidence.md)/
+  [JSON](generated/lean-execution-evidence.json) — TL0.7.1's two explicit lane
+  templates, twelve typed termination classes, exact immutable record
+  contracts, five synthetic lifecycle controls, and nineteen mutation classes.
+  All real execution and parity counters remain zero; TL0.7.2 process behavior
+  is next.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

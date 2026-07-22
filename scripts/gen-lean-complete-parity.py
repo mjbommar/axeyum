@@ -30,6 +30,7 @@ CONSTRUCT_MATRIX = ROOT / "docs" / "plan" / "lean-official-construct-matrix-v1.j
 AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
+EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -648,6 +649,29 @@ def u2_ci_profile_snapshot() -> dict[str, Any]:
     }
 
 
+def execution_evidence_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_execution_evidence_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-execution-evidence.py",
+    )
+    data = load_json(EXECUTION_EVIDENCE)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError("invalid Lean execution evidence authority: " + "; ".join(failures))
+    report = checker.summarize(data)
+    return {
+        "scope": data["scope"],
+        "lane_policies": len(report["lane_policies"]),
+        "termination_classes": len(report["termination_classes"]),
+        "synthetic_controls": len(report["synthetic_controls"]),
+        "mutation_classes": len(report["mutation_classes"]),
+        "all_synthetic_controls_valid": all(
+            item["valid"] for item in report["synthetic_controls"]
+        ),
+        "observed": report["observed"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -667,6 +691,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         AXIOM_LEDGER,
         U2_AUTHORITY,
         U2_CI_PROFILES,
+        EXECUTION_EVIDENCE,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
@@ -675,6 +700,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_test_authority.py",
         ROOT / "scripts" / "gen-lean-u2-official-ci-profiles.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_ci_profiles.py",
+        ROOT / "scripts" / "gen-lean-execution-evidence.py",
+        ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -704,6 +731,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "axiom_ledger": axiom_snapshot(),
             "u2_test_authority": u2_test_snapshot(),
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
+            "execution_evidence_authority": execution_evidence_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -774,6 +802,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     axioms = bounded["axiom_ledger"]
     u2_tests = bounded["u2_test_authority"]
     u2_ci = bounded["u2_ci_profile_authority"]
+    execution = bounded["execution_evidence_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -836,6 +865,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_ci['derivation']['selection_sets']} exact selection sets; "
             f"{u2_ci['outcomes']['official_executed_attempts']} official executions "
             "and zero parity credit.",
+            f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
+            f"{execution['termination_classes']} termination classes, "
+            f"{execution['synthetic_controls']} synthetic controls, and "
+            f"{execution['mutation_classes']} mutation classes; "
+            f"{execution['observed']['real_runs']} real runs and zero parity credit.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

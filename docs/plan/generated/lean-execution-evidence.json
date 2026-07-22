@@ -1,0 +1,233 @@
+{
+  "schema": "axeyum-lean-execution-evidence-report-v1",
+  "generated_from": "docs/plan/lean-execution-evidence-v1.json",
+  "generated_from_sha256": "1cb68d9ebbfe17beccace8b3d233b756a3fc465567881f4d3d5a8902b1e08c41",
+  "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
+  "preregistration": {
+    "commit": "ff8f8dd4b71c3c488ce53229f4301527d5e9d360",
+    "published_before_implementation": true,
+    "plan_sha256": "0f38bb7944de77a0df28d122c9c1190af3865c8ecc9778cc243135df191f0c37"
+  },
+  "lane_policies": [
+    {
+      "id": "standard-local-4g",
+      "purpose": "bounded local development and contract evidence",
+      "producer_class": "local-process",
+      "memory_limit_bytes": 4294967296,
+      "memory_scope": "per-process-address-space",
+      "memory_enforcement": "explicit-rlimit-as",
+      "required_mem_limit_gb": 4,
+      "worker_limit": 2,
+      "durability_class": "contract-only-until-tl0.7.3",
+      "credit_class": "development-only"
+    },
+    {
+      "id": "official-export-8g",
+      "purpose": "bounded official Lean exporter adapter",
+      "producer_class": "official-adapter-process",
+      "memory_limit_bytes": 8589934592,
+      "memory_scope": "per-process-address-space",
+      "memory_enforcement": "explicit-rlimit-as",
+      "required_mem_limit_gb": 8,
+      "worker_limit": 1,
+      "durability_class": "contract-only-until-tl0.7.3",
+      "credit_class": "adapter-export-only"
+    }
+  ],
+  "termination_classes": [
+    "exited",
+    "signaled",
+    "wall-timeout",
+    "cpu-timeout",
+    "memory-limit",
+    "pids-limit",
+    "disk-limit",
+    "cancelled",
+    "runner-lost",
+    "launch-failed",
+    "preflight-invalid",
+    "unknown-termination"
+  ],
+  "record_field_counts": {
+    "run": 22,
+    "attempt": 8,
+    "attempt_terminal": 8,
+    "case": 8,
+    "artifact": 9,
+    "completion": 10,
+    "credits": 7
+  },
+  "checkpoint_policy": {
+    "canonical_json": true,
+    "self_hashes": true,
+    "temporary_same_directory": true,
+    "flush_and_fsync_file": true,
+    "atomic_install": true,
+    "fsync_directory": true,
+    "overwrite_existing": false,
+    "duplicate_is_conflict": true,
+    "resume_skips_only_valid_record": true,
+    "completion_installed_last": true,
+    "junit_is_sidecar_not_authority": true,
+    "ctest_failover_is_not_checkpoint_authority": true
+  },
+  "credit_predicates": [
+    "prelaunch-run-identity-required",
+    "all-and-only-assigned-cases-required",
+    "raw-artifact-and-case-record-required",
+    "resource-classification-requires-enforcement-evidence",
+    "all-attempts-including-terminal-less-accounted",
+    "actual-platform-identity-required",
+    "matched-effective-resources-required-for-performance",
+    "adapter-evidence-cannot-fill-native-profile",
+    "incomplete-or-invalid-zero-credit",
+    "synthetic-controls-zero-credit"
+  ],
+  "synthetic_controls": [
+    {
+      "id": "clean-complete",
+      "detail": "two passed cases and completion-last closure",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "failed-case-complete",
+      "detail": "one passed and one failed case retained in a complete run",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "interrupted-resumed",
+      "detail": "terminal-less first attempt retained beside a completing retry",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "incomplete",
+      "detail": "partial diagnostic bundle with no completion or credit",
+      "valid": true,
+      "failures": []
+    },
+    {
+      "id": "preflight-invalid",
+      "detail": "preflight-invalid attempt with no launched cases or credit",
+      "valid": true,
+      "failures": []
+    }
+  ],
+  "mutation_classes": [
+    {
+      "id": "source-identity-drift",
+      "detail": "source, schema, producer, or preregistration identity drift"
+    },
+    {
+      "id": "lane-policy-drift",
+      "detail": "lane cap, concurrency, purpose, enforcement, or credit-class drift"
+    },
+    {
+      "id": "implicit-wrapper-default",
+      "detail": "64 GiB wrapper default presented as an explicit 4/8 GiB lane"
+    },
+    {
+      "id": "malformed-resource",
+      "detail": "missing, zero, unitless, or contradictory resource field"
+    },
+    {
+      "id": "runner-substitution",
+      "detail": "runner label substituted without actual platform identity"
+    },
+    {
+      "id": "run-identity-drift",
+      "detail": "command, environment, directory, selection, or resource change under one run ID"
+    },
+    {
+      "id": "attempt-closure",
+      "detail": "attempt omission, duplication, sequence drift, or invalid assignment overlap"
+    },
+    {
+      "id": "guessed-termination",
+      "detail": "OOM, timeout, or signal class without matching evidence"
+    },
+    {
+      "id": "case-closure",
+      "detail": "missing, duplicate, unexpected, reordered, or identity-drifted case"
+    },
+    {
+      "id": "case-attribution",
+      "detail": "case attributed to the wrong attempt or selection set"
+    },
+    {
+      "id": "artifact-identity",
+      "detail": "stdout, stderr, JUnit, diagnostic, or controller hash/size drift"
+    },
+    {
+      "id": "sidecar-only-completion",
+      "detail": "JUnit or provider conclusion substituted for case closure"
+    },
+    {
+      "id": "artifact-retention",
+      "detail": "provider artifact lacks expiry and durable-copy identity"
+    },
+    {
+      "id": "checkpoint-conflict",
+      "detail": "duplicate, overwritten, conflicting, or self-hash-reused checkpoint"
+    },
+    {
+      "id": "completion-order",
+      "detail": "completion installed early or names a wrong record-set digest"
+    },
+    {
+      "id": "lost-attempt",
+      "detail": "resumed completion omits an earlier terminal-less attempt"
+    },
+    {
+      "id": "incomplete-credit",
+      "detail": "incomplete or invalid bundle receives result, denominator, performance, or parity credit"
+    },
+    {
+      "id": "profile-promotion",
+      "detail": "adapter/export evidence promoted to native-system credit"
+    },
+    {
+      "id": "contract-outcome",
+      "detail": "contract-only authority carries a real outcome or terminal promotion"
+    }
+  ],
+  "observed": {
+    "real_runs": 0,
+    "executed_attempts": 0,
+    "completed_cases": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0
+  },
+  "milestones": [
+    {
+      "id": "TL0.7.1",
+      "state": "contract-only"
+    },
+    {
+      "id": "TL0.7.2",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.7.3",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.7.4",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.6.3",
+      "state": "blocked-on-tl0.7"
+    }
+  ],
+  "residual": [
+    "Implement forced process exit, signal, timeout, and evidence-backed limit capture in TL0.7.2.",
+    "Prove immutable filesystem checkpoints, conflict handling, kill/resume, and completion-last publication in TL0.7.3.",
+    "Run no-credit pinned-Lean and official-export controls in TL0.7.4 before any U2 execution."
+  ],
+  "verdict": "execution evidence contract represented; no process or parity outcome observed"
+}

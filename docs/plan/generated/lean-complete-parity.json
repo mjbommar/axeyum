@@ -4,7 +4,11 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "421eac9c56f6b2e51c76fff4495b8d5d81c0936bc2800cda5c96732e7766cb61"
+      "sha256": "b73d19776268c3016595bc80f161ae6fe7c8ba45626ab0ac2dfabe7c892189df"
+    },
+    {
+      "path": "docs/plan/generated/lean-execution-evidence.md",
+      "sha256": "8b74124117f6bb1293218b492af8eb381991d04249fd9a00aa47a82e0d6cf0d8"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
@@ -24,7 +28,15 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "f2fc71509b4f557265a853ebb7666071b7b67d8553c0951ae1f91b736059ab78"
+      "sha256": "e481b4769b85bd2737003320829a8f4b2c3d979e999746050f312acdfc9b6934"
+    },
+    {
+      "path": "docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md",
+      "sha256": "322492f9a9a40de4a66fd9212dc5cf70a12722b7858fdd0e490cd886c46764ed"
+    },
+    {
+      "path": "docs/plan/lean-execution-evidence-v1.json",
+      "sha256": "1cb68d9ebbfe17beccace8b3d233b756a3fc465567881f4d3d5a8902b1e08c41"
     },
     {
       "path": "docs/plan/lean-official-construct-matrix-v1.json",
@@ -32,7 +44,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "1e23a4e77be3c4ee348b7c19f88511254045ae17a53c102a5f64ba9384981de4"
+      "sha256": "e8a4f6cbc7372a9524f97361f3a30cd6adc1750aaacfe221079d9b07c6867a24"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -48,11 +60,15 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "482347f2bca5e652d784cd01c5c5aa96af0803d9cc77e14e0756763c460dd113"
+      "sha256": "c2f3e63d0105900a8320c2a3d8ffb7a8daf43d360dcb14b829a53ba712f30bc6"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "f5356d9f57c4d44035aac86f5af390bb51835afc2e59b0ca6be8674ba2d3813e"
+      "sha256": "c8f58881f9ad241d4b42723bb36123e3e4da69af7c1ef1a05fe274abdada5e9f"
+    },
+    {
+      "path": "scripts/gen-lean-execution-evidence.py",
+      "sha256": "5112cfe9d7cf7dcb3b28da2d6001abaa52e1227b86ab6f5443b9f1e08646e36c"
     },
     {
       "path": "scripts/gen-lean-u2-official-ci-profiles.py",
@@ -68,7 +84,11 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "f2973c2a7f840e006559503778ff6f913072cd98d4c348d1450bd803c0080636"
+      "sha256": "0cea3dcf9959c0d9baecb03884a08c28cd4ce07de393beaa5a899b11dfe2d7c2"
+    },
+    {
+      "path": "scripts/tests/test_lean_execution_evidence.py",
+      "sha256": "3c730211a4b1c125a4ad0a0cd18d58e3f5f8bfcce374b0dc60a19248c0a800b3"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
@@ -320,11 +340,28 @@
         "state": "not-run"
       }
     },
+    "execution_evidence_authority": {
+      "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
+      "lane_policies": 2,
+      "termination_classes": 12,
+      "synthetic_controls": 5,
+      "mutation_classes": 19,
+      "all_synthetic_controls_valid": true,
+      "observed": {
+        "real_runs": 0,
+        "executed_attempts": 0,
+        "completed_cases": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "performance_rows": 0
+      }
+    },
     "implementation_tasks": {
       "rows": 140,
       "status_counts": {
-        "DONE": 22,
-        "PARTIAL": 7,
+        "DONE": 23,
+        "PARTIAL": 6,
         "TODO": 111,
         "BLOCKED": 0
       }
@@ -410,11 +447,23 @@
           "detail": "TL0.6.2 result, reproduction commands, exact corrections, assurance boundary, and TL0.6.3 handoff."
         },
         {
+          "path": "docs/plan/lean-execution-evidence-v1.json",
+          "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
+        },
+        {
+          "path": "docs/plan/generated/lean-execution-evidence.md",
+          "detail": "Generated two-lane, twelve-termination, five-control, nineteen-mutation review surface with no process credit."
+        },
+        {
+          "path": "docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md",
+          "detail": "TL0.7.1 result, source-first order, corrections, non-claims, and process/durability handoff."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence, then implement and run matched native Axeyum cases; profile derivation alone is not complete U2 authority."
+      "residual": "Implement TL0.7.2-TL0.7.4 process/durability controls, then execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence and matched native Axeyum cases; contract/profile derivation alone is not complete U2 authority."
     },
     {
       "id": "U3",

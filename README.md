@@ -114,6 +114,9 @@ The next bounded checkpoint derives the pinned workflow into
 [17 contexts, 153 cells, 111 declared CTest attempts, and eight exact selection
 sets](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md), while all
 attempts remain not-run and all parity counters remain zero.
+The prerequisite [execution-evidence contract](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
+now freezes explicit resource lanes, typed terminations, immutable attempts and
+completion-last records, but still records zero real runs or outcomes.
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 

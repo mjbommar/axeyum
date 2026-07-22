@@ -414,9 +414,12 @@ state.
 > preregisters explicit 4 GiB standard/8 GiB exporter lanes, concrete
 > run/resource identity, twelve termination classes, immutable attempt/case/
 > completion records, completion-last resume, nineteen mutation classes, and
-> the no-execution boundary. Implementation, process/durability controls, and
-> all official outcomes remain open; exact paired records remain later
-> TL0.6.5 work.
+> the no-execution boundary. TL0.7.1's
+> [result](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md) now closes
+> the machine authority with two lanes, five synthetic lifecycle controls,
+> twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior,
+> TL0.7.3 durability, TL0.7.4 no-credit controls, and all official outcomes
+> remain open; exact paired records remain later TL0.6.5 work.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

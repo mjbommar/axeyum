@@ -32,6 +32,8 @@ step lean-u2-test-authority-tests python3 -m unittest scripts.tests.test_lean_u2
 step lean-u2-test-authority python3 scripts/gen-lean-u2-test-authority.py --check
 step lean-u2-ci-profile-tests python3 -m unittest scripts.tests.test_lean_u2_official_ci_profiles
 step lean-u2-ci-profiles python3 scripts/gen-lean-u2-official-ci-profiles.py --check
+step lean-execution-evidence-tests python3 -m unittest scripts.tests.test_lean_execution_evidence
+step lean-execution-evidence python3 scripts/gen-lean-execution-evidence.py --check
 step lean-complete-parity-tests python3 -m unittest scripts.tests.test_lean_complete_parity
 step lean-complete-parity python3 scripts/gen-lean-complete-parity.py --check
 step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_official_construct_matrix

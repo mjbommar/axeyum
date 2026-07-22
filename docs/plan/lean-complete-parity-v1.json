@@ -92,11 +92,23 @@
           "detail": "TL0.6.2 result, reproduction commands, exact corrections, assurance boundary, and TL0.6.3 handoff."
         },
         {
+          "path": "docs/plan/lean-execution-evidence-v1.json",
+          "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
+        },
+        {
+          "path": "docs/plan/generated/lean-execution-evidence.md",
+          "detail": "Generated two-lane, twelve-termination, five-control, nineteen-mutation review surface with no process credit."
+        },
+        {
+          "path": "docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md",
+          "detail": "TL0.7.1 result, source-first order, corrections, non-claims, and process/durability handoff."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence, then implement and run matched native Axeyum cases; profile derivation alone is not complete U2 authority."
+      "residual": "Implement TL0.7.2-TL0.7.4 process/durability controls, then execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence and matched native Axeyum cases; contract/profile derivation alone is not complete U2 authority."
     },
     {
       "id": "U3",
