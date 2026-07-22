@@ -12,11 +12,13 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Branch/worktree discipline:** follow the current
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
-  branch, and leave `main` to the integration owner.
-- **Tests:** `522` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+  branch, and leave `main` to the integration owner. The current increment is
+  `agent/cas/raw-moment-order-twenty`, stacked on CAS parent `f08e97ef`; do not
+  rebase it onto `main` ahead of the integration owner.
+- **Tests:** `524` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adv**). Keep both in sync when landing features.
+  latest is **Entry 37adw**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -29,9 +31,14 @@ Everything runs in the axeyum worktree:
 
 ```bash
 # The full gate before any commit:
-cargo test  -p axeyum-cas          # unit + doctests
-cargo clippy -p axeyum-cas --all-targets
-cargo build -p axeyum-cas --target wasm32-unknown-unknown   # must stay wasm-safe
+: "${AXEYUM_CAS_TMP:?create AXEYUM_CAS_TMP with the guarded setup below}"
+CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
+CARGO_BUILD_JOBS=1 cargo clippy --workspace --all-targets --all-features --jobs 1 -- -D warnings
+CARGO_BUILD_JOBS=1 cargo build -p axeyum-cas --target wasm32-unknown-unknown --jobs 1
+RUSTDOCFLAGS="-D warnings" CARGO_BUILD_JOBS=1 cargo +stable doc -p axeyum-cas --no-deps --jobs 1
+RUSTDOCFLAGS="-D warnings" CARGO_BUILD_JOBS=1 cargo doc -p axeyum-cas --no-deps --jobs 1
+./scripts/check-links.sh
+git diff --check
 ```
 
 ### Critical gotcha: `TMPDIR`
@@ -39,9 +46,13 @@ The tmpfs `/tmp` hits **"Disk quota exceeded"** when the ~147 doctests link
 concurrently. **Always** point `TMPDIR` at a roomy disk:
 
 ```bash
-AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/tmp/axeyum-cas-full.XXXXXX)"
+case "$AXEYUM_CAS_TMP" in
+  /nas4/data/tmp/axeyum-cas-full.*) ;;
+  *) exit 2 ;;
+esac
 export AXEYUM_CAS_TMP
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas          # etc.
+trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 ```
 Without this, doctests fail with a spurious linker `LLVM ERROR: IO failure`.
 
@@ -132,7 +143,7 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), a direct squared-binomial falling-factorial family (regressed for
 orders `0..=33`), and Stirling-composed raw moments (regressed for orders
-`0..=19`). False near-misses correctly decline.
+`0..=33`). False near-misses correctly decline.
 
 ---
 
@@ -327,28 +338,33 @@ unchanged symbolic equality gate through order 33. Order 34 passes that symbolic
 gate too, then declines at the exact base case because `34!` exceeds the `i128`
 rational domain.
 
-The raw compositor forms all Stirling terms over the known common denominator
-`(2n)ₘ` and cancels a linear denominator factor only when exact polynomial
-division succeeds. It now constructs the remaining denominator directly from
-those known uncancelled factors and checks that their product reconstructs the
-computed monic denominator. The numerator path peels only exactly dividing
-small integer roots; if general factorization exhausts checked arithmetic on
-the residual, the exact residual is retained rather than rejecting a valid
-closed form.
+The raw compositor no longer expands every Stirling term over the full known
+common denominator `(2n)ₘ`. Before expansion, it removes every even factor
+`2n−2r`: either the matching complement factor is present, or one copy of
+`n−r` is removed from `(n)ⱼ²` and its scalar `2` is recorded. Each reduced term
+therefore retains only the odd common-denominator factors. Dense polynomial
+products and accumulation use exact `BigRational` intermediates, but the
+candidate declines unless every final coefficient converts back to the public
+checked-`i128` `Rational` representation. The prior exact odd-factor division,
+monic normalization, and compact residual factorization remain mandatory.
 
-The composite checker no longer expands one large sum of Gamma-valued component
-RHSs. It replays every component WZ proof, certifies the Stirling power identity,
-divides each stored component and the final closed form by the shared central
-binomial, cancels only the known `(2n)ⱼ` linear factors by exact division, and
-compares separately normalized monic numerator/denominator coefficient vectors.
-This structured exact route extends
-`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 19. Regressions cover raw orders
-`0..=19`, exact direct-sum samples, the explicit compact order-11 form, and
-tampered results, certificates, missing components, and the ceiling. Order 20
-is the first measured decline: all twenty falling-factorial WZ candidates
-construct, but normalization of common-numerator Stirling term 13 exceeds the
-checked `i128` polynomial domain. The separately bounded direct family remains
-at order 33, with order 34 blocked by `34! > i128::MAX` at its exact base case.
+The composite checker still replays every component WZ proof and independently
+certifies `k^m=ΣⱼS(m,j)(k)ⱼ`, now with exact bignum polynomial intermediates.
+Before expanding a central-binomial quotient, it lowers Gamma shifts, expands
+only bounded positive product powers, extracts exact polynomial leading
+scalars, makes factors monic, cancels structurally identical factors, and sorts
+the remaining factor lists deterministically. Structural equality closes the
+large but already factored cases; otherwise the prior exact monic
+numerator/denominator comparison remains the fail-closed fallback. This route
+extends `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 33. Regressions cover raw orders
+`0..=33`, exact direct-sum samples, the explicit compact order-11 form,
+pre-cancelled-term reconstruction, factor canonicalization, and tampered
+results, certificates, missing components, and the ceiling. Order 34 is now the
+shared boundary: its required falling-factorial component is outside the direct
+family because `34! > i128::MAX` at the exact base case. The independent
+concrete-sum control retains `n=8` through raw order 25; orders 26–33 use the
+nontrivial exact `n=2` sum because substituting their large factored forms at
+`n=8` exceeds the small `i128` equality checker's intermediate domain.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -369,14 +385,12 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Raw order 20 now has an exact boundary: common-numerator term 13 overflows
-   checked `i128` polynomial normalization even though all component WZ proofs
-   construct. Explore product-level common-factor extraction before expansion,
-   or choose a deliberate bignum polynomial path; do not weaken the structured
-   checker. Falling order 34 is likewise an explicit exact-value boundary
-   (`34! > i128::MAX`) and needs a deliberate bignum base checker. For fixed
-   shifts, investigate the `r=8` exact-growth decline only if a concrete use
-   needs it.
+   Falling and raw moments now share the order-33 ceiling. Order 34 passes the
+   falling family’s symbolic quotient gate, then both exact base routes decline
+   because `34! > i128::MAX`; raw order 34 must include that component. Decide
+   deliberately whether a bignum exact base evaluator is worth the added trusted
+   arithmetic surface before widening either family. For fixed shifts,
+   investigate the `r=8` exact-growth decline only if a concrete use needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -430,11 +444,17 @@ Design invariants (hold the line):
 
 ```bash
 cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
-AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/tmp/axeyum-cas-full.XXXXXX)"
+case "$AXEYUM_CAS_TMP" in
+  /nas4/data/tmp/axeyum-cas-full.*) ;;
+  *) exit 2 ;;
+esac
 export AXEYUM_CAS_TMP
+trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 522 + 147 green
+git merge-base --is-ancestor f08e97ef HEAD
+CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
+# → 524 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
