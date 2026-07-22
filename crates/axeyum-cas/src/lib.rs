@@ -2516,6 +2516,64 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     if roots.is_empty() { None } else { Some(roots) }
 }
 
+/// Solve a **homogeneous linear combination** `a·cos(m·var) + b·sin(m·var) = 0`
+/// (both `a, b ≠ 0`) by dividing through by `cos`: `tan(m·var) = −a/b`, solved via
+/// [`solve_trigonometric`]. Closes `cos x + sin x = 0 ⇒ {3π/4, 7π/4}`. `None` unless
+/// the equation is exactly that shape with a shared multiple angle and no constant.
+fn solve_linear_trig_combination(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let terms = match expr {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    let mut cos_coeff = Rational::zero();
+    let mut sin_coeff = Rational::zero();
+    let mut argument: Option<CasExpr> = None;
+    for term in &terms {
+        if constant_term(term).is_some() {
+            return None; // an inhomogeneous constant — not this shape
+        }
+        // Peel a leading negation (`sin x − cos x`).
+        let (core, sign) = match term {
+            CasExpr::Neg(inner) => ((**inner).clone(), Rational::integer(-1)),
+            other => (other.clone(), Rational::integer(1)),
+        };
+        let mut head: Option<UnaryFunc> = None;
+        let mut term_coeff = sign;
+        for factor in flatten_mul(&core) {
+            match factor {
+                CasExpr::Const(c) => term_coeff = term_coeff.checked_mul(c)?,
+                CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos), arg)
+                    if head.is_none() && expr_contains_var(&arg, var) =>
+                {
+                    // All trig heads must share the same argument `m·var`.
+                    if let Some(existing) = &argument {
+                        if existing != &*arg {
+                            return None;
+                        }
+                    } else {
+                        argument = Some((*arg).clone());
+                    }
+                    head = Some(f);
+                }
+                _ => return None,
+            }
+        }
+        match head? {
+            UnaryFunc::Cos => cos_coeff = cos_coeff.checked_add(term_coeff)?,
+            UnaryFunc::Sin => sin_coeff = sin_coeff.checked_add(term_coeff)?,
+            _ => return None,
+        }
+    }
+    if cos_coeff.is_zero() || sin_coeff.is_zero() {
+        return None; // a single head — `solve_trigonometric` already covers it
+    }
+    // a·cos θ + b·sin θ = 0 ⇒ b·tan θ + a = 0.
+    let theta = argument?;
+    let tan_equation =
+        scaled_term(sin_coeff, CasExpr::Unary(UnaryFunc::Tan, Box::new(theta))) + CasExpr::Const(cos_coeff);
+    solve_trigonometric(&tan_equation, var)
+}
+
 /// Replace every occurrence of the subexpression `target` in `expr` with
 /// `replacement` (structural equality). Used to treat `sin(var)` as a single
 /// unknown when solving a polynomial-in-trig equation.
@@ -2604,6 +2662,10 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Trigonometric equations `A·f(var)+C=0` (f ∈ {sin,cos,tan}) — principal
     // solutions in [0, 2π) from the special-angle table.
     if let Some(roots) = solve_trigonometric(expr, var) {
+        return Some(roots);
+    }
+    // Homogeneous linear combinations `a·cos(mx) + b·sin(mx) = 0` → `tan(mx) = −a/b`.
+    if let Some(roots) = solve_linear_trig_combination(expr, var) {
         return Some(roots);
     }
     // Polynomials in a single trig head, `P(sin var) = 0` — solve for `u = sin var`.
@@ -15244,6 +15306,14 @@ mod tests {
         assert!(double.contains(&(CasExpr::rat(1, 2) * pi())));
         assert!(double.contains(&(CasExpr::rat(3, 2) * pi())));
         assert_eq!(solve(&(CasExpr::int(3) * x()).sin(), "x").unwrap().len(), 6);
+        // Homogeneous linear combination cos x + sin x = 0 ⇒ tan x = −1 ⇒ {3π/4, 7π/4};
+        // sin x − cos x = 0 ⇒ tan x = 1 ⇒ {π/4, 5π/4} (the Neg term is peeled).
+        let combo = solve(&(x().cos() + x().sin()), "x").unwrap();
+        assert!(combo.contains(&(CasExpr::rat(3, 4) * pi())));
+        assert!(combo.contains(&(CasExpr::rat(7, 4) * pi())));
+        let combo2 = solve(&(x().sin() - x().cos()), "x").unwrap();
+        assert!(combo2.contains(&(CasExpr::rat(1, 4) * pi())));
+        assert!(combo2.contains(&(CasExpr::rat(5, 4) * pi())));
         // Polynomial in sin: sin²x = ¼ ⇒ sin x = ±½ ⇒ {π/6, 5π/6, 7π/6, 11π/6}.
         let quad = solve(&(x().sin().pow(2) - CasExpr::rat(1, 4)), "x").unwrap();
         assert_eq!(quad.len(), 4);
