@@ -605,6 +605,7 @@ def main() -> int:
                     session_id = args.host_session_id or new_session_id(run_hash)
                     inside = [
                         sys.executable,
+                        *(["-B"] if multi_host else []),
                         str(Path(__file__).resolve()),
                         *sys.argv[1:],
                         "--resource-session-id",
@@ -643,6 +644,7 @@ def main() -> int:
                 commands = [
                     [
                         sys.executable,
+                        *(["-B"] if multi_host else []),
                         str(Path(__file__).resolve()),
                         *child_args,
                         "--resource-session-id",

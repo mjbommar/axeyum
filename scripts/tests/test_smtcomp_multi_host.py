@@ -327,6 +327,7 @@ class MultiHostPortableTests(unittest.TestCase):
             run_dir = root / "evidence"
             argv = [
                 sys.executable,
+                "-B",
                 str(staged / "scripts" / "smtcomp_repro" / "compete.py"),
                 "--host-run",
                 "--host-shards",
@@ -616,6 +617,7 @@ class MultiHostPortableTests(unittest.TestCase):
             for index, session_id in enumerate(sessions):
                 argv = [
                     sys.executable,
+                    "-B",
                     str(source_root / "compete.py"),
                     "--host-run",
                     "--host-shards",
