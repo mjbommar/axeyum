@@ -106,6 +106,39 @@ quota flag cleared. No runaways; temps nominal.
 so far every merge auto-resolved union-clean. The SMT `full`-feature deep gate
 is the one open verification.
 
+### ⚠️ TRACKED ISSUE — pre-existing CI-red under `--all-features` (FP, NOT mine)
+
+The SMT deep-gate (`cargo test -p axeyum-solver --features full`) surfaced a
+**failing test**, `user_declare_cannot_alias_fp_max_signzero_bit`
+(`crates/axeyum-solver/tests/fp.rs:731`). This matters because the **official
+gate and CI both run `--all-features`** (`justfile:16`, `.github/workflows/ci.yml:96`),
+which enables `full` — so **`main`/CI is red in that config**, and has been since
+**before this session** (baseline `48fece10`; the only `.rs` files changed since
+are `lean-*`, `axeyum-cas`, `abv.rs` — no FP code). My per-merge gate used
+default features + the changed crate's tests, so it never compiled these
+`full`-only tests.
+
+**Root cause (diagnosed read-only — definitive):** it is a **stale white-box
+test**, not a soundness regression.
+- Current reduction (`crates/axeyum-fp/src/lib.rs:3762`) names the opposite-sign-zero
+  bit by **format + order**: `axeyum_fp.max.signzero.{exp}.{sig}.{pos_neg|neg_pos}`.
+  `axeyum-fp`'s own tests (`lib.rs:7391+`) use that scheme, confirm the internal
+  namespace firewall holds, and confirm no symbol is minted for non-zero pairs.
+  The sound behavior (a fresh free Boolean per application, via `declare_internal`,
+  never a wrong `unsat`) is intact and covered.
+- The failing test hardcodes the **old operand-index** name
+  `axeyum_fp.max.signzero.{pos0.index()}.{neg0.index()}` (`fp.rs:738`), which the
+  reduction no longer uses → `find_internal_symbol` → `None` → panics at the
+  precondition, before the real firewall assertion (`fp.rs:746`) even runs.
+
+**Assessment:** low-severity, test-only staleness; a duplicate of coverage that
+already lives authoritatively in `axeyum-fp`. **Recommendation:** the FP/soundness
+lane should update the solver-side test's expected name to the format+order
+scheme (F32 → `axeyum_fp.max.signzero.8.24.{pos_neg|neg_pos}`) or delete the
+duplicate. **Left untouched** — outside the three monitored lanes; awaiting the
+owner's call. **Integrator note:** the `--all-features` baseline now has exactly
+this ONE known red — any *other* `--all-features` failure is a real new regression.
+
 ---
 
 ## Cycle log
