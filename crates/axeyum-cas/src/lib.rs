@@ -6355,6 +6355,13 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // Bounded transcendental heads with horizontal asymptotes (`erf(±∞)=±1`,
+    // `atan(±∞)=±π/2`) — resolves e.g. the Gaussian `(√π/2)·erf(x)` at ±∞.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_asymptotic_head(expr, var, point)
+    {
+        return Some(value);
+    }
     // At `x → 0⁺`, a positive power of `x` beats any power of `ln x`
     // (`x·ln x → 0`, `x²·(ln x)³ → 0`), resolving the `0·∞` form the series
     // fallback can't (ln has no Taylor expansion at 0).
@@ -6437,6 +6444,94 @@ fn limit_exp_dominated(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
         Some(CasExpr::zero()) // decay beats the rational factor
     } else {
         None // growth → ±∞
+    }
+}
+
+/// Limit at `±∞` of an expression containing **bounded transcendental heads** with
+/// known horizontal asymptotes — `erf(→±∞)=±1`, `atan(→±∞)=±π/2` — by substituting
+/// each such head (whose polynomial argument tends to `±∞`) with its limiting value
+/// and re-evaluating. Enables e.g. the Gaussian `∫_{−∞}^{∞} e^{−x²} = √π` (whose
+/// antiderivative is `(√π/2)·erf(x)`). `None` if nothing was substituted.
+fn limit_asymptotic_head(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    let substituted = substitute_asymptotic_heads(expr, var, point);
+    if substituted == *expr {
+        return None; // no bounded head resolved
+    }
+    // If the substitution removed all `var` dependence, the result *is* the limit
+    // (a constant that may involve π/√π, which `limit` itself can't re-process).
+    if !expr_contains_var(&substituted, var) {
+        return Some(simplify(&substituted));
+    }
+    limit(&substituted, var, point)
+}
+
+/// Whether `var` appears anywhere in `expr`.
+fn expr_contains_var(expr: &CasExpr, var: &str) -> bool {
+    match expr {
+        CasExpr::Var(name) => name == var,
+        CasExpr::Const(_) => false,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => expr_contains_var(a, var),
+        CasExpr::Div(a, b) => expr_contains_var(a, var) || expr_contains_var(b, var),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().any(|t| expr_contains_var(t, var))
+        }
+    }
+}
+
+/// Replace each `erf`/`atan` of a polynomial argument that tends to `±∞` with its
+/// horizontal asymptote (`erf→±1`, `atan→±π/2`); recurse structurally otherwise.
+fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> CasExpr {
+    match expr {
+        CasExpr::Unary(head @ (UnaryFunc::Erf | UnaryFunc::Atan), arg) => {
+            if let Some(positive) = arg_tends_to_infinity(arg, var, point) {
+                let magnitude = match head {
+                    UnaryFunc::Erf => CasExpr::int(1),
+                    _ => scaled_term(Rational::new(1, 2), CasExpr::var("pi")), // atan → π/2
+                };
+                return if positive {
+                    magnitude
+                } else {
+                    CasExpr::Neg(Box::new(magnitude))
+                };
+            }
+            CasExpr::Unary(*head, Box::new(substitute_asymptotic_heads(arg, var, point)))
+        }
+        CasExpr::Unary(head, arg) => {
+            CasExpr::Unary(*head, Box::new(substitute_asymptotic_heads(arg, var, point)))
+        }
+        CasExpr::Add(items) => CasExpr::Add(
+            items.iter().map(|t| substitute_asymptotic_heads(t, var, point)).collect(),
+        ),
+        CasExpr::Mul(items) => CasExpr::Mul(
+            items.iter().map(|t| substitute_asymptotic_heads(t, var, point)).collect(),
+        ),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(substitute_asymptotic_heads(a, var, point))),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(substitute_asymptotic_heads(a, var, point)),
+            Box::new(substitute_asymptotic_heads(b, var, point)),
+        ),
+        CasExpr::Pow(a, e) => {
+            CasExpr::Pow(Box::new(substitute_asymptotic_heads(a, var, point)), *e)
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Whether a polynomial argument `arg` tends to `+∞` (`Some(true)`) or `−∞`
+/// (`Some(false)`) as `var → point`. Decided by the leading term's sign and, at
+/// `−∞`, the degree parity. `None` if `arg` is not a non-constant polynomial in `var`.
+fn arg_tends_to_infinity(arg: &CasExpr, var: &str, point: LimitPoint) -> Option<bool> {
+    let poly = normalize(arg)?.to_univariate(var)?;
+    let degree = poly::rat_degree(&poly)?;
+    if degree == 0 {
+        return None; // constant argument — bounded
+    }
+    let leading_positive = poly[degree].numerator() > 0;
+    match point {
+        LimitPoint::PosInfinity => Some(leading_positive),
+        // At −∞, the sign flips for odd degree.
+        LimitPoint::NegInfinity => Some(leading_positive == degree.is_multiple_of(2)),
+        LimitPoint::Finite(_) => None,
     }
 }
 
@@ -11124,6 +11219,28 @@ mod tests {
             improper_integrate(&(CasExpr::int(1) / x()), "x", one(), LimitPoint::PosInfinity)
                 .is_none()
         );
+        // Gaussian ∫_{−∞}^{∞} e^{−x²} = √π and ∫₀^∞ = √π/2 (via erf(±∞)=±1).
+        let gaussian = improper_integrate(
+            &(CasExpr::int(-1) * x().pow(2)).exp(),
+            "x",
+            LimitPoint::NegInfinity,
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert!(gaussian.is_certified());
+        assert!(matches!(
+            equal(&gaussian.value, &v("pi").sqrt()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // ∫₀^∞ 1/(1+x²) = π/2 (arctan → π/2); ∫_{−∞}^∞ = π.
+        let arctan_half = improper_integrate(
+            &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
+            "x",
+            zero(),
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert_equal(&arctan_half.value, &(CasExpr::rat(1, 2) * v("pi")));
     }
 
     #[test]
