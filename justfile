@@ -138,7 +138,8 @@ parity-docs:
 
 # ADR-0344 E0-E2: contract generation, immutable filesystem recovery, active
 # runner lifecycle/sidecars/lease/export, one-host aggregate cgroup evidence,
-# and the legacy scoring pipeline.
+# portable plus opt-in N>=3 multi-host durability evidence, and the legacy
+# scoring pipeline.
 smtcomp-resume:
     ./scripts/check-smtcomp-resume.sh
 

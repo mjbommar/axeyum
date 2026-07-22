@@ -129,7 +129,7 @@ Schema: `axeyum.smtcomp-host-recovery.v1`
 
 A recovery binds the failed and retry allocation IDs, failed resource session,
 exact stale lease owner, remote unit name, remote unit state, launcher PID
-probe, probe time, recovered shard IDs, quarantine path, and record hash. The
+probe, probe time, recovered shard ID, quarantine path, and record hash. The
 coordinator refuses recovery if the unit is active, the launcher PID is live,
 the lease owner differs, the retry is not preregistered, or the environment
 class differs.
@@ -154,10 +154,12 @@ recomputes every staged runner file and solver executable hash and compares the
 source identity fields; it does not invent a clean Git checkout or weaken the
 run identity.
 
-The coordinator invokes SSH without a remote shell. Every argument is a
-separate argv element. Paths and identifiers pass the same safe-leaf and
-absolute-root checks used by the evidence filesystem. SSH stdout and stderr are
-content-addressed rather than parsed as result evidence.
+The coordinator invokes only one fixed staged helper through SSH; solver argv
+is stored in a canonical manifest and executed by that helper, not interpolated
+into the SSH command. Because OpenSSH may still pass its fixed remote command
+through the account's login shell, every transport token is restricted to safe
+identifiers or absolute safe paths. SSH stdout and stderr are content-addressed
+rather than parsed as result evidence.
 
 ## Preregistered gates
 
@@ -190,10 +192,13 @@ Run two independent controls:
   shard attempt, recover only the exact stale lease, execute the preregistered
   retry on an equivalent second host, and validate final completion.
 
-The two canonical scoring projections must be byte-identical. Lifecycle and
+The two canonical timing-free outcome projections must be byte-identical.
+Lifecycle and
 resource evidence must differ in the expected way: the interrupted run has one
-unclosed allocation attempt, resource session, and shard attempt plus one exact
-recovery record.
+failed allocation terminal, one unclosed resource session and shard attempt,
+plus one exact recovery record. An absent allocation terminal remains a valid
+representation of coordinator loss, but the registered host-runner-loss gate
+keeps the coordinator alive and therefore closes that outer SSH attempt.
 
 The live gate must use `AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1`; absence of any
 registered host, user-systemd/cgroup capability, or exact shared filesystem

@@ -39,9 +39,15 @@ CGROUP_RESOURCE_POLICY = {
     "pids": "pids.max-exact",
     "terminal_accounting": "memory.peak-memory.events-cpu.stat-pids.peak-pids.events",
 }
+MULTI_HOST_RESOURCE_POLICY = {
+    **CGROUP_RESOURCE_POLICY,
+    "stage": "E3",
+    "adapter": "systemd-user-service-cgroup-v2-shared-nfs-v1",
+}
 
 FIXTURE_KIND = "fixture-e1b-no-measurement-credit"
 CGROUP_KIND = "cgroup-v2-systemd-user-service-v1"
+MULTI_HOST_KIND = "cgroup-v2-systemd-user-service-shared-nfs-v1"
 PREFLIGHT_SCHEMA = "axeyum.smtcomp-resource-session-preflight.v1"
 TERMINAL_SCHEMA = "axeyum.smtcomp-resource-session-terminal.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-resource-completion.v1"
@@ -73,6 +79,7 @@ PREFLIGHT_FIELDS = {
     "enforcement_id",
     "environment_class_sha256",
     "host_id",
+    "shard_ids",
     "launcher_pid",
     "started_at_ns",
     "snapshot",
@@ -143,6 +150,7 @@ def cgroup_enforcement(
     aggregate_cpu_cores: int,
     pids_max: int,
     unit_prefix: str = "axeyum-smtcomp-e2",
+    multi_host: bool = False,
 ) -> dict[str, Any]:
     """Build an exact E2 enforcement descriptor.
 
@@ -154,7 +162,7 @@ def cgroup_enforcement(
     if not SAFE_UNIT_PREFIX.fullmatch(unit_prefix):
         raise ContractError("unsafe cgroup unit prefix")
     descriptor = {
-        "kind": CGROUP_KIND,
+        "kind": MULTI_HOST_KIND if multi_host else CGROUP_KIND,
         "worker_slots": worker_slots,
         "aggregate_memory_bytes": aggregate_memory_bytes,
         "aggregate_cpu_quota_usec": aggregate_cpu_cores * 100_000,
@@ -175,6 +183,8 @@ def resource_policy_for(enforcement: dict[str, Any]) -> dict[str, str]:
         return FIXTURE_RESOURCE_POLICY
     if kind == CGROUP_KIND:
         return CGROUP_RESOURCE_POLICY
+    if kind == MULTI_HOST_KIND:
+        return MULTI_HOST_RESOURCE_POLICY
     raise ContractError(f"unsupported aggregate resource enforcement kind: {kind}")
 
 
@@ -201,7 +211,8 @@ def validate_enforcement(
         "required_controllers",
     }
     expected_fields = fixture_fields if kind == FIXTURE_KIND else cgroup_fields
-    if kind not in {FIXTURE_KIND, CGROUP_KIND} or set(resources) != expected_fields:
+    cgroup_kinds = {CGROUP_KIND, MULTI_HOST_KIND}
+    if kind not in {FIXTURE_KIND, *cgroup_kinds} or set(resources) != expected_fields:
         raise ContractError("resource enforcement field set mismatch")
     if resources["enforcement_id"] != _descriptor_id(resources):
         raise ContractError("resource enforcement identity mismatch")
@@ -220,11 +231,11 @@ def validate_enforcement(
             raise ContractError(f"invalid positive resource field: {field}")
     if workers > shard_count or workers * per_worker > aggregate:
         raise ContractError("aggregate memory budget overcommitted")
-    if require_measurement is True and kind != CGROUP_KIND:
+    if require_measurement is True and kind not in cgroup_kinds:
         raise ContractError("measurement execution requires E2 cgroup enforcement")
     if require_measurement is False and kind != FIXTURE_KIND:
         raise ContractError("fixture execution requires fixture resource enforcement")
-    if kind == CGROUP_KIND:
+    if kind in cgroup_kinds:
         if not SAFE_UNIT_PREFIX.fullmatch(resources["unit_prefix"]):
             raise ContractError("unsafe cgroup unit prefix")
         required = resources["required_controllers"]
@@ -349,7 +360,7 @@ def configure_current_cgroup(
 ) -> None:
     """Apply the one delegated controller setting systemd cannot express here."""
 
-    if enforcement.get("kind") != CGROUP_KIND:
+    if enforcement.get("kind") not in {CGROUP_KIND, MULTI_HOST_KIND}:
         raise ContractError("cannot configure a non-E2 cgroup")
     snapshot = cgroup_snapshot(proc_root=proc_root, cgroup_root=cgroup_root)
     validate_snapshot(
@@ -455,12 +466,23 @@ def build_preflight(
     session_id: str,
     environment_class_sha256: str,
     snapshot: dict[str, Any],
+    shard_ids: list[int],
 ) -> dict[str, Any]:
     enforcement = validate_enforcement(run, require_measurement=True)
     validate_snapshot(snapshot, enforcement, session_id=session_id)
     identity = run["identity"]
     if environment_class_sha256 != identity["environment_class_sha256"]:
         raise ContractError("resource session environment drift")
+    if (
+        not shard_ids
+        or shard_ids != sorted(set(shard_ids))
+        or any(
+            type(shard_id) is not int
+            or not 0 <= shard_id < identity["shard_count"]
+            for shard_id in shard_ids
+        )
+    ):
+        raise ContractError("invalid resource session shard allocation")
     return _sealed(
         {
             "schema": PREFLIGHT_SCHEMA,
@@ -469,6 +491,7 @@ def build_preflight(
             "enforcement_id": enforcement["enforcement_id"],
             "environment_class_sha256": environment_class_sha256,
             "host_id": socket.gethostname(),
+            "shard_ids": shard_ids,
             "launcher_pid": os.getpid(),
             "started_at_ns": time.time_ns(),
             "snapshot": snapshot,
@@ -630,6 +653,18 @@ def _validate_preflight_record(
         or preflight["started_at_ns"] < 0
     ):
         raise ContractError("invalid resource preflight process identity")
+    shard_ids = preflight["shard_ids"]
+    if (
+        not isinstance(shard_ids, list)
+        or not shard_ids
+        or shard_ids != sorted(set(shard_ids))
+        or any(
+            type(shard_id) is not int
+            or not 0 <= shard_id < run["identity"]["shard_count"]
+            for shard_id in shard_ids
+        )
+    ):
+        raise ContractError("invalid resource session shard allocation")
     if preflight["launcher_pid"] not in preflight["snapshot"]["member_pids"]:
         raise ContractError("resource preflight launcher membership mismatch")
     validate_snapshot(
@@ -653,7 +688,7 @@ def _validate_terminal_record(
     codes = terminal.get("worker_exit_codes")
     if (
         not isinstance(codes, list)
-        or len(codes) != run["identity"]["shard_count"]
+        or len(codes) != len(preflight["shard_ids"])
         or any(not isinstance(code, int) for code in codes)
     ):
         raise ContractError("resource terminal worker status mismatch")
@@ -706,6 +741,15 @@ def validate_resource_evidence(run_dir: Path, bundle: Any) -> None:
     }
     if None in referenced or not referenced <= set(sessions):
         raise ContractError("attempt resource-session attribution mismatch")
+    for shard_id, attempts in bundle.attempts.items():
+        try:
+            numeric_shard_id = int(shard_id)
+        except ValueError as exc:
+            raise ContractError("invalid attempt shard identity") from exc
+        for attempt in attempts:
+            session_id = attempt["resource_session_id"]
+            if numeric_shard_id not in sessions[session_id]["preflight"]["shard_ids"]:
+                raise ContractError("attempt is outside its resource-session allocation")
     completion = read_canonical_json(run_dir / "resource-completion.json")
     if set(completion) != COMPLETION_FIELDS:
         raise ContractError("resource completion field set mismatch")
@@ -759,6 +803,8 @@ def new_session_id(run_hash: str) -> str:
 def systemd_run_command(
     *, enforcement: dict[str, Any], session_id: str, command: list[str]
 ) -> list[str]:
+    if not SAFE_SESSION.fullmatch(session_id):
+        raise ContractError("unsafe resource session identity")
     unit_name = f"{enforcement['unit_prefix']}-{session_id}"
     quota = enforcement["aggregate_cpu_quota_usec"]
     period = enforcement["cpu_period_usec"]
@@ -852,6 +898,8 @@ __all__ = [
     "COMPLETION_FIELDS",
     "FIXTURE_KIND",
     "FIXTURE_RESOURCE_POLICY",
+    "MULTI_HOST_KIND",
+    "MULTI_HOST_RESOURCE_POLICY",
     "PREFLIGHT_FIELDS",
     "TERMINAL_FIELDS",
     "build_preflight",

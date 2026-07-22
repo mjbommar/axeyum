@@ -199,7 +199,13 @@ def release_shard_lease(lease: ShardLease) -> None:
     _fsync_directory(lease.path.parent)
 
 
-def recover_shard_lease(root: Path, shard_id: str, expected_owner_id: str) -> Path:
+def recover_shard_lease(
+    root: Path,
+    shard_id: str,
+    expected_owner_id: str,
+    *,
+    recovery_id: str | None = None,
+) -> Path:
     """Explicitly quarantine one exactly identified stale lease.
 
     The caller must first establish staleness out of band.  There is
@@ -207,9 +213,25 @@ def recover_shard_lease(root: Path, shard_id: str, expected_owner_id: str) -> Pa
     """
 
     path = root / "leases" / f"{_safe_leaf(shard_id)}.json"
+    if recovery_id is not None:
+        recovery_id = _safe_leaf(recovery_id)
+        quarantine = root / "quarantine" / "stale-leases"
+        destination = quarantine / f"{path.name}.{recovery_id}"
+        if destination.exists():
+            owner = _read_canonical_json(destination)
+            if path.exists() or owner.get("owner_id") != expected_owner_id:
+                raise LeaseConflict("stale-lease recovery replay mismatch")
+            return destination
     owner = _read_canonical_json(path)
     if owner.get("owner_id") != expected_owner_id:
         raise LeaseConflict(f"stale-lease owner mismatch: {path}")
+    if recovery_id is not None:
+        quarantine.mkdir(parents=True, exist_ok=True)
+        os.replace(path, destination)
+        _fsync_directory(quarantine)
+        _fsync_directory(quarantine.parent)
+        _fsync_directory(path.parent)
+        return destination
     return _quarantine(path, "stale-leases", root / "quarantine")
 
 
@@ -322,6 +344,13 @@ def load_bundle(root: Path) -> Bundle:
         "quarantine",
         "resource-sessions",
         "resource-completion.json",
+        "multi-host-plan.json",
+        "multi-host-commands",
+        "multi-host-attempts",
+        "multi-host-terminals",
+        "multi-host-outputs",
+        "multi-host-recoveries",
+        "multi-host-completion.json",
     }
     if not root.is_dir():
         raise ContractError(f"missing run directory: {root}")
@@ -421,6 +450,7 @@ def validate_bundle_directory(
     *,
     require_output_sidecars: bool = False,
     require_resource_evidence: bool = True,
+    require_multi_host_evidence: bool = True,
 ) -> bytes:
     bundle = load_bundle(root)
     if require_output_sidecars:
@@ -429,4 +459,11 @@ def validate_bundle_directory(
         from resource_enforcement import validate_resource_evidence
 
         validate_resource_evidence(root, bundle)
+    if require_multi_host_evidence:
+        from resource_enforcement import MULTI_HOST_KIND
+
+        if bundle.run.get("resource_enforcement", {}).get("kind") == MULTI_HOST_KIND:
+            from multi_host import validate_multi_host_evidence
+
+            validate_multi_host_evidence(root, bundle)
     return merge_complete(bundle)
