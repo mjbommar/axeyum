@@ -7771,6 +7771,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
         integrate_log_times_cofactor(expr, var),
+        integrate_ln_composite(expr, var),
         integrate_sinusoid_product(expr, var),
         integrate_sqrt_quadratic(expr, var),
         integrate_poly_times_inverse(expr, var),
@@ -9489,6 +9490,27 @@ fn expr_contains_ln(expr: &CasExpr) -> bool {
         CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(expr_contains_ln),
         CasExpr::Const(_) | CasExpr::Var(_) => false,
     }
+}
+
+/// ∫ ln(g(x)) dx by parts (`u = ln g`, `dv = dx`): `x·ln(g) − ∫ x·g′/g`, when the
+/// residual `∫x·g′/g` integrates. Covers `∫ln(x²+1) = x·ln(x²+1) − 2x + 2 atan x`.
+/// A rational-constant coefficient is pulled out first. Certified downstream.
+fn integrate_ln_composite(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (coeff, core) = match split_constant_factor(expr) {
+        Some((c, rest)) => (c, rest),
+        None => (Rational::integer(1), expr.clone()),
+    };
+    let CasExpr::Unary(UnaryFunc::Ln, arg) = &core else {
+        return None;
+    };
+    let gprime = arg.differentiate(var);
+    let residual_integrand = CasExpr::var(var) * gprime / arg.as_ref().clone();
+    let residual = integrate(&residual_integrand, var)?;
+    if !residual.is_certified() {
+        return None;
+    }
+    let body = CasExpr::Mul(vec![CasExpr::var(var), core]) - residual.antiderivative;
+    Some(scaled_term(coeff, body))
 }
 
 /// ∫ ln(x)·R(x) dx by parts (`u = ln x`, `dv = R dx`): `V·ln x − ∫ V/x`, where
@@ -13905,6 +13927,30 @@ mod tests {
         let r = integrate(&(x() * inv(UnaryFunc::Asin, x())), "x").expect("∫x·asin");
         assert!(r.is_certified());
         assert_equal(&r.antiderivative.differentiate("x"), &(x() * inv(UnaryFunc::Asin, x())));
+    }
+
+    #[test]
+    fn ln_of_composite_integrals() {
+        let x = || v("x");
+        // ∫ln(g) = x·ln g − ∫x·g′/g. ∫ln(x²+1)=x ln(x²+1)−2x+2 atan x.
+        for integrand in [
+            (x().pow(2) + CasExpr::int(1)).ln(),
+            (x().pow(2) + CasExpr::int(4)).ln(),
+            CasExpr::int(2) * (x().pow(2) + CasExpr::int(1)).ln(),
+        ] {
+            let r = integrate(&integrand, "x").expect("∫ln(composite)");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // Closed form of ∫ln(x²+1).
+        assert!(matches!(
+            equal(
+                &integrate(&(x().pow(2) + CasExpr::int(1)).ln(), "x").unwrap().antiderivative,
+                &(x() * (x().pow(2) + CasExpr::int(1)).ln() - CasExpr::int(2) * x()
+                    + CasExpr::int(2) * x().atan()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
