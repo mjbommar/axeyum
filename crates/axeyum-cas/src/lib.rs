@@ -144,6 +144,12 @@ pub enum UnaryFunc {
     Sqrt,
     /// Absolute value `abs`.
     Abs,
+    /// The **sign** function `sign(x)` (`−1` for `x<0`, `0` at `0`, `+1` for `x>0`).
+    Sign,
+    /// The **floor** function `⌊x⌋` (greatest integer `≤ x`).
+    Floor,
+    /// The **ceiling** function `⌈x⌉` (least integer `≥ x`).
+    Ceiling,
     /// The **error function** `erf(x) = (2/√π)·∫₀ˣ e^{−t²} dt`.
     Erf,
     /// The **sine integral** `Si(x) = ∫₀ˣ sin t / t dt` (so `Si′(x) = sin x / x`).
@@ -189,6 +195,9 @@ impl UnaryFunc {
             UnaryFunc::Atan => "atan",
             UnaryFunc::Sqrt => "sqrt",
             UnaryFunc::Abs => "abs",
+            UnaryFunc::Sign => "sign",
+            UnaryFunc::Floor => "floor",
+            UnaryFunc::Ceiling => "ceiling",
             UnaryFunc::Erf => "erf",
             UnaryFunc::Si => "Si",
             UnaryFunc::Ci => "Ci",
@@ -233,6 +242,8 @@ impl UnaryFunc {
             }
             // d/du |u| = u/|u| (the sign of u; valid away from u = 0)
             UnaryFunc::Abs => u() / CasExpr::Unary(UnaryFunc::Abs, Box::new(u())),
+            // sign/floor/ceiling are locally constant — derivative 0 (a.e.).
+            UnaryFunc::Sign | UnaryFunc::Floor | UnaryFunc::Ceiling => CasExpr::zero(),
             // d/du erf(u) = (2/√π)·e^{−u²}
             UnaryFunc::Erf => {
                 CasExpr::int(2) / CasExpr::var("pi").sqrt()
@@ -405,6 +416,38 @@ impl CasExpr {
             }
         }
         CasExpr::Unary(UnaryFunc::Abs, Box::new(self))
+    }
+
+    /// The **sign** function `sign(self)`. A rational constant folds to `−1`, `0`,
+    /// or `+1`.
+    #[must_use]
+    pub fn sign(self) -> Self {
+        if let CasExpr::Const(value) = self {
+            let n = value.numerator();
+            return CasExpr::int(i128::from(n > 0) - i128::from(n < 0));
+        }
+        CasExpr::Unary(UnaryFunc::Sign, Box::new(self))
+    }
+
+    /// The **floor** function `⌊self⌋`. A rational constant folds to the greatest
+    /// integer `≤ self`.
+    #[must_use]
+    pub fn floor(self) -> Self {
+        if let CasExpr::Const(value) = self {
+            return CasExpr::int(value.numerator().div_euclid(value.denominator()));
+        }
+        CasExpr::Unary(UnaryFunc::Floor, Box::new(self))
+    }
+
+    /// The **ceiling** function `⌈self⌉`. A rational constant folds to the least
+    /// integer `≥ self`.
+    #[must_use]
+    pub fn ceiling(self) -> Self {
+        if let CasExpr::Const(value) = self {
+            let (num, den) = (value.numerator(), value.denominator());
+            return CasExpr::int(-((-num).div_euclid(den)));
+        }
+        CasExpr::Unary(UnaryFunc::Ceiling, Box::new(self))
     }
 
     /// The imaginary unit `I`. It is a reserved symbol: the zero-test ([`equal`])
@@ -5824,6 +5867,16 @@ pub fn simplify_under_assumptions(expr: &CasExpr, assumptions: &Assumptions) -> 
                 inner.abs()
             }
         }
+        CasExpr::Unary(UnaryFunc::Sign, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // sign(u) resolves to ±1/0 once the assumptions fix u's sign.
+            match assumptions.sign_of(&inner) {
+                Sign::Positive => CasExpr::int(1),
+                Sign::Negative => CasExpr::int(-1),
+                Sign::Zero => CasExpr::zero(),
+                _ => inner.sign(),
+            }
+        }
         CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
             let inner = simplify_under_assumptions(arg, assumptions);
             // √(b^{2k}) = bᵏ when b ≥ 0.
@@ -6284,6 +6337,12 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::one()
                 }
+                // `abs`/`sign`/`floor`/`ceiling` of a rational constant reduce via
+                // the builder folds (also collapses these after a substitution).
+                (UnaryFunc::Abs, CasExpr::Const(_)) => inner.clone().abs(),
+                (UnaryFunc::Sign, CasExpr::Const(_)) => inner.clone().sign(),
+                (UnaryFunc::Floor, CasExpr::Const(_)) => inner.clone().floor(),
+                (UnaryFunc::Ceiling, CasExpr::Const(_)) => inner.clone().ceiling(),
                 _ => CasExpr::Unary(*func, Box::new(inner)),
             }
         }
@@ -6925,6 +6984,15 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Atan => value.atan(),
                 UnaryFunc::Sqrt => value.sqrt(),
                 UnaryFunc::Abs => value.abs(),
+                UnaryFunc::Sign => {
+                    if value == 0.0 {
+                        0.0
+                    } else {
+                        value.signum()
+                    }
+                }
+                UnaryFunc::Floor => value.floor(),
+                UnaryFunc::Ceiling => value.ceil(),
                 UnaryFunc::Erf => erf_f64(value),
                 UnaryFunc::Si => sine_integral_f64(value),
                 UnaryFunc::Ci => cosine_integral_f64(value),
@@ -14531,9 +14599,13 @@ mod tests {
             &x(),
         );
         assert_equal(&simplify_under_assumptions(&x().abs(), &nonneg), &x());
-        // Under x < 0: |x| = −x.
+        // sign(x) resolves under a definite sign: x > 0 ⇒ 1, x < 0 ⇒ −1.
+        let pos = Assumptions::new().positive("x");
+        assert_equal(&simplify_under_assumptions(&x().sign(), &pos), &CasExpr::int(1));
+        // Under x < 0: |x| = −x, sign(x) = −1.
         let neg = Assumptions::new().negative("x");
         assert_equal(&simplify_under_assumptions(&x().abs(), &neg), &(-x()));
+        assert_equal(&simplify_under_assumptions(&x().sign(), &neg), &CasExpr::int(-1));
         // Without assumptions: √(x²) stays |x|, |x| stays |x|.
         let none = Assumptions::new();
         assert_equal(
@@ -14651,6 +14723,39 @@ mod tests {
         assert_equal(&simplify_radicals(&x().pow(2).sqrt()), &x().abs());
         // √(x⁴) = |x²| = x² … as |x²|; check it equals abs(x²).
         assert_equal(&simplify_radicals(&x().pow(4).sqrt()), &x().pow(2).abs());
+    }
+
+    #[test]
+    fn sign_floor_ceiling_heads() {
+        let x = || v("x");
+        // sign: +1 / −1 / 0 for a rational constant.
+        assert_equal(&CasExpr::int(5).sign(), &CasExpr::int(1));
+        assert_equal(&CasExpr::int(-3).sign(), &CasExpr::int(-1));
+        assert_equal(&CasExpr::int(0).sign(), &CasExpr::int(0));
+        assert_equal(&CasExpr::rat(-7, 2).sign(), &CasExpr::int(-1));
+        // floor / ceiling of rationals (round toward −∞ / +∞).
+        assert_equal(&CasExpr::rat(7, 2).floor(), &CasExpr::int(3));
+        assert_equal(&CasExpr::rat(-7, 2).floor(), &CasExpr::int(-4));
+        assert_equal(&CasExpr::rat(7, 2).ceiling(), &CasExpr::int(4));
+        assert_equal(&CasExpr::rat(-7, 2).ceiling(), &CasExpr::int(-3));
+        assert_equal(&CasExpr::int(4).floor(), &CasExpr::int(4)); // integer is fixed
+        assert_equal(&CasExpr::int(4).ceiling(), &CasExpr::int(4));
+        // Symbolic heads render and round-trip.
+        assert_eq!(x().sign().to_string(), "sign(x)");
+        assert_eq!(x().floor().to_string(), "floor(x)");
+        assert_eq!(x().ceiling().to_string(), "ceiling(x)");
+        // Locally constant → derivative 0 (after simplify).
+        assert_equal(&x().sign().differentiate("x"), &CasExpr::zero());
+        assert_equal(&x().floor().differentiate("x"), &CasExpr::zero());
+        assert_equal(&x().ceiling().differentiate("x"), &CasExpr::zero());
+        // Numeric evaluation, including sign(0) = 0 (not the f64 signum's +1).
+        assert!((evalf(&x().sign(), &[("x", -2.5)]).unwrap() + 1.0).abs() < 1e-12);
+        assert!((evalf(&x().sign(), &[("x", 0.0)]).unwrap()).abs() < 1e-12);
+        assert!((evalf(&x().floor(), &[("x", 3.7)]).unwrap() - 3.0).abs() < 1e-12);
+        assert!((evalf(&x().ceiling(), &[("x", 3.2)]).unwrap() - 4.0).abs() < 1e-12);
+        // Folding after substitution: floor(x) at x = 5/2 → 2, sign(x) at x = −4 → −1.
+        assert_equal(&fold_elementary_constants(&x().floor().substitute("x", &CasExpr::rat(5, 2))), &CasExpr::int(2));
+        assert_equal(&fold_elementary_constants(&x().sign().substitute("x", &CasExpr::int(-4))), &CasExpr::int(-1));
     }
 
     #[test]

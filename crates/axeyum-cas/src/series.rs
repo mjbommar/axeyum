@@ -379,9 +379,13 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
             let cos = compose(&inner, cosine_coeff)?;
             sin.div(&cos)
         }
-        // `abs`, `erf`, and the Si/Ci/Ei integrals are outside the
-        // rational-coefficient series fragment (√π factors / logarithmic terms).
+        // `abs`, `sign`/`floor`/`ceiling` (not analytic at integers / the origin),
+        // `erf`, and the Si/Ci/Ei integrals are outside the rational-coefficient
+        // series fragment (√π factors / logarithmic terms).
         UnaryFunc::Abs
+        | UnaryFunc::Sign
+        | UnaryFunc::Floor
+        | UnaryFunc::Ceiling
         | UnaryFunc::Erf
         | UnaryFunc::Si
         | UnaryFunc::Ci
