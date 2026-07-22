@@ -1129,3 +1129,29 @@ certified by differentiate-and-check:
 subsystems): residue-based contour integration (complex poles), Gamma/digamma heads, general
 multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch, arbitrary-precision
 N[expr,d], symbolic-coefficient series.
+
+## 2026-07-22 — Entry 36: Weierstrass substitution + an exp-tower soundness fix (452 tests)
+
+Took on a **substantial subsystem** rather than another edge case: the **Weierstrass substitution**
+`t = tan(x/2)`, which closes the *entire class* of rational-trigonometric integrals `∫R(sin x, cos x)`
+— `∫1/(1+cos x)=tan(x/2)`, `∫1/(a+b·cos x)`, `∫sec x`, `∫csc x`, `∫1/(sin x+cos x)`, … Every such
+integrand becomes a rational function of `t` (via `sin x=2t/(1+t²)`, `cos x=(1−t²)/(1+t²)`,
+`dx=2/(1+t²)dt`), integrated by the now-complete rational integrator and mapped back.
+
+Getting there required two prerequisites:
+
+- **A genuine soundness fix.** `exp(x/2)·exp(−x/2)` certified **FALSE** (it is `exp(0)=1`).
+  `normalize_exp` bailed to distinct opaque atoms whenever the exp argument's rational normal form had
+  denominator ≠ 1 — but `x/2` normalizes to `num x / den 2` (a *constant* denominator). Fix: absorb a
+  constant denominator into the coefficients, so `exp(x/2)` keys on the primitive `exp((1/2)x)` and
+  `exp(−x/2)=1/exp((1/2)x)`. Now half-angle identities like `1+tan²(x/2)=sec²(x/2)` decide too.
+- **A half-angle certificate.** The cross-level relation `exp(x/2)²=exp(x)` still can't be captured by
+  the `u32`-power atom representation, so the Weierstrass antiderivative (in `x/2` trig) can't be
+  directly zero-tested against the integrand (in `x` trig). Added a `rewrite_double_angle` fallback in
+  `prove_derivative`: rewrite full-angle `sin x→2sin(x/2)cos(x/2)`, `cos x→2cos²(x/2)−1` so both sides
+  live at the `x/2` level, which the (now-fixed) zero-test decides.
+
+**452 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Rational-trig integration is now
+complete. Frontier remaining (large subsystems): residue-based contour integration, Gamma/digamma
+heads, general multivariate factorization, Puiseux, Zeilberger, general Risch, arbitrary-precision
+N[expr,d], symbolic-coefficient series, and the whole Lean/Mathlib theorem-proving axis.
