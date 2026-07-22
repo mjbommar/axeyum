@@ -8831,7 +8831,10 @@ fn leading_term(coeffs: &[Rational]) -> Option<(usize, Rational)> {
 /// expansions. `None` for an infinite limit or outside the series fragment.
 fn limit_via_series(expr: &CasExpr, var: &str, a: Rational) -> Option<CasExpr> {
     const ORDER: usize = 12;
-    let shifted = expr.substitute(var, &(CasExpr::var(var) + CasExpr::Const(a)));
+    // Canonicalize `(1/g)·f → f/g` (as a rational function over the atoms) so the
+    // `Div` fast path below fires for both spellings — `(1/x²)·ln(cos x)` too.
+    let canonical = cancel(expr).unwrap_or_else(|| expr.clone());
+    let shifted = canonical.substitute(var, &(CasExpr::var(var) + CasExpr::Const(a)));
 
     if let CasExpr::Div(numerator, denominator) = &shifted {
         let num_coeffs = series_coefficients(numerator, var, ORDER)?;
@@ -13512,6 +13515,16 @@ mod tests {
         assert_equal(
             &limit(&((CasExpr::int(3) * x()).sin() / x()), "x", at0).unwrap(),
             &CasExpr::int(3),
+        );
+        // A `(1/g)·f` (Mul) spelling must reduce like `f/g` (Div): (1/x²)·ln(cos x)
+        // → −1/2, so (cos x)^{1/x²} = exp((1/x²)ln cos x) → e^{−1/2}.
+        assert_equal(
+            &limit(&((CasExpr::int(1) / x().pow(2)) * x().cos().ln()), "x", at0).unwrap(),
+            &CasExpr::rat(-1, 2),
+        );
+        assert_equal(
+            &limit(&((CasExpr::int(1) / x().pow(2)) * x().cos().ln()).exp(), "x", at0).unwrap(),
+            &CasExpr::rat(-1, 2).exp(),
         );
         // Analytic point: lim_{x→0} cos(x) = 1; lim_{x→0} (sin x + 2) = 2.
         assert_equal(&limit(&x().cos(), "x", at0).unwrap(), &CasExpr::int(1));
