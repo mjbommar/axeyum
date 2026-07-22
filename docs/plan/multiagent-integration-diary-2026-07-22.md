@@ -296,6 +296,23 @@ feature is now genuinely close.
 - **s4:** live (last write 13:30), WRONG=2 (stale binary). NB: tail progress
   markers are per-shard, not a global monotonic counter.
 
+### Cycle 13 — 2026-07-22 (~13:45 EDT) — trigger: Lean M4 importer landing
+
+**Micro.** Lean `f03dfcdf Import official nested inductive groups` (→ main
+`b2e5c0fa`) — the **M4 importer**: `lean-import/lib.rs` +152, updated
+`official_construct_matrix.rs`, new **578-line** `official_nested_inductive_groups.rs`
+(6 tests). Flips the M1 `Unsupported("inductive-nested")` decline into **actual
+import** of nested inductive groups — now that the M3 kernel grammar can admit
+them. In-lane, merge-clean. **Gate: GREEN** — all `axeyum-lean-import` tests pass
+(incl. the new nested-groups suite); `cargo check --workspace` exit 0.
+
+**Macro.** This closes the loop on the Lean nested-inductive arc: M1 (decline
+cleanly) → TL2.14/M3 (admit + exhaustively characterize in the kernel) → **M4
+(ingest from real Lean export data)**. The kernel can now not only *reason about*
+nested inductives soundly but *receive them from the outside world* — the whole
+point of a proof importer. Lean-import parity on nested inductives: functionally
+there, end-to-end.
+
 ---
 
 ## Cycle log
