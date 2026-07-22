@@ -6627,6 +6627,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
+        integrate_sqrt_quadratic(expr, var),
         integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
     ]
@@ -7843,6 +7844,74 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         return Some(scaled_term(coeff, base.as_ref().clone().pow(n + 1)));
     }
     None
+}
+
+/// Canonical trig/hyperbolic-substitution radical integrals (`a = 1` forms):
+///   ∫√(1−x²) = ½(x√(1−x²) + asin x),   ∫x²/√(1−x²) = ½(asin x − x√(1−x²))
+///   ∫√(1+x²) = ½(x√(1+x²) + asinh x),  ∫x²/√(1+x²) = ½(x√(1+x²) − asinh x)
+///   ∫√(x²−1) = ½(x√(x²−1) − acosh x),  ∫x²/√(x²−1) = ½(x√(x²−1) + acosh x)
+/// Recognized structurally; certified downstream by differentiate-and-check (which
+/// folds `(√u)²=u`). Also unlocks `∫x·asin x` etc. via the by-parts residual.
+fn integrate_sqrt_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    // Classify the radicand 1−x², 1+x², or x²−1 by its coefficient vector, and
+    // return (√radicand expr, inverse-head term, sign of the inverse term).
+    let classify = |radicand: &CasExpr| -> Option<(CasExpr, CasExpr, bool)> {
+        let poly = normalize(radicand)?.to_univariate(var)?;
+        let [c0, c1, c2] = <[Rational; 3]>::try_from(poly).ok()?;
+        if !c1.is_zero() {
+            return None;
+        }
+        let sqrt = radicand.clone().sqrt();
+        let (one, neg_one) = (Rational::integer(1), Rational::integer(-1));
+        // (inverse function, whether √· and asin-family share sign in ∫√)
+        if c0 == one && c2 == neg_one {
+            Some((sqrt, CasExpr::Unary(UnaryFunc::Asin, Box::new(x.clone())), true))
+        } else if c0 == one && c2 == one {
+            Some((sqrt, CasExpr::Unary(UnaryFunc::Asinh, Box::new(x.clone())), true))
+        } else if c0 == neg_one && c2 == one {
+            Some((sqrt, CasExpr::Unary(UnaryFunc::Acosh, Box::new(x.clone())), false))
+        } else {
+            None
+        }
+    };
+    let half = Rational::new(1, 2);
+    match expr {
+        // ∫√(radicand) = ½(x·√ ± inverse)
+        CasExpr::Unary(UnaryFunc::Sqrt, radicand) => {
+            let (sqrt, inverse, plus) = classify(radicand)?;
+            let x_sqrt = CasExpr::Mul(vec![x, sqrt]);
+            let body = if plus { x_sqrt + inverse } else { x_sqrt - inverse };
+            Some(scaled_term(half, body))
+        }
+        // ∫(c·x²)/√(radicand): c·½(∓x·√ ± inverse) — the inverse and x√ swap roles.
+        CasExpr::Div(num, den) => {
+            let num_poly = normalize(num)?.to_univariate(var)?;
+            let [z0, z1, c] = <[Rational; 3]>::try_from(num_poly).ok()?;
+            if !z0.is_zero() || !z1.is_zero() || c.is_zero() {
+                return None; // must be a pure c·x² numerator
+            }
+            let CasExpr::Unary(UnaryFunc::Sqrt, radicand) = den.as_ref() else {
+                return None;
+            };
+            let (sqrt, inverse, sign_1mx2) = classify(radicand)?;
+            let x_sqrt = CasExpr::Mul(vec![x, sqrt]);
+            // 1−x²: ½(asin − x√);  1+x²: ½(x√ − asinh);  x²−1: ½(x√ + acosh).
+            let body = if sign_1mx2 {
+                // 1−x² (inverse=asin) → asin − x√ ; 1+x² (inverse=asinh) → x√ − asinh
+                if matches!(&inverse, CasExpr::Unary(UnaryFunc::Asin, _)) {
+                    inverse - x_sqrt
+                } else {
+                    x_sqrt - inverse
+                }
+            } else {
+                // x²−1 (inverse=acosh) → x√ + acosh
+                x_sqrt + inverse
+            };
+            Some(scaled_term(half.checked_mul(c)?, body))
+        }
+        _ => None,
+    }
 }
 
 /// ∫ k·g′(x)/g(x) dx = k·ln(g(x)) — the logarithmic-derivative rule for a general
@@ -11677,6 +11746,29 @@ mod tests {
     }
 
     #[test]
+    fn trig_sub_radical_integrals() {
+        let x = || v("x");
+        let inv = |h, a| CasExpr::Unary(h, Box::new(a));
+        // Canonical trig/hyperbolic-sub radicals, certified by differentiate-and-check.
+        for integrand in [
+            (CasExpr::int(1) - x().pow(2)).sqrt(),                  // ∫√(1−x²)
+            (CasExpr::int(1) + x().pow(2)).sqrt(),                  // ∫√(1+x²)
+            (x().pow(2) - CasExpr::int(1)).sqrt(),                  // ∫√(x²−1)
+            x().pow(2) / (CasExpr::int(1) - x().pow(2)).sqrt(),     // ∫x²/√(1−x²)
+            x().pow(2) / (x().pow(2) + CasExpr::int(1)).sqrt(),     // ∫x²/√(1+x²)
+            x().pow(2) / (x().pow(2) - CasExpr::int(1)).sqrt(),     // ∫x²/√(x²−1)
+            // Cascade: ∫x·asin now closes via the by-parts residual ∫x²/√(1−x²).
+            x() * inv(UnaryFunc::Asin, x()),
+            x() * inv(UnaryFunc::Acosh, x()),
+            x() * inv(UnaryFunc::Asinh, x()),
+        ] {
+            let r = integrate(&integrand, "x").expect("trig-sub radical integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+    }
+
+    #[test]
     fn poly_times_inverse_integrals() {
         let x = || v("x");
         let inv = |h, a| CasExpr::Unary(h, Box::new(a));
@@ -11691,8 +11783,10 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
-        // ∫x·asin needs a trig substitution (∫x²/√(1−x²)); decline honestly.
-        assert!(integrate(&(x() * inv(UnaryFunc::Asin, x())), "x").is_none_or(|c| !c.is_certified()));
+        // ∫x·asin now closes (its residual ∫x²/√(1−x²) is a trig-sub radical).
+        let r = integrate(&(x() * inv(UnaryFunc::Asin, x())), "x").expect("∫x·asin");
+        assert!(r.is_certified());
+        assert_equal(&r.antiderivative.differentiate("x"), &(x() * inv(UnaryFunc::Asin, x())));
     }
 
     #[test]
