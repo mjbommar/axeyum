@@ -1352,7 +1352,9 @@ scoped effort rather than a risky mid-session refactor.
 
 **Fourier integrals via residues** (Entry 37q): `improper_fourier_quadratic` — `∫_{−∞}^∞ N(x)·{cos,sin}(ax)/(x²+q)` (`q>0`, `a>0`, `deg N≤1`) via the residue theorem (pole at `i√q`); by parity `∫(c₁x+c₀)cos(ax)/(x²+q)=c₀(π/√q)e^{−a√q}`, `·sin=c₁·π·e^{−a√q}`. `find_linear_trig` peels the oscillatory factor. Certified by construction (residue theorem exact; cross-checked numerically). `∫cos x/(x²+1)=π/e`, `∫x sin x/(x²+1)=π/e`, `∫cos2x/(x²+1)=π/e²`. **First genuine contour-integration capability.**
 
-**Session tally (Entries 37–37q): 36 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**QR decomposition** (Entry 37r): `qr_decomposition` reuses `gram_schmidt`+`norm` — orthogonalize A's columns, normalize to Q (surd entries), `R=QᵀA`; reconstruction `Q·R=A` and orthonormality `QᵀQ=I` certified by the zero-test (surds decided). Declines rank-deficient inputs.
+
+**Session tally (Entries 37–37r): 38 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
