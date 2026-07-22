@@ -10292,6 +10292,78 @@ fn improper_gaussian_fourier(
     })
 }
 
+/// Bose–Einstein / Fermi–Dirac integrals `∫₀^∞ x^{n−1}/(e^x ∓ 1) dx`, the Mellin
+/// transforms of the quantum-statistics kernels:
+///
+/// - `1/(e^x − 1)` (Bose): `Γ(n)·ζ(n) = (n−1)!·ζ(n)`,
+/// - `1/(e^x + 1)` (Fermi): `η(n)·Γ(n) = (1 − 2^{1−n})·(n−1)!·ζ(n)`.
+///
+/// Closed only when `ζ(n)` is — even `n ≥ 2`, a rational multiple of `π^n`; odd `n`
+/// declines (`ζ(3)` has no elementary form). The value is built from the rigorous
+/// `special::zeta` (Euler/Bernoulli) and `ntheory::factorial`, so it is genuinely
+/// derived; a numeric quadrature cross-check guards the construction. `∫₀^∞
+/// x/(e^x−1) = π²/6`, `∫₀^∞ x³/(e^x−1) = π⁴/15`, `∫₀^∞ x/(e^x+1) = π²/12`.
+fn improper_bose_einstein_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let LimitPoint::Finite(z) = &lower else {
+        return None;
+    };
+    if !z.is_zero() || !matches!(upper, LimitPoint::PosInfinity) {
+        return None;
+    }
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    // Numerator must be a pure power `x^m` (`m ≥ 1`; `m = 0` diverges at 0).
+    let m: u32 = match &simplify(numerator) {
+        CasExpr::Var(name) if name == var => 1,
+        CasExpr::Pow(base, power) if matches!(&**base, CasExpr::Var(name) if name == var) => *power,
+        _ => return None,
+    };
+    if m == 0 {
+        return None;
+    }
+    // Denominator is `e^x − 1` (Bose) or `e^x + 1` (Fermi).
+    let exp_x = CasExpr::var(var).exp();
+    let bose = matches!(
+        equal(denominator, &(exp_x.clone() - CasExpr::int(1))),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let fermi = matches!(
+        equal(denominator, &(exp_x + CasExpr::int(1))),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    if !bose && !fermi {
+        return None;
+    }
+    let n = m + 1; // the Mellin parameter `s = n`
+    let zeta_n = special::zeta(i64::from(n))?; // `None` for odd n (no closed form)
+    let factorial = ntheory::factorial(i128::from(m))?; // (n−1)!
+    let mut value = CasExpr::Const(Rational::integer(factorial)) * zeta_n;
+    if fermi {
+        // Dirichlet eta factor `η(n)/ζ(n) = 1 − 2^{1−n}`.
+        let two_pow = 2i128.checked_pow(m)?; // 2^{n−1}
+        value = (CasExpr::int(1) - CasExpr::rat(1, two_pow)) * value;
+    }
+    let value = simplify(&value);
+    // Numeric guard: the integrand decays like `x^m e^{−x}` (negligible past 50) and
+    // is finite at 0 for `m ≥ 1`; confirm the closed form against quadrature.
+    let approx = numeric_integrate(expr, var, 1e-6, 50.0, 20_000)?;
+    let exact = evalf(&value, &[])?;
+    if (approx - exact).abs() > 1e-2 * (1.0 + exact.abs()) {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// Find a single `cos(a·var)` or `sin(a·var)` factor anywhere in `expr` (a linear
 /// argument, `a` a nonzero rational), returning the head and `a` — used to peel the
 /// oscillatory factor of a Fourier integral.
@@ -10506,6 +10578,9 @@ pub fn improper_integrate(
     }
     if let Some(fourier) = improper_gaussian_fourier(expr, var, lower, upper) {
         return Some(fourier);
+    }
+    if let Some(bose) = improper_bose_einstein_integral(expr, var, lower, upper) {
+        return Some(bose);
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
@@ -15154,6 +15229,24 @@ mod tests {
         assert_equal(&gauss((CasExpr::int(-1) * x().pow(2)).exp() * x().sin(), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &CasExpr::zero());
         // Half-line sin·Gaussian is a Dawson function — outside the fragment, declines.
         assert!(improper_integrate(&((CasExpr::int(-1) * x().pow(2)).exp() * x().sin()), "x", zero(), LimitPoint::PosInfinity).is_none());
+        // Bose–Einstein/Fermi–Dirac ∫₀^∞ x^{n−1}/(e^x∓1) = Γ(n)ζ(n)·[η factor].
+        // ∫₀^∞ x/(e^x−1) = ζ(2) = π²/6; ∫₀^∞ x³/(e^x−1) = 6ζ(4) = π⁴/15.
+        assert!(matches!(
+            equal(&gauss(x() / (x().exp() - CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi").pow(2) / CasExpr::int(6))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(x().pow(3) / (x().exp() - CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi").pow(4) / CasExpr::int(15))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Fermi ∫₀^∞ x/(e^x+1) = (1−½)ζ(2) = π²/12.
+        assert!(matches!(
+            equal(&gauss(x() / (x().exp() + CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi").pow(2) / CasExpr::int(12))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Odd n (ζ(3), no closed form) declines; the divergent m=0 case declines.
+        assert!(improper_integrate(&(x().pow(2) / (x().exp() - CasExpr::int(1))), "x", zero(), LimitPoint::PosInfinity).is_none());
+        assert!(improper_integrate(&(CasExpr::int(1) / (x().exp() - CasExpr::int(1))), "x", zero(), LimitPoint::PosInfinity).is_none());
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
         assert!(matches!(
