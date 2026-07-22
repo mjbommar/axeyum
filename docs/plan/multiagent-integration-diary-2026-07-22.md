@@ -220,6 +220,22 @@ infra that makes an *honest, reproducible* decide/decline/WRONG map of all of
 SMT-LIB feasible — the prerequisite for the z3/cvc5 parity measurement the whole
 lane exists to produce.
 
+### Cycle 9 — 2026-07-22 (~12:50 EDT) — trigger: SMT (batched E3 hardening)
+
+**Micro.** Three small E3-durability follow-ups, each merged + gated green
+(official `check-smtcomp-resume.sh` E0–E3 `resume_byte_equal=true` + multi_host
+unit tests), all Python:
+- `138ef9f8` freeze NFS checkpoints after link (`resume_fs.py` — checkpoint atomicity).
+- `d079087e` precreate E3 shared namespaces (`multi_host.py` +41).
+- `f08e8af7` observe E3 fault markers on owner host (`multi_host.py` +78; `_live`
+  test expanded +74 to cover fault detection).
+
+**Macro.** This is the "make it actually survive a real distributed run" pass —
+NFS checkpoint atomicity, namespace precreation, and owner-host fault observation
+are the failure modes that bite an unattended multi-host sweep. The lane is
+paying down operational risk before turning the full 64k-file run loose, so the
+resulting parity map is trustworthy rather than corrupted by harness faults.
+
 ---
 
 ## Cycle log
