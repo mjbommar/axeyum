@@ -210,6 +210,16 @@ next.
 Stop before official production on any archive or tree mismatch. No partial
 tree may be relabeled as the release.
 
+**S2 implementation:** committed before live use. The standard-library
+acquisition runner supports explicit incomplete-root resume, bounded parallel
+HTTP range downloads, published size/MD5 plus local SHA-256 checks, redirect
+evidence, streamed `zstd` decompression, regular-file-only tar extraction,
+per-logic atomic promotion, and a disk-backed exact metadata/tree join. It
+emits `archives.json`, a path-sorted 450,472-row `corpus.jsonl`, summary, and
+completion last. Three focused tests reject traversal, absolute/cross-logic
+paths, symlinks, hardlinks, unexpected roots, and linked inventory entries.
+The 41-test bounded SMT-COMP gate passes. A fresh 4.89 GB acquisition is next.
+
 ### S3 — pinned official producer
 
 - Materialize the organizer source/data/submission bundle at the registered

@@ -17,7 +17,7 @@ Section references in the code point at that document.
 | Stage | Rules § | Module | Status |
 |---|---|---|---|
 | A. Legacy candidate selection (local cap/family approximation) | §6 | `selection.py` | **superseded for official-selection claims** |
-| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0 authority/fixture complete; full producer/audit open** |
+| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0/S1 complete; S2 verified corpus acquisition next** |
 | B. Resource-limited execution (wall `T`, CPU `mT`, mem; measures `aw`,`ac`) | §5 | `runner.py` | **done** (self-contained; BenchExec optional) |
 | C. Result → benchmark score tuple ⟨e,n,aw,w,ac,c⟩ (all 5 tracks) | §7.1 | `scoring.py` | **done** |
 | C′. Sequential benchmark score ⟨e_S,n_S,c_S⟩ (virtual CPU limit = T) | §7.1.1 | `scoring.py` | **done** |
@@ -40,7 +40,12 @@ They also parse a real-shaped `defs.py` division table and official compressed
 benchmark/result/submission documents without importing organizer code.
 The selection-free live runner, `scripts/audit-smtcomp-selection-inputs.py`,
 also streams the full gzip inputs with bounded historical state and cannot emit
-an official sample.
+an official sample. Its completed S1b result is recorded in
+[`smtcomp-official-selection-input-audit-s1b-2026-07-22.md`](../../docs/plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md).
+Three S2 extraction tests reject traversal, cross-logic members, links, and
+unexpected corpus roots. The resumable full acquisition entry point is
+`scripts/acquire-smtcomp-selection-corpus.py`; it verifies published size/MD5,
+adds local SHA-256, extracts regular files only, and writes completion last.
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.

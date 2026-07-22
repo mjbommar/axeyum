@@ -431,7 +431,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   256,182,191-byte eligibility ledger were independently rehashed and
   recounted. The resulting aggregate cap is 45,905 with 2,709 new and 43,196
   old quota slots. `selection_observed=false`; S2 verified corpus acquisition
-  is next. No solver run or selection credit is granted yet.
+  is next. Its resumable 90-file downloader, safe streamed extractor,
+  per-logic atomic promotion, and disk-backed exact metadata/tree join are now
+  committed and covered by three focused tests; the full bounded gate is 41
+  tests with one live-only skip. No solver run or selection credit is granted
+  yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7199,6 +7203,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Implemented ADR-0356 S2 verified corpus acquisition.** The
+  new resumable runner binds the completed S1 audit, downloads all 90 release
+  files with published size/MD5 and local SHA-256, records redirects, rejects
+  unsafe tar members, atomically promotes one regular-file-only logic tree at a
+  time, and joins extracted bytes to metadata through a disk-backed unique
+  index. It writes canonical archive/corpus/summary artifacts and completion
+  last. Three focused extraction/inventory tests raise the bounded gate to
+  41 tests. The implementation is committed before the first 4.89 GB run.
 
 - **2026-07-22 — Completed ADR-0356 S1 independent input audit.** The fifth
   fresh S1b run verified 89 pinned inputs, normalized 450,472 metadata rows
