@@ -4609,7 +4609,10 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     let mut best_size = node_count(&best);
     // `trigsimp` is included so the common entry point also collapses
     // `sin²+cos²`; it returns an equality-gated (hence value-equal) form.
-    for candidate in [cancel(expr), expand(expr), Some(trigsimp(expr))]
+    // `fold_trivial` is included so residual identity junk *inside function
+    // arguments* — which `cancel`/`expand` treat as opaque atoms — is cleaned:
+    // `sin(1·t) → sin(t)`, `cos(0+t) → cos(t)` (only ever chosen when smaller).
+    for candidate in [cancel(expr), expand(expr), Some(trigsimp(expr)), Some(fold_trivial(expr))]
         .into_iter()
         .flatten()
     {
@@ -14476,6 +14479,16 @@ mod tests {
         let s = simplify(&f);
         assert_equal(&s, &(x() + CasExpr::int(1)));
         assert_equal(&s, &f);
+        // simplify also normalizes identity junk *inside function arguments*
+        // (`cancel`/`expand` treat the head as an atom): sin(1·x) → sin(x).
+        assert_eq!(
+            simplify(&CasExpr::Unary(UnaryFunc::Sin, Box::new(CasExpr::Mul(vec![CasExpr::int(1), x()])))),
+            x().sin()
+        );
+        assert_eq!(
+            simplify(&CasExpr::Unary(UnaryFunc::Cos, Box::new(CasExpr::Add(vec![CasExpr::int(0), x()])))),
+            x().cos()
+        );
     }
 
     #[test]
