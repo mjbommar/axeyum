@@ -39,14 +39,18 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   repeated outcome equivalence are executable.
 - The independent official eligibility/status/difficulty selection ledger is
   preregistered under proposed ADR-0356. S0 now freezes the 29-source,
-  53-submission, seven-result, 90-archive authority plus an 18-invariant/
+  51-direct-child-submission, seven-result, 90-archive authority plus an
+  18-invariant/
   18-mutation contract and exact synthetic fixture. Full official-input audit
   and production are still open. The authority is the pinned 2026 organizer
   code plus matching SMT-LIB 2025.08.04 release; E1b's exact ordered per-file
   digest ledger does not substitute for it. S1a now parses the organizer's
   actual `defs.py`, benchmark/results JSON, and submission shapes without
-  importing organizer code. The S1b streaming audit runner is fixture-green and
-  awaits its full selection-free input run; it cannot produce a selected set.
+  importing organizer code. The first S1b live input attempt is retained as a
+  negative: it stopped before metadata reduction on the official regexp-valued
+  logic shape and exposed that the organizer's submission glob is
+  non-recursive. The corrected fixture-green runner now awaits a fresh
+  selection-free input run; it cannot produce a selected set.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it

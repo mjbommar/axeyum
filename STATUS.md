@@ -401,17 +401,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   [execution plan](docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md)
   pin organizer commit `401302678311593efcef8a79b614b33a3b853eac`, the
   matching 450,472-file SMT-LIB 2025.08.04 Zenodo release, locked Polars 1.39.2,
-  all 2018--2024 Single Query inputs, and official seed `22,731,158`. The
+  all 2018--2024 Single Query inputs, and corrected official seed
+  `22,731,074`. The
   organizer remains the sampler producer; a separate standard-library auditor
   must prove release-byte closure, competitive-logics/difficulty eligibility,
   per-logic caps, complete decision reasons, and selected-file hashes. S0 now
-  freezes 29 source/config files, 53 submissions, seven historical result
+  freezes 29 source/config files, 51 direct-child submissions, seven historical
+  result
   inputs, 90 archives, 18 invariants, 18 mutations, and nine exact fixture
   files; the S1a official-format/AST adapter and S1b bounded-memory streaming
   runner raise the offline gate to fourteen tests. The runner is committed
   before use and emits only eligibility/cap facts, never an official sample.
-  Its live selection-free audit over every pinned official input is next. No
-  solver run or selection credit is granted yet.
+  Its first live selection-free attempt is retained as a negative after it
+  stopped before metadata reduction on regexp-valued submission logics. That
+  failure also exposed the organizer's non-recursive submission glob, excluding
+  two template examples and correcting the competitive count from 38 to 36 and
+  seed from `22,731,158` to `22,731,074` before any official sample was
+  observed. A corrected fresh-input rerun is next. No solver run or selection
+  credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7175,6 +7182,17 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-22 — Corrected the ADR-0356 authority before observing a sample.**
+  The first S1b live attempt stopped before metadata reduction because official
+  submission logics may be Pydantic root regexps, not only lists. The same
+  investigation proved `Config.submissions` uses non-recursive
+  `../submissions/*.json`, so two `submissions/template/` examples were never
+  producer inputs. The registered population is therefore 51 direct-child
+  submissions, 36 competitive submissions, seed sum `9,684,066,201`, and
+  global seed `22,731,074`. The retained negative is
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784743920768303217-16764d04`;
+  no official selected set was generated or inspected.
+
 - **2026-07-22 — Implemented the ADR-0356 S1b selection-free live auditor.**
   The new runner verifies and stages every pinned organizer/rules/data/
   submission byte, derives divisions and removals through a standard-library
@@ -7209,7 +7227,7 @@ plan is built and committed on the current branch:
   identity.** Proposed ADR-0356 separates pinned upstream Polars production
   from an independent eligibility/corpus auditor, selects Zenodo release
   2025.08.04 by exact 450,472-row agreement with organizer metadata, freezes the
-  2018--2024 result hashes and `22,731,158` global seed, and requires one
+  2018--2024 result hashes and corrected `22,731,074` global seed, and requires one
   terminal decision plus exact bytes for every metadata row before E1b can
   consume the population. S0 fixture/authority implementation is next; the old
   64,345-file candidate still has zero selection credit.

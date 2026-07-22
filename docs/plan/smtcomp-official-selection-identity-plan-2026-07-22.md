@@ -33,7 +33,7 @@ selection identity. It does not execute a solver or award benchmark credit.
 | Metadata population | 450,472 non-incremental rows, 89 logics |
 | New rows | 3,445 with first family component prefixed `2025` |
 | Historical years | 2018 through 2024 inclusive |
-| Seed | `(9,684,066,285 mod 2^30) + 2,341,289 = 22,731,158` |
+| Seed | `(9,684,066,201 mod 2^30) + 2,341,289 = 22,731,074` |
 
 The historical Single Query inputs are:
 
@@ -103,8 +103,8 @@ commit; do not explain drift away after observing a selection.
 
 **Result:** complete. The canonical
 [`authority-v1.json`](smtcomp-official-selection-authority-v1.json) freezes 29
-organizer source/config files, 53 submissions, seven historical result inputs,
-90 Zenodo entries, 450,472 metadata rows, and seed `22,731,158`. The
+organizer source/config files, 51 direct-child submissions, seven historical
+result inputs, 90 Zenodo entries, 450,472 metadata rows, and seed `22,731,074`. The
 [`contract-v1.json`](smtcomp-official-selection-contract-v1.json) freezes 18
 invariants and 18 rejecting mutations. Nine exact fixture files plus generated
 300/450/800/1200-row populations exercise the registered policy without
@@ -134,15 +134,26 @@ sat/unsat-only) historical predicate. No official selected set has been
 produced or observed.
 
 **S1b implementation:** ready for the registered live audit. The independent
-runner downloads and rechecks all 91 pinned organizer/rules/data/submission
-inputs (29 source/config files, 53 submissions, benchmark metadata, seven
-historical files, and the rules PDF), streams the multi-million-row gzip JSON
+runner downloads and rechecks all 89 pinned organizer/rules/data/submission
+inputs (29 source/config files, 51 direct-child submissions, benchmark metadata,
+seven historical files, and the rules PDF), streams the multi-million-row gzip JSON
 without Polars or organizer imports, and publishes a selection-free
 `eligibility.jsonl`, per-logic caps/quotas, summary, and completion-last input
 audit. A bounded-memory historical accumulator is differential-tested against
 the batch fixture result. Fourteen offline tests pass. The official selected
 set remains unobserved until this implementation commit is pushed and the live
 audit passes.
+
+**S1b first live attempt:** retained negative. The audit at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784743920768303217-16764d04`
+verified and retained its then-registered inputs, then stopped before metadata
+reduction with `official divisions/logics are not lists`. The official
+Pydantic `Logics` root accepts either a list or regexp. Investigation also
+proved that `Config.submissions` uses the non-recursive
+`../submissions/*.json` glob, excluding the two `submissions/template/`
+examples. S0 is corrected to 51 submissions, 36 competitive submissions, and
+seed `22,731,074` before any official sample was generated or observed. A
+fresh-directory rerun is required.
 
 ### S2 — verified corpus acquisition
 

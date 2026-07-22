@@ -31,7 +31,7 @@ Legacy scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
 `tests/test_pipeline.py` (6, full aggregation/ranking plus duplicate rejection),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
-Fourteen ADR-0356 tests separately validate the pinned 29-source/53-submission/
+Fourteen ADR-0356 tests separately validate the pinned 29-source/51-submission/
 90-archive authority, complete synthetic eligibility/decision partition, all
 four cap regions, the inclusive 1.0-second boundary, incoherence and
 single-solver-year handling, exact fixture bytes, and rejecting mutations. The

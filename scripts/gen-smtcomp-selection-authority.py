@@ -59,12 +59,12 @@ EXPECTED = {
         "file_count": 90,
         "total_bytes": 4_890_207_406,
     },
-    "submission_count": 53,
-    "competitive_submission_count": 38,
-    "competitive_seed_sum": 9_684_066_285,
-    "submission_seed_modulo": 20_389_869,
+    "submission_count": 51,
+    "competitive_submission_count": 36,
+    "competitive_seed_sum": 9_684_066_201,
+    "submission_seed_modulo": 20_389_785,
     "nyse_seed": 2_341_289,
-    "global_seed": 22_731_158,
+    "global_seed": 22_731_074,
 }
 
 
@@ -159,7 +159,11 @@ def refresh() -> dict[str, Any]:
         historical_rows.append({"year": year, **fetched})
 
     submission_paths = sorted(
-        path for path in tree if path.startswith("submissions/") and path.endswith(".json")
+        path
+        for path in tree
+        if path.startswith("submissions/")
+        and path.endswith(".json")
+        and path.count("/") == 1
     )
     _expect(
         len(submission_paths) == EXPECTED["submission_count"],
