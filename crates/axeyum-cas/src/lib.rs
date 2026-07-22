@@ -11049,7 +11049,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         // direct trig/rational-trig finders keep their canonical forms.
         integrate_power_reduced_trig(expr, var),
         integrate_ln_argument_substitution(expr, var),
-        integrate_sqrt_rational_usub(expr, var),
+        integrate_root_rational_usub(expr, var),
         // Final fallback: expand the integrand and integrate the expansion. Closes
         // powers of exponential/trig sums the direct finders miss — `∫sinh²x`,
         // `∫1/cosh²x` (even powers of `(eˣ±e^{−x})`) reduce to sums of exponentials.
@@ -13000,47 +13000,72 @@ pub fn improper_integrate(
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
 /// Whether `expr` contains a `ln(g)` head whose argument `g` involves `var`.
-/// Whether `expr` contains the exact head `√(var)` anywhere.
-fn contains_sqrt_of_var(expr: &CasExpr, var: &str) -> bool {
+/// The set of root **degrees** `q` of `var` appearing directly in `expr` — `√var`
+/// contributes `2`, `root_q(var)` contributes `q` (only heads whose argument is
+/// exactly `var`). Used to pick the `u = var^{1/q}` substitution.
+fn root_degrees_of_var(expr: &CasExpr, var: &str, out: &mut std::collections::BTreeSet<u32>) {
     match expr {
-        CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => true,
-        CasExpr::Unary(_, arg) => contains_sqrt_of_var(arg, var),
-        CasExpr::Neg(inner) => contains_sqrt_of_var(inner, var),
-        CasExpr::Pow(base, _) => contains_sqrt_of_var(base, var),
-        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(|e| contains_sqrt_of_var(e, var)),
-        CasExpr::Div(a, b) => contains_sqrt_of_var(a, var) || contains_sqrt_of_var(b, var),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
+            out.insert(2);
+        }
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
+            out.insert(*q);
+        }
+        CasExpr::Unary(_, arg) => root_degrees_of_var(arg, var, out),
+        CasExpr::Neg(inner) => root_degrees_of_var(inner, var, out),
+        CasExpr::Pow(base, _) => root_degrees_of_var(base, var, out),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            for e in items {
+                root_degrees_of_var(e, var, out);
+            }
+        }
+        CasExpr::Div(a, b) => {
+            root_degrees_of_var(a, var, out);
+            root_degrees_of_var(b, var, out);
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => {}
     }
 }
 
-/// `∫ F(√x) dx` via the substitution `u = √x` (`x = u²`, `dx = 2u du`): replace `√x`
-/// with `u` and `x` with `u²`, giving `∫ F(u)·2u du`, which the elementary finders
-/// handle when `F` is rational (or otherwise integrable). Closes `∫1/(√x+1) =
-/// 2√x − 2ln(√x+1)`, `∫√x/(1+√x)`, `∫atan(√x)`. Fires only when the whole `x`
-/// dependence is through `√x` (no residual `x`) and the `u`-integrand carries no
-/// `√u` (which would re-enter this finder). Certified downstream.
-fn integrate_sqrt_rational_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
-    if !contains_sqrt_of_var(expr, var) {
+/// `∫ F(root_q x) dx` via the substitution `u = root_q x` (`x = u^q`, `dx = q·u^{q−1} du`):
+/// replace the root head with `u` and `x` with `u^q`, giving `∫ F(u)·q·u^{q−1} du`,
+/// which the elementary finders handle when `F` is rational (or otherwise integrable).
+/// Handles a **single** root degree (`√x`, `∛x`, `root_q x`). Closes `∫1/(√x+1) =
+/// 2√x − 2ln(√x+1)`, `∫atan(√x)`, `∫∛x/(∛x+1)`. Fires only when the whole `x`
+/// dependence is through that root (no residual `x`) and the `u`-integrand carries no
+/// same-degree root of `u` (which would re-enter this finder). Certified downstream.
+fn integrate_root_rational_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let mut degrees = std::collections::BTreeSet::new();
+    root_degrees_of_var(expr, var, &mut degrees);
+    // A single root degree only (mixed `√x`+`∛x` would need `x^{1/lcm}`).
+    if degrees.len() != 1 {
         return None;
     }
+    let q = *degrees.iter().next()?;
+    let root_head = |arg: CasExpr| -> CasExpr {
+        if q == 2 {
+            arg.sqrt()
+        } else {
+            CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(arg))
+        }
+    };
     let u = if var == "u" { "w" } else { "u" };
-    // Replace `√x → u`, then any remaining `x → u²`.
-    let sqrt_x = CasExpr::Var(var.to_owned()).sqrt();
-    let replaced = replace_subexpr(expr, &sqrt_x, &CasExpr::var(u));
-    let in_u = replaced.substitute(var, &CasExpr::var(u).pow(2));
-    let integrand_u = simplify(&(in_u * CasExpr::int(2) * CasExpr::var(u)));
-    // Termination + validity guards: depends on `u`, no residual `x`, and no `√u`
-    // (which would send `integrate` back into this finder unboundedly).
-    if expr_contains_var(&integrand_u, var)
-        || !expr_contains_var(&integrand_u, u)
-        || contains_sqrt_of_var(&integrand_u, u)
-    {
+    // Replace `root_q x → u`, then any remaining `x → u^q`.
+    let replaced = replace_subexpr(expr, &root_head(CasExpr::var(var)), &CasExpr::var(u));
+    let in_u = replaced.substitute(var, &CasExpr::var(u).pow(q));
+    // `dx = q·u^{q−1} du`.
+    let dx = CasExpr::Const(Rational::integer(i128::from(q))) * CasExpr::var(u).pow(q - 1);
+    let integrand_u = simplify(&(in_u * dx));
+    let mut u_roots = std::collections::BTreeSet::new();
+    root_degrees_of_var(&integrand_u, u, &mut u_roots);
+    // Guards: depends on `u`, no residual `x`, and no leftover root of `u` (termination).
+    if expr_contains_var(&integrand_u, var) || !expr_contains_var(&integrand_u, u) || u_roots.contains(&q) {
         return None;
     }
     let anti_u = integrate(&integrand_u, u)
         .filter(CertifiedIntegral::is_certified)?
         .antiderivative;
-    Some(anti_u.substitute(u, &CasExpr::Var(var.to_owned()).sqrt()))
+    Some(anti_u.substitute(u, &root_head(CasExpr::var(var))))
 }
 
 fn contains_ln_of_var(expr: &CasExpr, var: &str) -> bool {
@@ -21145,15 +21170,18 @@ mod tests {
     #[test]
     fn sqrt_rational_substitution_integrals() {
         let x = || v("x");
-        // ∫F(√x) dx via u=√x (x=u², dx=2u du): a rational (or composite) function of √x.
-        // ∫1/(√x+1)=2√x−2ln(√x+1), ∫1/(√x(1+x))=2·atan(√x), ∫atan(√x)=(x+1)atan√x−√x.
+        // ∫F(root_q x) dx via u=root_q x (x=u^q, dx=q·u^{q−1} du): rational/composite
+        // functions of √x and ∛x. ∫1/(√x+1)=2√x−2ln(√x+1), ∫1/(√x(1+x))=2·atan(√x),
+        // ∫atan(√x)=(x+1)atan√x−√x, ∫∛x/(∛x+1), ∫1/(1+∛x).
         for integrand in [
             CasExpr::int(1) / (x().sqrt() + CasExpr::int(1)),
             x().sqrt() / (x().sqrt() + CasExpr::int(1)),
             CasExpr::int(1) / (x().sqrt() * (CasExpr::int(1) + x())),
             CasExpr::Unary(UnaryFunc::Atan, Box::new(x().sqrt())),
+            x().cbrt() / (x().cbrt() + CasExpr::int(1)),
+            CasExpr::int(1) / (CasExpr::int(1) + x().cbrt()),
         ] {
-            let r = integrate(&integrand, "x").expect("∫F(√x)");
+            let r = integrate(&integrand, "x").expect("∫F(root x)");
             assert!(r.is_certified(), "not certified: ∫{integrand}");
         }
         // Explicit: ∫1/(√x+1) = 2√x − 2ln(√x+1).
