@@ -383,6 +383,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.7 Lean execution evidence is preregistered before any
+  process observation.** The
+  [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) freezes
+  exact upstream/registry/decision/wrapper identities; explicit 4 GiB standard
+  and 8 GiB official-export lane templates; concrete run, resource, attempt,
+  case, artifact, and completion records; twelve typed termination classes;
+  immutable completion-last checkpoint/resume rules; nineteen fail-closed
+  mutations; and zero-outcome credit predicates. It records two corrections:
+  Lean CI resolves `NPROC` from the live runner and supplies no job-wide memory
+  cap, while generic `mem-run.sh` defaults to 64 GiB unless 4/8 GiB is explicit.
+  Runner labels, CTest/JUnit, provider conclusions, and expiring artifacts are
+  therefore not completion evidence by themselves. Next: publish this
+  source-first boundary, then implement TL0.7.1's machine authority and
+  synthetic validator without running Lean.
+
 - **2026-07-22 — TL0.6.2 closes official CI profile derivation without
   claiming execution or parity.** The source-first
   [plan](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md)
@@ -7545,6 +7560,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL0.7 execution-resource and completion
+  evidence.** The plan separates lane policy, immutable run identity, attempts,
+  per-case artifacts, and completion-last closure; freezes 4/8 GiB local lane
+  templates and twelve typed termination classes; and forbids guessed OOM,
+  runner-label hardware inference, JUnit-only completion, or synthetic parity
+  credit before implementation.
 
 - **2026-07-22 — Completed TL0.6.2's bounded official CI profile authority.**
   The isolated pinned workflow evaluator closes 17 contexts, nine active jobs,

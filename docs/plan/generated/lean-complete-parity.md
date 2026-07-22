@@ -28,7 +28,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 - Axiom ledger: 65 rows; `unclassified`=65.
 - U2 registration authority: 3678 default and 3723 full-Lake CTest cases; 0 official executions, 0 Axeyum executions, and 0 paired cells. This is bounded registration evidence, not complete U2 authority.
 - U2 official CI profiles: 17 contexts, 153 cells, 111 not-run CTest attempts, and 8 exact selection sets; 0 official executions and zero parity credit.
-- Implementation ledger: 136 rows; `DONE`=22, `PARTIAL`=5, `TODO`=109, `BLOCKED`=0.
+- Implementation ledger: 140 rows; `DONE`=22, `PARTIAL`=7, `TODO`=111, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 

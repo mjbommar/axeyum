@@ -79,6 +79,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   CTest attempts, and eight factored selection sets. The result records zero
   official/Axeyum executions and zero paired cells; TL0.6.3 execution remains
   open.
+- [`lean-execution-evidence-tl0.7-plan-2026-07-22.md`](lean-execution-evidence-tl0.7-plan-2026-07-22.md) —
+  source-first TL0.7 plan for explicit 4 GiB standard and 8 GiB exporter lane
+  templates, concrete resource/run identity, twelve typed termination classes,
+  immutable attempt/case/completion records, completion-last checkpoints,
+  nineteen mutation classes, and zero execution credit. It separates the
+  machine contract, bounded process adapter, durable store, and no-credit
+  controls before TL0.6.3 can begin.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

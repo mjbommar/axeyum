@@ -32,7 +32,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "b776c6e70ae107b9a3700dabdafba4d6a9c98c3fbdb8731b644244fd21bec90d"
+      "sha256": "1e23a4e77be3c4ee348b7c19f88511254045ae17a53c102a5f64ba9384981de4"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -321,11 +321,11 @@
       }
     },
     "implementation_tasks": {
-      "rows": 136,
+      "rows": 140,
       "status_counts": {
         "DONE": 22,
-        "PARTIAL": 5,
-        "TODO": 109,
+        "PARTIAL": 7,
+        "TODO": 111,
         "BLOCKED": 0
       }
     }

@@ -180,7 +180,7 @@ the interoperability and Track 6 plans.
 | TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
 | TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. U2 now has a [bounded executable registration authority](lean-u2-test-authority-2026-07-22.md) for 3,678 default / 3,723 full-Lake CTest cases plus an exact [official CI profile derivation](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md) for 17 contexts, 153 cells, 111 not-run attempts, and eight selection sets. Official executions, Axeyum executions, all terminal U0-U9 authorities, and terminal paired cells remain incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
-| TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
+| TL0.7 | PARTIAL | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. The [source-first execution plan](lean-execution-evidence-tl0.7-plan-2026-07-22.md) now freezes lane/run/attempt/case/completion identities, twelve typed termination classes, immutable completion-last checkpoints, exact credit predicates, nineteen mutation classes, and the explicit no-execution boundary before implementation or process observation. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
 | TL0.8 | TODO | Correct or archive older conflicting scope prose and wire link checks to this plan. | TL0.1 | S | No live document says both “import nothing” and “import mathlib.” |
 
 ### TL0.6 U2 official-test execution slices
@@ -198,6 +198,18 @@ result. U2 therefore advances through these separately reviewable slices:
 | TL0.6.6 | TODO | Review and promote U2 only after the complete declared platform/profile matrix and all both-system outcomes close without unexplained mismatch or missing completion evidence. | TL0.6.5 | M | U2 becomes `complete_authority`; otherwise it remains bounded with an exact residual and no terminal denominator promotion. |
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
+
+### TL0.7 Lean execution evidence slices
+
+Resource policy is a prerequisite to execution, not evidence that a process
+ran. TL0.7 therefore advances separately from TL0.6.3:
+
+| ID | Status | Task | Depends | Size | Exit artifact/gate |
+|---|---|---|---|---|---|
+| TL0.7.1 | PARTIAL | Freeze the machine execution-evidence contract: 4 GiB standard and 8 GiB official-export lane templates, concrete run/resource identity, typed attempt/case/completion records, immutable completion-last checkpoints, credit predicates, and synthetic validation only. The [preregistered plan](lean-execution-evidence-tl0.7-plan-2026-07-22.md) fixes the schema and mutations before implementation. | TL0.3, TL0.6.2 | M | Generated authority and mutation tests represent clean, failed, interrupted/resumed, invalid, and incomplete synthetic bundles while committed real-outcome counters remain zero. |
+| TL0.7.2 | TODO | Implement the bounded process adapter with explicit limits, exact command/environment/working-directory identity, process-group cleanup, raw output hashing, and evidence-backed exit/signal/timeout/limit classification. | TL0.7.1 | M | Forced exit, signal, timeout, cooperative memory-limit, and launch/preflight failures retain exact attempts without guessed OOM or completion. |
+| TL0.7.3 | TODO | Implement the immutable checkpoint store and completion-last validator on registered storage classes. | TL0.7.2 | M | Kill at every persistence boundary, resume without overwrite/duplication, quarantine conflicts, and reproduce the uninterrupted canonical result. |
+| TL0.7.4 | TODO | Run one no-credit pinned-Lean preflight and one official-export control through the complete path, then accept or revise the policy. | TL0.7.3 | S | Exact runner/platform/resource/artifact evidence validates; TL0.6.3 may begin without promoting either control into U2 outcomes. |
 
 ## 8. Phase L1 — production `lean4export` reader
 
@@ -518,10 +530,11 @@ parallel lane:
 18. **DONE:** TL0.6.2 — derive the pinned official CI
     event/check-level/platform/preset/filter/stage/rebootstrap profiles over
     the landed 3,678/3,723 U2 registrations.
-19. TL0.7 then TL0.6.3 — freeze execution resources/checkpoints and retain the
-    first official profile executions without promoting configuration evidence
-    into a pass or parity claim; continue U0-U9 authorities and A0-A11 paired
-    scoreboards.
+19. TL0.7.1--TL0.7.4 then TL0.6.3 — implement the preregistered execution
+    evidence contract, bounded process adapter, durable checkpoint store, and
+    no-credit controls before retaining the first official profile executions;
+    do not promote configuration or synthetic evidence into a pass or parity
+    claim. Continue U0-U9 authorities and A0-A11 paired scoreboards.
 20. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
 21. TL3.4 — discharge the first five axioms.
 22. TL3.6 — export minimal `Init` roots and regenerate blocker priority.

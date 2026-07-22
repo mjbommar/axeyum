@@ -409,7 +409,14 @@ state.
 > CTest attempts, and eight exact factored selection sets. The authority still
 > records zero official/Axeyum executions and zero paired cells. Next: TL0.7
 > must freeze execution resources/checkpoints before TL0.6.3 retains official
-> outcomes; exact paired records remain later TL0.6.5 work.
+> outcomes. Its source-first
+> [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) now
+> preregisters explicit 4 GiB standard/8 GiB exporter lanes, concrete
+> run/resource identity, twelve termination classes, immutable attempt/case/
+> completion records, completion-last resume, nineteen mutation classes, and
+> the no-execution boundary. Implementation, process/durability controls, and
+> all official outcomes remain open; exact paired records remain later
+> TL0.6.5 work.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
