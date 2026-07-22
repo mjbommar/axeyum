@@ -1263,3 +1263,24 @@ and `√A ± √B`. Closes `√(x²+x)−x=½`, `√(4x²+x)−2x=¼`, `√(x²+
   unevaluated so `∫` failed — try the raw `μ·q` integrand first, fall back to its simplified form
   (which collapses `eˣ·e⁻ˣ=1` but also rewrites `exp(2x)→exp(x)²`, so raw must win when it works).
   Closes `y′+y/x=1` (`μ=x`), `y′+2y/x=x` (`μ=x²`), `y′−y=eˣ`.
+
+---
+
+## 2026-07-22 — Entry 37f: nsimplify surds/logs + inverse Laplace repeated poles (456 tests)
+
+Two more parity fills:
+- **`nsimplify` quadratic surds & ln(rational).** Added `(a+√b)/c` recognition (via `(c·value−a)²=b`
+  over small `a,c` with `b` a non-square) — closing the golden ratio `(1+√5)/2` and `1+√2` — and
+  `ln(r)` for a positive rational `r≠1` (via `r=exp(value)`) — closing `ln2`, `ln3`. Both verified by
+  `evalf` reconstruction, so random values still decline.
+- **`inverse_laplace` repeated real poles.** It handled only distinct simple poles or one irreducible
+  quadratic, so `1/s²` declined. `inverse_laplace_repeated_poles` partial-fractions via `apart` and
+  maps each `C/(s−a)^k → (C/lead)·t^{k−1}/(k−1)!·e^{at}` (checking `den = lead·(s−a)^k` by
+  reconstruction). Closes `1/s²→t`, `1/s³→t²/2`, `1/(s−1)²→t·e^t`, and mixed `1/(s²(s−1))→e^t−1−t`.
+  Round-trip certified.
+
+**Session tally (Entries 37–37f): 17 substantial certified features** across integration (rational-trig
+half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
+series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
+summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
+variable/resonant first-order), `nsimplify`, and inverse Laplace. 355→456 tests.
