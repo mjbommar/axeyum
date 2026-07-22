@@ -31,6 +31,7 @@ AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
+EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -672,6 +673,28 @@ def execution_evidence_snapshot() -> dict[str, Any]:
     }
 
 
+def execution_process_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_execution_process_for_complete_parity",
+        ROOT / "scripts" / "lean_execution_process.py",
+    )
+    data = load_json(EXECUTION_PROCESS)
+    failures = checker.validate_result_authority(data)
+    if failures:
+        raise RuntimeError("invalid Lean execution process authority: " + "; ".join(failures))
+    return {
+        "scope": data["scope"],
+        "registered_controls": data["summary"]["registered_controls"],
+        "retained_process_attempts": data["summary"]["retained_process_attempts"],
+        "classification_counts": data["summary"]["classification_counts"],
+        "retained_files": data["summary"]["retained_files"],
+        "raw_artifacts": data["summary"]["raw_artifacts"],
+        "case_records": data["summary"]["case_records"],
+        "completion_records": data["summary"]["completion_records"],
+        "credits": data["credits"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -692,6 +715,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_AUTHORITY,
         U2_CI_PROFILES,
         EXECUTION_EVIDENCE,
+        EXECUTION_PROCESS,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
@@ -702,6 +726,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_official_ci_profiles.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
+        ROOT / "scripts" / "lean_execution_process.py",
+        ROOT / "scripts" / "tests" / "test_lean_execution_process.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -732,6 +758,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_test_authority": u2_test_snapshot(),
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
+            "execution_process_authority": execution_process_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -803,6 +830,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_tests = bounded["u2_test_authority"]
     u2_ci = bounded["u2_ci_profile_authority"]
     execution = bounded["execution_evidence_authority"]
+    process = bounded["execution_process_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -870,6 +898,11 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{execution['synthetic_controls']} synthetic controls, and "
             f"{execution['mutation_classes']} mutation classes; "
             f"{execution['observed']['real_runs']} real runs and zero parity credit.",
+            f"- Lean process controls: {process['retained_process_attempts']}/"
+            f"{process['registered_controls']} retained synthetic attempts, "
+            f"{process['retained_files']} exact files, and {process['raw_artifacts']} raw streams; "
+            f"{process['case_records']} case records, {process['completion_records']} completion "
+            f"records, {process['credits']['real_runs']} real runs, and zero parity credit.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

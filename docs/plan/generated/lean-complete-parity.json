@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "b73d19776268c3016595bc80f161ae6fe7c8ba45626ab0ac2dfabe7c892189df"
+      "sha256": "bc1f1011ea7c9b02476247089395bca149091e5118077f74f8feae2ee44d0213"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -39,12 +39,16 @@
       "sha256": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a"
     },
     {
+      "path": "docs/plan/lean-execution-process-v1.json",
+      "sha256": "0fc2d552f8594e2285eef2f0307a9b4d5313024166f0256486b731366947c0bf"
+    },
+    {
       "path": "docs/plan/lean-official-construct-matrix-v1.json",
       "sha256": "2c7fd6ed54dabb3f5e59291ea199d8621626e06e6dbcbe0492b00d0ff547277f"
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "0d9dcd04c6cfb6b28ddb23752430ce4901d4b271747daa3246237bb71b70e947"
+      "sha256": "97235fb539a55ff382be7138e8e3c0d37aae0350d3544e9edb0d90bd96add7a5"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -60,11 +64,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "887ef482d903145aa8083966609973128091df0f35d2b0c43bd9b532d13439e8"
+      "sha256": "02bf19515aff199585f17281d8ae4d268bfbca81e71dc04996be6a55be09a616"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "c8f58881f9ad241d4b42723bb36123e3e4da69af7c1ef1a05fe274abdada5e9f"
+      "sha256": "ae3986eda626a2a295a557b5423ea4125687e0db51916dd7510fb4bfcf1f0060"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -79,16 +83,24 @@
       "sha256": "2c173c2621c374179ee346aa8cc710a84e8c37792b2ead25d4e80f8144ad34ba"
     },
     {
+      "path": "scripts/lean_execution_process.py",
+      "sha256": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007"
+    },
+    {
       "path": "scripts/tests/test_lean_compatibility.py",
       "sha256": "b95626776c5ee358062b5e9b274037b9ad3dab6f0ea500eeae143a792295eb99"
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "0cea3dcf9959c0d9baecb03884a08c28cd4ce07de393beaa5a899b11dfe2d7c2"
+      "sha256": "f16998c03b25be2ed6c79317e63ed7a9b30102c07b3263b7eee5fb057b526790"
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
       "sha256": "1221e20ff4d712233613b03f5cbb75ec943e2b101ff7a370ad511011dc6b13f4"
+    },
+    {
+      "path": "scripts/tests/test_lean_execution_process.py",
+      "sha256": "5aea0fe02b3fa3278153807f7c1a1c8068ed1bfa7ea910f9b3aca08ae4a6521d"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
@@ -357,11 +369,37 @@
         "performance_rows": 0
       }
     },
+    "execution_process_authority": {
+      "scope": "synthetic-process-controls-only-no-lean-u2-case-completion-or-parity-credit",
+      "registered_controls": 8,
+      "retained_process_attempts": 8,
+      "classification_counts": {
+        "exited": 2,
+        "signaled": 1,
+        "wall-timeout": 1,
+        "memory-limit": 2,
+        "launch-failed": 1,
+        "preflight-invalid": 1
+      },
+      "retained_files": 40,
+      "raw_artifacts": 16,
+      "case_records": 0,
+      "completion_records": 0,
+      "credits": {
+        "real_runs": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "completed_cases": 0,
+        "paired_cells": 0,
+        "performance_rows": 0,
+        "parity_credit": 0
+      }
+    },
     "implementation_tasks": {
       "rows": 140,
       "status_counts": {
-        "DONE": 23,
-        "PARTIAL": 7,
+        "DONE": 24,
+        "PARTIAL": 6,
         "TODO": 110,
         "BLOCKED": 0
       }

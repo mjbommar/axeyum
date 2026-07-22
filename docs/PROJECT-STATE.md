@@ -288,7 +288,13 @@ Again, there are distinct targets:
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
   immutable completion-last evidence. Its five controls are synthetic and all
-  real execution counters remain zero.
+  real execution counters remain zero. The subsequent
+  [TL0.7.2 result](plan/lean-execution-process-tl0.7.2-2026-07-22.md) retains
+  8/8 bounded synthetic process attempts with exact raw output, descendant
+  cleanup, and evidence-backed exit/signal/timeout/memory/launch/preflight
+  classes. It still records zero cases, completions, official/Axeyum outcomes,
+  paired cells, performance rows, or parity credit; TL0.7.3--TL0.7.4 remain
+  prerequisites to official U2 execution.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

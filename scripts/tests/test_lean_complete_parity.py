@@ -67,6 +67,22 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(execution["mutation_classes"], 19)
         self.assertTrue(execution["all_synthetic_controls_valid"])
         self.assertEqual(execution["observed"]["real_runs"], 0)
+        process = first["bounded_snapshot"]["execution_process_authority"]
+        self.assertEqual(process["registered_controls"], 8)
+        self.assertEqual(process["retained_process_attempts"], 8)
+        self.assertEqual(process["classification_counts"], {
+            "exited": 2,
+            "signaled": 1,
+            "wall-timeout": 1,
+            "memory-limit": 2,
+            "launch-failed": 1,
+            "preflight-invalid": 1,
+        })
+        self.assertEqual(process["retained_files"], 40)
+        self.assertEqual(process["raw_artifacts"], 16)
+        self.assertEqual(process["case_records"], 0)
+        self.assertEqual(process["completion_records"], 0)
+        self.assertTrue(all(value == 0 for value in process["credits"].values()))
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
@@ -76,6 +92,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-u2-test-authority-v1.json", source_paths)
         self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")

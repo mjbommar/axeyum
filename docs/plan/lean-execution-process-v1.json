@@ -1,0 +1,742 @@
+{
+  "schema": "axeyum-lean-process-control-result-v1",
+  "as_of": "2026-07-22",
+  "scope": "synthetic-process-controls-only-no-lean-u2-case-completion-or-parity-credit",
+  "preregistration": {
+    "plan_commit": "45bf823a46b973a697c45140372540946edcfb0f",
+    "plan_sha256": "441f11cd86b50592ed038ef5b65451c74779d21d133065aa1e9213bde59d1239",
+    "implementation_revision": "367b9f3401da68981bcef984cc605f9dc000d346",
+    "plan_published_before_implementation": true,
+    "implementation_published_before_retained_result": true
+  },
+  "source_inputs": [
+    {
+      "path": "docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md",
+      "sha256": "441f11cd86b50592ed038ef5b65451c74779d21d133065aa1e9213bde59d1239",
+      "binding": "preregistered-current-file"
+    },
+    {
+      "path": "scripts/lean_execution_process.py",
+      "sha256": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
+      "binding": "current-file"
+    },
+    {
+      "path": "scripts/lean_execution_probe.py",
+      "sha256": "24451fcdf9d0ff5fb0e2b7cd9e59b55d963aa12197c61c323881912f63e0b1cf",
+      "binding": "current-file"
+    },
+    {
+      "path": "scripts/fixtures/lean-execution-invalid-interpreter",
+      "sha256": "2bf4485b2388353e8be93d68a669b1d255e7709f5c33b9a17cf80861ef42893b",
+      "binding": "current-file"
+    },
+    {
+      "path": "scripts/tests/test_lean_execution_process.py",
+      "sha256": "5aea0fe02b3fa3278153807f7c1a1c8068ed1bfa7ea910f9b3aca08ae4a6521d",
+      "binding": "current-file"
+    }
+  ],
+  "evidence_root": "docs/plan/evidence/lean-execution-process-tl0.7.2",
+  "evidence_files": [
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-seven-4g/attempt-prelaunch.json",
+      "bytes": 267,
+      "sha256": "4a396881cc77a648b05c2a37feb537c8d724cf522d73d765f61ddbf1187982de"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-seven-4g/attempt-terminal.json",
+      "bytes": 1176,
+      "sha256": "0f7a046646f6a51695a4d45d5904f6b72c4efa2c33b977b7b041644cc20d67fc"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-seven-4g/run.json",
+      "bytes": 2858,
+      "sha256": "5afa2730bb9ef75e4a05377dc1ad30af37b343a402ef432f6f7defe9807a90a4"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-seven-4g/stderr.bin",
+      "bytes": 29,
+      "sha256": "c0468de65298737b170ad2dd371b5a40c30bcfb3916405a73f04e4c9152a6eac"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-seven-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/attempt-prelaunch.json",
+      "bytes": 265,
+      "sha256": "fdc264c399e5230f00ee0863389648c7af9b14847d3317e7029eb87a9b969371"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/attempt-terminal.json",
+      "bytes": 1175,
+      "sha256": "564438618049fdcd1890569f7441e72802a04cd2388793e8785f0214f05c3a6d"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/run.json",
+      "bytes": 2856,
+      "sha256": "3c8a2f4b42674b76e0d60994f0c4c9d6fdaf0f9b87086f58296b71e108b71966"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/stderr.bin",
+      "bytes": 35,
+      "sha256": "be068b8383c2348ff5d93d12ba206f51ea4256eca587a4fabd0eb9a2c7beca17"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/exit-zero-4g/stdout.bin",
+      "bytes": 35,
+      "sha256": "3adf48e9b558ad37e744b509a007eab829b7a528981428f4ffbcf68cd1e25a29"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/invalid-interpreter-4g/attempt-prelaunch.json",
+      "bytes": 285,
+      "sha256": "21d2e1cf3196326f051fb6249e4553fc029f118a3a89427e41c00369111a3655"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/invalid-interpreter-4g/attempt-terminal.json",
+      "bytes": 1219,
+      "sha256": "73e32f70b7200afdc0afd6de386a38bb01ea36cd12752ef22d3c89417b42173a"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/invalid-interpreter-4g/run.json",
+      "bytes": 2852,
+      "sha256": "d408409962d26b51ea4d5ac3ae554631cc6e70a28c86dfa68eb40f95b73714b4"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/invalid-interpreter-4g/stderr.bin",
+      "bytes": 65,
+      "sha256": "b2a9d968cd07936b7f702d453fe53b4a9cd77582203cf86f5aaf3dc6d0d60e77"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/invalid-interpreter-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-4g/attempt-prelaunch.json",
+      "bytes": 271,
+      "sha256": "c67776d789213329f1492799e8acc96192fe585e88328d88f56830938a83178f"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-4g/attempt-terminal.json",
+      "bytes": 1229,
+      "sha256": "ca13e6de7d3751e8f849191fb77100b7688f52a520341e2d007a1446c1d7392e"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-4g/run.json",
+      "bytes": 2972,
+      "sha256": "5974b16e72136a75ee27b115443538c192e0b916c00825c860b18f0e0239cae6"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-4g/stderr.bin",
+      "bytes": 82,
+      "sha256": "e12ce74f58b8cb1a103f34104916108320ac512f365ad19b2e42180b66f06b62"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-8g/attempt-prelaunch.json",
+      "bytes": 271,
+      "sha256": "66dcae3e73f4790bce66446c8a9e34e849d9fb3274e66d6487baa09150a05a2f"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-8g/attempt-terminal.json",
+      "bytes": 1229,
+      "sha256": "2c21adeb73e2eb92b513ab74b1db246090adc9a9056b5bd3db0cf04dca344c08"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-8g/run.json",
+      "bytes": 2974,
+      "sha256": "e6a591bdacb2d9e83eb34fb0eb11b3196385e6e671a1d33964e832f15e6952e7"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-8g/stderr.bin",
+      "bytes": 82,
+      "sha256": "4786e8388d1ebab46f6c2c64bcd2cd111f918ee98b6a01e1b341c966eeb142a7"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/memory-limit-8g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/missing-cwd-4g/attempt-prelaunch.json",
+      "bytes": 269,
+      "sha256": "31df58505835f422359fc97d6b7cdb272d4929496410aaa192fe9a8cc494142a"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/missing-cwd-4g/attempt-terminal.json",
+      "bytes": 1216,
+      "sha256": "7b876f85c3da03221219d4d3d30eec7066719f8aed3bbcde8eaa06e847d8d0ff"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/missing-cwd-4g/run.json",
+      "bytes": 2897,
+      "sha256": "04565a3fe194b80235581d14a2c26afb54bd8220e614628c0a2f85c26912499a"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/missing-cwd-4g/stderr.bin",
+      "bytes": 69,
+      "sha256": "f868978537fbf3769579c7999dc27218544a800f8904186a0e02e7e0cce08844"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/missing-cwd-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/self-sigterm-4g/attempt-prelaunch.json",
+      "bytes": 271,
+      "sha256": "0d95da36d86fcbc2ab4a74361702a3a1c8a748a5a85cafd57d928cad5093f8ee"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/self-sigterm-4g/attempt-terminal.json",
+      "bytes": 1178,
+      "sha256": "778bb6266ba91e420802257974bcb508d27887703d99d73c0322260e2bd6de07"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/self-sigterm-4g/run.json",
+      "bytes": 2862,
+      "sha256": "e5b4a3bdb463d3148a4e96de1e9fd047c17badc1c361e9f591df72eca9a6cbce"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/self-sigterm-4g/stderr.bin",
+      "bytes": 31,
+      "sha256": "01b8f044093e268e766eec21a348b307aad9858cc07fe676d4edc9d42fcd5437"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/self-sigterm-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/wall-timeout-tree-4g/attempt-prelaunch.json",
+      "bytes": 281,
+      "sha256": "cfcf0b065f349875f021df1e74848b3a65fa1972025f7c1b0d549729750df65e"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/wall-timeout-tree-4g/attempt-terminal.json",
+      "bytes": 1254,
+      "sha256": "5f7641f2d8a56f30ee358a67b1fe84042e0c4568e974afa59f3955a8c9284d98"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/wall-timeout-tree-4g/run.json",
+      "bytes": 2867,
+      "sha256": "75ebefb331a577f441db1832f7f89284af748be6be0fdd2623bd76f516af626f"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/wall-timeout-tree-4g/stderr.bin",
+      "bytes": 41,
+      "sha256": "dd58ccec8fd727bc8170dab11a42dbdee416c99aad54e500079f285c85fdd347"
+    },
+    {
+      "path": "docs/plan/evidence/lean-execution-process-tl0.7.2/wall-timeout-tree-4g/stdout.bin",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "controls": [
+    {
+      "control_id": "exit-zero-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-exit-zero-4g",
+      "run_identity_sha256": "2b51980ca165bbd6334e3b97a29a13965714249d48f65d7cba42b494253e9958",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-exit-zero-4g",
+      "prelaunch_sha256": "9f41e8dc0dd89cd7c5a12604be97dc73ff3f66c79b7117ad6f3527b518fbafc0",
+      "expected_terminal_class": "exited",
+      "observed_terminal_class": "exited",
+      "exit_code": 0,
+      "signal": null,
+      "events": [
+        "rlimit-as-installed",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed",
+        "exit-status-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 31
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 11108352
+      },
+      "rlimit_as_bytes": 4294967296,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 35,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "be068b8383c2348ff5d93d12ba206f51ea4256eca587a4fabd0eb9a2c7beca17"
+        },
+        {
+          "bytes": 35,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "3adf48e9b558ad37e744b509a007eab829b7a528981428f4ffbcf68cd1e25a29"
+        }
+      ],
+      "terminal_record_sha256": "440d55ea807e13da0465e26e248138e9181dcc8d9225ab50bae97bec1e6b7327"
+    },
+    {
+      "control_id": "exit-seven-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-exit-seven-4g",
+      "run_identity_sha256": "c4c34a506bb1d9bb9907444916fcd49343757873e850d1cf20bdb45124c24582",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-exit-seven-4g",
+      "prelaunch_sha256": "b851d53a793d62b213569629f3883d13e53a779f52be893b46c49939fd6c1035",
+      "expected_terminal_class": "exited",
+      "observed_terminal_class": "exited",
+      "exit_code": 7,
+      "signal": null,
+      "events": [
+        "rlimit-as-installed",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed",
+        "exit-status-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 31
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 10866688
+      },
+      "rlimit_as_bytes": 4294967296,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 29,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "c0468de65298737b170ad2dd371b5a40c30bcfb3916405a73f04e4c9152a6eac"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "332ca74069e9540b12f84413f287d84672b8d8774e98f23672aa553974198d53"
+    },
+    {
+      "control_id": "self-sigterm-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-self-sigterm-4g",
+      "run_identity_sha256": "7ebc9347094827515181ba4ed91b37c4873a34f47d38432da395df0e6512e46d",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-self-sigterm-4g",
+      "prelaunch_sha256": "4c9cf2cfe54e6e71caa774f2f06bc2261362629078946baffba428511d6aab6e",
+      "expected_terminal_class": "signaled",
+      "observed_terminal_class": "signaled",
+      "exit_code": null,
+      "signal": 15,
+      "events": [
+        "rlimit-as-installed",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed",
+        "signal-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 31
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 10280960
+      },
+      "rlimit_as_bytes": 4294967296,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 31,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "01b8f044093e268e766eec21a348b307aad9858cc07fe676d4edc9d42fcd5437"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "449a7a2152be4a84075927224890b295ace4b9a71a80d41ea35f466c270d94e8"
+    },
+    {
+      "control_id": "wall-timeout-tree-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-wall-timeout-tree-4g",
+      "run_identity_sha256": "619b573e173f4ae9759de8575c0906089df587e2523360894f2b585fcf442879",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-wall-timeout-tree-4g",
+      "prelaunch_sha256": "8d557b570e152ed471d89878bcf2bfc5780e020a27870683e2122ce5737136d8",
+      "expected_terminal_class": "wall-timeout",
+      "observed_terminal_class": "wall-timeout",
+      "exit_code": null,
+      "signal": 9,
+      "events": [
+        "rlimit-as-installed",
+        "wall-timeout-observed",
+        "process-group-sigterm-sent",
+        "process-group-sigkill-sent",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 2289
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 13160448
+      },
+      "rlimit_as_bytes": 4294967296,
+      "watchdog_fired": true,
+      "sigterm_sent": true,
+      "sigkill_sent": true,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 41,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "dd58ccec8fd727bc8170dab11a42dbdee416c99aad54e500079f285c85fdd347"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "c09be2ce6eb4c551596b6e03c761b114d8b20ef6fea6805505a4fd6b083cd725"
+    },
+    {
+      "control_id": "memory-limit-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-memory-limit-4g",
+      "run_identity_sha256": "65b314d5807d9ba3277afc71f6240d3f90d6160d65a3214603fd377c56b93a2c",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-memory-limit-4g",
+      "prelaunch_sha256": "031038545a8330d94666b09bcbeb9aecaed7be4ac173c464d4089e357cf839e2",
+      "expected_terminal_class": "memory-limit",
+      "observed_terminal_class": "memory-limit",
+      "exit_code": 86,
+      "signal": null,
+      "events": [
+        "rlimit-as-installed",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed",
+        "memory-limit-observed",
+        "cooperative-memory-diagnostic-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 41
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 12693504
+      },
+      "rlimit_as_bytes": 4294967296,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 82,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "e12ce74f58b8cb1a103f34104916108320ac512f365ad19b2e42180b66f06b62"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "63d4f7c17e9e57a6943d339a103f31db1f0bbdf30157f4f4be284535a568eb4a"
+    },
+    {
+      "control_id": "memory-limit-8g",
+      "lane_id": "official-export-8g",
+      "run_id": "synthetic-tl0.7.2-memory-limit-8g",
+      "run_identity_sha256": "fbd6b0bbd2ace4fed26b51ac162aa224b563c883f39df9154cae8378f7e41d94",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-memory-limit-8g",
+      "prelaunch_sha256": "96e2841e1028b0aadf4fee7e0374124e4533b3f22866792d7277165ae0e86656",
+      "expected_terminal_class": "memory-limit",
+      "observed_terminal_class": "memory-limit",
+      "exit_code": 86,
+      "signal": null,
+      "events": [
+        "rlimit-as-installed",
+        "direct-child-reaped",
+        "process-group-no-live-members-observed",
+        "memory-limit-observed",
+        "cooperative-memory-diagnostic-observed"
+      ],
+      "wall_time": {
+        "state": "observed",
+        "unit": "milliseconds",
+        "value": 41
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "observed",
+        "unit": "bytes",
+        "value": 12664832
+      },
+      "rlimit_as_bytes": 8589934592,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": true,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 82,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "4786e8388d1ebab46f6c2c64bcd2cd111f918ee98b6a01e1b341c966eeb142a7"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "8c73a16fcdc703f77ab38c802d048d540a7463ed3a3951c52bf91aae6db9ca49"
+    },
+    {
+      "control_id": "invalid-interpreter-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-invalid-interpreter-4g",
+      "run_identity_sha256": "f46cf8086ee845426acf5cdda1d6d28d536f618c5a46a91da12231b15618acd1",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-invalid-interpreter-4g",
+      "prelaunch_sha256": "14e304168b13e85bc3e9366e6ccdabd0f40da14a04fee646c1af08b282293126",
+      "expected_terminal_class": "launch-failed",
+      "observed_terminal_class": "launch-failed",
+      "exit_code": null,
+      "signal": null,
+      "events": [
+        "launch-error-observed"
+      ],
+      "wall_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "not-observed",
+        "unit": "bytes",
+        "value": null
+      },
+      "rlimit_as_bytes": null,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": false,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 65,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "b2a9d968cd07936b7f702d453fe53b4a9cd77582203cf86f5aaf3dc6d0d60e77"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "45ee4651d3836df6dbbce696c4912a2daa7bcb0c74658ec20ea2e32fcb57608e"
+    },
+    {
+      "control_id": "missing-cwd-4g",
+      "lane_id": "standard-local-4g",
+      "run_id": "synthetic-tl0.7.2-missing-cwd-4g",
+      "run_identity_sha256": "faa06473c7b17b966f032b217b0b3b54d4adacf783f55e3b9ef1f90c4efbaedb",
+      "platform_sha256": "59939b8f792305a7547e6422df1a6107aa6e34873040665886277d8ae789acaf",
+      "attempt_id": "attempt-missing-cwd-4g",
+      "prelaunch_sha256": "5a85eb9d44c186949c36b23d1ab35639a487bab5bf746f8b4fa76046a7e6c244",
+      "expected_terminal_class": "preflight-invalid",
+      "observed_terminal_class": "preflight-invalid",
+      "exit_code": null,
+      "signal": null,
+      "events": [
+        "preflight-invalid-observed"
+      ],
+      "wall_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "cpu_time": {
+        "state": "not-observed",
+        "unit": "milliseconds",
+        "value": null
+      },
+      "peak_rss": {
+        "state": "not-observed",
+        "unit": "bytes",
+        "value": null
+      },
+      "rlimit_as_bytes": null,
+      "watchdog_fired": false,
+      "sigterm_sent": false,
+      "sigkill_sent": false,
+      "direct_child_reaped": false,
+      "live_non_zombie_pids_after_cleanup": [],
+      "raw_artifacts": [
+        {
+          "bytes": 69,
+          "id": "stderr",
+          "kind": "stderr",
+          "sha256": "f868978537fbf3769579c7999dc27218544a800f8904186a0e02e7e0cce08844"
+        },
+        {
+          "bytes": 0,
+          "id": "stdout",
+          "kind": "stdout",
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "terminal_record_sha256": "92a618146c1e15ccbe01b8949b39ee79032ef75b8a7b10a5c8374a8d6cd3d763"
+    }
+  ],
+  "summary": {
+    "registered_controls": 8,
+    "retained_process_attempts": 8,
+    "classification_counts": {
+      "exited": 2,
+      "signaled": 1,
+      "wall-timeout": 1,
+      "memory-limit": 2,
+      "launch-failed": 1,
+      "preflight-invalid": 1
+    },
+    "lane_counts": {
+      "standard-local-4g": 7,
+      "official-export-8g": 1
+    },
+    "raw_artifacts": 16,
+    "retained_files": 40,
+    "retained_bytes": 35463,
+    "case_records": 0,
+    "completion_records": 0,
+    "junit_artifacts": 0,
+    "provider_artifacts": 0
+  },
+  "credits": {
+    "real_runs": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "completed_cases": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "parity_credit": 0
+  },
+  "milestones": [
+    {
+      "id": "TL0.7.1",
+      "state": "done"
+    },
+    {
+      "id": "TL0.7.2",
+      "state": "synthetic-process-controls-complete"
+    },
+    {
+      "id": "TL0.7.3",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.7.4",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.6.3",
+      "state": "blocked-on-tl0.7"
+    }
+  ],
+  "residual": [
+    "Qualify immutable checkpoint installation, conflict quarantine, kill/resume, and completion-last publication in TL0.7.3.",
+    "Run the two no-credit real controls only after TL0.7.3 in TL0.7.4.",
+    "Keep every U2 official and Axeyum outcome at zero until TL0.6.3 begins."
+  ],
+  "authority_sha256": "a1e26218fb1fe7bf69c519e3c3a08d7b8ae749dfd51f182837e5f10cfaf4f94c"
+}
