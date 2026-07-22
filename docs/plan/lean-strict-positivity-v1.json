@@ -1,0 +1,118 @@
+{
+  "schema": "axeyum-lean-strict-positivity-v1",
+  "stage": "source-frozen",
+  "date": "2026-07-22",
+  "decision": "docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md",
+  "plan": "docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md",
+  "pins": {
+    "lean_toolchain": "leanprover/lean4:v4.30.0",
+    "lean_version": "4.30.0",
+    "lean_git_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "resource_policy": {
+    "runner": "systemd-run --user --scope",
+    "memory_high": "3G",
+    "memory_max": "4G",
+    "memory_swap_max": "512M",
+    "lean_jobs": 1,
+    "rust_jobs": 2
+  },
+  "commands": {
+    "working_directory": "fresh temporary directory with source copied to <module>.lean",
+    "resource_runner_argv": [
+      "systemd-run",
+      "--user",
+      "--scope",
+      "--quiet",
+      "-p",
+      "MemoryHigh=3G",
+      "-p",
+      "MemoryMax=4G",
+      "-p",
+      "MemorySwapMax=512M"
+    ],
+    "lean_argv_template": [
+      "/usr/bin/time",
+      "-v",
+      "<pinned-lean>",
+      "-j1",
+      "-o",
+      "<module>.olean",
+      "<module>.lean"
+    ]
+  },
+  "sources": {
+    "construct-matrix-positive": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix.lean",
+      "sha256": "08c6eeaed9d980a631dff14b30de1e3d8da37011b8ad03b84dbdc03c90bff13d",
+      "module": "AxeyumConstructMatrix",
+      "expected_official_outcome": "accepted",
+      "expected_diagnostic_substring": null
+    },
+    "negative-domain": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-negative.lean",
+      "sha256": "4c94c6563583b34cbd500075bb76b6a71b7476e7694bcff91253c460d718c71b",
+      "module": "AxeyumConstructMatrixNegative",
+      "expected_official_outcome": "rejected",
+      "expected_diagnostic_substring": "has a non positive occurrence of the datatypes being declared"
+    },
+    "negative-mixed": {
+      "path": "docs/plan/fixtures/lean-v4.30-strict-positivity-negative-mixed.lean",
+      "sha256": "0722ce6898bdbf5335b4ee77e62ef8ecdfb0654e1a421b4acc892c0fcb312ffc",
+      "module": "AxeyumStrictPositivityMixed",
+      "expected_official_outcome": "rejected",
+      "expected_diagnostic_substring": "has a non positive occurrence of the datatypes being declared"
+    },
+    "negative-deep": {
+      "path": "docs/plan/fixtures/lean-v4.30-strict-positivity-negative-deep.lean",
+      "sha256": "89b1909580a979ca2645297f07fd0379b4837e67b54cfd0471e5014d39bbec13",
+      "module": "AxeyumStrictPositivityDeep",
+      "expected_official_outcome": "rejected",
+      "expected_diagnostic_substring": "has a non positive occurrence of the datatypes being declared"
+    }
+  },
+  "cases": [
+    {
+      "id": "direct-recursive",
+      "source": "construct-matrix-positive",
+      "source_family": "direct-recursive-non-indexed",
+      "expected_rule_class": "positive-direct",
+      "expected_official_outcome": "accepted"
+    },
+    {
+      "id": "recursive-indexed",
+      "source": "construct-matrix-positive",
+      "source_family": "recursive-indexed",
+      "expected_rule_class": "positive-valid-indexed-application",
+      "expected_official_outcome": "accepted"
+    },
+    {
+      "id": "reflexive-higher-order",
+      "source": "construct-matrix-positive",
+      "source_family": "reflexive-higher-order",
+      "expected_rule_class": "positive-pi-codomain",
+      "expected_official_outcome": "accepted"
+    },
+    {
+      "id": "negative-domain",
+      "source": "negative-domain",
+      "source_family": "negative-function-domain",
+      "expected_rule_class": "non-positive-pi-domain",
+      "expected_official_outcome": "rejected"
+    },
+    {
+      "id": "negative-mixed",
+      "source": "negative-mixed",
+      "source_family": "mixed-positive-negative",
+      "expected_rule_class": "non-positive-pi-domain",
+      "expected_official_outcome": "rejected"
+    },
+    {
+      "id": "negative-deep",
+      "source": "negative-deep",
+      "source_family": "deep-negative-domain",
+      "expected_rule_class": "non-positive-pi-domain",
+      "expected_official_outcome": "rejected"
+    }
+  ]
+}

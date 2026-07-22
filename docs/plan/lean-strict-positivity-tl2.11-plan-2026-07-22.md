@@ -1,11 +1,14 @@
 # Lean strict positivity: TL2.11 execution plan
 
-Status: preregistered; M0 source/case freeze next
+Status: M0 source/case freeze complete; M1 trusted preflight next
 
 Date: 2026-07-22
 
 Decision gate:
 [proposed ADR-0352](../research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
+
+Current checkpoint:
+[M0 source freeze](lean-strict-positivity-m0-2026-07-22.md)
 
 Parents:
 

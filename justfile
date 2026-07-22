@@ -112,6 +112,8 @@ parity-docs:
     python3 -m unittest scripts.tests.test_lean_compatibility
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check
+    python3 -m unittest scripts.tests.test_lean_strict_positivity
+    python3 scripts/check-lean-strict-positivity.py --check
     python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
     python3 scripts/freeze-lean-official-construct-matrix-product.py --check
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 -m unittest scripts.tests.test_lean_axiom_ledger

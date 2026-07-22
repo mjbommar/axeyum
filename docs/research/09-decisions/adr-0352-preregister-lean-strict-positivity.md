@@ -4,6 +4,12 @@ Status: proposed
 
 Date: 2026-07-22
 
+Implementation checkpoint: the
+[M0 source freeze](../../plan/lean-strict-positivity-m0-2026-07-22.md) binds four
+source hashes, six ordered rule classes, exact resources/commands, and eight
+fail-closed contract tests without new official or product observation. M1
+trusted preflight remains next, so this ADR stays proposed.
+
 ## Context
 
 TL2.11 and T6.0.2 require a real strict-positivity checker before TL2.12 admits

@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.11/T6.0.2 strict positivity is preregistered; M0 source
-  freeze is next.** Proposed
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity M0 is complete; M1 trusted
+  preflight is next.** Proposed
   [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
   and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
   bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
@@ -381,8 +381,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   positive/invalid-occurrence errors. Direct recursion must remain admitted;
   positive `MiniVector`/`MiniAcc` shapes must pass positivity but retain their
   current feature declines. A >=256-case deterministic polarity grammar and a
-  mandatory pinned-Lean differential gate precede acceptance. No kernel or
-  importer semantics have changed at this checkpoint.
+  mandatory pinned-Lean differential gate precede acceptance. The
+  [M0 result](docs/plan/lean-strict-positivity-m0-2026-07-22.md) and
+  [`lean-strict-positivity-v1.json`](docs/plan/lean-strict-positivity-v1.json)
+  now hash-freeze four sources and six rule classes before new execution. Eight
+  mutation tests reject source/case/pin/resource/command/diagnostic drift and
+  premature observations. No kernel or importer semantics have changed at this
+  checkpoint.
 
 - **2026-07-22 — the official Lean construct-matrix selected-family milestone
   is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
@@ -6840,6 +6845,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M0 source freeze.** Added
+  hash-frozen mixed-polarity and deep-negative Lean sources beside the immutable
+  construct-matrix controls; registered six ordered rule classes and exact Lean
+  4.30/resource/command policy; added a fail-closed checker plus eight mutation
+  tests to normal parity/check paths. No new Lean or Axeyum product run occurred;
+  M1 pre-insertion trusted checking is next.
 
 - **2026-07-22 — Preregistered TL2.11/T6.0.2 strict positivity before kernel
   implementation.** Proposed ADR-0352 and a bounded M0--M4 execution plan from

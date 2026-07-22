@@ -120,6 +120,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   preregistered Lean 4.30 WHNF/`Pi`/valid-family-application rule, typed error
   boundary, pre-insertion ordering, adversarial grammar, official differential,
   and M0--M4 gates for TL2.11/T6.0.2.
+- [`lean-strict-positivity-m0-2026-07-22.md`](lean-strict-positivity-m0-2026-07-22.md)
+  and [`lean-strict-positivity-v1.json`](lean-strict-positivity-v1.json) —
+  four hash-frozen sources, six ordered rule classes, bounded command/resource
+  registration, and eight fail-closed tests with no premature observation.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

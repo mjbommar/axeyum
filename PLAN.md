@@ -154,7 +154,11 @@ state.
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
 > two typed occurrence failures, pre-insertion environment ordering, a generated
 > polarity grammar, and official differential gates. M0 freezes added negative
-> sources before any kernel semantic change; TL2.12 remains blocked.
+> sources before any kernel semantic change; the
+> [M0 result](docs/plan/lean-strict-positivity-m0-2026-07-22.md) now binds four
+> hashes, six ordered rule classes, exact resources/commands, and eight
+> fail-closed tests with no new observation. M1 trusted preflight is next;
+> TL2.12 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
