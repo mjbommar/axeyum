@@ -1245,3 +1245,21 @@ top order and declining on cancellation. `limit_algebraic_at_infinity` tries tha
 `S+R = (S²−R²)/(S−R)` — building the numerator polynomial `m²A−R²` **directly** (squaring `√A` does
 not auto-fold in `simplify_radicals`), then re-runs the leading-term ratio. Handles `√A ± polynomial`
 and `√A ± √B`. Closes `√(x²+x)−x=½`, `√(4x²+x)−2x=¼`, `√(x²+x)−√(x²−x)=1`, `√(x+1)−√x=0`.
+
+---
+
+## 2026-07-22 — Entry 37e: ODE gaps (still 456 tests; +2 features)
+
+- **Constant-coefficient homogeneous ODEs with surd roots.** `dsolve_homogeneous`'s leftover-quadratic
+  tail required a *rational* `β` (`rational_sqrt`), so a complex pair with a surd `β` (`x²+x+1 →
+  −½±(√3/2)i`) declined — blocking degree-3 char polys like `x³−1`. Now the complex branch keeps `β`
+  symbolic (`√(−disc)/2a`), and a new `disc>0` branch emits the two real-irrational-root exponentials
+  `e^{(α±√·)x}`. The substitute-and-check certificate applies `simplify_radicals∘simplify` to the
+  operator so the higher derivatives of a surd-trig basis fold and certify. Closes `y‴−y=0`, `y‴+y=0`,
+  `y″−2y=0` (±√2), `y″+y′+y=0`. (Two irreducible quadratics — `x⁴+1` — still declines.)
+- **First-order linear ODEs with variable/resonant coefficients.** (1) `p=k/x` gave `μ=exp(k·ln x)`
+  which never folded — added `rewrite_exp_log` (`exp(c·ln u)→u^c` for integer `c`, the dual of
+  `rewrite_log_exp`) applied to `μ` and `e^{−P}`. (2) Resonant forcing `y′−y=eˣ` left `eˣ·e⁻ˣ`
+  unevaluated so `∫` failed — try the raw `μ·q` integrand first, fall back to its simplified form
+  (which collapses `eˣ·e⁻ˣ=1` but also rewrites `exp(2x)→exp(x)²`, so raw must win when it works).
+  Closes `y′+y/x=1` (`μ=x`), `y′+2y/x=x` (`μ=x²`), `y′−y=eˣ`.
