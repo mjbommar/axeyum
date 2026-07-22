@@ -124,7 +124,7 @@ state.
 > The remaining recursive-indexed/mutual/nested/reflexive/well-founded fixture
 > matrix is now governed by a
 > [source-first, wire-second execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
-> under proposed ADR-0351. It freezes official source cases before export,
+> under accepted ADR-0351. It freezes official source cases before export,
 > freezes independently inventoried official wire forms before Rust product
 > measurement, pairs every decline with the exact direct-recursive positive
 > control, and forbids admission work inside the measurement milestone. M0 and
@@ -143,9 +143,11 @@ state.
 > no error publishes `CompletedImport`. It also exposes the valid nested stream's
 > current `Malformed` misclassification. M4 now generates the
 > [seven-row assurance matrix](docs/plan/generated/lean-official-construct-matrix.md)
-> from those facts and rejects false admission/computation promotions. TL2.16
-> is PARTIAL for this selected population, not complete. M5 final bounded gates,
-> decision closure, and handoff are next.
+> from those facts and rejects false admission/computation promotions. The
+> [M5 final result](docs/plan/lean-official-construct-matrix-final-2026-07-22.md)
+> closes the bounded kernel/importer, contract, parity, foundational-resource,
+> and link gates; accepts ADR-0351; and records the unrelated workspace-format
+> boundary. TL2.16 is PARTIAL for this selected population, not complete.
 > TL2.11 strict positivity remains the first semantic widening prerequisite.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
@@ -183,16 +185,17 @@ state.
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
 > arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, TL1.3
 > owned transactional publication, TL1.4 generated mutation coverage, and TL1.7
-> canonical declaration/dependency identity are complete. Continue the
-> [proposed official construct matrix](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
-> next from its completed [M0/Stage A](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+> canonical declaration/dependency identity are complete. The
+> [accepted official construct matrix](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+> is complete for its selected population from
+> [M0/Stage A](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
 > and [Stage B](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
 > checkpoints and the completed
 > [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md):
 > the [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
-> is complete; run M5 documentation/decision/final gates next. Do not repair the
-> nested classification inside this measurement
-> milestone. TL1.5 property
+> and [M5 handoff](docs/plan/lean-official-construct-matrix-final-2026-07-22.md).
+> Do not conflate the bounded nested diagnostic-classification follow-up with
+> semantic nested support. TL1.5 property
 > fuzzing is dependency-ready, but TL2.11 positivity remains mandatory before
 > recursive admission widens. Native
 > parser/macros,

@@ -1,12 +1,12 @@
 # Official Lean construct-matrix execution plan
 
-Status: M0 through M4 source, wire, product, and generated assurance artifacts
-complete; M5 final validation and handoff next
+Status: complete for the preregistered selected-family measurement population;
+TL1.8 and TL2.16 remain PARTIAL for their broader populations
 
 Date: 2026-07-22
 
-Decision gate:
-[proposed ADR-0351](../research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+Decision:
+[accepted ADR-0351](../research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
 
 Parent plans:
 
@@ -20,12 +20,14 @@ Current checkpoints:
 and [Stage B result](lean-official-construct-matrix-stage-b-2026-07-22.md),
 followed by the
 [M3 current-product result](lean-official-construct-matrix-product-2026-07-22.md),
-and the [M4 assurance result](lean-official-construct-matrix-m4-2026-07-22.md),
+the [M4 assurance result](lean-official-construct-matrix-m4-2026-07-22.md), and
+the [M5 final result](lean-official-construct-matrix-final-2026-07-22.md),
 with the canonical source/wire registration in
 [`lean-official-construct-matrix-v1.json`](lean-official-construct-matrix-v1.json).
 The registration includes exact typed current-product outcomes and regenerates
-the public assurance matrix without changing them. M5 owns final gates and
-handoff.
+the public assurance matrix without changing them. M5 closes the final bounded
+gates, accepts the decision, and hands the primary semantic trajectory to
+TL2.11 strict positivity.
 
 ## 1. Decision and outcome
 

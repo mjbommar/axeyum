@@ -1,6 +1,6 @@
 # Axeyum project state
 
-**As of 2026-07-21:** Axeyum is a working, research-grade automated-reasoning
+**As of 2026-07-22:** Axeyum is a working, research-grade automated-reasoning
 stack with competitive results on selected fragments and substantial checked
 proof coverage. It is not a drop-in Z3 replacement or a replacement for the
 Lean system.
@@ -132,9 +132,10 @@ Again, there are distinct targets:
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, iota reduction, dependent
-  projections, constructor projection reduction, and structure eta. Major
-  residuals include arbitrary-precision literal support, quotient computation,
-  recursive indexed families, and mutual/nested/reflexive inductives. A new
+  projections, constructor projection reduction, arbitrary-precision checked
+  Nat literals, and structure eta. Major residuals include String literals,
+  quotient computation, recursive indexed families, and mutual/nested/reflexive
+  inductives. A new
   format-3.1 Rust importer independently admits one official
   flat fixture as eight kernel declarations and one direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
@@ -167,6 +168,15 @@ Again, there are distinct targets:
   content and direct-dependency digests for every admitted declaration. Five
   focused tests freeze the exact flat-fixture identities and prove record-order
   invariance plus type/body/dependency mutation sensitivity.
+  A completed source-first/wire-second official construct matrix now freezes
+  recursive-indexed, reflexive, mutual, nested, and well-founded exports before
+  measuring the product. Its seven selected-family rows contain one admitted
+  direct-recursive control, one translated/kernel decline, three parsed/policy
+  declines, one valid nested export retained at inventory-only because of a
+  diagnostic misclassification, one official source rejection, and zero
+  computation-checked new families. This makes strict positivity the next
+  semantic prerequisite; it does not turn the selected matrix into broad Lean
+  admission credit.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

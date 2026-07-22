@@ -742,10 +742,10 @@ Out of scope:
     admitted content digest so dependency mutations propagate without changing
     the dependent declaration's own content identity. See
     [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
-- [ ] How should the remaining recursive-indexed, reflexive, mutual, nested,
+- [x] How should the remaining recursive-indexed, reflexive, mutual, nested,
       and well-founded official Lean cases be measured before independent
       admission widens?
-  - Proposed answer (2026-07-22): freeze minimal source cases first; export
+  - Answer (2026-07-22): freeze minimal source cases first; export
     every selected root twice; freeze exact official wire features with the
     independent Python reader before running Axeyum; then pair every typed Rust
     decline with the existing direct-recursive positive control and generate an
@@ -755,8 +755,9 @@ Out of scope:
     their full independent group metadata. M3 now freezes two current-product
     outcomes per row beside ten passing direct-recursive controls, without
     changing semantics. M4 now generates seven implication-checked assurance
-    rows; only final validation/decision closure remains. See
-    [proposed ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+    rows. M5 closes the bounded validation, documentation, decision, and remote-
+    ref gates without changing importer or kernel semantics. See
+    [accepted ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
     and the
     [execution plan](../../plan/lean-official-construct-matrix-plan-2026-07-22.md)
     plus the
@@ -767,6 +768,8 @@ Out of scope:
     [M3 product result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
     The generated selected-family result is in the
     [M4 assurance report](../../plan/lean-official-construct-matrix-m4-2026-07-22.md).
+    The exact gate and handoff record is in the
+    [final result](../../plan/lean-official-construct-matrix-final-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

@@ -675,7 +675,7 @@ Non-claims until their gates are met:
 - no independent-checking claim from official Lean acceptance alone;
 - no theorem-admission claim from NDJSON parsing alone.
 
-## 9. Immediate next eleven actions
+## 9. Immediate next twelve actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
 2. Keep the compatibility/census/ledger tests, 28 importer cases, and the
@@ -690,35 +690,39 @@ Non-claims until their gates are met:
    publishes canonical declaration/dependency identities; do not generalize
    exact K1 roots or K0 rules to broader native or ecosystem compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
-   hash-bound String closure; execute the
+   hash-bound String closure. The completed
    [official construct-matrix plan](lean-official-construct-matrix-plan-2026-07-22.md)
-   for recursive-indexed, reflexive/higher-order, mutual, nested, and well-
+   covers recursive-indexed, reflexive/higher-order, mutual, nested, and well-
    founded source families. Its [M0/Stage A checkpoint](lean-official-construct-matrix-stage-a-2026-07-22.md)
-   has reproduced the historical controls and frozen seven source cases with no
+   reproduced the historical controls and froze seven source cases before
    product observation; its [Stage B checkpoint](lean-official-construct-matrix-stage-b-2026-07-22.md)
-   now freezes five byte-identical official streams and complete independent
-   wire-group inventories, still with no Rust product result.
+   freezes five byte-identical official streams and complete independent wire-
+   group inventories before Rust measurement.
 5. **M3 DONE:** the [current-product result](lean-official-construct-matrix-product-2026-07-22.md)
    carries ten exact direct-recursive controls beside two stable outcomes for
    every new row. It records kernel/policy declines, the nested format
    misclassification, and completion-only failure without changing semantics.
-6. **M4 DONE:** the [assurance result](lean-official-construct-matrix-m4-2026-07-22.md)
+6. **M4/M5 DONE:** the [assurance result](lean-official-construct-matrix-m4-2026-07-22.md)
    generates the parsed/translated/admitted/computation-separated matrix from
-   tests and exact fixtures. The selected-family seed advances TL2.16 to PARTIAL
-   but does not complete its full population. Run M5 final gates and handoff.
-7. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
+   tests and exact fixtures, and the [final result](lean-official-construct-matrix-final-2026-07-22.md)
+   closes bounded gates, ADR-0351, and handoff. The selected-family seed advances
+   TL2.16 to PARTIAL but does not complete its full population.
+7. **NEXT — TL2.11:** preregister, implement, and fuzz strict positivity before
+   recursive admission widens. The nested diagnostic classification is a
+   separate bounded TL1.8 hygiene follow-up, not semantic nested support.
+8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
    primary semantic path after the matrix is TL2.11 positivity, not admission
    widening without it.
-8. **DONE (inventory/digest):** retain the runtime-derived, type-digested
+9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.
-9. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
+10. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
    dependency-closed admissions gained per slice.
-10. Select one mathlib `norm_num` or `ring` theorem basis and implement one
+11. Select one mathlib `norm_num` or `ring` theorem basis and implement one
    end-to-end CAS-certificate-to-kernel-term proof.
-11. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; after TL0 contracts,
+12. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; after TL0 contracts,
     start TL6.1-TL6.4 as an independent source/syntax lane while L1-L3 drive the
     checker/import critical path. Lake, LSP, compiler, and `.olean` remain
     dependency-gated by their explicit TL tasks rather than globally forbidden.

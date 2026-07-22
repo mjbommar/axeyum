@@ -113,6 +113,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   seven assurance-separated selected-family rows, implication checks against
   false parser/admission/computation promotion, and the explicit TL1.8/TL2.16
   partial boundary.
+- [`lean-official-construct-matrix-final-2026-07-22.md`](lean-official-construct-matrix-final-2026-07-22.md) —
+  M5's exact final gates, accepted ADR-0351, environmental rustdoc diagnosis,
+  selected-family completion boundary, and TL2.11-first handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

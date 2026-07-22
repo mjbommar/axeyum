@@ -369,15 +369,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — official Lean construct-matrix M0 through M4 are complete;
-  final validation and handoff are next.** The milestone remains explicitly
+- **2026-07-22 — the official Lean construct-matrix selected-family milestone
+  is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
   a measurement artifact, not kernel implementation. The
   [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
   and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
   and [Stage B result](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
   and [M3 product result](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
   and [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
-  and [proposed ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+  and [accepted ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
   define six positive/control families (existing direct recursion,
   recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
   well-founded) plus one official non-positive source rejection. Source intent
@@ -416,9 +416,15 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   independently admitted control, one translated-kernel decline, three parsed/
   policy declines, one inventory-only nested misclassification, one official-
   source rejection, and zero computation-checked rows. Thirteen contract tests
-  reject false admission, parsed, or computation promotion. **Next:** M5 final
-  bounded gates, ADR-0351 exit review, and push/ref equality. After the matrix,
-  TL2.11 strict positivity is the primary
+  reject false admission, parsed, or computation promotion. The
+  [M5 final result](docs/plan/lean-official-construct-matrix-final-2026-07-22.md)
+  closes the bounded Rust, contract, parity, foundational-resource, link,
+  documentation, ADR, and ref-equality gates. The first rustdoc link attempt's
+  LLD `SIGBUS` reproduced only on the 80%-full `/tmp` tmpfs and passed under the
+  same 4 GiB cgroup with an ext-family `TMPDIR`; no OOM or kernel I/O fault was
+  logged. Workspace-wide rustfmt remains pre-existing red outside the milestone,
+  while the new Rust test is focused-format clean. **Next:** preregister and
+  implement TL2.11 strict positivity as the primary
   trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
   lane.
 
@@ -6819,6 +6825,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed M5 and accepted the official Lean construct-matrix
+  decision.** All milestone-owned Rust, Python, parity, foundational-resource,
+  and link gates pass under bounded resources. Accepted ADR-0351, closed its
+  research question, synchronized PLAN/STATUS and both Lean roadmaps, and handed
+  the primary semantic sequence to TL2.11 strict positivity. The selected seven-
+  row matrix remains one admission, one translated-kernel decline, three parsed
+  declines, one inventory-only nested misclassification, one official source
+  rejection, and zero computation rows; TL1.8/TL2.16 remain PARTIAL globally.
+  The environmental `/tmp`-LLD rustdoc fault and unrelated workspace rustfmt
+  failure are recorded without modifying their files.
 
 - **2026-07-22 — Completed official Lean construct-matrix M4 generated
   assurance output.** The checked seven-row matrix derives one exact independent

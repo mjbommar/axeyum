@@ -1,6 +1,6 @@
 # ADR-0351: Preregister the official Lean construct matrix before widening admission
 
-Status: proposed
+Status: accepted
 
 Date: 2026-07-22
 
@@ -11,8 +11,9 @@ and Stage B is complete in the
 M3 product measurement is complete in the
 [typed outcome result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
 The generated assurance gate is complete in the
-[M4 result](../../plan/lean-official-construct-matrix-m4-2026-07-22.md). M5 final
-gates and handoff remain, so this ADR is deliberately still proposed.
+[M4 result](../../plan/lean-official-construct-matrix-m4-2026-07-22.md). M5's
+bounded gates, documentation synchronization, and handoff are complete in the
+[final result](../../plan/lean-official-construct-matrix-final-2026-07-22.md).
 
 ## Context
 
@@ -136,5 +137,6 @@ the independent Axeyum admission result.
 
 ### Accept the ADR immediately with the plan
 
-Rejected. The ADR remains proposed until the source/wire freeze mechanics and
-generated assurance gate are implemented and validated.
+Rejected. Acceptance waited until the source/wire freeze mechanics, repeated
+product measurement, generated assurance gate, final bounded validation, and
+documentation handoff were implemented and validated.

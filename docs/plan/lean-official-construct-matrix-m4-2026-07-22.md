@@ -1,7 +1,7 @@
 # Official Lean construct matrix: M4 assurance result
 
 Status: generated selected-family assurance matrix complete; M5 final gates and
-handoff remain
+handoff complete
 
 Date: 2026-07-22
 
@@ -74,9 +74,9 @@ complete TL2.11--TL2.14. The primary semantic sequence remains positivity,
 recursive-indexed/reflexive induction hypotheses, then mutual groups. Nested and
 well-founded native work remains dependency-gated.
 
-## Next gate
+## Final gate
 
-M5 runs the final bounded validation set, synchronizes the remaining current-
-state prose, decides ADR-0351 from its explicit exits, and verifies committed/
-pushed local, tracking, and remote refs. It must record the pre-existing
-workspace-wide rustfmt failure without formatting unrelated CAS/bench work.
+M5's [final result](lean-official-construct-matrix-final-2026-07-22.md) records
+the bounded validation set, synchronized current-state prose, accepted ADR-0351,
+and committed/pushed ref verification. The pre-existing workspace-wide rustfmt
+failure remains named without formatting unrelated CAS/bench work.
