@@ -5082,25 +5082,23 @@ fn certifies_wz_sum(
     let g = certificate.clone() * f.clone();
     let g_shift = g.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
     let h = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f;
-    if !matches!(
-        equal(&(g_shift - g), &h),
-        ZeroTest::Certified { equal: true, .. }
-    ) {
+    let symbolic = equal(&(g_shift - g), &h);
+    if !matches!(symbolic, ZeroTest::Certified { equal: true, .. }) {
         return false;
     }
 
     let mut total = CasExpr::zero();
     for kk in k_lo..=k_hi {
         total = total
-            + summand
-                .substitute(n, &CasExpr::int(base))
-                .substitute(k, &CasExpr::int(kk));
+            + simplify(
+                &summand
+                    .substitute(n, &CasExpr::int(base))
+                    .substitute(k, &CasExpr::int(kk)),
+            );
     }
-    let rhs_base = rhs.substitute(n, &CasExpr::int(base));
-    matches!(
-        equal(&total, &rhs_base),
-        ZeroTest::Certified { equal: true, .. }
-    )
+    let rhs_base = simplify(&rhs.substitute(n, &CasExpr::int(base)));
+    let base_check = equal(&total, &rhs_base);
+    matches!(base_check, ZeroTest::Certified { equal: true, .. })
 }
 
 /// Prove the fixed-shift Vandermonde family
@@ -5146,7 +5144,7 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
 
 /// Largest falling-factorial squared-binomial moment currently accepted by
 /// [`prove_squared_binomial_falling_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 6;
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 7;
 
 /// A proved falling-factorial squared-binomial moment
 /// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
@@ -17510,7 +17508,7 @@ mod tests {
                 * (CasExpr::int(2) * n() - CasExpr::int(1)));
         assert_equal(&fifth.closed_form, &fifth_expected);
 
-        let sixth = proofs.last().expect("moment six proof exists");
+        let sixth = proofs.get(6).expect("moment six proof exists");
         let sixth_expected = n().pow(3)
             * (n().pow(6) + CasExpr::int(3) * n().pow(5)
                 - CasExpr::int(13) * n().pow(4)
@@ -17525,15 +17523,30 @@ mod tests {
                 * (CasExpr::int(2) * n() - CasExpr::int(1)));
         assert_equal(&sixth.closed_form, &sixth_expected);
 
-        let mut false_proof = sixth.clone();
+        let seventh = proofs.last().expect("moment seven proof exists");
+        let seventh_expected = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(5) + CasExpr::int(5) * n().pow(4)
+                - CasExpr::int(15) * n().pow(3)
+                - CasExpr::int(35) * n().pow(2)
+                + CasExpr::int(70) * n()
+                - CasExpr::int(14))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(16)
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&seventh.closed_form, &seventh_expected);
+
+        let mut false_proof = seventh.clone();
         false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
         assert!(!false_proof.is_certified());
 
-        let mut false_proof = sixth.clone();
+        let mut false_proof = seventh.clone();
         false_proof.components[0].certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
 
-        let mut false_proof = sixth.clone();
+        let mut false_proof = seventh.clone();
         false_proof.components.pop();
         assert!(!false_proof.is_certified());
 
@@ -17563,7 +17576,7 @@ mod tests {
             proofs.push(proof);
         }
 
-        let mut false_proof = proofs.last().expect("order six proof exists").clone();
+        let mut false_proof = proofs.last().expect("order seven proof exists").clone();
         false_proof.certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
         assert!(

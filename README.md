@@ -118,7 +118,7 @@ returns a wrong answer**. Current surface (521 tests, clippy-clean):
   rational via Horowitz + Rothstein–Trager, `∫p·eˣ`, `∫p·sin|cos`),
   `definite_integrate` (FTC), `limit`, `series`/`series_at` (Taylor), summation,
   and checker-backed WZ families for fixed-shift binomial convolutions and
-  squared-binomial raw moments through order six.
+  squared-binomial raw moments through order seven.
 - **Algebra** — `expand`, `simplify`, `factor` (full ℤ/ℚ, Berlekamp–Zassenhaus),
   `cancel`, `apart`, `poly_gcd`, `resultant`, `discriminant`, `solve` (rational,
   quadratic, complex, factorable degree ≥ 3), Gröbner bases, radical simplification.

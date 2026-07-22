@@ -374,6 +374,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact base preprocessing extends composed moments through
+  order seven.** The order-seven falling-factorial certificate already passed
+  the fully symbolic WZ identity; only the finite base check returned `Unknown`
+  after accumulating zero-supported terms with unsimplified gamma factors.
+  `certifies_wz_sum` now simplifies each concrete summand and RHS before exact
+  base equality, preserving the symbolic gate and soundness. Both public moment
+  ceilings are now 7; raw order seven recovers
+  `n⁴(n+1)(n⁵+5n⁴−15n³−35n²+70n−14)C(2n,n)/(16(2n−5)(2n−3)(2n−1))`.
+  Order eight remains a symbolic `Unknown`. The CAS topic stack passes 521 unit
+  tests, 147 doctests, warning-denied all-target Clippy, stable/nightly strict
+  rustdoc, `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate
+  order eight's symbolic normalization growth without weakening the checker.
+
 - **2026-07-22 — strict CAS rustdoc is green on stable and nightly.** Cleared
   ten pre-existing `-D warnings` failures: escaped the `𝔽ₚ[x]` spelling, changed
   links to private helpers into code spans, qualified the crate-level `equal`

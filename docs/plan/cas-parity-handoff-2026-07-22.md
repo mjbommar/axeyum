@@ -16,7 +16,7 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adp**). Keep both in sync when landing features.
+  latest is **Entry 37adq**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -131,7 +131,7 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), and a generated squared-binomial raw-moment family (regressed for
-orders `0..=6`). False near-misses correctly decline.
+orders `0..=7`). False near-misses correctly decline.
 
 ---
 
@@ -302,11 +302,14 @@ replays all three obligations; it does not trust the Stirling expansion or
 component list.
 
 `MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` and
-`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` are both 6. Regressions cover both families
-through order six, direct-sum cross-check every member, recover the known compact
-fifth- and sixth-moment identities, and reject tampered results, certificates,
-and missing components. Order seven currently exceeds bounded exact symbolic
-checking, so larger requests decline immediately.
+`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` are both 7. Regressions cover both families
+through order seven, direct-sum cross-check every member, recover the known
+compact fifth-, sixth-, and seventh-moment identities, and reject tampered
+results, certificates, and missing components. The order-seven symbolic WZ
+identity already fit `i128`; only its finite base check overflowed because zero
+falling-factorial terms retained unsimplified gamma factors. The shared checker
+now simplifies each concrete term and RHS before exact equality. Order eight
+still returns symbolic `Unknown`, so larger requests decline immediately.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -327,7 +330,7 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Investigate the falling-factorial order-seven symbolic-check decline and
+   Investigate the falling-factorial order-eight symbolic-check decline and
    whether compact product-aware normalization can extend the direct family;
    keep the fully symbolic checker boundary unchanged. For fixed shifts,
    investigate the `r=8` exact-growth decline only if a concrete use needs it.
