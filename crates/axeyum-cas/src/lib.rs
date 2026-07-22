@@ -7366,6 +7366,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // A sum of log-singular integral functions `Σ cᵢ·H(aᵢx)` (`H ∈ {Ci, Ei, Chi}`,
+    // each `~ γ + ln|arg|` at 0) whose individual terms diverge but combine to a
+    // finite limit — the Frullani boundary `Ci(x) − Ci(2x) → −ln 2`.
+    if matches!(point, LimitPoint::Finite(ref a) if a.is_zero())
+        && let Some(value) = limit_singular_integral_sum_at_zero(expr, var)
+    {
+        return Some(value);
+    }
     // Series fallback for transcendental `0/0` forms at a finite point
     // (`sin x/x → 1`, `(1−cos x)/x² → 1/2`, `(eˣ−1)/x → 1`).
     if let LimitPoint::Finite(a) = point {
@@ -7386,6 +7394,82 @@ fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     } else {
         None
     }
+}
+
+/// Parse a term `c·H(a·var)` for a **log-singular integral function** `H ∈
+/// {Ci, Ei, Chi}` (each `~ γ + ln|a·var|` as `var → 0`): returns `(c, a, H)` with a
+/// rational coefficient `c` and a linear inner coefficient `a ≠ 0`. `None` otherwise.
+fn as_singular_integral_term(term: &CasExpr, var: &str) -> Option<(Rational, Rational, UnaryFunc)> {
+    let inner_coeff = |arg: &CasExpr| -> Option<Rational> {
+        let poly = normalize(arg)?.to_univariate(var)?;
+        (poly::rat_degree(&poly)? == 1 && poly[0].is_zero()).then_some(poly[1])
+    };
+    match term {
+        CasExpr::Unary(head @ (UnaryFunc::Ci | UnaryFunc::Ei | UnaryFunc::Chi), arg) => {
+            Some((Rational::integer(1), inner_coeff(arg)?, *head))
+        }
+        CasExpr::Neg(inner) => {
+            let (c, a, head) = as_singular_integral_term(inner, var)?;
+            Some((c.checked_neg()?, a, head))
+        }
+        CasExpr::Mul(factors) => {
+            let mut coefficient = Rational::integer(1);
+            let mut singular: Option<(Rational, UnaryFunc)> = None;
+            for factor in factors {
+                if let CasExpr::Unary(head @ (UnaryFunc::Ci | UnaryFunc::Ei | UnaryFunc::Chi), arg) =
+                    factor
+                {
+                    if singular.is_some() {
+                        return None;
+                    }
+                    singular = Some((inner_coeff(arg)?, *head));
+                } else {
+                    coefficient =
+                        coefficient.checked_mul(multipoly_as_constant(&normalize(factor)?)?)?;
+                }
+            }
+            let (a, head) = singular?;
+            Some((coefficient, a, head))
+        }
+        _ => None,
+    }
+}
+
+/// Limit at `var → 0` of `Σ cᵢ·Hᵢ(aᵢ·var) + (finite terms)` where each `Hᵢ ∈
+/// {Ci, Ei, Chi}` has the logarithmic singularity `Hᵢ(z) ~ γ + ln|z|`. The `γ` and
+/// `ln var` pieces cancel **iff** `Σ cᵢ = 0`, leaving `Σ cᵢ·ln|aᵢ|` — so
+/// `Ci(x) − Ci(2x) → −ln 2` (the Frullani boundary). Returns `None` when the
+/// singular part genuinely diverges (`Σ cᵢ ≠ 0`) — never the unsound naïve
+/// `Ci(0) − Ci(0) = 0`.
+fn limit_singular_integral_sum_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Only engage when a log-singular head is present — otherwise recursing `limit`
+    // on the non-singular terms below would re-enter this function forever.
+    if !contains_singular_integral_head(expr) {
+        return None;
+    }
+    let mut terms = Vec::new();
+    flatten_add_terms(expr, var, &mut terms);
+    let mut coefficient_sum = Rational::zero();
+    let mut finite = CasExpr::zero();
+    let mut other = CasExpr::zero();
+    let mut saw_singular = false;
+    for term in &terms {
+        if let Some((c, a, _head)) = as_singular_integral_term(term, var) {
+            coefficient_sum = coefficient_sum.checked_add(c)?;
+            let magnitude = if a < Rational::integer(0) { a.checked_neg()? } else { a };
+            finite = finite + CasExpr::Const(c) * CasExpr::Const(magnitude).ln();
+            saw_singular = true;
+        } else if contains_singular_integral_head(term) {
+            return None; // a singular head we can't parse as `c·H(a·x)` — decline
+        } else {
+            // Guaranteed singular-head-free, so `limit` returns without recursing here.
+            other = other + limit(term, var, LimitPoint::Finite(Rational::zero()))?;
+        }
+    }
+    if !saw_singular || !coefficient_sum.is_zero() {
+        return None;
+    }
+    Some(simplify(&fold_elementary_constants(&(finite + other))))
 }
 
 /// The `(order, coefficient)` of `expr` as `x → +∞`, where `expr` is built from
@@ -7907,6 +7991,24 @@ fn limit_asymptotic_head(expr: &CasExpr, var: &str, point: LimitPoint) -> Option
     limit(&substituted, var, point)
 }
 
+/// Whether `expr` contains a **log-singular** integral head (`Ci`/`Ei`/`Chi`/`li`),
+/// whose value at a finite bound needs a limit (not naïve substitution).
+fn contains_singular_integral_head(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ci | UnaryFunc::Ei | UnaryFunc::Chi | UnaryFunc::Li, _) => true,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => {
+            contains_singular_integral_head(a)
+        }
+        CasExpr::Div(a, b) => {
+            contains_singular_integral_head(a) || contains_singular_integral_head(b)
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().any(contains_singular_integral_head)
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
 /// Whether `var` appears anywhere in `expr`.
 fn expr_contains_var(expr: &CasExpr, var: &str) -> bool {
     match expr {
@@ -7958,6 +8060,13 @@ fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> 
                 return CasExpr::zero();
             }
             CasExpr::Unary(UnaryFunc::Ci, Box::new(substitute_asymptotic_heads(arg, var, point)))
+        }
+        // Ei(−∞) = 0 (only for a negatively-diverging argument; Ei(+∞) = +∞).
+        CasExpr::Unary(UnaryFunc::Ei, arg) => {
+            if arg_tends_to_infinity(arg, var, point) == Some(false) {
+                return CasExpr::zero();
+            }
+            CasExpr::Unary(UnaryFunc::Ei, Box::new(substitute_asymptotic_heads(arg, var, point)))
         }
         CasExpr::Unary(head, arg) => {
             CasExpr::Unary(*head, Box::new(substitute_asymptotic_heads(arg, var, point)))
@@ -9713,8 +9822,16 @@ pub fn improper_integrate(
     }
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
+    // An antiderivative with a **log-singular** integral head (`Ci`/`Ei`/`Chi`/`li`,
+    // each `~ γ + ln|·|` at 0) can't be evaluated at a finite bound by naïve
+    // substitution — `Ci(x)−Ci(2x)` at 0 would unsoundly cancel to 0 instead of the
+    // true `−ln2`. Route the finite boundary through `limit` in that case.
+    let singular = contains_singular_integral_head(antiderivative);
     let boundary = |point: LimitPoint| -> Option<CasExpr> {
         match point {
+            LimitPoint::Finite(a) if singular => {
+                limit(antiderivative, var, LimitPoint::Finite(a))
+            }
             LimitPoint::Finite(a) => Some(simplify(&fold_elementary_constants(
                 &antiderivative.substitute(var, &CasExpr::Const(a)),
             ))),
@@ -14264,6 +14381,18 @@ mod tests {
         ));
         assert_equal(&gauss(x().pow(3) * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
         assert_equal(&gauss(x() * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
+        // Frullani integrals ∫₀^∞ (f(ax)−f(bx))/x = (f(0)−f(∞))·ln(b/a). The
+        // antiderivative is Ci(ax)−Ci(bx) / Ei(−ax)−Ei(−bx), whose lower bound at 0
+        // combines the log-singular heads to a finite value — a naïve `Ci(0)−Ci(0)`
+        // would unsoundly give 0 instead of the true −ln(b/a).
+        assert!(matches!(
+            equal(&gauss((x().cos() - (CasExpr::int(2) * x()).cos()) / x(), zero(), LimitPoint::PosInfinity), &CasExpr::int(2).ln()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(((CasExpr::int(-1) * x()).exp() - (CasExpr::int(-2) * x()).exp()) / x(), zero(), LimitPoint::PosInfinity), &CasExpr::int(2).ln()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // Dirichlet integral ∫₀^∞ sin x/x = Si(∞) = π/2 (and the scaled sin(2x)/x
         // also π/2 — Si(2·0) folds to 0). Fresnel ∫₀^∞ sin(πx²/2) = S(∞) = 1/2.
         assert!(matches!(
