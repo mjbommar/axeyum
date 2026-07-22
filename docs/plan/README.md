@@ -92,8 +92,8 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   [JSON](generated/lean-execution-evidence.json) — TL0.7.1's two explicit lane
   templates, twelve typed termination classes, exact immutable record
   contracts, five synthetic lifecycle controls, and nineteen mutation classes.
-  All real execution and parity counters remain zero; TL0.7.2 process behavior
-  is next.
+  All real execution and parity counters remain zero; TL0.7.2 subsequently
+  qualified bounded process behavior.
 - [`lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md`](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md) —
   source-first TL0.7.2 plan for one Linux process attempt: exact argument,
   environment, directory, 4/8 GiB `RLIMIT_AS`, prelaunch record, raw output,
@@ -106,14 +106,22 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   [JSON](generated/lean-execution-process.json) — TL0.7.2's 8/8 retained
   synthetic attempts, 40 exact files, 16 raw streams, whole-group timeout
   cleanup, evidence-backed 4/8 GiB memory classifications, and zero-case/
-  zero-completion/zero-parity boundary. TL0.7.3 durable-store qualification is
-  next.
+  zero-completion/zero-parity boundary. TL0.7.3 subsequently qualified the
+  local process-interruption store.
 - [`lean-execution-store-tl0.7.3-plan-2026-07-22.md`](lean-execution-store-tl0.7.3-plan-2026-07-22.md) —
   source-first durable-store plan for a strict Lean record namespace,
   no-overwrite hard-link/fsync installation, conflict/orphan quarantine,
   completion-last closure, and a 16-cell `SIGKILL` matrix across worktree-local
   and `/dev/shm` storage. It freezes the process-kill/not-power-loss boundary
   and zero Lean/U2/parity credit before implementation.
+- [`lean-execution-store-tl0.7.3-2026-07-22.md`](lean-execution-store-tl0.7.3-2026-07-22.md),
+  [`lean-execution-store-v1.json`](lean-execution-store-v1.json), and generated
+  [Markdown](generated/lean-execution-store.md)/
+  [JSON](generated/lean-execution-store.json) — TL0.7.3's 16/16 reaped
+  `SIGKILL` cells across observed ext4 and tmpfs, 16/16 canonical projection
+  equality, 65 retained files, 22 contract tests over eighteen mutation
+  families, and zero Lean/U2/parity credit. This is local process-interruption
+  evidence, not power-, host-, network-, provider-, or object-loss durability.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

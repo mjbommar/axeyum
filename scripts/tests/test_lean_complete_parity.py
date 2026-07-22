@@ -83,6 +83,19 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(process["case_records"], 0)
         self.assertEqual(process["completion_records"], 0)
         self.assertTrue(all(value == 0 for value in process["credits"].values()))
+        store = first["bounded_snapshot"]["execution_store_authority"]
+        self.assertEqual(store["storage_classes"], 2)
+        self.assertEqual(store["kill_cells"], 16)
+        self.assertEqual(store["sigkill_cells"], 16)
+        self.assertEqual(store["projection_equal_cells"], 16)
+        self.assertEqual(store["evidence_files"], 65)
+        self.assertEqual(store["real_outcomes"], 0)
+        self.assertEqual(store["completed_u2_cases"], 0)
+        self.assertEqual(store["paired_cells"], 0)
+        self.assertEqual(store["performance_rows"], 0)
+        self.assertEqual(store["parity_credit"], 0)
+        self.assertTrue(store["claims"]["process_sigkill_recovery"])
+        self.assertFalse(store["claims"]["power_loss_recovery"])
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
@@ -93,6 +106,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")

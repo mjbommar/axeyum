@@ -293,8 +293,13 @@ Again, there are distinct targets:
   8/8 bounded synthetic process attempts with exact raw output, descendant
   cleanup, and evidence-backed exit/signal/timeout/memory/launch/preflight
   classes. It still records zero cases, completions, official/Axeyum outcomes,
-  paired cells, performance rows, or parity credit; TL0.7.3--TL0.7.4 remain
-  prerequisites to official U2 execution.
+  paired cells, performance rows, or parity credit. The subsequent
+  [TL0.7.3 result](plan/lean-execution-store-tl0.7.3-2026-07-22.md) retains
+  16/16 reaped dependency/completion persistence-boundary `SIGKILL` cells
+  across observed ext4/tmpfs, with exact completion-last recovery and 16/16
+  uninterrupted projection equality. It still records zero real/U2/parity
+  credit and explicitly does not qualify power/host loss or network/object
+  durability. TL0.7.4 remains the prerequisite to official U2 execution.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

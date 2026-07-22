@@ -383,18 +383,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.7.3 immutable checkpointing is source-first
-  preregistered; no store kill cell has run.** The
-  [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md) reuses the
-  exact accepted ADR-0344 local no-replace primitive without editing the
-  SMT-COMP lane, then adds strict Lean record/filename/self-hash validation and
-  completion-last closure over the interrupted/resumed synthetic fixture. Its
-  16 destructive cells cross dependency versus completion installation, four
-  exposed persistence boundaries, and worktree-local versus `/dev/shm`
-  storage. Eighteen mutation families cover overwrite, conflict/orphan,
-  namespace, lost-attempt, dependency/digest/order, projection, source, and
-  credit drift. This is planned local `SIGKILL` recovery, not power-loss, NFS,
-  host-loss, provider, or parity evidence.
+- **2026-07-22 — TL0.7.3 closes registered local process-interruption
+  checkpointing without Lean, U2, durability, or parity credit.** The
+  source-first [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md)
+  was pushed at `8bad6146` before implementation or kill cells; the final
+  checkout-portable source was pushed at `afe7db6e` before the authoritative
+  pass. The [result](docs/plan/lean-execution-store-tl0.7.3-2026-07-22.md),
+  [authority](docs/plan/lean-execution-store-v1.json), generated
+  [summary](docs/plan/generated/lean-execution-store.md), and 65 retained files
+  now close 16/16 dependency/completion × four-boundary × observed ext4/tmpfs
+  `SIGKILL` cells. All workers were reaped; eight pre-link and eight post-link
+  resumes have the exact expected outcomes; all 16 projections equal the
+  uninterrupted reference. Twenty-two contract tests cover all eighteen
+  mutation families. This is local process-interruption recovery, not power/
+  host loss, NFS, provider, object, or distributed durability. Real/U2
+  outcomes, paired cells, performance rows, and parity credit remain zero.
+  Next: source-first TL0.7.4 no-credit pinned-Lean/export controls; TL0.6.3
+  remains blocked.
 
 - **2026-07-22 — TL0.7.2 closes bounded process behavior without Lean, U2,
   completion, or parity credit.** The
@@ -409,7 +414,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   limits, launch failure, and preflight failure. Eleven tests cover sixteen
   mutation families. There are 16 raw streams but zero case/completion records,
   official/Axeyum outcomes, paired cells, performance rows, or parity credit.
-  Next: source-first TL0.7.3 durable-store kill/resume qualification.
+  TL0.7.3 now supplies the bounded local process-interruption store; TL0.7.4's
+  two no-credit real controls are next.
 
 - **2026-07-22 — TL0.7.1 closes the machine execution-evidence contract with
   zero process or parity outcomes.** The source-first
