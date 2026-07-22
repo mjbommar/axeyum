@@ -122,6 +122,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   equality, 65 retained files, 22 contract tests over eighteen mutation
   families, and zero Lean/U2/parity credit. This is local process-interruption
   evidence, not power-, host-, network-, provider-, or object-loss durability.
+- [`lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md`](lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md) —
+  source-first acceptance plan for one exact pinned-Lean compile preflight
+  under 4 GiB and one source-built official `lean4export` v4.30.0 export under
+  8 GiB, with immutable completion and byte equality to the committed 65-line
+  flat stream. Both controls have empty U2 selections and zero outcome,
+  pairing, performance, and parity credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

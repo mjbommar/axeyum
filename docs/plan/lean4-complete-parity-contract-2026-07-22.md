@@ -354,6 +354,16 @@ credit. This is local process-interruption evidence, explicitly not power or
 host loss, NFS, provider, object, or distributed durability. TL0.7.4 remains
 mandatory before TL0.6.3.
 
+TL0.7.4 is now governed by a
+[source-first acceptance plan](lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md).
+It freezes two empty-selection, no-credit external controls before execution:
+compile the committed flat probe with the exact pinned Lean binary under the
+4 GiB lane, then export the owned `.olean` with source-built official
+`lean4export` v4.30.0 under the 8 GiB lane and require byte equality with the
+committed 65-line stream. No exporter build, compilation, or export control has
+run. The pair cannot create a U2/Axeyum outcome, denominator, paired cell,
+performance row, or terminal credit.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

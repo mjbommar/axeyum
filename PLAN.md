@@ -441,6 +441,14 @@ state.
 > recovery, not power/host loss or network/object durability; Lean/U2 outcomes,
 > paired cells, performance rows, and parity credit remain zero. TL0.7.4's two
 > explicitly no-credit real controls are next; TL0.6.3 remains blocked.
+> TL0.7.4 now has a source-first
+> [acceptance plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
+> for two empty-selection external controls: compile the committed flat probe
+> with the exact pinned Lean binary under 4 GiB, then export its `.olean` with
+> source-built official `lean4export` v4.30.0 under 8 GiB and require exact
+> equality with the committed 65-line NDJSON stream. No compile, exporter build,
+> or export control has run. The pair cannot create a U2/Axeyum outcome,
+> denominator, paired/performance row, or parity credit.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

@@ -383,6 +383,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.7.4 no-credit real-control acceptance is source-first
+  preregistered; no compile/export control has run.** The
+  [plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
+  freezes the exact Lean 4.30 binary/toolchain, official `lean4export` v4.30.0
+  commit/tree/build, committed flat source and 65-line NDJSON oracle, 4/8 GiB
+  lanes, external process records, immutable artifact/completion closure, and
+  sixteen mutation families. The two empty-selection controls compile the flat
+  probe, then export its owned `.olean` and require byte equality. They cannot
+  create a U2/Axeyum outcome, denominator, pair, performance row, or parity
+  credit. The plan must be pushed before exporter build, implementation, or
+  either retained process.
+
 - **2026-07-22 — TL0.7.3 closes registered local process-interruption
   checkpointing without Lean, U2, durability, or parity credit.** The
   source-first [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md)
