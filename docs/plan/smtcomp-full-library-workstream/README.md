@@ -76,8 +76,8 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   run, but is deferred while the active lane closes checked solver capability.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
-soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
-receives zero measurement credit even if every shard eventually exits.
+soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3. It
+stopped without a raw shard artifact and receives zero measurement credit.
 
 ---
 
@@ -181,16 +181,26 @@ curated QF_AUFLIA corpus with a no-wrong-verdict regression.
 
 ---
 
-## 3. Live stale run snapshot
+## 3. Final stale run snapshot
 
-At the bounded 2026-07-22 13:14 EDT audit, the eight s4 shards had written
-21,564 progress lines (about 34% of 64,345) and were processing QF_BV. No
-`raw_*.json` shard had been published. The exact two WRONG markers were:
+At the bounded 2026-07-22 19:28 EDT audit, no `compete.py` or staged solver
+process remained. The eight s4 logs stopped after 33,305 of 64,345 cases
+(51.8%), with per-shard last indices 4,123, 4,139, 4,168, 4,141, 4,150,
+4,149, 4,302, and 4,125. No `raw_*.json` shard was published. The logs contain
+56 literal `<<< WRONG` markers: 25 `sat -> unsat` and 31 `unsat -> sat`.
+
+The first two markers triggered the preserved soundness work:
 
 1. QF_ABVFP KLEE `query.26.smt2`: expected `unsat`, stale binary returned
    `sat`; the exact-cancellation FP repair is on main.
 2. QF_AUFLIA `pipeline-invalid.smt2`: expected `sat`, stale and then-current
    Axeyum returned `unsat`; this branch adds the sound decline above.
+
+The remaining 54 markers are later FP-family alarms from the same stale binary,
+including division, multiplication, FMA, conversion, and a repeated
+`query.26.smt2` row. They have not been adjudicated against the current branch
+and receive no correctness, coverage, or measurement credit. The stopped logs
+remain immutable bug-discovery input only.
 
 Run identity:
 
