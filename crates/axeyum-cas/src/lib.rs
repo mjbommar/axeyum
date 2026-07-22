@@ -1694,10 +1694,11 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
         return direct;
     }
-    // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`)
-    // so hidden trig / log-exp relations are resolved before we would assert `≠`.
-    let ca = rewrite_log_exp(&rewrite_exp(a));
-    let cb = rewrite_log_exp(&rewrite_exp(b));
+    // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`
+    // and expanding `ln(rational)` over a prime basis so log-arithmetic identities
+    // like `2·ln2 − ln3 = ln(4/3)` decide) before we would assert `≠`.
+    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(a)));
+    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(b)));
     match equal_core(&ca, &cb) {
         certified @ ZeroTest::Certified { .. } => certified,
         // The Euler form could not decide. Never surface a relation-blind
@@ -1706,6 +1707,49 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
             ZeroTest::Certified { equal: false, .. } => ZeroTest::Unknown,
             other => other,
         },
+    }
+}
+
+/// Rewrite `ln(p/q)` for a positive rational `p/q` into its **prime basis**
+/// `Σ eᵢ·ln(pᵢ) − Σ fⱼ·ln(qⱼ)` (from the prime factorizations of numerator and
+/// denominator). Canonicalizes log-arithmetic so `ln(4/3)` and `2·ln2 − ln3` share
+/// a normal form — used only inside [`equal`]'s canonicalization. Recurses
+/// structurally; leaves `ln` of a non-constant argument untouched.
+fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            let inner = expand_log_over_primes(arg);
+            if let CasExpr::Const(c) = &inner
+                && c.numerator() > 0
+            {
+                let mut terms: Vec<CasExpr> = Vec::new();
+                let ln_prime = |p: i128, exponent: i64| {
+                    scaled_term(Rational::integer(i128::from(exponent)), CasExpr::int(p).ln())
+                };
+                for (prime, power) in ntheory::factorize(c.numerator()) {
+                    terms.push(ln_prime(prime, i64::from(power)));
+                }
+                for (prime, power) in ntheory::factorize(c.denominator()) {
+                    terms.push(ln_prime(prime, -i64::from(power)));
+                }
+                return match terms.len() {
+                    0 => CasExpr::zero(), // ln(1) = 0
+                    1 => terms.into_iter().next().unwrap_or_else(CasExpr::zero),
+                    _ => CasExpr::Add(terms),
+                };
+            }
+            CasExpr::Unary(UnaryFunc::Ln, Box::new(inner))
+        }
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(expand_log_over_primes).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(expand_log_over_primes).collect()),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(expand_log_over_primes(a))),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(expand_log_over_primes(a)),
+            Box::new(expand_log_over_primes(b)),
+        ),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(expand_log_over_primes(a)), *e),
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(expand_log_over_primes(a))),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -14970,6 +15014,29 @@ mod tests {
             &logcombine(&(x().ln() + CasExpr::int(3))),
             &(x().ln() + CasExpr::int(3)),
         );
+    }
+
+    #[test]
+    fn zero_test_decides_log_arithmetic() {
+        // `equal` expands `ln(rational)` over a prime basis, so log-arithmetic
+        // identities decide — the ∫₁² 1/(x(x+1)) = 2ln2−ln3 = ln(4/3) family.
+        let ln = |n: i128| CasExpr::int(n).ln();
+        for (a, b) in [
+            (CasExpr::int(2) * ln(2) - ln(3), CasExpr::rat(4, 3).ln()),
+            (ln(6), ln(2) + ln(3)),
+            (CasExpr::rat(1, 2).ln(), -ln(2)),
+            (CasExpr::int(3) * ln(2), ln(8)),
+            (ln(12), CasExpr::int(2) * ln(2) + ln(3)),
+            (CasExpr::rat(4, 3).ln(), CasExpr::int(2) * ln(2) - ln(3)),
+        ] {
+            assert!(
+                matches!(equal(&a, &b), ZeroTest::Certified { equal: true, .. }),
+                "{a} should equal {b}"
+            );
+        }
+        // Soundness: distinct logs must NOT be certified equal.
+        assert!(!matches!(equal(&ln(2), &ln(3)), ZeroTest::Certified { equal: true, .. }));
+        assert!(!matches!(equal(&ln(6), &ln(5)), ZeroTest::Certified { equal: true, .. }));
     }
 
     #[test]
