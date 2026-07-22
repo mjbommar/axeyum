@@ -12545,6 +12545,53 @@ fn improper_gamma_integral(
     })
 }
 
+/// `∫₀^∞ f(x) dx = 0` when `f` is **antisymmetric under the reciprocal reflection**
+/// `x → 1/x`: `f(1/x)·x^{−2} = −f(x)`. Then `∫₀^∞ f = ∫₀^1 f + ∫_1^∞ f`, and the
+/// substitution `x→1/x` maps `∫_1^∞ f = −∫₀^1 f`, so the two halves cancel. Closes
+/// `∫₀^∞ ln x/(1+x²) = 0` (and `∫₀^∞ (ln x)·g(x)` for reciprocal-symmetric even `g`).
+/// `expand_log` reduces the reflected `ln(1/x) → −ln x` so the antisymmetry decides;
+/// a decay check `x·f → 0` guards against a formal-but-divergent match.
+fn improper_reciprocal_antisymmetry(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    // Only the two-sided-in-log range `∫₀^∞`.
+    if !matches!(lower, LimitPoint::Finite(ref a) if a.is_zero())
+        || !matches!(upper, LimitPoint::PosInfinity)
+    {
+        return None;
+    }
+    // Reflected integrand under `x → 1/x` (with `dx → x^{−2} du`, the reversed bounds
+    // restoring the sign): `f(1/x)·x^{−2}`.
+    let recip = CasExpr::int(1) / CasExpr::var(var);
+    let reflected = expr.substitute(var, &recip) / CasExpr::var(var).pow(2);
+    // Antisymmetry `f + f(1/x)·x^{−2} ≡ 0`, deciding `ln(1/x) = −ln x` via `expand_log`.
+    let total = expand_log(&(expr.clone() + reflected));
+    if !matches!(equal(&total, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    // Convergence guard: `x·f(x) → 0` at both `0⁺` and `∞` (necessary for `∫₀^∞ f` to
+    // converge, and enough to reject the antisymmetric-but-divergent cases such as
+    // `ln x / x`, whose `x·f = ln x` blows up). The symmetric value would be `0`
+    // whether or not it converges, so a value check can't distinguish them.
+    let decay = |point: f64| -> Option<f64> {
+        evalf(expr, &[(var, point)]).map(|fx| (point * fx).abs())
+    };
+    if decay(1e8)? > 1e-3 || decay(1e-8)? > 1e-3 {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value: CasExpr::zero(),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified {
+            equal: true,
+            witness: MultiPoly::zero(),
+        },
+    })
+}
+
 /// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
 /// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
 /// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
@@ -12591,6 +12638,9 @@ pub fn improper_integrate(
     }
     if let Some(fourier) = improper_fourier_quadratic(expr, var, lower, upper) {
         return Some(fourier);
+    }
+    if let Some(anti) = improper_reciprocal_antisymmetry(expr, var, lower, upper) {
+        return Some(anti);
     }
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
@@ -20293,6 +20343,33 @@ mod tests {
         check(one() / (one() + x().tan().pow(2)));
         check(x().sin() / (x().sin() + x().cos()));
         check(x().sin().pow(3) / (x().sin().pow(3) + x().cos().pow(3)));
+    }
+
+    #[test]
+    fn improper_reciprocal_antisymmetry_integrals() {
+        let x = || v("x");
+        let zero = || LimitPoint::Finite(Rational::zero());
+        // ∫₀^∞ ln x/(1+x²) = 0 by the reciprocal reflection x→1/x (f(1/x)/x² = −f).
+        let r = improper_integrate(
+            &(x().ln() / (CasExpr::int(1) + x().pow(2))),
+            "x",
+            zero(),
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert!(matches!(equal(&r.value, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }));
+        // Divergent antisymmetric integrands are rejected by the decay guard:
+        // ∫₀^∞ ln x/x has f(1/x)/x² = −f but x·f = ln x → ∞, so it must decline.
+        assert!(improper_integrate(&(x().ln() / x()), "x", zero(), LimitPoint::PosInfinity).is_none());
+        // A non-antisymmetric convergent integrand is unaffected (∫₀^∞ 1/(1+x²)=π/2).
+        let pi_half = improper_integrate(
+            &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
+            "x",
+            zero(),
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert!(matches!(equal(&pi_half.value, &(v("pi") / CasExpr::int(2))), ZeroTest::Certified { equal: true, .. }));
     }
 
     #[test]
