@@ -380,6 +380,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — product-level cancellation carries raw squared-binomial
+  moments through order 33.** Every even factor shared with the known
+  `(2n)ₘ` denominator is now removed from each Stirling term before polynomial
+  expansion. The reduced terms and the independent Stirling power identity use
+  exact `BigRational` intermediates, but a result is admitted only when all
+  coefficients convert back to the public checked-`i128` `Rational` domain.
+  Component and final central-binomial quotients are first compared in a
+  deterministic factored form after bounded power expansion, exact scalar and
+  monic-factor normalization, Gamma lowering, and structural cancellation;
+  the prior exact rational comparison remains the fallback. Focused tests
+  reconstruct every pre-cancelled term through order 12 and freeze scalar,
+  power, and factor-order canonicalization. The full family regression now
+  certifies raw orders 0 through 33 with direct sums and tamper/ceiling checks.
+  Order 34 remains outside both public moment families because its required
+  falling-factorial component reaches the independently measured exact base
+  boundary `34! > i128::MAX`. The CAS topic stack passes 524 unit tests, 147
+  doctests, warning-denied all-target Clippy, strict stable/nightly rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`. Next: decide whether
+  a deliberate bignum exact base checker is justified for falling/raw order 34,
+  or return to broader timeout-bounded CAS gap probing.
+
 - **2026-07-22 — structured composition carries raw squared-binomial moments
   through order 19.** Raw order 11 was mathematically valid but hit two
   representation limits: exhaustive rational-root search overflowed on its
@@ -7594,6 +7615,15 @@ plan is built and committed on the current branch:
   contracts pass under the one-worker/4 GiB policy. M3's >=640-case generated
   grammar and forced mutation teeth are next; importer policy and M0 streams
   remain untouched.
+- **2026-07-22 — Extended Stirling-composed squared-binomial moments through
+  order 33.** Exact even-factor pre-cancellation plus bignum-only polynomial
+  intermediates remove the raw order-20 representation overflow while keeping
+  public coefficients in checked `i128`. Deterministic monic product
+  canonicalization lets the proof object compare high-order component and final
+  quotients before expansion, with the existing rational comparison retained as
+  fallback. Two focused regressions cover term reconstruction and factor
+  canonicalization; the 524-unit/147-doctest family gate includes exact samples,
+  tamper rejection, and the order-34 ceiling.
 
 - **2026-07-22 — Completed TL2.14 M1 diagnostic preflight without nested
   admission.** `import_inductive` now parses one consistent group-wide
