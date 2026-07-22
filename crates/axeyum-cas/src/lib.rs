@@ -9335,6 +9335,93 @@ fn improper_gaussian_moment(
     })
 }
 
+/// Decompose `expr` into `(c, p, has_exp)` for the form `c · x^p · e^{−x}` (`c`
+/// rational, `p` a rational power built from `x`, `√x`, and their reciprocals,
+/// `has_exp` whether an `e^{−x}` factor is present). Used to recognise a Gamma
+/// integral `∫₀^∞ x^p e^{−x} = Γ(p+1)`. `None` outside that multiplicative form.
+fn extract_gamma_form(expr: &CasExpr, var: &str) -> Option<(Rational, Rational, bool)> {
+    match expr {
+        CasExpr::Const(c) => Some((*c, Rational::zero(), false)),
+        CasExpr::Var(name) if name == var => Some((Rational::integer(1), Rational::integer(1), false)),
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(n) if n == var) => {
+            Some((Rational::integer(1), Rational::new(1, 2), false))
+        }
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            // Require exactly `e^{−x}`.
+            let poly = normalize(arg)?.to_univariate(var)?;
+            (poly::rat_degree(&poly)? == 1
+                && poly[0].is_zero()
+                && poly[1] == Rational::integer(-1))
+            .then(|| (Rational::integer(1), Rational::zero(), true))
+        }
+        CasExpr::Pow(base, exp) => {
+            let (c, p, has_exp) = extract_gamma_form(base, var)?;
+            if has_exp {
+                return None; // `(e^{−x})^k` is out of the recognised form
+            }
+            let power = Rational::integer(i128::from(*exp));
+            let mut c_pow = Rational::integer(1);
+            for _ in 0..*exp {
+                c_pow = c_pow.checked_mul(c)?;
+            }
+            Some((c_pow, p.checked_mul(power)?, false))
+        }
+        CasExpr::Neg(inner) => {
+            let (c, p, has_exp) = extract_gamma_form(inner, var)?;
+            Some((c.checked_neg()?, p, has_exp))
+        }
+        CasExpr::Mul(factors) => {
+            let mut c = Rational::integer(1);
+            let mut p = Rational::zero();
+            let mut has_exp = false;
+            for factor in factors {
+                let (fc, fp, fe) = extract_gamma_form(factor, var)?;
+                if fe && has_exp {
+                    return None; // more than one exponential
+                }
+                c = c.checked_mul(fc)?;
+                p = p.checked_add(fp)?;
+                has_exp |= fe;
+            }
+            Some((c, p, has_exp))
+        }
+        CasExpr::Div(a, b) => {
+            let (ca, pa, ea) = extract_gamma_form(a, var)?;
+            let (cb, pb, eb) = extract_gamma_form(b, var)?;
+            if eb {
+                return None; // an exponential in the denominator is out of form
+            }
+            Some((ca.checked_div(cb)?, pa.checked_sub(pb)?, ea))
+        }
+        _ => None,
+    }
+}
+
+/// `∫₀^∞ x^p·e^{−x} dx = Γ(p+1)` for a half-integer or integer power `p` (the power
+/// may be built from `√x`) — e.g. `∫₀^∞ e^{−x}/√x = Γ(1/2) = √π`. Reuses the closed
+/// forms in [`special::gamma`]. `None` outside `[0,∞)`, or when `Γ(p+1)` has no
+/// elementary closed form.
+fn improper_gamma_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    if !matches!((&lower, &upper), (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero()) {
+        return None;
+    }
+    let (coefficient, power, has_exp) = extract_gamma_form(expr, var)?;
+    if !has_exp {
+        return None;
+    }
+    let gamma = special::gamma(power.checked_add(Rational::integer(1))?)?;
+    Some(DefiniteIntegral {
+        value: simplify(&(CasExpr::Const(coefficient) * gamma)),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
 /// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
 /// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
@@ -9363,6 +9450,9 @@ pub fn improper_integrate(
 ) -> Option<DefiniteIntegral> {
     if let Some(moment) = improper_gaussian_moment(expr, var, lower, upper) {
         return Some(moment);
+    }
+    if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
+        return Some(gamma);
     }
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
@@ -13965,6 +14055,16 @@ mod tests {
                 &gauss(x().pow(2) / (x().pow(4) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity),
                 &(v("pi") / CasExpr::int(2).sqrt()),
             ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Gamma integrals ∫₀^∞ x^p e^{−x} = Γ(p+1) with half-integer powers via √x:
+        // ∫₀^∞ e^{−x}/√x = Γ(1/2) = √π, ∫₀^∞ √x·e^{−x} = Γ(3/2) = √π/2.
+        assert!(matches!(
+            equal(&gauss((CasExpr::int(-1) * x()).exp() / x().sqrt(), zero(), LimitPoint::PosInfinity), &v("pi").sqrt()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(x().sqrt() * (CasExpr::int(-1) * x()).exp(), zero(), LimitPoint::PosInfinity), &(v("pi").sqrt() / CasExpr::int(2))),
             ZeroTest::Certified { equal: true, .. }
         ));
         // Surd-atan asymptotes (irreducible quadratics with non-square discriminant):
