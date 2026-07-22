@@ -369,6 +369,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — the complete Lean-system implementation program is now an
+  executable plan, not a list of missing subsystems.** The active
+  [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
+  defines checker-through-ecosystem profiles K0-K6, a common ten-part
+  definition of done, crate/TCB ownership, parallel lanes, task IDs TL0.1
+  through TL10.9, milestones M0-M7, and a 23-item immediate queue. It covers
+  the production exporter reader, kernel projection/literal/quotient/inductive
+  breadth, axiom discharge and selected libraries, the existing Track 6
+  bridge/goal/tactic work, native parser/macros and elaboration, modules/caches,
+  Lake and version-specific `.olean` compatibility outside the TCB, LSP,
+  compiler/runtime/metaprograms, and a full pinned mathlib build. The first
+  execution slice is TL0.1/TL0.2 contract reconciliation and capability schema,
+  in parallel with the T6.0.3/TL2.15 fuzz harness; kernel semantics then advance
+  one measured slice at a time through projection TL2.2-TL2.5. The plan removes
+  the rewrite-provenance/`simp` dependency cycle and makes selected mathlib
+  imports and native source/workflow compatibility explicit owners rather than
+  contradictions in Track 6 scope prose.
+
 - **2026-07-21 — the Lean-system roadmap objective passes its completion
   audit; implementation remains open.** The
   [requirement audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)

@@ -46,13 +46,17 @@ the TCB.
 - A CIC ⇄ `axeyum-ir` bridge over a **published, declining** fragment.
 - An agent-facing surface (narrow — "fewer tools perform better").
 
-### Out of scope — permanently, not "for now"
+### Out of scope for Track 6 ownership
 
-- **A mathematics library.** No Mathlib competitor, ever. We import nothing and
-  grow no corpus of mathematical lemmas.
-- **A human-facing proof language of our own.** Refused with a number, not a
-  preference: LLMs score **0/33 across 660 attempts** on a low-resource formal
-  language, and any novel surface syntax we invent inherits that
+- **A separate native mathematics library.** Track 6 does not grow a competing
+  mathlib. Selected upstream theorem imports and the full pinned-mathlib
+  compatibility build are owned by ADR-0345's L3/L10 program; Track 6 consumes
+  theorem identities and checked terms through that boundary.
+- **A novel human-facing proof language.** Track 6's stable surface is goals,
+  holes, steps, and certificates. Native Lean-compatible syntax/macros and tactic
+  scripts are owned by L6/L5.8, so this refuses invention of an Axeyum-only
+  language rather than source compatibility. The low-resource-language evidence
+  remains a warning against novel syntax
   ([`research/10`](../../prover-track/research/10-autoformalization.md)).
 - **A universal proof substrate.** *Don't build the universal thing; build the
   bridge someone wants* ([`research/11`](../../prover-track/research/11-dedukti-and-substrates.md)).
@@ -108,16 +112,18 @@ tool is not entering the rung.** Everything else stops.
   outside the decidable fragment.**
 - **We are a rare genuinely independent kernel** — `coqchk` links
   `rocq-runtime.kernel`, the kernel it checks; `lean4lean`'s own README says *"not
-  really an independent implementation."* **But this argues for P3.7, not for this
-  rung**: this ADR scopes us to import nothing, which makes it *an independent
-  checker with nothing to check*. Recorded here as evidence **against** treating it
-  as a reason to enter.
+  really an independent implementation."* This argues directly for P3.7 and for
+  keeping imported declarations outside Track 6 ownership: ADR-0345 may feed the
+  checker, while this rung remains responsible for goal construction and checked
+  certificate consumption.
 - **MM0's producer/consumer split is this design**, stated independently by
   Carneiro. **"Scope laundering" at 15.3–52.5%** — models claiming formal grounding
   without running the solver — makes the certificate the only thing separating a
   proof from a claim of one.
-- **We have no library to import**, and **~99.9% of agent per-branch wall time is
-  import + re-elaboration**. Structural.
+- **Library import and re-elaboration dominate workflow cost.** The older
+  “nothing to import” premise is superseded by ADR-0345's versioned declaration
+  importer and selected theorem-base plan; the cost evidence now motivates
+  content-addressed imports and caches rather than a permanent import ban.
 
 **Against — recorded, because this ADR should be refusable:**
 
@@ -150,7 +156,10 @@ tool is not entering the rung.** Everything else stops.
    rewrite theory + external confluence + termination + adequacy proof), its export
    weakens to constructive simple type theory, no BV theory exists, and CoqInE has
    chased CIC universe polymorphism since ~2012.
-4. **A general proof assistant.** Refused permanently — see out-of-scope.
+4. **A general proof assistant inside Track 6.** Rejected as an ownership
+   collapse. Track 6 supplies the one goal/tactic engine; the broader compatible
+   source/workflow/runtime system is independently staged by ADR-0345 and the
+   Lean-system implementation plan.
 
 ## Consequences
 
@@ -166,15 +175,20 @@ tool is not entering the rung.** Everything else stops.
 - **Does not touch:** ADR-0011/0012 (DRAT/LRAT), ADR-0036 (the kernel), or
   [ADR-0166](adr-0166-alethe-target-reassessment.md) — Track 6 must **not** depend
   on the Alethe/CPC resolution.
+- **Interlocks with:** [ADR-0345](adr-0345-preregister-lean-system-interoperability.md),
+  which owns declaration/library import, native source compatibility,
+  modules/packages/editor/runtime integration, and mathlib build compatibility.
+  It reuses this ADR's goal/tactic engine and does not create a second one.
 
 ## Boundary
 
 Stated per *Verification Theatre*'s lesson — the undocumented boundary is what
 bites.
 
-- **In the TCB today:** `axeyum-lean-kernel` (which admitted `False` on
-  2026-07-15), the checkers, **64 unproven prelude axioms**, `rustc`, **6 of 14**
-  open reduction-ledger entries.
+- **In the TCB today:** `axeyum-lean-kernel` (including the historical
+  2026-07-15 `False`-admission defect and its fix), the checkers, the current
+  **64 arithmetic/integer plus one string prelude assumptions**, `rustc`, and
+  the still-open reduction-ledger entries.
 - **Not in the TCB:** the solver, the translator, the search, any agent, any tactic.
 - **Not covered:** `sat` results until P6.1c; anything outside the published
   fragment; whether the fragment covers anything anyone wants (unmeasured until

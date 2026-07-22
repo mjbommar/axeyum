@@ -149,12 +149,14 @@ Again, there are distinct targets:
   macros, elaborator, unifier, tactic language, compiler, package ecosystem,
   language server, or mathlib. The near-term product goal is a fail-closed,
   versioned `lean4export` import path plus certificate tactics and optional
-  official-Lean/Lake/editor adapters. A full independent clone remains a
-  non-goal unless measured demand justifies a later profile.
+  official-Lean/Lake/editor adapters. Full native compatibility is a separately
+  gated long-horizon program, not a claim about today's product and not a
+  prerequisite for the checker/import profiles.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
-plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md).
+plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md)
+and [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md).
 The exact first import result and negative matrix are in the
 [`lean4export` Rust prototype report](plan/lean4export-rust-import-prototype-2026-07-21.md).
 

@@ -6,6 +6,9 @@ Date: 2026-07-21
 
 Decision gate: [proposed ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
+Active execution breakdown:
+[`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md)
+
 ## Executive conclusion
 
 Axeyum already has an independent, pure-Rust implementation of a meaningful
@@ -30,16 +33,19 @@ The recommended strategy is therefore:
    Lean's implementation at once;
 4. build the existing certificate-first goal/tactic track on that checker;
 5. integrate with official Lean, Lake, and the Lean language server through an
-   optional sidecar/plugin profile before cloning those systems;
-6. treat mathlib as an import/cross-check and tactic-integration target, not as
-   something Axeyum should reimplement file for file.
+   optional sidecar/plugin profile before depending on native replacements;
+6. implement native parser/macro, elaborator, tactic, module/package, editor,
+   and runtime compatibility as separately gated later profiles;
+7. grow from selected mathlib import/cross-check slices to a complete pinned
+   native build, without confusing theorem-library breadth with kernel breadth.
 
 This closes useful portions of the gap without putting the official Lean
 runtime in the default TCB, sacrificing WASM, or making “we parsed a file” mean
-“we checked its declarations.” A full independent replacement for Lean's
+"we checked its declarations." A full independent replacement for Lean's
 parser, macro expander, elaborator, compiler, Lake, language server, and mathlib
-would be a multi-person-year program. It remains a north-star option, not the
-next milestone.
+is a multi-person-year program. It is now an explicit long-horizon
+implementation program, not the next milestone and not a prerequisite for
+useful checker/import/tactic profiles.
 
 ## 1. Define the target before measuring it
 
@@ -150,8 +156,9 @@ The useful relationship is therefore a bridge:
 | curriculum/example packs | selected theorem targets and regression cases | imported theorem identities and no-`sorry` evidence |
 
 The first mathlib milestone is not “implement mathlib.” It is to eliminate the
-current 64 prelude axioms where possible, then import and independently check a
-small, pinned theorem slice that exercises the CAS/tactic crosswalk.
+current 64 arithmetic/integer plus one string prelude assumptions where
+possible, then import and independently check a small, pinned theorem slice that
+exercises the CAS/tactic crosswalk.
 
 ## 3. What official Lean actually does
 
@@ -278,12 +285,18 @@ dependency evidence, not estimated ecosystem frequency.
 
 ## 5. Architecture
 
-### 5.1 Two deployment profiles
+### 5.1 Three deployment profiles
 
 **Independent profile (default).** Pure Rust, no official Lean runtime, no C/C++
 dependency, WASM-compatible where the existing kernel is. It reads Axeyum's
 native proof artifacts and the initial pinned `lean4export` NDJSON profile. It
 owns all admission decisions and reports unsupported constructs structurally.
+
+**Native-system profile (staged).** Pure-Rust parser/macros, elaboration,
+goals/tactics, modules/packages, editor services, and runtime components are
+enabled only as their K2-K6 gates pass. These components may construct terms and
+artifacts but do not gain admission authority or create a dependency back-edge
+into the kernel.
 
 **Official-integration profile (optional).** A version-pinned Lean process or
 plugin performs source elaboration, module export, project discovery, editor
@@ -300,13 +313,14 @@ L0 capability/version contract
             -> L3 pinned Prelude/Init/Std/mathlib slices
                  -> L4 Goal/Hole/unifier (Track 6 P6.2)
                       -> L5 certificate tactics (Track 6 P6.3)
-                           -> L6 selected Lean source surface
-                                -> L7 Lake/package adapter
-                                -> L8 editor/LSP integration
+                           -> L6 native parser/macro surface
+                                -> L4B native elaborator
+                                     -> L7 modules/Lake/packages/`.olean`
+                                     -> L8 native editor/LSP
 
 L2 + existing reconstruction -> optional official-Lean plugin/sidecar
-L6/L7 measured demand        -> L9 restricted compiler work, if any
-L3-L5                        -> L10 widening mathlib release matrix
+L4B + L7                     -> L9 compiler/runtime/metaprograms
+L3-L9                        -> L10 full pinned mathlib build/release matrix
 ```
 
 L8 cannot precede source maps and information-tree equivalents. L9 is not a
@@ -468,37 +482,37 @@ Exit: each tactic has positive/negative/tampered certificates and can emit a
 kernel term checked by both the independent kernel and the pinned official
 kernel on its admitted profile.
 
-### L6 — A selected Lean source profile (XL; bridge-first)
+### L6 — Native Lean parser, syntax extensions, and macros (XL; adapter-first)
 
-Goal: permit human-authored Lean-like statements without pretending to
-implement Lean's open-ended macro/elaboration ecosystem.
+Goal: accept the pinned Lean source language with source-mapped syntax,
+extensible parser categories, quotations, notation, and hygienic macros.
 
 Stage 1 uses official Lean as an optional frontend: elaborate ordinary Lean,
 export declarations, and independently check the supported core. This gives
 immediate language/workflow value without trusting official elaboration for
 the final independent admission.
 
-Stage 2, only after importer measurements, may implement a versioned native
-subset:
+Stage 2 implements the native frontend in measured layers: source identities
+and lexer; syntax objects and Pratt parser tables; builtin command/term/tactic
+categories; user syntax/notation compilation; quotations and hygienic macro
+expansion; recovery and canonical printing; then bootstrap of selected frontend
+modules. Elaboration is L4B, not hidden inside parsing, and arbitrary
+metaprograms wait for the bounded L9 runtime.
 
-- fixed lexical grammar and source locations;
-- declarations, binders, universes, applications, `fun`/`forall`/`let`;
-- a fixed notation table rather than user-defined Pratt categories;
-- explicit types first, then bounded implicit insertion/coercions;
-- pattern unification using L4;
-- no arbitrary macros, custom elaborators, or metaprogram execution.
+Unsupported constructs decline with source spans and stable codes throughout
+the climb. Differential tests compare token/syntax identity, expanded syntax,
+and eventually elaborated core digests—not pretty-printed similarity. Exact
+task order and gates are TL6.1-TL6.13 in the
+[implementation plan](lean-system-implementation-plan-2026-07-21.md).
 
-Any source outside the profile declines with a source span and suggests the
-official frontend. Differential tests compare parsed/elaborated core terms,
-not pretty-printed output.
+Exit: the supported pinned source profile parses and macro-expands like official
+Lean, preserves stable incremental identities, and bootstraps the declared
+frontend modules.
 
-Exit: the native profile is documented by grammar and capability version;
-accepted source produces core terms definitionally equal to the pinned official
-Lean result on a mutation-tested corpus.
+### L7 — Modules, caches, packages, Lake, and `.olean` (M adapter; XL native)
 
-### L7 — Lake and package interoperability (M/L adapter; clone deferred)
-
-Goal: work in real Lean projects without rebuilding the package manager.
+Goal: work in real Lean projects immediately through the official adapter and
+eventually reproduce their module/package build graph natively.
 
 First implementation:
 
@@ -509,13 +523,17 @@ First implementation:
 - expose `axeyum check-lean-project` and machine-readable declines;
 - optionally package an Axeyum Lake facet or plugin command.
 
-Do not parse arbitrary `lakefile.lean` as configuration or claim compatible
-dependency solving. A native package manager is only reconsidered if the
-official adapter prevents an independently deployable use case that users
-actually need.
+The native path then implements module deltas and content-addressed caches,
+toolchain/manifest/TOML parsing, deterministic Git/path resolution, build
+targets/facets/traces, and `lakefile.lean` through L4B/L9. A version-specific
+`.olean` reader is deliberately late and remains in the untrusted cache/adapter
+layer; it must translate to the same checked environment and produce declaration
+digests equal to the `lean4export` path.
 
-Exit: two cloned pinned projects, including one selected mathlib project, export
-reproducibly and rerun incrementally without stale-cache acceptance.
+Adapter exit: two pinned projects, including one selected mathlib project,
+export reproducibly and rerun incrementally without stale-cache acceptance.
+Native exit: clean, incremental, and offline builds reproduce module identities,
+dependency resolution, and build graphs with no stale artifact acceptance.
 
 ### L8 — Editor and language-server integration (M adapter; XL native)
 
@@ -527,30 +545,34 @@ Order:
 1. official Lean plugin/custom RPC exposing Axeyum goals, evidence, declines,
    and counterexamples;
 2. VS Code/editor client consuming that RPC;
-3. narrow Axeyum goal server for the native L6 subset;
-4. only then evaluate a broader LSP implementation.
+3. native snapshot/cancellation and incremental parser/elaborator services;
+4. navigation, completion, semantic data, code actions, widgets, and proof RPC.
 
 The server must version documents, cancel stale work, preserve source-to-core
 maps, and never publish diagnostics from an older snapshot. Full Lean editor
 compatibility requires information-tree semantics and is not implied by JSON-RPC
 method compatibility.
 
-Exit: stale/cancelled document mutations cannot surface as current proof
-results; every diagnostic links to a stable goal/evidence ID.
+Exit: a selected Lean project can be edited through the native server with
+snapshot-correct goals, diagnostics, navigation, completion, and proof actions;
+stale/cancelled document mutations cannot surface as current results.
 
-### L9 — Compiler/runtime (deferred, demand-gated)
+### L9 — Evaluator, compiler, runtime, and metaprograms (XL; checker-independent)
 
-Goal: avoid making compilation a prerequisite for checking proofs.
+Goal: execute Lean definitions, metaprograms, build scripts, tactics, and
+programs natively while keeping compilation outside proof admission.
 
-Use the official Lean compiler for Lean metaprograms and generated executables
-in the optional profile. The independent kernel remains an evaluator/checker,
-not an optimizing compiler. Consider a restricted compiler only for a measured
-need such as WASM execution of closed certified functions or proof-producing
-partial evaluation.
+The optional profile continues to use official Lean first. The native sequence
+then freezes erasure/runtime semantics, implements a bounded interpreter,
+checked IR/LCNF-like forms, closure/specialization/RC passes, portable C/native
+and WASM outputs, controlled FFI, and bounded execution of macros/tactics/Lake
+DSL. Each optimization is compared against the interpreter and pinned official
+Lean. Compiler output never receives theorem credit without kernel admission or
+observable replay.
 
-Exit before admission: a concrete use case cannot be served by kernel
-evaluation, Axeyum IR lowering, or the optional official compiler; semantics and
-replay are specified; compiler output is outside the proof TCB.
+Exit: the declared runtime profile builds and executes without official Lean,
+with zero unexplained differential observations and an explicit runtime/FFI
+trust boundary.
 
 ### L10 — Mathlib breadth and release maintenance (ongoing, after L3/L5)
 
@@ -615,7 +637,7 @@ typed decline, never evidence that a theorem is invalid.
 |---|---|
 | importer bugs expand the TCB | separate wire validation from kernel admission; fuzz and mutate both seams |
 | official exporter becomes an implicit trust root | sandbox it; hash/version outputs; independently check core terms |
-| direct `.olean` attack/version coupling | explicit non-goal; official tool alone reads `.olean` |
+| direct `.olean` attack/version coupling | late version-specific reader in the untrusted cache/adapter layer; export-digest equivalence; malformed-input fuzzing |
 | library counts become fake parity | dependency-closed admission denominator and assurance states |
 | axioms make imported proofs vacuous | stable axiom allowlist, type digest, discharge queue, fail on additions |
 | frontend effort consumes the solver/proof program | bridge-first source profile; native frontend after measured imports |
@@ -629,7 +651,8 @@ Non-claims until their gates are met:
 
 - no full Lean parser, macro, elaborator, tactic-language, compiler, Lake, LSP,
   or mathlib parity;
-- no direct `.olean` compatibility;
+- no direct `.olean` compatibility until TL7.9's versioned reader and
+  export-digest equivalence gate pass;
 - no mathlib coverage claim from Axeyum curriculum or CAS counts;
 - no general Lean-kernel parity from 71 generated modules;
 - no independent-checking claim from official Lean acceptance alone;
@@ -650,26 +673,30 @@ Non-claims until their gates are met:
    current hand-checked six-profile seed.
 6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
    completed-environment publication mutations.
-7. Inventory and type-digest the 64 prelude axioms; choose the first five to
-   discharge from existing arithmetic/CAS evidence.
+7. Inventory and type-digest the 64 arithmetic/integer plus one string prelude
+   assumptions; choose the first five to discharge from existing
+   arithmetic/CAS evidence.
 8. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
    dependency-closed admissions gained per slice.
 9. Select one mathlib `norm_num` or `ring` theorem basis and implement one
    end-to-end CAS-certificate-to-kernel-term proof.
-10. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; do not begin a native
-    Lean parser, Lake clone, standalone LSP, or compiler before L1-L3 provide
-    measured demand.
+10. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; after TL0 contracts,
+    start TL6.1-TL6.4 as an independent source/syntax lane while L1-L3 drive the
+    checker/import critical path. Lake, LSP, compiler, and `.olean` remain
+    dependency-gated by their explicit TL tasks rather than globally forbidden.
 
 ## 10. Strategic answer
 
 Axeyum is not “far from Lean” in the narrow role it deliberately built: it has
 an independent kernel/reconstruction slice and a real cross-check lane. It is
 far from Lean as a complete user-facing programming and theorem-proving
-environment. The most valuable next step is not to erase that distinction with
-a huge rewrite. It is to connect the independent checker to the official
-ecosystem through a narrow, auditable import boundary, then let real import and
-tactic evidence decide which pieces deserve independent implementations.
+environment. The most valuable next step is to preserve that distinction while
+executing the complete program in dependency order: connect the checker through
+a narrow import boundary, harden/admit the core, build one native goal engine,
+and then advance source, workflow, runtime, and mathlib profiles behind their
+own evidence gates.
 
-That trajectory preserves the project's differentiator: official Lean can be
-the convenient frontend and oracle, while Axeyum remains a second,
-independently implemented checker for the admitted core.
+That trajectory preserves the project's differentiator at every milestone:
+official Lean remains a convenient frontend and oracle until each native layer
+is ready, while Axeyum remains an independently implemented checker and grows
+into a complete compatible system without expanding the kernel TCB.

@@ -1,4 +1,4 @@
-# ADR-0345: Preregister Lean-system interoperability through a versioned export boundary
+# ADR-0345: Preregister adapter-first, full Lean-system compatibility through versioned trust boundaries
 
 Status: proposed
 
@@ -24,22 +24,30 @@ workflow code before proving demand.
 
 The detailed evidence audit and phased plan is
 [`docs/plan/lean-system-compatibility-roadmap-2026-07-21.md`](../../plan/lean-system-compatibility-roadmap-2026-07-21.md).
+The implementation-grade task graph is
+[`docs/plan/lean-system-implementation-plan-2026-07-21.md`](../../plan/lean-system-implementation-plan-2026-07-21.md).
 
 ## Decision
 
 **Axeyum will support both export and import, in that order: keep the existing
-official-Lean source cross-check, then add a fail-closed reader for the pinned
-official `lean4export` NDJSON interchange and independently admit supported
-declarations with `axeyum-lean-kernel`; it will not parse `.olean` directly or
-preregister full independent clones of Lean's frontend, compiler, Lake,
-language server, or mathlib.**
+official-Lean source cross-check, then complete the fail-closed reader for the
+pinned official `lean4export` NDJSON interchange and independently admit
+supported declarations with `axeyum-lean-kernel`. This export boundary remains
+the first critical path. A complete native Lean-compatible frontend, proof
+environment, workflow, runtime, and pinned-mathlib build are preregistered as
+later profiles with separate gates; they do not enter the kernel TCB or block
+useful earlier profiles.**
 
-The implementation has two explicit profiles:
+The implementation has three explicit profiles:
 
 1. **Independent default:** pure Rust, no Lean runtime, independently checks
    native proof artifacts and supported exported declarations. This is the
    checking-credit and WASM-compatible profile.
-2. **Optional official integration:** a pinned, sandboxed Lean/exporter process
+2. **Native system:** independently implemented parser/macros, elaboration,
+   goals/tactics, modules/packages, editor services, compiler/runtime, and
+   pinned-mathlib compatibility are enabled incrementally as K2-K6 gates pass.
+   They may construct artifacts but do not gain kernel admission authority.
+3. **Optional official integration:** a pinned, sandboxed Lean/exporter process
    or plugin supplies source elaboration, project/module discovery, export,
    editor integration, and official cross-checks. This is an oracle and workflow
    adapter, not independent checking credit.
@@ -47,24 +55,28 @@ The implementation has two explicit profiles:
 The interchange rules are:
 
 - pin Lean, exporter, and format versions and record their hashes;
-- only the external official process may read `.olean`;
+- the official process reads `.olean` first; a native version-specific reader
+  is allowed only later in the untrusted cache/adapter layer and must reproduce
+  declaration digests from the checked export path;
 - accept NDJSON only after metadata, topology, resource, safety, axiom, and
   declaration-shape validation;
 - keep parsing/translation/independent admission/official admission/workflow
   reproduction as distinct states;
 - fail closed on unknown formats or constructs;
 - use actual import declines to order kernel work;
-- import selected mathlib theorem bases and translate Axeyum certificates; do
-  not reimplement mathlib file for file or infer mathlib coverage from CAS and
-  curriculum counts;
-- build source/Lake/editor adapters before considering native replacements;
+- import selected mathlib theorem bases and translate Axeyum certificates first;
+  then grow measured profiles to a full pinned source build without inferring
+  mathlib coverage from CAS and curriculum counts;
+- build source/Lake/editor adapters before depending on native replacements,
+  while allowing the independent syntax substrate to proceed after L0;
 - keep compiler output outside the proof TCB.
 
 The Rust reader/admission prototype and its first negative matrix are now
-landed in a separate workspace crate. The decision remains proposed until that
-crate boundary and the broader projection/literal/quotient/inductive fixture
-matrix are reviewed. The exact flat and direct-recursive fixtures earn
-independent-admission credit; the Python inventory by itself still earns none.
+landed in a separate workspace crate. The decision remains proposed until the
+crate boundary, ADR-0167 ownership reconciliation, and the broader
+projection/literal/quotient/inductive fixture matrix are reviewed. The exact
+flat and direct-recursive fixtures earn independent-admission credit; the
+Python inventory by itself still earns none.
 
 ## Evidence
 
@@ -168,11 +180,13 @@ trusted-second-implementation boundary.
 Rejected. Existing source emission and official cross-checks are useful and
 already operational. The two directions test different failure modes.
 
-### Direct `.olean` reader
+### Direct `.olean` reader as the first or trusted boundary
 
 Rejected. `.olean` is a version-coupled implementation cache with an unsafe
-untrusted-input surface. The official exporter is the supported conversion
-boundary and can be sandboxed.
+untrusted-input surface. The official exporter is the initial supported
+conversion boundary and can be sandboxed. TL7.9 permits a late, version-specific
+reader only outside the TCB, with malformed-input fuzzing and equality against
+the export-derived declaration digests.
 
 ### Full native Lean frontend and ecosystem immediately
 
@@ -181,11 +195,12 @@ metaprogramming, compiler/runtime, package management, and editor information
 trees form several large coupled systems. The official adapter yields earlier
 workflow value while preserving independent kernel checking.
 
-### Reimplement mathlib
+### Reimplement mathlib independently file for file
 
-Rejected. Axeyum should import and check selected theorem dependencies and use
-its CAS/solvers to generate proof terms. Duplicating a vast generic theorem
-library is lower leverage than interoperability and theorem discharge.
+Rejected. Axeyum should import and check upstream theorem dependencies and use
+its CAS/solvers to generate proof terms. L10 targets a complete pinned mathlib
+build through the native compatibility stack, not authorship of a competing
+library with duplicate theorem content.
 
 ### Add an external Rust Lean checker as a dependency
 
@@ -207,11 +222,13 @@ to define Axeyum's own admission, safety, axiom, and TCB contracts.
   require.
 - The importer is a separate workspace crate so parser dependencies and
   malformed-input logic do not enter `axeyum-lean-kernel`.
-- The 64 prelude axioms become a named discharge queue and new axioms fail
-  closed.
+- The 64 arithmetic/integer prelude axioms plus the string axiom become a named
+  65-row discharge queue and new axioms fail closed.
 - Track 6 remains the native proof-assistant plan. Interoperability adds inputs,
   source/workflow adapters, and cross-checks.
-- A full native Lean frontend, Lake clone, LSP, compiler, or mathlib equivalent
-  requires a later ADR with measured demand and independent exit criteria.
+- Native parser/macros, elaboration, modules/Lake/`.olean`, LSP,
+  compiler/runtime, and full pinned-mathlib compatibility follow the accepted
+  L0-L10 dependency graph and their independent exit criteria; none is implied
+  by the import prototype or allowed to expand the kernel TCB.
 - Changes to exporter format or supported Lean releases require an explicit
   version-profile update; unknown versions do not receive compatibility credit.

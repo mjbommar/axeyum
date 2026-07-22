@@ -38,7 +38,7 @@ state.
 > quantified-BV export failures (67/71); real-inductive rendering for the exact
 > computing Bool/BV families plus one measured elaborator-depth option raises
 > the same bounded local run to **71/71 accepted, zero skipped, zero failed**.
-> Remote CI acceptance and the 64-axiom discharge remain open; do not convert
+> Remote CI acceptance and prelude-axiom discharge remain open; do not convert
 > representative source acceptance into full proof-family or Lean parity.
 
 > **Lean-system interoperability reset (2026-07-21).** The independent Rust
@@ -61,8 +61,9 @@ state.
 > `u.1`), now compared after explicit level substitution. Theorem-body and
 > recursor-rule mutations reject among eleven Rust tests. This is exact flat and
 > direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
-> credit. Direct `.olean` parsing and full ecosystem cloning remain non-goals. A
-> four-root
+> credit. A direct `.olean` reader and full native ecosystem compatibility are
+> late, untrusted-adapter/native-system phases rather than checker
+> prerequisites. A four-root
 > [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md)
 > now freezes exact projection, Nat, String, and quotient dependency closures.
 > Projection is the sole blocker for its four-declaration closure and the first
@@ -72,7 +73,9 @@ state.
 > source/command/hash, and 11 Rust plus eight Python tests hold the boundary.
 > Resume with projection representation/inference/reduction, the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix, and type-digesting
-> the 64 prelude axioms before native frontend, Lake, LSP, or compiler work. See
+> the 64 arithmetic/integer plus one string prelude assumptions before dependent
+> native elaborator, Lake, LSP, or compiler work. The TL6.1-TL6.4 source/syntax
+> substrate may proceed independently after TL0. See
 > the
 > [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 > A final [roadmap completion audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
@@ -82,7 +85,14 @@ state.
 > 137 concepts, 173 non-template packs, 1,131 result rows, 249 learning files,
 > and the pinned Lean/mathlib tree counts. The research/design/prototype/docs
 > objective is complete without claiming that the implementation program is:
-> resume implementation at the projection-first L2 slice and L0 contract gates.
+> resume implementation through the new
+> [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md),
+> which assigns task IDs, dependencies, owners, gates, milestones, and concrete
+> exits to L0-L10. Start at TL0.1/TL0.2, seed T6.0.3/TL2.15, and then execute the
+> projection slice TL2.2-TL2.5. Native parser/macros, elaboration, tactics,
+> modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
+> all planned; adapter-first ordering controls risk but does not erase the
+> destination.
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact
@@ -3242,16 +3252,17 @@ against [the north-star reference targets](docs/plan/00-north-star.md):
 | **Lean certificate coverage** | **Substantial but uneven** | All 35 measured rows have complete dominance-audit artifacts: 327 baseline UNSAT decisions become 325 evidence-audit UNSAT outcomes, 267 certified + genuinely independently checked outcomes, and 260 Lean-checked outcomes. The affected v1 rows historically had 28 vacuous `bare-unsat` check booleans; the schema-v2 refresh now records zero, gates checking on certification, and attributes all residual bare outcomes to a decision backend/check mode. The full conjunction remains 259/327: 58 uncertified audit-row occurrences, eight reconstruction-only gaps, zero declared trust holes, and two QF_NIA `IntPow2` proof-production errors. Four stale QF_SEQ rows created before the string evidence soundness fix lose source-invalid DRAT credit: their old proof covered only the bounded/flat lowering, while the source verdicts remain unchanged. The parser-backed [shape census](docs/plan/generated/proof-gap-shape-census.md) deduplicates the 58 to 56 paths / 51 exact contents (25 arithmetic, 26 string/sequence): all 26 string/sequence contents use bounded lowering, 31 occurrences return through `smtlib-string-front-door`, 15 through `auto-solve`, and 12 through `nra-linear-abstraction`. The [causal design](docs/plan/evidence-route-provenance-design-2026-07-21.md) makes route/reduction tracing—starting with the QF_SEQ `source-side-channel-not-serialized` case—the next prerequisite, not a syntax-selected proof rule. The eight reconstruction-only gaps split into five measured selected-evidence plumbing wins (two quantified-BV plus all three QF_NIA proofs through the existing EUF consumer) and three distinct quantified-BV cost cases: scoped kernel closure exceeds 4 GiB, compact spooling misses 30 seconds after kernel closure below 600 MiB, and CPS tail reconstruction misses 30 seconds below 525 MiB. The production denominator remains unchanged until evidence-aware dispatch and official-Lean checking land; add no theorem family from query-only re-derivation failures. The current declared trust-hole ledger is zero, but 58 definitive results still lack certificates and the Lean tactic backend (P3.7) is unbuilt. |
 | **Pareto-dominance on selected rows** | **Strong selected-fragment result; timing refresh required** | 23/35 audited rows are fully dominant; the current mixed-vintage audit artifacts mark 594/753 measured decisions as dominant candidates ([DOMINANCE](bench-results/DOMINANCE.md)). The schema-v2 proof refresh changed 22 timing-derived flags, mostly in QF_SEQ, without changing verdicts; do not turn that unpaired rerun into a performance claim. Refresh paired timing cells before publication. |
 
-**"Full parity across Z3/cvc5/Lean" is not one actionable destination.** The
+**"Full parity across Z3/cvc5/Lean" is not one scalar milestone.** The
 active product targets are measured fragment competitiveness, production
 SMT-LIB/API depth, complete evidence on claimed routes, a versioned Lean-core
 compatibility profile, and a fail-closed Lean bridge. The identity remains
 *untrusted fast search, trusted small checking*. Work on each axis is mapped
-below and under [`docs/plan/`](docs/plan/README.md). Full Lean-system replacement
-is explicitly not part of the solver roadmap; selected declaration import,
-workflow adapters, certificate tactics, and a demand-gated source profile are
-now separately staged in the
-[Lean-system compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md).
+below and under [`docs/plan/`](docs/plan/README.md). Full Lean-system
+compatibility is a separate, long-horizon program—not a solver-parity shortcut
+or proof-kernel prerequisite. Its adapter-first strategy is in the
+[Lean-system compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
+and its complete native implementation breakdown is in the
+[Lean-system implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md).
 
 **Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread

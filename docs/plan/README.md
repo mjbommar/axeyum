@@ -33,8 +33,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md) —
   evidence-backed separation of independent kernel checking from the missing
   Lean frontend/workflow/mathlib surfaces, a real format-3.1 `lean4export`
-  prototype, two-profile architecture, and staged L0-L10 import, kernel,
+  prototype, three-profile architecture, and staged L0-L10 import, kernel,
   tactic, source, Lake, editor, compiler, and mathlib gates.
+- [`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md) —
+  active implementation-grade L0-L10 work breakdown: K0-K6 capability
+  profiles, common gates, ownership boundaries, dependency graph, TL task IDs,
+  milestones, native parser/elaborator/tactics/Lake/LSP/compiler/`.olean` and
+  full pinned-mathlib paths, plus the exact resume queue.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

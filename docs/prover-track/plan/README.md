@@ -9,8 +9,11 @@ statement. **Every slice lands alone**; none is justified by a later one.
 
 This track builds Axeyum's native certificate-first proof assistant. The
 separate [Lean-system compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md)
-adds versioned declaration import and optional source/Lake/editor adapters. It
-reuses P6.2/P6.3 for goals and tactics rather than creating a second goal engine.
+and [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md)
+add versioned declaration/library import and staged native
+source/Lake/editor/runtime/mathlib compatibility. They reuse P6.2/P6.3 for goals
+and tactics rather than creating a second goal engine; Track 6 does not own a
+competing theorem library or an Axeyum-only proof language.
 
 ---
 

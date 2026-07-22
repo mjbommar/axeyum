@@ -19,11 +19,14 @@ Last updated: 2026-07-21
 > production Z3 compatibility is demonstrably far; solver-proof export to Lean
 > now has a bounded local 71/71 official-Lean acceptance result after four
 > hidden export failures were exposed and fixed, while remote CI and exhaustive
-> acceptance remain open. Full Lean language/toolchain cloning remains out of
-> scope, while selected declaration import, certificate tactics, and optional
-> workflow adapters are now staged in the
+> acceptance remain open. Full Lean language/toolchain compatibility is a
+> separate long-horizon implementation program, while selected declaration
+> import, certificate tactics, and optional workflow adapters remain the first
+> value-bearing stages in the
 > [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
-> under proposed ADR-0345. Its
+> under proposed ADR-0345. The complete native work breakdown is the
+> [Lean-system implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md).
+> Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib
 > inventories while keeping the L0-L10 implementation program explicitly open.
@@ -602,10 +605,13 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   makes projection the first product decline for the structure, Nat-literal,
   and String-literal roots and isolates quotient as a separate closure. Broader
   dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
-  Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
-  parsing and full frontend/compiler/ecosystem cloning are non-goals absent a
-  later measured ADR. See the
+  Track 6 goals/tactics, and official Lean/Lake/editor adapters. Native source,
+  elaboration, modules/Lake, a version-specific untrusted `.olean` reader, LSP,
+  compiler/runtime, and full pinned-mathlib compatibility are later staged
+  phases with their own gates; none enters the checker TCB or blocks the earlier
+  useful profiles. See the
   [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
+  [implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md),
   [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md),
   [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
   and [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).

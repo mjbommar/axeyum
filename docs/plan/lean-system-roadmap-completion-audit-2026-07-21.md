@@ -8,6 +8,9 @@ Date: 2026-07-21
 Roadmap:
 [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md)
 
+Active execution plan:
+[`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md)
+
 Decision gate:
 [proposed ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
@@ -44,14 +47,14 @@ source printing would fail.
 
 | Requested surface | Evidence about current state | Closing design and measured exit | Audit result |
 |---|---|---|---|
-| Lean parser and macro system | Roadmap sections 1 and 3 distinguish extensible syntax/macros from core checking and record the native frontend as absent | L6 is bridge-first, then permits only a versioned native grammar/notation subset with source spans and core-term differential tests; arbitrary macros/custom elaborators decline | covered by roadmap; implementation open by design |
-| Elaborator and unifier | Sections 2.2 and 3 distinguish existing solver automation from metavariable elaboration; Track 6 already owns goals/holes/delayed assignment | L4 specifies typed goals, scope-safe metavariables, occurs checks, delayed assignment, pattern unification, deterministic replay, and `intro`/`apply` exits; L6 adds bounded implicit insertion/coercions only after that | covered by roadmap; implementation open |
+| Lean parser and macro system | Roadmap sections 1 and 3 distinguish extensible syntax/macros from core checking and record the native frontend as absent | TL6.1-TL6.13 cover lexer/syntax, Pratt extension tables, builtin and user syntax, quotations, hygiene, recovery, printing, differential fixtures, and bootstrap | covered by active plan; implementation open by design |
+| Elaborator and unifier | Sections 2.2 and 3 distinguish existing solver automation from metavariable elaboration; Track 6 already owns goals/holes/delayed assignment | L4A reuses Track 6; TL4.1-TL4.12 add constraints, universe/coercion/typeclass handling, terms/declarations/inductives/recursion, information trees, and official-core differential tests | covered by active plan; implementation open |
 | Tactics | Section 2.2 inventories solver reconstruction, e-graph explanations, CAS certificates, and 56 default rewrite rules without calling them Lean tactics | L5 orders `exact`/`intro`/`apply`, `decide`, counterexamples, `norm_num`, `ring`, `linarith`/`nlinarith`, theorem-backed `simp`, induction, and instantiation; every step must emit a tamper-tested kernel term | covered by roadmap; existing engines reused rather than ignored |
-| Compiler/runtime | Section 3 separates optional compilation from kernel admission; no native Lean compiler is claimed | L9 keeps official compilation optional and outside the proof TCB; an independent restricted compiler is demand-gated on a use case not served by kernel evaluation, Axeyum IR, or the adapter | covered by explicit deferral gate |
-| Lake/package ecosystem | Section 3 records Lake as a Lean-aware build/package system rather than a configuration-file parser | L7 specifies toolchain/project discovery, module closure, sandboxed export, content-addressed cache identity, CLI/plugin surfaces, two-project reproduction, and stale-cache rejection; native package resolution remains demand-gated | covered by adapter-first plan |
-| Language server/editor | Section 3 records the dependency on elaboration information trees rather than treating JSON-RPC as compatibility | L8 orders an official Lean custom RPC/plugin, editor client, native-subset goal server, and only then a broader LSP; document versions, cancellation, source maps, and stable evidence IDs are exit conditions | covered by dependency-correct plan |
-| Mathlib | Section 2.3 compares actual Axeyum assets with the pinned mathlib tree and explicitly rejects a coverage percentage | L3 orders axiom classification/discharge, `Init`/`Std`, then one dependency-closed mathlib theorem basis; L10 tracks admitted roots, blockers, axioms, tactics, resources, and releases without optimizing vanity declaration counts | covered by source-backed bridge plan |
-| `.olean` / `lean4export` reader | The original state had no reader. Section 4 rejects direct `.olean` parsing as a trusted interchange and selects pinned `lean4export` 3.1 NDJSON | L1's separate Rust reader now validates format/topology/resources and L2 independently admits exact flat and direct-recursive fixtures; projection/literal/quotient/harder-inductive closures fail closed and order the next slices | prototype crossed the seam; broad library admission open |
+| Compiler/runtime | Section 3 separates optional compilation from kernel admission; no native Lean compiler is claimed today | TL9.1-TL9.13 stage interpreter, erasure, checked IR/LCNF, passes, RC/runtime, C/native/WASM, FFI, metaprograms, differential execution, and bootstrap outside the proof TCB | covered by active long-horizon plan |
+| Lake/package ecosystem | Section 3 records Lake as a Lean-aware build/package system rather than a configuration-file parser | TL7.1-TL7.10 stage the official adapter, module/cache identity, manifests/resolution/build facets, native Lake DSL, `.olean`, and clean/incremental/offline project reproduction | covered by adapter-first native plan |
+| Language server/editor | Section 3 records the dependency on elaboration information trees rather than treating JSON-RPC as compatibility | TL8.1-TL8.10 cover snapshots/cancellation, incremental syntax/elaboration, diagnostics, navigation, completion, semantic data, actions/widgets, and transcript/resource gates | covered by dependency-correct native plan |
+| Mathlib | Section 2.3 compares actual Axeyum assets with the pinned mathlib tree and explicitly rejects a coverage percentage | L3 orders axiom classification/discharge and selected bases; TL10.1-TL10.9 then require blocker inventories, native tactic tests, a full pinned build, release maintenance, dashboards, and distributions | covered by source-backed full-build plan |
+| `.olean` / `lean4export` reader | The original state had no reader. Section 4 rejects direct `.olean` parsing as the first or trusted interchange and selects pinned `lean4export` 3.1 NDJSON | L1's reader and L2 admission remain first; TL7.9 later allows a version-specific untrusted cache reader only with export-digest equivalence and malformed-input gates | prototype crossed the seam; both production paths open |
 | Detailed roadmap under `docs/` | The main roadmap has target definitions, current inventory, primary-source model, architecture, dependency graph, L0-L10 phases, sizes, exits, assurance states, negative gates, performance reporting, risks/non-claims, and ten immediate actions | This audit plus the prototype and blocker reports bind each claim to code, fixtures, commands, or pinned upstream trees | satisfied |
 | Research what Axeyum actually has | The comparison covers the independent kernel, proof reconstruction, Track 6, CAS, rewrite/e-graph layers, curriculum, foundational resources, and current axiom surface | Counts below were rederived from the current worktree; capability relationships are expressed as missing proof bridges, not as superficial LOC/file ratios | satisfied |
 
@@ -161,12 +164,13 @@ The following remain deliberately open and must not be erased by this audit:
 - L1 fuzzing, axiom type digests, and large-stream publication;
 - L2 projections, arbitrary-precision literals, quotient, positivity, and
   recursive-indexed/reflexive/mutual admission;
-- L3 dependency-closed `Init`/`Std`/mathlib slices and discharge of the 64
-  arithmetic/integer reconstruction axioms;
+- L3 dependency-closed `Init`/`Std`/mathlib slices and discharge/classification
+  of the 64 arithmetic/integer plus one string reconstruction assumptions;
 - L4 goals/holes/unification and L5 certificate tactics;
-- L6 selected source adapter/profile, L7 project adapter, and L8 editor path;
-- any L9 compiler work, which remains demand-gated;
-- L10 compatibility breadth and release maintenance.
+- L6 native parser/macros and L4B elaboration;
+- L7 modules/caches/packages/Lake/`.olean` and L8 native editor/LSP;
+- L9 evaluator/compiler/runtime/metaprograms outside the proof TCB;
+- L10 full pinned-mathlib build, compatibility breadth, and release maintenance.
 
 Those are roadmap phases with explicit exit criteria, not unfinished
 requirements of the research/design/prototype/documentation objective itself.

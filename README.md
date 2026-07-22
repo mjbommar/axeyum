@@ -102,7 +102,8 @@ kernel or ecosystem: projections, quotients, literal/bignum handling,
 recursive-indexed/mutual breadth, dependency-closed `Init`/`Std`/mathlib imports,
 and a fail-closed tactic bridge remain open. See
 [Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
-[Lean-system roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md).
+[Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md).
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
