@@ -507,6 +507,10 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         UnaryFunc::Sqrt => {
             require_unit(argument, constant_term).and_then(|inner| compose(&inner, binomial_half))
         }
+        // `root_q(1+u) = (1+u)^{1/q} = Σ C(1/q, d) uᵈ` — the fractional binomial series
+        // (the `q`-th-root generalization of `√` / `binomial_half`).
+        UnaryFunc::NthRoot(q) => require_unit(argument, constant_term)
+            .and_then(|inner| compose(&inner, |degree| binomial_reciprocal(q, degree))),
         // tan(u) = sin(u)/cos(u); cos(u) has constant term 1 at a vanishing `u`,
         // so the power-series division is well-defined.
         UnaryFunc::Tan => {
@@ -539,7 +543,6 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         | UnaryFunc::Acosh
         | UnaryFunc::Gamma
         | UnaryFunc::PolyGamma(_)
-        | UnaryFunc::NthRoot(_)
         | UnaryFunc::Ai
         | UnaryFunc::AiPrime
         | UnaryFunc::Bi
@@ -685,6 +688,21 @@ fn log_one_plus_coeff(degree: usize) -> Option<Rational> {
 /// The binomial coefficient `C(1/2, k)`, i.e. the `Maclaurin` coefficient of
 /// `sqrt(1 + t)` at degree `k`, computed exactly as the product
 /// `prod_{i=0}^{k-1} (1/2 - i) / (i + 1)`. `None` on `i128` overflow.
+/// Coefficient of `uᵈ` in `(1+u)^{1/q} = Σ_d C(1/q, d) uᵈ` — the fractional binomial
+/// series for the `q`-th root, generalizing [`binomial_half`] (the `q = 2` case).
+fn binomial_reciprocal(q: u32, degree: usize) -> Option<Rational> {
+    let exponent = Rational::checked_new(1, i128::from(q))?;
+    let mut result = Rational::integer(1);
+    for step in 0..degree {
+        let factor_numerator = exponent.checked_sub(Rational::integer(i128::try_from(step).ok()?))?;
+        let factor_denominator = Rational::integer(i128::try_from(step + 1).ok()?);
+        result = result
+            .checked_mul(factor_numerator)?
+            .checked_div(factor_denominator)?;
+    }
+    Some(result)
+}
+
 fn binomial_half(degree: usize) -> Option<Rational> {
     let half = Rational::new(1, 2);
     let mut result = Rational::integer(1);
@@ -965,6 +983,27 @@ mod tests {
                 Rational::new(-1, 8),
                 Rational::new(1, 16),
             ]
+        );
+    }
+
+    #[test]
+    fn nth_root_binomial_series() {
+        // (1+x)^{1/3} = 1 + x/3 − x²/9 + 5x³/81 − … (fractional binomial series).
+        let cube = CasExpr::Unary(UnaryFunc::NthRoot(3), Box::new(CasExpr::int(1) + var()));
+        assert_eq!(
+            coeffs(&cube, 3),
+            vec![
+                Rational::integer(1),
+                Rational::new(1, 3),
+                Rational::new(-1, 9),
+                Rational::new(5, 81),
+            ]
+        );
+        // (1−x)^{1/4} = 1 − x/4 − 3x²/32 − … (composes with the inner series `1−x`).
+        let quartic = CasExpr::Unary(UnaryFunc::NthRoot(4), Box::new(CasExpr::int(1) - var()));
+        assert_eq!(
+            coeffs(&quartic, 2),
+            vec![Rational::integer(1), Rational::new(-1, 4), Rational::new(-3, 32)]
         );
     }
 
