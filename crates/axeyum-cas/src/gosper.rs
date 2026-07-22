@@ -230,7 +230,44 @@ fn reduce_fraction(num: &[Rational], den: &[Rational]) -> Option<(RatVec, RatVec
         a = poly::rat_negate(&a)?;
         b = poly::rat_negate(&b)?;
     }
+    // Divide `a` and `b` by their **common integer content** (preserving `a/b`). The
+    // polynomial GCD above is monic, so for coprime `a, b` it leaves a large shared
+    // content (e.g. `15360` from a binomial-based consecutive ratio); without this
+    // reduction the dispersion resultant in `gosper_petkovsek` overflows and declines.
+    if let Some(content) = common_content(a.iter().chain(b.iter()).copied())
+        && content != Rational::integer(1)
+    {
+        let divide = |v: &[Rational]| -> Option<RatVec> {
+            v.iter().map(|c| c.checked_div(content)).collect()
+        };
+        a = divide(&a)?;
+        b = divide(&b)?;
+    }
     Some((poly::rat_trim(a), poly::rat_trim(b)))
+}
+
+/// The common rational content of a coefficient sequence: `gcd(numerators) /
+/// lcm(denominators)`, the largest `g` for which dividing every coefficient by `g`
+/// yields coprime integers. `None` if the sequence is all-zero or on overflow.
+fn common_content(coeffs: impl Iterator<Item = Rational>) -> Option<Rational> {
+    fn gcd(a: i128, b: i128) -> i128 {
+        let (mut a, mut b) = (a.abs(), b.abs());
+        while b != 0 {
+            (a, b) = (b, a % b);
+        }
+        a
+    }
+    let mut num_gcd: i128 = 0;
+    let mut den_lcm: i128 = 1;
+    for c in coeffs {
+        if c.is_zero() {
+            continue;
+        }
+        num_gcd = gcd(num_gcd, c.numerator());
+        let d = c.denominator();
+        den_lcm = den_lcm.checked_div(gcd(den_lcm, d))?.checked_mul(d)?;
+    }
+    (num_gcd != 0).then(|| Rational::checked_new(num_gcd, den_lcm)).flatten()
 }
 
 /// The Gosper–Petkovšek normal form of `a/b`: polynomials `(p, q, r)` with
@@ -826,6 +863,19 @@ mod tests {
 
         // Soundness: ∑ 1/k! is not Gosper-summable — decline, never a wrong answer.
         assert_eq!(gosper_sum(&(CasExpr::int(1) / k().factorial()), "k"), None);
+
+        // Binomial (WZ) term: the k-antidifference of `[C(6,k) − 2·C(5,k)]/64`
+        // exists (`R·g` with `R = −k/(2(k−3))`). Its consecutive ratio carries a large
+        // integer content that must be divided out (`reduce_fraction`) or the
+        // dispersion resultant overflows. This is the building block for the
+        // Wilf–Zeilberger proof of `∑ C(n,k) = 2ⁿ`.
+        let wz = (crate::binomial_coefficient(&CasExpr::int(6), &k())
+            - CasExpr::int(2) * crate::binomial_coefficient(&CasExpr::int(5), &k()))
+            / CasExpr::int(64);
+        let s_wz = certified_sum(&wz, "k");
+        // The antidifference equals `−k·g/(2(k−3))`.
+        let expected = CasExpr::int(-1) * k() * wz.clone() / (CasExpr::int(2) * (k() - CasExpr::int(3)));
+        assert!(is(&s_wz, &expected));
     }
 
     #[test]
