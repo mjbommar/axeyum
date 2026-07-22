@@ -5914,6 +5914,17 @@ pub fn beta_function(a: &CasExpr, b: &CasExpr) -> CasExpr {
     simplify(&(a.clone().gamma() * b.clone().gamma() / (a.clone() + b.clone()).gamma()))
 }
 
+/// The **binomial coefficient** `C(n, k) = n!/(k!·(n−k)!) = Γ(n+1)/(Γ(k+1)·Γ(n−k+1))`,
+/// built from the gamma head. Folds to the exact integer for concrete `n, k` (`C(5,2)
+/// = 10`); symmetric `C(n,k) = C(n,n−k)` and Pascal's rule hold by construction.
+#[must_use]
+pub fn binomial_coefficient(n: &CasExpr, k: &CasExpr) -> CasExpr {
+    let numerator = (n.clone() + CasExpr::int(1)).gamma();
+    let denominator = (k.clone() + CasExpr::int(1)).gamma()
+        * (n.clone() - k.clone() + CasExpr::int(1)).gamma();
+    simplify(&(numerator / denominator))
+}
+
 /// The **forward difference** `Δf = f(var+1) − f(var)`, expanded to canonical form —
 /// the discrete analogue of the derivative.
 #[must_use]
@@ -19761,6 +19772,18 @@ mod tests {
         assert!(certified(&beta_function(&CasExpr::int(2), &CasExpr::int(3)), &CasExpr::rat(1, 12)));
         assert!(certified(&beta_function(&CasExpr::rat(1, 2), &CasExpr::rat(1, 2)), &v("pi")));
         assert!(certified(&beta_function(&CasExpr::int(3), &CasExpr::int(5)), &beta_function(&CasExpr::int(5), &CasExpr::int(3))));
+        // Binomial C(n,k)=Γ(n+1)/(Γ(k+1)Γ(n−k+1)): C(5,2)=10, symbolic C(n,0)=1,
+        // C(n,n)=1, symmetry, Pascal's rule, and the binomial theorem ∑C(4,k)=16.
+        assert!(certified(&binomial_coefficient(&CasExpr::int(5), &CasExpr::int(2)), &CasExpr::int(10)));
+        assert!(certified(&binomial_coefficient(&v("n"), &CasExpr::int(0)), &CasExpr::int(1)));
+        assert!(certified(&binomial_coefficient(&v("n"), &v("n")), &CasExpr::int(1)));
+        assert!(certified(&binomial_coefficient(&CasExpr::int(7), &CasExpr::int(2)), &binomial_coefficient(&CasExpr::int(7), &CasExpr::int(5))));
+        assert!(certified(
+            &binomial_coefficient(&CasExpr::int(6), &CasExpr::int(3)),
+            &(binomial_coefficient(&CasExpr::int(5), &CasExpr::int(2)) + binomial_coefficient(&CasExpr::int(5), &CasExpr::int(3))),
+        ));
+        let binom_sum = (0..=4).map(|kk| binomial_coefficient(&CasExpr::int(4), &CasExpr::int(kk))).fold(CasExpr::int(0), |a, b| a + b);
+        assert!(certified(&binom_sum, &CasExpr::int(16)));
         // Digamma/trigamma at positive integers (harmonic connection): ψ(3)=3/2−γ,
         // ψ(4)=11/6−γ, ψ₁(1)=π²/6, ψ₁(2)=π²/6−1.
         let gam = v("EulerGamma");
