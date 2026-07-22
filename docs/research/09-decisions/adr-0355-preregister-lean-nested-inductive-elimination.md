@@ -1,6 +1,6 @@
 # ADR-0355: Preregister Lean nested-inductive kernel elimination
 
-Status: proposed
+Status: accepted upon containing-commit publication
 
 Date: 2026-07-22
 
@@ -222,8 +222,44 @@ The semantic implementation is
 pre-product no-observation snapshot; M4 is the planned first product import of
 those streams.
 
-ADR-0355 remains proposed: M5--M6 still own registered computation
-normal forms, assurance, live-decline removal, and the final aggregate gates.
+## M5 evidence
+
+The
+[M5 result](../../plan/lean-nested-inductive-elimination-m5-2026-07-22.md)
+closes the registered computation and assurance exits:
+
+- pinned Lean reproduces the unchanged OLEAN digest twice;
+- the three theorem proofs import and reduce twice to the exact registered
+  three-, three-, and five-successor normal forms;
+- the append-only TL2.14 overlay preserves all earlier evidence while recording
+  seven rows, six admitted rows, four computation-checked rows, and zero current
+  declines; and
+- only after those checks pass, the obsolete live `inductive-nested` code is
+  removed while five unrelated codes remain exact.
+
+The computation implementation is
+`edfa7924adde416393db74325bf29ce280e3f8a7`; the complete M5 assurance
+checkpoint is `346523387b164d828bf9f66aa68068550dc27392`.
+
+## M6 disposition
+
+Acceptance is effective upon containing-commit publication. The
+[M6 final result](../../plan/lean-nested-inductive-elimination-final-2026-07-22.md)
+maps all twelve exits to the committed P0--M5 evidence and closes the final
+non-publication aggregate. Fresh positive Lean runs reproduce the exact 374,840-byte
+OLEAN digest twice; fresh negative runs both reject with the exact registered
+line-8 diagnostic. Kernel/importer all-target tests and separate doctests,
+exact 640/720/768/840 populations, retained identities and well-founded
+control, focused formatting, warning-denied Clippy/rustdoc, 73 related Python
+tests, every registered generator/checker, parity documents, foundational
+resources, links, shell syntax, and staged-path audit pass under the one-worker/
+4 GiB policy. The decision's publication and handoff are final only after the
+containing commit is pushed with local/tracking/remote equality.
+
+Acceptance is bounded to the stated kernel/import profile. Native source
+parsing/elaboration, recursion compilation and termination, broader Lean
+libraries, ecosystem/runtime support, and full Lean-kernel parity remain
+explicitly outside this decision.
 
 ## Alternatives
 

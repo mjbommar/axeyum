@@ -1,14 +1,14 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: M5 complete; M6 final closure next
+Status: ADR-0355 acceptance and TL2.14 DONE effective upon containing-commit publication
 
 Date: 2026-07-22
 
 Resume this stream from the single authoritative
 [TL2.14 handoff](lean-nested-inductive-elimination-resume.md).
 
-Decision gate:
-[proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+Decision:
+[ADR-0355, acceptance effective upon containing-commit publication](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
 
 Parents:
 
@@ -363,15 +363,28 @@ preserves every older observation and advances the current seven-row matrix to
 six admitted, four computation-checked, and zero current declines. Only then
 was `inductive-nested` removed from the live compatibility registry. Complete
 kernel/importer, exact 640/720/768/840, historical, generated-document, and
-resource gates pass. ADR-0355 remains proposed for M6.
+resource gates pass. ADR-0355 remained proposed at the M5 checkpoint and was
+decided only by M6's fresh final aggregate.
 
 ### M6 — final closure
+
+Status: **complete**. See the
+[M6 final result](lean-nested-inductive-elimination-final-2026-07-22.md).
 
 - run all bounded final gates;
 - accept, reject, or defer ADR-0355 strictly from its exits;
 - synchronize PLAN, STATUS, project state, roadmaps, P6.0, research question,
   generated documents, and handoff;
 - commit, push, and verify local/tracking/remote equality.
+
+ADR exits 1--11 and every non-publication component of exit 12 pass. Fresh pinned-Lean
+positive runs reproduce the frozen OLEAN digest twice; both negative runs
+repeat the exact line-8 diagnostic. Kernel/importer all-target tests and
+separate doctests, exact 640/720/768/840 populations, focused strict tooling,
+73 related Python tests, generators/checkers, parity documents, foundational
+resources, links, shell syntax, and staged-path audit pass under the registered
+resource policy. ADR-0355 acceptance and TL2.14 DONE become final when the
+containing commit is pushed with local/tracking/remote equality.
 
 Every milestone stages only owned files. Negative results are committed rather
 than hidden. Concurrent solver/FP work remains untouched.
