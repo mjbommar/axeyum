@@ -833,6 +833,15 @@ Out of scope:
     Even.rec`; importer comparison must therefore use checked recursor identity
     and owned rules rather than array position. See the
     [M0 result](../../plan/lean-mutual-inductive-groups-m0-2026-07-22.md).
+    The
+    [M1 result](../../plan/lean-mutual-inductive-groups-m1-2026-07-22.md)
+    now makes the ordered group a public kernel input, preserves singleton
+    declarations/computation/errors exactly, and checks group-local names,
+    definitionally equal shared parameters, per-family indices, and equivalent
+    result universes inside a scalable insertion-log transaction. A valid
+    multi-family group still receives a typed policy decline. M2 must implement
+    the complete positivity/constructor/motive/minor/recursor/publication rule
+    before this research question can close.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

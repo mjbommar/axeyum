@@ -1,6 +1,6 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: M0 source/wire freeze complete; M1 group representation is next
+Status: M1 group representation complete; M2 native mutual semantics is next
 
 Date: 2026-07-22
 
@@ -297,6 +297,12 @@ Status: **complete**. See the
 - commit, push, and verify remote equality.
 
 ### M1 — group representation and single-family delegation
+
+Status: **complete**. See the
+[M1 result](lean-mutual-inductive-groups-m1-2026-07-22.md). The public ordered
+family input, shared parameter/result-universe preflight, insertion-log
+transaction, exact singleton delegation, and typed policy decline are live;
+multi-family positivity/recursors/admission remain M2-only.
 
 - add the ordered group/family specification and one transaction scaffold;
 - route `add_inductive` through a singleton group without widening mutual

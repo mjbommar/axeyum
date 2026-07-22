@@ -194,7 +194,10 @@ Again, there are distinct targets:
   official streams are machine-bound without any new Axeyum observation. The
   wire inventories also show why later comparison cannot use array position:
   families are source-ordered `Even, Odd`, but recursors are dependency-ordered
-  `Odd.rec, Even.rec`. M1 group representation and singleton delegation are
+  `Odd.rec, Even.rec`. M1 now adds the ordered group input, common parameter/
+  result-universe preflight, scalable atomic rollback, and identity-preserving
+  singleton delegation. Valid multi-family groups still receive a typed policy
+  decline; no mutual admission credit exists. M2 native group semantics are
   next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.

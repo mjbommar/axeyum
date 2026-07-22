@@ -102,8 +102,10 @@ pub struct RecRule {
 /// inductives and recursive fields whose WHNF is a possibly empty `Pi`
 /// telescope ending in the exact family application. This includes enums,
 /// structures, `Nat`/`List`/`Prod`/`Sum`, `Eq`, and `Vector`/`Acc`-shaped
-/// recursion. Mutual inductives and occurrences nested under foreign heads are
-/// deferred and rejected explicitly rather than guessed.
+/// recursion. TL2.13 M1 represents and preflights ordered mutual groups, but
+/// multi-family declarations are not yet admitted into these declaration
+/// variants. Occurrences nested under foreign heads remain explicitly rejected
+/// rather than guessed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Declaration {
     /// `axiom name : ty` — an asserted constant with no definitional value.
@@ -349,11 +351,14 @@ impl Declaration {
 /// [`Declaration`].
 ///
 /// Backed by a [`BTreeMap`] so iteration order is id order (determinism rule).
+/// A private insertion log provides constant-time transaction checkpoints for
+/// atomic inductive-group admission; it is not part of iteration or identity.
 /// Declarations are admitted only through [`super::Kernel::add_declaration`],
 /// which type-checks them first (the trusted kernel gate).
 #[derive(Debug, Default, Clone)]
 pub struct Environment {
     declars: BTreeMap<NameId, Declaration>,
+    insertion_log: Vec<NameId>,
 }
 
 impl Environment {
@@ -408,13 +413,36 @@ impl Environment {
     /// validated the declaration. Use [`super::Kernel::add_declaration`] for
     /// the trusted, type-checked admission path.
     pub(crate) fn insert_unchecked(&mut self, decl: Declaration) {
-        self.declars.insert(decl.name(), decl);
+        let name = decl.name();
+        if self.declars.insert(name, decl).is_none() {
+            self.insertion_log.push(name);
+        }
     }
 
     /// Remove a declaration by name (used to roll back a partially-admitted
     /// inductive when a later constructor or the recursor fails to check).
     pub(crate) fn remove_unchecked(&mut self, name: NameId) {
-        self.declars.remove(&name);
+        if self.declars.remove(&name).is_some()
+            && let Some(position) = self
+                .insertion_log
+                .iter()
+                .rposition(|candidate| *candidate == name)
+        {
+            self.insertion_log.remove(position);
+        }
+    }
+
+    /// Return an opaque checkpoint for a later all-or-nothing admission.
+    pub(crate) fn checkpoint(&self) -> usize {
+        self.insertion_log.len()
+    }
+
+    /// Remove every declaration first inserted after `checkpoint`.
+    pub(crate) fn rollback_unchecked(&mut self, checkpoint: usize) {
+        let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();
+        for name in inserted.into_iter().rev() {
+            self.declars.remove(&name);
+        }
     }
 }
 

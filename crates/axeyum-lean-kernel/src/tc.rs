@@ -193,6 +193,35 @@ pub enum KernelError {
         /// The name that was already declared.
         name: crate::name::NameId,
     },
+    /// An attempted mutual-inductive declaration contained no families.
+    EmptyInductiveGroup,
+    /// A family, constructor, or generated recursor name occurred more than
+    /// once inside one ordered mutual-inductive group.
+    DuplicateInductiveGroupName {
+        /// The repeated group-local declaration name.
+        name: crate::name::NameId,
+    },
+    /// One mutual-inductive family did not expose the shared parameter at the
+    /// registered position, or its parameter type was not definitionally equal
+    /// to the first family's parameter type.
+    MutualInductiveParameterMismatch {
+        /// The family whose parameter telescope disagreed.
+        family: crate::name::NameId,
+        /// Zero-based position in the shared parameter telescope.
+        parameter_index: usize,
+    },
+    /// One mutual-inductive family's result universe was not equivalent to the
+    /// first family's result universe after opening parameters and indices.
+    MutualInductiveResultUniverseMismatch {
+        /// The family whose result universe disagreed.
+        family: crate::name::NameId,
+    },
+    /// The ordered mutual group passed M1 structural preflight, but semantic
+    /// mutual admission remains intentionally disabled until TL2.13 M2.
+    MutualInductiveNotSupported {
+        /// Number of families in the declined group.
+        family_count: usize,
+    },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).
     DeclarationTypeNotASort {

@@ -174,6 +174,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   streams, complete group/recursor inventories, source-family versus wire-
   dependency order distinction, fail-closed eleven-test contract, exact
   non-claims, and M1 representation/singleton handoff.
+- [`lean-mutual-inductive-groups-m1-2026-07-22.md`](lean-mutual-inductive-groups-m1-2026-07-22.md)
+  — M1's public ordered family/group representation, common-parameter/result-
+  universe and name preflight, per-family index opening, insertion-log
+  transaction, exact singleton identity/error/computation preservation, typed
+  multi-family policy decline, bounded gates, non-claims, and M2 handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

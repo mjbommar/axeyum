@@ -123,6 +123,20 @@ it may not infer family identity from array position. Motive and minor order in
 the recursor types remains the semantic family/family-then-constructor order
 above.
 
+M1 establishes the representation and transaction boundary without consuming
+that semantic budget. `InductiveFamilySpec` and
+`Kernel::add_mutual_inductive` carry the ordered families; common parameter
+domains are compared definitionally against shared locals, each family opens
+its own indices, result universes are compared for equivalence, and all names
+are checked group-wide. `add_inductive` delegates through a singleton group
+with its established declarations, rules, computation, identities, and error
+payloads unchanged. A private environment insertion log provides a constant-
+time checkpoint and rollback proportional to the attempted group. Every valid
+multi-family input still ends in `MutualInductiveNotSupported`; M2 retains sole
+ownership of positivity, constructor admission, motives/minors, recursive
+calls, recursors, and atomic publication. See the
+[M1 result](../../plan/lean-mutual-inductive-groups-m1-2026-07-22.md).
+
 ADR-0350's declaration-identity v1 remains unchanged in this slice. Group
 membership is checked input to atomic generation and is structurally reflected
 in generated recursor types/rules and direct dependencies. If persistent public

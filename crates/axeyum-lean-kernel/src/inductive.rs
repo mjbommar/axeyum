@@ -37,9 +37,12 @@
 //! historical direct case; nonempty indices and telescopes cover `Vector`- and
 //! `Acc`-shaped single-family recursion.
 //!
-//! **Deferred** (and rejected explicitly, never guessed): mutual inductives,
-//! nested occurrences under a foreign type constructor, malformed family
-//! applications, and frontend lowering for well-founded/nested definitions.
+//! TL2.13 M1 adds an explicit ordered mutual-group input, common parameter and
+//! result-universe preflight, and an atomic transaction. Multi-family semantic
+//! admission remains deliberately declined until M2. Also deferred (and
+//! rejected explicitly, never guessed): nested occurrences under a foreign
+//! type constructor, malformed family applications, and frontend lowering for
+//! well-founded/nested definitions.
 //!
 //! `Prop` elimination follows Lean's syntactic-subsingleton rule. An inductive
 //! whose result universe is provably nonzero may eliminate into an arbitrary
@@ -77,11 +80,42 @@
 //! parameter) would wrongly accept proofs, so it is verified rather than
 //! trusted.
 
+use std::collections::BTreeSet;
+
 use crate::env::{Declaration, RecRule};
 use crate::expr::{ExprId, ExprNode};
 use crate::name::NameId;
 use crate::tc::{KernelError, LocalContext, LocalDecl};
 use crate::{BinderInfo, Kernel};
+
+/// One family in an explicitly ordered mutual-inductive group.
+///
+/// The group-level universe parameters and parameter count are supplied once to
+/// [`Kernel::add_mutual_inductive`]. Each family owns its closed type and its
+/// constructors in declaration order. Persistent group metadata is deliberately
+/// absent: TL2.13 reconstructs and checks the group transactionally rather than
+/// changing declaration-identity v1.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InductiveFamilySpec {
+    /// The inductive type's declaration name.
+    pub name: NameId,
+    /// The inductive type's closed parameter/index telescope.
+    pub ty: ExprId,
+    /// Constructor names and closed types in declaration order.
+    pub constructors: Vec<(NameId, ExprId)>,
+}
+
+impl InductiveFamilySpec {
+    /// Construct one owned family specification.
+    #[must_use]
+    pub fn new(name: NameId, ty: ExprId, constructors: Vec<(NameId, ExprId)>) -> Self {
+        Self {
+            name,
+            ty,
+            constructors,
+        }
+    }
+}
 
 impl Kernel {
     /// Type-check and admit an inductive type together with its constructors —
@@ -133,6 +167,217 @@ impl Kernel {
     /// returned as [`KernelError`]s.
     #[allow(clippy::too_many_lines)]
     pub fn add_inductive(
+        &mut self,
+        name: NameId,
+        uparams: &[NameId],
+        num_params: usize,
+        ty: ExprId,
+        ctors: &[(NameId, ExprId)],
+    ) -> Result<(), KernelError> {
+        let family = InductiveFamilySpec::new(name, ty, ctors.to_vec());
+        self.add_mutual_inductive(uparams, num_params, &[family])
+    }
+
+    /// Type-check and atomically admit an explicitly ordered inductive group.
+    ///
+    /// TL2.13 M1 establishes the group representation, shared-parameter/result-
+    /// universe preflight, and one rollback boundary. A singleton delegates to
+    /// the established single-family implementation with byte-identical
+    /// declarations and errors. A structurally valid group with more than one
+    /// family still returns [`KernelError::MutualInductiveNotSupported`]; M2
+    /// owns group-wide positivity and recursor generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KernelError::EmptyInductiveGroup`] for no families,
+    /// [`KernelError::DuplicateInductiveGroupName`] for group-local name
+    /// collisions, [`KernelError::MutualInductiveParameterMismatch`] for a
+    /// non-shared parameter telescope,
+    /// [`KernelError::MutualInductiveResultUniverseMismatch`] for inequivalent
+    /// family result universes, [`KernelError::DeclarationExists`] for an
+    /// environment collision, or [`KernelError::MutualInductiveNotSupported`]
+    /// after a valid multi-family M1 preflight. Singleton inputs retain every
+    /// error from [`Kernel::add_inductive`]'s historical trusted gate.
+    pub fn add_mutual_inductive(
+        &mut self,
+        uparams: &[NameId],
+        num_params: usize,
+        families: &[InductiveFamilySpec],
+    ) -> Result<(), KernelError> {
+        if families.is_empty() {
+            return Err(KernelError::EmptyInductiveGroup);
+        }
+        if let [family] = families {
+            return self.with_inductive_transaction(|kernel| {
+                kernel.add_single_inductive(
+                    family.name,
+                    uparams,
+                    num_params,
+                    family.ty,
+                    &family.constructors,
+                )
+            });
+        }
+
+        self.with_inductive_transaction(|kernel| {
+            kernel.check_mutual_inductive_preflight(num_params, families)?;
+            Err(KernelError::MutualInductiveNotSupported {
+                family_count: families.len(),
+            })
+        })
+    }
+
+    /// Execute one inductive admission attempt against an insertion checkpoint.
+    /// Failed provisional declarations and environment-sensitive caches never
+    /// escape the transaction. Checkpoint and rollback cost scale with the
+    /// attempted group, not the complete prior environment. Expression/name
+    /// interning remains monotone and deterministic, as elsewhere in the kernel.
+    fn with_inductive_transaction<T>(
+        &mut self,
+        action: impl FnOnce(&mut Self) -> Result<T, KernelError>,
+    ) -> Result<T, KernelError> {
+        let checkpoint = self.env.checkpoint();
+        match action(self) {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                self.env.rollback_unchecked(checkpoint);
+                self.infer_closed_cache.clear();
+                self.whnf_cache.clear();
+                Err(error)
+            }
+        }
+    }
+
+    /// Check only the group facts needed before M2 may widen semantic support.
+    fn check_mutual_inductive_preflight(
+        &mut self,
+        num_params: usize,
+        families: &[InductiveFamilySpec],
+    ) -> Result<(), KernelError> {
+        let mut names = BTreeSet::new();
+        for family in families {
+            self.check_group_name(family.name, &mut names)?;
+            for &(constructor, _) in &family.constructors {
+                self.check_group_name(constructor, &mut names)?;
+            }
+            let recursor = self.name_str(family.name, "rec");
+            self.check_group_name(recursor, &mut names)?;
+        }
+
+        let mut shared_parameters = Vec::with_capacity(num_params);
+        let mut shared_result_level = None;
+        for (family_index, family) in families.iter().enumerate() {
+            let result_level = self.check_mutual_family_type(
+                family,
+                family_index,
+                num_params,
+                &mut shared_parameters,
+            )?;
+            if let Some(expected) = shared_result_level {
+                if !self.level_is_equiv(expected, result_level) {
+                    return Err(KernelError::MutualInductiveResultUniverseMismatch {
+                        family: family.name,
+                    });
+                }
+            } else {
+                shared_result_level = Some(result_level);
+            }
+        }
+        Ok(())
+    }
+
+    fn check_group_name(
+        &self,
+        name: NameId,
+        group_names: &mut BTreeSet<NameId>,
+    ) -> Result<(), KernelError> {
+        if self.env.contains(name) {
+            return Err(KernelError::DeclarationExists { name });
+        }
+        if !group_names.insert(name) {
+            return Err(KernelError::DuplicateInductiveGroupName { name });
+        }
+        Ok(())
+    }
+
+    /// Open one family against the first family's shared parameter locals and
+    /// return its result-universe level after independently opening its indices.
+    fn check_mutual_family_type(
+        &mut self,
+        family: &InductiveFamilySpec,
+        family_index: usize,
+        num_params: usize,
+        shared_parameters: &mut Vec<LocalDecl>,
+    ) -> Result<crate::LevelId, KernelError> {
+        let mut ctx = LocalContext::new();
+        if family_index != 0 {
+            for parameter in shared_parameters.iter().copied() {
+                ctx.bump_fresh_above(parameter.fvar);
+                ctx.push(parameter);
+            }
+        }
+
+        let inferred = self.infer_core(family.ty, &mut ctx)?;
+        let inferred = self.whnf(inferred);
+        if !matches!(self.expr_node(inferred), ExprNode::Sort(_)) {
+            return Err(KernelError::InductiveTypeNotASort { got: inferred });
+        }
+
+        let mut cursor = self.whnf(family.ty);
+        for parameter_index in 0..num_params {
+            let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MutualInductiveParameterMismatch {
+                    family: family.name,
+                    parameter_index,
+                });
+            };
+            let parameter = if family_index == 0 {
+                let parameter = LocalDecl {
+                    fvar: ctx.fresh_fvar(),
+                    name,
+                    ty: domain,
+                    info,
+                };
+                ctx.push(parameter);
+                shared_parameters.push(parameter);
+                parameter
+            } else {
+                let parameter = shared_parameters[parameter_index];
+                if !self.def_eq_in(domain, parameter.ty, &mut ctx) {
+                    return Err(KernelError::MutualInductiveParameterMismatch {
+                        family: family.name,
+                        parameter_index,
+                    });
+                }
+                parameter
+            };
+            let value = self.fvar(parameter.fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+
+        while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
+            let index = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name,
+                ty: domain,
+                info,
+            };
+            ctx.push(index);
+            let value = self.fvar(index.fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+        let ExprNode::Sort(result_level) = self.expr_node(cursor) else {
+            return Err(KernelError::InductiveTypeNotASort { got: cursor });
+        };
+        Ok(*result_level)
+    }
+
+    /// Historical single-family trusted implementation, reached only through
+    /// the ordered group transaction.
+    #[allow(clippy::too_many_lines)]
+    fn add_single_inductive(
         &mut self,
         name: NameId,
         uparams: &[NameId],
