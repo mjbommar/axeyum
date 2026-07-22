@@ -717,9 +717,12 @@ Non-claims until their gates are met:
    gates pass and no recursive admission widened. **TL2.12 is now
    preregistered under proposed ADR-0353:** direct, indexed, higher-order, and
    combined fields use one `Pi telescope, motive indices (field args)` IH/rule
-   construction. M0 next freezes a machine contract and dedicated official
-   recursor-computation source before admission changes; M1 must preserve exact
-   direct-recursive identity before M2 widens native semantics. The
+   construction. [M0 is complete](lean-recursive-induction-hypotheses-m0-2026-07-22.md):
+   one explicit-recursor source compiles twice, two root-specific official
+   streams repeat byte-identically, and ten fail-closed tests bind their exact
+   inventories while forbidding Axeyum product credit. M1 next introduces the
+   shared recursive-field representation under the existing declines and must
+   preserve exact direct-recursive identity before M2 widens semantics. The
    [execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
    requires both frozen official streams, exact generated-recursor comparison,
    selected computation, a >=512-case grammar, and the existing 840-case
@@ -728,7 +731,7 @@ Non-claims until their gates are met:
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path is TL2.12 M0, with every TL2.11 guard retained.
+   primary semantic path is TL2.12 M1, with every TL2.11 guard retained.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

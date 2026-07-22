@@ -7,6 +7,12 @@ Date: 2026-07-22
 Execution plan:
 [TL2.12 recursive induction-hypothesis plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
 
+Implementation checkpoint:
+[M0](../../plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md) freezes
+the baseline revision, exact semantic/case/mutation/resource/stop contracts,
+one twice-compiled computation source, and two root-specific byte-identical
+official streams before any Axeyum product observation. M1 is next.
+
 ## Context
 
 TL2.11 now checks Lean 4.30 strict positivity before any provisional inductive

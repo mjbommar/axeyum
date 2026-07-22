@@ -86,9 +86,11 @@ Last updated: 2026-07-22
 > fuzzing is dependency-ready. TL2.12 is now preregistered under
 > [proposed ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md):
 > one telescope-based rule covers direct, indexed, and higher-order recursive
-> fields; M0 must freeze the machine contract and actual recursor-computation
-> source before admission changes, and the completed TL2.11 guard remains
-> mandatory throughout.
+> fields. [M0](../../../docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+> now freezes the twice-compiled explicit-recursor source, two byte-identical
+> official root streams, independent inventories, and fail-closed machine
+> contract with no Axeyum product observation. M1 shared representation is next,
+> and the completed TL2.11 guard remains mandatory throughout.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

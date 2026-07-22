@@ -142,6 +142,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — proposed ADR-0353's unified `Pi telescope, motive indices (field args)`
   rule, native/official computation gates, mutation grammar, resource bounds,
   stop conditions, and M0--M5 commit/push sequence for TL2.12.
+- [`lean-recursive-induction-hypotheses-m0-2026-07-22.md`](lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+  and [`lean-recursive-induction-hypotheses-v1.json`](lean-recursive-induction-hypotheses-v1.json)
+  — M0's twice-compiled explicit-recursor source, two byte-identical official
+  root streams, independent wire inventories, fail-closed ten-test contract,
+  exact non-claims, and M1 shared-representation handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

@@ -189,10 +189,15 @@ state.
 > `u : Pi xs, I params indices` receives
 > `u_ih : Pi xs, motive indices (u xs)`, and its iota rule supplies the matching
 > recursively computed function. Empty telescopes/indices recover the existing
-> direct case. M0 next binds a machine-readable contract and a dedicated
-> official `Vector`/`Acc` recursor-computation source; M1 must route direct
-> recursion through the shared representation without identity drift before M2
-> widens admission. Exact official recursor comparison, a new >=512-case
+> direct case. The
+> [M0 source/wire freeze](docs/plan/lean-recursive-induction-hypotheses-m0-2026-07-22.md)
+> now binds the baseline revision, exact semantic/case/mutation/resource/stop
+> contract, a twice-compiled explicit-recursor source, and two root-specific
+> byte-identical official streams. Its ten fail-closed tests reject drift and
+> any premature Axeyum product observation. M1 next must route direct recursion
+> through the shared representation without identity drift while retaining both
+> feature declines; only M2 may widen native admission. Exact official recursor
+> comparison, a new >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups remain TL2.13; nested/well-founded frontend lowering remains

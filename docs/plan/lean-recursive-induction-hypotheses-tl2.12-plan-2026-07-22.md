@@ -1,11 +1,14 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: preregistered; M0 is next and no recursive admission has widened
+Status: M0 source/wire freeze complete; M1 is next and no recursive admission has widened
 
 Date: 2026-07-22
 
 Decision gate:
 [proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+
+Current checkpoint:
+[M0 source/wire freeze](lean-recursive-induction-hypotheses-m0-2026-07-22.md)
 
 Parents:
 
@@ -83,9 +86,11 @@ which is direct recursive-indexed. `MiniAcc` has two parameters and one index;
 ending in the recursive family. These exact facts, not their friendly source
 names, define the primary target.
 
-M0 must add and hash-freeze a small supplemental official source whose
-definitions actually apply the generated `MiniVector.rec` and `MiniAcc.rec`.
-The existing constructor witnesses remain admission-only evidence.
+M0 now adds and hash-freezes a small supplemental official source whose
+definitions explicitly apply `MiniVector.rec` and `MiniAcc.rec`, plus separate
+root streams for their `rfl` computation theorems. The existing constructor
+witnesses remain admission-only evidence. See the
+[M0 result](lean-recursive-induction-hypotheses-m0-2026-07-22.md).
 
 ## 4. Executable semantic rule
 
@@ -236,10 +241,11 @@ shrink after seeing results.
 The official gate has three distinct layers:
 
 1. **Source:** pinned Lean accepts the unchanged construct source and the new
-   computation source twice under the registered resource wrapper.
+   computation source twice under the registered resource wrapper. M0 has
+   completed the new-source half.
 2. **Wire:** the two existing streams stay byte-identical to their frozen
-   hashes; the computation stream is exported twice and frozen before Rust
-   product execution.
+   hashes; M0 has exported and frozen separate Vector and Acc computation
+   streams twice before Rust product execution.
 3. **Product:** Axeyum imports each stream twice to `CompletedImport`; exact
    declaration counts/names remain stable; generated recursor types and rules
    pass the existing definitional comparison; selected recursor applications
@@ -253,6 +259,12 @@ are reported separately; neither is inferred from the other.
 ## 10. Milestones and commit rhythm
 
 ### M0 — machine preregistration and computation-source freeze
+
+**Complete.** The machine registration now binds the baseline revision, exact
+semantic/case/mutation/resource/stop contracts, one twice-compiled source, and
+two root-specific byte-identical official streams. Ten fail-closed tests reject
+drift and premature Axeyum product observations. See the
+[M0 result](lean-recursive-induction-hypotheses-m0-2026-07-22.md).
 
 - commit ADR-0353 and this plan first;
 - add a machine-readable v1 registration binding baseline revision, Lean pin,
@@ -290,7 +302,8 @@ are reported separately; neither is inferred from the other.
 
 ### M4 — pinned computation differential and assurance update
 
-- export the M0 computation source twice and confirm its frozen identity;
+- reproduce both M0 computation streams twice and confirm their frozen
+  identities;
 - run pinned Lean and Axeyum computation observations twice;
 - update the construct matrix from tested facts rather than hand-edited claims;
 - record timing/RSS and exact admission/computation assurance separately;
