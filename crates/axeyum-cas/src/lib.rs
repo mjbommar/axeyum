@@ -1950,6 +1950,86 @@ fn factor_bivariate_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     }
 }
 
+/// Factor a homogeneous **sum or difference of like powers** `a·xⁿ − a·yⁿ` or
+/// `a·xⁿ + a·yⁿ` (`n ≥ 3`) in two variables:
+/// `xⁿ − yⁿ = (x−y)·Σ_{k<n} x^{n−1−k}·yᵏ`, and for odd `n`,
+/// `xⁿ + yⁿ = (x+y)·Σ_{k<n} (−1)ᵏ·x^{n−1−k}·yᵏ`. Certified by re-multiplication.
+/// `None` unless `expr` is exactly two pure-power monomials of equal degree.
+fn factor_binomial_powers(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let poly = normalize(expr)?;
+    if poly.terms.len() != 2 {
+        return None;
+    }
+    // Classify the two monomials: one a pure power of `var`, the other a pure power
+    // of a single *other* variable, both of the same degree `n ≥ 3`.
+    let mut var_term: Option<(u32, Rational)> = None;
+    let mut other_term: Option<(String, u32, Rational)> = None;
+    for (mono, coefficient) in &poly.terms {
+        if mono.powers.len() != 1 {
+            return None; // a cross term — not a pure binomial of powers
+        }
+        let (name, &power) = mono.powers.iter().next()?;
+        if name == var {
+            var_term = Some((power, *coefficient));
+        } else {
+            other_term = Some((name.clone(), power, *coefficient));
+        }
+    }
+    let (n, lead) = var_term?;
+    let (other, other_degree, other_coeff) = other_term?;
+    if n != other_degree || n < 3 {
+        return None;
+    }
+    let x = CasExpr::var(var);
+    let y = CasExpr::var(&other);
+    // The cofactor `Σ_{k=0}^{n−1} sᵏ·x^{n−1−k}·yᵏ`, with `s = +1` (difference) or
+    // `s = −1` (sum).
+    let cofactor = |alternating: bool| -> CasExpr {
+        let terms: Vec<CasExpr> = (0..n)
+            .map(|k| {
+                // `x^{n−1−k}·yᵏ`, dropping any unit factor.
+                let mono = match (n - 1 - k, k) {
+                    (0, _) => power_or_one(&y, k),
+                    (_, 0) => power_or_one(&x, n - 1 - k),
+                    (px, py) => power_or_one(&x, px) * power_or_one(&y, py),
+                };
+                if alternating && k % 2 == 1 {
+                    CasExpr::Neg(Box::new(mono))
+                } else {
+                    mono
+                }
+            })
+            .collect();
+        CasExpr::Add(terms)
+    };
+    // Difference `a·(xⁿ − yⁿ)` ⇒ `b = −a`; sum `a·(xⁿ + yⁿ)` (odd n) ⇒ `b = a`.
+    let (linear, cofactor_expr) = if other_coeff == lead.checked_neg()? {
+        (x.clone() - y.clone(), cofactor(false))
+    } else if other_coeff == lead && n % 2 == 1 {
+        (x.clone() + y.clone(), cofactor(true))
+    } else {
+        return None;
+    };
+    let factored = if lead == Rational::integer(1) {
+        CasExpr::Mul(vec![linear, cofactor_expr])
+    } else {
+        CasExpr::Mul(vec![CasExpr::Const(lead), linear, cofactor_expr])
+    };
+    match equal(&factored, expr) {
+        ZeroTest::Certified { equal: true, .. } => Some(factored),
+        _ => None,
+    }
+}
+
+/// `base^power`, or `1` when `power == 0` (avoiding a `Pow(_, 0)` node).
+fn power_or_one(base: &CasExpr, power: u32) -> CasExpr {
+    match power {
+        0 => CasExpr::one(),
+        1 => base.clone(),
+        _ => base.clone().pow(power),
+    }
+}
+
 /// The polynomial square root of `disc` as a [`CasExpr`], if `disc` is a perfect
 /// square that is constant or univariate in a single variable. `None` otherwise.
 fn poly_sqrt_expr(disc: &CasExpr) -> Option<CasExpr> {
@@ -1977,8 +2057,9 @@ fn poly_sqrt_expr(disc: &CasExpr) -> Option<CasExpr> {
 pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let Some(univariate) = normalize(expr)?.to_univariate(var) else {
         // Coefficients aren't rational (a multivariate polynomial) — try the
-        // bivariate-quadratic factorizer before giving up.
-        return factor_bivariate_quadratic(expr, var);
+        // bivariate-quadratic factorizer, then the sum/difference of like powers.
+        return factor_bivariate_quadratic(expr, var)
+            .or_else(|| factor_binomial_powers(expr, var));
     };
     let coeffs = poly::rat_trim(univariate);
     if ratint::is_zero(&coeffs) {
@@ -15281,6 +15362,30 @@ mod tests {
         );
         // x² + y² is irreducible over ℚ — returns None (never a wrong factorization).
         assert!(factor(&(x().pow(2) + y().pow(2)), "x").is_none());
+        // Sum/difference of like powers (n ≥ 3): x³−y³=(x−y)(x²+xy+y²),
+        // x³+y³=(x+y)(x²−xy+y²), x⁴−y⁴, x⁵+y⁵, 2x³−2y³ — each certified by re-mult.
+        for (poly, factored) in [
+            (
+                x().pow(3) - y().pow(3),
+                (x() - y()) * (x().pow(2) + x() * y() + y().pow(2)),
+            ),
+            (
+                x().pow(3) + y().pow(3),
+                (x() + y()) * (x().pow(2) - x() * y() + y().pow(2)),
+            ),
+        ] {
+            let result = factor(&poly, "x").expect("factorable");
+            assert_equal(&result, &poly);
+            assert_equal(&result, &factored);
+        }
+        assert!(factor(&(x().pow(4) - y().pow(4)), "x").is_some());
+        assert!(factor(&(x().pow(5) + y().pow(5)), "x").is_some());
+        assert_equal(
+            &factor(&(CasExpr::int(2) * x().pow(3) - CasExpr::int(2) * y().pow(3)), "x").unwrap(),
+            &(CasExpr::int(2) * x().pow(3) - CasExpr::int(2) * y().pow(3)),
+        );
+        // x⁴ + y⁴ is irreducible over ℚ (its real factorization needs surds) — None.
+        assert!(factor(&(x().pow(4) + y().pow(4)), "x").is_none());
     }
 
     #[test]
