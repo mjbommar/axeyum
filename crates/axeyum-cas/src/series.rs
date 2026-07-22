@@ -256,6 +256,49 @@ fn build_power_term(coefficient: Rational, var: &str, exponent: i64) -> Option<C
     }
 }
 
+/// The **root degree** `q` of the first `root_q(var)` / `√var` subexpression whose
+/// argument is exactly `var` — the fractional-power denominator a Puiseux expansion
+/// substitutes on. `None` if there is no such root of the bare variable.
+fn root_degree_of(expr: &CasExpr, var: &str) -> Option<u32> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
+            Some(2)
+        }
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg)
+            if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) =>
+        {
+            Some(*q)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => root_degree_of(a, var),
+        CasExpr::Div(a, b) => root_degree_of(a, var).or_else(|| root_degree_of(b, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().find_map(|t| root_degree_of(t, var)),
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// The **Puiseux expansion** at the origin of a function of a single root `x^{1/q}`:
+/// substitute `t = x^{1/q}` (`root_q(x) → t`, `x → tᵠ`), take the ordinary Taylor
+/// series in `t` to order `q·order`, then re-substitute `t → x^{1/q}`. So
+/// `sin√x = √x − x√x/6 + …`, `e^{∛x} = 1 + ∛x + ∛x²/2 + …`. `None` unless a single
+/// root degree governs the expansion.
+fn puiseux_at_origin(expr: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
+    // Operate on the un-shifted `expr` (center is 0) so the root heads are not
+    // atomized (`simplify(exp(√x))` collapses to an opaque atom).
+    let q = root_degree_of(expr, var)?;
+    let t = if var == "t" { "s" } else { "t" };
+    let root = if q == 2 {
+        CasExpr::var(var).sqrt()
+    } else {
+        CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(CasExpr::var(var)))
+    };
+    // `root_q(x) → t`, then remaining `x → tᵠ`.
+    let in_t = crate::replace_subexpr(expr, &root, &CasExpr::var(t))
+        .substitute(var, &CasExpr::var(t).pow(q));
+    // Need `q·order` Taylor terms in `t` to recover `order` in `x`.
+    let taylor = series_at(&in_t, t, &CasExpr::int(0), order.checked_mul(q as usize)?)?;
+    Some(crate::simplify(&taylor.substitute(t, &root)))
+}
+
 /// The `Taylor` polynomial of `expr` about an **arbitrary** center `var = center`,
 /// up to and including degree `order`, returned in powers of `(var − center)`.
 ///
@@ -295,6 +338,13 @@ pub fn series_at(expr: &CasExpr, var: &str, center: &CasExpr, order: usize) -> O
     // 1/x + x/6 + …`, `1/(eˣ−1) = 1/x − 1/2 + x/12 − …`, `cot x`, `csc x`.
     if let Some(laurent) = laurent_ratio_at_origin(&shifted, var, order) {
         return Some(laurent.substitute(var, &(CasExpr::var(var) - center.clone())));
+    }
+    // Puiseux fallback (center 0 only): a function of a root `x^{1/q}` — substitute
+    // `t = x^{1/q}`, Taylor-expand in `t`, then re-substitute — `sin√x = √x − x√x/6 + …`.
+    if matches!(center, CasExpr::Const(c) if c.is_zero())
+        && let Some(puiseux) = puiseux_at_origin(expr, var, order)
+    {
+        return Some(puiseux);
     }
     // The rational-coefficient series ring declined — commonly because a head's
     // shifted argument needs a transcendental value at the center (e.g. `exp(x)`
@@ -671,6 +721,22 @@ mod tests {
         expand_series(expr, "x", order)
             .expect("expansion should exist")
             .coeffs
+    }
+
+    #[test]
+    fn puiseux_series() {
+        use crate::{CasExpr as C, evalf, series_at};
+        let at0 = |e: &C, n| series_at(e, "x", &C::int(0), n).expect("Puiseux");
+        // sin√x = √x − (√x)³/6 + (√x)⁵/120.
+        let s = at0(&var().sqrt().sin(), 3);
+        let s_expected = var().sqrt() - C::rat(1, 6) * var().sqrt().pow(3) + C::rat(1, 120) * var().sqrt().pow(5);
+        assert_matches(&s, &s_expected);
+        // e^√x = 1 + √x + (√x)²/2 + (√x)³/6 + (√x)⁴/24 (mixed integer/half-integer).
+        let e = at0(&var().sqrt().exp(), 2);
+        assert!((evalf(&e, &[("x", 0.25)]).unwrap() - 0.25_f64.sqrt().exp()).abs() < 1e-3);
+        // Cube-root Puiseux e^∛x, verified numerically.
+        let c = at0(&var().cbrt().exp(), 2);
+        assert!((evalf(&c, &[("x", 0.064)]).unwrap() - 0.064_f64.cbrt().exp()).abs() < 1e-3);
     }
 
     #[test]

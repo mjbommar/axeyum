@@ -3127,7 +3127,7 @@ fn solve_linear_trig_combination(expr: &CasExpr, var: &str) -> Option<Vec<CasExp
 /// Replace every occurrence of the subexpression `target` in `expr` with
 /// `replacement` (structural equality). Used to treat `sin(var)` as a single
 /// unknown when solving a polynomial-in-trig equation.
-fn replace_subexpr(expr: &CasExpr, target: &CasExpr, replacement: &CasExpr) -> CasExpr {
+pub(crate) fn replace_subexpr(expr: &CasExpr, target: &CasExpr, replacement: &CasExpr) -> CasExpr {
     if expr == target {
         return replacement.clone();
     }
