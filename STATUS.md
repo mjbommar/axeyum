@@ -394,6 +394,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   handoff docs are synchronized. Next: probe adjacent-binomial convolution and
   weighted squared-binomial identities through the same concrete-discovery plus
   symbolic-certificate gate.
+- **2026-07-22 — G1 official selection identity is preregistered after E3.**
+  Proposed
+  [ADR-0356](docs/research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
+  and the
+  [execution plan](docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md)
+  pin organizer commit `401302678311593efcef8a79b614b33a3b853eac`, the
+  matching 450,472-file SMT-LIB 2025.08.04 Zenodo release, locked Polars 1.39.2,
+  all 2018--2024 Single Query inputs, and official seed `22,731,158`. The
+  organizer remains the sampler producer; a separate standard-library auditor
+  must prove release-byte closure, competitive-logics/difficulty eligibility,
+  per-logic caps, complete decision reasons, and selected-file hashes. S0's
+  authority manifest and adversarial fixture are next. No solver run or
+  selection credit is granted yet.
+
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
   validates the exact ordered benchmark ledger and the
@@ -7134,6 +7148,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered official SMT-COMP 2026 Single Query selection
+  identity.** Proposed ADR-0356 separates pinned upstream Polars production
+  from an independent eligibility/corpus auditor, selects Zenodo release
+  2025.08.04 by exact 450,472-row agreement with organizer metadata, freezes the
+  2018--2024 result hashes and `22,731,158` global seed, and requires one
+  terminal decision plus exact bytes for every metadata row before E1b can
+  consume the population. S0 fixture/authority implementation is next; the old
+  64,345-file candidate still has zero selection credit.
 
 - **2026-07-22 — Completed TL2.14 M3 deterministic nested grammar and
   restoration integrity.** Commit `6a2afdd5` repeats the exact 640-case public
