@@ -3134,6 +3134,93 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     }
 }
 
+/// Specialize a **general ODE solution** (with integration constants `C0, C1, …`)
+/// to an **initial-value problem**, solving for the constants from a list of
+/// conditions `(k, x₀, v)` meaning `y^{(k)}(x₀) = v`. The constants enter linearly,
+/// so each condition — differentiated `k` times and evaluated at `x₀` — is one
+/// linear equation; the exact rational system is solved and the constants
+/// substituted back. E.g. `y'' + y = 0` with `y(0)=1, y'(0)=0` gives `cos x`.
+/// `None` if the number of conditions ≠ number of constants, a condition does not
+/// evaluate to a rational, or the system is singular.
+#[must_use]
+pub fn apply_initial_conditions(
+    general: &CasExpr,
+    var: &str,
+    conditions: &[(usize, CasExpr, CasExpr)],
+) -> Option<CasExpr> {
+    // Collect the constants C0, C1, … appearing in the general solution.
+    let mut constant_set: BTreeSet<String> = BTreeSet::new();
+    collect_constant_names(general, &mut constant_set);
+    let constants: Vec<String> = constant_set.into_iter().collect();
+    if constants.is_empty() || constants.len() != conditions.len() {
+        return None;
+    }
+    // Evaluate an expression to an exact rational (folding trig/exp constants).
+    let to_rational = |expr: &CasExpr| -> Option<Rational> {
+        constant_term(&simplify(&fold_elementary_constants(&evaluate_trig(expr))))
+    };
+    // One linear equation per condition; `columns[i]` = coefficients of `Cᵢ`.
+    let mut columns: Vec<Vec<Rational>> = vec![Vec::new(); constants.len()];
+    let mut rhs: Vec<Rational> = Vec::new();
+    for (order, point, value) in conditions {
+        let at_point = general.differentiate_n(var, *order).substitute(var, point);
+        // Baseline with all constants zeroed.
+        let mut baseline = at_point.clone();
+        for name in &constants {
+            baseline = baseline.substitute(name, &CasExpr::zero());
+        }
+        let baseline_value = to_rational(&baseline)?;
+        for (i, name) in constants.iter().enumerate() {
+            // Coefficient of Cᵢ: set Cᵢ = 1, the rest 0, subtract the baseline.
+            let mut probe = at_point.clone();
+            for other in &constants {
+                let replacement = if other == name {
+                    CasExpr::one()
+                } else {
+                    CasExpr::zero()
+                };
+                probe = probe.substitute(other, &replacement);
+            }
+            columns[i].push(to_rational(&probe)?.checked_sub(baseline_value)?);
+        }
+        rhs.push(to_rational(value)?.checked_sub(baseline_value)?);
+    }
+    let solution = ratint::solve_linear(&columns, &rhs)?;
+    // Substitute the solved constants back into the general solution.
+    let mut result = general.clone();
+    for (name, value) in constants.iter().zip(solution) {
+        result = result.substitute(name, &CasExpr::Const(value));
+    }
+    Some(simplify(&result))
+}
+
+/// Collect variable names of the form `C<digits>` (integration constants) from an
+/// expression into `names`.
+fn collect_constant_names(expr: &CasExpr, names: &mut BTreeSet<String>) {
+    match expr {
+        CasExpr::Var(name)
+            if name.starts_with('C')
+                && name.len() > 1
+                && name[1..].bytes().all(|b| b.is_ascii_digit()) =>
+        {
+            names.insert(name.clone());
+        }
+        CasExpr::Var(_) | CasExpr::Const(_) => {}
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => {
+            collect_constant_names(a, names);
+        }
+        CasExpr::Div(a, b) => {
+            collect_constant_names(a, names);
+            collect_constant_names(b, names);
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            for item in items {
+                collect_constant_names(item, names);
+            }
+        }
+    }
+}
+
 /// Solve a **separable first-order ODE** `dy/dx = f(x)·g(y)` by separation of
 /// variables, returning the **implicit** general solution `G(y) − F(x) − C0 = 0`
 /// (`= 0`), where `F = ∫ f dx` and `G = ∫ dy/g(y)`.
@@ -9946,6 +10033,41 @@ mod tests {
         let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
         let hpp = h.differentiate("x").differentiate("x");
         assert_equal(&(hpp + h.clone()), &CasExpr::zero());
+    }
+
+    #[test]
+    fn initial_value_problems() {
+        let ig = Rational::integer;
+        let zero = || CasExpr::int(0);
+        // y″ + y = 0, y(0)=1, y′(0)=0 ⇒ cos x ; y(0)=0, y′(0)=1 ⇒ sin x.
+        let osc = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").unwrap();
+        assert_equal(
+            &apply_initial_conditions(&osc, "x", &[(0, zero(), CasExpr::int(1)), (1, zero(), zero())])
+                .unwrap(),
+            &v("x").cos(),
+        );
+        assert_equal(
+            &apply_initial_conditions(&osc, "x", &[(0, zero(), zero()), (1, zero(), CasExpr::int(1))])
+                .unwrap(),
+            &v("x").sin(),
+        );
+        // y′ − y = 0, y(0)=3 ⇒ 3eˣ.
+        let growth = dsolve_homogeneous(&[ig(-1), ig(1)], "x").unwrap();
+        assert_equal(
+            &apply_initial_conditions(&growth, "x", &[(0, zero(), CasExpr::int(3))]).unwrap(),
+            &(CasExpr::int(3) * v("x").exp()),
+        );
+        // y″ − 3y′ + 2y = 0, y(0)=0, y′(0)=1 ⇒ e^{2x} − eˣ.
+        let two_roots = dsolve_homogeneous(&[ig(2), ig(-3), ig(1)], "x").unwrap();
+        let solved =
+            apply_initial_conditions(&two_roots, "x", &[(0, zero(), zero()), (1, zero(), CasExpr::int(1))])
+                .unwrap();
+        assert!(matches!(
+            equal(&solved, &((CasExpr::int(2) * v("x")).exp() - v("x").exp())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Mismatched condition count declines.
+        assert!(apply_initial_conditions(&osc, "x", &[(0, zero(), CasExpr::int(1))]).is_none());
     }
 
     #[test]
