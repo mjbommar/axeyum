@@ -3591,13 +3591,24 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
 /// Built on certified primitives (the antidifference and the limit).
 #[must_use]
 pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
-    // p-series `∑_{k=1}^{∞} c/kˢ = c·ζ(s)` (`s ≥ 2`) — not Gosper-summable, but a
-    // closed form for even `s` (`ζ(2)=π²/6`, …) via the ζ table.
-    if integer_constant(lower) == Some(1)
+    // p-series `∑_{k=m}^{∞} c/kˢ = c·(ζ(s) − ∑_{j=1}^{m−1} 1/jˢ)` (`s ≥ 2`, `m ≥ 1`)
+    // — not Gosper-summable, but a closed form for even `s` (`ζ(2)=π²/6`, …).
+    if let Some(start) = integer_constant(lower)
+        && start >= 1
         && let Some((coeff, exponent)) = match_p_series(f, var)
         && let Some(zeta_value) = special::zeta(exponent)
     {
-        return Some(simplify(&(CasExpr::Const(coeff) * zeta_value)));
+        // Subtract the finite head ∑_{j=1}^{m−1} 1/jˢ (a rational).
+        let mut head = Rational::zero();
+        for j in 1..start {
+            let mut power = Rational::integer(1);
+            for _ in 0..exponent {
+                power = power.checked_mul(Rational::integer(j))?;
+            }
+            head = head.checked_add(Rational::integer(1).checked_div(power)?)?;
+        }
+        let tail = zeta_value - CasExpr::Const(head);
+        return Some(simplify(&(CasExpr::Const(coeff) * tail)));
     }
     let antidifference = sum_polynomial(f, var).or_else(|| gosper_sum(f, var))?;
     let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
@@ -10159,10 +10170,14 @@ mod tests {
             &infinite_sum(&(CasExpr::int(1) / k().pow(4)), "k", &at(1)).unwrap(),
             &(CasExpr::rat(1, 90) * v("pi").pow(4)),
         );
-        // Odd ζ (no elementary form), harmonic (s=1 diverges), and a non-1 start all decline.
+        // Non-1 lower bound subtracts the finite head: Σ_{2}^{∞} 1/k² = π²/6 − 1.
+        assert_equal(
+            &infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(2)).unwrap(),
+            &(CasExpr::rat(1, 6) * v("pi").pow(2) - CasExpr::int(1)),
+        );
+        // Odd ζ (no elementary form) and harmonic (s=1 diverges) still decline.
         assert!(infinite_sum(&(CasExpr::int(1) / k().pow(3)), "k", &at(1)).is_none());
         assert!(infinite_sum(&(CasExpr::int(1) / k()), "k", &at(1)).is_none());
-        assert!(infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(2)).is_none());
     }
 
     #[test]
