@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 438 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 439 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -19,7 +19,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric), `infinite_sum` (**convergent** Σ_{k}^∞ — geometric `Σr^k=1/(1−r)`, p-series `Σ1/k²=π²/6` via ζ) | ✓ |
 | Summation (definite) | `definite_sum` (Σ over bounds — polynomial via telescoping, **geometric/hypergeometric via Gosper**: `Σ 2^k = 2^{n+1}−1`, `Σ k·2^k`), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
-| Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
+| Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `nsimplify` (f64→closed form, 1.5708→π/2), `series_reversion` (compositional inverse) | exact |
 | Integration | `integrate` → `CertifiedIntegral`: polynomials, **complete univariate rational over ℚ** (Horowitz rational part + partial-fractions over ℚ-irreducible factors → logs, `atan` for irreducible quadratics **incl. surd** `∫1/(x²+x+1)`, and algebraic surd-logs for real-irrational-root quadratics `∫1/(x²−2)`; mixed factors `∫1/(x³+1)`), `∫k·f(ax+b)`, `∫p·eˣ`, `∫p·sin\|cos`, `∫p·eˣ·sin\|cos` (exp×trig), `∫sinᵐ·cosⁿ`, `∫sin(ax)·sin(bx)` product-to-sum (Fourier orthogonality), `∫f+g` (linearity); **by-parts**: `∫p·ln`, `∫p·(ln x)ᵐ`, `∫p·{atan,asin,acos,asinh,acosh}`; **substitution/power-rule**: `∫k·g′·gⁿ = k·gⁿ⁺¹/(n+1)` (`∫(ln x)²/x`, `∫eˣ(eˣ+1)²`, `∫sin·cos³`), `∫k·g′/g = k·ln g` (`∫cos/sin`), `∫k·f′/√f = 2k√f`, half-integer power rule `∫√(ax+b)`/`∫xᵐ√x`, `u=x²` for `∫x·S(x²)·{eˣ²,sin,cos}`; special-function antiderivatives (erf/Si/Ci/Ei/li/Shi/Fresnel); `definite_integrate` (FTC), `fourier_series` (Euler coeffs — `f=x` → 2sin x−sin2x+…), `numeric_integrate` (Simpson — `∫₀¹e^{−x²}≈0.7468` for non-elementary), `improper_integrate` (±∞ bounds; Gaussian `∫_{−∞}^∞ e^{−x²}=√π` via erf asymptote, `∫₀^∞1/(1+x²)=π/2`) | ✓ (differentiate-and-check / FTC) |
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`; **log-vs-power** at 0 — `x·ln x=0`), `series`/`series_at`/`laurent_series` (incl. `tan`, `asin`, `asinh`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` (poly×{1,sin,cos} with the **s-shift rule** `L{e^{at}f}=F(s−a)` — `L{e^t sin t}`, `L{t·e^t·sin t}`) + `inverse_laplace` (simple real poles **and irreducible quadratics** → damped sinusoids `L⁻¹{1/((s−1)²+4)}=½e^t sin2t`, rational frequency), `z_transform` + `inverse_z_transform` (discrete; simple poles); all round-trip-certified | ✓ |

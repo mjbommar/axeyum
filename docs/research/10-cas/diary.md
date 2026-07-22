@@ -1078,6 +1078,27 @@ A broad parity sweep across many surfaces (each certified):
   **erf/atan horizontal asymptotes at ±∞** (`limit_asymptotic_head`) — closes the **Gaussian**
   `∫_{−∞}^∞ e^{−x²}=√π` and `∫₀^∞1/(1+x²)=π/2`.
 
-**433 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
+**433 unit + 143 doctests, clippy-pedantic clean, WASM-green.**
+
+## 2026-07-21 — Entry 34: applied-math surface — Fourier, IVPs, numerics (439 tests)
+
+Rounding out the *applied* mathematics surface a working analyst reaches for:
+
+- **`∫sin(ax)sin(bx)`** via product-to-sum → the Fourier-orthogonality integrals `∫₀^{2π}sin2x·sin3x=0`,
+  `∫₀^{2π}sin²3x=π`.
+- **`fourier_series`** — Euler coefficients by exact `definite_integrate` over `[−L,L]`: `f(x)=x` on
+  `[−π,π]` → `2sin x − sin2x + (2/3)sin3x`, `f(x)=x²` → `π²/3 − 4cos x + cos2x − …`.
+- **`apply_initial_conditions`** — specialize a general ODE solution (constants `C0,C1,…`) to an IVP by
+  solving the exact linear system in the constants (`collect_constant_names` + `ratint::solve_linear`):
+  `y″+y=0, y(0)=1, y′(0)=0 ⇒ cos x`; `y′−y=0, y(0)=3 ⇒ 3eˣ`.
+- **`numeric_integrate`** — composite Simpson for integrands with no elementary antiderivative
+  (`∫₀¹e^{−x²}≈0.7468`, `∫₀¹sin(x²)≈0.3103`); **`nsimplify`** — recognize an f64 as a closed form
+  (`1.5708→π/2`, `1.4142→√2`, `2.718→e`), the numeric→symbolic bridge.
+- **`argument`** (complex phase, `arg(1+i)=π/4` across all quadrants); exact **inverse-trig** values
+  incl. surds (`atan(√3)=π/3`, `asin(√2/2)=π/4`) in `evaluate_trig`; p-series `infinite_sum` at an
+  arbitrary lower bound (`Σ_{2}^{∞}1/k²=π²/6−1`).
+
+**439 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
 heads, general multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch,
-arbitrary-precision N[expr,d].
+arbitrary-precision N[expr,d]. Known limitation: `normalize` (public poly normalizer) doesn't atomize
+transcendentals, so `real_part`/`imaginary_part` decline surd complex coefficients.
