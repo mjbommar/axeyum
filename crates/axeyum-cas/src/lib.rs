@@ -6342,6 +6342,50 @@ pub fn nsimplify(value: f64, max_denominator: i128) -> Option<CasExpr> {
             return Some(scale_by(coeff, CasExpr::int(i128::from(n)).sqrt()));
         }
     }
+    // 4. Quadratic surd `(a + √b)/c` (a, c small integers, b a non-square): then
+    // `(c·value − a)² = b`. Closes the golden ratio `(1 + √5)/2`.
+    for c in 1..=6_i128 {
+        for a in -6..=6_i128 {
+            #[allow(clippy::cast_precision_loss)]
+            let t = c as f64 * value - a as f64;
+            if t <= 0.0 {
+                continue;
+            }
+            let Some(b) = rationalize(t * t, max_denominator) else {
+                continue;
+            };
+            if b.denominator() != 1 || b.numerator() <= 1 {
+                continue;
+            }
+            let b_int = b.numerator();
+            if isqrt(b_int).is_some_and(|root| root * root == b_int) {
+                continue; // perfect square → rational, already handled
+            }
+            let numerator = if a == 0 {
+                CasExpr::int(b_int).sqrt()
+            } else {
+                CasExpr::int(a) + CasExpr::int(b_int).sqrt()
+            };
+            let candidate = if c == 1 {
+                numerator
+            } else {
+                numerator / CasExpr::int(c)
+            };
+            if evalf(&candidate, &[]).is_some_and(|approx| (approx - value).abs() < TOL) {
+                return Some(candidate);
+            }
+        }
+    }
+    // 5. `ln(r)` for a positive rational `r ≠ 1`: `r = exp(value)`. Closes `ln 2`.
+    if let Some(r) = rationalize(value.exp(), max_denominator)
+        && r.numerator() > 0
+        && r != Rational::integer(1)
+    {
+        let candidate = CasExpr::Const(r).ln();
+        if evalf(&candidate, &[]).is_some_and(|approx| (approx - value).abs() < TOL) {
+            return Some(candidate);
+        }
+    }
     None
 }
 
@@ -14002,6 +14046,18 @@ mod tests {
             &nsimplify(std::f64::consts::SQRT_2 / 2.0, 10_000).unwrap(),
             &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()),
         );
+        // Quadratic surds `(a + √b)/c` — the golden ratio φ = (1+√5)/2.
+        assert_equal(
+            &nsimplify(f64::midpoint(1.0, 5.0_f64.sqrt()), 10_000).unwrap(),
+            &((CasExpr::int(1) + CasExpr::int(5).sqrt()) / CasExpr::int(2)),
+        );
+        assert_equal(
+            &nsimplify(1.0 + 2.0_f64.sqrt(), 10_000).unwrap(),
+            &(CasExpr::int(1) + CasExpr::int(2).sqrt()),
+        );
+        // ln of a rational: ln 2, ln 3.
+        assert_equal(&nsimplify(2.0_f64.ln(), 10_000).unwrap(), &CasExpr::int(2).ln());
+        assert_equal(&nsimplify(3.0_f64.ln(), 10_000).unwrap(), &CasExpr::int(3).ln());
         // A value with no closed form in the fragment (∫₀¹ e^{−x²}) declines.
         assert!(nsimplify(0.746_824, 10_000).is_none());
         assert!(nsimplify(f64::NAN, 100).is_none());
