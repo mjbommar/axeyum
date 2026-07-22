@@ -99,12 +99,18 @@ pub fn gosper_sum(term: &CasExpr, var: &str) -> Option<CasExpr> {
     {
         return Some(CasExpr::zero());
     }
-    // Primary, fully certified path: rational-function terms.
-    if let Some(sum) = rational_gosper(term, var) {
+    // Geometric × polynomial terms `p(k)·c^k` first: these produce a clean,
+    // pole-free antidifference `X(k)·c^k`. The rational path *would* also accept them
+    // (their consecutive ratio is rational, `k·(1/2)^k → (k+1)/(2k)`), but its
+    // reconstruction `(r(k−1)/p(k))·x(k)·t(k)` carries a removable `1/p(k)` pole that
+    // makes a definite sum's boundary substitution hit `0/0`. Trying the geometric
+    // path first avoids that; it declines for non-geometric terms.
+    if let Some(sum) = geometric_gosper(term, var) {
         return Some(sum);
     }
-    // Secondary path: geometric × polynomial terms `p(k)·c^k`.
-    geometric_gosper(term, var)
+    // Primary path for rational-function (and, via the `Γ` lowering, hypergeometric
+    // factorial) terms, certified by the exact zero-test.
+    rational_gosper(term, var)
 }
 
 /// `c^var`, the canonical CAS representation of a geometric factor with rational
@@ -689,6 +695,27 @@ mod tests {
             let rhs = Rational::integer(k).checked_mul(pow2(k)).unwrap(); // k·2^k
             assert_eq!(delta, rhs, "geometric telescoping mismatch at k = {k}");
         }
+    }
+
+    #[test]
+    fn arithmetic_geometric_definite_and_infinite_sums() {
+        // Regression: the geometric path must win over the rational path for `k·c^k`,
+        // so the antidifference is the pole-free `X(k)·c^k` and a definite sum's
+        // boundary substitution does not hit `0/0` (previously `∑ k·(1/2)^k` at
+        // `k=0` produced `-(0/0)`).
+        let k = CasExpr::var("k");
+        let is = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        let term = CasExpr::Mul(vec![k.clone(), geometric_power(Rational::new(1, 2), "k")]);
+        // Finite: ∑_{k=0}^{3} k·(1/2)^k = 1/2 + 2/4 + 3/8 = 11/8.
+        let def = crate::definite_sum(&term, "k", &CasExpr::int(0), &CasExpr::int(3)).unwrap();
+        assert!(is(&def, &CasExpr::rat(11, 8)));
+        // Infinite: ∑_{k=0}^{∞} k·(1/2)^k = (1/2)/(1−1/2)² = 2.
+        let inf = crate::infinite_sum(&term, "k", &CasExpr::int(0)).unwrap();
+        assert!(is(&inf, &CasExpr::int(2)));
+        // And ∑_{k=0}^{∞} k·(1/3)^k = (1/3)/(2/3)² = 3/4.
+        let term3 = CasExpr::Mul(vec![k, geometric_power(Rational::new(1, 3), "k")]);
+        let inf3 = crate::infinite_sum(&term3, "k", &CasExpr::int(0)).unwrap();
+        assert!(is(&inf3, &CasExpr::rat(3, 4)));
     }
 
     #[test]
