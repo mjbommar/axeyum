@@ -9611,7 +9611,9 @@ fn integrate_log_times_cofactor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     if !v.is_certified() || expr_contains_ln(&v.antiderivative) {
         return None;
     }
-    let residual = integrate(&(v.antiderivative.clone() / CasExpr::var(var)), var)?;
+    // `cancel` the V/x quotient first so e.g. `(2/3)x√x/x → (2/3)√x` is recognized.
+    let v_over_x = v.antiderivative.clone() / CasExpr::var(var);
+    let residual = integrate(&cancel(&v_over_x).unwrap_or(v_over_x), var)?;
     if !residual.is_certified() {
         return None;
     }
@@ -14012,10 +14014,11 @@ mod tests {
     #[test]
     fn log_times_rational_cofactor_integrals() {
         let x = || v("x");
-        // ∫ln x·R(x) by parts with a rational cofactor: ∫ln x/x² = −ln x/x − 1/x.
+        // ∫ln x·R(x) by parts: rational cofactor (∫ln x/x²) and a radical one (∫√x·ln x).
         for integrand in [
             x().ln() / x().pow(2),
             x().ln() / x().pow(3),
+            x().sqrt() * x().ln(),
         ] {
             let r = integrate(&integrand, "x").expect("log × rational cofactor");
             assert!(r.is_certified(), "not certified: ∫{integrand}");
