@@ -1536,6 +1536,16 @@ impl RatFunc {
                     num = negate(&num)?;
                     den = negate(&den)?;
                 }
+                // Absorb a fully-constant denominator into the numerator, so
+                // `(3/8·pi)/2` reduces to `(3/16)·pi` rather than staying a quotient
+                // (a common shape from definite integrals — Wallis/Beta values).
+                if poly::rat_degree(&den).is_none_or(|deg| deg == 0)
+                    && let Some(c) = den.first().copied()
+                    && !c.is_zero()
+                {
+                    num = num.iter().map(|coeff| coeff.checked_div(c)).collect::<Option<_>>()?;
+                    den = vec![Rational::integer(1)];
+                }
                 Some(RatFunc {
                     num: MultiPoly::from_univariate(var, &num),
                     den: MultiPoly::from_univariate(var, &den),
@@ -15182,6 +15192,20 @@ mod tests {
             normalize(&c).is_some(),
             "fully cancelled result should be a polynomial (denominator 1)"
         );
+    }
+
+    #[test]
+    fn cancel_absorbs_constant_denominator() {
+        // A fully-constant denominator folds into the numerator rather than staying a
+        // quotient — the common Wallis/Beta shape `(3/8·π)/2 → (3/16)·π`.
+        let pi = || v("pi");
+        let c = cancel(&((CasExpr::rat(3, 8) * pi()) / CasExpr::int(2))).expect("reduces");
+        assert_equal(&c, &(CasExpr::rat(3, 16) * pi()));
+        // The reduced form is now a genuine polynomial over atoms (denominator 1).
+        assert!(normalize(&c).is_some());
+        // ∫₀^{π/2} sin⁴x = 3π/16 renders reduced through `simplify`.
+        let wallis = definite_integrate(&v("x").sin().pow(4), "x", &CasExpr::int(0), &(pi() / CasExpr::int(2))).unwrap();
+        assert_equal(&simplify(&wallis.value), &(CasExpr::rat(3, 16) * pi()));
     }
 
     #[test]
