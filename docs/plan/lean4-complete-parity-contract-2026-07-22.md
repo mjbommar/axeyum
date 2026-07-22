@@ -329,8 +329,9 @@ record-set digests. CTest/JUnit, logs, runner labels, provider conclusions, and
 expiring artifacts do not independently prove completion. Five synthetic
 controls and nineteen mutation classes validate representation only. Every real
 run/outcome/pair/performance counter remains zero, so TL0.7.1 grants no U2 or
-terminal credit. TL0.7.2--TL0.7.4 must prove actual process and durability
-behavior before TL0.6.3 begins.
+terminal credit. TL0.7.2 and TL0.7.3 now prove bounded process and local
+process-interruption behavior; TL0.7.4 must exercise the complete path with
+two no-credit real controls before TL0.6.3 begins.
 
 TL0.7.2 is now complete under its
 [source-first process-adapter plan](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
@@ -339,15 +340,19 @@ eight synthetic controls retain 40 exact files and sixteen raw streams across
 both registered `RLIMIT_AS` lanes, including a descendant-bearing timeout with
 no live group member after cleanup. The result still has zero case/completion
 records, U2 outcomes, paired cells, performance rows, and parity credit.
-TL0.7.3--TL0.7.4 remain mandatory before TL0.6.3.
+TL0.7.4 remains mandatory before TL0.6.3.
 
-TL0.7.3 is now governed by a
-[source-first checkpoint-store plan](lean-execution-store-tl0.7.3-plan-2026-07-22.md).
-It freezes two local storage classes, exact Lean namespace/completion closure,
-conflict/orphan quarantine, and 16 dependency/completion persistence-boundary
-`SIGKILL` cells. This preregistration is not durability evidence and grants no
-Lean/U2/parity credit; process kill is explicitly weaker than power or host
-loss.
+TL0.7.3 is now complete under its
+[source-first checkpoint-store plan](lean-execution-store-tl0.7.3-plan-2026-07-22.md)
+and [bounded result](lean-execution-store-tl0.7.3-2026-07-22.md). Sixteen of
+sixteen dependency/completion persistence-boundary cells reaped their workers
+by `SIGKILL` across the observed ext4 worktree and `/dev/shm` tmpfs classes;
+every interrupted/resumed canonical projection equals its uninterrupted
+reference. The authority retains 65 exact files and still records zero real
+outcomes, completed U2 cases, paired cells, performance rows, and parity
+credit. This is local process-interruption evidence, explicitly not power or
+host loss, NFS, provider, object, or distributed durability. TL0.7.4 remains
+mandatory before TL0.6.3.
 
 ## 8. Layer-specific equivalence
 

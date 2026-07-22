@@ -32,6 +32,7 @@ U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
+EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -695,6 +696,31 @@ def execution_process_snapshot() -> dict[str, Any]:
     }
 
 
+def execution_store_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_execution_store_for_complete_parity",
+        ROOT / "scripts" / "lean_execution_store.py",
+    )
+    data = load_json(EXECUTION_STORE)
+    failures = checker.validate_result_authority(data)
+    if failures:
+        raise RuntimeError("invalid Lean execution store authority: " + "; ".join(failures))
+    return {
+        "scope": data["scope"],
+        "storage_classes": data["summary"]["storage_classes"],
+        "kill_cells": data["summary"]["kill_cells"],
+        "sigkill_cells": data["summary"]["sigkill_cells"],
+        "projection_equal_cells": data["summary"]["projection_equal_cells"],
+        "evidence_files": data["summary"]["evidence_files"],
+        "real_outcomes": data["summary"]["real_outcomes"],
+        "completed_u2_cases": data["summary"]["completed_u2_cases"],
+        "paired_cells": data["summary"]["paired_cells"],
+        "performance_rows": data["summary"]["performance_rows"],
+        "parity_credit": data["summary"]["parity_credit"],
+        "claims": data["claims"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -716,6 +742,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_CI_PROFILES,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
+        EXECUTION_STORE,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
@@ -728,6 +755,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_process.py",
+        ROOT / "scripts" / "lean_execution_store.py",
+        ROOT / "scripts" / "tests" / "test_lean_execution_store.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -759,6 +788,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
+            "execution_store_authority": execution_store_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -831,6 +861,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_ci = bounded["u2_ci_profile_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
+    store = bounded["execution_store_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -903,6 +934,16 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{process['retained_files']} exact files, and {process['raw_artifacts']} raw streams; "
             f"{process['case_records']} case records, {process['completion_records']} completion "
             f"records, {process['credits']['real_runs']} real runs, and zero parity credit.",
+            f"- Lean checkpoint-store controls: {store['sigkill_cells']}/"
+            f"{store['kill_cells']} reaped SIGKILL cells across "
+            f"{store['storage_classes']} observed local storage classes, "
+            f"{store['projection_equal_cells']}/{store['kill_cells']} uninterrupted "
+            f"projection matches, and {store['evidence_files']} retained files; "
+            f"{store['real_outcomes']} real outcomes, {store['completed_u2_cases']} "
+            f"completed U2 cases, {store['paired_cells']} paired cells, "
+            f"{store['performance_rows']} performance rows, and "
+            f"{store['parity_credit']} parity credit. Process interruption is not "
+            "power/host loss or network/object durability.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

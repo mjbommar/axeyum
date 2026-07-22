@@ -417,9 +417,10 @@ state.
 > the no-execution boundary. TL0.7.1's
 > [result](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md) now closes
 > the machine authority with two lanes, five synthetic lifecycle controls,
-> twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior,
-> TL0.7.3 durability, TL0.7.4 no-credit controls, and all official outcomes
-> remain open; exact paired records remain later TL0.6.5 work.
+> twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior and
+> TL0.7.3 local process-interruption storage controls are now closed; TL0.7.4
+> no-credit real controls and all official outcomes remain open. Exact paired
+> records remain later TL0.6.5 work.
 > TL0.7.2's source-first
 > [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
 > was pushed before implementation or probes. The subsequent
@@ -427,15 +428,19 @@ state.
 > 8/8 synthetic process attempts, 40 exact retained files, 16 raw streams,
 > whole-group descendant cleanup, and evidence-backed 4/8 GiB memory classes.
 > Eleven tests cover sixteen mutation families. Case/completion records, real
-> outcomes, paired cells, and parity credit remain zero. TL0.7.3 durable-store
-> kill/resume qualification is next; TL0.6.3 remains blocked.
-> TL0.7.3 now has a source-first
+> outcomes, paired cells, and parity credit remain zero.
+> TL0.7.3's source-first
 > [checkpoint-store plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md)
-> for two observed local storage classes, the frozen ADR-0344 no-replace
-> primitive, exact Lean namespace/completion closure, eighteen mutation
-> families, and 16 dependency/completion persistence-boundary `SIGKILL` cells.
-> No store kill cell has run; this preregistration is neither power-loss nor
-> Lean/U2/parity evidence.
+> was pushed before implementation. The subsequent
+> [result](docs/plan/lean-execution-store-tl0.7.3-2026-07-22.md) closes 16/16
+> retained dependency/completion persistence-boundary `SIGKILL` cells across
+> the observed ext4 worktree and `/dev/shm` tmpfs classes. All workers were
+> reaped, all interrupted/resumed projections equal their uninterrupted
+> references, 22 contract tests cover eighteen mutation families, and 65 exact
+> evidence files are retained. This proves bounded local process-interruption
+> recovery, not power/host loss or network/object durability; Lean/U2 outcomes,
+> paired cells, performance rows, and parity credit remain zero. TL0.7.4's two
+> explicitly no-credit real controls are next; TL0.6.3 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

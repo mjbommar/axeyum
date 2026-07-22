@@ -30,7 +30,8 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 - U2 official CI profiles: 17 contexts, 153 cells, 111 not-run CTest attempts, and 8 exact selection sets; 0 official executions and zero parity credit.
 - Lean execution evidence: 2 lane templates, 12 termination classes, 5 synthetic controls, and 19 mutation classes; 0 real runs and zero parity credit.
 - Lean process controls: 8/8 retained synthetic attempts, 40 exact files, and 16 raw streams; 0 case records, 0 completion records, 0 real runs, and zero parity credit.
-- Implementation ledger: 140 rows; `DONE`=24, `PARTIAL`=7, `TODO`=109, `BLOCKED`=0.
+- Lean checkpoint-store controls: 16/16 reaped SIGKILL cells across 2 observed local storage classes, 16/16 uninterrupted projection matches, and 65 retained files; 0 real outcomes, 0 completed U2 cases, 0 paired cells, 0 performance rows, and 0 parity credit. Process interruption is not power/host loss or network/object durability.
+- Implementation ledger: 140 rows; `DONE`=25, `PARTIAL`=6, `TODO`=109, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 

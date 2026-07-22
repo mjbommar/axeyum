@@ -36,6 +36,8 @@ step lean-execution-evidence-tests python3 -m unittest scripts.tests.test_lean_e
 step lean-execution-evidence python3 scripts/gen-lean-execution-evidence.py --check
 step lean-execution-process-tests python3 -m unittest scripts.tests.test_lean_execution_process
 step lean-execution-process python3 scripts/lean_execution_process.py result --check
+step lean-execution-store-tests python3 -m unittest scripts.tests.test_lean_execution_store
+step lean-execution-store python3 scripts/lean_execution_store.py result --check
 step lean-complete-parity-tests python3 -m unittest scripts.tests.test_lean_complete_parity
 step lean-complete-parity python3 scripts/gen-lean-complete-parity.py --check
 step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_official_construct_matrix
