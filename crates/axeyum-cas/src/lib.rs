@@ -7650,8 +7650,10 @@ pub fn prove_derivative(expr: &CasExpr, var: &str, claimed: &CasExpr) -> ZeroTes
     // trig, rewrite the full-angle trig down to the half angle on both sides so the
     // zero-test compares them at a common `x/2` level. A sound, denotation-preserving
     // rewrite (double-angle identities); only consulted when the direct test fails.
-    let derivative_half = rewrite_double_angle(&derivative, var);
-    let claimed_half = rewrite_double_angle(claimed, var);
+    // `expand_trig` first reduces multiple angles (`sin 2x → 2 sin x cos x`) to the
+    // single angle, then `rewrite_double_angle` drops the single angle to the half.
+    let derivative_half = rewrite_double_angle(&expand_trig(&derivative), var);
+    let claimed_half = rewrite_double_angle(&expand_trig(claimed), var);
     if derivative_half != derivative || claimed_half != *claimed {
         let half_result = equal(&derivative_half, &claimed_half);
         if matches!(half_result, ZeroTest::Certified { equal: true, .. }) {
@@ -9084,7 +9086,10 @@ fn integrate_weierstrass(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let sin_t = CasExpr::int(2) * tv.clone() / one_plus.clone();
     let cos_t = (CasExpr::int(1) - tv.clone().pow(2)) / one_plus.clone();
     let tan_t = CasExpr::int(2) * tv.clone() / (CasExpr::int(1) - tv.clone().pow(2));
-    let in_t = replace_trig_heads(expr, var, &sin_t, &cos_t, &tan_t);
+    // Reduce multiple angles to single-angle first (`sin 2x → 2 sin x cos x`), so
+    // integrands like `∫sin 2x/(1+cos x)` also fall into the substitution.
+    let reduced = expand_trig(expr);
+    let in_t = replace_trig_heads(&reduced, var, &sin_t, &cos_t, &tan_t);
     // After substitution nothing in `x` (no bare x, no un-substituted trig) may remain.
     if expr_contains_var(&in_t, var) || contains_sin_or_cos(&in_t) {
         return None;
@@ -14299,6 +14304,9 @@ mod tests {
             CasExpr::int(1) / (CasExpr::int(1) - x().cos()),      // −cot(x/2)
             CasExpr::int(1) / (CasExpr::int(2) + x().sin()),
             CasExpr::int(1) / (CasExpr::int(5) + CasExpr::int(4) * x().cos()),
+            // Multiple-angle integrand — reduced to single angle before substitution.
+            (CasExpr::int(2) * x()).sin() / (CasExpr::int(1) + x().cos()),
+            CasExpr::int(1) / (CasExpr::int(1) + (CasExpr::int(2) * x()).cos()),
         ] {
             let r = integrate(&integrand, "x").expect("Weierstrass integral");
             assert!(
