@@ -206,6 +206,9 @@ infer the proof, require definitional equality, normalize the registered side,
 and compare the exact three-successor, indexed, and five-successor normal forms
 from M0. It then appends a TL2.14 assurance overlay without rewriting history
 and removes the live nested decline only after all retained controls pass.
+The exact ownership, observations, mutation contract, and checkpoint sequence
+are frozen in the
+[M5 computation and assurance plan](lean-nested-inductive-elimination-m5-plan-2026-07-22.md).
 
 ## Remaining milestones after M4
 
