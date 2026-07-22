@@ -374,6 +374,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — product-aware WZ checking extends squared-binomial moments.**
+  When direct symbolic telescoping overflows, `certifies_wz_sum` now checks the
+  exact quotient identity; certified-false direct checks never fall back. This
+  preserves the symbolic soundness gate while cancelling consecutive gamma
+  products before polynomial expansion, extending the direct falling-factorial
+  family through order 14 (order 15 remains `Unknown`). The raw compositor now
+  uses the known `(2n)ₘ` common denominator and cancels only exactly divisible
+  linear factors, extending independently rechecked raw moments through order
+  10. Order eight recovers
+  `n³(n⁹+6n⁸−31n⁷−106n⁶+315n⁵+294n⁴−693n³+18n²+96n−20)C(2n,n)/(16(2n−7)(2n−5)(2n−3)(2n−1))`.
+  A measured raw order-11 probe reaches numerator factorization and declines.
+  The CAS topic stack passes 521 unit tests, 147 doctests, warning-denied
+  all-target Clippy, stable/nightly strict rustdoc, `wasm32-unknown-unknown`,
+  links, and `git diff --check`. Next: isolate order 15's quotient growth and
+  order 11's bounded factorization limit without weakening the proof objects.
+
 - **2026-07-22 — exact base preprocessing extends composed moments through
   order seven.** The order-seven falling-factorial certificate already passed
   the fully symbolic WZ identity; only the finite base check returned `Unknown`

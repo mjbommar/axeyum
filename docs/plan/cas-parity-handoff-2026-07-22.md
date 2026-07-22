@@ -16,7 +16,7 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adq**). Keep both in sync when landing features.
+  latest is **Entry 37adr**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -301,15 +301,26 @@ factored result. `CertifiedSquaredBinomialMoment::is_certified()` independently
 replays all three obligations; it does not trust the Stirling expansion or
 component list.
 
-`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` and
-`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` are both 7. Regressions cover both families
-through order seven, direct-sum cross-check every member, recover the known
-compact fifth-, sixth-, and seventh-moment identities, and reject tampered
-results, certificates, and missing components. The order-seven symbolic WZ
-identity already fit `i128`; only its finite base check overflowed because zero
-falling-factorial terms retained unsimplified gamma factors. The shared checker
-now simplifies each concrete term and RHS before exact equality. Order eight
-still returns symbolic `Unknown`, so larger requests decline immediately.
+`certifies_wz_sum` first checks the direct symbolic telescoping equation. If that
+exact expansion returns `Unknown`, it now checks the algebraically equivalent
+quotient equation
+`R(n,k+1)f(n,k+1)/f(n,k)−R(n,k)=f(n+1,k)/f(n,k)−1`; consecutive gamma factors
+cancel before polynomial expansion. A certified-false direct equation never
+falls back. This exact product-aware route extends
+`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 14; order 15 is the first
+measured symbolic decline.
+
+The raw compositor now forms all Stirling terms over the known common
+denominator `(2n)ₘ` and cancels a linear denominator factor only when exact
+polynomial division succeeds. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` is therefore
+10. Regressions cover falling-factorial orders `0..=14` and raw orders `0..=10`,
+direct-sum cross-check every member, recover the known compact fifth- through
+eighth-moment forms, and reject tampered results, certificates, and missing
+components. The eighth raw form is
+`n³(n⁹+6n⁸−31n⁷−106n⁶+315n⁵+294n⁴−693n³+18n²+96n−20)C(2n,n)/(16(2n−7)(2n−5)(2n−3)(2n−1))`.
+An order-11 probe constructs the exact common numerator and cancels its proven
+linear factors, then declines in bounded numerator factorization; public calls
+therefore stop before that work.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -330,10 +341,10 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Investigate the falling-factorial order-eight symbolic-check decline and
-   whether compact product-aware normalization can extend the direct family;
-   keep the fully symbolic checker boundary unchanged. For fixed shifts,
-   investigate the `r=8` exact-growth decline only if a concrete use needs it.
+   Isolate the falling-factorial order-15 quotient-check decline and the raw
+   order-11 numerator-factorization limit without weakening either symbolic or
+   compositional checking. For fixed shifts, investigate the `r=8` exact-growth
+   decline only if a concrete use needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
