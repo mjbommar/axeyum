@@ -374,6 +374,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — proof-carrying CAS closes adjacent convolution and the first
+  two squared-binomial moments.** `prove_wz_sum` now symbolically certifies
+  `∑C(n,k)C(n,k+1)=C(2n,n−1)`, `∑kC(n,k)²=(n/2)C(2n,n)`, and
+  `∑k²C(n,k)²=n³C(2n,n)/(2(2n−1))`, with exact returned-certificate checks and
+  `rhs+1` false controls. Discovery now admits monic rational interpolants whose
+  denominator vanishes at zero (`1/(2n)`), prefers balanced degree splits when
+  samples exactly determine several same-total-degree fits, strips scalar
+  content before polynomial GCD, and uses primitive-part Euclid to avoid
+  removable `i128` growth. Large concrete gamma towers may use the equivalent
+  exact reduced Gosper equation when expanding the full residual overflows; the
+  final fully symbolic WZ equality gate remains mandatory and unchanged. The
+  CAS topic stack passes 508 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, and documentation-link validation. Next:
+  probe fixed-shift (`r=2`) convolution and the third squared-binomial moment.
+
 - **2026-07-22 — proof-carrying CAS closes the Vandermonde WZ gap; broader
   creative telescoping is next.** `prove_wz_sum` now proves
   `∑ₖ C(n,k)² = C(2n,n)` and returns

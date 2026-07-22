@@ -5168,15 +5168,20 @@ fn interpolate_coeffs_over_n(rows: &[(Rational, Vec<Rational>)], n: &str, k: &st
     })
 }
 
-/// The lowest-degree rational function `P(var)/Q(var)` (with `Q(0)=1`) passing through
-/// every `(xᵢ, yᵢ)`, or `None` if none does. Tries total degree `deg P + deg Q` from 0
-/// upward; for each split it solves a square system on the first `deg+1` points and
-/// **validates against all** points, so an over-fit is rejected. Subsumes polynomial
-/// interpolation (`deg Q = 0`).
+/// The lowest-degree rational function `P(var)/Q(var)` (with monic `Q`) passing
+/// through every `(xᵢ, yᵢ)`, or `None` if none does. Tries total degree
+/// `deg P + deg Q` from 0 upward, preferring the most balanced numerator/denominator
+/// split when several exactly determined fits have the same total degree. Each fit
+/// is solved on the first `deg+1` points and **validated against all** available
+/// points. Monic normalization admits denominators with `Q(0)=0` (for example
+/// `1/(2n)`), unlike a fixed-unit constant term. Subsumes polynomial interpolation
+/// (`deg Q = 0`).
 fn rational_interpolate(points: &[(Rational, Rational)], var: &str) -> Option<CasExpr> {
     let m = points.len();
     for total in 0..m {
-        for pdeg in 0..=total {
+        let mut numerator_degrees: Vec<usize> = (0..=total).collect();
+        numerator_degrees.sort_by_key(|&pdeg| (pdeg.max(total - pdeg), pdeg));
+        for pdeg in numerator_degrees {
             if let Some(expr) = try_rational_fit(points, pdeg, total - pdeg, var) {
                 return Some(expr);
             }
@@ -5185,12 +5190,12 @@ fn rational_interpolate(points: &[(Rational, Rational)], var: &str) -> Option<Ca
     None
 }
 
-/// Attempt a rational fit `P/Q` with `deg P = pdeg`, `deg Q = qdeg` (`Q(0)=1`): solve
-/// the exact square system `P(xᵢ) − yᵢ·Q(xᵢ) = 0` on the first `pdeg+1+qdeg` points,
-/// then require `P(xᵢ)/Q(xᵢ) = yᵢ` at **every** point. `None` if singular, if any
-/// `Q(xᵢ)=0`, or if validation fails.
+/// Attempt a rational fit `P/Q` with `deg P = pdeg`, `deg Q = qdeg` and monic
+/// denominator: solve the exact square system `P(xᵢ) − yᵢ·Q(xᵢ) = 0` on the first
+/// `pdeg+1+qdeg` points, then require `P(xᵢ)/Q(xᵢ) = yᵢ` at **every** point. `None`
+/// if singular, if any `Q(xᵢ)=0`, or if validation fails.
 fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, var: &str) -> Option<CasExpr> {
-    let unknowns = pdeg + 1 + qdeg; // p₀..p_pdeg, q₁..q_qdeg  (q₀ fixed to 1)
+    let unknowns = pdeg + 1 + qdeg; // p₀..p_pdeg, q₀..q_(qdeg−1); q_qdeg fixed to 1
     if points.len() < unknowns {
         return None;
     }
@@ -5207,14 +5212,17 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
     for j in 0..=pdeg {
         cols.push(rows.iter().map(|(x, _)| rat_pow(*x, j)).collect::<Option<_>>()?);
     }
-    for j in 1..=qdeg {
+    for j in 0..qdeg {
         cols.push(
             rows.iter()
                 .map(|(x, y)| y.checked_neg()?.checked_mul(rat_pow(*x, j)?))
                 .collect::<Option<_>>()?,
         );
     }
-    let rhs: Vec<Rational> = rows.iter().map(|(_, y)| *y).collect();
+    let rhs: Vec<Rational> = rows
+        .iter()
+        .map(|(x, y)| y.checked_mul(rat_pow(*x, qdeg)?))
+        .collect::<Option<_>>()?;
     let solution = ratint::solve_linear(&cols, &rhs)?;
     let (p_coeffs, q_tail) = solution.split_at(pdeg + 1);
     let eval = |coeffs: &[Rational], x: Rational| -> Option<Rational> {
@@ -5224,12 +5232,13 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
         }
         Some(acc)
     };
-    // Validate `P(x)/Q(x) = y` at every point (`Q(x) = 1 + Σ qⱼ xʲ`).
+    // Validate `P(x)/Q(x) = y` at every point
+    // (`Q(x) = Σ_{j<qdeg} qⱼxʲ + x^qdeg`).
     for (x, y) in points {
         let p_val = eval(p_coeffs, *x)?;
-        let mut q_val = Rational::integer(1);
+        let mut q_val = rat_pow(*x, qdeg)?;
         for (j, q) in q_tail.iter().enumerate() {
-            q_val = q_val.checked_add(q.checked_mul(rat_pow(*x, j + 1)?)?)?;
+            q_val = q_val.checked_add(q.checked_mul(rat_pow(*x, j)?)?)?;
         }
         if q_val.is_zero() || p_val != y.checked_mul(q_val)? {
             return None;
@@ -5240,8 +5249,8 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
     if qdeg == 0 {
         return Some(p_expr);
     }
-    let mut q_full = vec![Rational::integer(1)];
-    q_full.extend_from_slice(q_tail);
+    let mut q_full = q_tail.to_vec();
+    q_full.push(Rational::integer(1));
     let q_expr = MultiPoly::from_univariate(var, &q_full).to_expr();
     Some(CasExpr::Div(Box::new(p_expr), Box::new(q_expr)))
 }
@@ -17075,6 +17084,96 @@ mod tests {
         // Soundness: a FALSE identity ∑_k C(n,k) = 3ⁿ must not be "proven".
         let three_n = geometric_power(Rational::new(3, 1), "n");
         assert!(prove_wz_sum(&binomial_coefficient(&n(), &k()), "n", "k", &three_n, 1, 0, 1).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_adjacent_binomial_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(1)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 0)
+            .expect("adjacent-binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(1))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(2))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n())
+                * (k() - n() - CasExpr::int(1)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 0).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_squared_binomial_moments() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let squared = binomial_coefficient(&n(), &k()).pow(2);
+
+        // ∑ k·C(n,k)² = (n/2)·C(2n,n). Its certificate coefficients include a
+        // pole at n=0, and concrete discovery uses the reduced Gosper certificate.
+        let first_rhs = n() * central.clone() / CasExpr::int(2);
+        let first = prove_wz_sum(&(k() * squared.clone()), "n", "k", &first_rhs, 1, 0, 1)
+            .expect("first squared-binomial moment is WZ-provable");
+        let first_expected = k()
+            * (k() - CasExpr::int(1))
+            * ((CasExpr::int(2) * n() + CasExpr::int(1)) * k()
+                - (CasExpr::int(3) * n() + CasExpr::int(1)) * (n() + CasExpr::int(1)))
+            / (CasExpr::int(2)
+                * n()
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&first, &first_expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        // ∑ k²·C(n,k)² = n³/(2(2n−1))·C(2n,n).
+        let second_rhs = n().pow(3) * central
+            / (CasExpr::int(2) * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let second = prove_wz_sum(&(k().pow(2) * squared), "n", "k", &second_rhs, 1, 0, 1)
+            .expect("second squared-binomial moment is WZ-provable");
+        let second_expected = (k() - CasExpr::int(1)).pow(2)
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(2))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() - CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&second, &second_expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        let false_first_rhs = n()
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / CasExpr::int(2)
+            + CasExpr::int(1);
+        assert!(
+            prove_wz_sum(
+                &(k() * binomial_coefficient(&n(), &k()).pow(2)),
+                "n",
+                "k",
+                &false_first_rhs,
+                1,
+                0,
+                1,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn rational_interpolation_allows_a_pole_at_zero() {
+        let points: Vec<_> = (1..=5)
+            .map(|n| (Rational::integer(n), Rational::new(1, 2 * n)))
+            .collect();
+        let fit = rational_interpolate(&points, "n").expect("1/(2n) is rational-interpolable");
+        assert_equal(&fit, &(CasExpr::int(1) / (CasExpr::int(2) * v("n"))));
     }
 
     #[test]

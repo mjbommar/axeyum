@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `504` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `508` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adh**). Keep both in sync when landing features.
+  latest is **Entry 37adi**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -39,8 +39,8 @@ The tmpfs `/tmp` hits **"Disk quota exceeded"** when the ~147 doctests link
 concurrently. **Always** point `TMPDIR` at a roomy disk:
 
 ```bash
-export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"
-mkdir -p "$AXEYUM_CAS_TMP"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+export AXEYUM_CAS_TMP
 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas          # etc.
 ```
 Without this, doctests fail with a spurious linker `LLVM ERROR: IO failure`.
@@ -94,7 +94,9 @@ Gotchas when probing:
 
 ## 4. What landed this session (chronological highlights)
 
-The marquee arc, roughly in order (all on `main`):
+The marquee arc, roughly in order. Vandermonde is on `main`; the adjacent and
+moment extensions are on the current CAS topic branch pending green integration
+by the `main` owner:
 
 **Foundations / gammasimp**
 - **`gammasimp`/`combsimp`**: the Γ functional equation `Γ(z+1)=z·Γ(z)` now lives
@@ -126,8 +128,9 @@ The marquee arc, roughly in order (all on `main`):
 
 **★ Zeilberger / Wilf–Zeilberger (the marquee)** — `prove_wz_sum(...)`
 Proves definite hypergeometric identities *soundly*. Currently proven:
-`∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`. A false
-identity (`∑C(n,k)=3ⁿ`) correctly declines.
+`∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
+Vandermonde, adjacent-binomial convolution, and the first two squared-binomial
+moments. False near-misses correctly decline.
 
 ---
 
@@ -144,20 +147,24 @@ Pipeline:
    term at several *small* concrete `n` (sample from `n=1,2,3,…` — larger `n`
    overflow the rising factorials), extract `R(nᵢ,k)`, monic-normalize the
    denominator, and interpolate each coefficient over `n` with
-   `rational_interpolate` (lowest-degree `P(n)/Q(n)`, validated — subsumes
-   Lagrange, needed because e.g. `k²·C(n,k)` certificates have `(n+1)/(n+2)`-type
-   coefficients).
+   `rational_interpolate` (lowest-total-degree `P(n)/Q(n)` with a monic
+   denominator, balanced-degree tie-breaking, and validation against every
+   available sample — subsumes Lagrange and admits poles such as `1/(2n)`).
 3. **Soundness gate (symbolic):** verify `equal(G(n,k+1)−G(n,k),
    f(n+1,k)−f(n,k))` with `n,k` both symbolic. A wrong/under-fit interpolation
    fails here and the prover declines. This leans on gammasimp + the atom-ordering
    fix.
 
-Enabling Gosper fixes: `reduce_fraction` divides out the common
-integer **content** (binomial ratios carry a huge content that overflowed the
-dispersion machinery); `nonneg_integer_dispersion` now scans `j=0..64` by direct
-shifted polynomial GCD instead of materializing an overflow-prone symbolic
-resultant; and consecutive-ratio extraction cancels exact common monomial content
-before requiring a univariate ratio.
+Enabling Gosper fixes: `reduce_fraction` divides out common scalar content before
+the GCD and normalizes every Euclidean remainder to its primitive part (large
+gamma-lowered ratios otherwise overflow despite a small reduced quotient);
+`nonneg_integer_dispersion` scans `j=0..64` by direct shifted polynomial GCD
+instead of materializing an overflow-prone symbolic resultant; and
+consecutive-ratio extraction cancels exact common monomial content before
+requiring a univariate ratio. The preferred Gosper certificate is the full
+telescoping identity; if expanding a concrete gamma tower overflows, the exact
+reduced polynomial Gosper equation certifies the same antidifference. The final
+symbolic WZ check remains mandatory and unchanged.
 
 Base-case gotcha: avoid `n` where a binomial hits the `Γ(0)` pole (e.g. `C(0,1)`)
 — use `base ≥ 1` with a clean `k` range.
@@ -175,16 +182,36 @@ shifted-GCD scanning, and separately specializing/folding the summand and RHS
 close those seams. The final WZ equality checker is unchanged; a false
 `C(2n,n)+1` near-miss still declines.
 
+### Adjacent convolution and squared moments are closed
+
+The same public `prove_wz_sum` route now certifies:
+
+- `∑ₖ C(n,k)C(n,k+1)=C(2n,n−1)`, with
+  `R=k(k+1)(2k−3n−2)/(2(2n+1)(k−n)(k−n−1))`;
+- `∑ₖ kC(n,k)²=(n/2)C(2n,n)`, with
+  `R=k(k−1)((2n+1)k−(3n+1)(n+1))/(2n(2n+1)(k−n−1)²)`;
+- `∑ₖ k²C(n,k)²=n³C(2n,n)/(2(2n−1))`, with
+  `R=(k−1)²(2k−3n−2)/(2(2n−1)(k−n−1)²)`.
+
+The first-moment coefficient `1/(2n)` exposed the old `Q(0)=1` interpolation
+restriction; monic-denominator interpolation closes it. Its `n=5` concrete
+Gosper sample also exposed coefficient growth in a degree-35 ratio with a
+degree-31 common factor; pre-GCD content reduction, primitive-part Euclid, and
+the exact reduced-equation certificate close that path. Every returned WZ
+certificate still passes the fully symbolic identity, while `rhs+1` controls for
+the new families decline.
+
 ---
 
 ## 6. Known-open items / candidate next work
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond Vandermonde.** Probe the
-   adjacent-binomial convolution `∑C(n,k)C(n,k+1)=C(2n,n−1)` and weighted
-   squared-binomial moments; retain only identities whose concrete discovery and
-   fully symbolic WZ check both close.
+1. **Broaden certified creative telescoping beyond the closed first tier.** Probe
+   fixed-shift convolutions `∑C(n,k)C(n,k+r)=C(2n,n−r)` (starting with concrete
+   `r=2`) and the third squared-binomial moment
+   `∑k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`; retain only identities whose concrete
+   discovery and fully symbolic WZ check both close.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -238,10 +265,11 @@ Design invariants (hold the line):
 
 ```bash
 cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
-export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"; mkdir -p "$AXEYUM_CAS_TMP"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 504 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 508 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
