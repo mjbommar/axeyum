@@ -1234,7 +1234,14 @@ Continuing the breadth push across three branches:
   power of `x` beats any power of `ln x`, so `ln x/x→0`, `(ln x)²/x→0`, `1/ln x→0`, and
   `x^{1/x}=exp((ln x)/x)→1` via the exp-of-limit path. Divergent forms (`x/ln x`, `x·ln x`) decline.
 
-**455 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Deferred (needs a real
-asymptotic-expansion-at-∞ / Puiseux-at-∞ engine): conjugate limits like `√(x²+x)−x=½`, where the
-leading `x` terms cancel and the ½ lives in the sub-leading term — the reciprocal substitution `x=1/t`
-stalls because `√((1/t)²+1/t)` doesn't simplify to `√(1+t)/t` (sqrt-of-Laurent).
+**455 unit + 143 doctests, clippy-pedantic clean, WASM-green.**
+
+**Entry 37d — conjugate limits at +∞ (456 tests).** Closed the item deferred above, but via
+*conjugate rationalization* rather than a full Puiseux-at-∞ engine (which the reciprocal substitution
+would have needed). `algebraic_leading_at_infinity` gives the `(order, coefficient)` of any
+polynomial/`√`-polynomial expression (`√P → order deg/2, coeff √lead`), summing coefficients at the
+top order and declining on cancellation. `limit_algebraic_at_infinity` tries that ratio directly
+(`√(x²+1)/x=1`); when a `√`-sum's leading terms cancel (`√(x²+x)~x`, minus `x`), it rationalizes —
+`S+R = (S²−R²)/(S−R)` — building the numerator polynomial `m²A−R²` **directly** (squaring `√A` does
+not auto-fold in `simplify_radicals`), then re-runs the leading-term ratio. Handles `√A ± polynomial`
+and `√A ± √B`. Closes `√(x²+x)−x=½`, `√(4x²+x)−2x=¼`, `√(x²+x)−√(x²−x)=1`, `√(x+1)−√x=0`.
