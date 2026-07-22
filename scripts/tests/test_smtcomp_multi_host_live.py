@@ -27,13 +27,14 @@ from multi_host import (  # noqa: E402
     kill_remote_launcher,
     prepare_run_directory,
     recover_failed_shard,
+    remote_file_observation,
     remote_liveness,
     remote_probe,
     stage_execution_bundle,
     start_allocation,
     validate_multi_host_evidence,
 )
-from resume_contract import canonical_bytes  # noqa: E402
+from resume_contract import ContractError, canonical_bytes  # noqa: E402
 from resume_fs import (  # noqa: E402
     atomic_install_bytes,
     atomic_install_json,
@@ -220,13 +221,31 @@ class E3LiveGate(unittest.TestCase):
         return installed
 
     def wait_for_failure_point(
-        self, run_dir: Path, marker: Path, session_id: str
+        self,
+        run_dir: Path,
+        marker: Path,
+        session_id: str,
+        registration: dict,
+        helper: Path,
+        prior_marker_mtime_ns: int,
     ) -> dict:
         deadline = time.monotonic() + 15
         preflight_path = run_dir / "resource-sessions" / session_id / "preflight.json"
         shard_attempts = run_dir / "attempts" / "0"
         while time.monotonic() < deadline:
-            if marker.is_file() and preflight_path.is_file() and shard_attempts.is_dir():
+            marker_observed = False
+            try:
+                marker_observed = (
+                    remote_file_observation(
+                        registration=registration,
+                        remote_helper_path=helper,
+                        path=marker,
+                    )["mtime_ns"]
+                    > prior_marker_mtime_ns
+                )
+            except ContractError:
+                pass
+            if marker_observed and preflight_path.is_file() and shard_attempts.is_dir():
                 attempts = list(shard_attempts.glob("*.json"))
                 if attempts:
                     return read_canonical_json(preflight_path)
@@ -349,7 +368,13 @@ class E3LiveGate(unittest.TestCase):
             run_dir = gate_root / mode
             fault = {"kind": "none"}
             marker = marker_root / "case-a-kill.smt2.marker"
+            prior_marker_mtime_ns = 0
             if mode == "loss-retry":
+                prior_marker_mtime_ns = remote_file_observation(
+                    registration=registrations[0],
+                    remote_helper_path=helper,
+                    path=marker,
+                )["mtime_ns"]
                 marker.unlink(missing_ok=True)
                 fault = {
                     "kind": "kill-host-runner-after-marker",
@@ -391,24 +416,31 @@ class E3LiveGate(unittest.TestCase):
                 )
                 for allocation_id in ("initial-0", "initial-1", "initial-2")
             }
-            if mode == "loss-retry":
-                preflight = self.wait_for_failure_point(
-                    run_dir, marker, sessions["initial-0"]
-                )
-                unit = (
-                    f"{run['resource_enforcement']['unit_prefix']}-"
-                    f"{sessions['initial-0']}.service"
-                )
-                kill_remote_launcher(
-                    registration=registrations[0],
-                    remote_helper_path=helper,
-                    unit=unit,
-                    launcher_pid=preflight["launcher_pid"],
-                )
-            terminals = {
-                allocation_id: finish_allocation(handle, timeout=30)
-                for allocation_id, handle in handles.items()
-            }
+            try:
+                if mode == "loss-retry":
+                    preflight = self.wait_for_failure_point(
+                        run_dir,
+                        marker,
+                        sessions["initial-0"],
+                        registrations[0],
+                        helper,
+                        prior_marker_mtime_ns,
+                    )
+                    unit = (
+                        f"{run['resource_enforcement']['unit_prefix']}-"
+                        f"{sessions['initial-0']}.service"
+                    )
+                    kill_remote_launcher(
+                        registration=registrations[0],
+                        remote_helper_path=helper,
+                        unit=unit,
+                        launcher_pid=preflight["launcher_pid"],
+                    )
+            finally:
+                terminals = {
+                    allocation_id: finish_allocation(handle, timeout=30)
+                    for allocation_id, handle in handles.items()
+                }
             if mode == "control":
                 self.assertEqual(
                     {row["status"] for row in terminals.values()}, {"completed"}
