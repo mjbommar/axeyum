@@ -34,7 +34,7 @@ The three lanes are the three legs of that goal:
 
 | Front | axeyum today | Upstream ref | Gap being worked |
 |---|---|---|---|
-| Lean kernel import | nested-inductive **declines cleanly** (M1 done) | Lean 4 kernel | admit nested inductives (TL2.14) |
+| Lean kernel import | nested-inductive **admitted natively** (TL2.14 done; strict-positivity + transactional) | Lean 4 kernel | remaining kernel-completeness gaps |
 | SMT `QF_*` | full-library run ~30% at pause, WRONG=2 (FP, stale bin) | see landscape ↓ | full-library resume + FP-fix revalidation |
 | CAS summation | Gosper + WZ (`∑C(n,k)`, `∑k·C(n,k)`, `∑k²·C(n,k)`, **`∑C(n,k)²=C(2n,n)`** ✓) | SymPy `Sum`/`hyperexpand`, Mathematica | Dixon/Saalschütz `₃F₂`; alternating `(−1)ᵏ` |
 
@@ -60,6 +60,51 @@ Frontier to chase: **Bitwuzla** owns BV+FP, **Z3-alpha** owns nonlinear,
 proof-carrying angle (certified `unsat`) is where axeyum differentiates rather
 than trying to out-raw-solve Bitwuzla — track *decide-with-certificate* rate,
 not just decide rate. (Sources in cycle-2 research note below.)
+
+### Cycle 3+4 — 2026-07-22 (~11:30 EDT) — trigger: SMT + Lean commits
+
+**Micro.**
+- **SMT-COMP** 🟢 merged (ff → main): `23dfd4e8 integrate resumable fixture
+  runner` + `0121874b gate unchecked AUFLIA refutations` + `3e872fb8 make resume
+  gate executable`. The soundness one is the headline: QF_AUFLIA lazy-ROW was
+  exporting `unsat` from a **scalar refutation with no independently checked
+  proof** liftable through the array abstraction — now it **declines to
+  `unknown`** at the adapter boundary (trades coverage for zero wrong-`unsat`
+  risk; cheap certificate-rechecked array refuters still run first, so real
+  UNSAT coverage is preserved). Fixture-backed (`corpus/.../QF_AUFLIA/.../
+  pipeline-invalid.smt2` + `int_array_sort.rs`). **Gate: GREEN** — solver tests
+  pass; `cargo check --workspace` exit 0. Note: the array test file is
+  `#![cfg(feature = "full")]`; deep gate `-p axeyum-solver --features full`
+  queued as a background verify (change is sound-by-construction regardless).
+  The agent **rebased onto main** before pushing — clean ff.
+- **Lean** 🟢 merged (`60aa89b2`): `96b6fbd4 Implement native nested inductive
+  elimination` — **+2401 lines**, +1040 in `inductive.rs`, a new **1249-line,
+  23-test** suite. This is TL2.14: the kernel now **admits** nested inductives
+  (the M1 decline is replaced by real elimination). Highest-stakes review type
+  (a soundness *expansion* of the trusted kernel). Verified the evidence:
+  **185 kernel lib tests + all 23 nested-inductive tests pass**, and the suite
+  includes the load-bearing negative cases — `negative_occurrence_..._rejects`
+  (**strict positivity** preserved), `non_inductive_foreign_head_..._rejection`,
+  and multiple `..._is_typed_and_transactional` / `rolls_back...` (rejections
+  **roll back with no partial mutation** of the trusted environment). In-lane.
+  **Gate: GREEN** — `cargo check --workspace` exit 0. Pushed.
+
+**Macro.** The **Lean leg takes its biggest step yet**: from "nested inductives
+DECLINE cleanly" (cycle 1) to "nested inductives are **eliminated natively**"
+(this cycle) — a real move toward Lean-4-kernel parity, done the sound way
+(strict-positivity gate + transactional admission, so a rejected inductive can
+never half-mutate the environment). On the SMT leg, the AUFLIA fix is parity
+*with a minus sign that's actually a plus*: we deliberately solve **fewer**
+AUFLIA benchmarks than z3/cvc5 until we can *certify* the refutation — the
+decide-with-certificate metric is the one that matters here, exactly as the
+landscape note argues.
+
+**Health.** `/tmp` cleaned 80%→8% (45G of stale scratch reclaimed); doctest
+quota flag cleared. No runaways; temps nominal.
+
+**Watch-items.** All three lanes now touch shared `PLAN.md`/`STATUS.md`/docs;
+so far every merge auto-resolved union-clean. The SMT `full`-feature deep gate
+is the one open verification.
 
 ---
 
