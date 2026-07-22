@@ -1,9 +1,9 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0--S3 complete; S4 auditor implemented and live audit blocked on commit/push
+Status: S0--S4 complete; accepted selection identity ready for bounded S5 harness admission
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
-Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
+Decision: [accepted ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
 
 ## Bounded objective
 
@@ -284,8 +284,8 @@ artifact roots. `selection_observed=true`; S4 is next.
 - Commit the compact result document with all counts and digests; consider
   ADR-0356 for acceptance only after every registered gate passes.
 
-**S4 implementation:** preregistered and live-blocked until this implementation
-is committed and pushed. The standard-library entry point streams the complete
+**S4 implementation:** committed before live use. The standard-library entry
+point streams the complete
 path-sorted S1 eligibility and S2 corpus ledgers in lockstep, joins official S3
 membership, and emits one terminal decision plus historical row for every one
 of the 450,472 metadata IDs. It validates the exact S1 per-logic pools and
@@ -299,6 +299,19 @@ organizer package nor Polars and cannot execute a solver.
 The zero-selected `QF_UFFP` case is an explicit S4 gate: both metadata rows
 must retain `excluded-trivial`, with zero eligible rows, zero cap, and no S3
 per-logic output row. Competitive-logic exclusion is not the reason.
+
+**S4 result:** complete. The accepted artifact is
+`/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`.
+It contains one terminal decision for all 450,472 metadata rows and a
+15,148,369,947-byte selected population of 45,905 files: 2,709 selected-new,
+43,196 selected-old, 736 excluded-cap-new, 206,719 excluded-cap-old, and
+197,112 excluded-trivial. All 18 invariants passed and all 18 mutations
+rejected. A second fresh process reconstructed the complete join and physically
+rehashed every selected file. The implementation commit recorded by the
+artifact, `5f8864bc2b936f5be685a69b86d7fadaa4bb3d49`, is retained on remote branch
+`agent/smtcomp/s4-audit-5f8864bc`. The compact
+[S4 result](smtcomp-official-selection-final-s4-2026-07-22.md) records the
+artifact hashes and verification command.
 
 ### S5 — execution handoff
 
@@ -325,7 +338,8 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Commit and push the tested standard-library S4 auditor before its first live
-use. Then run it in a fresh external attempt, validate the content-addressed
-result from a second process, and record all counts and digests. No selected
-benchmark may reach solver execution before this gate completes.
+S4 is complete. S5 must add the accepted completion, selected-list, and
+selected-file identities to E1b preflight and prove them first on a tiny harness
+fixture. It is deliberately deferred while the active solver lane closes
+checked quantified functionality; this deferral does not weaken selection
+identity and does not authorize a large solver run.
