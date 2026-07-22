@@ -9808,6 +9808,18 @@ fn contains_sin_or_cos(expr: &CasExpr) -> bool {
     }
 }
 
+/// Whether `expr` contains a `sin`, `cos`, or `tan` head — the trig heads the
+/// Weierstrass `t = tan(x/2)` substitution rewrites.
+fn contains_trig(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan, _) => true,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_trig(a),
+        CasExpr::Div(a, b) => contains_trig(a) || contains_trig(b),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_trig),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
 /// Replace every `sin`/`cos` subexpression with `1` (a valid upper bound on their
 /// magnitude), counting the replacements in `count`.
 fn replace_trig_with_one(expr: &CasExpr, count: &mut usize) -> CasExpr {
@@ -14381,8 +14393,10 @@ fn replace_trig_heads(
 /// [`prove_derivative`] (whose half-angle fallback bridges the `x/2` ↔ `x` levels).
 /// `None` if the integrand is not a function of trig of `x` alone.
 fn integrate_weierstrass(expr: &CasExpr, var: &str) -> Option<CasExpr> {
-    // Require at least one sin/cos of `var` (else this is not a trig integrand).
-    if !contains_sin_or_cos(expr) {
+    // Require at least one sin/cos/tan of `var` (else this is not a trig integrand).
+    // `tan` is included so `∫1/(1+tan x)` — pure-tan, no bare sin/cos — is accepted;
+    // `replace_trig_heads` rewrites it as the rational `2t/(1−t²)`.
+    if !contains_trig(expr) {
         return None;
     }
     let t = if var == "t" { "s" } else { "t" };
@@ -14396,7 +14410,7 @@ fn integrate_weierstrass(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let reduced = expand_trig(expr);
     let in_t = replace_trig_heads(&reduced, var, &sin_t, &cos_t, &tan_t);
     // After substitution nothing in `x` (no bare x, no un-substituted trig) may remain.
-    if expr_contains_var(&in_t, var) || contains_sin_or_cos(&in_t) {
+    if expr_contains_var(&in_t, var) || contains_trig(&in_t) {
         return None;
     }
     let integrand_t = in_t * (CasExpr::int(2) / one_plus);
@@ -21198,6 +21212,10 @@ mod tests {
             // Multiple-angle integrand — reduced to single angle before substitution.
             (CasExpr::int(2) * x()).sin() / (CasExpr::int(1) + x().cos()),
             CasExpr::int(1) / (CasExpr::int(1) + (CasExpr::int(2) * x()).cos()),
+            // Pure-`tan` integrands (no bare sin/cos) are accepted too — `tan` is
+            // rewritten to `2t/(1−t²)`: ∫1/(1+tan x), ∫tan x/(1+tan x).
+            CasExpr::int(1) / (CasExpr::int(1) + x().tan()),
+            x().tan() / (CasExpr::int(1) + x().tan()),
         ] {
             let r = integrate(&integrand, "x").expect("Weierstrass integral");
             assert!(
