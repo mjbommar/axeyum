@@ -6567,6 +6567,13 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // Bounded (sin/cos) factor times a magnitude that decays to 0 — `sin x/x → 0`,
+    // `cos x/x² → 0` (the squeeze theorem).
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_bounded_decay(expr, var, point)
+    {
+        return Some(value);
+    }
     // At `x → 0⁺`, a positive power of `x` beats any power of `ln x`
     // (`x·ln x → 0`, `x²·(ln x)³ → 0`), resolving the `0·∞` form the series
     // fallback can't (ln has no Taylor expansion at 0).
@@ -6649,6 +6656,78 @@ fn limit_exp_dominated(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
         Some(CasExpr::zero()) // decay beats the rational factor
     } else {
         None // growth → ±∞
+    }
+}
+
+/// Limit at `±∞` by the **squeeze theorem**: if `expr` is a bounded `sin`/`cos`
+/// factor (`|·| ≤ 1`) times a magnitude that decays to `0`, the limit is `0`
+/// (`sin x/x → 0`, `cos x/x² → 0`). Requires no `sin`/`cos` in a denominator (where
+/// it could blow up), and at least one bounded factor. `None` otherwise.
+fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    if trig_in_denominator(expr) {
+        return None;
+    }
+    let mut replaced = 0usize;
+    let magnitude = replace_trig_with_one(expr, &mut replaced);
+    if replaced == 0 {
+        return None; // no bounded factor — not this path
+    }
+    match limit(&magnitude, var, point) {
+        Some(value) if matches!(&simplify(&value), CasExpr::Const(c) if c.is_zero()) => {
+            Some(CasExpr::zero())
+        }
+        _ => None,
+    }
+}
+
+/// Whether any `sin`/`cos` appears inside a denominator (the second operand of a
+/// `Div`) of `expr` — where bounding it above by `1` would be invalid.
+fn trig_in_denominator(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Div(numerator, denominator) => {
+            trig_in_denominator(numerator) || contains_sin_or_cos(denominator)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => trig_in_denominator(a),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(trig_in_denominator),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// Whether `sin` or `cos` appears anywhere in `expr`.
+fn contains_sin_or_cos(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _) => true,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_sin_or_cos(a),
+        CasExpr::Div(a, b) => contains_sin_or_cos(a) || contains_sin_or_cos(b),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_sin_or_cos),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// Replace every `sin`/`cos` subexpression with `1` (a valid upper bound on their
+/// magnitude), counting the replacements in `count`.
+fn replace_trig_with_one(expr: &CasExpr, count: &mut usize) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _) => {
+            *count += 1;
+            CasExpr::one()
+        }
+        CasExpr::Unary(func, a) => {
+            CasExpr::Unary(*func, Box::new(replace_trig_with_one(a, count)))
+        }
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(replace_trig_with_one(a, count))),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(replace_trig_with_one(a, count)), *e),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(replace_trig_with_one(a, count)),
+            Box::new(replace_trig_with_one(b, count)),
+        ),
+        CasExpr::Add(items) => {
+            CasExpr::Add(items.iter().map(|t| replace_trig_with_one(t, count)).collect())
+        }
+        CasExpr::Mul(items) => {
+            CasExpr::Mul(items.iter().map(|t| replace_trig_with_one(t, count)).collect())
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
 }
 
@@ -10955,6 +11034,27 @@ mod tests {
         );
         // Growth diverges (no finite limit): eˣ/x → +∞.
         assert!(limit(&(x().exp() / x()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn limits_of_bounded_over_infinity() {
+        let x = || v("x");
+        // Squeeze theorem: a bounded sin/cos over a growing magnitude → 0.
+        for e in [
+            x().sin() / x(),                    // sin x / x → 0
+            x().cos() / x().pow(2),             // cos x / x² → 0
+            x().sin() * x().cos() / x(),        // sin x cos x / x → 0
+        ] {
+            assert_equal(&limit(&e, "x", LimitPoint::PosInfinity).unwrap(), &CasExpr::zero());
+        }
+        assert_equal(
+            &limit(&(x().sin() / x()), "x", LimitPoint::NegInfinity).unwrap(),
+            &CasExpr::zero(),
+        );
+        // Divergent/oscillating/trig-in-denominator forms decline (no false 0).
+        assert!(limit(&(x() * x().sin()), "x", LimitPoint::PosInfinity).is_none());
+        assert!(limit(&x().sin(), "x", LimitPoint::PosInfinity).is_none());
+        assert!(limit(&(CasExpr::int(1) / x().sin()), "x", LimitPoint::PosInfinity).is_none());
     }
 
     #[test]
