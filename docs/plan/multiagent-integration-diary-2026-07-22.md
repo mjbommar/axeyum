@@ -458,6 +458,40 @@ nothing more (not full Lean parity). One leg of the compass, genuinely delivered
   never assume it's covered.)
 - **Health:** 30 °C, no runaways, disk fine.
 
+### Cycle 20 — 2026-07-22 (~15:10 EDT) — ★ MONITORING GAP found + 14-commit CAS catch-up
+
+**The gap.** The CAS agent does **not stay on one branch** — it creates a new
+topic branch per milestone (`vandermonde-wz` → `falling-moment-order-{seven,eight,
+fifteen,sixteen,nineteen}` → `raw-moment-order-{eleven,twenty}`, plus
+`squared-binomial-moment-family`, `fixed-shift-*`, etc.). My monitor **and** digest
+watched the fixed name `agent/cas/vandermonde-wz`, which froze at `c9e6f48f`
+(Vandermonde) hours ago. **So I was blind to all committed CAS work**, and my
+cycle-12/15/17 notes calling it "uncommitted WIP for hours" were WRONG — it was
+committing steadily to branches I wasn't watching. Correction logged here.
+
+**The catch-up.** The live CAS branch `raw-moment-order-twenty` (`f08e97ef`) was
+**14 commits** ahead of main — a certified moment hierarchy: WZ binomial identities
+→ fixed-shift third/fourth/fifth moments → fixed-shift convolution family →
+squared-binomial moment family → falling-factorial composition → direct moments
+through eighteen → nested-WZ-quotient compaction → raw-moment composition.
+merge-tree: **no conflicts** (CAS touched only `axeyum-cas` + `10-cas` docs; the
+big two-dot file list was branch-lag, not overlap). Merged with the safe pattern;
+**verified the 3-way merge kept all lean/smtcomp work** (grammar test still present)
+and STATUS kept both lanes' entries (32 cross-lane markers, 0 conflict markers).
+**Gate: GREEN — 522 CAS lib tests** (up from 504 at Vandermonde; +18 certified
+theorems), `cargo check --workspace` exit 0. → main `f69dd5be`, WIP intact.
+
+**The fixes.**
+1. **Monitor rearmed** (`bajgo9gs8`) to track **worktree HEADs by path**, not
+   branch names — immune to topic-branch switching; reports the live branch on each move.
+2. **Digest** now derives each lane's branch from `git -C <worktree> branch
+   --show-current` (fallback to seed), so it never watches a dead branch again.
+
+**Lesson (important).** When agents create topic branches per unit of work, watch
+the **worktree HEAD**, not a branch name. A fixed-branch watcher silently goes
+blind the moment the agent branches — and "no commits on the branch I watch" reads
+identically to "the lane is stuck," which is exactly the wrong conclusion I drew.
+
 ---
 
 ## Cycle log
