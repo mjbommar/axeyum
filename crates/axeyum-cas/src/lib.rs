@@ -8163,7 +8163,8 @@ fn integrate_partial_fraction_term(term: &CasExpr, var: &str) -> Option<CasExpr>
                         MultiPoly::from_univariate(var, &fpoly).to_expr().ln(),
                     ))
                 }
-                2 => integrate_irreducible_quadratic(var, &npoly, &fpoly),
+                2 => integrate_irreducible_quadratic(var, &npoly, &fpoly)
+                    .or_else(|| integrate_real_irrational_quadratic(var, &npoly, &fpoly)),
                 _ => None,
             }
         }
@@ -8237,6 +8238,66 @@ fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) 
                 CasExpr::Unary(UnaryFunc::Atan, Box::new(arg)),
             ])));
         }
+    }
+    match parts.len() {
+        0 => None,
+        1 => parts.into_iter().next(),
+        _ => Some(CasExpr::Add(parts)),
+    }
+}
+
+/// `∫ (c₁·x + c₀)/(a·x² + b·x + d) dx` for a quadratic with **real irrational
+/// roots** (discriminant `b² − 4ad > 0`, not a perfect square — i.e. irreducible
+/// over ℚ): the constant part gives an algebraic log with a symbolic surd
+/// `s = √(b² − 4ad)`:
+/// `(c₁/2a)·ln(a·x²+b·x+d) + ((2a·c₀ − b·c₁)/(a·s))·ln((2a·x+b−s)/(2a·x+b+s))`.
+/// The surd squares away under differentiation, so the certificate is rational.
+/// Closes `∫1/(x²−2) = (1/(2√2))·ln((x−√2)/(x+√2))` (up to the surd form).
+fn integrate_real_irrational_quadratic(
+    var: &str,
+    cc: &[Rational],
+    dd: &[Rational],
+) -> Option<CasExpr> {
+    let a = dd[2];
+    let b = dd.get(1).copied().unwrap_or_else(Rational::zero);
+    let d = dd.first().copied().unwrap_or_else(Rational::zero);
+    let c1 = cc.get(1).copied().unwrap_or_else(Rational::zero);
+    let c0 = cc.first().copied().unwrap_or_else(Rational::zero);
+    // Discriminant must be positive (real roots) and irrational (no rational √).
+    let disc = b
+        .checked_mul(b)?
+        .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(d)?)?;
+    if disc.numerator() <= 0 || rational_sqrt(disc).is_some() {
+        return None; // ≤0 handled elsewhere; rational √ ⇒ rational roots (linear factors)
+    }
+    let two_a = Rational::integer(2).checked_mul(a)?;
+
+    let mut parts: Vec<CasExpr> = Vec::new();
+    if !c1.is_zero() {
+        let ln_coeff = c1.checked_div(two_a)?;
+        let ln = CasExpr::Unary(
+            UnaryFunc::Ln,
+            Box::new(MultiPoly::from_univariate(var, dd).to_expr()),
+        );
+        parts.push(scaled_term(ln_coeff, ln));
+    }
+    // Constant-part coefficient (2a·c₀ − b·c₁)/(2a), over the surd s. (Unlike the
+    // atan case, ∫1/(ax²+bx+d) here is (1/s)·log_diff — no factor of 2 — so we
+    // divide by 2a, not a.)
+    let top = two_a.checked_mul(c0)?.checked_sub(b.checked_mul(c1)?)?;
+    if !top.is_zero() {
+        let rational_top = top.checked_div(two_a)?;
+        let s = CasExpr::Const(disc).sqrt();
+        let inv_s = CasExpr::int(1) / s.clone();
+        let base = MultiPoly::from_univariate(var, &[b, two_a]).to_expr(); // 2a·x + b
+        // ln((2a·x+b−s)/(2a·x+b+s)) = ln(2a·x+b−s) − ln(2a·x+b+s).
+        let log_diff =
+            (base.clone() - s.clone()).ln() - (base + s).ln();
+        parts.push(fold_trivial(&CasExpr::Mul(vec![
+            CasExpr::Const(rational_top),
+            inv_s,
+            log_diff,
+        ])));
     }
     match parts.len() {
         0 => None,
@@ -11577,9 +11638,17 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
-        // Purely irrational-real-root quadratics still need algebraic numbers → decline.
-        assert!(integrate(&(CasExpr::int(1) / (x().pow(2) - CasExpr::int(2))), "x")
-            .is_none_or(|c| !c.is_certified()));
+        // Quadratics with real irrational roots — algebraic logs with a symbolic surd.
+        for integrand in [
+            CasExpr::int(1) / (x().pow(2) - CasExpr::int(2)),   // (1/2√2)ln((x−√2)/(x+√2))
+            CasExpr::int(1) / (CasExpr::int(2) * x().pow(2) - CasExpr::int(3)),
+            (x() + CasExpr::int(1)) / (x().pow(2) - CasExpr::int(2)), // ln + surd log
+            CasExpr::int(1) / (x().pow(2) + x() - CasExpr::int(1)),
+        ] {
+            let r = integrate(&integrand, "x").expect("real-irrational quadratic");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
     }
 
     #[test]
