@@ -1344,7 +1344,9 @@ scoped effort rather than a risky mid-session refactor.
 
 **Frullani integrals + a soundness fix** (Entry 37m): `∫₀^∞(cos x−cos 2x)/x` wrongly returned `0` — the antiderivative `Ci(x)−Ci(2x)` at the lower bound `0` unsoundly cancelled `Ci(0)−Ci(0)`, but `Ci(z)~γ+ln|z|` so the combination is `−ln2`. Added `limit_singular_integral_sum_at_zero` (`Σcᵢ·Hᵢ(aᵢx)`, `H∈{Ci,Ei,Chi}`, converges iff `Σcᵢ=0` → `Σcᵢ·ln|aᵢ|`) and routed the improper/definite finite boundary through `limit` when the antiderivative has a log-singular head (`contains_singular_integral_head`). Plus `Ei(−∞)=0`. Closes the Frullani family. **(This is the kind of ∞−∞ cancellation a proof-carrying CAS must get right — declining, not guessing 0.)**
 
-**Session tally (Entries 37–37m): 30 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Limit polish** (Entry 37n): (1) `limit_via_series` now `cancel`s first so the `(1/g)·f` (Mul) spelling reduces like `f/g` (Div) — `(1/x²)ln(cos x)→−½`, hence `(cos x)^{1/x²}→e^{−½}`. (2) `limit_lhopital` — a 0/0 quotient with `f(a)=g(a)=0` returns `lim f′/g′` (up to depth 4), reaching forms the rational-coefficient series can't: `(aˣ−1)/x→ln a` (the numerator's derivative carries a transcendental `ln a`). Uses the *raw* quotient (cancel atomizes exp/ln). Non-0/0 and `g′(a)=0` poles decline.
+
+**Session tally (Entries 37–37n): 32 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
