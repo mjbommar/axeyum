@@ -164,7 +164,7 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M5 final bounded gates, accepted ADR-0353, completed TL2.12, exact
   non-claims, and the TL2.13 mutual-group handoff.
 - [`lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md`](lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
-  — proposed ADR-0354's atomic ordered group rule, shared parameter/universe and
+  — accepted ADR-0354's atomic ordered group rule, shared parameter/universe and
   group-wide positivity checks, complete motive/minor and target-recursion
   construction, native/mutation/generated/official gates, resource bounds,
   stop conditions, and P0--M5 commit/push sequence for TL2.13.
@@ -194,6 +194,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   twice-repeated exact construct/non-indexed/indexed streams, two registered
   cross-family normal forms, 22 rejecting wire/publication mutations, retained
   720/768/840 controls, and M5 assurance/closure handoff.
+- [`lean-mutual-inductive-groups-final-2026-07-22.md`](lean-mutual-inductive-groups-final-2026-07-22.md)
+  — M5's append-only assurance overlay, synchronized compatibility contract,
+  final bounded gates, accepted ADR-0354, completed TL2.13, exact non-claims,
+  and TL2.14 frontend-lowering handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

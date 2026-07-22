@@ -148,9 +148,9 @@ state.
 > closes the bounded kernel/importer, contract, parity, foundational-resource,
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
-> TL2.11 strict positivity and TL2.12 recursive induction-hypothesis generation
-> are now complete; TL2.13 mutual groups are the next preregistration-first
-> admission slice.
+> TL2.11 strict positivity, TL2.12 recursive induction-hypothesis generation,
+> and TL2.13 mutual groups are now complete; TL2.14 frontend lowering is the
+> next preregistration-first admission slice.
 > Accepted ADR-0352 and the
 > [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
@@ -233,8 +233,8 @@ state.
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups are now the primary TL2.13 semantic path; nested/well-founded
 > frontend lowering remains TL2.14.
-> TL2.13 is now preregistered by
-> [proposed ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> TL2.13 is now complete under
+> [accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
 > and its
 > [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
 > The trusted unit is one ordered group, not repeated single-family calls:
@@ -286,10 +286,13 @@ state.
 > import twice to identical declaration manifests; both selected theorem sides
 > normalize to `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Twenty-two rejecting
 > metadata/type/count/rule/field/publication mutations plus two positive
-> non-authority controls pass, as do the retained 720/768/840 populations. M5
-> next owns the assurance overlay, final bounded gates, ADR-0354 decision, and
-> complete roadmap synchronization. One Lean/Rust worker and 4 GiB caps remain
-> mandatory.
+> non-authority controls pass, as do the retained 720/768/840 populations. The
+> [M5 final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+> preserves the historical matrix in an append-only TL2.13 overlay, records
+> five admitted rows, three independently computation-checked rows, and one
+> current decline, removes the obsolete live `inductive-mutual` decline, closes
+> every bounded gate, accepts ADR-0354, and marks TL2.13 DONE. TL2.14 frontend
+> lowering is next; one Lean/Rust worker and 4 GiB caps remain mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

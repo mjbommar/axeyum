@@ -168,6 +168,13 @@ class LeanMutualInductiveGroupsM0Tests(unittest.TestCase):
             any("baseline identity/outcome" in item for item in self.failures())
         )
 
+    def test_tl2_13_assurance_overlay_preserves_m0_baseline_binding(self) -> None:
+        row = self.data["baseline"]["construct_matrix"]
+        digest = CHECK.baseline_artifact_sha256(
+            CHECK.ROOT / row["path"], "construct_matrix"
+        )
+        self.assertEqual(digest, row["sha256"])
+
     def test_premature_axeyum_observation_rejects(self) -> None:
         self.data["kernel_results"] = {"cross-family-computation": "accepted"}
         failures = self.failures()

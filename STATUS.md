@@ -369,9 +369,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.13 M4 importer and exact official groups are complete;
-  M5 assurance update and closure are next.**
-  [Proposed ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+- **2026-07-22 — TL2.13 mutual inductive groups are complete; TL2.14 frontend
+  lowering is next.**
+  [Accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
   and the
   [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
   bind pinned Lean 4.30's actual atomic group algorithm. M0 freezes a
@@ -425,8 +425,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   type, count, rule, field, and late-publication mutations plus recursor-order
   and descriptive-metadata positive controls pass. The complete importer suite
   is 40 integration tests; the complete kernel suite, 720/768/840 populations,
-  strict Clippy, and rustdoc pass. M5 owns the assurance overlay, final gates,
-  ADR-0354 decision, and roadmap synchronization; TL2.14 remains separate.
+  strict Clippy, and rustdoc pass. The
+  [M5 final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+  adds a history-preserving assurance overlay with five admitted rows, three
+  independently computation-checked rows, and one current decline; removes the
+  obsolete live `inductive-mutual` decline; and closes every registered code,
+  pinned-Lean, contract, foundational-resource, and link gate. ADR-0354 is
+  accepted and TL2.13 is DONE. TL2.14 frontend lowering remains separate and
+  is now the primary Lean semantic path.
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**
@@ -6932,7 +6938,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14. |
-| P3.6 / TL2.13 | Mutual inductive groups | **WIP (M4 official import/computation complete; M5 next; ADR-0354 proposed)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1 lands ordered representation/preflight/rollback; M2 lands native complete-group semantics across 18 public rows plus private mutation/late-failure teeth. M3 repeats 720 unique public cases byte-identically at descriptor `2ea6769fa45ea159`: 432 positive inference/iota contracts, 288 typed rollbacks, direct recursor-telescope order and target-rule oracles, 288 group-order/240 target-family mutations, and unchanged 768/840 controls. M4 imports the construct and both computation streams twice, compares dependency-ordered recursors by name, confirms both registered cross-family normal forms, and closes 22 rejecting importer/publication mutation classes. M5 assurance/final closure remains; TL2.14 frontend lowering stays separate. |
+| P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. TL2.14 frontend lowering is next. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6986,6 +6992,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.13 M5 and accepted ADR-0354.** The append-only
+  construct-matrix overlay preserves ADR-0351/TL2.12 history while recording
+  five admitted rows, three independently computation-checked rows, and one
+  current decline. The live compatibility contract removes
+  `inductive-mutual`; historical validators project their original matrix
+  view; 184 kernel units, 61 kernel integrations, 40 importer integrations,
+  both doctests, the 720/768/840 populations, pinned-Lean differentials,
+  strict Clippy/rustdoc, 77 Python tests, every generator/checker, 137 concepts,
+  174 packs, and links pass under the 4 GiB policy. The
+  [final result](docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+  marks TL2.13 DONE and hands the primary path to TL2.14 frontend lowering.
 
 - **2026-07-22 — Completed TL2.13 M4 exact official mutual-group import and
   computation.** The importer now validates each ordered family/constructor/

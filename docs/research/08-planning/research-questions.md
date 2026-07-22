@@ -809,10 +809,10 @@ Out of scope:
     [M5 result](../../plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
     closes all bounded gates and marks TL2.12 DONE. TL2.13 mutual groups are
     the next atomic semantic widening.
-- [ ] What is the trusted admission/publication unit for mutual inductive
+- [x] What is the trusted admission/publication unit for mutual inductive
       groups, and how must motives, minors, positivity, indices, and recursive
       target families be ordered?
-  - Proposed answer (2026-07-22): use one atomic ordered group, never repeated
+  - Answer (2026-07-22): use one atomic ordered group, never repeated
     single-family calls. Check common universe parameters and definitionally
     equal shared parameter telescopes, equivalent result universes, and the
     complete group occurrence set before publication. Order motives by family
@@ -824,7 +824,7 @@ Out of scope:
     K-like reduction, infer-check every recursor, and commit all declarations or
     none. Preserve `add_inductive` as a singleton wrapper and keep TL2.14
     frontend lowering separate. See
-    [proposed ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+    [accepted ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
     and the
     [TL2.13 execution plan](../../plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
     M0 now freezes both explicit official computations and their complete wire
@@ -853,8 +853,11 @@ Out of scope:
     imports all three frozen official streams twice, compares dependency-
     ordered recursors by checked name, confirms both registered cross-family
     normal forms, and closes 22 rejecting importer/publication mutation
-    classes. The question remains open until M5's assurance and final gates
-    close.
+    classes. The
+    [M5 result](../../plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+    preserves the historical assurance record, removes the obsolete live
+    decline, closes every bounded gate, accepts the decision, and marks TL2.13
+    DONE. TL2.14 owns the distinct frontend-lowering question.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

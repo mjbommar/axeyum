@@ -1,12 +1,11 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: M4 importer and exact official groups complete; M5 assurance update and
-closure are next
+Status: complete; ADR-0354 accepted; TL2.13 DONE
 
 Date: 2026-07-22
 
 Decision gate:
-[proposed ADR-0354](../research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+[accepted ADR-0354](../research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
 
 Parents:
 
@@ -362,6 +361,13 @@ order and descriptive-metadata controls prove completion-only publication.
 - commit, push, and verify remote equality.
 
 ### M5 — assurance update and closure
+
+Status: **complete**. See the
+[M5 final result](lean-mutual-inductive-groups-final-2026-07-22.md). The
+append-only assurance overlay records five admitted rows, three independently
+computation-checked rows, and one current decline; the live compatibility
+contract removes the obsolete mutual decline; all bounded gates pass;
+ADR-0354 is accepted; and TL2.14 owns the next semantic path.
 
 - update the machine construct assurance matrix without rewriting historical
   observations;

@@ -61,6 +61,16 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def historical_construct_matrix_sha256(path: Path) -> tuple[str, dict[str, Any]]:
+    """Hash the matrix at the TL2.12 boundary while retaining later overlays."""
+
+    registration = json.loads(path.read_text(encoding="utf-8"))
+    historical = dict(registration)
+    historical.pop("tl2_13_update", None)
+    encoded = (json.dumps(historical, indent=2) + "\n").encode()
+    return hashlib.sha256(encoded).hexdigest(), registration
+
+
 def load_manifest() -> dict[str, Any]:
     """Load the committed M3 observation manifest."""
 
@@ -176,12 +186,18 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         failures.append("construct-matrix observation drift")
     else:
         registration = ROOT / matrix["registration"]
-        if not registration.is_file() or sha256(registration) != matrix[
-            "current_registration_sha256"
-        ]:
+        if not registration.is_file():
             failures.append("construct-matrix registration hash drift")
-        elif "tl2_12_update" not in json.loads(registration.read_text(encoding="utf-8")):
-            failures.append("construct-matrix TL2.12 update missing")
+        else:
+            historical_sha256, current = historical_construct_matrix_sha256(
+                registration
+            )
+            if historical_sha256 != matrix["current_registration_sha256"]:
+                failures.append("construct-matrix registration hash drift")
+            elif "tl2_12_update" not in current:
+                failures.append("construct-matrix TL2.12 update missing")
+            elif "tl2_13_update" not in current:
+                failures.append("construct-matrix TL2.13 update missing")
     return failures
 
 

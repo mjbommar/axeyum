@@ -35,6 +35,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
         self.assertIn("`literal-string-typing`", first)
+        self.assertNotIn("`inductive-mutual`", first)
         self.assertNotIn("`literal-nat-typing`", first)
 
     def test_translation_cannot_receive_credit_without_parsing(self) -> None:

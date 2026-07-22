@@ -69,6 +69,14 @@ class LeanStrictPositivityM3Tests(unittest.TestCase):
         self.data = mutated
         self.assertTrue(any("construct-matrix observation" in item for item in self.failures()))
 
+    def test_later_construct_matrix_overlay_preserves_m3_binding(self) -> None:
+        matrix = self.data["construct_matrix_regression"]
+        digest, current = CHECK.historical_construct_matrix_sha256(
+            CHECK.ROOT / matrix["registration"]
+        )
+        self.assertEqual(digest, matrix["current_registration_sha256"])
+        self.assertIn("tl2_13_update", current)
+
 
 if __name__ == "__main__":
     unittest.main()

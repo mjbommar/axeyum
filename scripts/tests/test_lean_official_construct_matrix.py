@@ -96,7 +96,7 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
                 "direct-recursive-control": "independently-admitted",
                 "recursive-indexed": "dual-admitted-computation-checked",
                 "reflexive-higher-order": "dual-admitted-computation-checked",
-                "mutual": "parsed-declined",
+                "mutual": "dual-admitted-computation-checked",
                 "nested": "official-export-inventory-only",
                 "well-founded": "independently-admitted",
                 "non-positive-source-negative": "official-source-rejected",
@@ -104,6 +104,7 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         )
         self.assertIn("misclassified as malformed", first)
         self.assertIn("pre-elaborated root admitted through Acc.rec", first)
+        self.assertIn("indexedCrossFamilyComputes", first)
 
     def test_tl212_computation_and_outcome_drift_reject(self) -> None:
         self.data["tl2_12_update"]["outcomes"]["recursive-indexed"]["report"][
@@ -116,6 +117,24 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         self.assertTrue(any("typed outcome/report drift" in failure for failure in failures))
         self.assertTrue(any("computation contract drift" in failure for failure in failures))
         self.assertTrue(any("computation hash drift" in failure for failure in failures))
+
+    def test_tl213_computation_outcome_and_resource_drift_reject(self) -> None:
+        self.data["tl2_13_update"]["outcomes"]["mutual"]["report"][
+            "admitted_declarations"
+        ] = 25
+        self.data["tl2_13_update"]["computations"]["cross-family"]["sha256"] = (
+            "0" * 64
+        )
+        self.data["tl2_13_update"]["computations"]["indexed-cross-family"][
+            "reduction_checked"
+        ] = False
+        self.data["tl2_13_update"]["rust_test_threads"] = 2
+        failures = self.failures()
+        self.assertTrue(any("typed outcome/report drift" in failure for failure in failures))
+        self.assertTrue(any("computation contract drift" in failure for failure in failures))
+        self.assertTrue(any("computation hash drift" in failure for failure in failures))
+        self.assertTrue(any("two checked TL2.13 computations" in failure for failure in failures))
+        self.assertTrue(any("rust_test_threads drift" in failure for failure in failures))
 
     def test_impossible_assurance_promotions_reject(self) -> None:
         rows = {row["id"]: row for row in CHECK.derive_matrix_rows(self.data)}

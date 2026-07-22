@@ -97,8 +97,8 @@ Last updated: 2026-07-22
 > [M5 result](../../../docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
 > accepts the decision after every bounded gate and hands the semantic path to
 > TL2.13 mutual groups; the completed TL2.11 guard remains mandatory.
-> TL2.13 is now preregistered under
-> [proposed ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> TL2.13 is now complete under
+> [accepted ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
 > and a
 > [P0--M5 plan](../../../docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md):
 > one atomic ordered group path checks shared parameters/universes and complete-
@@ -124,8 +124,11 @@ Last updated: 2026-07-22
 > [M4 result](../../../docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md)
 > imports all three official streams twice, compares named recursors exactly,
 > confirms both registered cross-family normal forms, and closes 22 rejecting
-> importer/publication mutation classes. M5 final closure remains; TL2.14
-> frontend lowering stays separate.
+> importer/publication mutation classes. The
+> [M5 result](../../../docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
+> preserves the historical assurance record, closes every bounded gate, accepts
+> the decision, and marks TL2.13 DONE. TL2.14 frontend lowering is next and
+> stays separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

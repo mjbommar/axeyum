@@ -1871,5 +1871,91 @@
         }
       }
     }
+  },
+  "tl2_13_update": {
+    "measured_date": "2026-07-22",
+    "source_revision": "931524688efea5da928a14cfec03cf2fb0cf5a81",
+    "product_test": "crates/axeyum-lean-import/tests/official_mutual_inductive_groups.rs",
+    "runs_per_case": 2,
+    "resource_runner": "systemd-run --user --scope",
+    "memory_max": "4G",
+    "rust_jobs": 1,
+    "rust_test_threads": 1,
+    "lean_jobs": 1,
+    "lean_source_runs": 2,
+    "lean_olean_sha256": "b2582c150c5901728a871919e1c04922f44c11ddeba1a8a446189b6c4d604aba",
+    "lean_elapsed_ms": [
+      460,
+      220
+    ],
+    "lean_max_rss_kib": [
+      474312,
+      474740
+    ],
+    "rust_gate_elapsed_ms": 280,
+    "rust_gate_max_rss_kib": 52892,
+    "outcomes": {
+      "mutual": {
+        "variant": "CompletedImport",
+        "runs": 2,
+        "report": {
+          "names": 75,
+          "levels": 4,
+          "expressions": 305,
+          "declaration_records": 10,
+          "admitted_declarations": 26,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 26
+        },
+        "line": null,
+        "code": null,
+        "message": null
+      }
+    },
+    "computations": {
+      "cross-family": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-mutual-cross-computation.ndjson",
+        "sha256": "5013aff1165c8a50a63c54cd946ab2b489d0edfee7e0862bc53b061eabac0070",
+        "bytes": 18827,
+        "records": 318,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumMutualInductiveComputation.crossFamilyComputes",
+        "normal_form": "MiniNat.succ (MiniNat.succ MiniNat.zero)",
+        "report": {
+          "names": 60,
+          "levels": 4,
+          "expressions": 246,
+          "declaration_records": 7,
+          "admitted_declarations": 21,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 21
+        }
+      },
+      "indexed-cross-family": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-mutual-indexed-computation.ndjson",
+        "sha256": "fe867639eeed25db9672730b092db32a49b79e82c6c59c386d9ff0e6a48b3787",
+        "bytes": 21455,
+        "records": 374,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumMutualInductiveComputation.indexedCrossFamilyComputes",
+        "normal_form": "MiniNat.succ (MiniNat.succ MiniNat.zero)",
+        "report": {
+          "names": 72,
+          "levels": 4,
+          "expressions": 290,
+          "declaration_records": 7,
+          "admitted_declarations": 21,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 21
+        }
+      }
+    }
   }
 }

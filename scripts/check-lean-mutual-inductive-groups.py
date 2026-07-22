@@ -389,6 +389,17 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def baseline_artifact_sha256(path: Path, key: str) -> str:
+    """Hash an M0 artifact after removing its registered later-stage overlay."""
+
+    if key != "construct_matrix":
+        return sha256(path)
+    registration = json.loads(path.read_text(encoding="utf-8"))
+    registration.pop("tl2_13_update", None)
+    encoded = (json.dumps(registration, indent=2) + "\n").encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
 def load_manifest() -> dict[str, Any]:
     """Load the committed M0 manifest."""
 
@@ -483,7 +494,7 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         path = ROOT / str(row.get("path", ""))
         if not path.is_file():
             failures.append(f"baseline artifact missing: {key}")
-        elif sha256(path) != row.get("sha256"):
+        elif baseline_artifact_sha256(path, key) != row.get("sha256"):
             failures.append(f"baseline artifact hash drift: {key}")
         elif "bytes" in row and path.stat().st_size != row["bytes"]:
             failures.append(f"baseline artifact byte count drift: {key}")

@@ -36,6 +36,7 @@ TOP_LEVEL_KEYS = {
     "stage_b",
     "product_measurement",
     "tl2_12_update",
+    "tl2_13_update",
 }
 CASE_KEYS = {
     "id",
@@ -141,6 +142,28 @@ TL212_COMPUTATION_KEYS = {
     "normal_form",
     "report",
 }
+TL213_UPDATE_KEYS = {
+    "measured_date",
+    "source_revision",
+    "product_test",
+    "runs_per_case",
+    "resource_runner",
+    "memory_max",
+    "rust_jobs",
+    "rust_test_threads",
+    "lean_jobs",
+    "lean_source_runs",
+    "lean_olean_sha256",
+    "lean_elapsed_ms",
+    "lean_max_rss_kib",
+    "rust_gate_elapsed_ms",
+    "rust_gate_max_rss_kib",
+    "outcomes",
+    "computations",
+}
+TL213_OUTCOME_KEYS = TL212_OUTCOME_KEYS
+TL213_REPORT_KEYS = TL212_REPORT_KEYS
+TL213_COMPUTATION_KEYS = TL212_COMPUTATION_KEYS
 EXPECTED_PINS = {
     "lean": {
         "toolchain": "leanprover/lean4:v4.30.0",
@@ -306,6 +329,35 @@ EXPECTED_TL212_COMPUTATIONS = {
         "AxeyumRecursiveIHComputation.accPropertyComputes",
         "True",
         (67, 3, 232, 11, 20, 0, 0, 20),
+    ),
+}
+EXPECTED_TL213_OUTCOMES = {
+    "mutual": (
+        "CompletedImport",
+        None,
+        None,
+        None,
+        (75, 4, 305, 10, 26, 0, 0, 26),
+    ),
+}
+EXPECTED_TL213_COMPUTATIONS = {
+    "cross-family": (
+        "docs/plan/fixtures/lean4export-v4.30-mutual-cross-computation.ndjson",
+        "5013aff1165c8a50a63c54cd946ab2b489d0edfee7e0862bc53b061eabac0070",
+        18_827,
+        318,
+        "AxeyumMutualInductiveComputation.crossFamilyComputes",
+        "MiniNat.succ (MiniNat.succ MiniNat.zero)",
+        (60, 4, 246, 7, 21, 0, 0, 21),
+    ),
+    "indexed-cross-family": (
+        "docs/plan/fixtures/lean4export-v4.30-mutual-indexed-computation.ndjson",
+        "fe867639eeed25db9672730b092db32a49b79e82c6c59c386d9ff0e6a48b3787",
+        21_455,
+        374,
+        "AxeyumMutualInductiveComputation.indexedCrossFamilyComputes",
+        "MiniNat.succ (MiniNat.succ MiniNat.zero)",
+        (72, 4, 290, 7, 21, 0, 0, 21),
     ),
 }
 ALLOWED_ASSURANCE_CLASSES = {
@@ -709,6 +761,126 @@ def validate_tl212_update(data: dict[str, Any], failures: list[str]) -> None:
                     failures.append(f"{case_id}: TL2.12 computation record drift")
 
 
+def validate_tl213_update(data: dict[str, Any], failures: list[str]) -> None:
+    update = data.get("tl2_13_update")
+    check_exact_keys(update, TL213_UPDATE_KEYS, "tl2_13_update", failures)
+    if not isinstance(update, dict):
+        return
+    expected_scalars = {
+        "measured_date": "2026-07-22",
+        "source_revision": "931524688efea5da928a14cfec03cf2fb0cf5a81",
+        "product_test": (
+            "crates/axeyum-lean-import/tests/official_mutual_inductive_groups.rs"
+        ),
+        "runs_per_case": 2,
+        "resource_runner": "systemd-run --user --scope",
+        "memory_max": "4G",
+        "rust_jobs": 1,
+        "rust_test_threads": 1,
+        "lean_jobs": 1,
+        "lean_source_runs": 2,
+        "lean_olean_sha256": (
+            "b2582c150c5901728a871919e1c04922f44c11ddeba1a8a446189b6c4d604aba"
+        ),
+        "lean_elapsed_ms": [460, 220],
+        "lean_max_rss_kib": [474312, 474740],
+        "rust_gate_elapsed_ms": 280,
+        "rust_gate_max_rss_kib": 52892,
+    }
+    for key, expected in expected_scalars.items():
+        if update.get(key) != expected:
+            failures.append(f"TL2.13 update {key} drift")
+    checked_repo_path(update.get("product_test"), "tl2_13_update.product_test", failures)
+
+    outcomes = update.get("outcomes")
+    if not isinstance(outcomes, dict):
+        failures.append("TL2.13 outcomes must be an object")
+    elif list(outcomes) != list(EXPECTED_TL213_OUTCOMES):
+        failures.append("TL2.13 outcome population/order drift")
+    else:
+        for case_id, expected in EXPECTED_TL213_OUTCOMES.items():
+            outcome = outcomes[case_id]
+            check_exact_keys(
+                outcome,
+                TL213_OUTCOME_KEYS,
+                f"tl2_13_update.outcomes.{case_id}",
+                failures,
+            )
+            if not isinstance(outcome, dict):
+                continue
+            actual = (
+                outcome.get("variant"),
+                outcome.get("line"),
+                outcome.get("code"),
+                outcome.get("message"),
+                report_tuple(outcome.get("report")),
+            )
+            if actual != expected:
+                failures.append(f"{case_id}: TL2.13 typed outcome/report drift")
+            if outcome.get("runs") != 2:
+                failures.append(f"{case_id}: TL2.13 outcome must repeat twice")
+            check_exact_keys(
+                outcome.get("report"),
+                TL213_REPORT_KEYS,
+                f"tl2_13_update.outcomes.{case_id}.report",
+                failures,
+            )
+
+    computations = update.get("computations")
+    if not isinstance(computations, dict):
+        failures.append("TL2.13 computations must be an object")
+    elif list(computations) != list(EXPECTED_TL213_COMPUTATIONS):
+        failures.append("TL2.13 computation population/order drift")
+    else:
+        for computation_id, expected in EXPECTED_TL213_COMPUTATIONS.items():
+            computation = computations[computation_id]
+            check_exact_keys(
+                computation,
+                TL213_COMPUTATION_KEYS,
+                f"tl2_13_update.computations.{computation_id}",
+                failures,
+            )
+            if not isinstance(computation, dict):
+                continue
+            path = checked_repo_path(
+                computation.get("path"),
+                f"tl2_13_update.computations.{computation_id}.path",
+                failures,
+            )
+            actual = (
+                computation.get("path"),
+                computation.get("sha256"),
+                computation.get("bytes"),
+                computation.get("records"),
+                computation.get("theorem"),
+                computation.get("normal_form"),
+                report_tuple(computation.get("report")),
+            )
+            if actual != expected:
+                failures.append(f"{computation_id}: TL2.13 computation contract drift")
+            if (
+                computation.get("runs") != 2
+                or computation.get("completed") is not True
+                or computation.get("reduction_checked") is not True
+            ):
+                failures.append(
+                    f"{computation_id}: two checked TL2.13 computations required"
+                )
+            check_exact_keys(
+                computation.get("report"),
+                TL213_REPORT_KEYS,
+                f"tl2_13_update.computations.{computation_id}.report",
+                failures,
+            )
+            if path is not None:
+                if sha256(path) != computation.get("sha256"):
+                    failures.append(f"{computation_id}: TL2.13 computation hash drift")
+                if path.stat().st_size != computation.get("bytes"):
+                    failures.append(f"{computation_id}: TL2.13 computation size drift")
+                if len(path.read_bytes().splitlines()) != computation.get("records"):
+                    failures.append(f"{computation_id}: TL2.13 computation record drift")
+
+
 def validate_manifest(data: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     check_exact_keys(data, TOP_LEVEL_KEYS, "manifest", failures)
@@ -738,16 +910,21 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             failures.append("pre-product manifest must not contain product measurements")
         if data.get("tl2_12_update") is not None:
             failures.append("pre-product manifest must not contain TL2.12 updates")
+        if data.get("tl2_13_update") is not None:
+            failures.append("pre-product manifest must not contain TL2.13 updates")
     elif stage == "wire-frozen":
         validate_stage_b(data, failures)
         if data.get("product_measurement") is not None:
             failures.append("pre-product manifest must not contain product measurements")
         if data.get("tl2_12_update") is not None:
             failures.append("pre-product manifest must not contain TL2.12 updates")
+        if data.get("tl2_13_update") is not None:
+            failures.append("pre-product manifest must not contain TL2.13 updates")
     elif stage == "product-measured":
         validate_stage_b(data, failures)
         validate_product(data, failures)
         validate_tl212_update(data, failures)
+        validate_tl213_update(data, failures)
 
     toolchain_path = ROOT / "lean-toolchain"
     if toolchain_path.read_text(encoding="utf-8").strip() != EXPECTED_PINS["lean"]["toolchain"]:
@@ -935,8 +1112,10 @@ def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
 
     historical = {entry["id"]: entry for entry in data["historical_controls"]}
     streams = data["stage_b"]["streams"]
-    outcomes = data["tl2_12_update"]["outcomes"]
-    computations = data["tl2_12_update"]["computations"]
+    outcomes = dict(data["tl2_12_update"]["outcomes"])
+    outcomes.update(data["tl2_13_update"]["outcomes"])
+    tl212_computations = data["tl2_12_update"]["computations"]
+    tl213_computations = data["tl2_13_update"]["computations"]
     rows: list[dict[str, str]] = []
     for case in data["cases"]:
         case_id = case["id"]
@@ -945,7 +1124,7 @@ def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
             "source_family": case["source_family"],
             "official_source": case["expected_official_source"],
             "selected_root": case["selected_root"] or "—",
-            "computation_stream": "none",
+            "computation_streams": [],
         }
         if case_id == "non-positive-source-negative":
             row = {
@@ -982,14 +1161,20 @@ def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
             inventory = stream["inventory"]
             outcome = outcomes[case_id]
             blockers = ", ".join(inventory["blockers"]) or "none"
+            selected_computations: list[dict[str, Any]] = []
             if outcome["variant"] == "CompletedImport":
                 report = outcome["report"]
                 rust_outcome = (
                     f"CompletedImport: {report['admitted_declarations']} declarations, "
                     f"{report['axioms']} axioms"
                 )
-                computation = computations.get(case_id)
-                if computation is None:
+                if case_id == "mutual":
+                    selected_computations = list(tl213_computations.values())
+                elif case_id in tl212_computations:
+                    selected_computations = [tl212_computations[case_id]]
+                else:
+                    selected_computations = []
+                if not selected_computations:
                     computation_status = "not selected"
                     assurance = "independently-admitted"
                 else:
@@ -1013,8 +1198,14 @@ def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
                 boundary = (
                     "pre-elaborated root admitted through Acc.rec; no frontend-lowering credit"
                 )
-            elif case_id in computations:
-                computation = computations[case_id]
+            elif case_id == "mutual":
+                computation_values = list(tl213_computations.values())
+                boundary = "companion official streams check " + "; ".join(
+                    f"{computation['theorem']} -> {computation['normal_form']}"
+                    for computation in computation_values
+                )
+            elif case_id in tl212_computations:
+                computation = tl212_computations[case_id]
                 boundary = (
                     f"companion official stream checks {computation['theorem']} -> "
                     f"{computation['normal_form']}"
@@ -1037,8 +1228,9 @@ def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
                 "assurance_class": assurance,
                 "boundary": boundary,
             }
-            if case_id in computations:
-                row["computation_stream"] = computations[case_id]["path"]
+            row["computation_streams"] = [
+                computation["path"] for computation in selected_computations
+            ]
         row_failures = validate_matrix_row(row)
         if row_failures:
             raise ValueError(f"{case_id}: " + "; ".join(row_failures))
@@ -1130,8 +1322,11 @@ def render_matrix(data: dict[str, Any]) -> str:
     for row in rows:
         stream = markdown_link(row["stream"])
         wire = f"{stream}; {row['wire_inventory']}" if stream != "none" else row["wire_inventory"]
-        if row["computation_stream"] != "none":
-            wire += f"; computation {markdown_link(row['computation_stream'])}"
+        computation_streams = row["computation_streams"]
+        if computation_streams:
+            wire += "; computation " + ", ".join(
+                markdown_link(path) for path in computation_streams
+            )
         values = [
             f"`{row['id']}`",
             row["source_family"],
@@ -1152,8 +1347,9 @@ def render_matrix(data: dict[str, Any]) -> str:
             "",
             "- `independently-admitted` means the exact official stream produced a completed owned",
             "  environment through Axeyum's trusted gate. It does not imply a checked computation.",
-            "- `dual-admitted-computation-checked` adds a separate frozen official stream whose",
-            "  exported `rfl` theorem and registered normal form are checked by Axeyum reduction.",
+            "- `dual-admitted-computation-checked` adds one or more separate frozen official",
+            "  streams whose exported `rfl` theorems and registered normal forms are checked by",
+            "  Axeyum reduction.",
             "- `translated-kernel-declined` means an official declaration reached the independent",
             "  kernel and received a typed rejection.",
             "- `parsed-declined` means importer policy recognized and transactionally declined the",
@@ -1166,6 +1362,8 @@ def render_matrix(data: dict[str, Any]) -> str:
             "The well-founded row now admits the already-elaborated selected root through `Acc.rec`.",
             "That is kernel/import evidence for this exact stream, not well-founded source elaboration,",
             "frontend lowering, or general ecosystem credit.",
+            "The mutual row requires both the non-indexed and indexed companion computations; neither",
+            "the construct witness nor only one companion stream is sufficient for computation credit.",
             "",
         ]
     )
@@ -1211,7 +1409,8 @@ def main() -> int:
         f"{len(data['historical_controls'])} reproduced controls, "
         f"Stage B={'frozen' if data['stage'] != 'source-frozen' else 'absent'}, "
         f"product={'frozen' if data['stage'] == 'product-measured' else 'absent'}, "
-        f"TL2.12={'current' if data.get('tl2_12_update') else 'absent'}"
+        f"TL2.12={'frozen' if data.get('tl2_12_update') else 'absent'}, "
+        f"TL2.13={'current' if data.get('tl2_13_update') else 'absent'}"
     )
     return 0
 

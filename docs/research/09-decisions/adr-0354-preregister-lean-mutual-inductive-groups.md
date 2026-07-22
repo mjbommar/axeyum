@@ -1,6 +1,6 @@
 # ADR-0354: Preregister atomic Lean mutual-inductive group admission
 
-Status: proposed
+Status: accepted
 
 Date: 2026-07-22
 
@@ -241,6 +241,20 @@ reviewable.
 Rejected in this slice. The accepted identity domain is versioned and its
 single-family digests are mandatory controls. Any public structural extension
 needs its own versioned decision rather than an incidental semantic change.
+
+## Outcome
+
+Accepted on 2026-07-22. M0-M4 met the preregistration, singleton-preservation,
+native-semantics, deterministic-grammar, official-import, computation, and
+mutation requirements. M5 preserved the historical construct observations in
+an append-only assurance overlay, removed the obsolete live
+`inductive-mutual` decline, and closed every bounded code, pinned-Lean,
+contract, foundational-resource, link, staged-file, and remote-ref gate. See
+the [final result](../../plan/lean-mutual-inductive-groups-final-2026-07-22.md).
+
+The accepted scope is the independently checked, already lowered mutual core.
+Native mutual syntax/elaboration and nested or well-founded frontend lowering
+remain outside this decision and move to TL2.14.
 
 ## Consequences
 

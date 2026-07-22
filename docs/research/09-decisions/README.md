@@ -408,4 +408,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0351](adr-0351-preregister-official-lean-construct-matrix.md) | Preregister source-first and wire-second official Lean construct measurement before widening recursive admission | accepted |
 | [0352](adr-0352-preregister-lean-strict-positivity.md) | Reproduce Lean 4.30 strict positivity before recursive-indexed or reflexive admission widens | accepted |
 | [0353](adr-0353-preregister-lean-recursive-induction-hypotheses.md) | Accept one telescope-based Lean induction-hypothesis rule for direct, indexed, and higher-order recursive fields | accepted |
-| [0354](adr-0354-preregister-lean-mutual-inductive-groups.md) | Preregister atomic ordered mutual-inductive groups with group-wide positivity, shared motives/minors, and target-family recursion | proposed |
+| [0354](adr-0354-preregister-lean-mutual-inductive-groups.md) | Preregister atomic ordered mutual-inductive groups with group-wide positivity, shared motives/minors, and target-family recursion | accepted |
