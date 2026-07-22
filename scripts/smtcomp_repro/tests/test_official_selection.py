@@ -59,9 +59,9 @@ class OfficialSelectionTests(unittest.TestCase):
     def test_authority_manifest_is_canonical_and_cross_checked(self) -> None:
         self.generator["validate"](self.authority)
         self.assertEqual(AUTHORITY_PATH.read_bytes(), canonical_json_bytes(self.authority))
-        self.assertEqual(self.authority["summary"]["submission_count"], 53)
-        self.assertEqual(self.authority["summary"]["competitive_submission_count"], 38)
-        self.assertEqual(self.authority["policy"]["global_seed"], 22_731_158)
+        self.assertEqual(self.authority["summary"]["submission_count"], 51)
+        self.assertEqual(self.authority["summary"]["competitive_submission_count"], 36)
+        self.assertEqual(self.authority["policy"]["global_seed"], 22_731_074)
         self.assertEqual(self.authority["benchmark_metadata"]["non_incremental_rows"], 450_472)
 
     def test_authority_mutations_reject(self) -> None:
@@ -100,7 +100,7 @@ class OfficialSelectionTests(unittest.TestCase):
     def test_contract_ids_and_frozen_policy_are_unique(self) -> None:
         contract = json.loads(CONTRACT_PATH.read_bytes())
         self.assertEqual(contract["schema"], "axeyum-smtcomp-official-selection-contract-v1")
-        self.assertEqual(contract["policy"]["global_seed"], 22_731_158)
+        self.assertEqual(contract["policy"]["global_seed"], 22_731_074)
         invariant_ids = [row["id"] for row in contract["invariants"]]
         mutation_ids = [row["id"] for row in contract["mutations"]]
         self.assertEqual(len(invariant_ids), 18)
@@ -134,6 +134,13 @@ class OfficialSelectionTests(unittest.TestCase):
                     {"logics": ["QF_BV"], "tracks": ["SingleQuery"]},
                 ],
             },
+            {
+                "name": "regexp-solver",
+                "participations": [
+                    {"logics": "QF_(BV|LIA)", "tracks": ["SingleQuery"]},
+                ],
+                "seed": 23,
+            },
         ]
         normalized = adapt_official_submissions(documents, divisions)
         self.assertEqual(normalized[0]["seed"], 17)
@@ -143,6 +150,10 @@ class OfficialSelectionTests(unittest.TestCase):
         )
         self.assertFalse(normalized[1]["competitive"])
         self.assertIsNone(normalized[1]["seed"])
+        self.assertEqual(
+            normalized[2]["participations"],
+            [{"logics": ["QF_BV", "QF_LIA"], "track": "single-query"}],
+        )
         self.assertEqual(
             extract_removed_benchmark_ids(defs_source),
             {"non-incremental/QF_BV/2024-old/nested/removed.smt2"},
@@ -199,6 +210,19 @@ class OfficialSelectionTests(unittest.TestCase):
                         "name": "bad-division",
                         "participations": [
                             {"divisions": ["missing"], "tracks": ["SingleQuery"]},
+                        ],
+                        "seed": 1,
+                    }
+                ],
+                divisions,
+            )
+        with self.assertRaises(SelectionAuditError):
+            adapt_official_submissions(
+                [
+                    {
+                        "name": "bad-regexp",
+                        "participations": [
+                            {"logics": "[", "tracks": ["SingleQuery"]},
                         ],
                         "seed": 1,
                     }
@@ -274,7 +298,7 @@ class OfficialSelectionTests(unittest.TestCase):
             path.write_bytes(gzip.compress(b'{"other":[]}\n'))
             with self.assertRaises(self.input_audit["InputAuditError"]):
                 list(self.input_audit["iter_gzip_object_array"](path, "target"))
-            path.write_bytes(gzip.compress(b'{"target":[{"id":1}') )
+            path.write_bytes(gzip.compress(b'{"target":[{"id":1}'))
             with self.assertRaises(self.input_audit["InputAuditError"]):
                 list(self.input_audit["iter_gzip_object_array"](path, "target"))
 

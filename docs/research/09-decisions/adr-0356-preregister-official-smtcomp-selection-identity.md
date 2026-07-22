@@ -64,10 +64,12 @@ as non-`Unknown`. The auditor records this discrepancy and matches the
 executable producer; it does not silently substitute the comment.
 4. The complete competitive/noncompetitive submission ledger, participation
    expansion, competitive-logic derivation, and seed derivation. The frozen
-   upstream snapshot currently yields 53 submissions, 38 competitive
+   upstream snapshot currently yields 51 direct-child submission files, 36 competitive
    submissions, no missing competitive seed, submission-seed sum
-   `9,684,066,285`, modulo-2^30 value `20,389,869`, NYSE component `2,341,289`,
-   and final global seed `22,731,158`.
+   `9,684,066,201`, modulo-2^30 value `20,389,785`, NYSE component `2,341,289`,
+   and final global seed `22,731,074`. The two JSON examples below
+   `submissions/template/` are excluded because `Config.submissions` uses the
+   non-recursive glob `../submissions/*.json`.
 5. One normalized benchmark row for every metadata entry, with exact path,
    logic, complete family path, name, status, assertion count, archive identity,
    file size, and SHA-256. The metadata and extracted corpus must form an exact
@@ -121,7 +123,7 @@ The implementation must pass all of these gates in order:
    explicit selection removals. Each file's digest is computed from its bytes,
    not inferred from archive metadata.
 5. **Official production:** the pinned organizer code runs twice in isolated
-   locked environments with Polars 1.39.2 and seed `22,731,158`; normalized
+   locked environments with Polars 1.39.2 and seed `22,731,074`; normalized
    selections and per-logic counts are byte-identical.
 6. **Independent audit:** a separate standard-library checker reconstructs the
    metadata IDs, competitive logics, historical difficulty facts, eligibility,

@@ -305,7 +305,7 @@ def run(authority_path: Path, output_dir: Path) -> dict[str, Any]:
     competitive_submissions = [row for row in submissions if row["competitive"]]
     seed_sum = sum(row["seed"] for row in competitive_submissions)
     seed = seed_sum % authority["policy"]["submission_seed_modulus"] + authority["policy"]["nyse_seed"]
-    if len(submissions) != 53 or len(competitive_submissions) != 38 or seed != 22_731_158:
+    if len(submissions) != 51 or len(competitive_submissions) != 36 or seed != 22_731_074:
         raise InputAuditError("normalized submission count or seed drift")
 
     benchmark_path = input_root / authority["benchmark_metadata"]["path"]

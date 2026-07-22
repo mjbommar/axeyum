@@ -13,6 +13,7 @@ import gzip
 import hashlib
 import json
 import math
+import re
 import stat
 from collections import defaultdict
 from pathlib import Path, PurePosixPath
@@ -442,9 +443,21 @@ def adapt_official_submissions(
                 continue
             expanded: set[str] = set()
             division_names = participation.get("divisions", [])
-            explicit_logics = participation.get("logics", [])
-            if not isinstance(division_names, list) or not isinstance(explicit_logics, list):
-                raise SelectionAuditError("official divisions/logics are not lists")
+            explicit_logics_value = participation.get("logics", [])
+            if not isinstance(division_names, list):
+                raise SelectionAuditError("official divisions are not a list")
+            if isinstance(explicit_logics_value, str):
+                try:
+                    pattern = re.compile(explicit_logics_value)
+                except re.error as error:
+                    raise SelectionAuditError("official logic regexp is invalid") from error
+                explicit_logics = sorted(
+                    logic for logic in valid_logics if pattern.fullmatch(logic)
+                )
+            elif isinstance(explicit_logics_value, list):
+                explicit_logics = explicit_logics_value
+            else:
+                raise SelectionAuditError("official logics are neither a list nor regexp")
             for division in division_names:
                 if division not in divisions:
                     raise SelectionAuditError(f"unknown official division: {division!r}")
