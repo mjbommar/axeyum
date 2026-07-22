@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0--S3 complete; S4 independent audit next
+Status: S0--S3 complete; S4 auditor implemented and live audit blocked on commit/push
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -284,6 +284,22 @@ artifact roots. `selection_observed=true`; S4 is next.
 - Commit the compact result document with all counts and digests; consider
   ADR-0356 for acceptance only after every registered gate passes.
 
+**S4 implementation:** preregistered and live-blocked until this implementation
+is committed and pushed. The standard-library entry point streams the complete
+path-sorted S1 eligibility and S2 corpus ledgers in lockstep, joins official S3
+membership, and emits one terminal decision plus historical row for every one
+of the 450,472 metadata IDs. It validates the exact S1 per-logic pools and
+new-before-old quotas against S3 counts, physically rehashes all 45,905 selected
+files, and publishes the eleven-artifact contract only after all 18 invariants
+and 18 rejecting mutation IDs pass. A second invocation validates the
+content-addressed root, reconstructs the complete corpus/history/decision join,
+and physically rehashes the selected population again. It imports neither the
+organizer package nor Polars and cannot execute a solver.
+
+The zero-selected `QF_UFFP` case is an explicit S4 gate: both metadata rows
+must retain `excluded-trivial`, with zero eligible rows, zero cap, and no S3
+per-logic output row. Competitive-logic exclusion is not the reason.
+
 ### S5 — execution handoff
 
 - Extend E1b preflight to consume the accepted `complete.json`,
@@ -309,8 +325,7 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Implement, test, commit, and push the standard-library S4 auditor before using
-the selected population for any solver execution. Join all 450,472 eligibility
-and corpus rows to the official selected set, prove the complete decision
-partition and per-logic quotas, hash every selected file, run the registered
-mutation matrix, and publish completion last.
+Commit and push the tested standard-library S4 auditor before its first live
+use. Then run it in a fresh external attempt, validate the content-addressed
+result from a second process, and record all counts and digests. No selected
+benchmark may reach solver execution before this gate completes.
