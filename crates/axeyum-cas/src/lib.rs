@@ -184,6 +184,10 @@ pub enum UnaryFunc {
     Acosh,
     /// The **gamma function** `Γ(x)` (with `Γ′(x) = Γ(x)·ψ(x)`, `ψ` the digamma).
     Gamma,
+    /// The principal **`q`-th root** `x^{1/q}` (`q ≥ 2`), the degree `q` carried in the
+    /// variant. `NthRoot(2)` is the square root; `NthRoot(3)` the cube root. The
+    /// derivative `d/dx x^{1/q} = (1/q)·x^{1/q}/x` stays in the fragment.
+    NthRoot(u32),
     /// The **polygamma function** `ψ⁽ⁿ⁾(x)`, the `n`-th derivative of the digamma
     /// `ψ = ψ⁽⁰⁾ = (ln Γ)′`. The order `n` is carried in the variant, so the whole
     /// derivative tower `ψ⁽ⁿ⁾′ = ψ⁽ⁿ⁺¹⁾` stays inside the fragment (no infinite set
@@ -207,6 +211,9 @@ impl UnaryFunc {
         if let UnaryFunc::BesselJ(order) = self {
             return format!("BesselJ{order}");
         }
+        if let UnaryFunc::NthRoot(degree) = self {
+            return format!("root{degree}");
+        }
         let fixed = match self {
             UnaryFunc::Ln => "ln",
             UnaryFunc::Exp => "exp",
@@ -229,6 +236,7 @@ impl UnaryFunc {
             UnaryFunc::FresnelS => "FresnelS",
             UnaryFunc::FresnelC => "FresnelC",
             UnaryFunc::BesselJ(_) => unreachable!("Bessel order handled above"),
+            UnaryFunc::NthRoot(_) => unreachable!("root degree handled above"),
             UnaryFunc::Asin => "asin",
             UnaryFunc::Acos => "acos",
             UnaryFunc::Asinh => "asinh",
@@ -317,6 +325,12 @@ impl UnaryFunc {
             UnaryFunc::PolyGamma(order) => {
                 CasExpr::Unary(UnaryFunc::PolyGamma(order.saturating_add(1)), Box::new(u()))
             }
+            // d/du u^{1/q} = (1/q)·u^{1/q}/u.
+            UnaryFunc::NthRoot(degree) => {
+                CasExpr::Const(Rational::checked_new(1, i128::from(degree)).unwrap_or_else(Rational::zero))
+                    * CasExpr::Unary(UnaryFunc::NthRoot(degree), Box::new(u()))
+                    / u()
+            }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -403,6 +417,23 @@ impl CasExpr {
     #[must_use]
     pub fn sqrt(self) -> Self {
         CasExpr::Unary(UnaryFunc::Sqrt, Box::new(self))
+    }
+
+    /// The principal **`q`-th root** `self^{1/q}`. `q = 1` is the identity, `q = 2`
+    /// the square root (routed to the `Sqrt` head), and `q ≥ 3` the `NthRoot(q)` head.
+    #[must_use]
+    pub fn nth_root(self, q: u32) -> Self {
+        match q {
+            0 | 1 => self,
+            2 => self.sqrt(),
+            _ => CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(self)),
+        }
+    }
+
+    /// The **cube root** `∛self = self^{1/3}`.
+    #[must_use]
+    pub fn cbrt(self) -> Self {
+        CasExpr::Unary(UnaryFunc::NthRoot(3), Box::new(self))
     }
 
     /// The **error function** `erf(self)` as a symbolic head.
@@ -1069,6 +1100,35 @@ impl MultiPoly {
                     even.mul(&MultiPoly::single_var_pow(var, exp % 2))?
                 } else {
                     MultiPoly::single_var_pow(var, exp)
+                };
+                term = term.mul(&factor)?;
+            }
+            out = out.add(&term)?;
+        }
+        Some(out)
+    }
+
+    /// Reduce powers of an **`n`-th-root atom** using `root_q(u)^q = u` (principal
+    /// real root): `root_q(u)^exp = u^{exp/q}·root_q(u)^{exp mod q}`. `roots` maps each
+    /// root-atom key to `(q, radicand)`. Sound over the reals like [`fold_radical`].
+    fn fold_nth_root(&self, roots: &BTreeMap<String, (u32, MultiPoly)>) -> Option<MultiPoly> {
+        let reducible = self.terms.keys().any(|m| {
+            m.powers
+                .iter()
+                .any(|(var, &e)| roots.get(var).is_some_and(|(q, _)| e >= *q))
+        });
+        if !reducible {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut term = MultiPoly::constant(*coeff);
+            for (var, &exp) in &mono.powers {
+                let factor = match roots.get(var) {
+                    Some((q, radicand)) if exp >= *q => radicand
+                        .pow(exp / q)?
+                        .mul(&MultiPoly::single_var_pow(var, exp % q))?,
+                    _ => MultiPoly::single_var_pow(var, exp),
                 };
                 term = term.mul(&factor)?;
             }
@@ -1894,6 +1954,7 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     collect_atom_dictionary(b, &mut atoms);
     let mut radicands: BTreeMap<String, MultiPoly> = BTreeMap::new();
     let mut abs_args: BTreeMap<String, MultiPoly> = BTreeMap::new();
+    let mut nth_roots: BTreeMap<String, (u32, MultiPoly)> = BTreeMap::new();
     for (key, atom) in &atoms {
         match atom {
             // Radicand of a `sqrt` atom for `(√u)² = u`.
@@ -1908,6 +1969,12 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
                     abs_args.insert(key.clone(), poly);
                 }
             }
+            // `(q, radicand)` of an `n`-th-root atom for `root_q(u)^q = u`.
+            CasExpr::Unary(UnaryFunc::NthRoot(q), arg) => {
+                if let Some(poly) = normalize(arg) {
+                    nth_roots.insert(key.clone(), (*q, poly));
+                }
+            }
             _ => {}
         }
     }
@@ -1917,6 +1984,7 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
         .and_then(|w| w.fold_pythagorean())
         .and_then(|w| w.fold_radical(&radicands))
         .and_then(|w| w.fold_abs(&abs_args))
+        .and_then(|w| w.fold_nth_root(&nth_roots))
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
@@ -7030,6 +7098,16 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
             }
             CasExpr::Unary(UnaryFunc::PolyGamma(*order), Box::new(inner))
         }
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) => {
+            let inner = fold_gamma(arg);
+            // `q`-th root of a perfect `q`-th power (`∛8→2`), after arithmetic.
+            if let Some(constant) = normalize(&inner).and_then(|p| multipoly_as_constant(&p))
+                && let Some(value) = nth_root_of_rational(constant, *q)
+            {
+                return value;
+            }
+            CasExpr::Unary(UnaryFunc::NthRoot(*q), Box::new(inner))
+        }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_gamma(arg))),
         CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_gamma(inner))),
         CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(fold_gamma(base)), *exp),
@@ -7038,6 +7116,26 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(fold_gamma(a)), Box::new(fold_gamma(b))),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// The exact value of the principal `q`-th root of a rational `c` when it is itself
+/// rational — i.e. numerator and denominator are perfect `q`-th powers (`∛(8/27)=2/3`,
+/// `root4(16)=2`). `None` otherwise (including an even root of a negative).
+fn nth_root_of_rational(c: Rational, q: u32) -> Option<CasExpr> {
+    let (numerator, denominator) = (c.numerator(), c.denominator());
+    let negative = numerator < 0;
+    if negative && q.is_multiple_of(2) {
+        return None; // no real even root of a negative
+    }
+    let num_abs = numerator.checked_abs()?;
+    let num_root = ntheory_more::integer_nth_root(num_abs, q)?;
+    let den_root = ntheory_more::integer_nth_root(denominator, q)?;
+    // Confirm exactness — `integer_nth_root` returns the floor root.
+    if num_root.checked_pow(q)? != num_abs || den_root.checked_pow(q)? != denominator {
+        return None;
+    }
+    let signed = if negative { num_root.checked_neg()? } else { num_root };
+    Some(CasExpr::Const(Rational::checked_new(signed, den_root)?))
 }
 
 fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
@@ -7076,6 +7174,9 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
                 // Γ at a rational with a closed form: Γ(n)=(n−1)!, Γ(k+½)=…·√π.
                 (UnaryFunc::Gamma, CasExpr::Const(c)) => gamma_of_rational(*c)
                     .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner.clone()))),
+                // `q`-th root of a perfect `q`-th power: `∛8→2`, `root4(16)→2`.
+                (UnaryFunc::NthRoot(q), CasExpr::Const(c)) => nth_root_of_rational(*c, *q)
+                    .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::NthRoot(*q), Box::new(inner.clone()))),
                 // `abs`/`sign`/`floor`/`ceiling` of a rational constant reduce via
                 // the builder folds (also collapses these after a substitution).
                 (UnaryFunc::Abs, CasExpr::Const(_)) => inner.clone().abs(),
@@ -7759,6 +7860,16 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Acosh => value.acosh(),
                 UnaryFunc::Gamma => gamma_f64(value),
                 UnaryFunc::PolyGamma(order) => polygamma_f64(*order, value),
+                UnaryFunc::NthRoot(degree) => {
+                    let exponent = 1.0 / f64::from(*degree);
+                    if value >= 0.0 {
+                        value.powf(exponent)
+                    } else if degree.is_multiple_of(2) {
+                        f64::NAN // no real even root of a negative
+                    } else {
+                        -(-value).powf(exponent) // odd root is sign-preserving
+                    }
+                }
             })
         }
     }
@@ -19033,6 +19144,30 @@ mod tests {
         check((x() - CasExpr::int(1)).sign(), 0, 3, CasExpr::int(1));
         check(heaviside(&(x() - CasExpr::int(1))), 0, 2, CasExpr::int(1));
         check(heaviside(&(x() - CasExpr::int(1))) * x(), 0, 2, CasExpr::rat(3, 2));
+    }
+
+    #[test]
+    fn nth_root_head() {
+        let x = || v("x");
+        let certified = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        // Perfect-power folds: ∛8=2, ∛27=3, root4(16)=2, ∛(−8)=−2, ∛(8/27)=2/3.
+        assert!(certified(&CasExpr::int(8).cbrt(), &CasExpr::int(2)));
+        assert!(certified(&CasExpr::int(27).cbrt(), &CasExpr::int(3)));
+        assert!(certified(&CasExpr::int(16).nth_root(4), &CasExpr::int(2)));
+        assert!(certified(&CasExpr::int(-8).cbrt(), &CasExpr::int(-2)));
+        assert!(certified(&CasExpr::rat(8, 27).cbrt(), &CasExpr::rat(2, 3)));
+        // Zero-test: root_q(u)^q = u (and multiples), soundly.
+        assert!(certified(&x().cbrt().pow(3), &x()));
+        assert!(certified(&x().cbrt().pow(6), &x().pow(2)));
+        assert!(certified(&x().nth_root(4).pow(4), &x()));
+        // Soundness: (∛x)²≠x, ∛7≠2.
+        assert!(!certified(&x().cbrt().pow(2), &x()));
+        assert!(!certified(&CasExpr::int(7).cbrt(), &CasExpr::int(2)));
+        // Derivative d/dx ∛x = (1/3)·∛x/x, verified numerically at x=8 → 1/12.
+        assert!((evalf(&x().cbrt().differentiate("x"), &[("x", 8.0)]).unwrap() - 1.0 / 12.0).abs() < 1e-9);
+        // nth_root(2) routes to the sqrt head, nth_root(1) is the identity.
+        assert_eq!(x().nth_root(2), x().sqrt());
+        assert_eq!(x().nth_root(1), x());
     }
 
     #[test]
