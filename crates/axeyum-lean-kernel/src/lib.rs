@@ -1,10 +1,13 @@
-//! In-tree Rust Lean kernel for Axeyum — data-structure slice (ADR-0036).
+//! In-tree independent Rust Lean kernel for Axeyum (ADR-0036).
 //!
 //! The north star is Z3 **and Lean** parity: every `unsat`/`valid` result
 //! should carry a machine-checkable proof a Lean-grade kernel accepts. This
-//! crate is the first slice of that kernel: the term language plus its de Bruijn
-//! machinery. WHNF reduction, definitional equality, and type checking are the
-//! **next** slice and are intentionally absent here.
+//! crate contains the term language and de Bruijn machinery, declarations and
+//! environments, WHNF reduction, definitional equality, type inference and
+//! checking, proof irrelevance, and the admitted inductive/recursor profile.
+//! It is not Lean's parser, elaborator, tactic engine, compiler, package system,
+//! language server, or mathlib; those are separate compatibility axes documented
+//! in the Lean-system roadmap.
 //!
 //! The semantics are ported from `nanoda_lib` (a faithful Rust reimplementation
 //! of the Lean 4 kernel), but adapted to axeyum's idioms: nanoda's
@@ -22,6 +25,8 @@
 //! - [`ExprNode`] — locally-nameless expressions with de Bruijn
 //!   `instantiate`/`abstract`/`lift`, driven by cached loose-bvar / free-var
 //!   metadata.
+//! - [`Environment`] and [`Declaration`] — the checked declaration environment.
+//! - [`LocalContext`] and [`KernelError`] — type checking and explicit declines.
 //!
 //! ## Example
 //!

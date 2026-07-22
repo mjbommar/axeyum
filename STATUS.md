@@ -369,6 +369,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — Lean-system distance is now decomposed and a real import seam
+  is prototyped.** The new
+  [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+  distinguishes independent kernel admission, official source acceptance,
+  declaration import, language compatibility, and workflow/ecosystem
+  compatibility. It audits the actual assets rather than repeating the gap
+  list: the pure-Rust kernel already has environments/reduction/definitional
+  equality/type checking/selected inductives; Track 6 already owns goals,
+  holes, delayed assignment, and certificate tactics; the approximately
+  14,123-line CAS, 56-rule canonical manifest, and 173 validated math packs are
+  candidate proof engines and theorem targets, not mathlib coverage. Proposed
+  ADR-0345 chooses both bridge directions, sequenced: retain fail-closed
+  official source validation, then consume pinned `lean4export` NDJSON and
+  independently admit supported declarations. A fresh official Lean 4.30 /
+  export-format 3.1 fixture contains 14 names, two nonzero universe levels, 43
+  expressions, and five declaration records; the research reader reports no
+  inventory blockers on that flat slice and passes five fixture/mutation tests.
+  This is parsing evidence only, not kernel-import or mathlib credit. Direct
+  `.olean` reading is rejected; official Lean is an optional sandboxed
+  frontend/workflow adapter while the default checker remains pure Rust.
+  **Next:** review ADR-0345, port the wire reader to Rust, independently admit
+  the fixture in a fresh environment, generate blocker fixtures for projection,
+  literals, quotient and harder inductives, then inventory/type-digest the 64
+  prelude axioms before any native parser, Lake, LSP, or compiler work.
+
 - **2026-07-21 — the representative official-Lean gate is now locally real and
   fail-closed.** Primary-source inspection showed that `leanprover/lean-action`
   required a Lake manifest even though Axeyum only needs standalone Lean; a

@@ -137,14 +137,17 @@ Again, there are distinct targets:
   format. The arithmetic reconstruction preludes also have an explicitly
   audited axiom surface whose types are checked but whose statements have not
   yet been discharged against mathlib.
-- **Full Lean-system parity:** not a useful Axeyum milestone. Axeyum does not aim
-  to reproduce Lean's parser, macros, elaborator, unifier, tactic ecosystem,
-  compiler, package ecosystem, or language server. The relevant product goal is
-  a fail-closed Lean tactic/import bridge backed by a versioned kernel-
-  compatibility profile.
+- **Lean language and ecosystem compatibility:** absent today, but now staged
+  rather than dismissed. Axeyum does not currently reproduce Lean's parser,
+  macros, elaborator, unifier, tactic language, compiler, package ecosystem,
+  language server, or mathlib. The near-term product goal is a fail-closed,
+  versioned `lean4export` import path plus certificate tactics and optional
+  official-Lean/Lake/editor adapters. A full independent clone remains a
+  non-goal unless measured demand justifies a later profile.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
-and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md).
+and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
+plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md).
 
 ## What is not claimed
 

@@ -7,6 +7,11 @@ Entry ADR: [ADR-0167](../../research/09-decisions/adr-0167-prover-track-entry.md
 Each phase has its own file with tasks, sizes, exit criteria, and its TCB
 statement. **Every slice lands alone**; none is justified by a later one.
 
+This track builds Axeyum's native certificate-first proof assistant. The
+separate [Lean-system compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md)
+adds versioned declaration import and optional source/Lake/editor adapters. It
+reuses P6.2/P6.3 for goals and tactics rather than creating a second goal engine.
+
 ---
 
 ## The shape
@@ -81,7 +86,9 @@ hard rule, a generator that avoids the corner is not a gate.
 
 ## What this track must never do
 
-- Import Mathlib, or grow a mathematical corpus. **Ever.**
+- Make mathlib part of this track's native trusted goal/tactic core. Selected
+  pinned mathlib imports belong to the interoperability track as external
+  compatibility and theorem-discharge evidence.
 - Add a human proof-scripting language.
 - Claim `sorry`. **`fail`.**
 - Claim we decide more than Z3 (`PLAN.md:2901-2904` settles it).

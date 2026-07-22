@@ -41,6 +41,23 @@ state.
 > Remote CI acceptance and the 64-axiom discharge remain open; do not convert
 > representative source acceptance into full proof-family or Lean parity.
 
+> **Lean-system interoperability reset (2026-07-21).** The independent Rust
+> kernel and the 71/71 official-source gate are not a bundled Lean distribution,
+> but neither are they merely a printer. The new
+> [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+> inventories the actual kernel, CAS, rewrite, curriculum, and Track 6 assets
+> against the distinct missing parser/macro, elaborator/unifier, tactic,
+> compiler, Lake, LSP, mathlib, and import surfaces. Proposed ADR-0345 sequences
+> both bridge directions: preserve fail-closed source export, then ingest pinned
+> official `lean4export` 3.1 NDJSON and independently admit supported
+> declarations. A real Lean 4.30 fixture and mutation-tested inventory probe
+> establish the seam (14 names, two nonzero levels, 43 expressions, five
+> declaration records); they grant no kernel-import or mathlib credit yet.
+> Direct `.olean` parsing and full ecosystem cloning remain non-goals. Resume at
+> L1: replace the probe with a Rust wire reader, import the flat fixture into a
+> fresh environment, and classify projections/literals/quotients/harder
+> inductives before native frontend, Lake, LSP, or compiler work.
+
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact
 > content, selection, scoring, and oracle identity across the regression and
@@ -3204,8 +3221,11 @@ active product targets are measured fragment competitiveness, production
 SMT-LIB/API depth, complete evidence on claimed routes, a versioned Lean-core
 compatibility profile, and a fail-closed Lean bridge. The identity remains
 *untrusted fast search, trusted small checking*. Work on each axis is mapped
-below and under [`docs/plan/`](docs/plan/README.md); full Lean-system replacement
-is explicitly not part of the solver roadmap.
+below and under [`docs/plan/`](docs/plan/README.md). Full Lean-system replacement
+is explicitly not part of the solver roadmap; selected declaration import,
+workflow adapters, certificate tactics, and a demand-gated source profile are
+now separately staged in the
+[Lean-system compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md).
 
 **Where the remaining work lives (the two load-bearing fronts + two keystones, below):**
 1. **Decide-rate & measured performance (Track 1)** — close the 0–100% spread

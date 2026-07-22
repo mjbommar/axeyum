@@ -19,7 +19,11 @@ Last updated: 2026-07-21
 > production Z3 compatibility is demonstrably far; solver-proof export to Lean
 > now has a bounded local 71/71 official-Lean acceptance result after four
 > hidden export failures were exposed and fixed, while remote CI and exhaustive
-> acceptance remain open; full Lean language/toolchain parity is out of scope.
+> acceptance remain open. Full Lean language/toolchain cloning remains out of
+> scope, while selected declaration import, certificate tactics, and optional
+> workflow adapters are now staged in the
+> [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+> under proposed ADR-0345.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
@@ -586,6 +590,14 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   30-second bound. The next boundary is evidence-aware production dispatch plus
   mechanism-specific profiling under the existing hard cap, not a new theorem
   family or a larger memory allowance.
+- Lean-system interoperability: the independent Rust checker remains the
+  default TCB; a pinned official `lean4export` NDJSON reader and
+  dependency-closed kernel admission precede selected Init/Std/mathlib slices,
+  Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
+  parsing and full frontend/compiler/ecosystem cloning are non-goals absent a
+  later measured ADR. See the
+  [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+  and [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
 - **Categorical-engine depth, not green-field breadth:** the
   [source-backed audit](../../../docs/plan/categorical-engine-depth-audit-2026-07-21.md)
   confirms 125/125 focused tests across six interpolation families, a substantial

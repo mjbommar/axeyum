@@ -102,6 +102,7 @@ rules-as-code:
 # the measurements it checks.
 parity-docs:
     python3 -m unittest scripts.tests.test_parity_evidence
+    python3 -m unittest scripts.tests.test_prototype_lean4export_reader
     python3 scripts/gen-gap-ownership.py --check
     python3 scripts/gen-measurement-provenance.py --check
     python3 scripts/gen-smtcomp-resume-contract.py --check

@@ -30,6 +30,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   primary-source diagnosis of the Lake-action setup failure, checksum-pinned
   non-Lake installer, missing-binary fail-closed repair, initial 67/71 external
   rejection result, narrow export corrections, and bounded local 71/71 rerun.
+- [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md) —
+  evidence-backed separation of independent kernel checking from the missing
+  Lean frontend/workflow/mathlib surfaces, a real format-3.1 `lean4export`
+  prototype, two-profile architecture, and staged L0-L10 import, kernel,
+  tactic, source, Lake, editor, compiler, and mathlib gates.
 - [`gap-ownership-v1.json`](gap-ownership-v1.json) and the generated
   [contributor ownership map](../contributor-guide/gap-ownership.md) — G0-G10
   routing from each research question to owning code, committed evidence,

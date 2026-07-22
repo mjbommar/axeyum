@@ -704,6 +704,14 @@ Out of scope:
 - [ ] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
+  - Proposed answer (2026-07-21): **both, sequenced**. Preserve the existing
+    fail-closed source-export/official-check lane, then import pinned official
+    `lean4export` NDJSON and independently admit supported declarations. Do not
+    parse `.olean` or clone the full frontend/ecosystem before import evidence
+    justifies it. Selected theorem-backed rewrite/CAS tactic slices follow the
+    importer and the 64-axiom discharge inventory. See
+    [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md)
+    and the [compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md).
 - [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
   - Answer: expose each live combined theory through the shared `TheorySolver`
