@@ -28,9 +28,15 @@ from typing import Any, Callable
 ROOT = Path(__file__).resolve().parents[1]
 PROBE = ROOT / "scripts/lean_execution_probe.py"
 INVALID_INTERPRETER = ROOT / "scripts/fixtures/lean-execution-invalid-interpreter"
+PREREGISTRATION_PLAN = ROOT / "docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md"
+RESULT_AUTHORITY = ROOT / "docs/plan/lean-execution-process-v1.json"
+RESULT_JSON = ROOT / "docs/plan/generated/lean-execution-process.json"
+RESULT_MARKDOWN = ROOT / "docs/plan/generated/lean-execution-process.md"
 SCHEMA = "axeyum-lean-process-spec-v1"
 TERMINAL_SCHEMA = "axeyum-lean-process-attempt-terminal-v1"
 RESULT_SCHEMA = "axeyum-lean-process-control-result-v1"
+SUMMARY_SCHEMA = "axeyum-lean-process-control-summary-v1"
+PREREGISTRATION_COMMIT = "45bf823a46b973a697c45140372540946edcfb0f"
 EMPTY_SELECTION_ID = "synthetic-empty-selection-v1"
 PROFILE = "synthetic-process-control"
 CREDIT_CLASS = "synthetic-no-credit"
@@ -1002,6 +1008,314 @@ def write_control_spec(control_id: str, path: Path) -> None:
     _write_exclusive(path, canonical_bytes(build_control_spec(control_id)))
 
 
+def _evidence_file_manifest(evidence_root: Path) -> list[dict[str, Any]]:
+    rows = []
+    for path in sorted(item for item in evidence_root.rglob("*") if item.is_file()):
+        rows.append(
+            {
+                "path": path.relative_to(ROOT).as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+        )
+    return rows
+
+
+def build_result_authority(
+    evidence_root: Path, *, implementation_revision: str
+) -> dict[str, Any]:
+    evidence_root = evidence_root.resolve()
+    if not re.fullmatch(r"[0-9a-f]{40}", implementation_revision):
+        raise ProcessEvidenceError("implementation revision must be lowercase 40-hex")
+    try:
+        relative_evidence_root = evidence_root.relative_to(ROOT).as_posix()
+    except ValueError as exc:
+        raise ProcessEvidenceError("retained evidence must be inside the repository") from exc
+    try:
+        directory_names = sorted(path.name for path in evidence_root.iterdir() if path.is_dir())
+        nondirectories = [path.name for path in evidence_root.iterdir() if not path.is_dir()]
+    except OSError as exc:
+        raise ProcessEvidenceError("cannot enumerate retained process evidence") from exc
+    if directory_names != sorted(CONTROL_IDS) or nondirectories:
+        raise ProcessEvidenceError("retained control directory set must be exact")
+    controls = []
+    classification_counts: dict[str, int] = {}
+    for control_id in CONTROL_IDS:
+        directory = evidence_root / control_id
+        spec = build_control_spec(control_id)
+        failures = validate_attempt_directory(directory, expected_spec=spec)
+        if failures:
+            raise ProcessEvidenceError(f"{control_id}: {'; '.join(failures)}")
+        run = _load_canonical(directory / "run.json")
+        prelaunch = _load_canonical(directory / "attempt-prelaunch.json")
+        wrapper = _load_canonical(directory / "attempt-terminal.json")
+        terminal = wrapper["terminal"]
+        classification = terminal["class"]
+        classification_counts[classification] = classification_counts.get(classification, 0) + 1
+        controls.append(
+            {
+                "control_id": control_id,
+                "lane_id": spec["lane_id"],
+                "run_id": run["id"],
+                "run_identity_sha256": run["identity_sha256"],
+                "platform_sha256": run["platform_sha256"],
+                "attempt_id": prelaunch["id"],
+                "prelaunch_sha256": prelaunch["sha256"],
+                "expected_terminal_class": spec["expected_terminal_class"],
+                "observed_terminal_class": classification,
+                "exit_code": terminal["exit_code"],
+                "signal": terminal["signal"],
+                "events": terminal["events"],
+                "wall_time": terminal["wall_time"],
+                "cpu_time": terminal["cpu_time"],
+                "peak_rss": terminal["peak_rss"],
+                "rlimit_as_bytes": wrapper["process"]["rlimit_as_bytes"],
+                "watchdog_fired": wrapper["process"]["watchdog_fired"],
+                "sigterm_sent": wrapper["process"]["sigterm_sent"],
+                "sigkill_sent": wrapper["process"]["sigkill_sent"],
+                "direct_child_reaped": wrapper["process"]["direct_child_reaped"],
+                "live_non_zombie_pids_after_cleanup": wrapper["process"][
+                    "live_non_zombie_pids_after_cleanup"
+                ],
+                "raw_artifacts": wrapper["artifacts"],
+                "terminal_record_sha256": wrapper["record_sha256"],
+            }
+        )
+    expected_counts = {
+        "exited": 2,
+        "signaled": 1,
+        "wall-timeout": 1,
+        "memory-limit": 2,
+        "launch-failed": 1,
+        "preflight-invalid": 1,
+    }
+    if classification_counts != expected_counts:
+        raise ProcessEvidenceError("retained terminal-class partition drift")
+    source_inputs = [
+        {
+            "path": PREREGISTRATION_PLAN.relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(PREREGISTRATION_PLAN),
+            "binding": "preregistered-current-file",
+        },
+        {
+            "path": Path(__file__).resolve().relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(Path(__file__).resolve()),
+            "binding": "current-file",
+        },
+        {
+            "path": PROBE.relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(PROBE),
+            "binding": "current-file",
+        },
+        {
+            "path": INVALID_INTERPRETER.relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(INVALID_INTERPRETER),
+            "binding": "current-file",
+        },
+        {
+            "path": "scripts/tests/test_lean_execution_process.py",
+            "sha256": sha256_file(ROOT / "scripts/tests/test_lean_execution_process.py"),
+            "binding": "current-file",
+        },
+    ]
+    files = _evidence_file_manifest(evidence_root)
+    authority: dict[str, Any] = {
+        "schema": RESULT_SCHEMA,
+        "as_of": "2026-07-22",
+        "scope": "synthetic-process-controls-only-no-lean-u2-case-completion-or-parity-credit",
+        "preregistration": {
+            "plan_commit": PREREGISTRATION_COMMIT,
+            "plan_sha256": sha256_file(PREREGISTRATION_PLAN),
+            "implementation_revision": implementation_revision,
+            "plan_published_before_implementation": True,
+            "implementation_published_before_retained_result": True,
+        },
+        "source_inputs": source_inputs,
+        "evidence_root": relative_evidence_root,
+        "evidence_files": files,
+        "controls": controls,
+        "summary": {
+            "registered_controls": len(CONTROL_IDS),
+            "retained_process_attempts": len(controls),
+            "classification_counts": classification_counts,
+            "lane_counts": {
+                "standard-local-4g": 7,
+                "official-export-8g": 1,
+            },
+            "raw_artifacts": len(controls) * 2,
+            "retained_files": len(files),
+            "retained_bytes": sum(row["bytes"] for row in files),
+            "case_records": 0,
+            "completion_records": 0,
+            "junit_artifacts": 0,
+            "provider_artifacts": 0,
+        },
+        "credits": {
+            "real_runs": 0,
+            "official_outcomes": 0,
+            "axeyum_outcomes": 0,
+            "completed_cases": 0,
+            "paired_cells": 0,
+            "performance_rows": 0,
+            "parity_credit": 0,
+        },
+        "milestones": [
+            {"id": "TL0.7.1", "state": "done"},
+            {"id": "TL0.7.2", "state": "synthetic-process-controls-complete"},
+            {"id": "TL0.7.3", "state": "not-run"},
+            {"id": "TL0.7.4", "state": "not-run"},
+            {"id": "TL0.6.3", "state": "blocked-on-tl0.7"},
+        ],
+        "residual": [
+            "Qualify immutable checkpoint installation, conflict quarantine, kill/resume, and completion-last publication in TL0.7.3.",
+            "Run the two no-credit real controls only after TL0.7.3 in TL0.7.4.",
+            "Keep every U2 official and Axeyum outcome at zero until TL0.6.3 begins.",
+        ],
+        "authority_sha256": "",
+    }
+    authority["authority_sha256"] = domain_digest(
+        RESULT_SCHEMA,
+        {key: value for key, value in authority.items() if key != "authority_sha256"},
+    )
+    return authority
+
+
+def validate_result_authority(authority: Any) -> list[str]:
+    failures: list[str] = []
+    if not isinstance(authority, dict):
+        return ["result authority must be an object"]
+    preregistration = authority.get("preregistration")
+    implementation_revision = (
+        preregistration.get("implementation_revision")
+        if isinstance(preregistration, dict)
+        else None
+    )
+    evidence_root = authority.get("evidence_root")
+    if not isinstance(evidence_root, str):
+        return ["result authority evidence root is missing"]
+    try:
+        expected = build_result_authority(
+            ROOT / evidence_root, implementation_revision=str(implementation_revision)
+        )
+    except ProcessEvidenceError as exc:
+        return [str(exc)]
+    if authority != expected:
+        failures.append("result authority differs from retained process evidence")
+    return failures
+
+
+def build_result_summary(authority: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": SUMMARY_SCHEMA,
+        "authority_sha256": authority["authority_sha256"],
+        "scope": authority["scope"],
+        "summary": authority["summary"],
+        "credits": authority["credits"],
+        "controls": authority["controls"],
+        "milestones": authority["milestones"],
+        "residual": authority["residual"],
+    }
+
+
+def render_result_markdown(authority: dict[str, Any]) -> str:
+    summary = authority["summary"]
+    lines = [
+        "# Generated TL0.7.2 Lean process-control result",
+        "",
+        "> Generated by `scripts/lean_execution_process.py`; do not hand-edit.",
+        "",
+        "This is synthetic process-control evidence only. It executes no Lean, CTest,",
+        "`lean4export`, Axeyum, or U2 case and grants zero parity credit.",
+        "",
+        "## Summary",
+        "",
+        f"- Registered/retained controls: **{summary['registered_controls']}/{summary['retained_process_attempts']}**",
+        f"- Retained files/bytes: **{summary['retained_files']} / {summary['retained_bytes']}**",
+        f"- Raw stdout/stderr artifacts: **{summary['raw_artifacts']}**",
+        "- Case records / completion records: **0 / 0**",
+        "- Official outcomes / Axeyum outcomes / paired cells: **0 / 0 / 0**",
+        "- Terminal Lean parity credit: **0**",
+        "",
+        "## Controls",
+        "",
+        "| Control | Lane | Terminal | Exit | Signal | Wall ms | Peak RSS bytes | Cleanup |",
+        "|---|---|---|---:|---:|---:|---:|---|",
+    ]
+    for row in authority["controls"]:
+        wall = row["wall_time"]["value"]
+        rss = row["peak_rss"]["value"]
+        cleanup = (
+            "reaped/no-live-members"
+            if row["direct_child_reaped"] and row["live_non_zombie_pids_after_cleanup"] == []
+            else "no-child"
+        )
+        lines.append(
+            f"| `{row['control_id']}` | `{row['lane_id']}` | `{row['observed_terminal_class']}` | "
+            f"{row['exit_code'] if row['exit_code'] is not None else '—'} | "
+            f"{row['signal'] if row['signal'] is not None else '—'} | "
+            f"{wall if wall is not None else 'not-observed'} | "
+            f"{rss if rss is not None else 'not-observed'} | {cleanup} |"
+        )
+    lines.extend(
+        [
+            "",
+            "CPU time is deliberately `not-observed`: TL0.7.2 does not present a",
+            "cumulative `RUSAGE_CHILDREN` delta as isolated per-attempt evidence. Peak RSS",
+            "is the sampled root-process Linux `VmHWM`/`VmRSS`, not aggregate-tree memory.",
+            "",
+            "## Residual",
+            "",
+        ]
+    )
+    lines.extend(f"- {item}" for item in authority["residual"])
+    return "\n".join(lines) + "\n"
+
+
+def generate_result(
+    *,
+    evidence_root: Path,
+    implementation_revision: str | None,
+    check: bool,
+) -> None:
+    if check:
+        try:
+            committed = json.loads(RESULT_AUTHORITY.read_bytes())
+        except (OSError, json.JSONDecodeError) as exc:
+            raise ProcessEvidenceError("cannot read committed result authority") from exc
+        failures = validate_result_authority(committed)
+        if failures:
+            raise ProcessEvidenceError("; ".join(failures))
+        authority = committed
+    else:
+        if implementation_revision is None:
+            raise ProcessEvidenceError("generation requires --implementation-revision")
+        authority = build_result_authority(
+            evidence_root, implementation_revision=implementation_revision
+        )
+    summary = build_result_summary(authority)
+    outputs = {
+        RESULT_AUTHORITY: json.dumps(authority, indent=2) + "\n",
+        RESULT_JSON: json.dumps(summary, indent=2) + "\n",
+        RESULT_MARKDOWN: render_result_markdown(authority),
+    }
+    if check:
+        stale = [path for path, content in outputs.items() if not path.is_file() or path.read_text() != content]
+        if stale:
+            raise ProcessEvidenceError(
+                "stale generated result: " + ", ".join(path.relative_to(ROOT).as_posix() for path in stale)
+            )
+    else:
+        for path, content in outputs.items():
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+    print(
+        "LEAN_PROCESS_RESULT|"
+        f"controls={summary['summary']['retained_process_attempts']}|"
+        f"files={summary['summary']['retained_files']}|"
+        "real_outcomes=0|paired_cells=0|parity_credit=0"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command_name", required=True)
@@ -1014,6 +1328,14 @@ def main() -> int:
     validate_parser = subparsers.add_parser("validate-attempt")
     validate_parser.add_argument("--control", choices=CONTROL_IDS, required=True)
     validate_parser.add_argument("--directory", type=Path, required=True)
+    result_parser = subparsers.add_parser("result")
+    result_parser.add_argument(
+        "--evidence-root",
+        type=Path,
+        default=ROOT / "docs/plan/evidence/lean-execution-process-tl0.7.2",
+    )
+    result_parser.add_argument("--implementation-revision")
+    result_parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
     try:
         if args.command_name == "write-spec":
@@ -1032,6 +1354,12 @@ def main() -> int:
             if failures:
                 raise ProcessEvidenceError("; ".join(failures))
             print(f"LEAN_PROCESS_ATTEMPT_VALID|control={args.control}|credit=zero")
+        elif args.command_name == "result":
+            generate_result(
+                evidence_root=args.evidence_root,
+                implementation_revision=args.implementation_revision,
+                check=args.check,
+            )
         else:  # pragma: no cover
             raise AssertionError(args.command_name)
     except ProcessEvidenceError as exc:

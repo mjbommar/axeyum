@@ -75,6 +75,13 @@ class LeanExecutionProcessContractTests(unittest.TestCase):
         with self.assertRaises(PROCESS.ProcessEvidenceError):
             PROCESS.validate_spec(changed)
 
+    def test_result_builder_rejects_missing_or_partial_evidence(self) -> None:
+        with tempfile.TemporaryDirectory(dir=PROCESS.ROOT) as temporary:
+            with self.assertRaisesRegex(PROCESS.ProcessEvidenceError, "directory set"):
+                PROCESS.build_result_authority(
+                    Path(temporary), implementation_revision="0" * 40
+                )
+
 
 @unittest.skipUnless(os.name == "posix" and Path("/proc/self/status").is_file(), "Linux /proc required")
 class LeanExecutionProcessLiveTests(unittest.TestCase):
@@ -198,6 +205,22 @@ class LeanExecutionProcessLiveTests(unittest.TestCase):
                 "unit": "milliseconds",
             })
         self.assertEqual(normalize(first), normalize(second))
+
+    def test_result_authority_closes_only_the_synthetic_control_population(self) -> None:
+        with tempfile.TemporaryDirectory(dir=PROCESS.ROOT) as temporary:
+            root = Path(temporary)
+            for control_id in PROCESS.CONTROL_IDS:
+                self._run(control_id, root)
+            authority = PROCESS.build_result_authority(
+                root, implementation_revision="0" * 40
+            )
+        self.assertEqual(authority["summary"]["retained_process_attempts"], 8)
+        self.assertEqual(authority["summary"]["case_records"], 0)
+        self.assertEqual(authority["summary"]["completion_records"], 0)
+        self.assertTrue(all(value == 0 for value in authority["credits"].values()))
+        markdown = PROCESS.render_result_markdown(authority)
+        self.assertIn("synthetic process-control evidence only", markdown)
+        self.assertIn("Terminal Lean parity credit: **0**", markdown)
 
 
 if __name__ == "__main__":
