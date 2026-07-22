@@ -7411,6 +7411,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
+        integrate_sinusoid_product(expr, var),
         integrate_sqrt_quadratic(expr, var),
         integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
@@ -8696,6 +8697,49 @@ fn integrate_sqrt_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         }
         _ => None,
     }
+}
+
+/// ∫ of a **product of two sinusoids** `k·f(u)·g(v)` (`f,g ∈ {sin,cos}`, `u,v`
+/// linear in `var`) via product-to-sum, then integrating the resulting single
+/// sinusoids. Handles different frequencies — the Fourier-orthogonality integrals
+/// `∫sin(2x)sin(3x)`, `∫cos(ax)cos(bx)`, `∫sin(ax)cos(bx)`. Certified downstream.
+fn integrate_sinusoid_product(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let factors = flatten_mul(expr);
+    let mut coeff = Rational::integer(1);
+    let mut sinusoids: Vec<(UnaryFunc, CasExpr)> = Vec::new();
+    for factor in factors {
+        match factor {
+            CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+            CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos), arg) => {
+                // Argument must be linear in `var`.
+                if poly::rat_degree(&normalize(&arg)?.to_univariate(var)?)? != 1 {
+                    return None;
+                }
+                sinusoids.push((f, *arg));
+            }
+            _ => return None,
+        }
+    }
+    if sinusoids.len() != 2 {
+        return None;
+    }
+    let (f1, u) = &sinusoids[0];
+    let (f2, v) = &sinusoids[1];
+    let half = Rational::new(1, 2);
+    let (sum, minus) = (u.clone() + v.clone(), u.clone() - v.clone());
+    // Product-to-sum identities.
+    let combined = match (f1, f2) {
+        (UnaryFunc::Sin, UnaryFunc::Sin) => scaled_term(half, minus.cos() - sum.cos()),
+        (UnaryFunc::Cos, UnaryFunc::Cos) => scaled_term(half, minus.cos() + sum.cos()),
+        (UnaryFunc::Sin, UnaryFunc::Cos) => scaled_term(half, sum.sin() + minus.sin()),
+        (UnaryFunc::Cos, UnaryFunc::Sin) => scaled_term(half, sum.sin() - minus.sin()),
+        _ => return None,
+    };
+    let inner = integrate(&combined, var)?;
+    if !inner.is_certified() {
+        return None;
+    }
+    Some(scaled_term(coeff, inner.antiderivative))
 }
 
 /// ∫ k·g′(x)/g(x) dx = k·ln(g(x)) — the logarithmic-derivative rule for a general
@@ -12793,6 +12837,39 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
         }
+    }
+
+    #[test]
+    fn sinusoid_product_integrals() {
+        let x = || v("x");
+        // Products of two sinusoids (product-to-sum), certified by differentiate-and-check.
+        for integrand in [
+            (CasExpr::int(2) * x()).sin() * (CasExpr::int(3) * x()).sin(),
+            (CasExpr::int(2) * x()).cos() * (CasExpr::int(3) * x()).cos(),
+            (CasExpr::int(2) * x()).sin() * (CasExpr::int(3) * x()).cos(),
+        ] {
+            let r = integrate(&integrand, "x").expect("sinusoid product");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // Fourier orthogonality: ∫₀^{2π} sin(2x)sin(3x) = 0; ∫₀^{2π} sin²(3x) = π.
+        let two_pi = CasExpr::int(2) * v("pi");
+        let orthogonal = definite_integrate(
+            &((CasExpr::int(2) * x()).sin() * (CasExpr::int(3) * x()).sin()),
+            "x",
+            &CasExpr::int(0),
+            &two_pi,
+        )
+        .unwrap();
+        assert_equal(&orthogonal.value, &CasExpr::zero());
+        let norm = definite_integrate(
+            &((CasExpr::int(3) * x()).sin() * (CasExpr::int(3) * x()).sin()),
+            "x",
+            &CasExpr::int(0),
+            &two_pi,
+        )
+        .unwrap();
+        assert_equal(&norm.value, &v("pi"));
     }
 
     #[test]
