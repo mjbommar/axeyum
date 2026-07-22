@@ -1318,7 +1318,13 @@ handles `√x`, so `p` can be half-integral) and returns `c·Γ(p+1)` via `speci
 `∫₀^∞ e^{−x}/√x=Γ(1/2)=√π`, `∫₀^∞ √x·e^{−x}=Γ(3/2)=√π/2`, the half-integer cases with no elementary
 antiderivative.
 
-**Session tally (Entries 37–37i): 25 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Beta integrals** (Entry 37j): `definite_beta_integral` decomposes `c·x^p·(1−x)^q` (`extract_beta_form`
+recognises `x`, `1−x`, `√x`, `√(1−x)`, and `√` of a product `√(x(1−x))=√x·√(1−x)`) and returns
+`c·B(p+1,q+1)` via `special::beta` — `∫₀^1 1/√(x(1−x))=B(½,½)=π`, `∫₀^1 √x/√(1−x)=π/2`. Only fires for
+fractional powers (integer powers stay on FTC). (Cosmetic: `simplify_radicals` doesn't fold
+`Pow(Sqrt(Var),2)→Var`, so `B(½,½)` prints as `sqrt(pi)^2` though it certifies `= π`.)
+
+**Session tally (Entries 37–37j): 26 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
