@@ -5521,6 +5521,9 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
         // against any matching rational factor.
         cancel(&combine_gamma_ratios(expr)),
         Some(combine_gamma_ratios(expr)),
+        // Double-angle contraction `2 sin x cos x → sin 2x`, `cos²x − sin²x → cos 2x`
+        // (reverse of `expand_trig`). Value-preserving; chosen only when it shrinks.
+        Some(fold_double_angle(expr)),
     ]
     .into_iter()
     .flatten()
@@ -8179,6 +8182,101 @@ pub fn expand_trig(expr: &CasExpr) -> CasExpr {
         CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(expand_trig(base)), *exp),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// **Contract** double-angle products — the reverse of [`expand_trig`]:
+/// `2·sin(u)·cos(u) → sin(2u)` and `cos²(u) − sin²(u) → cos(2u)`. Value-preserving
+/// identities, applied bottom-up. Chosen by [`simplify`] only when it shrinks the
+/// expression (`sin 2x` is smaller than `2 sin x cos x`), so an already-expanded form
+/// a caller wants is never disturbed unless the contracted form is strictly simpler.
+fn fold_double_angle(expr: &CasExpr) -> CasExpr {
+    let expr = match expr {
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_double_angle(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_double_angle(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(fold_double_angle(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(fold_double_angle).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(fold_double_angle).collect()),
+        CasExpr::Div(a, b) => {
+            CasExpr::Div(Box::new(fold_double_angle(a)), Box::new(fold_double_angle(b)))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    };
+    // `c·sin(u)·cos(u)·rest → (c/2)·sin(2u)·rest` — one matching sin/cos pair.
+    if matches!(&expr, CasExpr::Mul(_)) {
+        let flat = flatten_mul(&expr);
+        let sin_pos = flat
+            .iter()
+            .position(|f| matches!(f, CasExpr::Unary(UnaryFunc::Sin, _)));
+        if let Some(i) = sin_pos {
+            let CasExpr::Unary(_, u) = &flat[i] else { unreachable!() };
+            let cos_pos = flat.iter().enumerate().position(|(j, f)| {
+                j != i && matches!(f, CasExpr::Unary(UnaryFunc::Cos, v) if v == u)
+            });
+            if let Some(j) = cos_pos {
+                let mut rest: Vec<CasExpr> = flat
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, _)| *idx != i && *idx != j)
+                    .map(|(_, e)| e.clone())
+                    .collect();
+                rest.push(CasExpr::Const(Rational::new(1, 2)));
+                rest.push((CasExpr::int(2) * (**u).clone()).sin());
+                return fold_trivial(&fold_double_angle(&CasExpr::Mul(rest)));
+            }
+        }
+    }
+    // `cos²(u) − sin²(u) → cos(2u)` in a sum (as `cos(u)² + (−1)·sin(u)²`).
+    if let CasExpr::Add(terms) = &expr
+        && let Some(folded) = fold_cos_double_angle(terms)
+    {
+        return folded;
+    }
+    expr
+}
+
+/// Recognize `cos²(u) − sin²(u)` among the terms of a sum and contract it to
+/// `cos(2u)`, leaving the other terms intact. `None` if the pair is not present.
+fn fold_cos_double_angle(terms: &[CasExpr]) -> Option<CasExpr> {
+    // A squared trig head `f(u)²` at term index, with an optional leading sign.
+    let squared_trig = |t: &CasExpr| -> Option<(bool, UnaryFunc, CasExpr)> {
+        let (neg, core) = match t {
+            CasExpr::Neg(inner) => (true, inner.as_ref()),
+            _ => (false, t),
+        };
+        if let CasExpr::Pow(base, 2) = core
+            && let CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos), u) = base.as_ref()
+        {
+            Some((neg, *func, (**u).clone()))
+        } else {
+            None
+        }
+    };
+    for i in 0..terms.len() {
+        let (neg_i, f_i, u_i) = squared_trig(&terms[i])?;
+        for j in 0..terms.len() {
+            if i == j {
+                continue;
+            }
+            let Some((neg_j, f_j, u_j)) = squared_trig(&terms[j]) else {
+                continue;
+            };
+            // `+cos²(u) − sin²(u)` → `cos(2u)`.
+            if u_i == u_j && f_i == UnaryFunc::Cos && f_j == UnaryFunc::Sin && !neg_i && neg_j {
+                let mut rest: Vec<CasExpr> = terms
+                    .iter()
+                    .enumerate()
+                    .filter(|(idx, _)| *idx != i && *idx != j)
+                    .map(|(_, e)| e.clone())
+                    .collect();
+                rest.push((CasExpr::int(2) * u_i).cos());
+                return Some(match rest.len() {
+                    1 => rest.pop()?,
+                    _ => CasExpr::Add(rest),
+                });
+            }
+        }
+    }
+    None
 }
 
 /// Split a trig **angle** into `(a, b)` with `a + b` denoting the same angle, for
