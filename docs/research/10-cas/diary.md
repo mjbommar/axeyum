@@ -1313,7 +1313,7 @@ narrowed the skip to unevaluated *trig* heads. And **multiple-angle** `f(m·var)
 `sin 3x=0`): extract the integer frequency `m`, scan `θ∈[0,2π)` for `f(θ)=target`, emit
 `var=((θ_coeff+2j)/m)·π` for `j=0..m` as clean `r·π`.
 
-**Session tally (Entries 37–37h): 22 substantial certified features** across integration (rational-trig
+**Session tally (Entries 37–37h): 24 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
