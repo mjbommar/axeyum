@@ -2132,6 +2132,92 @@ fn constant_term(expr: &CasExpr) -> Option<Rational> {
 /// (e^{−C/A} − b)/a`. Certified by substituting the root back (`equal`, using the
 /// exp-tower `e^{ln v}=v`). `None` if `expr` is not of this shape (e.g. a
 /// polynomial, so the caller proceeds to the polynomial solver) or has no real root.
+/// Solve `A·a^var + C = 0` for a rational base `a > 0, ≠ 1` (written as
+/// `A·exp(var·ln a) + C`): `a^var = −C/A`, so `var = log_a(−C/A)`, returned as a
+/// clean integer `n` when the right-hand side is `aⁿ`. Closes `2^x = 8 ⇒ 3`,
+/// `2^x = 1/8 ⇒ −3`. `None` when the base is not rational or the RHS is not an
+/// integer power of it (a non-integer `log` is left symbolic elsewhere).
+fn solve_power_equation(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let terms = match expr {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    let mut base: Option<Rational> = None;
+    let mut big_a = Rational::integer(1);
+    let mut constant = Rational::zero();
+    for term in &terms {
+        if let Some(c) = constant_term(term) {
+            constant = constant.checked_add(c)?;
+            continue;
+        }
+        if base.is_some() {
+            return None; // more than one exponential term
+        }
+        // `A·exp(arg)` with `arg` linear in `var`.
+        let mut coeff = Rational::integer(1);
+        let mut argument: Option<CasExpr> = None;
+        for factor in flatten_mul(term) {
+            match factor {
+                CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+                CasExpr::Unary(UnaryFunc::Exp, arg)
+                    if argument.is_none() && expr_contains_var(&arg, var) =>
+                {
+                    argument = Some((*arg).clone());
+                }
+                _ => return None,
+            }
+        }
+        let argument = argument?;
+        // The coefficient of `var` in the exponent is `ln(a)`; recover `a = exp(·)`.
+        let ln_base = simplify(&argument.differentiate(var));
+        if expr_contains_var(&ln_base, var) {
+            return None; // exponent not linear in `var`
+        }
+        // The exponent must be exactly `ln(a)·var` (no constant term).
+        if !matches!(
+            equal(&argument, &(ln_base.clone() * CasExpr::var(var))),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return None;
+        }
+        let base_rational = multipoly_as_constant(&normalize(&simplify(&ln_base.exp()))?)?;
+        if base_rational <= Rational::integer(0) || base_rational == Rational::integer(1) {
+            return None;
+        }
+        base = Some(base_rational);
+        big_a = coeff;
+    }
+    let base = base?;
+    let target = constant.checked_neg()?.checked_div(big_a)?; // a^var = target
+    if target.numerator() <= 0 {
+        return None; // aˣ > 0 — no real solution
+    }
+    // Find integer `n` with `aⁿ = target` (scanning both signs of the exponent).
+    for n in -64_i128..=64 {
+        let mut power = Rational::integer(1);
+        let step = if n >= 0 { base } else { Rational::integer(1).checked_div(base)? };
+        let mut ok = true;
+        for _ in 0..n.abs() {
+            let Some(next) = power.checked_mul(step) else {
+                ok = false;
+                break;
+            };
+            power = next;
+        }
+        if ok && power == target {
+            let root = CasExpr::int(n);
+            // Certify against the original: A·aⁿ + C = 0.
+            if matches!(
+                equal(&simplify(&expr.substitute(var, &root)), &CasExpr::zero()),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return Some(vec![root]);
+            }
+        }
+    }
+    None
+}
+
 fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     let terms = match expr {
         CasExpr::Add(terms) => terms.clone(),
@@ -2653,6 +2739,10 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Elementary transcendental equations `A·exp(ax+b)+C=0`, `A·ln(ax+b)+C=0`
     // fall outside the polynomial fragment; try them first.
     if let Some(roots) = solve_transcendental(expr, var) {
+        return Some(roots);
+    }
+    // Exponential-base equations `a^x = c` (e.g. `2^x = 8 ⇒ 3`).
+    if let Some(roots) = solve_power_equation(expr, var) {
         return Some(roots);
     }
     // Polynomials in `eˣ` (e.g. `e^{2x} − 3e^x + 2`) — solve for `u = eˣ`.
@@ -15263,6 +15353,19 @@ mod tests {
             solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
             2
         );
+        // Exponential-base equations a^x = c (a^x written as exp(x·ln a)): 2^x = 8
+        // ⇒ 3, 2^x = 1/8 ⇒ −3, 5·2^x = 40 ⇒ 3; a non-power RHS declines.
+        let pow = |base: i128, e: CasExpr| (e * CasExpr::int(base).ln()).exp();
+        assert_equal(&solve(&(pow(2, x()) - CasExpr::int(8)), "x").unwrap()[0], &CasExpr::int(3));
+        assert_equal(
+            &solve(&(pow(2, x()) - CasExpr::rat(1, 8)), "x").unwrap()[0],
+            &CasExpr::int(-3),
+        );
+        assert_equal(
+            &solve(&(CasExpr::int(5) * pow(2, x()) - CasExpr::int(40)), "x").unwrap()[0],
+            &CasExpr::int(3),
+        );
+        assert!(solve(&(pow(2, x()) - CasExpr::int(5)), "x").is_none());
     }
 
     #[test]
