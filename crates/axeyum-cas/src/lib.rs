@@ -5144,6 +5144,109 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
     .then_some(certificate)
 }
 
+/// Largest squared-binomial raw-moment order currently accepted by
+/// [`prove_squared_binomial_moment`].
+pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 5;
+
+/// A proved squared-binomial raw moment
+/// `∑_k k^moment C(n,k)² = closed_form`, carrying its rational WZ certificate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertifiedSquaredBinomialMoment {
+    /// The nonnegative raw-moment order.
+    pub moment: u32,
+    /// The exact closed form as an expression in `n`.
+    pub closed_form: CasExpr,
+    /// The rational Wilf–Zeilberger multiplier `R(n,k)`.
+    pub certificate: CasExpr,
+}
+
+impl CertifiedSquaredBinomialMoment {
+    /// Recheck the symbolic WZ identity and exact finite base case from the
+    /// stored moment, closed form, and certificate.
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        if self.moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+            return false;
+        }
+        let n = CasExpr::var("n");
+        let k = CasExpr::var("k");
+        let summand = k.clone().pow(self.moment) * binomial_coefficient(&n, &k).pow(2);
+        let base = i128::from(self.moment.max(1));
+        certifies_wz_sum(
+            &summand,
+            &self.closed_form,
+            &self.certificate,
+            "n",
+            "k",
+            base,
+            0,
+            base,
+        )
+    }
+}
+
+/// Prove the concrete raw-moment member
+/// `∑_k k^moment C(n,k)²` using its falling-factorial expansion.
+///
+/// The candidate closed form is generated from the exact identity
+/// `k^m = ∑_j S(m,j) k^(j)` and the Vandermonde consequence
+/// `∑_k k^(j) C(n,k)² = C(2n,n) (n^(j))²/(2n)^(j)`, where `x^(j)` is a
+/// falling factorial. The generated expression is not trusted: [`prove_wz_sum`]
+/// must discover a rational certificate and pass the fully symbolic WZ and
+/// exact base-case checks. Unsupported orders return `None`.
+#[must_use]
+pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBinomialMoment> {
+    if moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+        return None;
+    }
+    let n = CasExpr::var("n");
+    let k = CasExpr::var("k");
+    let mut normalized_moment = CasExpr::zero();
+    for order in 0..=moment {
+        let stirling = combinatorics::stirling_second(moment, order)?;
+        if stirling == 0 {
+            continue;
+        }
+        let numerator = falling_factorial(&n, order).pow(2);
+        let denominator = falling_factorial(&(CasExpr::int(2) * n.clone()), order);
+        normalized_moment = normalized_moment
+            + CasExpr::int(stirling) * numerator / denominator;
+    }
+    let reduced_moment = normalize_rational(&cancel(&normalized_moment)?)?.reduced()?;
+    let numerator_coefficients = reduced_moment.num.to_univariate("n")?;
+    let denominator_coefficients = reduced_moment.den.to_univariate("n")?;
+    let numerator_lead = *numerator_coefficients.last()?;
+    let denominator_lead = *denominator_coefficients.last()?;
+    let monic_numerator = numerator_coefficients
+        .iter()
+        .map(|coefficient| coefficient.checked_div(numerator_lead))
+        .collect::<Option<Vec<_>>>()?;
+    let monic_denominator = denominator_coefficients
+        .iter()
+        .map(|coefficient| coefficient.checked_div(denominator_lead))
+        .collect::<Option<Vec<_>>>()?;
+    let scalar = numerator_lead.checked_div(denominator_lead)?;
+    let normalized_moment = simplify(
+        &(CasExpr::Const(scalar)
+            * factor(&MultiPoly::from_univariate("n", &monic_numerator).to_expr(), "n")?
+            / factor(
+                &MultiPoly::from_univariate("n", &monic_denominator).to_expr(),
+                "n",
+            )?),
+    );
+    let closed_form = simplify(
+        &(binomial_coefficient(&(CasExpr::int(2) * n.clone()), &n) * normalized_moment),
+    );
+    let summand = k.clone().pow(moment) * binomial_coefficient(&n, &k).pow(2);
+    let base = i128::from(moment.max(1));
+    let certificate = prove_wz_sum(&summand, "n", "k", &closed_form, base, 0, base)?;
+    Some(CertifiedSquaredBinomialMoment {
+        moment,
+        closed_form,
+        certificate,
+    })
+}
+
 /// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
 /// **Wilf–Zeilberger** method, returning the certificate `R(n,k)` when the proof
 /// succeeds. With `f = F/rhs`, a rational **certificate** `R(n,k)` gives the
@@ -17258,6 +17361,51 @@ mod tests {
             0,
             0,
         ));
+    }
+
+    #[test]
+    fn squared_binomial_moment_family_is_checked() {
+        let n = || v("n");
+        let mut proofs = Vec::new();
+        for moment in 0..=MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+            let proof = prove_squared_binomial_moment(moment)
+                .unwrap_or_else(|| panic!("squared-binomial moment {moment} must verify"));
+            assert!(proof.is_certified());
+
+            let sample_n = i128::from(moment.max(2));
+            let mut direct = CasExpr::zero();
+            for sample_k in 0..=sample_n {
+                direct = direct
+                    + CasExpr::int(sample_k).pow(moment)
+                        * binomial_coefficient(&CasExpr::int(sample_n), &CasExpr::int(sample_k))
+                            .pow(2);
+            }
+            assert_equal(
+                &direct,
+                &proof.closed_form.substitute("n", &CasExpr::int(sample_n)),
+            );
+            proofs.push(proof);
+        }
+
+        let fifth = proofs.last().expect("moment five proof exists");
+        let fifth_expected = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(2) + CasExpr::int(2) * n() - CasExpr::int(5))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&fifth.closed_form, &fifth_expected);
+
+        let mut false_proof = fifth.clone();
+        false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
+        assert!(!false_proof.is_certified());
+
+        let mut false_proof = fifth.clone();
+        false_proof.certificate = CasExpr::zero();
+        assert!(!false_proof.is_certified());
+
+        assert!(prove_squared_binomial_moment(MAX_PROVED_SQUARED_BINOMIAL_MOMENT + 1).is_none());
     }
 
     #[test]

@@ -374,6 +374,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — squared-binomial raw moments are now a generated checked
+  family.** `prove_squared_binomial_moment(moment)` derives the candidate from
+  the exact Stirling/falling-factorial expansion
+  `C(2n,n)∑S(m,j)(n)ⱼ²/(2n)ⱼ`, compacts the reduced rational through monic
+  numerator/denominator factorization, and accepts it only through the existing
+  fully symbolic WZ plus exact base-case checker. The returned
+  `CertifiedSquaredBinomialMoment` can recheck its own order, closed form, and
+  certificate. Regressions certify orders `0..=5`, direct-sum cross-check every
+  generated member, recover the known fifth-moment form, and reject tampered
+  closed forms and certificates. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT=5` makes
+  the current bounded-discovery ceiling explicit; larger requests decline
+  immediately. The CAS topic stack passes 520 unit tests, 147 doctests,
+  warning-denied all-target Clippy, `wasm32-unknown-unknown`, links, and
+  `git diff --check`. Next: investigate direct falling-factorial certificate
+  composition for higher moments without weakening the symbolic gate.
+
 - **2026-07-22 — fixed-shift Vandermonde is now a checked public family route.**
   `prove_fixed_shift_binomial_convolution(shift)` constructs the closed
   certificate `k(k+r)(2k−3n+r−3)/(2(2n+1)(k−n−1)(k−n+r−1))` for a concrete
