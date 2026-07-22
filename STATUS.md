@@ -423,8 +423,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Single Query division table. That behavior is now fixture-covered; another
   retained attempt then completed all 450,472 metadata rows and proved the two
   configured removal IDs match zero of them, making the official anti-join
-  idempotent. That exact absence is now audited; another fresh-input rerun is
-  next. No solver run or selection credit is granted yet.
+  idempotent. That exact absence is now audited. The next retained attempt
+  completed all seven historical streams (5,345,294 rows) and proved organizer
+  metadata order is not canonical path order. A standard-library, bounded
+  external merge sort now supplies the canonical ledger order and has sorted
+  all 450,472 retained rows exactly. Another fresh-input rerun is next. No
+  solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7187,6 +7191,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added bounded canonical ordering for the S1b ledger.** The
+  fourth retained attempt passed the 89-input and 450,472-row metadata gates,
+  then reduced 5,345,294 historical rows across 2018--2024 before rejecting the
+  organizer's noncanonical metadata order. The second metadata pass now writes
+  bounded sorted chunks and merge-iterates them by normalized benchmark ID.
+  The retained full input proves an exact 450,472-row strict ordering. The
+  failed attempt is
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744715221056942-32ecd649`;
+  no official sample was generated or inspected.
 
 - **2026-07-22 — Recorded the official removal anti-join as idempotent.** The
   third retained S1b attempt streamed all 450,472 metadata rows, then rejected
