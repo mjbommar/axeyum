@@ -74,6 +74,11 @@ type RatVec = Vec<Rational>;
 /// linear system. Well past any degree a real Gosper certificate needs.
 const MAX_SOLVE_DEGREE: usize = 64;
 
+/// The largest non-negative integer Gosper–Petkovšek dispersion shift searched for.
+/// A shift beyond this is pathological; missing one only makes Gosper decline (the
+/// telescoping certificate still gates soundness), never return a wrong sum.
+const MAX_DISPERSION_SHIFT: i128 = 64;
+
 /// The indefinite hypergeometric sum `S(var)` of a Gosper-summable term, i.e. an
 /// antidifference with `S(var+1) − S(var) = term`, or `None` when the term is not
 /// Gosper-summable in this certifiable fragment.
@@ -314,13 +319,16 @@ fn nonneg_integer_dispersion(a: &[Rational], b: &[Rational]) -> Option<Vec<i128>
         return Some(Vec::new());
     }
     let resultant = dispersion_resultant(a, b)?;
-    let mut roots: Vec<i128> = crate::ratint::rational_roots(&resultant)?
-        .into_iter()
-        .filter(|value| value.denominator() == 1 && value.numerator() >= 0)
-        .map(Rational::numerator)
-        .collect();
-    roots.sort_unstable();
-    roots.dedup();
+    // Only the **non-negative integer** roots `j` of the resultant matter for the
+    // Gosper–Petkovšek shifts. Scan them directly by evaluation rather than the full
+    // rational-root finder, which overflows on a high-degree resultant (a binomial WZ
+    // term's dispersion resultant has degree ~9 with large coefficients).
+    let mut roots: Vec<i128> = Vec::new();
+    for j in 0..=MAX_DISPERSION_SHIFT {
+        if poly::eval_rat_poly(&resultant, Rational::integer(j)) == Some(Rational::zero()) {
+            roots.push(j);
+        }
+    }
     Some(roots)
 }
 
