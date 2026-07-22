@@ -10511,6 +10511,16 @@ fn extract_beta_form(expr: &CasExpr, var: &str) -> Option<(Rational, Rational, R
             let root_c = rational_sqrt(c)?; // radicand coefficient must be a square
             Some((root_c, p.checked_div(Rational::integer(2))?, q.checked_div(Rational::integer(2))?))
         }
+        CasExpr::Unary(UnaryFunc::NthRoot(k), arg) => {
+            // `root_k(x^a·(1−x)^b) = x^{a/k}·(1−x)^{b/k}` — the radicand coefficient
+            // must be a perfect `k`-th power to stay rational.
+            let (c, p, q) = extract_beta_form(arg, var)?;
+            let CasExpr::Const(root_c) = nth_root_of_rational(c, *k)? else {
+                return None;
+            };
+            let kr = Rational::integer(i128::from(*k));
+            Some((root_c, p.checked_div(kr)?, q.checked_div(kr)?))
+        }
         CasExpr::Pow(base, exp) => {
             let (c, p, q) = extract_beta_form(base, var)?;
             let power = Rational::integer(i128::from(*exp));
@@ -10564,7 +10574,17 @@ fn definite_beta_integral(
     if p.denominator() == 1 && q.denominator() == 1 && p.numerator() >= 0 && q.numerator() >= 0 {
         return None;
     }
-    let beta = special::beta(p.checked_add(Rational::integer(1))?, q.checked_add(Rational::integer(1))?)?;
+    // Convergence: both exponents must exceed −1, i.e. `p+1 > 0` and `q+1 > 0`.
+    let a = p.checked_add(Rational::integer(1))?;
+    let b = q.checked_add(Rational::integer(1))?;
+    if a.numerator() <= 0 || b.numerator() <= 0 {
+        return None;
+    }
+    // Prefer the closed form from `special::beta` (folds `B(½,½) = π`, etc.); when it
+    // has none, fall back to the symbolic Beta head `B(a,b) = Γ(a)Γ(b)/Γ(a+b)`, so
+    // e.g. `∫₀¹ x^{2/3}(1−x)^{1/3} = B(5/3,4/3)` still resolves.
+    let beta = special::beta(a, b)
+        .unwrap_or_else(|| beta_function(&CasExpr::Const(a), &CasExpr::Const(b)));
     // `simplify` first combines `√π·√π → (√π)²`, then `simplify_radicals` folds it
     // to `π` in `B(½,½) = Γ(½)²/Γ(1)`.
     Some(simplify(&simplify_radicals(&simplify(&(CasExpr::Const(coefficient) * beta)))))
@@ -17270,6 +17290,27 @@ mod tests {
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
+        // Fractional (non-half-integer) Beta integral via the symbolic Beta head:
+        // ∫₀^1 ∛x²·∛(1−x) = ∫₀^1 x^{2/3}(1−x)^{1/3} = B(5/3, 4/3) = Γ(5/3)Γ(4/3)/Γ(3).
+        // No elementary antiderivative and `special::beta` has no closed form, so the
+        // result is carried symbolically as B(a,b) = Γ(a)Γ(b)/Γ(a+b) and certified by
+        // numeric agreement (B(5/3,4/3) ≈ 0.30843).
+        let beta_frac = definite_integrate(
+            &(x().nth_root(3).pow(2) * (CasExpr::int(1) - x()).nth_root(3)),
+            "x",
+            &CasExpr::int(0),
+            &CasExpr::int(1),
+        )
+        .unwrap();
+        let beta_expected = beta_function(
+            &CasExpr::Const(Rational::new(5, 3)),
+            &CasExpr::Const(Rational::new(4, 3)),
+        );
+        assert!(matches!(
+            equal(&beta_frac.value, &beta_expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
         // Special-angle inverse-trig boundary: ∫₀^{√3} 1/(1+x²) = atan(√3) = π/3.
         let atan_bound = definite_integrate(
             &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
