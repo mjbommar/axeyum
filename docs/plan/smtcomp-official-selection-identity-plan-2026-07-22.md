@@ -133,16 +133,16 @@ identity, unknown answer, and the executable's non-`Unknown` (rather than
 sat/unsat-only) historical predicate. No official selected set has been
 produced or observed.
 
-**S1b implementation:** ready for the registered live audit. The independent
+**S1b implementation:** committed before and exercised by the live audit. The independent
 runner downloads and rechecks all 89 pinned organizer/rules/data/submission
 inputs (29 source/config files, 51 direct-child submissions, benchmark metadata,
-seven historical files, and the rules PDF), streams the multi-million-row gzip JSON
+seven historical files, and the rules PDF), streams the multi-million-row gzip
+JSON
 without Polars or organizer imports, and publishes a selection-free
 `eligibility.jsonl`, per-logic caps/quotas, summary, and completion-last input
 audit. A bounded-memory historical accumulator is differential-tested against
 the batch fixture result. Fourteen offline tests pass. The official selected
-set remains unobserved until this implementation commit is pushed and the live
-audit passes.
+set remained unobserved throughout this selection-free stage.
 
 **S1b first live attempt:** retained negative. The audit at
 `/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784743920768303217-16764d04`
@@ -185,6 +185,18 @@ runner now performs a standard-library bounded external merge sort during its
 second metadata pass; a retained-input check produced exactly 450,472 strictly
 ordered rows. No official sample was generated or observed; another
 fresh-directory rerun is required.
+
+**S1 result:** complete. The fifth fresh audit at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744992636593932-5051dfbc`
+verified all 89 inputs, 450,472 metadata rows across 89 logics, and 5,345,294
+historical rows. It emitted 450,472 strictly path-ordered eligibility rows:
+3,445 eligible new, 249,915 eligible old, and 197,112 excluded trivial. The two
+configured removals match zero metadata rows. Aggregate cap is 45,905, split
+into 2,709 new and 43,196 old quota slots. A fresh-process audit rehashed every
+input and completion dependency and reconstructed all counts. The compact
+[S1b result](smtcomp-official-selection-input-audit-s1b-2026-07-22.md) records
+the artifact roots and retained negatives. `selection_observed=false`; S2 is
+next.
 
 ### S2 — verified corpus acquisition
 
