@@ -7766,6 +7766,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_odd_rational_usub(expr, var),
         integrate_exp_substitution(expr, var),
         integrate_trig_inner_substitution(expr, var),
+        integrate_tan_substitution(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -8893,6 +8894,38 @@ fn replace_head_with_var(expr: &CasExpr, head: UnaryFunc, var: &str, replacement
         ),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// ∫ R(tan x)/cos²x dx = [∫R(u)du]_{u=tan x}, the `u = tan x` substitution
+/// (`du = sec²x dx = dx/cos²x`), for a **rational** `R` in `tan x`. Covers
+/// `∫1/cos²x = tan x` (`sec²`), `∫tan²x/cos²x = tan³x/3`. The integrand must carry
+/// a `1/cos²x` factor and be a rational function of `tan x` otherwise. Certified.
+fn integrate_tan_substitution(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Div(num, den) = expr else {
+        return None;
+    };
+    // The denominator must contain a `cos(x)²` factor (the `sec²` Jacobian).
+    let cos_sq = CasExpr::Unary(UnaryFunc::Cos, Box::new(CasExpr::var(var))).pow(2);
+    let mut den_factors = flatten_mul(den);
+    let position = den_factors.iter().position(|f| *f == cos_sq)?;
+    den_factors.remove(position);
+    let reduced_den = match den_factors.len() {
+        0 => CasExpr::int(1),
+        1 => den_factors.into_iter().next()?,
+        _ => CasExpr::Mul(den_factors),
+    };
+    let rest = CasExpr::Div(num.clone(), Box::new(reduced_den));
+    // Substitute tan x → u; the result must be a rational function of `u` alone.
+    let u = if var == "u" { "w" } else { "u" };
+    let in_u = replace_head_with_var(&rest, UnaryFunc::Tan, var, u);
+    if expr_contains_var(&in_u, var) || contains_sin_or_cos(&in_u) {
+        return None;
+    }
+    let inner = integrate(&in_u, u)?;
+    if !inner.is_certified() {
+        return None;
+    }
+    Some(inner.antiderivative.substitute(u, &CasExpr::Unary(UnaryFunc::Tan, Box::new(CasExpr::var(var)))))
 }
 
 /// ∫ cos(x)·R(sin x) dx = [∫R(u)du]_{u=sin x} and ∫ sin(x)·R(cos x) dx =
@@ -13902,6 +13935,26 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn tan_substitution_integrals() {
+        let x = || v("x");
+        // u=tan x (sec² Jacobian): ∫1/cos²x=tan x, ∫tan²x/cos²x=tan³x/3.
+        for integrand in [
+            CasExpr::int(1) / x().cos().pow(2),
+            x().tan().pow(2) / x().cos().pow(2),
+            x().tan() / x().cos().pow(2),
+        ] {
+            let r = integrate(&integrand, "x").expect("u=tan x substitution");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫1/cos²x = tan x exactly.
+        assert_equal(
+            &integrate(&(CasExpr::int(1) / x().cos().pow(2)), "x").unwrap().antiderivative,
+            &x().tan(),
+        );
     }
 
     #[test]
