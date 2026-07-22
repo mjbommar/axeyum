@@ -16,20 +16,26 @@ Section references in the code point at that document.
 
 | Stage | Rules § | Module | Status |
 |---|---|---|---|
-| A. Benchmark selection (per-division cap formula, seeded family sampling) | §6 | `selection.py` | **done** (scrambling = reference-only) |
+| A. Legacy candidate selection (local cap/family approximation) | §6 | `selection.py` | **superseded for official-selection claims** |
+| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0 authority/fixture complete; full producer/audit open** |
 | B. Resource-limited execution (wall `T`, CPU `mT`, mem; measures `aw`,`ac`) | §5 | `runner.py` | **done** (self-contained; BenchExec optional) |
 | C. Result → benchmark score tuple ⟨e,n,aw,w,ac,c⟩ (all 5 tracks) | §7.1 | `scoring.py` | **done** |
 | C′. Sequential benchmark score ⟨e_S,n_S,c_S⟩ (virtual CPU limit = T) | §7.1.1 | `scoring.py` | **done** |
 | D. Division scoring: parallel, PAR-2, sequential, 24s, sat, unsat; disagreement removal | §7.2 | `scoring.py` | **done** |
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + local shard execution | — | `compete.py`, `run_repro.sh` | **bounded slice** |
-| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, `resource_enforcement.py`, ADR-0344 | **E0-E2 complete; E3 multi-host execution open** |
+| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, `resource_enforcement.py`, ADR-0344 | **E0-E3 complete** |
 | —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
-Scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
+Legacy scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
 `tests/test_pipeline.py` (6, full aggregation/ranking plus duplicate rejection),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
+Eight ADR-0356 tests separately validate the pinned 29-source/53-submission/
+90-archive authority, complete synthetic eligibility/decision partition, all
+four cap regions, the inclusive 1.0-second boundary, incoherence and
+single-solver-year handling, exact fixture bytes, and rejecting mutations. The
+legacy sampler never substitutes for the pinned official Polars producer.
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.
@@ -45,7 +51,9 @@ states and byte-exact output. E2 adds portable resource-contract tests plus
 live delegated user-systemd/cgroup-v2 tests for exact aggregate limits, bounded
 two-worker execution, evidence mutation, host-runner kill, and explicit resumed
 completion. `./scripts/check-smtcomp-resume.sh` runs the portable bounded gate;
-`AXEYUM_REQUIRE_SMTCOMP_CGROUP=1` makes live E2 support mandatory.
+`AXEYUM_REQUIRE_SMTCOMP_CGROUP=1` makes live E2 support mandatory. E3's
+registered `s5`/`s6`/`s7` gate is separately mandatory with
+`AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1`.
 
 ## Reproduce
 
@@ -73,8 +81,14 @@ The source-backed v2 process-schema correction and narrow integration seams are
 in the [`E1b audit`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md).
 The fixture-only runner implementation is in the
 [`E1b result`](../../docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md).
-The one-host aggregate enforcement result and remaining E3 boundary are in the
+The one-host aggregate enforcement result is in the
 [`E2 result`](../../docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md).
+The accepted multi-host result is in the
+[`E3 result`](../../docs/plan/smtcomp-multi-host-durability-e3-2026-07-22.md).
+The independent official-selection boundary is in
+[ADR-0356](../../docs/research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
+and its
+[`S0--S5 plan`](../../docs/plan/smtcomp-official-selection-identity-plan-2026-07-22.md).
 
 ## Tracks
 

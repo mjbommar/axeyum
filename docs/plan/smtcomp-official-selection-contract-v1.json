@@ -1,0 +1,72 @@
+{
+  "artifacts": {
+    "archives.json": "verified Zenodo archive inventory including local SHA-256 after download",
+    "audit.json": "independent invariant and mutation results",
+    "authority.json": "resolved copy of the committed authority manifest plus exact tool identity",
+    "complete.json": "completion-last self-hashed root over every required artifact",
+    "corpus.jsonl": "one exact-byte row for every official metadata benchmark",
+    "decisions.jsonl": "one terminal eligibility or selection decision per metadata benchmark",
+    "historical.jsonl": "normalized evidence for each admitted and rejected historical year",
+    "official-selected.txt": "LF-terminated normalized official producer output",
+    "producer.json": "two locked official executions and their equality result",
+    "selected-files.jsonl": "official-selected order with exact size and SHA-256",
+    "summary.json": "per-logic transition counts and artifact digests"
+  },
+  "canonicalization": {
+    "absolute_paths_forbidden": true,
+    "benchmark_id": "non-incremental/<logic>/<family...>/<name>",
+    "json": "UTF-8, sorted keys, no insignificant whitespace, one final LF",
+    "jsonl": "benchmark_id byte order; canonical JSON object plus LF per row",
+    "selected_txt": "benchmark_id byte order; one ID plus LF per row"
+  },
+  "invariants": [
+    {"id": "S01", "statement": "Every authority input matches its pinned URL, size, and SHA-256 before use."},
+    {"id": "S02", "statement": "All 90 Zenodo files match record 16740866 name, size, and published MD5 before extraction."},
+    {"id": "S03", "statement": "Archive extraction admits only regular files below the fresh registered root."},
+    {"id": "S04", "statement": "Official metadata and the extracted corpus form a 450472-row bijection."},
+    {"id": "S05", "statement": "Every corpus row records bytes and SHA-256 computed from the extracted file."},
+    {"id": "S06", "statement": "Submission expansion derives competitive logic from more than one competitive participation row."},
+    {"id": "S07", "statement": "The 38 competitive submissions have integer seeds summing to 9684066285 with none missing."},
+    {"id": "S08", "statement": "The one global seed is 22731158 after modulo 2^30 and NYSE addition."},
+    {"id": "S09", "statement": "The two explicit removals occur before competitive-logic, difficulty, and cap selection."},
+    {"id": "S10", "statement": "A file with any sat/unsat incoherence across 2018-2024 has no admitted historical year."},
+    {"id": "S11", "statement": "A historical year is competitive only when it retains more than one result row."},
+    {"id": "S12", "statement": "A file is trivial only when it has an admitted year and every admitted year has only decided results at CPU time at most 1.0 seconds."},
+    {"id": "S13", "statement": "New means the complete normalized family string starts with 2025."},
+    {"id": "S14", "statement": "Each competitive logic uses the pinned 300, 0.5, 1000, and 0.1 cap expression."},
+    {"id": "S15", "statement": "Official output selects min(cap,new_count) new rows and fills the remainder with old rows."},
+    {"id": "S16", "statement": "The official producer runs twice with Polars 1.39.2 and emits byte-identical normalized outputs."},
+    {"id": "S17", "statement": "Every metadata row has exactly one internally consistent terminal decision reason."},
+    {"id": "S18", "statement": "Publication occurs only after the self-hashed completion root validates from a fresh process."}
+  ],
+  "mutations": [
+    {"id": "M01", "rejects": "organizer source hash drift"},
+    {"id": "M02", "rejects": "benchmark or historical data hash drift"},
+    {"id": "M03", "rejects": "submission removal, duplication, or seed drift"},
+    {"id": "M04", "rejects": "Zenodo record, version, archive count, or archive size drift"},
+    {"id": "M05", "rejects": "missing or extra corpus benchmark"},
+    {"id": "M06", "rejects": "duplicate metadata or decision benchmark ID"},
+    {"id": "M07", "rejects": "path traversal, absolute path, separator-bearing component, symlink, or non-regular corpus entry"},
+    {"id": "M08", "rejects": "selected-file byte or SHA-256 drift"},
+    {"id": "M09", "rejects": "false competitive-logic admission"},
+    {"id": "M10", "rejects": "false coherent or competitive historical year"},
+    {"id": "M11", "rejects": "strict-less-than substitution at the inclusive 1.0-second boundary"},
+    {"id": "M12", "rejects": "explicitly removed, noncompetitive, or trivial selected row"},
+    {"id": "M13", "rejects": "wrong per-logic cap or new-before-old quota"},
+    {"id": "M14", "rejects": "unknown or duplicate official selected ID"},
+    {"id": "M15", "rejects": "missing, duplicate, unknown, or inconsistent terminal decision reason"},
+    {"id": "M16", "rejects": "producer repetition disagreement"},
+    {"id": "M17", "rejects": "producer and independent auditor membership disagreement"},
+    {"id": "M18", "rejects": "missing dependency artifact, digest drift, or premature completion publication"}
+  ],
+  "policy": {
+    "competition_year": 2026,
+    "global_seed": 22731158,
+    "organizer_commit": "401302678311593efcef8a79b614b33a3b853eac",
+    "polars": "1.39.2",
+    "track": "single-query",
+    "zenodo_record": 16740866,
+    "zenodo_version": "2025.08.04"
+  },
+  "schema": "axeyum-smtcomp-official-selection-contract-v1"
+}

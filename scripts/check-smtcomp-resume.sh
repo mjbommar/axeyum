@@ -10,9 +10,11 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_resource_enforcement \
   scripts.tests.test_smtcomp_cgroup_host \
   scripts.tests.test_smtcomp_multi_host \
-  scripts.tests.test_smtcomp_multi_host_live
+  scripts.tests.test_smtcomp_multi_host_live \
+  scripts.smtcomp_repro.tests.test_official_selection
 python3 scripts/smtcomp_repro/tests/test_runner.py
 for test in test_scoring test_pipeline test_selection test_provenance; do
   python3 "scripts/smtcomp_repro/tests/$test.py"
 done
 python3 scripts/gen-smtcomp-resume-contract.py --check
+python3 scripts/gen-smtcomp-selection-authority.py --check

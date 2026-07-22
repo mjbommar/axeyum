@@ -1,0 +1,141 @@
+{
+  "benchmarks": [
+    {
+      "asserts": 1,
+      "family": ["2025-new", "nested"],
+      "logic": "QF_BV",
+      "name": "new-fast.smt2",
+      "status": "sat"
+    },
+    {
+      "asserts": 1,
+      "family": ["2025-new"],
+      "logic": "QF_BV",
+      "name": "new-boundary.smt2",
+      "status": "sat"
+    },
+    {
+      "asserts": 1,
+      "family": ["2025-new"],
+      "logic": "QF_BV",
+      "name": "new-slow.smt2",
+      "status": "sat"
+    },
+    {
+      "asserts": 1,
+      "family": ["2025-new"],
+      "logic": "QF_BV",
+      "name": "new-incoherent.smt2",
+      "status": "unknown"
+    },
+    {
+      "asserts": 1,
+      "family": ["2024-old"],
+      "logic": "QF_BV",
+      "name": "old-single-solver.smt2",
+      "status": "unsat"
+    },
+    {
+      "asserts": 1,
+      "family": ["2024-old"],
+      "logic": "QF_BV",
+      "name": "old-never-run.smt2",
+      "status": "unknown"
+    },
+    {
+      "asserts": 1,
+      "family": ["2024-old"],
+      "logic": "QF_BV",
+      "name": "old-removed.smt2",
+      "status": "sat"
+    },
+    {
+      "asserts": 1,
+      "family": ["2024-only-one-entry"],
+      "logic": "QF_UF",
+      "name": "noncompetitive.smt2",
+      "status": "sat"
+    },
+    {
+      "asserts": 2,
+      "family": ["2024-nested", "deeper"],
+      "logic": "QF_LIA",
+      "name": "unknown-status.smt2",
+      "status": "unknown"
+    }
+  ],
+  "file_ledger": [
+    {"benchmark_id": "non-incremental/QF_BV/2024-old/old-never-run.smt2", "bytes": 71, "sha256": "28950cb9cc48183f68c5d7ca08f8777fc0b280dcbbfd183429afa0a71464a591"},
+    {"benchmark_id": "non-incremental/QF_BV/2024-old/old-removed.smt2", "bytes": 67, "sha256": "48b8b353a2ee401e24df1a5ca8695ad246ffb08f57bb6f4ebb72b87ff77c7374"},
+    {"benchmark_id": "non-incremental/QF_BV/2024-old/old-single-solver.smt2", "bytes": 70, "sha256": "25b1b59049259b1863cbee0a2d60d64e4049fecc12ca6cd28bfc8fd3392e8465"},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/nested/new-fast.smt2", "bytes": 67, "sha256": "48b8b353a2ee401e24df1a5ca8695ad246ffb08f57bb6f4ebb72b87ff77c7374"},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-boundary.smt2", "bytes": 67, "sha256": "48b8b353a2ee401e24df1a5ca8695ad246ffb08f57bb6f4ebb72b87ff77c7374"},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-incoherent.smt2", "bytes": 71, "sha256": "28950cb9cc48183f68c5d7ca08f8777fc0b280dcbbfd183429afa0a71464a591"},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-slow.smt2", "bytes": 67, "sha256": "48b8b353a2ee401e24df1a5ca8695ad246ffb08f57bb6f4ebb72b87ff77c7374"},
+    {"benchmark_id": "non-incremental/QF_LIA/2024-nested/deeper/unknown-status.smt2", "bytes": 72, "sha256": "f7b9d30b64133c919c7fdcd37c191ca3b19f18f0f0326a6ea6ae5eabc94821f8"},
+    {"benchmark_id": "non-incremental/QF_UF/2024-only-one-entry/noncompetitive.smt2", "bytes": 67, "sha256": "67d39641bbc10cf733c06fc9a6f180e6ee8b83047f5d0e7dd63a3660984ff343"}
+  ],
+  "generated_logic_populations": [
+    {"count": 300, "expected_cap": 300, "logic": "CAP_300", "new": 2},
+    {"count": 450, "expected_cap": 300, "logic": "CAP_450", "new": 2},
+    {"count": 800, "expected_cap": 400, "logic": "CAP_800", "new": 2},
+    {"count": 1200, "expected_cap": 520, "logic": "CAP_1200", "new": 2}
+  ],
+  "historical_results": [
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/nested/new-fast.smt2", "cpu_seconds": 0.2, "result": "sat", "solver": "solver-a", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/nested/new-fast.smt2", "cpu_seconds": 0.3, "result": "sat", "solver": "solver-b", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-boundary.smt2", "cpu_seconds": 1.0, "result": "sat", "solver": "solver-a", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-boundary.smt2", "cpu_seconds": 1.0, "result": "sat", "solver": "solver-b", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-slow.smt2", "cpu_seconds": 1.0, "result": "sat", "solver": "solver-a", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-slow.smt2", "cpu_seconds": 1.01, "result": "sat", "solver": "solver-b", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-incoherent.smt2", "cpu_seconds": 0.1, "result": "sat", "solver": "solver-a", "year": 2023},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-incoherent.smt2", "cpu_seconds": 0.1, "result": "sat", "solver": "solver-b", "year": 2023},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-incoherent.smt2", "cpu_seconds": 0.1, "result": "unsat", "solver": "solver-a", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2025-new/new-incoherent.smt2", "cpu_seconds": 0.1, "result": "unsat", "solver": "solver-b", "year": 2024},
+    {"benchmark_id": "non-incremental/QF_BV/2024-old/old-single-solver.smt2", "cpu_seconds": 0.1, "result": "unsat", "solver": "solver-a", "year": 2024}
+  ],
+  "removed_ids": [
+    "non-incremental/QF_BV/2024-old/old-removed.smt2"
+  ],
+  "selected_ids": [
+    "non-incremental/QF_BV/2024-old/old-never-run.smt2",
+    "non-incremental/QF_BV/2024-old/old-single-solver.smt2",
+    "non-incremental/QF_BV/2025-new/new-incoherent.smt2",
+    "non-incremental/QF_BV/2025-new/new-slow.smt2",
+    "non-incremental/QF_LIA/2024-nested/deeper/unknown-status.smt2"
+  ],
+  "submissions": [
+    {
+      "competitive": true,
+      "name": "solver-a",
+      "participations": [
+        {"logics": ["QF_BV", "QF_LIA"], "track": "single-query"}
+      ],
+      "seed": 10
+    },
+    {
+      "competitive": true,
+      "name": "solver-b",
+      "participations": [
+        {"logics": ["QF_BV", "QF_LIA"], "track": "single-query"}
+      ],
+      "seed": 20
+    },
+    {
+      "competitive": true,
+      "name": "solver-c",
+      "participations": [
+        {"logics": ["QF_UF"], "track": "single-query"}
+      ],
+      "seed": 30
+    },
+    {
+      "competitive": false,
+      "name": "noncompetitive-solver",
+      "participations": [
+        {"logics": ["QF_BV", "QF_UF"], "track": "single-query"}
+      ],
+      "seed": null
+    }
+  ]
+}
