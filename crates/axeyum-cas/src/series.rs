@@ -297,6 +297,10 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
             .and_then(|inner| compose(&inner, cosine_coeff)),
         UnaryFunc::Atan => require_vanishing(&argument, constant_term)
             .and_then(|inner| compose(&inner, arctangent_coeff)),
+        UnaryFunc::Asin => require_vanishing(&argument, constant_term)
+            .and_then(|inner| compose(&inner, arcsine_coeff)),
+        UnaryFunc::Asinh => require_vanishing(&argument, constant_term)
+            .and_then(|inner| compose(&inner, arcsinh_coeff)),
         UnaryFunc::Ln => require_unit(argument, constant_term)
             .and_then(|inner| compose(&inner, log_one_plus_coeff)),
         UnaryFunc::Sqrt => {
@@ -324,9 +328,9 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         | UnaryFunc::FresnelC
         | UnaryFunc::BesselJ0
         | UnaryFunc::BesselJ1
-        | UnaryFunc::Asin
+        // acos = π/2 − asin has an irrational (π/2) constant term; acosh is
+        // undefined at 0 (|x|<1) — neither has a rational Maclaurin series.
         | UnaryFunc::Acos
-        | UnaryFunc::Asinh
         | UnaryFunc::Acosh => None,
     }
 }
@@ -429,6 +433,32 @@ fn arctangent_coeff(degree: usize) -> Option<Rational> {
     with_alternating_sign((degree - 1) / 2, magnitude)
 }
 
+/// The `Maclaurin` coefficient of `asin(t)` at degree `k`: `0` at even `k`, and
+/// `C(2n,n)/(4ⁿ(2n+1))` at `k = 2n+1` — computed exactly as
+/// `[∏_{i=1}^{n} (2i−1)/(2i)] / (2n+1)`. `None` on `i128` overflow.
+fn arcsine_coeff(degree: usize) -> Option<Rational> {
+    if degree.is_multiple_of(2) {
+        return Some(Rational::zero());
+    }
+    let n = (degree - 1) / 2;
+    let mut product = Rational::integer(1);
+    for i in 1..=n {
+        let num = Rational::integer(i128::try_from(2 * i - 1).ok()?);
+        let den = Rational::integer(i128::try_from(2 * i).ok()?);
+        product = product.checked_mul(num)?.checked_div(den)?;
+    }
+    product.checked_div(Rational::integer(i128::try_from(degree).ok()?))
+}
+
+/// The `Maclaurin` coefficient of `asinh(t)` at degree `k`: `(−1)ⁿ` times the
+/// `asin` coefficient at `k = 2n+1` (`0` at even `k`).
+fn arcsinh_coeff(degree: usize) -> Option<Rational> {
+    if degree.is_multiple_of(2) {
+        return Some(Rational::zero());
+    }
+    with_alternating_sign((degree - 1) / 2, arcsine_coeff(degree)?)
+}
+
 /// The `Maclaurin` coefficient of `ln(1 + t)` at degree `k`: `0` at `k = 0` and
 /// `(-1)^{k+1} / k` for `k >= 1`.
 fn log_one_plus_coeff(degree: usize) -> Option<Rational> {
@@ -490,6 +520,39 @@ mod tests {
         let result = series(&expr, "x", 5).expect("rational function");
         let expected = (0..=5).fold(CasExpr::zero(), |acc, k| acc + var().pow(k));
         assert_matches(&result, &expected);
+    }
+
+    #[test]
+    fn arcsine_arcsinh_series() {
+        // asin(x) = x + x³/6 + 3x⁵/40 (even coefficients zero).
+        let asin = CasExpr::Unary(UnaryFunc::Asin, Box::new(var()));
+        assert_eq!(
+            coeffs(&asin, 5),
+            vec![
+                Rational::zero(),
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(1, 6),
+                Rational::zero(),
+                Rational::new(3, 40),
+            ]
+        );
+        // asinh(x) = x − x³/6 + 3x⁵/40 (alternating).
+        let asinh = CasExpr::Unary(UnaryFunc::Asinh, Box::new(var()));
+        assert_eq!(
+            coeffs(&asinh, 5),
+            vec![
+                Rational::zero(),
+                Rational::integer(1),
+                Rational::zero(),
+                Rational::new(-1, 6),
+                Rational::zero(),
+                Rational::new(3, 40),
+            ]
+        );
+        // acos (π/2 constant) and acosh (undefined at 0) have no rational series.
+        assert!(series(&CasExpr::Unary(UnaryFunc::Acos, Box::new(var())), "x", 4).is_none());
+        assert!(series(&CasExpr::Unary(UnaryFunc::Acosh, Box::new(var())), "x", 4).is_none());
     }
 
     #[test]
