@@ -5855,6 +5855,84 @@ pub fn gram_schmidt(vectors: &[Vec<CasExpr>]) -> Option<Vec<Vec<CasExpr>>> {
     Some(basis)
 }
 
+/// **QR decomposition** `A = Q·R` of a full-column-rank matrix: `Q` has orthonormal
+/// columns (Gram–Schmidt on `A`'s columns, then normalized — surd norms) and `R =
+/// Qᵀ·A` is upper triangular. Returns `(Q, R)`, or `None` if the columns are
+/// linearly dependent or the reconstruction `Q·R = A` does not certify (the surd
+/// entries are decided by the zero-test).
+///
+/// ```
+/// use axeyum_cas::{Matrix, CasExpr, qr_decomposition, equal, ZeroTest};
+/// // A = [[1,1],[1,-1]] has orthogonal columns; Q·R reconstructs A (surd entries,
+/// // so compare with the zero-test, not structural equality).
+/// let a = Matrix::from_rows(vec![
+///     vec![CasExpr::int(1), CasExpr::int(1)],
+///     vec![CasExpr::int(1), CasExpr::int(-1)],
+/// ]).unwrap();
+/// let (q, r) = qr_decomposition(&a).unwrap();
+/// let qr = q.mul(&r).unwrap();
+/// for i in 0..2 {
+///     for j in 0..2 {
+///         assert!(matches!(equal(qr.get(i, j).unwrap(), a.get(i, j).unwrap()),
+///             ZeroTest::Certified { equal: true, .. }));
+///     }
+/// }
+/// ```
+#[must_use]
+pub fn qr_decomposition(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
+    let (rows, cols) = (matrix.rows(), matrix.cols());
+    if rows == 0 || cols == 0 {
+        return None;
+    }
+    // Columns of A.
+    let columns: Vec<Vec<CasExpr>> = (0..cols)
+        .map(|j| (0..rows).map(|i| matrix.get(i, j).cloned()).collect::<Option<Vec<_>>>())
+        .collect::<Option<Vec<_>>>()?;
+    let orthogonal = gram_schmidt(&columns)?;
+    if orthogonal.len() != cols {
+        return None; // linearly dependent columns — no full-rank QR
+    }
+    // Normalize each orthogonal column to unit length → columns of Q.
+    let q_columns: Vec<Vec<CasExpr>> = orthogonal
+        .iter()
+        .map(|u| {
+            let length = norm(u)?;
+            u.iter()
+                .map(|c| Some(simplify(&simplify_radicals(&(c.clone() / length.clone())))))
+                .collect::<Option<Vec<_>>>()
+        })
+        .collect::<Option<Vec<_>>>()?;
+    let q = Matrix::from_rows(
+        (0..rows)
+            .map(|i| (0..cols).map(|j| q_columns[j][i].clone()).collect())
+            .collect(),
+    )?;
+    // R = Qᵀ·A (upper triangular; below-diagonal entries vanish by orthogonality).
+    let raw_r = q.transpose().mul(matrix)?;
+    let r = Matrix::from_rows(
+        (0..raw_r.rows())
+            .map(|i| {
+                (0..raw_r.cols())
+                    .map(|j| Some(simplify(&simplify_radicals(raw_r.get(i, j)?))))
+                    .collect::<Option<Vec<_>>>()
+            })
+            .collect::<Option<Vec<_>>>()?,
+    )?;
+    // Certify the reconstruction `Q·R = A` (surds decided by the zero-test).
+    let reconstructed = q.mul(&r)?;
+    for i in 0..rows {
+        for j in 0..cols {
+            if !matches!(
+                equal(reconstructed.get(i, j)?, matrix.get(i, j)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    Some((q, r))
+}
+
 /// The Euclidean norm `‖v‖ = √(v · v)` of a vector, as an exact [`CasExpr`] with any
 /// surd simplified to lowest terms (`‖(3,4)‖ = 5`, `‖(1,1)‖ = √2`). `None` on
 /// overflow. For a constant vector the value is exact and certifiable via the
@@ -15516,6 +15594,41 @@ mod tests {
         let reduced = gram_schmidt(&dependent).unwrap();
         assert_eq!(reduced.len(), 2);
         assert_equal(&dot(&reduced[0], &reduced[1]).unwrap(), &CasExpr::zero());
+    }
+
+    #[test]
+    fn qr_decomposition_reconstructs_and_orthonormal() {
+        let c = |n: i128| CasExpr::int(n);
+        for rows in [
+            vec![vec![c(1), c(1)], vec![c(1), c(-1)]],
+            vec![vec![c(1), c(2)], vec![c(0), c(1)]],
+            vec![vec![c(6), c(6)], vec![c(3), c(-8)]],
+            vec![vec![c(1), c(1), c(0)], vec![c(1), c(0), c(1)], vec![c(0), c(1), c(1)]],
+        ] {
+            let a = Matrix::from_rows(rows).unwrap();
+            let (q, r) = qr_decomposition(&a).unwrap();
+            let ncol = a.cols();
+            // Q·R = A (surds decided by the zero-test).
+            let qr = q.mul(&r).unwrap();
+            for i in 0..a.rows() {
+                for j in 0..ncol {
+                    assert_equal(qr.get(i, j).unwrap(), a.get(i, j).unwrap());
+                }
+            }
+            // QᵀQ = I (orthonormal columns).
+            let qtq = q.transpose().mul(&q).unwrap();
+            for i in 0..ncol {
+                for j in 0..ncol {
+                    assert_equal(qtq.get(i, j).unwrap(), &c(i128::from(i == j)));
+                }
+            }
+            // R upper triangular (below-diagonal entries zero).
+            for i in 0..r.rows() {
+                for j in 0..i.min(r.cols()) {
+                    assert_equal(r.get(i, j).unwrap(), &CasExpr::zero());
+                }
+            }
+        }
     }
 
     #[test]
