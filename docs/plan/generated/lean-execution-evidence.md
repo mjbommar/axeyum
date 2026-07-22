@@ -27,7 +27,7 @@ A memory, timeout, PID, or disk classification requires matching enforcement evi
 |---|---:|
 | `run` | 22 |
 | `attempt` | 8 |
-| `attempt_terminal` | 8 |
+| `attempt_terminal` | 7 |
 | `case` | 8 |
 | `artifact` | 9 |
 | `completion` | 10 |

@@ -83,8 +83,9 @@ The authority fixes exact field sets for:
   policy before launch;
 - an attempt recorded before process creation, with assignment, raw artifacts,
   terminal or deliberate absence, and self-hash;
-- a terminal record retaining exit code, signal, enforcement events, wall/CPU
-  time, peak RSS, and metric state as separate facts;
+- a terminal record retaining exit code, signal, enforcement events, and
+  independent typed state/value/unit records for wall time, CPU time, and peak
+  RSS;
 - per-case records joined to the exact TL0.6 selection and owning attempt;
 - provider/local artifacts with content identity, size, expiry state, and
   durable-copy identity;

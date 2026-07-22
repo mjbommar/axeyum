@@ -1,7 +1,7 @@
 {
   "schema": "axeyum-lean-execution-evidence-report-v1",
   "generated_from": "docs/plan/lean-execution-evidence-v1.json",
-  "generated_from_sha256": "1cb68d9ebbfe17beccace8b3d233b756a3fc465567881f4d3d5a8902b1e08c41",
+  "generated_from_sha256": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a",
   "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
   "preregistration": {
     "commit": "ff8f8dd4b71c3c488ce53229f4301527d5e9d360",
@@ -51,7 +51,7 @@
   "record_field_counts": {
     "run": 22,
     "attempt": 8,
-    "attempt_terminal": 8,
+    "attempt_terminal": 7,
     "case": 8,
     "artifact": 9,
     "completion": 10,

@@ -125,10 +125,9 @@ TERMINAL_FIELDS = (
     "exit_code",
     "signal",
     "events",
-    "wall_time_ms",
-    "cpu_time_ms",
-    "peak_rss_bytes",
-    "metric_state",
+    "wall_time",
+    "cpu_time",
+    "peak_rss",
 )
 CASE_FIELDS = (
     "id",
@@ -500,10 +499,9 @@ def terminal(
         "exit_code": exit_code,
         "signal": signal,
         "events": events if events is not None else ["exit-status-observed"],
-        "wall_time_ms": 10,
-        "cpu_time_ms": 5,
-        "peak_rss_bytes": 1_048_576,
-        "metric_state": "observed",
+        "wall_time": metric("observed", 10, "milliseconds"),
+        "cpu_time": metric("observed", 5, "milliseconds"),
+        "peak_rss": metric("observed", 1_048_576, "bytes"),
     }
 
 
@@ -774,12 +772,8 @@ def validate_terminal(attempt_id: str, value: Any, failures: list[str]) -> None:
         required = termination + "-observed"
         if required not in events:
             failures.append(f"{attempt_id}: {termination} lacks enforcement evidence")
-    for field in ("wall_time_ms", "cpu_time_ms", "peak_rss_bytes"):
-        number = value.get(field)
-        if not isinstance(number, int) or isinstance(number, bool) or number < 0:
-            failures.append(f"{attempt_id}: {field} must be non-negative")
-    if value.get("metric_state") not in METRIC_STATES:
-        failures.append(f"{attempt_id}: invalid terminal metric state")
+    for field in ("wall_time", "cpu_time", "peak_rss"):
+        validate_metric(f"{attempt_id}.{field}", value.get(field), failures)
 
 
 def validate_bundle(bundle: dict[str, Any], authority: dict[str, Any] | None = None) -> list[str]:

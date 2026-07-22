@@ -251,6 +251,12 @@ class LeanExecutionEvidenceTests(unittest.TestCase):
         )
         self.assertTrue(any("lacks enforcement evidence" in item for item in failures))
 
+        failures = []
+        terminal = GEN.terminal()
+        terminal["peak_rss"] = GEN.metric("not-observed", 0, "bytes")
+        GEN.validate_terminal("attempt-zero", terminal, failures)
+        self.assertTrue(any("value must be null" in item for item in failures))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -8,7 +8,7 @@
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
-      "sha256": "8b74124117f6bb1293218b492af8eb381991d04249fd9a00aa47a82e0d6cf0d8"
+      "sha256": "502cd3514e753108d4af9b487925f58161bf92eb29631899bb5befa92a82d2ca"
     },
     {
       "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
@@ -32,11 +32,11 @@
     },
     {
       "path": "docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md",
-      "sha256": "322492f9a9a40de4a66fd9212dc5cf70a12722b7858fdd0e490cd886c46764ed"
+      "sha256": "281bb75975186e4eb5a99359eb302a8280d12c4d2e06ed5ebd954a41dab9cb2c"
     },
     {
       "path": "docs/plan/lean-execution-evidence-v1.json",
-      "sha256": "1cb68d9ebbfe17beccace8b3d233b756a3fc465567881f4d3d5a8902b1e08c41"
+      "sha256": "83fbfeaf6baa4c1bd747ce80bba87a15aaf159bb164a7647cc8e3155282fa05a"
     },
     {
       "path": "docs/plan/lean-official-construct-matrix-v1.json",
@@ -68,7 +68,7 @@
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
-      "sha256": "5112cfe9d7cf7dcb3b28da2d6001abaa52e1227b86ab6f5443b9f1e08646e36c"
+      "sha256": "025f935111b83e1a3bbc78af50a4ad5671baa370bda02fe94756481e54f55418"
     },
     {
       "path": "scripts/gen-lean-u2-official-ci-profiles.py",
@@ -88,7 +88,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
-      "sha256": "3c730211a4b1c125a4ad0a0cd18d58e3f5f8bfcce374b0dc60a19248c0a800b3"
+      "sha256": "1221e20ff4d712233613b03f5cbb75ec943e2b101ff7a370ad511011dc6b13f4"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
