@@ -5027,6 +5027,128 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
     }
 }
 
+/// Rows of `(nᵢ, coefficient_vector_in_k)` — one per concrete sample — for the
+/// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
+type CoeffRows = Vec<(Rational, Vec<Rational>)>;
+
+/// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
+/// **Wilf–Zeilberger** method, returning the certificate `R(n,k)` when the proof
+/// succeeds. With `f = F/rhs`, a rational **certificate** `R(n,k)` gives the
+/// telescoping WZ pair `f(n+1,k) − f(n,k) = G(n,k+1) − G(n,k)` for `G = R·f`; summing
+/// over all `k` collapses the right side to `0`, so `S(n) = ∑_k f(n,k)` is constant,
+/// and `S(base) = 1` pins it to `1` — i.e. `∑_k F(n,k) = rhs(n)`.
+///
+/// `R` is **discovered** by running [`gosper_sum`] on the WZ term at several concrete
+/// `n` and interpolating the certificate's coefficients over `n`; the answer is then
+/// **verified symbolically** — `equal(G(n,k+1) − G(n,k), f(n+1,k) − f(n,k))` must
+/// certify with `n, k` both symbolic. That symbolic check (not the interpolation) is
+/// the soundness gate: a wrong or under-fitted `R` fails it and the prover declines.
+/// The base case `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite
+/// summation. `None` if any concrete Gosper run, the interpolation, the symbolic
+/// verification, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
+#[must_use]
+#[allow(clippy::many_single_char_names)] // n, k, f, g, h, r are the standard names here
+pub fn prove_wz_sum(
+    summand: &CasExpr,
+    n: &str,
+    k: &str,
+    rhs: &CasExpr,
+    base: i128,
+    k_lo: i128,
+    k_hi: i128,
+) -> Option<CasExpr> {
+    // Collect this many successful concrete-`n` certificate samples (comfortably above
+    // the n-degree of the certificate coefficients for the classic identities), trying
+    // up to `SCAN` values and *skipping* any `n` where the concrete Gosper run declines
+    // or overflows (larger `n` grow the rising factorials and can overflow) — the
+    // symbolic verification below is the real gate, so a few missing samples are fine.
+    const TARGET: usize = 6;
+    const SCAN: i128 = 24;
+    let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
+
+    let (mut num_rows, mut den_rows): (CoeffRows, CoeffRows) = (Vec::new(), Vec::new());
+    let mut step = 1;
+    while num_rows.len() < TARGET && step <= SCAN {
+        let ni = base + step;
+        step += 1;
+        let sample = (|| {
+            let f_ni = simplify(&f.substitute(n, &CasExpr::int(ni)));
+            let f_ni1 = simplify(&f.substitute(n, &CasExpr::int(ni + 1)));
+            // WZ term h(k) = f(n+1,k) − f(n,k); its k-antidifference is the certificate
+            // G_ni(k) = R(ni,k)·f(ni,k).
+            let h = simplify(&(f_ni1 - f_ni.clone()));
+            let g = gosper_sum(&h, k)?;
+            let r = simplify(&CasExpr::Div(Box::new(g), Box::new(f_ni)));
+            let rf = normalize_rational(&r)?;
+            let mut num = rf.num.to_univariate(k)?;
+            let mut den = rf.den.to_univariate(k)?;
+            // Monic denominator, so coefficient positions align across samples.
+            let lead = *den.last()?;
+            if lead.is_zero() {
+                return None;
+            }
+            for c in num.iter_mut().chain(den.iter_mut()) {
+                *c = c.checked_div(lead)?;
+            }
+            Some((poly::rat_trim(num), poly::rat_trim(den)))
+        })();
+        if let Some((num, den)) = sample {
+            num_rows.push((Rational::integer(ni), num));
+            den_rows.push((Rational::integer(ni), den));
+        }
+    }
+    if num_rows.len() < 3 {
+        return None; // too few samples to interpolate reliably
+    }
+
+    // Interpolate each coefficient position over `n`, reassembling R(n,k).
+    let r_num = interpolate_coeffs_over_n(&num_rows, n, k)?;
+    let r_den = interpolate_coeffs_over_n(&den_rows, n, k)?;
+    let big_r = CasExpr::Div(Box::new(r_num), Box::new(r_den));
+
+    // Symbolic soundness gate: G(n,k+1) − G(n,k) = f(n+1,k) − f(n,k), with n,k symbolic.
+    let g_sym = CasExpr::Mul(vec![big_r.clone(), f.clone()]);
+    let g_shift = g_sym.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
+    let h_sym = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f.clone();
+    if !matches!(equal(&(g_shift - g_sym), &h_sym), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+
+    // Base case: `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` by exact finite summation.
+    let mut total = CasExpr::zero();
+    for kk in k_lo..=k_hi {
+        total = total + summand.substitute(n, &CasExpr::int(base)).substitute(k, &CasExpr::int(kk));
+    }
+    let rhs_base = rhs.substitute(n, &CasExpr::int(base));
+    matches!(equal(&total, &rhs_base), ZeroTest::Certified { equal: true, .. }).then_some(big_r)
+}
+
+/// Interpolate a `k`-polynomial whose coefficients are polynomials in `n`, from rows
+/// `(nᵢ, coeff_vec_in_k)`: for each `k`-power `j`, fit `pⱼ(n)` through `(nᵢ, coeff_i[j])`
+/// (Lagrange) and assemble `∑ⱼ pⱼ(n)·kʲ`. Used to lift a Gosper certificate found at
+/// concrete `n` to a symbolic `R(n,k)`. `None` on empty input or interpolation failure.
+fn interpolate_coeffs_over_n(rows: &[(Rational, Vec<Rational>)], n: &str, k: &str) -> Option<CasExpr> {
+    let width = rows.iter().map(|(_, v)| v.len()).max()?;
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for j in 0..width {
+        let points: Vec<(Rational, Rational)> = rows
+            .iter()
+            .map(|(ni, v)| (*ni, v.get(j).copied().unwrap_or_else(Rational::zero)))
+            .collect();
+        let coeff_poly = approx::lagrange_interpolation(&points, n)?;
+        let power = if j == 0 {
+            CasExpr::int(1)
+        } else {
+            CasExpr::var(k).pow(u32::try_from(j).ok()?)
+        };
+        terms.push(coeff_poly * power);
+    }
+    Some(match terms.len() {
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    })
+}
+
 /// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f` — the
 /// **discrete antiderivative** `S` with `S(var+1) − S(var) = f(var)` and `S(0)=0`.
 /// Solved as one exact linear system; **certified** by the telescoping zero-test
@@ -16434,6 +16556,32 @@ mod tests {
         assert_equal(&simplify(&tele2), &(CasExpr::int(1) / (n() + CasExpr::int(1))));
         // A non-splitting rational term (irreducible quadratic factor) is declined.
         assert!(finite_product(&(CasExpr::int(1) / (k().pow(2) + CasExpr::int(1))), "k", &CasExpr::int(1), &n()).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_binomial_sum_proofs() {
+        let n = || v("n");
+        let k = || v("k");
+        let two_n = geometric_power(Rational::new(2, 1), "n"); // 2ⁿ
+
+        // ∑_k C(n,k) = 2ⁿ — proven by Wilf–Zeilberger (certificate discovered at
+        // concrete n, verified symbolically). The certificate is R(n,k) = (k/2)/(k−n−1).
+        let cert = prove_wz_sum(&binomial_coefficient(&n(), &k()), "n", "k", &two_n, 1, 0, 1)
+            .expect("∑ C(n,k) = 2ⁿ is provable");
+        // The returned certificate does satisfy the WZ telescoping identity.
+        let f = binomial_coefficient(&n(), &k()) / two_n.clone();
+        let g = cert * f.clone();
+        let telescope = g.substitute("k", &(k() + CasExpr::int(1))) - g;
+        let wz = f.substitute("n", &(n() + CasExpr::int(1))) - f;
+        assert!(matches!(equal(&telescope, &wz), ZeroTest::Certified { equal: true, .. }));
+
+        // ∑_k k·C(n,k) = n·2^{n−1}.
+        let rhs2 = n() * two_n.clone() / CasExpr::int(2);
+        assert!(prove_wz_sum(&(k() * binomial_coefficient(&n(), &k())), "n", "k", &rhs2, 2, 0, 2).is_some());
+
+        // Soundness: a FALSE identity ∑_k C(n,k) = 3ⁿ must not be "proven".
+        let three_n = geometric_power(Rational::new(3, 1), "n");
+        assert!(prove_wz_sum(&binomial_coefficient(&n(), &k()), "n", "k", &three_n, 1, 0, 1).is_none());
     }
 
     #[test]
