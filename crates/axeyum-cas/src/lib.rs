@@ -10438,6 +10438,40 @@ pub fn definite_integrate(
     })
 }
 
+/// An **iterated (multiple) integral** `∫∫…∫ f` over the given `bounds`, listed
+/// **outer-to-inner** as `(var, lower, upper)`. Integration proceeds inside-out (the
+/// last triple first), and — since the bounds are arbitrary [`CasExpr`] — an inner
+/// bound may depend on an outer variable, so **non-rectangular regions** are covered:
+/// `∫₀^1 ∫₀^x (x+y) dy dx = 1/2`, as well as plain rectangles
+/// `∫₀^1 ∫₀^2 xy dy dx = 1`. Each stage must produce a certified definite value,
+/// else `None`.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, iterated_integral};
+/// let x = CasExpr::var("x");
+/// let y = CasExpr::var("y");
+/// // ∫₀^1 ∫₀^2 x·y dy dx = ∫₀^1 x·2 dx = 1.
+/// let value = iterated_integral(
+///     &(x.clone() * y),
+///     &[("x", &CasExpr::int(0), &CasExpr::int(1)), ("y", &CasExpr::int(0), &CasExpr::int(2))],
+/// )
+/// .unwrap();
+/// assert_eq!(value, CasExpr::int(1));
+/// ```
+#[must_use]
+pub fn iterated_integral(expr: &CasExpr, bounds: &[(&str, &CasExpr, &CasExpr)]) -> Option<CasExpr> {
+    let mut current = expr.clone();
+    // Innermost integral first (the last listed pair), working outward.
+    for (var, lower, upper) in bounds.iter().rev() {
+        let definite = definite_integrate(&current, var, lower, upper)?;
+        if !definite.is_certified() {
+            return None;
+        }
+        current = simplify(&definite.value);
+    }
+    Some(current)
+}
+
 /// **Numeric** definite integral `∫_a^b f dx` by composite Simpson's rule over
 /// `intervals` sub-intervals (rounded up to even), evaluating `f` at each node via
 /// [`evalf`]. Works for integrands with **no elementary antiderivative** (`∫₀¹
@@ -18452,6 +18486,35 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn iterated_multiple_integrals() {
+        let x = || v("x");
+        let y = || v("y");
+        let z = || v("z");
+        let zero = CasExpr::int(0);
+        let one = CasExpr::int(1);
+        let two = CasExpr::int(2);
+        // Rectangle ∫₀^1 ∫₀^2 x·y dy dx = 1.
+        assert_equal(
+            &iterated_integral(&(x() * y()), &[("x", &zero, &one), ("y", &zero, &two)]).unwrap(),
+            &CasExpr::int(1),
+        );
+        // Non-rectangular ∫₀^1 ∫₀^x (x+y) dy dx = 1/2 (inner bound depends on x).
+        assert_equal(
+            &iterated_integral(&(x() + y()), &[("x", &zero, &one), ("y", &zero, &x())]).unwrap(),
+            &CasExpr::rat(1, 2),
+        );
+        // Triangle area ∫₀^1 ∫₀^x 1 dy dx = 1/2; unit-cube triple ∫₀^1³ xyz = 1/8.
+        assert_equal(
+            &iterated_integral(&CasExpr::int(1), &[("x", &zero, &one), ("y", &zero, &x())]).unwrap(),
+            &CasExpr::rat(1, 2),
+        );
+        assert_equal(
+            &iterated_integral(&(x() * y() * z()), &[("x", &zero, &one), ("y", &zero, &one), ("z", &zero, &one)]).unwrap(),
+            &CasExpr::rat(1, 8),
+        );
     }
 
     #[test]
