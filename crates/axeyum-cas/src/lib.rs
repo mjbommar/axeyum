@@ -8009,13 +8009,20 @@ fn definite_full_period_rational_trig(
     if !contains_sin_or_cos(expr) {
         return None;
     }
-    // Interval must be exactly [0, 2π].
-    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
-        || !matches!(
-            equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
-            ZeroTest::Certified { equal: true, .. }
-        )
-    {
+    // `t = tan(x/2)` maps the lower bound 0 to `t = 0`; the upper bound picks the
+    // `t`-range: `x=2π → t∈(−∞,∞)` (full period), `x=π → t∈(0,∞)` (half period).
+    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    let is_full = matches!(
+        equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    let is_half = matches!(
+        equal(upper, &CasExpr::var("pi")),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    if !is_full && !is_half {
         return None;
     }
     // Weierstrass substitution to a rational function of `t`, incl. the Jacobian.
@@ -8030,11 +8037,16 @@ fn definite_full_period_rational_trig(
         return None;
     }
     let rational_t = cancel(&(in_t * (CasExpr::int(2) / one_plus)))?;
-    // ∫_{−∞}^{∞} of the rational t-integrand.
-    let integral = improper_integrate(&rational_t, t, LimitPoint::NegInfinity, LimitPoint::PosInfinity)?;
+    // The `t`-integral: full period → (−∞,∞), half period → (0,∞).
+    let t_lower = if is_full {
+        LimitPoint::NegInfinity
+    } else {
+        LimitPoint::Finite(Rational::zero())
+    };
+    let integral = improper_integrate(&rational_t, t, t_lower, LimitPoint::PosInfinity)?;
     integral
         .is_certified()
-        .then(|| simplify(&simplify_radicals(&integral.value)))
+        .then(|| fold_elementary_constants(&simplify(&simplify_radicals(&integral.value))))
 }
 
 /// The **Fourier series** partial sum of `f` on `[−L, L]` up to `n_terms`
@@ -14404,6 +14416,21 @@ mod tests {
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
+        // Half period [0,π]: t=tan(x/2) maps to [0,∞). ∫₀^π 1/(2+cos x) = π/√3.
+        assert!(matches!(
+            equal(
+                &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(2) + x().cos())), "x", &CasExpr::int(0), &v("pi")).unwrap().value,
+                &(v("pi") / CasExpr::int(3).sqrt()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // ∫₀^π 1/(5+3cos x) = π/4 (half of the full-period π/2).
+        assert_equal(
+            &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(5) + CasExpr::int(3) * x().cos())), "x", &CasExpr::int(0), &v("pi"))
+                .unwrap()
+                .value,
+            &(CasExpr::rat(1, 4) * v("pi")),
+        );
     }
 
     #[test]
