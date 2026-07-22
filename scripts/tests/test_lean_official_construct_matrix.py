@@ -25,7 +25,7 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
     def failures(self) -> list[str]:
         return CHECK.validate_manifest(self.data)
 
-    def test_committed_stage_a_registration_is_valid(self) -> None:
+    def test_committed_stage_b_registration_is_valid(self) -> None:
         self.assertEqual(self.failures(), [])
 
     def test_source_hash_drift_rejects(self) -> None:
@@ -51,14 +51,28 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         self.data["cases"][1]["id"] = self.data["cases"][0]["id"]
         self.assertTrue(any("case IDs must be unique" in failure for failure in self.failures()))
 
-    def test_premature_wire_and_product_observations_reject(self) -> None:
-        self.data["stage_b"] = {"observed": True}
-        self.data["cases"][1]["stage_b_wire"] = {"sha256": "not-yet"}
+    def test_stage_a_rejects_premature_wire_and_product_observations(self) -> None:
+        self.data["stage"] = "source-frozen"
         self.data["product_measurement"] = {"rust": "not-yet"}
         failures = self.failures()
         self.assertTrue(any("must not contain Stage B" in failure for failure in failures))
         self.assertTrue(any("premature Stage B" in failure for failure in failures))
         self.assertTrue(any("must not contain product" in failure for failure in failures))
+
+    def test_wire_inventory_and_case_link_drift_reject(self) -> None:
+        stream = self.data["stage_b"]["streams"]["recursive-indexed"]
+        stream["inventory"]["sha256"] = "0" * 64
+        self.data["cases"][1]["stage_b_wire"] = None
+        failures = self.failures()
+        self.assertTrue(any("independent wire inventory drift" in failure for failure in failures))
+        self.assertTrue(any("Stage B wire link drift" in failure for failure in failures))
+
+    def test_stage_b_aggregate_and_reproduction_drift_reject(self) -> None:
+        self.data["stage_b"]["new_stream_aggregate_bytes"] += 1
+        self.data["stage_b"]["streams"]["mutual"]["export_runs"] = 1
+        failures = self.failures()
+        self.assertTrue(any("aggregate byte count drift" in failure for failure in failures))
+        self.assertTrue(any("two byte-identical" in failure for failure in failures))
 
     def test_unknown_fields_reject(self) -> None:
         self.data["cases"][0]["claim"] = "full Lean parity"

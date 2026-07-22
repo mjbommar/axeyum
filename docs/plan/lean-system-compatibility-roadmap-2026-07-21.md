@@ -695,12 +695,13 @@ Non-claims until their gates are met:
    for recursive-indexed, reflexive/higher-order, mutual, nested, and well-
    founded source families. Its [M0/Stage A checkpoint](lean-official-construct-matrix-stage-a-2026-07-22.md)
    has reproduced the historical controls and frozen seven source cases with no
-   new wire or product observation.
-5. Execute M2: freeze two-run byte-identical official wire observations with
-   the independent Python reader before the Rust importer sees them, and commit
-   Stage B first. Carry the exact direct-recursive positive control beside every
-   negative so the boundary is attributed to the measured feature, not
-   recursion alone.
+   product observation; its [Stage B checkpoint](lean-official-construct-matrix-stage-b-2026-07-22.md)
+   now freezes five byte-identical official streams and complete independent
+   wire-group inventories, still with no Rust product result.
+5. Execute M3 only after the Stage B commit is remote: carry the exact direct-
+   recursive positive control beside two current-importer runs for every new
+   row, record exact typed completion-only outcomes, and do not change importer
+   or kernel semantics inside the measurement.
 6. Generate the assurance-separated parsed/translated/admitted/dual-admitted
    matrix from tests and exact fixtures; the selected-family seed advances but
    does not complete TL2.16.

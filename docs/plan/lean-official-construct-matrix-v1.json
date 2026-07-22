@@ -1,6 +1,6 @@
 {
   "schema": "axeyum-lean-official-construct-matrix-v1",
-  "stage": "source-frozen",
+  "stage": "wire-frozen",
   "date": "2026-07-22",
   "decision": "docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md",
   "pins": {
@@ -126,7 +126,7 @@
       "selected_root": "AxeyumImportShapes",
       "computation_witness": "miniOne",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "historical-direct-recursive-control",
       "product_measurement": null
     },
     {
@@ -138,7 +138,7 @@
       "selected_root": "AxeyumConstructMatrix.recursiveIndexedWitness",
       "computation_witness": "AxeyumConstructMatrix.recursiveIndexedWitness",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "recursive-indexed",
       "product_measurement": null
     },
     {
@@ -150,7 +150,7 @@
       "selected_root": "AxeyumConstructMatrix.reflexiveWitness",
       "computation_witness": "AxeyumConstructMatrix.reflexiveWitness",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "reflexive-higher-order",
       "product_measurement": null
     },
     {
@@ -162,7 +162,7 @@
       "selected_root": "AxeyumConstructMatrix.mutualWitness",
       "computation_witness": "AxeyumConstructMatrix.mutualWitness",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "mutual",
       "product_measurement": null
     },
     {
@@ -174,7 +174,7 @@
       "selected_root": "AxeyumConstructMatrix.nestedWitness",
       "computation_witness": "AxeyumConstructMatrix.nestedWitness",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "nested",
       "product_measurement": null
     },
     {
@@ -186,7 +186,7 @@
       "selected_root": "AxeyumConstructMatrix.wellFoundedWitness",
       "computation_witness": "AxeyumConstructMatrix.wellFoundedWitness",
       "expected_official_source": "accepted",
-      "stage_b_wire": null,
+      "stage_b_wire": "well-founded",
       "product_measurement": null
     },
     {
@@ -202,6 +202,1454 @@
       "product_measurement": null
     }
   ],
-  "stage_b": null,
+  "stage_b": {
+    "frozen_date": "2026-07-22",
+    "independent_reader": "scripts/prototype_lean4export_reader.py",
+    "independent_census": "scripts/prototype_lean4export_census.py",
+    "new_stream_aggregate_bytes": 116636,
+    "streams": {
+      "recursive-indexed": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-recursive-indexed.ndjson",
+        "selected_root": "AxeyumConstructMatrix.recursiveIndexedWitness",
+        "export_runs": 2,
+        "byte_identical": true,
+        "max_rss_kib": [
+          705040,
+          709160
+        ],
+        "retained": true,
+        "inventory": {
+          "label": "recursive-indexed",
+          "sha256": "df1e82fa72eac9f2a37cdf3b0eb8044f118489c51f76ab14b9af06c3f4cf11de",
+          "bytes": 9899,
+          "records": 175,
+          "format": "3.1.0",
+          "lean": "4.30.0",
+          "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+          "names": 34,
+          "levels": 4,
+          "exprs": 132,
+          "decls": 4,
+          "declaration_kinds": {
+            "def": 1,
+            "inductive": 3
+          },
+          "expression_kinds": {
+            "app": 57,
+            "bvar": 7,
+            "const": 13,
+            "forallE": 31,
+            "lam": 20,
+            "sort": 4
+          },
+          "declaration_names": [
+            "AxeyumConstructMatrix.MiniNat",
+            "AxeyumConstructMatrix.MiniNat.zero",
+            "AxeyumConstructMatrix.MiniNat.succ",
+            "AxeyumConstructMatrix.MiniNat.rec",
+            "AxeyumConstructMatrix.MiniVector",
+            "AxeyumConstructMatrix.MiniVector.nil",
+            "AxeyumConstructMatrix.MiniVector.cons",
+            "AxeyumConstructMatrix.MiniVector.rec",
+            "AxeyumConstructMatrix.Atom",
+            "AxeyumConstructMatrix.Atom.token",
+            "AxeyumConstructMatrix.Atom.rec",
+            "AxeyumConstructMatrix.recursiveIndexedWitness"
+          ],
+          "inductive_groups": [
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.zero",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.succ",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 1,
+                  "num_params": 0,
+                  "num_fields": 1
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 2,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    1
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniVector",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniVector"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.MiniVector.nil",
+                    "AxeyumConstructMatrix.MiniVector.cons"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniVector.nil",
+                  "inductive": "AxeyumConstructMatrix.MiniVector",
+                  "cidx": 0,
+                  "num_params": 1,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.MiniVector.cons",
+                  "inductive": "AxeyumConstructMatrix.MiniVector",
+                  "cidx": 1,
+                  "num_params": 1,
+                  "num_fields": 3
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniVector.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniVector"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 2,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.MiniVector.nil",
+                    "AxeyumConstructMatrix.MiniVector.cons"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    3
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.token",
+                  "inductive": "AxeyumConstructMatrix.Atom",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            }
+          ],
+          "blockers": [
+            "inductive-recursive-indexed"
+          ]
+        }
+      },
+      "reflexive-higher-order": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-reflexive-higher-order.ndjson",
+        "selected_root": "AxeyumConstructMatrix.reflexiveWitness",
+        "export_runs": 2,
+        "byte_identical": true,
+        "max_rss_kib": [
+          716880,
+          714148
+        ],
+        "retained": true,
+        "inventory": {
+          "label": "reflexive-higher-order",
+          "sha256": "a2dc21e61e6938bd5eb5d8c4032c7d6197e312c7a617b8bd33388f2e46db0ec3",
+          "bytes": 10583,
+          "records": 196,
+          "format": "3.1.0",
+          "lean": "4.30.0",
+          "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+          "names": 47,
+          "levels": 3,
+          "exprs": 139,
+          "decls": 6,
+          "declaration_kinds": {
+            "def": 3,
+            "inductive": 3
+          },
+          "expression_kinds": {
+            "app": 61,
+            "bvar": 8,
+            "const": 11,
+            "forallE": 37,
+            "lam": 18,
+            "sort": 4
+          },
+          "declaration_names": [
+            "AxeyumConstructMatrix.MiniAcc",
+            "AxeyumConstructMatrix.MiniAcc.intro",
+            "AxeyumConstructMatrix.MiniAcc.rec",
+            "AxeyumConstructMatrix.Atom",
+            "AxeyumConstructMatrix.Atom.token",
+            "AxeyumConstructMatrix.Atom.rec",
+            "False",
+            "False.rec",
+            "AxeyumConstructMatrix.EmptyRel",
+            "False.elim",
+            "AxeyumConstructMatrix.reflexiveWitness"
+          ],
+          "inductive_groups": [
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniAcc",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniAcc"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.MiniAcc.intro"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": true
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniAcc.intro",
+                  "inductive": "AxeyumConstructMatrix.MiniAcc",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 2
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniAcc.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniAcc"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.MiniAcc.intro"
+                  ],
+                  "rule_nfields": [
+                    2
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.token",
+                  "inductive": "AxeyumConstructMatrix.Atom",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "False",
+                  "all_names": [
+                    "False"
+                  ],
+                  "constructor_names": [],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [],
+              "recursors": [
+                {
+                  "name": "False.rec",
+                  "all_names": [
+                    "False"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 0,
+                  "rule_constructors": [],
+                  "rule_nfields": [],
+                  "k": false
+                }
+              ]
+            }
+          ],
+          "blockers": [
+            "inductive-recursive-indexed",
+            "inductive-reflexive"
+          ]
+        }
+      },
+      "mutual": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-mutual.ndjson",
+        "selected_root": "AxeyumConstructMatrix.mutualWitness",
+        "export_runs": 2,
+        "byte_identical": true,
+        "max_rss_kib": [
+          716420,
+          716864
+        ],
+        "retained": true,
+        "inventory": {
+          "label": "mutual",
+          "sha256": "06aa05ccc8abc9309fad04b373017e770da25c7b0c2743fc0f097efd72de3174",
+          "bytes": 23596,
+          "records": 395,
+          "format": "3.1.0",
+          "lean": "4.30.0",
+          "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+          "names": 75,
+          "levels": 4,
+          "exprs": 305,
+          "decls": 10,
+          "declaration_kinds": {
+            "def": 4,
+            "inductive": 5,
+            "thm": 1
+          },
+          "expression_kinds": {
+            "app": 114,
+            "bvar": 8,
+            "const": 32,
+            "forallE": 76,
+            "lam": 70,
+            "sort": 5
+          },
+          "declaration_names": [
+            "Eq",
+            "Eq.refl",
+            "Eq.rec",
+            "AxeyumConstructMatrix.MiniNat",
+            "AxeyumConstructMatrix.MiniNat.zero",
+            "AxeyumConstructMatrix.MiniNat.succ",
+            "AxeyumConstructMatrix.MiniNat.rec",
+            "AxeyumConstructMatrix.EvenTree",
+            "AxeyumConstructMatrix.OddTree",
+            "AxeyumConstructMatrix.EvenTree.leaf",
+            "AxeyumConstructMatrix.EvenTree.branch",
+            "AxeyumConstructMatrix.OddTree.leaf",
+            "AxeyumConstructMatrix.OddTree.branch",
+            "AxeyumConstructMatrix.EvenTree.rec",
+            "AxeyumConstructMatrix.OddTree.rec",
+            "AxeyumConstructMatrix.Atom",
+            "AxeyumConstructMatrix.Atom.token",
+            "AxeyumConstructMatrix.Atom.rec",
+            "PUnit",
+            "PUnit.unit",
+            "PUnit.rec",
+            "AxeyumConstructMatrix.EvenTree.casesOn",
+            "AxeyumConstructMatrix.mutualTag.match_1",
+            "AxeyumConstructMatrix.mutualTag",
+            "rfl",
+            "AxeyumConstructMatrix.mutualWitness"
+          ],
+          "inductive_groups": [
+            {
+              "types": [
+                {
+                  "name": "Eq",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "constructor_names": [
+                    "Eq.refl"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "Eq.refl",
+                  "inductive": "Eq",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "Eq.rec",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "Eq.refl"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": true
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.zero",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.succ",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 1,
+                  "num_params": 0,
+                  "num_fields": 1
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 2,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    1
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.EvenTree",
+                  "all_names": [
+                    "AxeyumConstructMatrix.EvenTree",
+                    "AxeyumConstructMatrix.OddTree"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.EvenTree.leaf",
+                    "AxeyumConstructMatrix.EvenTree.branch"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                },
+                {
+                  "name": "AxeyumConstructMatrix.OddTree",
+                  "all_names": [
+                    "AxeyumConstructMatrix.EvenTree",
+                    "AxeyumConstructMatrix.OddTree"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.OddTree.leaf",
+                    "AxeyumConstructMatrix.OddTree.branch"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.EvenTree.leaf",
+                  "inductive": "AxeyumConstructMatrix.EvenTree",
+                  "cidx": 0,
+                  "num_params": 1,
+                  "num_fields": 1
+                },
+                {
+                  "name": "AxeyumConstructMatrix.EvenTree.branch",
+                  "inductive": "AxeyumConstructMatrix.EvenTree",
+                  "cidx": 1,
+                  "num_params": 1,
+                  "num_fields": 1
+                },
+                {
+                  "name": "AxeyumConstructMatrix.OddTree.leaf",
+                  "inductive": "AxeyumConstructMatrix.OddTree",
+                  "cidx": 0,
+                  "num_params": 1,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.OddTree.branch",
+                  "inductive": "AxeyumConstructMatrix.OddTree",
+                  "cidx": 1,
+                  "num_params": 1,
+                  "num_fields": 1
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.EvenTree.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.EvenTree",
+                    "AxeyumConstructMatrix.OddTree"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_motives": 2,
+                  "num_minors": 4,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.EvenTree.leaf",
+                    "AxeyumConstructMatrix.EvenTree.branch"
+                  ],
+                  "rule_nfields": [
+                    1,
+                    1
+                  ],
+                  "k": false
+                },
+                {
+                  "name": "AxeyumConstructMatrix.OddTree.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.EvenTree",
+                    "AxeyumConstructMatrix.OddTree"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_motives": 2,
+                  "num_minors": 4,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.OddTree.leaf",
+                    "AxeyumConstructMatrix.OddTree.branch"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    1
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.token",
+                  "inductive": "AxeyumConstructMatrix.Atom",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "PUnit",
+                  "all_names": [
+                    "PUnit"
+                  ],
+                  "constructor_names": [
+                    "PUnit.unit"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "PUnit.unit",
+                  "inductive": "PUnit",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "PUnit.rec",
+                  "all_names": [
+                    "PUnit"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "PUnit.unit"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            }
+          ],
+          "blockers": [
+            "inductive-mutual"
+          ]
+        }
+      },
+      "nested": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson",
+        "selected_root": "AxeyumConstructMatrix.nestedWitness",
+        "export_runs": 2,
+        "byte_identical": true,
+        "max_rss_kib": [
+          716440,
+          716976
+        ],
+        "retained": true,
+        "inventory": {
+          "label": "nested",
+          "sha256": "faabcde4553b0d597a768aedf35117d7fb4310d3dae052e2545e5b239277456e",
+          "bytes": 23418,
+          "records": 409,
+          "format": "3.1.0",
+          "lean": "4.30.0",
+          "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+          "names": 70,
+          "levels": 6,
+          "exprs": 322,
+          "decls": 10,
+          "declaration_kinds": {
+            "def": 4,
+            "inductive": 5,
+            "thm": 1
+          },
+          "expression_kinds": {
+            "app": 133,
+            "bvar": 9,
+            "const": 29,
+            "forallE": 78,
+            "lam": 66,
+            "sort": 7
+          },
+          "declaration_names": [
+            "Eq",
+            "Eq.refl",
+            "Eq.rec",
+            "AxeyumConstructMatrix.Atom",
+            "AxeyumConstructMatrix.Atom.token",
+            "AxeyumConstructMatrix.Atom.rec",
+            "AxeyumConstructMatrix.NestList",
+            "AxeyumConstructMatrix.NestList.nil",
+            "AxeyumConstructMatrix.NestList.cons",
+            "AxeyumConstructMatrix.NestList.rec",
+            "AxeyumConstructMatrix.Rose",
+            "AxeyumConstructMatrix.Rose.node",
+            "AxeyumConstructMatrix.Rose.rec_1",
+            "AxeyumConstructMatrix.Rose.rec",
+            "PUnit",
+            "PUnit.unit",
+            "PUnit.rec",
+            "AxeyumConstructMatrix.Rose.casesOn",
+            "AxeyumConstructMatrix.roseRoot.match_1",
+            "AxeyumConstructMatrix.roseRoot",
+            "rfl",
+            "AxeyumConstructMatrix.nestedWitness"
+          ],
+          "inductive_groups": [
+            {
+              "types": [
+                {
+                  "name": "Eq",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "constructor_names": [
+                    "Eq.refl"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "Eq.refl",
+                  "inductive": "Eq",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "Eq.rec",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "Eq.refl"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": true
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.token",
+                  "inductive": "AxeyumConstructMatrix.Atom",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.NestList",
+                  "all_names": [
+                    "AxeyumConstructMatrix.NestList"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.NestList.nil",
+                    "AxeyumConstructMatrix.NestList.cons"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.NestList.nil",
+                  "inductive": "AxeyumConstructMatrix.NestList",
+                  "cidx": 0,
+                  "num_params": 1,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.NestList.cons",
+                  "inductive": "AxeyumConstructMatrix.NestList",
+                  "cidx": 1,
+                  "num_params": 1,
+                  "num_fields": 2
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.NestList.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.NestList"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 2,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.NestList.nil",
+                    "AxeyumConstructMatrix.NestList.cons"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    2
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Rose",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Rose"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Rose.node"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_nested": 1,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Rose.node",
+                  "inductive": "AxeyumConstructMatrix.Rose",
+                  "cidx": 0,
+                  "num_params": 1,
+                  "num_fields": 2
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Rose.rec_1",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Rose"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_motives": 2,
+                  "num_minors": 3,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.NestList.nil",
+                    "AxeyumConstructMatrix.NestList.cons"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    2
+                  ],
+                  "k": false
+                },
+                {
+                  "name": "AxeyumConstructMatrix.Rose.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Rose"
+                  ],
+                  "num_params": 1,
+                  "num_indices": 0,
+                  "num_motives": 2,
+                  "num_minors": 3,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Rose.node"
+                  ],
+                  "rule_nfields": [
+                    2
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "PUnit",
+                  "all_names": [
+                    "PUnit"
+                  ],
+                  "constructor_names": [
+                    "PUnit.unit"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "PUnit.unit",
+                  "inductive": "PUnit",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "PUnit.rec",
+                  "all_names": [
+                    "PUnit"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "PUnit.unit"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            }
+          ],
+          "blockers": [
+            "inductive-nested"
+          ]
+        }
+      },
+      "well-founded": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-well-founded.ndjson",
+        "selected_root": "AxeyumConstructMatrix.wellFoundedWitness",
+        "export_runs": 2,
+        "byte_identical": true,
+        "max_rss_kib": [
+          715320,
+          714960
+        ],
+        "retained": true,
+        "inventory": {
+          "label": "well-founded",
+          "sha256": "c1fc14097f9be381625846f13277edfd8294afd93c8e9cadd72c54d71e48e3c6",
+          "bytes": 49140,
+          "records": 920,
+          "format": "3.1.0",
+          "lean": "4.30.0",
+          "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+          "names": 160,
+          "levels": 5,
+          "exprs": 731,
+          "decls": 23,
+          "declaration_kinds": {
+            "def": 9,
+            "inductive": 6,
+            "thm": 8
+          },
+          "expression_kinds": {
+            "app": 375,
+            "bvar": 12,
+            "const": 48,
+            "forallE": 163,
+            "lam": 128,
+            "sort": 5
+          },
+          "declaration_names": [
+            "Eq",
+            "Eq.refl",
+            "Eq.rec",
+            "AxeyumConstructMatrix.MiniNat",
+            "AxeyumConstructMatrix.MiniNat.zero",
+            "AxeyumConstructMatrix.MiniNat.succ",
+            "AxeyumConstructMatrix.MiniNat.rec",
+            "AxeyumConstructMatrix.Atom",
+            "AxeyumConstructMatrix.Atom.token",
+            "AxeyumConstructMatrix.Atom.rec",
+            "Acc",
+            "Acc.intro",
+            "Acc.rec",
+            "WellFounded",
+            "WellFounded.intro",
+            "WellFounded.rec",
+            "WellFounded.fixF",
+            "WellFounded.apply",
+            "WellFounded.fix",
+            "False",
+            "False.rec",
+            "AxeyumConstructMatrix.atomEmptyRel",
+            "False.elim",
+            "AxeyumConstructMatrix.atomEmptyWellFounded",
+            "AxeyumConstructMatrix.wellFoundedLoop",
+            "id",
+            "rfl",
+            "Eq.symm",
+            "Eq.mpr",
+            "congrArg",
+            "Acc.recOn",
+            "Acc.inv",
+            "WellFounded.fixF_eq",
+            "WellFounded.fix_eq",
+            "AxeyumConstructMatrix.wellFoundedWitness"
+          ],
+          "inductive_groups": [
+            {
+              "types": [
+                {
+                  "name": "Eq",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "constructor_names": [
+                    "Eq.refl"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "Eq.refl",
+                  "inductive": "Eq",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "Eq.rec",
+                  "all_names": [
+                    "Eq"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "Eq.refl"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": true
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.zero",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                },
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.succ",
+                  "inductive": "AxeyumConstructMatrix.MiniNat",
+                  "cidx": 1,
+                  "num_params": 0,
+                  "num_fields": 1
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.MiniNat.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.MiniNat"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 2,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.MiniNat.zero",
+                    "AxeyumConstructMatrix.MiniNat.succ"
+                  ],
+                  "rule_nfields": [
+                    0,
+                    1
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "constructor_names": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.token",
+                  "inductive": "AxeyumConstructMatrix.Atom",
+                  "cidx": 0,
+                  "num_params": 0,
+                  "num_fields": 0
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "AxeyumConstructMatrix.Atom.rec",
+                  "all_names": [
+                    "AxeyumConstructMatrix.Atom"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "AxeyumConstructMatrix.Atom.token"
+                  ],
+                  "rule_nfields": [
+                    0
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "Acc",
+                  "all_names": [
+                    "Acc"
+                  ],
+                  "constructor_names": [
+                    "Acc.intro"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_nested": 0,
+                  "is_rec": true,
+                  "is_reflexive": true
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "Acc.intro",
+                  "inductive": "Acc",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 2
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "Acc.rec",
+                  "all_names": [
+                    "Acc"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 1,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "Acc.intro"
+                  ],
+                  "rule_nfields": [
+                    2
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "WellFounded",
+                  "all_names": [
+                    "WellFounded"
+                  ],
+                  "constructor_names": [
+                    "WellFounded.intro"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [
+                {
+                  "name": "WellFounded.intro",
+                  "inductive": "WellFounded",
+                  "cidx": 0,
+                  "num_params": 2,
+                  "num_fields": 1
+                }
+              ],
+              "recursors": [
+                {
+                  "name": "WellFounded.rec",
+                  "all_names": [
+                    "WellFounded"
+                  ],
+                  "num_params": 2,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 1,
+                  "rule_constructors": [
+                    "WellFounded.intro"
+                  ],
+                  "rule_nfields": [
+                    1
+                  ],
+                  "k": false
+                }
+              ]
+            },
+            {
+              "types": [
+                {
+                  "name": "False",
+                  "all_names": [
+                    "False"
+                  ],
+                  "constructor_names": [],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_nested": 0,
+                  "is_rec": false,
+                  "is_reflexive": false
+                }
+              ],
+              "constructors": [],
+              "recursors": [
+                {
+                  "name": "False.rec",
+                  "all_names": [
+                    "False"
+                  ],
+                  "num_params": 0,
+                  "num_indices": 0,
+                  "num_motives": 1,
+                  "num_minors": 0,
+                  "rule_constructors": [],
+                  "rule_nfields": [],
+                  "k": false
+                }
+              ]
+            }
+          ],
+          "blockers": [
+            "inductive-recursive-indexed",
+            "inductive-reflexive"
+          ]
+        }
+      }
+    }
+  },
   "product_measurement": null
 }

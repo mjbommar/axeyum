@@ -5,9 +5,11 @@ Status: proposed
 Date: 2026-07-22
 
 Implementation checkpoint: M0 and Stage A are complete in the
-[source-freeze result](../../plan/lean-official-construct-matrix-stage-a-2026-07-22.md).
-Stage B, product measurement, and the generated assurance gate remain open, so
-this ADR is deliberately still proposed.
+[source-freeze result](../../plan/lean-official-construct-matrix-stage-a-2026-07-22.md),
+and Stage B is complete in the
+[wire-freeze result](../../plan/lean-official-construct-matrix-stage-b-2026-07-22.md).
+Product measurement and the generated assurance gate remain open, so this ADR
+is deliberately still proposed.
 
 ## Context
 

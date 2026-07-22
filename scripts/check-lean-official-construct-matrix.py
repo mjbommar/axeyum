@@ -12,6 +12,11 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs" / "plan" / "lean-official-construct-matrix-v1.json"
+SCRIPTS = str(ROOT / "scripts")
+if SCRIPTS not in sys.path:
+    sys.path.insert(0, SCRIPTS)
+
+from prototype_lean4export_census import census_bytes  # noqa: E402
 
 SCHEMA = "axeyum-lean-official-construct-matrix-v1"
 TOP_LEVEL_KEYS = {
@@ -59,6 +64,22 @@ REPORT_KEYS = {
     "admitted_declarations",
     "axioms",
 }
+STAGE_B_KEYS = {
+    "frozen_date",
+    "independent_reader",
+    "independent_census",
+    "new_stream_aggregate_bytes",
+    "streams",
+}
+STREAM_KEYS = {
+    "path",
+    "selected_root",
+    "export_runs",
+    "byte_identical",
+    "max_rss_kib",
+    "retained",
+    "inventory",
+}
 EXPECTED_PINS = {
     "lean": {
         "toolchain": "leanprover/lean4:v4.30.0",
@@ -100,6 +121,21 @@ EXPECTED_CONTROL_REPORTS = {
         "admitted_declarations": 11,
         "axioms": 0,
     },
+}
+EXPECTED_STAGE_B_PATHS = {
+    "recursive-indexed": (
+        "docs/plan/fixtures/"
+        "lean4export-v4.30-construct-matrix-recursive-indexed.ndjson"
+    ),
+    "reflexive-higher-order": (
+        "docs/plan/fixtures/"
+        "lean4export-v4.30-construct-matrix-reflexive-higher-order.ndjson"
+    ),
+    "mutual": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-mutual.ndjson",
+    "nested": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson",
+    "well-founded": (
+        "docs/plan/fixtures/lean4export-v4.30-construct-matrix-well-founded.ndjson"
+    ),
 }
 EXPECTED_CASES = [
     (
@@ -237,14 +273,92 @@ def validate_file_hash(entry: Any, path_key: str, hash_key: str, context: str) -
     return failures
 
 
+def validate_stage_b(data: dict[str, Any], failures: list[str]) -> None:
+    stage_b = data.get("stage_b")
+    check_exact_keys(stage_b, STAGE_B_KEYS, "stage_b", failures)
+    if not isinstance(stage_b, dict):
+        return
+    if stage_b.get("frozen_date") != "2026-07-22":
+        failures.append("Stage B freeze date drift")
+    for key, expected in (
+        ("independent_reader", "scripts/prototype_lean4export_reader.py"),
+        ("independent_census", "scripts/prototype_lean4export_census.py"),
+    ):
+        if stage_b.get(key) != expected:
+            failures.append(f"Stage B {key} drift")
+        else:
+            checked_repo_path(stage_b[key], f"stage_b.{key}", failures)
+
+    streams = stage_b.get("streams")
+    if not isinstance(streams, dict):
+        failures.append("stage_b.streams must be an object")
+        return
+    if list(streams) != list(EXPECTED_STAGE_B_PATHS):
+        failures.append("Stage B stream population/order drift")
+
+    total_bytes = 0
+    retention = data.get("retention_policy")
+    per_stream_limit = EXPECTED_RETENTION["per_stream_max_bytes"]
+    aggregate_limit = EXPECTED_RETENTION["aggregate_new_stream_max_bytes"]
+    if isinstance(retention, dict):
+        per_stream_limit = retention.get("per_stream_max_bytes", per_stream_limit)
+        aggregate_limit = retention.get("aggregate_new_stream_max_bytes", aggregate_limit)
+
+    roots = {case[0]: case[5] for case in EXPECTED_CASES}
+    for case_id, expected_path in EXPECTED_STAGE_B_PATHS.items():
+        stream = streams.get(case_id)
+        check_exact_keys(stream, STREAM_KEYS, f"stage_b.streams.{case_id}", failures)
+        if not isinstance(stream, dict):
+            continue
+        if stream.get("path") != expected_path:
+            failures.append(f"{case_id}: retained stream path drift")
+        path = checked_repo_path(stream.get("path"), f"{case_id}.path", failures)
+        if stream.get("selected_root") != roots[case_id]:
+            failures.append(f"{case_id}: selected root drift")
+        if stream.get("export_runs") != 2 or stream.get("byte_identical") is not True:
+            failures.append(f"{case_id}: two byte-identical official exports are required")
+        if stream.get("retained") is not True:
+            failures.append(f"{case_id}: retained Stage B stream must be marked retained")
+        rss = stream.get("max_rss_kib")
+        if not (
+            isinstance(rss, list)
+            and len(rss) == 2
+            and all(isinstance(value, int) and 0 < value <= 4 * 1024 * 1024 for value in rss)
+        ):
+            failures.append(f"{case_id}: both export RSS values must fit the 4 GiB cgroup")
+        inventory = stream.get("inventory")
+        if path is not None:
+            observed = json.loads(
+                json.dumps(census_bytes(path.read_bytes(), label=case_id), sort_keys=True)
+            )
+            if inventory != observed:
+                failures.append(f"{case_id}: independent wire inventory drift")
+            size = path.stat().st_size
+            total_bytes += size
+            if size > per_stream_limit:
+                failures.append(f"{case_id}: retained stream exceeds the per-stream limit")
+        if isinstance(inventory, dict):
+            declarations = inventory.get("declaration_names")
+            if not isinstance(declarations, list) or not declarations:
+                failures.append(f"{case_id}: inventory must contain declaration names")
+            elif declarations[-1] != roots[case_id]:
+                failures.append(f"{case_id}: final declaration is not the selected root")
+
+    if total_bytes > aggregate_limit:
+        failures.append("Stage B retained streams exceed the aggregate limit")
+    if stage_b.get("new_stream_aggregate_bytes") != total_bytes:
+        failures.append("Stage B aggregate byte count drift")
+
+
 def validate_manifest(data: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     check_exact_keys(data, TOP_LEVEL_KEYS, "manifest", failures)
 
     if data.get("schema") != SCHEMA:
         failures.append(f"schema must be {SCHEMA!r}")
-    if data.get("stage") != "source-frozen":
-        failures.append("Stage A manifest must have stage=source-frozen")
+    stage = data.get("stage")
+    if stage not in {"source-frozen", "wire-frozen"}:
+        failures.append("manifest stage must be source-frozen or wire-frozen")
     if data.get("date") != "2026-07-22":
         failures.append("Stage A date drift")
     if data.get("decision") != (
@@ -258,10 +372,13 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         failures.append("resource policy drift")
     if data.get("retention_policy") != EXPECTED_RETENTION:
         failures.append("retention policy drift")
-    if data.get("stage_b") is not None:
-        failures.append("Stage A must not contain Stage B wire observations")
     if data.get("product_measurement") is not None:
-        failures.append("Stage A must not contain product measurements")
+        failures.append("pre-product manifest must not contain product measurements")
+    if stage == "source-frozen":
+        if data.get("stage_b") is not None:
+            failures.append("Stage A must not contain Stage B wire observations")
+    elif stage == "wire-frozen":
+        validate_stage_b(data, failures)
 
     toolchain_path = ROOT / "lean-toolchain"
     if toolchain_path.read_text(encoding="utf-8").strip() != EXPECTED_PINS["lean"]["toolchain"]:
@@ -404,10 +521,20 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
             check_exact_keys(case, CASE_KEYS, f"cases[{index}]", failures)
             if not isinstance(case, dict):
                 continue
-            if case.get("stage_b_wire") is not None:
-                failures.append(f"cases[{index}] contains premature Stage B wire data")
             if case.get("product_measurement") is not None:
                 failures.append(f"cases[{index}] contains premature product data")
+            if stage == "source-frozen" and case.get("stage_b_wire") is not None:
+                failures.append(f"cases[{index}] contains premature Stage B wire data")
+            if stage == "wire-frozen":
+                case_id = case.get("id")
+                if case_id == "direct-recursive-control":
+                    expected_wire = "historical-direct-recursive-control"
+                elif case_id == "non-positive-source-negative":
+                    expected_wire = None
+                else:
+                    expected_wire = case_id
+                if case.get("stage_b_wire") != expected_wire:
+                    failures.append(f"cases[{index}] Stage B wire link drift")
             if index < len(EXPECTED_CASES):
                 actual = (
                     case.get("id"),
@@ -437,10 +564,11 @@ def main() -> int:
             print(f"lean construct matrix: {failure}", file=sys.stderr)
         return 1
     print(
-        "lean construct matrix Stage A valid: "
+        f"lean construct matrix {data['stage']} valid: "
         f"{len(data['cases'])} cases, 2 source outcomes, "
         f"{len(data['historical_controls'])} reproduced controls, "
-        "Stage B/product observations absent"
+        f"Stage B={'frozen' if data['stage'] == 'wire-frozen' else 'absent'}, "
+        "product observations absent"
     )
     return 0
 

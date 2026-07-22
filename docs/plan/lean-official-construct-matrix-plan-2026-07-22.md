@@ -1,6 +1,6 @@
 # Official Lean construct-matrix execution plan
 
-Status: M0 and Stage A source freeze complete; Stage B export/inventory and
+Status: M0, Stage A source freeze, and Stage B export/inventory freeze complete;
 product measurement not yet executed
 
 Date: 2026-07-22
@@ -15,11 +15,13 @@ Parent plans:
 - [Lean system compatibility roadmap](lean-system-compatibility-roadmap-2026-07-21.md);
 - [Rust `lean4export` importer result](lean4export-rust-import-prototype-2026-07-21.md).
 
-Current checkpoint:
-[M0 and Stage A result](lean-official-construct-matrix-stage-a-2026-07-22.md),
-with the canonical source registration in
+Current checkpoints:
+[M0 and Stage A result](lean-official-construct-matrix-stage-a-2026-07-22.md)
+and [Stage B result](lean-official-construct-matrix-stage-b-2026-07-22.md),
+with the canonical source/wire registration in
 [`lean-official-construct-matrix-v1.json`](lean-official-construct-matrix-v1.json).
-No new NDJSON or Rust product outcome exists at this checkpoint; M2 is next.
+No Rust product outcome exists at this checkpoint; M3 is next after the Stage B
+commit is pushed and remote-verified.
 
 ## 1. Decision and outcome
 

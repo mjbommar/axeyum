@@ -14,6 +14,7 @@ FIXTURE = ROOT / "docs" / "plan" / "fixtures" / "lean4export-v4.30-axeyum-probe.
 RECURSIVE_FIXTURE = (
     ROOT / "docs" / "plan" / "fixtures" / "lean4export-v4.30-recursive-shapes.ndjson"
 )
+CONSTRUCT_FIXTURES = ROOT / "docs" / "plan" / "fixtures"
 SPEC = importlib.util.spec_from_file_location("prototype_lean4export_reader", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 PROBE = importlib.util.module_from_spec(SPEC)
@@ -53,6 +54,78 @@ class ProbeTests(unittest.TestCase):
         )
         self.assertEqual(result.blockers, ())
         self.assertEqual(result.declaration_kinds, {"def": 3, "inductive": 2})
+
+    def test_official_construct_group_metadata(self) -> None:
+        recursive = PROBE.probe_path(
+            CONSTRUCT_FIXTURES
+            / "lean4export-v4.30-construct-matrix-recursive-indexed.ndjson"
+        )
+        vector = next(
+            inductive
+            for group in recursive.inductive_groups
+            for inductive in group.types
+            if inductive.name == "AxeyumConstructMatrix.MiniVector"
+        )
+        self.assertEqual(
+            (
+                vector.num_params,
+                vector.num_indices,
+                vector.num_nested,
+                vector.is_rec,
+                vector.is_reflexive,
+            ),
+            (1, 1, 0, True, False),
+        )
+
+        mutual = PROBE.probe_path(
+            CONSTRUCT_FIXTURES / "lean4export-v4.30-construct-matrix-mutual.ndjson"
+        )
+        mutual_group = next(
+            group
+            for group in mutual.inductive_groups
+            if tuple(inductive.name for inductive in group.types)
+            == (
+                "AxeyumConstructMatrix.EvenTree",
+                "AxeyumConstructMatrix.OddTree",
+            )
+        )
+        self.assertEqual(
+            tuple((recursor.num_motives, recursor.num_minors) for recursor in mutual_group.recursors),
+            ((2, 4), (2, 4)),
+        )
+
+        nested = PROBE.probe_path(
+            CONSTRUCT_FIXTURES / "lean4export-v4.30-construct-matrix-nested.ndjson"
+        )
+        rose_group = next(
+            group
+            for group in nested.inductive_groups
+            if any(inductive.name == "AxeyumConstructMatrix.Rose" for inductive in group.types)
+        )
+        self.assertEqual(rose_group.types[0].num_nested, 1)
+        self.assertEqual(
+            tuple(recursor.name for recursor in rose_group.recursors),
+            (
+                "AxeyumConstructMatrix.Rose.rec_1",
+                "AxeyumConstructMatrix.Rose.rec",
+            ),
+        )
+
+        well_founded = PROBE.probe_path(
+            CONSTRUCT_FIXTURES
+            / "lean4export-v4.30-construct-matrix-well-founded.ndjson"
+        )
+        acc = next(
+            inductive
+            for group in well_founded.inductive_groups
+            for inductive in group.types
+            if inductive.name == "Acc"
+        )
+        self.assertEqual((acc.num_indices, acc.is_rec, acc.is_reflexive), (1, True, True))
+        self.assertEqual(
+            well_founded.declaration_names[-1],
+            "AxeyumConstructMatrix.wellFoundedWitness",
+        )
 
     def test_unknown_record_fails_closed(self) -> None:
         with self.assertRaisesRegex(PROBE.ProbeError, "exactly one record kind"):

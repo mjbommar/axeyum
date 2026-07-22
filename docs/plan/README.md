@@ -98,6 +98,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   registration: exact pins, source/control hashes, official positive/negative
   outcomes, resource/retention bounds, and an enforced absence of Stage B wire
   or Rust product observations.
+- [`lean-official-construct-matrix-stage-b-2026-07-22.md`](lean-official-construct-matrix-stage-b-2026-07-22.md) —
+  two-run byte-identical official exports and independent declaration/group
+  inventories for recursive-indexed, reflexive, mutual, nested, and well-
+  founded roots, with 116,636 retained bytes and every Rust product field still
+  absent.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

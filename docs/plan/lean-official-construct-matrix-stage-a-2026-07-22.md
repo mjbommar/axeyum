@@ -130,6 +130,10 @@ loss of the kernel positivity rejection.
 
 ## Next gate
 
+This section records the successor known at the Stage A checkpoint. It has now
+been completed by the
+[Stage B wire-freeze result](lean-official-construct-matrix-stage-b-2026-07-22.md).
+
 M2 is now the only primary next action:
 
 1. compile fresh transient inputs from the frozen positive source;

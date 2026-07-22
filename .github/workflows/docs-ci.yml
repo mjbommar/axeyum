@@ -18,4 +18,5 @@ jobs:
       - run: ./scripts/check-foundational-resources.sh
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix
       - run: python3 scripts/check-lean-official-construct-matrix.py
+      - run: python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
       - run: ./scripts/check-links.sh

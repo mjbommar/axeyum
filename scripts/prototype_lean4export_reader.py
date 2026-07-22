@@ -41,6 +41,47 @@ class ProbeError(ValueError):
 
 
 @dataclass(frozen=True)
+class InductiveTypeInventory:
+    name: str
+    all_names: tuple[str, ...]
+    constructor_names: tuple[str, ...]
+    num_params: int
+    num_indices: int
+    num_nested: int
+    is_rec: bool
+    is_reflexive: bool
+
+
+@dataclass(frozen=True)
+class ConstructorInventory:
+    name: str
+    inductive: str
+    cidx: int
+    num_params: int
+    num_fields: int
+
+
+@dataclass(frozen=True)
+class RecursorInventory:
+    name: str
+    all_names: tuple[str, ...]
+    num_params: int
+    num_indices: int
+    num_motives: int
+    num_minors: int
+    rule_constructors: tuple[str, ...]
+    rule_nfields: tuple[int, ...]
+    k: bool
+
+
+@dataclass(frozen=True)
+class InductiveGroupInventory:
+    types: tuple[InductiveTypeInventory, ...]
+    constructors: tuple[ConstructorInventory, ...]
+    recursors: tuple[RecursorInventory, ...]
+
+
+@dataclass(frozen=True)
 class ProbeResult:
     format: str
     lean: str
@@ -51,12 +92,20 @@ class ProbeResult:
     decls: int
     declaration_kinds: dict[str, int]
     expression_kinds: dict[str, int]
+    declaration_names: tuple[str, ...]
+    inductive_groups: tuple[InductiveGroupInventory, ...]
     blockers: tuple[str, ...]
 
 
 def _integer(value: Any, where: str) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise ProbeError(f"{where}: expected a non-negative integer")
+    return value
+
+
+def _boolean(value: Any, where: str) -> bool:
+    if not isinstance(value, bool):
+        raise ProbeError(f"{where}: expected a boolean")
     return value
 
 
@@ -107,6 +156,7 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
         raise ProbeError("meta.lean: version and githash are required")
 
     names = {0}
+    name_values = {0: ""}
     levels = {0}
     exprs: set[int] = set()
     next_name = 1
@@ -114,6 +164,8 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
     next_expr = 0
     expression_kinds: Counter[str] = Counter()
     declaration_kinds: Counter[str] = Counter()
+    declaration_names: list[str] = []
+    inductive_groups: list[InductiveGroupInventory] = []
     blockers: set[str] = set()
 
     for line_number, record in enumerate(records[1:], 2):
@@ -134,6 +186,9 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
                 raise ProbeError(f"line {line_number}.str.str: expected string")
             if kind == "num":
                 _integer(payload.get("i"), f"line {line_number}.num.i")
+            prefix = name_values[payload["pre"]]
+            suffix = payload["str"] if kind == "str" else str(payload["i"])
+            name_values[index] = f"{prefix}.{suffix}" if prefix else suffix
             names.add(index)
             next_name += 1
             continue
@@ -227,6 +282,7 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
             if not isinstance(params, list):
                 raise ProbeError(f"line {line_number}.{kind}.levelParams: expected array")
             _refs_exist(params, names, f"line {line_number}.{kind}.levelParams")
+            declaration_names.append(name_values[payload["name"]])
         if kind in {"def", "opaque", "thm"}:
             _refs_exist([payload.get("value")], exprs, f"line {line_number}.{kind}.value")
             all_names = payload.get("all")
@@ -251,6 +307,7 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
                 raise ProbeError(f"line {line_number}.inductive: types/ctors/recs must be arrays")
             if len(types) > 1:
                 blockers.add("inductive-mutual")
+            type_inventory: list[InductiveTypeInventory] = []
             for type_value in types:
                 type_value = _object(type_value, f"line {line_number}.inductive.types")
                 _refs_exist([type_value.get("name")], names, f"line {line_number}.inductive.type.name")
@@ -260,14 +317,45 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
                     if not isinstance(values, list):
                         raise ProbeError(f"line {line_number}.inductive.type.{field}: expected array")
                     _refs_exist(values, names, f"line {line_number}.inductive.type.{field}")
-                if type_value.get("isReflexive"):
+                num_params = _integer(
+                    type_value.get("numParams"), "inductive.type.numParams"
+                )
+                num_indices = _integer(
+                    type_value.get("numIndices"), "inductive.type.numIndices"
+                )
+                num_nested = _integer(
+                    type_value.get("numNested"), "inductive.type.numNested"
+                )
+                is_rec = _boolean(type_value.get("isRec"), "inductive.type.isRec")
+                is_reflexive = _boolean(
+                    type_value.get("isReflexive"), "inductive.type.isReflexive"
+                )
+                _boolean(type_value.get("isUnsafe"), "inductive.type.isUnsafe")
+                if is_reflexive:
                     blockers.add("inductive-reflexive")
-                if _integer(type_value.get("numNested"), "inductive.type.numNested") > 0:
+                if num_nested > 0:
                     blockers.add("inductive-nested")
-                if type_value.get("isRec") and _integer(type_value.get("numIndices"), "inductive.type.numIndices") > 0:
+                if is_rec and num_indices > 0:
                     blockers.add("inductive-recursive-indexed")
                 if type_value.get("isUnsafe"):
                     raise ProbeError(f"line {line_number}.inductive: unsafe declaration is rejected")
+                type_name = name_values[type_value["name"]]
+                declaration_names.append(type_name)
+                type_inventory.append(
+                    InductiveTypeInventory(
+                        name=type_name,
+                        all_names=tuple(name_values[value] for value in type_value["all"]),
+                        constructor_names=tuple(
+                            name_values[value] for value in type_value["ctors"]
+                        ),
+                        num_params=num_params,
+                        num_indices=num_indices,
+                        num_nested=num_nested,
+                        is_rec=is_rec,
+                        is_reflexive=is_reflexive,
+                    )
+                )
+            constructor_inventory: list[ConstructorInventory] = []
             for ctor_value in ctors:
                 ctor_value = _object(ctor_value, f"line {line_number}.inductive.ctors")
                 _refs_exist(
@@ -284,8 +372,25 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
                         f"line {line_number}.inductive.ctor.levelParams: expected array"
                     )
                 _refs_exist(params, names, f"line {line_number}.inductive.ctor.levelParams")
+                _boolean(ctor_value.get("isUnsafe"), "inductive.ctor.isUnsafe")
                 if ctor_value.get("isUnsafe"):
                     raise ProbeError(f"line {line_number}.inductive: unsafe constructor is rejected")
+                ctor_name = name_values[ctor_value["name"]]
+                declaration_names.append(ctor_name)
+                constructor_inventory.append(
+                    ConstructorInventory(
+                        name=ctor_name,
+                        inductive=name_values[ctor_value["induct"]],
+                        cidx=_integer(ctor_value.get("cidx"), "inductive.ctor.cidx"),
+                        num_params=_integer(
+                            ctor_value.get("numParams"), "inductive.ctor.numParams"
+                        ),
+                        num_fields=_integer(
+                            ctor_value.get("numFields"), "inductive.ctor.numFields"
+                        ),
+                    )
+                )
+            recursor_inventory: list[RecursorInventory] = []
             for rec_value in recs:
                 rec_value = _object(rec_value, f"line {line_number}.inductive.recs")
                 _refs_exist([rec_value.get("name")], names, f"line {line_number}.inductive.rec.name")
@@ -298,12 +403,50 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
                 rules = rec_value.get("rules")
                 if not isinstance(rules, list):
                     raise ProbeError(f"line {line_number}.inductive.rec.rules: expected array")
+                rule_constructors: list[str] = []
+                rule_nfields: list[int] = []
                 for rule in rules:
                     rule = _object(rule, f"line {line_number}.inductive.rec.rule")
                     _refs_exist([rule.get("ctor")], names, f"line {line_number}.inductive.rec.rule.ctor")
                     _refs_exist([rule.get("rhs")], exprs, f"line {line_number}.inductive.rec.rule.rhs")
+                    rule_constructors.append(name_values[rule["ctor"]])
+                    rule_nfields.append(
+                        _integer(rule.get("nfields"), "inductive.rec.rule.nfields")
+                    )
+                _boolean(rec_value.get("k"), "inductive.rec.k")
+                _boolean(rec_value.get("isUnsafe"), "inductive.rec.isUnsafe")
                 if rec_value.get("isUnsafe"):
                     raise ProbeError(f"line {line_number}.inductive: unsafe recursor is rejected")
+                rec_name = name_values[rec_value["name"]]
+                declaration_names.append(rec_name)
+                recursor_inventory.append(
+                    RecursorInventory(
+                        name=rec_name,
+                        all_names=tuple(name_values[value] for value in rec_value["all"]),
+                        num_params=_integer(
+                            rec_value.get("numParams"), "inductive.rec.numParams"
+                        ),
+                        num_indices=_integer(
+                            rec_value.get("numIndices"), "inductive.rec.numIndices"
+                        ),
+                        num_motives=_integer(
+                            rec_value.get("numMotives"), "inductive.rec.numMotives"
+                        ),
+                        num_minors=_integer(
+                            rec_value.get("numMinors"), "inductive.rec.numMinors"
+                        ),
+                        rule_constructors=tuple(rule_constructors),
+                        rule_nfields=tuple(rule_nfields),
+                        k=rec_value["k"],
+                    )
+                )
+            inductive_groups.append(
+                InductiveGroupInventory(
+                    types=tuple(type_inventory),
+                    constructors=tuple(constructor_inventory),
+                    recursors=tuple(recursor_inventory),
+                )
+            )
 
     return ProbeResult(
         format=export_format,
@@ -315,6 +458,8 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
         decls=sum(declaration_kinds.values()),
         declaration_kinds=dict(sorted(declaration_kinds.items())),
         expression_kinds=dict(sorted(expression_kinds.items())),
+        declaration_names=tuple(declaration_names),
+        inductive_groups=tuple(inductive_groups),
         blockers=tuple(sorted(blockers)),
     )
 
