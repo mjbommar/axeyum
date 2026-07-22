@@ -723,17 +723,51 @@ impl<'kernel> ImportState<'kernel> {
         if types.is_empty() {
             return Err(malformed(line, "inductive group has no family types"));
         }
-        if types.len() == 1 && recursors.len() != 1 {
+
+        // `numNested` is not admission authority. It is sufficient at this
+        // policy boundary only to distinguish a well-shaped nested export
+        // (one main recursor per source family plus the reported auxiliary
+        // recursors) from an ordinary malformed recursor population. M4 must
+        // derive and compare this count structurally before nested admission.
+        let nested_counts = types
+            .iter()
+            .map(|raw_type| {
+                let ty = object(raw_type, line, "inductive.type")?;
+                usize_value(
+                    required(ty, "numNested", line)?,
+                    line,
+                    "inductive.type.numNested",
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let nested_count = nested_counts[0];
+        if nested_counts.iter().any(|&count| count != nested_count) {
+            return Err(malformed(line, "mutual family numNested differs"));
+        }
+        let expected_recursor_count = types
+            .len()
+            .checked_add(nested_count)
+            .ok_or_else(|| malformed(line, "inductive recursor count exceeds host width"))?;
+        if recursors.len() != expected_recursor_count && nested_count != 0 {
+            return Err(malformed(
+                line,
+                "nested inductive recursor count differs from numNested",
+            ));
+        }
+        if types.len() == 1 && recursors.len() != 1 && nested_count == 0 {
             return Err(malformed(
                 line,
                 "single-family inductive must export one recursor",
             ));
         }
-        if recursors.len() != types.len() {
+        if recursors.len() != types.len() && nested_count == 0 {
             return Err(malformed(
                 line,
                 "inductive group must export one recursor per family",
             ));
+        }
+        if nested_count != 0 {
+            return Err(unsupported(line, "inductive-nested"));
         }
 
         let group_names = types
@@ -782,14 +816,6 @@ impl<'kernel> ImportState<'kernel> {
                 line,
                 "inductive.type.isReflexive",
             )?;
-            if u64_value(
-                required(ty, "numNested", line)?,
-                line,
-                "inductive.type.numNested",
-            )? != 0
-            {
-                return Err(unsupported(line, "inductive-nested"));
-            }
             let all = self.name_array(required(ty, "all", line)?, line, "inductive.type.all")?;
             if all != group_names {
                 return Err(malformed(

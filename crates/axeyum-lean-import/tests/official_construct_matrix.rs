@@ -27,9 +27,9 @@ enum ExpectedOutcome {
         counts: (usize, usize, usize, usize, usize),
         required_names: &'static [&'static str],
     },
-    Malformed {
+    Unsupported {
         line: usize,
-        message: &'static str,
+        code: &'static str,
     },
 }
 
@@ -90,16 +90,12 @@ fn assert_outcome(case_id: &str, fixture: &str, expected: ExpectedOutcome) {
             }
         }
         (
-            Err(ImportError::Malformed {
+            Err(ImportError::Unsupported {
                 line: actual_line,
-                message: actual_message,
+                code: actual_code,
             }),
-            ExpectedOutcome::Malformed { line, message },
-        ) => assert_eq!(
-            (actual_line, actual_message.as_str()),
-            (line, message),
-            "{case_id}"
-        ),
+            ExpectedOutcome::Unsupported { line, code },
+        ) => assert_eq!((actual_line, actual_code), (line, code), "{case_id}"),
         (actual, _) => panic!("{case_id}: unexpected typed outcome: {actual:?}"),
     }
 }
@@ -193,9 +189,9 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "nested",
             NESTED,
-            ExpectedOutcome::Malformed {
+            ExpectedOutcome::Unsupported {
                 line: 248,
-                message: "single-family inductive must export one recursor",
+                code: "inductive-nested",
             },
         ),
         (
@@ -242,7 +238,11 @@ fn reflexive_metadata_is_descriptive_while_boundaries_remain_fail_closed() {
     let nested = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
         group["types"][0]["numNested"] = json!(1);
     });
-    assert_unsupported(&nested, 148, "inductive-nested");
+    assert_malformed(
+        &nested,
+        148,
+        "nested inductive recursor count differs from numNested",
+    );
 
     let unsafe_group = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
         group["types"][0]["isUnsafe"] = json!(true);
@@ -263,6 +263,69 @@ fn reflexive_metadata_is_descriptive_while_boundaries_remain_fail_closed() {
         148,
         "inductive group repeats a family name",
     );
+}
+
+#[test]
+fn nested_preflight_preserves_ordinary_singleton_recursor_validation() {
+    for _ in 0..2 {
+        assert_control();
+        assert_unsupported(NESTED, 248, "inductive-nested");
+    }
+
+    let missing_auxiliary = mutate_inductive_record(NESTED, 248, |group| {
+        group["recs"].as_array_mut().unwrap().pop();
+    });
+    assert_malformed(
+        &missing_auxiliary,
+        248,
+        "nested inductive recursor count differs from numNested",
+    );
+
+    let extra_auxiliary = mutate_inductive_record(NESTED, 248, |group| {
+        let duplicate = group["recs"][0].clone();
+        group["recs"].as_array_mut().unwrap().push(duplicate);
+    });
+    assert_malformed(
+        &extra_auxiliary,
+        248,
+        "nested inductive recursor count differs from numNested",
+    );
+
+    let missing_main = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
+        group["recs"].as_array_mut().unwrap().clear();
+    });
+    assert_malformed(
+        &missing_main,
+        148,
+        "single-family inductive must export one recursor",
+    );
+
+    let extra_main = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
+        let duplicate = group["recs"][0].clone();
+        group["recs"].as_array_mut().unwrap().push(duplicate);
+    });
+    assert_malformed(
+        &extra_main,
+        148,
+        "single-family inductive must export one recursor",
+    );
+
+    let inconsistent_mutual_count = mutate_inductive_record(MUTUAL, 233, |group| {
+        group["types"][0]["numNested"] = json!(1);
+    });
+    assert_malformed(
+        &inconsistent_mutual_count,
+        233,
+        "mutual family numNested differs",
+    );
+
+    let nested_mutual_shape = mutate_inductive_record(MUTUAL, 233, |group| {
+        group["types"][0]["numNested"] = json!(1);
+        group["types"][1]["numNested"] = json!(1);
+        let auxiliary = group["recs"][0].clone();
+        group["recs"].as_array_mut().unwrap().push(auxiliary);
+    });
+    assert_unsupported(&nested_mutual_shape, 233, "inductive-nested");
 }
 
 #[test]
