@@ -48,7 +48,10 @@ The old caller-supplied-kernel entry point is removed rather than retained as a
 public footgun. The internal streaming routine may still mutate its private
 scratch kernel record by record. Publication is the construction and return of
 `CompletedImport`, which happens only after EOF, metadata validation, and all
-translation/admission checks succeed.
+translation/admission checks succeed. “Completed” is relative to the delivered
+stream; ADR-0349 records that upstream format 3.1 has no footer and therefore
+requires external identity to distinguish an intended short stream from a
+record-boundary truncation.
 
 This is an API correction before TL1.10 stability, not a compatibility shim.
 It deliberately does not support extending an arbitrary pre-existing kernel.

@@ -14,9 +14,16 @@ entire stream in a private fresh `Kernel` and returns an owned
 kernel admission, and exported-recursor comparison all succeed. Any error drops
 the staging state and returns no environment or arena-relative handle.
 
-This closes TL1.3's whole-environment publication requirement. The previous
+This closes TL1.3's whole-environment publication requirement for the delivered
+stream. The previous
 documentation-only rule—“pass a fresh kernel”—is removed because it still let a
 caller inspect earlier declarations after a late error.
+
+Format 3.1 has no footer or expected record count. `CompletedImport` therefore
+means every delivered record checked through EOF; it does not authenticate the
+bytes as the producer's intended entire export. ADR-0349's TL1.4 corpus measures
+record-boundary prefixes explicitly, while TL0.3/TL1.6/TL1.9 own external
+digest/manifest and durable completion identity.
 
 ## Public contract
 
@@ -102,12 +109,12 @@ documentation links pass under build concurrency capped at two.
   owns completion-last durable publication;
 - no arbitrary existing kernel can be extended or merged;
 - no new wire construct or Lean semantic fragment is admitted;
-- TL1.4's exhaustive record-by-record mutation corpus and TL1.7's declaration
-  dependency digests remain open;
+- TL1.4's exhaustive record-by-record mutation corpus has since landed;
+  TL1.7's declaration dependency digests remain open;
 - transactionality does not broaden the exact K0/K1 compatibility claims.
 
 ## Next action
 
-Execute TL1.4: generate truncation-at-every-record plus duplicate-ID, forward-
-reference, unknown-field, deep-JSON, Unicode, integer, cycle, and version
-mutations against the now-atomic publication boundary.
+TL1.4 subsequently generated and froze the 226-case mutation corpus against
+this boundary. Resume the immediate queue at TL1.7 declaration content and
+dependency digests.

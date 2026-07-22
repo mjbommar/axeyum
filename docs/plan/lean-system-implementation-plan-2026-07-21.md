@@ -171,7 +171,7 @@ broadening kernel semantics.
 | TL1.1 | DONE | Parse metadata, names, levels, expressions, declarations, and group records into a separate Rust wire layer. | — | M | Flat and direct-recursive official fixtures inventory exactly. |
 | TL1.2 | DONE | Enforce dense IDs, backward references, exact fields/version, integer bounds, safety flags, and line/record limits. | — | M | Fourteen Rust tests retain stable first errors and projection wire mutations. |
 | TL1.3 | DONE | Make whole-environment publication transactional rather than only declaration-transactional. | TL1.1 | M | [Owned completed publication](lean-import-transactional-publication-tl1.3-2026-07-22.md) stages in a private kernel and returns a field-private `CompletedImport` only after full success; late JSON, kernel, unsupported, record-limit, and I/O failures expose no environment. |
-| TL1.4 | TODO | Generate truncation-at-every-record, duplicate-ID, forward-reference, unknown-field, deep-JSON, Unicode, integer, cycle, and version mutations. | TL0.2 | L | Mutation corpus runs without panic and with stable decline classes. |
+| TL1.4 | DONE | Generate truncation-at-every-record, duplicate-ID, forward-reference, unknown-field, deep-JSON, Unicode, integer, cycle, and version mutations. | TL0.2 | L | The [226-case deterministic corpus](lean-import-mutation-corpus-tl1.4-2026-07-22.md) runs twice byte-identically without panic and freezes exact JSON/malformed/kernel/unsupported/published/unsealed classes; all 65 record bodies reject truncation while 64 complete-record prefixes are explicitly unsealed under the upstream no-footer contract. |
 | TL1.5 | TODO | Add property fuzzing for wire topology and semantic erasure of metadata. | TL1.4 | M | Fuzzer covers every record discriminant and metadata path. |
 | TL1.6 | TODO | Add streaming large-input checkpoints, aggregate byte/depth limits, and completion-last publication. | TL0.7 | M | Forced termination resumes without duplicate admission or lost provenance. |
 | TL1.7 | TODO | Record axiom name/type digests and declaration content/dependency digests during import. | TL0.4 | M | Reordering preserves content identity; type mutation changes the digest. |
@@ -452,8 +452,8 @@ parallel lane:
 10. **DONE:** TL2.6 — replace `u128` Nat storage with canonical arbitrary precision.
 11. **DONE:** TL2.7 — type Nat literals, implement checked constructor/literal conversion, and close the exact official Nat closure.
 12. **DONE:** TL1.3 — publish only owned completed environments after full-stream success.
-13. **NEXT:** TL1.4 — generate record-by-record and structural mutation corpora.
-14. TL1.7 — add axiom and declaration dependency digests.
+13. **DONE:** TL1.4 — generate and freeze the 226-case record/structural mutation corpus.
+14. **NEXT:** TL1.7 — add axiom and declaration dependency digests.
 15. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
     official fixtures while the importer lane is independent.
 16. TL2.11 — implement positivity before widening inductive admission.

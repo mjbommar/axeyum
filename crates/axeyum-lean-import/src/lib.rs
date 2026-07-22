@@ -82,7 +82,9 @@ pub struct ImportReport {
 /// This is the only successful publication boundary. Its fields are private so
 /// callers cannot construct a completed state from an unchecked kernel or a
 /// mismatched report. On import failure no `Kernel` or arena-relative handle is
-/// returned.
+/// returned. Completion is relative to the delivered bytes: format 3.1 has no
+/// footer, so authenticating those bytes as the producer's intended entire
+/// export requires an external digest or record manifest.
 ///
 /// ```compile_fail
 /// use axeyum_lean_import::{CompletedImport, ImportReport};
@@ -1104,7 +1106,9 @@ impl<'kernel> ImportState<'kernel> {
 /// are validated in stream order; name, level, and expression indices must be
 /// dense and may only refer backward. Declarations enter a private staging
 /// kernel only through its checked admission gates. The kernel is published in
-/// [`CompletedImport`] only after the complete stream succeeds.
+/// [`CompletedImport`] only after every delivered record succeeds and the
+/// reader reaches EOF. The upstream format has no footer; EOF alone does not
+/// authenticate a record-boundary prefix as the producer's intended artifact.
 ///
 /// # Errors
 ///

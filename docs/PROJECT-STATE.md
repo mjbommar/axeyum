@@ -159,6 +159,10 @@ Again, there are distinct targets:
   differential. The importer now stages in a private kernel and returns an
   owned `CompletedImport` only after the entire stream succeeds, so late parser,
   resource, I/O, unsupported, or kernel failures expose no partial environment.
+  A deterministic 226-case mutation corpus covers every official record plus
+  ID/reference/field/depth/Unicode/integer/cycle/version families. It records 64
+  complete-record prefixes as `published-unsealed`, not full artifacts, because
+  upstream format 3.1 has no footer or expected count.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

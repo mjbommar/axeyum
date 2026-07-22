@@ -725,6 +725,15 @@ Out of scope:
     the caller-supplied mutable-kernel API is removed rather than retained as a
     documented footgun. See
     [ADR-0348](../09-decisions/adr-0348-owned-lean-import-publication.md).
+- [x] Can format-3.1 record-boundary truncation be detected from the bare
+      NDJSON stream, and how should the importer mutation corpus classify it?
+  - Answer (2026-07-22): not in general. The upstream grammar has initial
+    metadata followed by a backward-referencing record sequence but no footer,
+    expected count, or root manifest, so a complete-record prefix is a valid
+    unsealed stream. Generate every prefix and record-body truncation, classify
+    accepted prefixes as `published-unsealed` with no exact-artifact credit,
+    and assign authenticated completion to TL0.3/TL1.6/TL1.9. See
+    [ADR-0349](../09-decisions/adr-0349-generated-lean-import-mutation-corpus.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

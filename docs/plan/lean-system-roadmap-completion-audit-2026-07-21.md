@@ -147,7 +147,7 @@ The roadmap is backed by implementation rather than only a feature list:
    constructor/literal semantics, while the unretained String root awaits a
    refreshed first-blocker measurement;
 8. focused current validation passes 179 kernel unit tests, 35 kernel
-   integration cases across twelve binaries, and twenty importer tests under
+   integration cases across twelve binaries, and twenty-three importer tests under
    the repository's 4 GiB cap, including a required pinned-Lean Nat-literal
    differential;
 9. the separate official-source lane has a committed fail-closed 71/71 Lean
@@ -165,9 +165,10 @@ The four-root dependency evidence and next implementation order are in the
 The following remain deliberately open and must not be erased by this audit:
 
 - ADR-0345 review and L0 capability/axiom contracts;
-- L1 generated mutation/fuzzing, declaration dependency digests, and
-  checkpointed large-stream durable publication; whole-environment in-memory
-  publication is now atomic through owned `CompletedImport` staging;
+- L1 property fuzzing, declaration dependency digests, and checkpointed
+  large-stream durable publication; whole-environment in-memory publication is
+  atomic and the deterministic 226-case mutation corpus is complete, with the
+  upstream no-footer prefix boundary explicit;
 - L2 String literals, quotient, positivity, and recursive-indexed/reflexive/
   mutual admission; projection and arbitrary-precision Nat-literal slices are
   now complete for their exact roots;

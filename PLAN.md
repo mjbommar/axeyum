@@ -105,9 +105,14 @@ state.
 > across twelve binaries. TL1.3 now removes the caller-owned mutable-kernel
 > import API: format-3.1 streams stage in a private kernel and publish a
 > field-private `CompletedImport` only after full success. Late JSON, kernel,
-> unsupported, record-limit, and I/O failures return no environment; all 20
-> importer cases pass. Resume with TL1.4's record-by-record mutation corpus,
-> plus the remaining
+> unsupported, record-limit, and I/O failures return no environment. TL1.4 now
+> freezes a 226-case deterministic mutation corpus: 67 JSON, 90 malformed, one
+> kernel, one format decline, three positive, and 64 explicitly
+> `published-unsealed` complete-record prefixes. The upstream format has no
+> footer, so those prefixes receive no exact-artifact credit; all 65
+> record-body truncations reject. The importer passes 23 cases across two
+> binaries. Resume with TL1.7's declaration content/dependency digests, plus the
+> remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -142,9 +147,10 @@ state.
 > partial until generated projection/reduction/eta and quotient semantic
 > families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
-> arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, and
-> TL1.3 owned transactional publication are complete; execute TL1.4 mutation
-> generation next. Native parser/macros,
+> arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, TL1.3
+> owned transactional publication, and TL1.4 generated mutation coverage are
+> complete; execute TL1.7 declaration content/dependency digests next. Native
+> parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

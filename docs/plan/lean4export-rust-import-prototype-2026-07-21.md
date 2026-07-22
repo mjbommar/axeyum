@@ -217,7 +217,7 @@ object and compare results.
 
 ## Negative matrix
 
-The 20 Rust integration tests in
+The 23 Rust integration tests across two binaries in
 [`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
 cover:
 
@@ -240,11 +240,13 @@ cover:
 | line/record limits (two cells in one test) | resource rejection | bounded input contract |
 | completed publication | borrowed and consumed kernel length equals the matching report | success publishes one owned checked pair |
 | late failure matrix | appended JSON, final kernel rejection, quotient, late record limit, and post-stream I/O error return no completed environment | whole-environment transactionality |
+| generated TL1.4 corpus | 226 cases: every record body/prefix/top-level field plus ID/reference/depth/Unicode/integer/cycle/version families | deterministic stable-class mutation coverage; 64 valid prefixes are explicitly unsealed |
 
 Several tests contain multiple mutation cells: the blocker fixture, projection
 mutations, resource limits, arbitrary-precision values, and late-publication
 failure classes remain separated by assertions even when they share one test
-function.
+function. The mutation binary separately freezes exact population/class counts
+and byte-identical repeated summaries.
 
 The earlier Python probe remains useful as an implementation-independent
 inventory oracle. Six reader tests plus two exact census/hash tests and the Rust
@@ -281,10 +283,11 @@ The initial parts of L1 and L2 are now implemented together:
 - flat, parametric-recursive, and direct-recursive non-indexed inductive
   admission with recursor comparison: **landed on the two fixtures**.
 
-L1 is not complete because there is no fuzz target, declaration dependency
-digest, completed wire-model separation for every unsupported variant,
-truncation/duplicate-ID/deep-nesting matrix, or large-stream checkpoint/durable
-publication protocol. L2 is not
+L1 is not complete because there is no property fuzz target, declaration
+dependency digest, completed wire-model separation for every unsupported
+variant, or large-stream checkpoint/durable publication protocol. The
+deterministic truncation/ID/reference/field/depth/Unicode/integer/cycle/version
+matrix is complete. L2 is not
 complete because String literals, quotients, recursive-indexed, mutual, nested,
 and reflexive groups remain explicit declines.
 
@@ -295,9 +298,10 @@ and reflexive groups remain explicit declines.
    reflexive families.
 2. Add a generated parsed/translated/admitted/dual-admitted matrix from those
    fixtures.
-3. **NEXT (TL1.4):** add duplicate-ID, truncation-at-every-record, oversized
-   integer, deep JSON, Unicode, cycle, version, unknown-field, and publication
-   mutations against the completed-import boundary.
+3. **DONE (TL1.4):** retain the 226-case duplicate-ID, truncation-at-every-
+   record, integer, deep-JSON, Unicode, cycle, version, unknown-field, and
+   publication corpus. Sixty-four record-boundary prefixes remain explicitly
+   unsealed until authenticated artifact identity lands.
 4. **DONE:** hash axiom names **and canonical types**, then bind the 65 actual
    Axeyum prelude assumptions (real 30, integer 34, string 1) to that stable
    [runtime-derived identity](lean-axiom-ledger-v1.json).
@@ -308,7 +312,8 @@ and reflexive groups remain explicit declines.
    admission/computation, separately gated structure eta, arbitrary-precision
    Nat storage, checked literal semantics, and exact Nat-root admission/
    computation are complete; private staging now publishes only an owned
-   completed environment. Execute TL1.4 mutation generation next.
+   completed environment. Execute TL1.7 declaration content/dependency digests
+   next; TL1.5 later adds property fuzzing over the frozen paths.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

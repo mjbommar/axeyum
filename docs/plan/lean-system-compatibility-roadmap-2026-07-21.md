@@ -262,11 +262,13 @@ export. The measured result is:
 LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
 ```
 
-Twenty importer integration tests include flat, direct-recursive, projection,
+Twenty-three importer integration tests across two binaries include flat,
+direct-recursive, projection,
 and Nat-literal positive fixtures; theorem-body, recursor-rule, projection, and
 Nat-bootstrap tampering; determinism, format drift, topology, safety, quotient
 declines, arbitrary-precision wire values, resource controls, owned completed
-publication, and five late-failure classes.
+publication, five late-failure classes, and the 226-case generated TL1.4
+mutation population.
 See the full
 [`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
 The second official fixture independently admits direct-recursive `MiniNat` and
@@ -676,16 +678,17 @@ Non-claims until their gates are met:
 ## 9. Immediate next eleven actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
-2. Keep the 14 Python compatibility/census tests, 20 importer cases, and the
+2. Keep the 14 Python compatibility/census tests, 23 importer cases, and the
    bounded native/pinned-Lean kernel gates in normal checks.
 3. **TL2.2-TL2.7 DONE:** preserve first-class projection representation,
    checked dependent inference, constructor reduction, exact official-root
    import/computation, and separately gated structure eta with pinned-Lean
    positive/rejecting controls, plus canonical arbitrary-precision Nat storage
    and checked Nat literal typing/conversion. TL1.3 now publishes only an owned
-   completed environment after full-stream success. Resume TL1.4 mutation
-   generation; do not generalize exact K1 roots or K0 rules to broader native
-   or ecosystem compatibility.
+   completed environment after full-stream success. TL1.4 now freezes 226
+   mutation cases and labels upstream no-footer prefixes unsealed. Resume TL1.7
+   declaration digests; do not generalize exact K1 roots or K0 rules to broader
+   native or ecosystem compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
    nested, and reflexive fixtures.
@@ -694,9 +697,9 @@ Non-claims until their gates are met:
    negative so the boundary is attributed to indices, not recursion alone.
 6. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
    current hand-checked six-profile seed.
-7. **TL1.3 DONE; NEXT TL1.4:** preserve owned completion-only publication while
-   adding truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field,
-   and publication mutations.
+7. **TL1.3-TL1.4 DONE; NEXT TL1.7:** preserve owned completion-only publication
+   and the 226-case mutation corpus while adding axiom name/type and declaration
+   content/dependency digests.
 8. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.
