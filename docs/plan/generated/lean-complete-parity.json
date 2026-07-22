@@ -4,7 +4,11 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "8d0ef461da0ff7c84376cf8eb401826f670f5cd4fee93a6a7ef36eeb297d1be4"
+      "sha256": "b9d15687c5d0c6c2cb809ac26b6ff206f7352923211b56475963f43f1a6cf791"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-test-authority.md",
+      "sha256": "9f03a34e9a287dc65903dad9649af0a71d9e455570961382126c0242f04e1017"
     },
     {
       "path": "docs/plan/lean-axiom-ledger-v1.json",
@@ -16,7 +20,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "1e46bdb0881b4318253f7c233edb48daac34634e728182912578bac56972fe27"
+      "sha256": "2e742d4a33776cd67f17cffc6592c7c2a5a5e8e72cd54e90b8775a0f524ef906"
     },
     {
       "path": "docs/plan/lean-official-construct-matrix-v1.json",
@@ -24,15 +28,23 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "fe8e5513bcec329fcf3d90bb0fe16f00cc91fafa6f9cd98b35aad65ce1c6913c"
+      "sha256": "a73b980011cfe22dcecaa28d96dee8aa86ae37f672ecb733bc764050e8bed890"
+    },
+    {
+      "path": "docs/plan/lean-u2-test-authority-v1.json",
+      "sha256": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e"
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "c8c3fd5f9afadfea76b0222a8fa05c08092cf4f69b5fe1826be9ac1a67003418"
+      "sha256": "c753a908f702994ce35cddbe5c34351ff5e0a7f29cd72bf4d30ba2b3e862b091"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "09f46ebe865e8678417d1e3222c9536a5400482366cef21292b429a60be927e8"
+      "sha256": "e93ea4d89084fdb28bb166134edc674fdf7204b3591fff33bf5f711e1bd60c36"
+    },
+    {
+      "path": "scripts/gen-lean-u2-test-authority.py",
+      "sha256": "2c173c2621c374179ee346aa8cc710a84e8c37792b2ead25d4e80f8144ad34ba"
     },
     {
       "path": "scripts/tests/test_lean_compatibility.py",
@@ -40,7 +52,11 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "ca09c438011102d8193e2d6871da46f2f0139f679d86d34a903e75ca0c32d486"
+      "sha256": "01c5aeaa4af823443761fbef9480068955417dcf89b76d54607f783fac608d34"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_test_authority.py",
+      "sha256": "2fb077105c1540bac6d3921712b1e69ae6afeb21f65de4165cf49dc5edd89345"
     }
   ],
   "target": {
@@ -110,12 +126,72 @@
         "unreviewed": 65
       }
     },
+    "u2_test_authority": {
+      "scope": "bounded-registration-authority-not-complete-u2",
+      "profiles": [
+        {
+          "id": "default",
+          "lake_ci": false,
+          "registered": 3678,
+          "registration_sha256": "a93e4fdea36da4cd4667ff07c18583106065a8f120eff3ff560a01a7c54c3463"
+        },
+        {
+          "id": "full-lake",
+          "lake_ci": true,
+          "registered": 3723,
+          "registration_sha256": "043b9d2ca765bb63553b083843829a5660a32877a0c8b1a37685d8f6fedbd03b"
+        }
+      ],
+      "selection_relation": {
+        "default_only": 0,
+        "full_lake_only": 45
+      },
+      "content": {
+        "roots": [
+          {
+            "path": "doc/examples",
+            "files": 73,
+            "bytes": 106530,
+            "sha256": "4443151d00c3a179ca9e2ee41d7572095fa3c797761f72bf562c9d88df0449ba"
+          },
+          {
+            "path": "tests",
+            "files": 6931,
+            "bytes": 12979843,
+            "sha256": "407de8e9868fa4f52f28984285c0909f9121cde1987f574dda0783d95d238d16"
+          }
+        ],
+        "files": 7004,
+        "files_sha256": "f2c8b9c9276ac85dfef7d8e4fc32abe2350a3ae9e659a9a5795cba7f0390631f",
+        "support_scopes": 94,
+        "cases": 3723,
+        "cases_sha256": "37050cfb25f0ecfa2256ccb9516124092fc611af5d7be94cce1e9e0745745cd3"
+      },
+      "kind_counts": {
+        "directory": 31,
+        "lake-directory": 52,
+        "lint": 1,
+        "pile": 3639
+      },
+      "output_policy_counts": {
+        "empty": 2099,
+        "exact": 1480,
+        "ignored": 60,
+        "script-defined": 84
+      },
+      "outcomes": {
+        "official_executed": 0,
+        "axeyum_executed": 0,
+        "paired_registered": 0,
+        "state": "not-run"
+      }
+    },
     "implementation_tasks": {
-      "rows": 130,
+      "rows": 136,
       "status_counts": {
-        "DONE": 20,
+        "DONE": 21,
         "PARTIAL": 5,
-        "TODO": 105,
+        "TODO": 110,
         "BLOCKED": 0
       }
     }
@@ -124,8 +200,8 @@
     "total": 10,
     "state_counts": {
       "complete_authority": 0,
-      "bounded_profile": 2,
-      "inventory_only": 4,
+      "bounded_profile": 3,
+      "inventory_only": 3,
       "not_registered": 4
     }
   },
@@ -174,17 +250,25 @@
       "id": "U2",
       "label": "official Lean tests",
       "owner": "L0/L4-L9",
-      "state": "inventory_only",
+      "state": "bounded_profile",
       "raw_denominator": null,
       "normalized_denominator": null,
       "content_digest": null,
       "evidence": [
         {
+          "path": "docs/plan/lean-u2-test-authority-v1.json",
+          "detail": "Pinned CMake/CTest registration authority for 3,678 default and 3,723 full-Lake cases, with exact content, command, property, sidecar, output-policy, and support-scope identities; outcomes remain not run."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-test-authority.md",
+          "detail": "Generated bounded profile summary and explicit non-terminal residual."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Derive the executable authority from CMake registration, piles, configuration, support files, and expected outputs."
+      "residual": "Derive official CI platform/preset/filter/resource/attempt identities, retain official and native Axeyum executions, and register exact matched outcomes; registration alone is not complete U2 authority."
     },
     {
       "id": "U3",

@@ -1,0 +1,208 @@
+{
+  "schema": "axeyum-lean-u2-test-authority-report-v1",
+  "generated_from": "docs/plan/lean-u2-test-authority-v1.json",
+  "generated_from_sha256": "d7446e7965bac100ac6b5c607cbb7c87b5b80063fc23b3ec998fff2736d5d18e",
+  "target": {
+    "repository": "https://github.com/leanprover/lean4.git",
+    "version": "4.30.0",
+    "tag": "v4.30.0",
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "scope": "bounded-registration-authority-not-complete-u2",
+  "profiles": [
+    {
+      "id": "default",
+      "lake_ci": false,
+      "registered": 3678,
+      "registration_sha256": "a93e4fdea36da4cd4667ff07c18583106065a8f120eff3ff560a01a7c54c3463"
+    },
+    {
+      "id": "full-lake",
+      "lake_ci": true,
+      "registered": 3723,
+      "registration_sha256": "043b9d2ca765bb63553b083843829a5660a32877a0c8b1a37685d8f6fedbd03b"
+    }
+  ],
+  "selection_relation": {
+    "default_only": 0,
+    "full_lake_only": 45
+  },
+  "content": {
+    "roots": [
+      {
+        "path": "doc/examples",
+        "files": 73,
+        "bytes": 106530,
+        "sha256": "4443151d00c3a179ca9e2ee41d7572095fa3c797761f72bf562c9d88df0449ba"
+      },
+      {
+        "path": "tests",
+        "files": 6931,
+        "bytes": 12979843,
+        "sha256": "407de8e9868fa4f52f28984285c0909f9121cde1987f574dda0783d95d238d16"
+      }
+    ],
+    "files": 7004,
+    "files_sha256": "f2c8b9c9276ac85dfef7d8e4fc32abe2350a3ae9e659a9a5795cba7f0390631f",
+    "support_scopes": 94,
+    "cases": 3723,
+    "cases_sha256": "37050cfb25f0ecfa2256ccb9516124092fc611af5d7be94cce1e9e0745745cd3"
+  },
+  "selection_accounting": {
+    "declared_piles": 11,
+    "glob_candidates": 3660,
+    "registered": 3639,
+    "excluded": 21,
+    "excluded_by_reason": {
+      "no-test-runner": 11,
+      "no-test-sidecar": 7,
+      "runner-name": 3
+    },
+    "excluded_cases": [
+      {
+        "path": "tests/compile_bench/rbmap_checkpoint2.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/bv_decide_inequality.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/bv_decide_mod.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/cbv_arm_ldst.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/cbv_system_f.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/grind_bitvec2.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/elab_bench/riscv-ast.lean",
+        "reason": "no-test-sidecar"
+      },
+      {
+        "path": "tests/misc/run_test.sh",
+        "reason": "runner-name"
+      },
+      {
+        "path": "tests/misc_bench/import Init.Data.BitVec.Lemmas.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/import Init.Data.List.Sublist.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/import Init.Prelude.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/import Lean.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/import Std.Data.DHashMap.Internal.RawLemmas.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/import Std.Data.Internal.List.Associative.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/leanchecker --fresh Init.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/re-elab Init.Data.BitVec.Lemmas.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/re-elab Init.Data.List.Basic.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/re-elab Init.Data.List.Sublist.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/re-elab watchdog Init.Data.List.Sublist.sh",
+        "reason": "no-test-runner"
+      },
+      {
+        "path": "tests/misc_bench/run_bench.sh",
+        "reason": "runner-name"
+      },
+      {
+        "path": "tests/server_interactive/run_test.lean",
+        "reason": "runner-name"
+      }
+    ]
+  },
+  "kind_counts": {
+    "directory": 31,
+    "lake-directory": 52,
+    "lint": 1,
+    "pile": 3639
+  },
+  "family_counts": {
+    "bench": 1,
+    "compile": 60,
+    "compile_bench": 24,
+    "doc-examples": 8,
+    "docparse": 197,
+    "elab": 2854,
+    "elab_bench": 40,
+    "elab_fail": 316,
+    "lake": 52,
+    "lint": 1,
+    "misc": 5,
+    "misc_dir": 2,
+    "pkg": 27,
+    "server": 4,
+    "server_interactive": 132
+  },
+  "output_policy_counts": {
+    "empty": 2099,
+    "exact": 1480,
+    "ignored": 60,
+    "script-defined": 84
+  },
+  "sidecar_counts": {
+    ".before.sh": 6,
+    ".content_diag.json": 1,
+    ".dir/didOpen.log": 1,
+    ".dir/file.lean": 1,
+    ".dir/foo": 1,
+    ".dir/initialization.log": 1,
+    ".do_interpret": 2,
+    ".ex-50-50-1.leq": 1,
+    ".init.sh": 27,
+    ".input": 1,
+    ".log": 1,
+    ".no_compile": 1,
+    ".no_interpret": 6,
+    ".out.expected": 1480,
+    ".out.ignored": 60,
+    ".英語": 1
+  },
+  "outcomes": {
+    "official_executed": 0,
+    "axeyum_executed": 0,
+    "paired_registered": 0,
+    "state": "not-run"
+  },
+  "residual": [
+    "Derive every official CI platform, build preset, CTEST_OPTIONS filter, shard, retry, resource, and completion identity.",
+    "Execute and retain official Lean outcomes for the complete declared profile matrix.",
+    "Implement native Axeyum source/workflow/runtime surfaces and retain matched per-case outcomes.",
+    "Register U2 terminal paired cells only after both executions use the same normalized case identity."
+  ],
+  "verdict": "registration bounded; complete U2 parity authority not established"
+}

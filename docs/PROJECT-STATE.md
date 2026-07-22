@@ -275,13 +275,21 @@ Again, there are distinct targets:
   [complete Lean 4.30 parity contract](plan/lean4-complete-parity-contract-2026-07-22.md)
   reserves an unqualified “100%” claim for the native A0-A11 conjunction over
   complete content-identified U0-U9 populations; adapters and bounded fixtures
-  cannot fill that terminal gate.
+  cannot fill that terminal gate. The first U2 measurement slice now derives
+  [3,678 default / 3,723 full-Lake official registrations](plan/lean-u2-test-authority-2026-07-22.md)
+  from pinned CMake/CTest semantics and content-binds all selected commands,
+  sources, sidecars, output policies, and support trees. It records zero
+  official executions, zero Axeyum executions, and zero paired cells, so U2 is
+  a bounded registration profile rather than evidence of language or ecosystem
+  compatibility.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
 plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md),
 the [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md),
 and the [complete-parity contract](plan/lean4-complete-parity-contract-2026-07-22.md).
+The exact official-test selection checkpoint is the
+[U2 registration authority](plan/lean-u2-test-authority-2026-07-22.md).
 The exact first import result and negative matrix are in the
 [`lean4export` Rust prototype report](plan/lean4export-rust-import-prototype-2026-07-21.md).
 

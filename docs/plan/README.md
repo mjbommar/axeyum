@@ -56,6 +56,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   outcome classes, G1-G10 terminal gates, and the public-claim guard. It
   derives current bounded K-profile, construct, task, and axiom facts while
   granting zero terminal denominator or paired-cell credit.
+- [`lean-u2-test-authority-2026-07-22.md`](lean-u2-test-authority-2026-07-22.md),
+  [`lean-u2-test-authority-v1.json`](lean-u2-test-authority-v1.json), and the
+  generated [Markdown](generated/lean-u2-test-authority.md)/
+  [JSON](generated/lean-u2-test-authority.json) summaries — TL0.6.1's pinned
+  CMake/CTest derivation of 3,678 default and 3,723 full-Lake official Lean
+  registrations. Every case binds its normalized command/properties, primary,
+  sidecars, output policy, and support subtree; the artifact explicitly records
+  zero official executions, zero Axeyum executions, and zero paired cells, so
+  U2 remains a bounded profile rather than a complete authority.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

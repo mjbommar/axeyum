@@ -48,12 +48,27 @@ class LeanCompleteParityTests(unittest.TestCase):
             first["bounded_snapshot"]["construct_matrix"]["independently_admitted"],
             6,
         )
+        u2 = first["bounded_snapshot"]["u2_test_authority"]
+        self.assertEqual(
+            [(item["id"], item["registered"]) for item in u2["profiles"]],
+            [("default", 3678), ("full-lake", 3723)],
+        )
+        self.assertEqual(u2["outcomes"]["paired_registered"], 0)
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
             "docs/plan/lean4-complete-parity-contract-2026-07-22.md", source_paths
         )
         self.assertIn("scripts/gen-lean-complete-parity.py", source_paths)
+        self.assertIn("docs/plan/lean-u2-test-authority-v1.json", source_paths)
+
+    def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
+        population = self.population("U2")
+        self.assertEqual(population["state"], "bounded_profile")
+        self.assertIsNone(population["raw_denominator"])
+        self.assertIsNone(population["normalized_denominator"])
+        self.assertIsNone(population["content_digest"])
+        self.assertIn("registration alone is not complete", population["residual"])
 
     def test_population_order_and_incomplete_denominators_are_fail_closed(self) -> None:
         self.data["populations"][0], self.data["populations"][1] = (

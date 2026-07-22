@@ -417,6 +417,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   logic gate and is corrected. Next: pass the bounded repository gates, commit
   and push this implementation, then perform the first live S4 build and fresh
   verification. No solver execution is admitted yet.
+- **2026-07-22 — TL0.6.1 derives U2 from Lean's executable CMake/CTest
+  registration without claiming test execution or parity.** The new
+  [U2 result](docs/plan/lean-u2-test-authority-2026-07-22.md),
+  [machine-readable authority](docs/plan/lean-u2-test-authority-v1.json), and
+  generated [Markdown](docs/plan/generated/lean-u2-test-authority.md)/
+  [JSON](docs/plan/generated/lean-u2-test-authority.json) summaries freeze
+  pinned Lean v4.30.0's 3,678 default and 3,723 `LAKE_CI=ON` registrations.
+  The default set is a strict subset with 45 full-Lake-only cases; the full
+  set partitions into 3,639 pile, 31 non-Lake directory, 52 Lake directory,
+  and one lint case. Exact-output/empty/ignored/script-defined policies close
+  at 1,480/2,099/60/84. Every normalized command/property, primary, sidecar,
+  output policy, and over-approximating support subtree is content-bound across
+  7,004 Git-tracked files. Pile selection independently closes 3,660 candidates
+  as 3,639 registered plus 21 excluded. Eight mutation/contract tests and an
+  offline generated-output check are in `parity-docs`, the shell aggregate,
+  and both docs CI jobs; optional upstream verification reconstructs the
+  capture in an isolated archive. U2 advances from inventory-only to
+  `bounded_profile`, but the authority records zero official executions, zero
+  Axeyum executions, and zero paired cells. All complete populations, axes,
+  and terminal gates remain at zero. Next: TL0.6.2 must derive the official
+  event/check-level/platform/preset/filter/stage/rebootstrap profiles; TL0.3's
+  true remote 71/71 executable-identity gate remains independently open.
 
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
@@ -463,8 +485,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   contract explicitly refuses to treat those inventories as executable test
   denominators. The first corrected remote Lean CI job is reclassified from
   pending/unattempted to failed-before-sweep on working-directory-dependent
-  elan resolution. Next: close TL0.3's executable identity, derive U2 from the
-  executable CTest/test-pile authority, and populate exact paired records.
+  elan resolution. TL0.6.1 has since derived the bounded U2 registration
+  authority; next are TL0.3's executable identity and TL0.6.2's official CI
+  execution-profile derivation before exact paired records can be populated.
 
 - **2026-07-22 — structured composition carries raw squared-binomial moments
   through order 19.** Raw order 11 was mathematically valid but hit two
@@ -7515,6 +7538,15 @@ plan is built and committed on the current branch:
   byte identities, the zero-selected trivial `QF_UFFP` case, canonical selected
   order, published-decision drift, and all 18 registered rejecting mutations.
   The implementation remains live-blocked until this commit is pushed.
+- **2026-07-22 — Completed TL0.6.1's bounded U2 official-test registration
+  authority.** Pinned Lean's executable CMake/CTest semantics reproduce 3,678
+  default and 3,723 full-Lake registrations with exact commands, properties,
+  content, sidecars, output policies, support scopes, and selection digests.
+  The 3,660 pile candidates close as 3,639 registered and 21 excluded. The
+  machine-readable capture, generated reports, eight fail-closed tests, local
+  aggregates, and docs CI all preserve the boundary: official executions=0,
+  Axeyum executions=0, paired cells=0. U2 is a bounded profile, not a complete
+  authority; TL0.6.2 official workflow-profile derivation is next.
 
 - **2026-07-22 — Completed the twice-repeated ADR-0356 S3 official producer.**
   The first live attempt ran only after implementation commit `38c5f2af` was

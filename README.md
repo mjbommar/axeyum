@@ -106,6 +106,10 @@ open. See
 [Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
 plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
 and [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md).
+The first bounded U2 checkpoint derives
+[3,678 default / 3,723 full-Lake CTest registrations](docs/plan/lean-u2-test-authority-2026-07-22.md)
+from pinned upstream semantics while explicitly recording zero official,
+Axeyum, or paired executions.
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 
