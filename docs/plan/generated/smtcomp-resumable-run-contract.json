@@ -46,6 +46,7 @@
       "enforcement_id",
       "environment_class_sha256",
       "host_id",
+      "shard_ids",
       "launcher_pid",
       "started_at_ns",
       "snapshot",

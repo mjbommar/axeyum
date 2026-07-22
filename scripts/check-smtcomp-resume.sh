@@ -8,7 +8,9 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_resume_fs \
   scripts.tests.test_smtcomp_resume_runner \
   scripts.tests.test_smtcomp_resource_enforcement \
-  scripts.tests.test_smtcomp_cgroup_host
+  scripts.tests.test_smtcomp_cgroup_host \
+  scripts.tests.test_smtcomp_multi_host \
+  scripts.tests.test_smtcomp_multi_host_live
 python3 scripts/smtcomp_repro/tests/test_runner.py
 for test in test_scoring test_pipeline test_selection test_provenance; do
   python3 "scripts/smtcomp_repro/tests/$test.py"

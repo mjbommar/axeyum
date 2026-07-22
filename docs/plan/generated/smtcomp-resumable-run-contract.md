@@ -25,7 +25,7 @@ Status: E2 one-host integrated; E3 and official selection remain required before
 
 ## E2 resource evidence schemas
 
-- **resource_session_preflight_fields** — `schema`, `session_id`, `run_identity_sha256`, `enforcement_id`, `environment_class_sha256`, `host_id`, `launcher_pid`, `started_at_ns`, `snapshot`, `record_sha256`
+- **resource_session_preflight_fields** — `schema`, `session_id`, `run_identity_sha256`, `enforcement_id`, `environment_class_sha256`, `host_id`, `shard_ids`, `launcher_pid`, `started_at_ns`, `snapshot`, `record_sha256`
 - **resource_session_terminal_fields** — `schema`, `session_id`, `run_identity_sha256`, `enforcement_id`, `status`, `worker_exit_codes`, `memory_peak_bytes`, `pids_peak`, `memory_events_delta`, `cpu_stat_delta`, `pids_events_delta`, `ended_at_ns`, `record_sha256`
 - **resource_completion_fields** — `schema`, `run_identity_sha256`, `enforcement_id`, `session_ids`, `terminal_session_ids`, `unclosed_session_ids`, `observed_peak_memory_bytes`, `completed_at_ns`, `record_sha256`
 

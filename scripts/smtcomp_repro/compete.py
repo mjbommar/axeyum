@@ -393,6 +393,25 @@ def _without_options(argv: list[str], options_with_values: set[str], flags: set[
     return cleaned
 
 
+def _parse_host_shards(spec: str | None, shard_count: int) -> list[int]:
+    if spec is None:
+        return list(range(shard_count))
+    tokens = spec.split(",")
+    if (
+        not tokens
+        or any(not token.isascii() or not token.isdigit() for token in tokens)
+    ):
+        raise ValueError("--host-shards must be canonical comma-separated integers")
+    shard_ids = [int(token) for token in tokens]
+    if (
+        shard_ids != sorted(set(shard_ids))
+        or any(str(shard_id) != token for shard_id, token in zip(shard_ids, tokens, strict=True))
+        or any(not 0 <= shard_id < shard_count for shard_id in shard_ids)
+    ):
+        raise ValueError("--host-shards must be sorted, unique, and in range")
+    return shard_ids
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="SMT-COMP scoring reproduction")
     ap.add_argument("--corpus", default=None)
@@ -425,6 +444,10 @@ def main() -> int:
                     help="immutable resumable evidence directory")
     ap.add_argument("--host-run", action="store_true",
                     help="run every registered shard inside one E2 aggregate cgroup")
+    ap.add_argument("--host-shards", default=None,
+                    help="canonical shard subset owned by this E3 host allocation")
+    ap.add_argument("--host-session-id", default=None,
+                    help="preregistered E3 resource session for this host allocation")
     ap.add_argument("--resource-session-id", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--selection-manifest", default=None,
                     help="selection identity artifact required by resumable mode")
@@ -432,6 +455,8 @@ def main() -> int:
                     help="corpus identity artifact required by resumable mode")
     ap.add_argument("--environment-manifest", default=None,
                     help="registered environment-class artifact for resumable mode")
+    ap.add_argument("--source-identity-manifest", default=None,
+                    help="content-bound source identity for a staged E3 runner bundle")
     ap.add_argument("--benchmark-id-marker", default="non-incremental/",
                     help="prefix removed from absolute paths for result identity")
     args = ap.parse_args()
@@ -494,6 +519,10 @@ def main() -> int:
                 raise ContractError("resumable mode forbids --limit and --out")
             if args.host_run and args.shard:
                 raise ContractError("--host-run owns all shards and forbids --shard")
+            if args.host_shards is not None and not args.host_run:
+                raise ContractError("--host-shards requires --host-run")
+            if args.host_session_id is not None and not args.host_run:
+                raise ContractError("--host-session-id requires --host-run")
             if not args.host_run and not args.shard:
                 raise ContractError("resumable shard mode requires --shard I/J")
             if not all(
@@ -517,6 +546,11 @@ def main() -> int:
             selection_manifest = Path(args.selection_manifest)
             corpus_manifest = Path(args.corpus_manifest)
             environment_manifest = Path(args.environment_manifest)
+            source_identity_manifest = (
+                Path(args.source_identity_manifest)
+                if args.source_identity_manifest is not None
+                else None
+            )
             wall_limit_ms = round(args.wall_limit * 1000)
             memory_limit_bytes = round(args.mem_gb * 1024**3)
 
@@ -525,6 +559,7 @@ def main() -> int:
                 shard_count = claimed.get("identity", {}).get("shard_count")
                 if not isinstance(shard_count, int):
                     raise ContractError("run manifest lacks a valid shard count")
+                host_shards = _parse_host_shards(args.host_shards, shard_count)
                 run, identity, run_hash, _inputs = preflight_resumable(
                     run_manifest=run_manifest,
                     repository_root=root,
@@ -544,8 +579,18 @@ def main() -> int:
                     benchmark_id_marker=args.benchmark_id_marker,
                     resource_session_id=args.resource_session_id,
                     require_active_enforcement=False,
+                    source_identity_manifest=source_identity_manifest,
                 )
                 enforcement = validate_enforcement(run, require_measurement=True)
+                from resource_enforcement import MULTI_HOST_KIND
+
+                multi_host = enforcement["kind"] == MULTI_HOST_KIND
+                if multi_host != (args.host_shards is not None):
+                    raise ContractError(
+                        "E3 enforcement and explicit host-shard allocation must agree"
+                    )
+                if multi_host and args.dump_raw:
+                    raise ContractError("E3 host allocations cannot export raw output")
 
                 if args.resource_session_id is None:
                     if (run_dir / "resource-completion.json").exists():
@@ -557,7 +602,7 @@ def main() -> int:
                         if args.dump_raw:
                             export_legacy_raw(run_dir, Path(args.dump_raw))
                         return 0
-                    session_id = new_session_id(run_hash)
+                    session_id = args.host_session_id or new_session_id(run_hash)
                     inside = [
                         sys.executable,
                         str(Path(__file__).resolve()),
@@ -572,6 +617,8 @@ def main() -> int:
                     )
 
                 session_id = args.resource_session_id
+                if args.host_session_id is not None and args.host_session_id != session_id:
+                    raise ContractError("outer and active resource session identities differ")
                 configure_current_cgroup(enforcement, session_id=session_id)
                 initial_snapshot = cgroup_snapshot()
                 preflight = build_preflight(
@@ -579,11 +626,18 @@ def main() -> int:
                     session_id=session_id,
                     environment_class_sha256=sha256_file(environment_manifest),
                     snapshot=initial_snapshot,
+                    shard_ids=host_shards,
                 )
                 install_preflight(run_dir, preflight)
                 child_args = _without_options(
                     sys.argv[1:],
-                    {"--resource-session-id", "--dump-raw", "--shard"},
+                    {
+                        "--resource-session-id",
+                        "--dump-raw",
+                        "--shard",
+                        "--host-shards",
+                        "--host-session-id",
+                    },
                     {"--host-run"},
                 )
                 commands = [
@@ -596,14 +650,14 @@ def main() -> int:
                         "--shard",
                         f"{shard}/{shard_count}",
                     ]
-                    for shard in range(shard_count)
+                    for shard in host_shards
                 ]
                 try:
                     worker_codes = run_worker_pool(
                         commands, enforcement["worker_slots"]
                     )
                 except (ContractError, OSError):
-                    worker_codes = [125] * shard_count
+                    worker_codes = [125] * len(host_shards)
                     install_terminal(
                         run_dir,
                         build_terminal(
@@ -623,10 +677,13 @@ def main() -> int:
                 install_terminal(run_dir, terminal)
                 if any(code != 0 for code in worker_codes):
                     return 2
+                if multi_host:
+                    return 0
                 validate_bundle_directory(
                     run_dir,
                     require_output_sidecars=True,
                     require_resource_evidence=False,
+                    require_multi_host_evidence=False,
                 )
                 install_resource_completion(
                     run_dir,
@@ -667,6 +724,7 @@ def main() -> int:
                 benchmark_id_marker=args.benchmark_id_marker,
                 verbose=not args.quiet,
                 resource_session_id=args.resource_session_id,
+                source_identity_manifest=source_identity_manifest,
             )
             if complete and args.dump_raw:
                 if args.resource_session_id is not None:

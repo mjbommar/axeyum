@@ -48,6 +48,7 @@ from resume_fs import (
 from resource_enforcement import (
     CGROUP_KIND,
     FIXTURE_KIND,
+    MULTI_HOST_KIND,
     cgroup_enforcement,
     cgroup_snapshot,
     fixture_enforcement,
@@ -61,6 +62,14 @@ from smtlib_meta import read_meta
 
 SELECTION_INPUT_SCHEMA = "axeyum.smtcomp-selection-input.v1"
 SELECTION_SCHEMA = "axeyum.smtcomp-run-selection.v1"
+SOURCE_IDENTITY_SCHEMA = "axeyum.smtcomp-source-identity.v1"
+SOURCE_IDENTITY_FIELDS = {
+    "schema",
+    "repository_commit",
+    "source_tree_state_sha256",
+    "runner_source_sha256",
+    "record_sha256",
+}
 OUTPUT_CAPTURE_POLICY = {
     "capture": "exact-stdout-stderr-bytes",
     "parser": "last-sat-unsat-unknown-token-v1",
@@ -68,6 +77,7 @@ OUTPUT_CAPTURE_POLICY = {
 }
 RUNNER_SOURCE_NAMES = (
     "compete.py",
+    "multi_host.py",
     "resume_contract.py",
     "resume_fs.py",
     "resume_runner.py",
@@ -177,6 +187,39 @@ def runner_source_sha256(source_root: Path) -> str:
     return digest(entries)
 
 
+def source_identity_artifact(
+    repository_root: Path, source_root: Path
+) -> dict[str, Any]:
+    artifact = {
+        "schema": SOURCE_IDENTITY_SCHEMA,
+        "repository_commit": repository_commit(repository_root),
+        "source_tree_state_sha256": source_tree_state_sha256(repository_root),
+        "runner_source_sha256": runner_source_sha256(source_root),
+    }
+    artifact["record_sha256"] = digest(artifact)
+    return artifact
+
+
+def validate_source_identity(
+    artifact: dict[str, Any], source_root: Path
+) -> dict[str, Any]:
+    if set(artifact) != SOURCE_IDENTITY_FIELDS:
+        raise ContractError("source identity field set mismatch")
+    if artifact.get("schema") != SOURCE_IDENTITY_SCHEMA:
+        raise ContractError("source identity schema mismatch")
+    unsealed = dict(artifact)
+    claimed = unsealed.pop("record_sha256")
+    if claimed != digest(unsealed):
+        raise ContractError("source identity hash mismatch")
+    if artifact["runner_source_sha256"] != runner_source_sha256(source_root):
+        raise ContractError("source identity runner digest mismatch")
+    for field in ("repository_commit", "source_tree_state_sha256"):
+        value = artifact.get(field)
+        if not isinstance(value, str) or not value:
+            raise ContractError(f"invalid source identity field: {field}")
+    return artifact
+
+
 def solver_command_sha256(command_template: list[str]) -> str:
     return digest(command_template)
 
@@ -206,7 +249,14 @@ def _run_manifest(
     cores: int,
     shard_count: int,
     enforcement: dict[str, Any],
+    source_identity: dict[str, Any] | None = None,
+    toolchain_identity: str | None = None,
 ) -> dict[str, Any]:
+    source = (
+        source_identity_artifact(repository_root, source_root)
+        if source_identity is None
+        else validate_source_identity(source_identity, source_root)
+    )
     binary_sha256 = sha256_file(_solver_binary(command_template))
     command_sha256 = solver_command_sha256(command_template)
     solver_config_sha256 = digest(
@@ -227,10 +277,14 @@ def _run_manifest(
         "solver_binary_sha256": binary_sha256,
         "solver_command_sha256": command_sha256,
         "solver_config_sha256": solver_config_sha256,
-        "runner_source_sha256": runner_source_sha256(source_root),
-        "repository_commit": repository_commit(repository_root),
-        "source_tree_state_sha256": source_tree_state_sha256(repository_root),
-        "toolchain_identity_sha256": toolchain_identity_sha256(),
+        "runner_source_sha256": source["runner_source_sha256"],
+        "repository_commit": source["repository_commit"],
+        "source_tree_state_sha256": source["source_tree_state_sha256"],
+        "toolchain_identity_sha256": (
+            toolchain_identity_sha256()
+            if toolchain_identity is None
+            else toolchain_identity
+        ),
         "track": track,
         "wall_limit_ms": wall_limit_ms,
         "cpu_limit_ms": wall_limit_ms * cores,
@@ -308,14 +362,19 @@ def cgroup_run_manifest(
     worker_slots: int,
     aggregate_memory_bytes: int,
     pids_max: int,
+    multi_host: bool = False,
+    source_identity: dict[str, Any] | None = None,
+    toolchain_identity: str | None = None,
 ) -> dict[str, Any]:
-    """Build a canonical E2 one-host measurement manifest."""
+    """Build a canonical E2/E3 cgroup-backed measurement manifest."""
 
     enforcement = cgroup_enforcement(
         worker_slots=worker_slots,
         aggregate_memory_bytes=aggregate_memory_bytes,
         aggregate_cpu_cores=worker_slots * cores,
         pids_max=pids_max,
+        unit_prefix="axeyum-smtcomp-e3" if multi_host else "axeyum-smtcomp-e2",
+        multi_host=multi_host,
     )
     return _run_manifest(
         repository_root=repository_root,
@@ -332,6 +391,8 @@ def cgroup_run_manifest(
         cores=cores,
         shard_count=shard_count,
         enforcement=enforcement,
+        source_identity=source_identity,
+        toolchain_identity=toolchain_identity,
     )
 
 
@@ -460,17 +521,23 @@ def _validate_preflight(
     shard_count: int,
     resource_session_id: str | None,
     require_active_enforcement: bool,
+    source_identity: dict[str, Any] | None,
 ) -> tuple[dict[str, Any], str]:
     identity, run_hash = validate_run(run)
     enforcement = validate_enforcement(run)
+    source = (
+        source_identity_artifact(repository_root, source_root)
+        if source_identity is None
+        else validate_source_identity(source_identity, source_root)
+    )
     checks = {
         "selection_manifest_sha256": sha256_file(selection_manifest),
         "selected_list_sha256": sha256_file(file_list),
         "corpus_identity_sha256": sha256_file(corpus_manifest),
         "solver_binary_sha256": sha256_file(_solver_binary(command_template)),
         "solver_command_sha256": solver_command_sha256(command_template),
-        "runner_source_sha256": runner_source_sha256(source_root),
-        "source_tree_state_sha256": source_tree_state_sha256(repository_root),
+        "runner_source_sha256": source["runner_source_sha256"],
+        "source_tree_state_sha256": source["source_tree_state_sha256"],
         "toolchain_identity_sha256": toolchain_identity_sha256(),
         "environment_class_sha256": sha256_file(environment_manifest),
         "resource_enforcement_sha256": digest(enforcement),
@@ -482,7 +549,7 @@ def _validate_preflight(
             raise ContractError(f"preflight identity mismatch: {field}")
     scalar_checks = {
         "solver_id": solver_id,
-        "repository_commit": repository_commit(repository_root),
+        "repository_commit": source["repository_commit"],
         "track": track,
         "wall_limit_ms": wall_limit_ms,
         "cpu_limit_ms": wall_limit_ms * cores,
@@ -500,7 +567,7 @@ def _validate_preflight(
     if enforcement["kind"] == FIXTURE_KIND:
         if resource_session_id is not None:
             raise ContractError("fixture execution cannot name a resource session")
-    elif enforcement["kind"] == CGROUP_KIND:
+    elif enforcement["kind"] in {CGROUP_KIND, MULTI_HOST_KIND}:
         if require_active_enforcement:
             if resource_session_id is None:
                 raise ContractError("E2 shard execution requires a resource session")
@@ -532,10 +599,16 @@ def preflight_resumable(
     benchmark_id_marker: str,
     resource_session_id: str | None = None,
     require_active_enforcement: bool = False,
+    source_identity_manifest: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any], str, list[BenchmarkInput]]:
     """Validate all immutable inputs without creating the run directory."""
 
     run = read_canonical_json(run_manifest)
+    source_identity = (
+        read_canonical_json(source_identity_manifest)
+        if source_identity_manifest is not None
+        else None
+    )
     identity, run_hash = _validate_preflight(
         run=run,
         repository_root=repository_root,
@@ -554,6 +627,7 @@ def preflight_resumable(
         shard_count=shard_count,
         resource_session_id=resource_session_id,
         require_active_enforcement=require_active_enforcement,
+        source_identity=source_identity,
     )
     inputs = load_benchmark_inputs(
         file_list,
@@ -813,6 +887,7 @@ def execute_resumable(
     benchmark_id_marker: str,
     verbose: bool,
     resource_session_id: str | None = None,
+    source_identity_manifest: Path | None = None,
     runner: Runner = run_solver_metered,
     phase_hook: PhaseHook | None = None,
 ) -> bool:
@@ -837,6 +912,7 @@ def execute_resumable(
         benchmark_id_marker=benchmark_id_marker,
         resource_session_id=resource_session_id,
         require_active_enforcement=True,
+        source_identity_manifest=source_identity_manifest,
     )
     assignments = _assignments(inputs, shard_count)
     shard_id = str(shard_index)
@@ -878,6 +954,7 @@ def execute_resumable(
                 require_output_sidecars=True,
                 require_resource_evidence=run["resource_enforcement"]["kind"]
                 == FIXTURE_KIND,
+                require_multi_host_evidence=False,
             )
         return complete
 
@@ -1034,6 +1111,7 @@ def execute_resumable(
             require_output_sidecars=True,
             require_resource_evidence=run["resource_enforcement"]["kind"]
             == FIXTURE_KIND,
+            require_multi_host_evidence=False,
         )
     return complete
 
@@ -1079,4 +1157,6 @@ __all__ = [
     "fixture_run_manifest",
     "preflight_resumable",
     "selection_input_manifest",
+    "source_identity_artifact",
+    "validate_source_identity",
 ]
