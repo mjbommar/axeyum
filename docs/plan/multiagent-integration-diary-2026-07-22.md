@@ -414,6 +414,31 @@ CAS reach) is queued.
 **Others:** Lean 14-file WIP (M6 closure work incoming). SMT S1 producer active.
 **s4:** WRONG=16 stable (all verified stale, cycle 15). **Health:** 36 °C, no runaways.
 
+### Cycle 18 — 2026-07-22 (~14:40 EDT) — ★ LEAN ARC COMPLETE (M6 final closure)
+
+**Micro.** Merged Lean `1d848ad4 Complete nested inductive elimination` (→ main
+`e69b5117`) + SMT `b49777db` (S1 input audit complete). Lean M6 is docs-only (all
+code landed M3–M5); it **accepts ADR-0355** and marks **TL2.14 DONE**. Two doc
+conflicts resolved: `decisions/README.md` was a *semantic* union (took Lean's
+0355 proposed→accepted **and** kept SMT's 0356 row — not a blind union); STATUS.md
+pure union. Explicit-pathspec commit, no WIP swept, WIP intact.
+
+Evidence recorded in M6: OLEAN digest **374,840 bytes reproduced** by two fresh
+pinned-Lean runs; both negative runs reject with the registered diagnostic;
+kernel **188 unit + 85 integration**, importer **47 integration**, doctests pass;
+exact 640/720/768/840 populations + well-founded 35/0 controls; `DISAGREE=0`
+parity docs. Honest scope: DONE "without granting native source, elaboration,
+broad-library, ecosystem, or full-parity credit."
+
+**Macro — the Lean leg's assigned arc is fully closed this session:**
+M1 (decline cleanly) → TL2.14/M3 (admit + 640-case exhaustive kernel grammar) →
+M4 (import from real Lean exports) → M5 (computation + assurance, OLEAN digest) →
+**M6 (accept ADR-0355, TL2.14 DONE)**. Nested-inductive elimination — a real
+Lean-4-kernel capability — is now soundly implemented, exhaustively tested,
+importable end-to-end, and formally closed. The scoping caveat is the *right*
+proof-carrying posture: it claims exactly what's verified (nested inductives) and
+nothing more (not full Lean parity). One leg of the compass, genuinely delivered.
+
 ---
 
 ## Cycle log
