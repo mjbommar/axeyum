@@ -8,6 +8,8 @@ Primary repository: `/home/mjbommar/projects/personal/axeyum`
 
 Development branch used for the audit: `repro/smtcomp-scoring`
 
+Integrated branch: `main`
+
 Severity: P0 soundness repair plus follow-on completeness work
 
 ## Executive state
@@ -21,14 +23,27 @@ The immediate cause was exact finite cancellation under RTN: Axeyum forced
 
 The initial cancellation defect is repaired in both add and FMA, and the two
 preserved full queries now return `unsat`. A broader source audit then found
-several independent semantic hazards. The current working tree contains repairs
-for the high-risk carrier, overflow, congruence, and Float128 paths, together
-with focused unit, parser, trust-ledger, and end-to-end tests.
+several independent semantic hazards. `main` now contains repairs for the
+high-risk carrier, overflow, congruence, and Float128 paths, together with
+focused unit, parser, trust-ledger, and end-to-end tests.
 
 This work stream is not a claim that FP is at parity. The previous “already near
 parity” wording was removed from the P2.8 plan. Broad operator availability is
 real; complete SMT-LIB semantics, proof assurance, all-mode oracle coverage, and
 full-corpus performance remain separate obligations.
+
+## Integration record
+
+- The audit was committed on `repro/smtcomp-scoring` as `6a4d4934` without
+  switching the shared `/home/mjbommar/projects/personal/axeyum` worktree.
+- The scoped commit was cherry-picked into the clean, existing `main` worktree
+  at `/nas4/data/workspace-infosec/claude-axeyum-cas-work` as `887b52e6`.
+- The only cherry-pick conflict was `STATUS.md`. Resolution retained `main`'s
+  newer Lean/CAS status and added only the FP P0 status and changelog entries.
+- Unrelated frontier JSON changes and the untracked Glaurung/review directories
+  in the audit worktree were excluded from both commits.
+- This document is the authoritative FP resume point. The final wrap-up commit
+  that updates this integration record follows `887b52e6` on `main`.
 
 ## Preserved incident
 
@@ -194,6 +209,21 @@ The following focused results were observed in the audit worktree:
 Do not translate these focused results into a repository-wide green claim until
 the resume gates below have completed on the integrated `main` commit.
 
+Integrated-main wrap-up observations:
+
+- `cargo check --workspace --all-features`: passed on `887b52e6`.
+- `cargo clippy --workspace --all-targets --all-features -- -D warnings`:
+  passed on `887b52e6`.
+- `./scripts/check-links.sh`: passed.
+- `./scripts/check-foundational-resources.sh`: passed and regenerated the
+  committed dashboards without leaving a tracked diff.
+- The complete all-feature workspace test was started, but intentionally
+  stopped at the user's request when they elected to perform the remaining QA.
+  Do not infer a full-suite result from the focused results above.
+- Workspace rustfmt checks expose pre-existing repository-wide formatting drift
+  in recently landed CAS files. No broad unrelated formatting rewrite was
+  included in this FP wrap-up.
+
 ## Known open work and limits
 
 These items are deliberately not hidden by the implemented repair:
@@ -256,17 +286,18 @@ FP commit:
 - `docs/reviews/multiagent-20260717/`
 
 The existing `main` worktree is
-`/nas4/data/workspace-infosec/claude-axeyum-cas-work`. During wrap-up it had
-active CAS edits (`crates/axeyum-cas/src/lib.rs` and
-`crates/axeyum-cas/examples/probe_gaps.rs`). Never reset or overwrite that
-worktree. Integrate the FP commits only when those tracked edits are committed
-or otherwise owned by their agent, and re-read `main` immediately before the
-integration operation.
+`/nas4/data/workspace-infosec/claude-axeyum-cas-work`. It was clean and matched
+`origin/main` at `0c952772` immediately before the FP cherry-pick. The audit
+worktree remains on `repro/smtcomp-scoring`; do not switch it merely to inspect
+`main`, because the repository's shared `main` ref is available from either
+worktree and other agents may still own the unrelated dirty paths listed above.
 
 ## Exact resume sequence
 
-Run from `/home/mjbommar/projects/personal/axeyum` unless a step explicitly
-names the main worktree.
+Use `/nas4/data/workspace-infosec/claude-axeyum-cas-work` when validating or
+extending integrated `main`. Use `/home/mjbommar/projects/personal/axeyum` only
+when intentionally continuing the original audit branch; that worktree was not
+switched during wrap-up.
 
 1. Confirm branch and ownership before touching files:
 
@@ -316,11 +347,14 @@ names the main worktree.
    under a dated `bench-results/` directory. Only restore the broad soundness
    statement when all three affected selections have `DISAGREE = 0`.
 
-8. Commit only the FP-owned paths plus this handoff, P2.8 documentation, and
-   the small projection exhaustiveness repair. Re-check the active main
-   worktree, integrate without switching this shared worktree, run the full
-   gates on the resulting main commit, and verify local `main`, `origin/main`,
-   and the remote head agree before reporting completion.
+8. The scoped integration step is complete. Before new FP work, verify the
+   shared refs and remote state rather than repeating the cherry-pick:
+
+   ```sh
+   git rev-parse main origin/main
+   git ls-remote origin refs/heads/main
+   git merge-base --is-ancestor 887b52e6 main
+   ```
 
 ## Success criteria for closing this stream
 

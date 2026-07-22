@@ -12,14 +12,14 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Project reality check (updated 2026-07-21)
 
 **Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
-legacy baselines sound, full-library P0 fixed locally with slice revalidation
+legacy baselines sound, full-library P0 fixed on `main` with slice revalidation
 open; parity not yet reached, the road there fully mapped.** The remaining
 decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
 - **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
   the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
   exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
-  convention is fixed locally, bit-for-bit all-mode tests and a 600-script cvc5
+  convention is fixed on `main`, bit-for-bit all-mode tests and a 600-script cvc5
   differential sweep are green, and both preserved full queries now return
   `unsat`. The complete QF_FP/QF_BVFP/QF_ABVFP selected slices must return to
   DISAGREE = 0 before the broader soundness floor is called restored. (Two
@@ -374,7 +374,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — P0 FP wrong-`sat` is fixed locally; complete affected-slice
+- **2026-07-22 — P0 FP wrong-`sat` is fixed on `main`; complete affected-slice
   validation is next.** The full-library run exposed exact finite cancellation
   under `roundTowardNegative` being lowered to `+0` instead of `-0`. The same
   latent rule existed in FMA. `axeyum-fp` now selects exact-zero signs by
