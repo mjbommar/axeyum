@@ -62,11 +62,12 @@ echo "──── host health ────"
 printf 'disk: %s /tmp, %s /nas4\n' \
   "$(df -h /tmp 2>/dev/null | awk 'NR==2{print $5}')" \
   "$(df -h /nas4 2>/dev/null | awk 'NR==2{print $5}')"
-# Match actual solver runaways, not watchers that merely mention the worktree
-# path: exclude pgrep itself, this digest, and the branch-agnostic monitor (whose
-# command line contains the `.../axeyum-smtcomp` worktree path + its HEAD loop).
+# Match actual solver runaways (python3 .../compete.py, or the bare axeyum-smtcomp
+# binary), NOT tooling that merely mentions the `.../axeyum-smtcomp` worktree path:
+# exclude pgrep, this digest, the monitors, and any `git` subprocess (a transient
+# `git -C <worktree> …` carries the path in its args and false-matched before).
 runaways=$(pgrep -af 'compete\.py|axeyum-smtcomp' 2>/dev/null \
-             | grep -vcE 'pgrep|lane_integration_digest|rev-parse HEAD|HEADMOVE|declare -A WT')
+             | grep -vcE 'pgrep|lane_integration_digest|rev-parse HEAD|HEADMOVE|declare -A WT|worktree list|branch --show|[[:space:]]git[[:space:]]')
 printf 'solver runaways: %s%s\n' "$runaways" \
   "$([ "$runaways" -gt 0 ] && echo '  ⚠ stop via scripts/smtcomp_repro/stop_run.sh' || echo '')"
 if command -v sensors >/dev/null 2>&1; then
