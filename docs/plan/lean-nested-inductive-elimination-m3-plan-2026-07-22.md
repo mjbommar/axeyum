@@ -43,6 +43,16 @@ therefore could survive without either transactional rejection or a public
 observer difference. M3 publication remains blocked until those mutations are
 rejected.
 
+The survivor evidence is the pre-amendment restoration dataflow itself:
+restoration cloned source constructors plus main/auxiliary recursors, but never
+re-read temporary auxiliary constructor declarations. Consequently, changing a
+temporary copied constructor's `inductive`, `idx`, or `ty` field after the
+ordinary group check could affect neither rejection nor the restored public
+surface. The M3 private registry names and forces all three mutations; the
+amended path must classify each as
+`NestedInductiveRestorationMismatch`, prove exact pre/post environment
+equality, and admit the unchanged source on retry.
+
 The reviewed scope is amended to permit one bounded production change in
 `crates/axeyum-lean-kernel/src/inductive.rs`: preserve the expansion universe
 parameter list and validate the already-checked temporary declaration surface
