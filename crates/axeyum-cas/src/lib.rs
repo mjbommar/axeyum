@@ -5933,6 +5933,76 @@ pub fn qr_decomposition(matrix: &Matrix) -> Option<(Matrix, Matrix)> {
     Some((q, r))
 }
 
+/// **Cholesky decomposition** `A = L·Lᵀ` of a **symmetric positive-definite** matrix:
+/// `L` is lower triangular with `Lᵢᵢ = √(Aᵢᵢ − Σ_{k<i} Lᵢₖ²)` and `Lᵢⱼ = (Aᵢⱼ −
+/// Σ_{k<j} LᵢₖLⱼₖ)/Lⱼⱼ` for `j < i`. Returns `L`, verified by `L·Lᵀ = A`. `None` if
+/// `A` is not square/symmetric, not positive-definite (a diagonal radicand `≤ 0`),
+/// or the reconstruction does not certify.
+///
+/// ```
+/// use axeyum_cas::{Matrix, CasExpr, cholesky_decomposition, equal, ZeroTest};
+/// // A = [[4,2],[2,2]] = L·Lᵀ with L = [[2,0],[1,1]].
+/// let a = Matrix::from_rows(vec![
+///     vec![CasExpr::int(4), CasExpr::int(2)],
+///     vec![CasExpr::int(2), CasExpr::int(2)],
+/// ]).unwrap();
+/// let l = cholesky_decomposition(&a).unwrap();
+/// assert_eq!(l.get(0, 0).unwrap(), &CasExpr::int(2));
+/// assert_eq!(l.get(1, 1).unwrap(), &CasExpr::int(1));
+/// ```
+#[must_use]
+pub fn cholesky_decomposition(matrix: &Matrix) -> Option<Matrix> {
+    let n = matrix.rows();
+    if n == 0 || matrix.cols() != n {
+        return None;
+    }
+    // Symmetry: Aᵢⱼ = Aⱼᵢ.
+    for i in 0..n {
+        for j in (i + 1)..n {
+            if !matches!(
+                equal(matrix.get(i, j)?, matrix.get(j, i)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    let mut l = vec![vec![CasExpr::zero(); n]; n];
+    for i in 0..n {
+        for j in 0..=i {
+            // Σ_{k<j} Lᵢₖ·Lⱼₖ.
+            let mut sum = CasExpr::zero();
+            for (l_ik, l_jk) in l[i][..j].iter().zip(&l[j][..j]) {
+                sum = sum + l_ik.clone() * l_jk.clone();
+            }
+            let residual = simplify(&(matrix.get(i, j)?.clone() - sum));
+            if i == j {
+                // Diagonal: Lᵢᵢ = √(residual); positive-definite ⇒ residual > 0.
+                if !evalf(&residual, &[]).is_some_and(|v| v > 0.0) {
+                    return None;
+                }
+                l[i][j] = simplify(&simplify_radicals(&residual.sqrt()));
+            } else {
+                l[i][j] = simplify(&simplify_radicals(&(residual / l[j][j].clone())));
+            }
+        }
+    }
+    let lower = Matrix::from_rows(l)?;
+    // Certify `L·Lᵀ = A`.
+    let product = lower.mul(&lower.transpose())?;
+    for i in 0..n {
+        for j in 0..n {
+            if !matches!(
+                equal(product.get(i, j)?, matrix.get(i, j)?),
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return None;
+            }
+        }
+    }
+    Some(lower)
+}
+
 /// The Euclidean norm `‖v‖ = √(v · v)` of a vector, as an exact [`CasExpr`] with any
 /// surd simplified to lowest terms (`‖(3,4)‖ = 5`, `‖(1,1)‖ = √2`). `None` on
 /// overflow. For a constant vector the value is exact and certifiable via the
@@ -15629,6 +15699,38 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn cholesky_decomposition_reconstructs() {
+        let c = |n: i128| CasExpr::int(n);
+        let m = |rows| Matrix::from_rows(rows).unwrap();
+        // [[4,2],[2,2]] = L·Lᵀ with L = [[2,0],[1,1]]; standard 3×3 example.
+        for rows in [
+            vec![vec![c(4), c(2)], vec![c(2), c(2)]],
+            vec![vec![c(2), c(-1)], vec![c(-1), c(2)]], // surd entries
+            vec![
+                vec![c(4), c(12), c(-16)],
+                vec![c(12), c(37), c(-43)],
+                vec![c(-16), c(-43), c(98)],
+            ],
+        ] {
+            let a = m(rows);
+            let l = cholesky_decomposition(&a).unwrap();
+            let dim = a.rows();
+            let llt = l.mul(&l.transpose()).unwrap();
+            for i in 0..dim {
+                for j in 0..dim {
+                    assert_equal(llt.get(i, j).unwrap(), a.get(i, j).unwrap());
+                    if j > i {
+                        assert_equal(l.get(i, j).unwrap(), &CasExpr::zero()); // lower triangular
+                    }
+                }
+            }
+        }
+        // Not positive-definite / not symmetric → decline.
+        assert!(cholesky_decomposition(&m(vec![vec![c(1), c(2)], vec![c(2), c(1)]])).is_none());
+        assert!(cholesky_decomposition(&m(vec![vec![c(1), c(0)], vec![c(1), c(1)]])).is_none());
     }
 
     #[test]
