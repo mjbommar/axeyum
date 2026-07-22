@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `522` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adt**). Keep both in sync when landing features.
+  latest is **Entry 37adu**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -131,7 +131,7 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), a direct squared-binomial falling-factorial family (regressed for
-orders `0..=18`), and Stirling-composed raw moments (regressed for orders
+orders `0..=33`), and Stirling-composed raw moments (regressed for orders
 `0..=10`). False near-misses correctly decline.
 
 ---
@@ -308,7 +308,7 @@ quotient equation
 `R(n,k+1)f(n,k+1)/f(n,k)−R(n,k)=f(n+1,k)/f(n,k)−1`; consecutive gamma factors
 cancel before polynomial expansion. A certified-false direct equation never
 falls back. This exact product-aware route extends
-`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 18. The order-15 outer ratio
+`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 33. The order-15 outer ratio
 initially remained too large because both sides simplified their exact
 falling-factorial products before division. Product factors are now
 polynomial-canonicalized and identical factors cancelled before gamma/rational
@@ -316,13 +316,21 @@ normalization. Order 16 then exposed a separate concrete-base artifact:
 normalizing the whole `(16)₁₆(16!/16!)²` term overflowed before the quotient
 cancelled. Fully substituted terms and RHSs now use the existing exact rational
 evaluator first, retaining the older normalizer as a fail-closed fallback.
-Orders 16 through 18 pass; order 19 is the first measured symbolic quotient
-decline.
+Orders 16 through 18 pass. Order 19 then exposed equal Gamma atoms and
+polynomial factors buried inside nested divisions after Gamma lowering. The
+old preprocessor inspected only the top-level numerator and denominator, so the
+remaining exact products expanded into degree-36 polynomials. It now recursively
+collects factors across multiplication and division, reverses sides through a
+divisor, canonicalizes each polynomial factor and Gamma argument, and cancels
+only structurally equal pairs. The resulting quadratic quotient passes the
+unchanged symbolic equality gate through order 33. Order 34 passes that symbolic
+gate too, then declines at the exact base case because `34!` exceeds the `i128`
+rational domain.
 
 The raw compositor now forms all Stirling terms over the known common
 denominator `(2n)ₘ` and cancels a linear denominator factor only when exact
 polynomial division succeeds. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` is therefore
-10. Regressions cover falling-factorial orders `0..=18` and raw orders `0..=10`,
+10. Regressions cover falling-factorial orders `0..=33` and raw orders `0..=10`,
 direct-sum cross-check every member, recover the known compact fifth- through
 eighth-moment forms, and reject tampered results, certificates, and missing
 components. The eighth raw form is
@@ -350,10 +358,12 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Isolate the falling-factorial order-19 quotient-check decline and the raw
-   order-11 numerator-factorization limit without weakening either symbolic or
-   compositional checking. For fixed shifts, investigate the `r=8` exact-growth
-   decline only if a concrete use needs it.
+   Isolate the raw order-11 numerator-factorization limit without weakening
+   compositional checking. Falling order 34 is now an explicit exact-value
+   domain boundary (`34! > i128::MAX`), so extending it needs a deliberate
+   bignum checker path rather than another symbolic simplification. For fixed
+   shifts, investigate the `r=8` exact-growth decline only if a concrete use
+   needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -411,7 +421,7 @@ AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXX
 export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 521 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 522 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

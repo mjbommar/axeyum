@@ -5034,21 +5034,56 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
 /// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
 type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 
-/// Cancel syntactically equal factors across one quotient after canonicalizing
-/// polynomial factors. This keeps factored hypergeometric products compact
-/// before the general rational normalizer would expand them.
+/// Cancel syntactically equal factors across a product of nested quotients after
+/// canonicalizing polynomial factors. This keeps factored hypergeometric products
+/// compact before the general rational normalizer would expand them.
 fn cancel_common_product_factors(expr: &CasExpr) -> CasExpr {
-    let CasExpr::Div(numerator, denominator) = expr else {
+    fn collect_factors(
+        expr: &CasExpr,
+        inverted: bool,
+        numerator: &mut Vec<CasExpr>,
+        denominator: &mut Vec<CasExpr>,
+    ) {
+        match expr {
+            CasExpr::Mul(factors) => {
+                for factor in factors {
+                    collect_factors(factor, inverted, numerator, denominator);
+                }
+            }
+            CasExpr::Div(upper, lower) => {
+                collect_factors(upper, inverted, numerator, denominator);
+                collect_factors(lower, !inverted, numerator, denominator);
+            }
+            factor if inverted => denominator.push(factor.clone()),
+            factor => numerator.push(factor.clone()),
+        }
+    }
+    if !matches!(expr, CasExpr::Div(..)) {
         return expr.clone();
-    };
+    }
     let canonical_factor = |factor: CasExpr| {
+        let factor = match factor {
+            CasExpr::Unary(UnaryFunc::Gamma, argument) => {
+                let argument = *argument;
+                let argument =
+                    normalize(&argument).map_or(argument, |polynomial| polynomial.to_expr());
+                CasExpr::Unary(UnaryFunc::Gamma, Box::new(argument))
+            }
+            factor => factor,
+        };
         normalize(&factor).map_or(factor, |polynomial| polynomial.to_expr())
     };
-    let mut numerator_factors: Vec<CasExpr> = flatten_mul(numerator)
-        .into_iter()
-        .map(canonical_factor)
-        .collect();
-    let mut denominator_factors: Vec<CasExpr> = flatten_mul(denominator)
+    let mut numerator_factors = Vec::new();
+    let mut denominator_factors = Vec::new();
+    collect_factors(
+        expr,
+        false,
+        &mut numerator_factors,
+        &mut denominator_factors,
+    );
+    let mut numerator_factors: Vec<CasExpr> =
+        numerator_factors.into_iter().map(canonical_factor).collect();
+    let mut denominator_factors: Vec<CasExpr> = denominator_factors
         .into_iter()
         .map(canonical_factor)
         .collect();
@@ -5208,7 +5243,7 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
 
 /// Largest falling-factorial squared-binomial moment currently accepted by
 /// [`prove_squared_binomial_falling_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 18;
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 33;
 
 /// A proved falling-factorial squared-binomial moment
 /// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
@@ -17670,6 +17705,32 @@ mod tests {
     }
 
     #[test]
+    fn nested_product_quotients_compact_order_nineteen_wz_ratios() {
+        let n = || v("n");
+        let k = || v("k");
+        let order = 19u32;
+        let order_expr = CasExpr::int(i128::from(order));
+        let summand = falling_factorial_product(&k(), order)
+            * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = falling_factorial_product(&n(), order)
+            * binomial_coefficient(
+                &(CasExpr::int(2) * n() - order_expr.clone()),
+                &(n() - order_expr),
+            );
+        let (current_ratio, outer_ratio) = wz_symbolic_ratios(&summand, &rhs, "n", "k");
+        let expected_current = (n() - k()).pow(2)
+            / ((k() + CasExpr::int(1)) * (k() - CasExpr::int(18)));
+        let expected_outer = (n() + CasExpr::int(1)).pow(2)
+            / (n() - k() + CasExpr::int(1)).pow(2)
+            * (n() - CasExpr::int(18)).pow(2)
+            / ((CasExpr::int(2) * n() - CasExpr::int(17))
+                * (CasExpr::int(2) * n() - CasExpr::int(18)));
+        assert_equal(&current_ratio, &expected_current);
+        assert_equal(&outer_ratio, &expected_outer);
+        assert!(!format!("{outer_ratio}").contains("gamma"));
+    }
+
+    #[test]
     fn squared_binomial_falling_moment_family_is_checked() {
         let mut proofs = Vec::new();
         for order in 0..=MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
@@ -17678,21 +17739,42 @@ mod tests {
             assert!(proof.is_certified());
 
             let sample_n = i128::from(order.max(2));
-            let mut direct = CasExpr::zero();
+            let mut direct = 0i128;
             for sample_k in 0..=sample_n {
-                direct = direct
-                    + falling_factorial(&CasExpr::int(sample_k), order)
-                        * binomial_coefficient(&CasExpr::int(sample_n), &CasExpr::int(sample_k))
-                            .pow(2);
+                let falling = (0..order).try_fold(1i128, |value, index| {
+                    value.checked_mul(sample_k - i128::from(index))
+                });
+                let falling = falling.expect("sample falling factorial fits i128");
+                if falling == 0 {
+                    continue;
+                }
+                let binomial = ntheory::binomial(sample_n, sample_k)
+                    .expect("sample binomial coefficient fits i128");
+                let term = falling
+                    .checked_mul(
+                        binomial
+                            .checked_mul(binomial)
+                            .expect("sample binomial square fits i128"),
+                    )
+                    .expect("sample moment term fits i128");
+                direct = direct.checked_add(term).expect("sample moment sum fits i128");
             }
-            assert_equal(
-                &direct,
-                &proof.closed_form.substitute("n", &CasExpr::int(sample_n)),
+            let closed_at_sample = simplify(
+                &proof
+                    .closed_form
+                    .substitute("n", &CasExpr::int(sample_n)),
             );
+            let closed_value = closed_at_sample
+                .eval(&BTreeMap::new())
+                .expect("sample closed form evaluates exactly");
+            assert_eq!(closed_value, Rational::integer(direct));
             proofs.push(proof);
         }
 
-        let mut false_proof = proofs.last().expect("order eighteen proof exists").clone();
+        let mut false_proof = proofs
+            .last()
+            .expect("order thirty-three proof exists")
+            .clone();
         false_proof.certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
         assert!(

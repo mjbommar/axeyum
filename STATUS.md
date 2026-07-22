@@ -374,6 +374,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — nested quotient cancellation carries direct moments through
+  order 33.** Order 19's symbolic quotient was mathematically small, but Gamma
+  lowering left equal atoms and polynomial factors inside nested divisions;
+  the top-level-only product cancellation missed them and expanded the RHS
+  ratio into degree-36 polynomials. The exact preprocessor now recursively
+  collects multiplicative numerator/denominator factors, reverses sides through
+  nested division, canonicalizes polynomial factors and Gamma arguments, and
+  removes only structurally equal pairs. The compact quadratic ratio passes the
+  unchanged symbolic equality gate through order 33. Order 34 also passes that
+  symbolic gate, then declines exactly because its base value `34!` exceeds the
+  `i128` rational domain. Raw moments remain independently certified through
+  order 10; a fresh order-11 probe still reaches and declines in bounded
+  numerator factorization. The CAS topic stack passes 522 unit tests, 147
+  doctests, warning-denied all-target Clippy, stable/nightly strict rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`. Next: attack raw order
+  11 or design an explicit bignum-only exact base checker before widening the
+  direct family again.
+
 - **2026-07-22 — structured exact base evaluation extends direct moments
   through order 18.** Order 16 already passed the symbolic quotient identity;
   its remaining `Unknown` was the exact base term
