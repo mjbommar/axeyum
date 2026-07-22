@@ -6327,6 +6327,40 @@ pub fn modulus(expr: &CasExpr) -> Option<CasExpr> {
     Some(simplify_radicals(&square.sqrt()))
 }
 
+/// The **argument** (phase) `arg(z) = atan2(Im z, Re z) ∈ (−π, π]` of a complex
+/// number, exact where the reference angle is a tabulated (inverse-trig) value:
+/// `arg(1+i)=π/4`, `arg(i)=π/2`, `arg(−1)=π`, `arg(1+√3·i)=π/3`. The quadrant is
+/// resolved from the numeric signs of the real/imaginary parts. `None` if `expr`
+/// is not in the complex-polynomial fragment, or is `0` (undefined argument).
+#[must_use]
+pub fn argument(expr: &CasExpr) -> Option<CasExpr> {
+    let re = real_part(expr)?;
+    let im = imaginary_part(expr)?;
+    let (re_sign, im_sign) = (evalf(&re, &[])?, evalf(&im, &[])?);
+    if re_sign == 0.0 && im_sign == 0.0 {
+        return None; // arg(0) is undefined
+    }
+    let pi = CasExpr::var("pi");
+    if re_sign == 0.0 {
+        // Pure imaginary: ±π/2.
+        let half = if im_sign > 0.0 {
+            Rational::new(1, 2)
+        } else {
+            Rational::new(-1, 2)
+        };
+        return Some(scaled_term(half, pi));
+    }
+    // Reference angle atan(Im/Re), evaluated exactly where tabulated.
+    let reference = evaluate_trig(&simplify(&(im / re)).atan());
+    if re_sign > 0.0 {
+        Some(reference) // quadrants I/IV
+    } else if im_sign >= 0.0 {
+        Some(simplify(&(reference + pi))) // quadrant II
+    } else {
+        Some(simplify(&(reference - pi))) // quadrant III
+    }
+}
+
 /// The `n` complex **roots of unity** `e^{2πik/n} = cos(2πk/n) + i·sin(2πk/n)` for
 /// `k = 0..n`, with the exact trigonometric values substituted where they are
 /// tabulated (multiples of `π/12`). `None` for `n = 0`.
@@ -12412,6 +12446,23 @@ mod tests {
             &six[1],
             &(CasExpr::rat(1, 2) + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * i),
         );
+    }
+
+    #[test]
+    fn complex_argument_phase() {
+        let i = CasExpr::imaginary_unit();
+        let pi = || v("pi");
+        // arg over the four quadrants and the axes (exact, tabulated reference angles).
+        assert_equal(&argument(&(CasExpr::int(1) + i.clone())).unwrap(), &(CasExpr::rat(1, 4) * pi()));
+        assert_equal(&argument(&i).unwrap(), &(CasExpr::rat(1, 2) * pi())); // arg(i)=π/2
+        assert_equal(&argument(&CasExpr::int(-1)).unwrap(), &pi()); // arg(−1)=π
+        assert_equal(&argument(&(-i.clone())).unwrap(), &(CasExpr::rat(-1, 2) * pi()));
+        assert_equal(&argument(&(CasExpr::int(1) - i.clone())).unwrap(), &(CasExpr::rat(-1, 4) * pi()));
+        assert_equal(&argument(&(CasExpr::int(-1) + i.clone())).unwrap(), &(CasExpr::rat(3, 4) * pi()));
+        assert_equal(&argument(&(CasExpr::int(-1) - i.clone())).unwrap(), &(CasExpr::rat(-3, 4) * pi()));
+        // arg(positive real) = 0; arg(0) is undefined.
+        assert_equal(&argument(&CasExpr::int(2)).unwrap(), &CasExpr::zero());
+        assert!(argument(&CasExpr::int(0)).is_none());
     }
 
     #[test]
