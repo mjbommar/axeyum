@@ -59,8 +59,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   fuzzing.
 - [`lean-projection-representation-tl2.2-2026-07-21.md`](lean-projection-representation-tl2.2-2026-07-21.md) —
   TL2.2 result: first-class projection terms across all structural operations
-  and renderers, with exhaustive mutation/traversal tests and a deliberately
-  fail-closed inference/import boundary before TL2.3/TL2.4.
+  and renderers, with exhaustive mutation/traversal tests and the historical
+  fail-closed boundary before TL2.3.
+- [`lean-projection-inference-tl2.3-2026-07-21.md`](lean-projection-inference-tl2.3-2026-07-21.md) —
+  TL2.3 result: checked structure metadata and dependent projection inference,
+  including malformed-shape and Prop-elimination controls, while reduction,
+  eta, and importer translation remain explicitly uncredited.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

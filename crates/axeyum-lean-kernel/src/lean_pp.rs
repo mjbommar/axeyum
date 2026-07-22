@@ -383,6 +383,7 @@ impl Kernel {
             uparams,
             ty,
             ctor_names,
+            ..
         }) = self.environment().get(ind).cloned()
         else {
             return None;

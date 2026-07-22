@@ -20,8 +20,8 @@
 //!
 //! **Deferred to a later slice** (and erroring cleanly if reached): literal
 //! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]), structure-
-//! projection inference (`Proj` → [`KernelError::UnsupportedProj`]), and
-//! `Quotient` reduction. Inductive/recursor ι-reduction is implemented. An
+//! projection reduction/eta, and `Quotient` reduction. Projection inference
+//! and inductive/recursor ι-reduction are implemented. An
 //! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
@@ -53,7 +53,7 @@ use crate::level::LevelId;
 use crate::name::NameId;
 use crate::{BinderInfo, Kernel};
 
-/// An error from the environment-free type-checker.
+/// An error from the kernel type-checker.
 ///
 /// All variants are returned, never panicked: the kernel rejects malformed or
 /// out-of-scope input deterministically.
@@ -119,10 +119,66 @@ pub enum KernelError {
     /// A `Lit` reached inference. Literal typing needs inductive `Nat`/`String`
     /// declarations and their reduction rules, deferred to a later slice.
     UnsupportedLit,
-    /// A `Proj` reached inference. TL2.2 represents and traverses projections,
-    /// but structure metadata and dependent result-type inference land under
-    /// TL2.3. Until then admission rejects rather than guessing.
-    UnsupportedProj,
+    /// The inferred type of a projected value did not have the structure name
+    /// carried by the `Proj` node as its constant head.
+    ProjectionTypeMismatch {
+        /// Structure name recorded in the projection node.
+        expected: crate::name::NameId,
+        /// Complete inferred/WHNF type of the projected value.
+        got: ExprId,
+    },
+    /// A projection's named type was absent or was not an inductive
+    /// declaration in the checked environment.
+    ProjectionNotInductive {
+        /// Invalid structure type name.
+        name: crate::name::NameId,
+    },
+    /// Projection requires an inductive with exactly one constructor.
+    ProjectionConstructorCount {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Number of constructors recorded by its checked declaration.
+        got: usize,
+    },
+    /// The projected value's type did not supply exactly the inductive's
+    /// checked parameter-plus-index argument count.
+    ProjectionArityMismatch {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Checked parameter-plus-index count.
+        expected: usize,
+        /// Application arguments present on the projected value's type.
+        got: usize,
+    },
+    /// A projection selected a field outside the checked constructor field
+    /// range. Field indices exclude parameters and are zero-based.
+    ProjectionFieldOutOfBounds {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+        /// Checked number of non-parameter constructor fields.
+        field_count: u16,
+    },
+    /// Checked structure metadata and the constructor telescope disagreed
+    /// while instantiating parameters or walking to the selected field.
+    MalformedProjectionConstructor {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Sole constructor expected to supply the field telescope.
+        ctor: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+    },
+    /// A projection attempted to eliminate a proof-valued structure into data.
+    /// Lean permits such a projection only when every traversed dependent field
+    /// and the selected field are themselves propositions.
+    ProjectionFromPropToType {
+        /// Inductive type named by the projection.
+        name: crate::name::NameId,
+        /// Requested zero-based field index.
+        field_index: u32,
+    },
     /// A declaration with this name already exists in the environment;
     /// re-declaration is rejected.
     DeclarationExists {
@@ -974,13 +1030,22 @@ enum DeltaResult {
     Exhausted(ExprId, ExprId),
 }
 
+/// Checked environment/type-spine facts needed to walk one projection's sole
+/// constructor telescope. Kept private so callers cannot manufacture trusted
+/// structure metadata outside the inductive admission gate.
+struct ProjectionInferenceData {
+    ctor_name: NameId,
+    num_params: usize,
+    levels: Vec<LevelId>,
+    type_args: Vec<ExprId>,
+}
+
 // ---------------------------------------------------------------------------
 // Type inference
 // ---------------------------------------------------------------------------
 
 impl Kernel {
-    /// Infer the type of `e` for the environment-free fragment, in a checking
-    /// mode that validates as it goes.
+    /// Infer the type of `e` in a checking mode that validates as it goes.
     ///
     /// Allocates a fresh [`LocalContext`]; use [`Kernel::infer_in`] to share an
     /// existing one.
@@ -990,10 +1055,10 @@ impl Kernel {
     /// Returns [`KernelError`] for ill-typed or out-of-scope input: a non-`Pi`
     /// applied as a function ([`KernelError::NotAPi`]), a binder domain that is
     /// not a type ([`KernelError::NotASort`]), an argument or `let`-value type
-    /// mismatch ([`KernelError::TypeMismatch`]), a loose `BVar`
+    /// mismatch ([`KernelError::TypeMismatch`]), an invalid projection, a loose `BVar`
     /// ([`KernelError::LooseBVar`]), an unbound `FVar`
-    /// ([`KernelError::UnboundFVar`]), a `Const`
-    /// ([`KernelError::UnsupportedConst`]), or a `Lit`
+    /// ([`KernelError::UnboundFVar`]), an unknown `Const`
+    /// ([`KernelError::UnknownConst`]), or a `Lit`
     /// ([`KernelError::UnsupportedLit`]).
     pub fn infer(&mut self, e: ExprId) -> Result<ExprId, KernelError> {
         let mut ctx = LocalContext::new();
@@ -1140,7 +1205,9 @@ impl Kernel {
                 Ok(self.sort(succ))
             }
             ExprNode::Const(name, levels) => self.infer_const(name, &levels),
-            ExprNode::Proj(_, _, _) => Err(KernelError::UnsupportedProj),
+            ExprNode::Proj(type_name, field_index, structure) => {
+                self.infer_projection(type_name, field_index, structure, ctx)
+            }
             ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => {
@@ -1155,6 +1222,186 @@ impl Kernel {
             ctx.remember_inferred(e, inferred);
         }
         Ok(inferred)
+    }
+
+    /// Infer `Proj(type_name, field_index, structure)` using Lean's checked
+    /// single-constructor telescope algorithm.
+    ///
+    /// The projected value supplies the inductive's universe levels,
+    /// parameters, and indices. Constructor parameters are instantiated from
+    /// that type; each earlier dependent field is instantiated with a
+    /// projection from the same value. This slice does not reduce projections
+    /// of constructor applications (TL2.4) or add structure eta (TL2.5).
+    fn infer_projection(
+        &mut self,
+        type_name: NameId,
+        field_index: u32,
+        structure: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<ExprId, KernelError> {
+        let structure_type = self.infer_core(structure, ctx)?;
+        let structure_type = self.whnf_in(structure_type, ctx);
+        let data = self.projection_inference_data(type_name, field_index, structure_type)?;
+
+        let mut cursor = self.infer_const(data.ctor_name, &data.levels)?;
+        for &parameter in data.type_args.iter().take(data.num_params) {
+            cursor = self.whnf_in(cursor, ctx);
+            let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: data.ctor_name,
+                    field_index,
+                });
+            };
+            cursor = self.instantiate(body, &[parameter]);
+        }
+
+        let structure_is_prop = self.type_expression_is_prop(structure_type, ctx)?;
+        for previous_index in 0..field_index {
+            cursor = self.whnf_in(cursor, ctx);
+            let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: data.ctor_name,
+                    field_index,
+                });
+            };
+            if self.has_loose_bvars(body) {
+                if structure_is_prop && !self.type_expression_is_prop(domain, ctx)? {
+                    return Err(KernelError::ProjectionFromPropToType {
+                        name: type_name,
+                        field_index,
+                    });
+                }
+                let previous = self.proj(type_name, previous_index, structure);
+                cursor = self.instantiate(body, &[previous]);
+            } else {
+                cursor = body;
+            }
+        }
+
+        cursor = self.whnf_in(cursor, ctx);
+        let ExprNode::Pi(_, field_type, _, _) = self.expr_node(cursor).clone() else {
+            return Err(KernelError::MalformedProjectionConstructor {
+                name: type_name,
+                ctor: data.ctor_name,
+                field_index,
+            });
+        };
+        if structure_is_prop && !self.type_expression_is_prop(field_type, ctx)? {
+            return Err(KernelError::ProjectionFromPropToType {
+                name: type_name,
+                field_index,
+            });
+        }
+        Ok(field_type)
+    }
+
+    /// Validate the projected type head, checked inductive metadata, complete
+    /// parameter/index spine, sole constructor identity, and selected field
+    /// bound before any constructor telescope is traversed.
+    fn projection_inference_data(
+        &self,
+        type_name: NameId,
+        field_index: u32,
+        structure_type: ExprId,
+    ) -> Result<ProjectionInferenceData, KernelError> {
+        let (type_head, type_args) = self.unfold_apps(structure_type);
+        let ExprNode::Const(inferred_name, levels) = self.expr_node(type_head).clone() else {
+            return Err(KernelError::ProjectionTypeMismatch {
+                expected: type_name,
+                got: structure_type,
+            });
+        };
+        if inferred_name != type_name {
+            return Err(KernelError::ProjectionTypeMismatch {
+                expected: type_name,
+                got: structure_type,
+            });
+        }
+
+        let (ctor_name, num_params, num_indices, constructor_count) = match self.env.get(type_name)
+        {
+            Some(Declaration::Inductive {
+                num_params,
+                num_indices,
+                ctor_names,
+                ..
+            }) => (
+                ctor_names.first().copied(),
+                usize::from(*num_params),
+                usize::from(*num_indices),
+                ctor_names.len(),
+            ),
+            _ => {
+                return Err(KernelError::ProjectionNotInductive { name: type_name });
+            }
+        };
+        if constructor_count != 1 {
+            return Err(KernelError::ProjectionConstructorCount {
+                name: type_name,
+                got: constructor_count,
+            });
+        }
+        let Some(ctor_name) = ctor_name else {
+            return Err(KernelError::ProjectionConstructorCount {
+                name: type_name,
+                got: constructor_count,
+            });
+        };
+        let expected_arity = num_params + num_indices;
+        if type_args.len() != expected_arity {
+            return Err(KernelError::ProjectionArityMismatch {
+                name: type_name,
+                expected: expected_arity,
+                got: type_args.len(),
+            });
+        }
+
+        let field_count = match self.env.get(ctor_name) {
+            Some(Declaration::Constructor {
+                inductive,
+                num_fields,
+                ..
+            }) if *inductive == type_name => *num_fields,
+            _ => {
+                return Err(KernelError::MalformedProjectionConstructor {
+                    name: type_name,
+                    ctor: ctor_name,
+                    field_index,
+                });
+            }
+        };
+        if field_index >= u32::from(field_count) {
+            return Err(KernelError::ProjectionFieldOutOfBounds {
+                name: type_name,
+                field_index,
+                field_count,
+            });
+        }
+
+        Ok(ProjectionInferenceData {
+            ctor_name,
+            num_params,
+            levels,
+            type_args,
+        })
+    }
+
+    /// Whether a type expression is a proposition: its own inferred type
+    /// WHNFs to `Sort 0` in the active local context.
+    fn type_expression_is_prop(
+        &mut self,
+        expression: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<bool, KernelError> {
+        let sort = self.infer_core(expression, ctx)?;
+        let sort = self.whnf_in(sort, ctx);
+        let ExprNode::Sort(level) = self.expr_node(sort) else {
+            return Err(KernelError::NotASort { got: sort });
+        };
+        let level = *level;
+        Ok(self.level_is_zero(level))
     }
 
     /// Infer a complete application spine in one dependent-telescope pass.

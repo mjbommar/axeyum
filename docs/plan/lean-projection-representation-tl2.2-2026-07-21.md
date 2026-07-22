@@ -77,6 +77,12 @@ This result does **not** claim:
   decline;
 - an official-Lean differential result on this host.
 
-The next unblocked task is TL2.3: preserve and validate single-constructor
+Historical checkpoint: this document records the deliberate TL2.2 boundary.
+TL2.3 subsequently landed checked single-constructor metadata and dependent
+projection inference; see
+[the TL2.3 result](lean-projection-inference-tl2.3-2026-07-21.md). The next
+unblocked task is TL2.4 constructor projection reduction.
+
+At the TL2.2 checkpoint, the next task was to preserve and validate single-constructor
 structure metadata, then infer parameterized and dependent projection types
 with malformed-name/index/telescope mutations.

@@ -220,6 +220,8 @@ impl Kernel {
             name,
             uparams: uparams.to_vec(),
             ty,
+            num_params: u16::try_from(num_params).expect("parameter count fits u16"),
+            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
             ctor_names,
         });
 

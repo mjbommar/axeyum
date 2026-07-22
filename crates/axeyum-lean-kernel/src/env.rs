@@ -16,10 +16,12 @@
 //! universe instantiation, `Const` inference, δ-unfolding, and the lazy-delta
 //! step live on [`super::Kernel`] (see `tc.rs`).
 //!
-//! **Deferred to a later slice** (and erroring cleanly if reached): inductive
-//! types, constructors, recursors and their ι-reduction, structure
-//! projections, and `Quotient` reduction. Those declaration kinds are not
-//! representable here; admitting one is rejected, not guessed.
+//! The inductive, constructor, and recursor variants plus ι-reduction are now
+//! implemented by `inductive.rs`. **Deferred to later slices** (and erroring
+//! cleanly if reached): structure projection reduction/structure eta and
+//! `Quotient` reduction. Projection inference uses the checked inductive
+//! metadata recorded here; unsupported semantic paths reject rather than
+//! guess.
 //!
 //! ## Determinism
 //!
@@ -88,7 +90,7 @@ pub struct RecRule {
     pub value: ExprId,
 }
 
-/// A non-inductive global declaration.
+/// A checked global declaration.
 ///
 /// Every declaration carries a `name`, a list of universe parameter names
 /// (`uparams`), and a closed type (`ty`). Definitions/theorems/opaque
@@ -161,8 +163,16 @@ pub enum Declaration {
         name: NameId,
         /// The universe parameter names the type is polymorphic over.
         uparams: Vec<NameId>,
-        /// The inductive's (closed) type — a `Sort` in this slice.
+        /// The inductive's closed type: a parameter/index telescope ending in
+        /// a `Sort`.
         ty: ExprId,
+        /// Number of leading parameter binders fixed across the family.
+        /// Projection inference instantiates these from the projected value's
+        /// type before walking constructor fields.
+        num_params: u16,
+        /// Number of index binders after the parameters. Projection inference
+        /// validates the projected value's complete parameter/index spine.
+        num_indices: u16,
         /// The names of this type's constructors, in declaration order.
         ctor_names: Vec<NameId>,
     },

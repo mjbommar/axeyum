@@ -123,11 +123,13 @@ LEAN_PATH=. .lake/build/bin/lean4export \
 
 ## Why projection is an L-sized trusted-kernel slice
 
-**Implementation checkpoint (2026-07-21):** item 1 below is complete under
-TL2.2, including structural/de Bruijn operations, both renderers, and exhaustive
-payload mutations. Inference remains explicitly unsupported and the importer
-still declines wire projections. This earns representation evidence only; the
-closure rows above do not change until TL2.3/TL2.4 validate and compute them.
+**Implementation checkpoint (2026-07-21):** items 1--3 below are complete under
+TL2.2/TL2.3, including structural/de Bruijn operations, both renderers, checked
+parameter/index metadata, dependent telescope inference, and malformed-shape
+mutations. The importer still declines wire projections and the kernel does not
+yet reduce them. This earns native representation/inference evidence only; the
+closure rows above do not change until TL2.4 computes them and the importer is
+then enabled.
 
 The census establishes priority, not implementation simplicity. Projection is
 a first-class Lean core expression, so it changes more than the importer:
@@ -135,9 +137,9 @@ a first-class Lean core expression, so it changes more than the importer:
 1. **DONE (TL2.2):** add `Proj(structure_name, field_index, structure)` to the kernel expression
    language and every structural traversal, hash-consing, de Bruijn operation,
    metadata computation, and renderer;
-2. preserve enough single-constructor structure metadata to validate the
+2. **DONE (TL2.3):** preserve enough single-constructor structure metadata to validate the
    structure name, field index, parameters, and constructor telescope;
-3. infer a dependent field type by substituting parameters and earlier field
+3. **DONE (TL2.3):** infer a dependent field type by substituting parameters and earlier field
    projections into the selected field's type;
 4. reduce a projection of a constructor application to the selected field;
 5. add structure eta only as a separately tested definitional-equality slice;
@@ -162,9 +164,10 @@ after positive and false-equality controls pass both kernels.
 ## Updated next order
 
 1. **DONE:** accept ADR-0345's separate wire/checker boundary.
-2. **Representation DONE:** implement and adversarially test projection
-   representation. **Next:** TL2.3 inference and TL2.4 constructor reduction
-   against the committed projection closure.
+2. **Representation and inference DONE:** TL2.2/TL2.3 implement and
+   adversarially test projection structure and dependent typing. **Next:** TL2.4
+   constructor reduction against the committed projection closure, followed by
+   wire translation only after the computation gate passes.
 3. Re-run the Nat and String roots. Only after projection clears, freeze the
    next actual first declines.
 4. Replace `Lit::Nat(u128)` with an arbitrary-precision representation before

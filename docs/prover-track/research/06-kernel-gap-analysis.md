@@ -11,9 +11,9 @@ Every claim below is `file:line` against the code, not the doc comments.
 
 > **2026-07-21 refresh.** The stale `src/lib.rs` scope comment identified by the
 > original audit is corrected, and row #14's initial import path has landed.
-> TL2.2 has also since added first-class structural `Proj` representation with
-> fail-closed inference; statements below that projection is wholly
-> unrepresentable describe the audit point. Dependent inference, constructor
+> TL2.2 has also since added first-class structural `Proj` representation, and
+> TL2.3 adds checked dependent projection inference; statements below that
+> projection is wholly unrepresentable describe the audit point. Constructor
 > reduction, structure eta, and importer translation remain open. §3 records
 > the exact import boundary and links the superseding interoperability
 > measurements.
@@ -571,12 +571,12 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
    kernel and `False`. **This is the highest-risk item in P6.0** and must be
    accompanied by a negative-test corpus (`Bad : Type | mk : (Bad → Bad) → Bad`
    and friends) that fails loudly. **M, ~300-500 LoC.**
-3. **`Proj` inference/reduction + structure eta** (gaps #1 + #10). **TL2.2
-   update:** the first-class node and every structural traversal,
-   `instantiate`, `abstract`, metadata path, and renderer now exist with
-   fail-closed inference. TL2.3-TL2.5 still own dependent inference,
-   constructor reduction, and eta. **L, ~800-1300 LoC for the original complete
-   slice; representation is now retired from that estimate.**
+3. **`Proj` inference/reduction + structure eta** (gaps #1 + #10).
+   **TL2.2/TL2.3 update:** the first-class node, every structural traversal,
+   checked structure metadata, and dependent field-type inference now exist.
+   TL2.4-TL2.5 still own constructor reduction and eta. **L, ~800-1300 LoC for
+   the original complete slice; representation and inference are now retired
+   from that estimate.**
 4. **A performance baseline** (§6). The kernel would sit in the goal layer's
    inner loop and `bv_decide`'s bottleneck is precisely kernel reduction speed.
    Building a goal layer on an un-benchmarked kernel means discovering it is too

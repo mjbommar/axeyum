@@ -40,10 +40,13 @@ Last updated: 2026-07-21
 > [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
 > covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
 > fail-closed literals/reduction, with deterministic replay and 768 rejected
-> `False` admissions. TL2.2 now represents projections throughout the kernel's
-> structural operations while leaving inference and wire translation
-> fail-closed. Projection/eta and quotient semantic seams remain uncredited;
-> dependent projection inference in TL2.3 is next.
+> `False` admissions. TL2.2 represents projections throughout the kernel's
+> structural operations, and TL2.3 now infers parameterized, indexed,
+> universe-polymorphic, and dependent field types with typed rejection controls.
+> Wire translation and constructor reduction remain fail-closed, so the
+> official projection root still earns no import credit. Generated
+> projection/eta and quotient semantic seams remain uncredited; TL2.4
+> constructor projection reduction is next, followed separately by TL2.5 eta.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

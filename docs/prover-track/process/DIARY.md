@@ -1382,3 +1382,26 @@ the Nat/String roots that encounter projection first, and TL2.15 projection
 semantics receive no new admission credit. The next work is TL2.3 structure
 metadata and dependent field inference, followed by TL2.4 constructor reduction
 and only then wire translation of the committed closure.
+
+## 2026-07-21 — TL2.3 types dependent projections without claiming computation
+
+The checked inductive environment now retains parameter and index counts, and
+the type checker follows Lean's single-constructor projection algorithm. It
+infers and normalizes the projected value's type, validates the declared
+structure head and complete argument spine, instantiates constructor parameters,
+and substitutes projections of earlier fields into dependent later-field types.
+Proof-valued structures retain Lean's restriction against eliminating a data
+field from `Prop`.
+
+The positive matrix covers parameterized dependent fields,
+universe-polymorphism, an indexed family, and proof fields. Wrong names,
+non-inductive heads, wrong arity, multiple constructors, out-of-range fields,
+Prop-to-Type elimination, and injected inconsistent metadata reject with typed
+errors. Under 4 GiB the kernel passes 179 unit tests and 13 integration cases;
+the importer passes its 11 cases while retaining `expr-projection`.
+
+This is native inference, not computation or import compatibility. The official
+projection closure remains untranslated and unadmitted because constructor
+projection reduction is still absent. TL2.4 is next; TL2.5 eta stays separate,
+and importer enablement follows only after the committed closure independently
+admits and computes.

@@ -80,7 +80,7 @@
     },
     {
       "code": "expr-projection",
-      "meaning": "Wire projection translation remains declined until kernel inference and reduction land; TL2.2 structural representation alone earns no K1 credit.",
+      "meaning": "Wire projection translation remains declined until TL2.4 constructor reduction lands; TL2.2 representation and TL2.3 native inference alone earn no K1 credit.",
       "owner": "axeyum-lean-kernel",
       "source_path": "crates/axeyum-lean-import/src/lib.rs",
       "source_marker": "\"expr-projection\""
@@ -166,10 +166,15 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-kernel/tests/proj_representation.rs",
-          "detail": "TL2.2 exhausts projection payload and structural operations while inference and declaration admission fail closed."
+          "detail": "TL2.2 exhausts projection payload and structural operations."
+        },
+        {
+          "kind": "test",
+          "path": "crates/axeyum-lean-kernel/tests/projection_inference.rs",
+          "detail": "TL2.3 checks parameterized, indexed, universe-polymorphic, dependent, malformed-shape, and Prop-elimination projection inference."
         }
       ],
-      "residual": "K0 is real but does not imply official declaration import or native source support; projection representation is structural only until TL2.3-TL2.5."
+      "residual": "K0 includes native dependent projection inference but does not imply official declaration import or native source support; TL2.4 reduction, TL2.5 eta, and importer translation remain."
     },
     {
       "id": "lean4export-direct-recursive-fixture",
@@ -289,7 +294,7 @@
           "detail": "Stable first decline is expr-projection at line 81."
         }
       ],
-      "residual": "TL2.2 representation is landed; TL2.3-TL2.5 inference, reduction, structure eta, and importer translation remain."
+      "residual": "TL2.2 representation and TL2.3 native inference are landed; TL2.4 reduction, TL2.5 structure eta, and importer translation remain."
     },
     {
       "id": "lean4export-quotient-root",

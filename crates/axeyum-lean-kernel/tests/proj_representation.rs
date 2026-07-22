@@ -2,8 +2,8 @@
 //!
 //! This slice deliberately stops before projection inference and reduction.
 //! The tests therefore cover the complete structural contract and require the
-//! trusted admission boundary to reject `Proj` with `UnsupportedProj` until
-//! TL2.3 supplies validated structure metadata and dependent result types.
+//! trusted admission boundary to reject an unbound projected child. TL2.3's
+//! semantic inference contract has its own integration suite.
 
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprNode, Kernel, KernelError};
 
@@ -120,7 +120,7 @@ fn scoped_free_variable_closure_descends_through_projection() {
 }
 
 #[test]
-fn projection_is_neutral_but_admission_remains_fail_closed() {
+fn projection_is_neutral_and_child_inference_errors_remain_fail_closed() {
     let mut kernel = Kernel::new();
     let anon = kernel.anon();
     let pair = kernel.name_str(anon, "Pair");
@@ -128,7 +128,10 @@ fn projection_is_neutral_but_admission_remains_fail_closed() {
     let projection = kernel.proj(pair, 0, structure);
 
     assert_eq!(kernel.whnf(projection), projection);
-    assert_eq!(kernel.infer(projection), Err(KernelError::UnsupportedProj));
+    assert_eq!(
+        kernel.infer(projection),
+        Err(KernelError::UnboundFVar { id: 7 })
+    );
     assert!(kernel.def_eq(projection, projection));
     let other_structure = kernel.fvar(8);
     let other = kernel.proj(pair, 0, other_structure);
@@ -145,6 +148,6 @@ fn projection_is_neutral_but_admission_remains_fail_closed() {
             hint: axeyum_lean_kernel::ReducibilityHint::Regular(0),
         })
         .unwrap_err();
-    assert_eq!(error, KernelError::UnsupportedProj);
+    assert_eq!(error, KernelError::UnboundFVar { id: 7 });
     assert!(kernel.environment().get(bad_name).is_none());
 }

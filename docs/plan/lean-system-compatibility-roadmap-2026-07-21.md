@@ -674,9 +674,10 @@ Non-claims until their gates are met:
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
 2. Keep the eight Python and eleven Rust fixture/mutation/census tests in normal
    checks.
-3. **TL2.2 DONE:** preserve first-class projection representation and its
-   fail-closed inference/import boundary; execute TL2.3 dependent inference and
-   TL2.4 constructor reduction before translating the official root.
+3. **TL2.2/TL2.3 DONE:** preserve first-class projection representation and add
+   checked dependent inference. Execute TL2.4 constructor reduction and its
+   computation controls before translating the official root; keep TL2.5 eta a
+   separate definitional-equality gate.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
    nested, and reflexive fixtures.

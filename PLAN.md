@@ -73,11 +73,15 @@ state.
 > source/command/hash, and 11 Rust plus eight Python tests hold the boundary.
 > TL2.2 now lands first-class projection representation across interning,
 > metadata, structural/de Bruijn operations, dependency traversal, and both
-> Lean renderers, with four integration tests plus a renderer unit test. It is
-> deliberately fail-closed at inference and wire translation, so the measured
-> official projection closure still receives no translated or admitted credit.
-> Resume with TL2.3 dependent projection inference, TL2.4 constructor
-> reduction, and the remaining
+> Lean renderers, with four integration tests plus a renderer unit test. TL2.3
+> now adds checked parameter/index metadata and Lean-compatible dependent
+> projection inference, including Prop-elimination restrictions and typed
+> malformed-structure failures. The bounded kernel gate passes 179 unit tests
+> and 13 integration cases across six binaries. This is native K0 inference
+> credit only: wire translation remains fail-closed, projections do not yet
+> reduce, and the measured official projection closure therefore still receives
+> no translated or admitted credit. Resume with TL2.4 constructor reduction,
+> TL2.5 structure eta, importer enablement only after computation closes, and the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -109,8 +113,9 @@ state.
 > 768 unique generated cases across the four currently representable kernel
 > seams, repeats the complete summary deterministically, and rejects every
 > attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
-> partial until projection/eta and quotient semantics exist. TL2.2 structural
-> representation is complete; execute TL2.3-TL2.5 next. Native parser/macros,
+> partial until generated projection/eta and quotient semantic families exist.
+> TL2.2 representation and TL2.3 dependent inference are complete; execute
+> TL2.4 constructor reduction and TL2.5 eta next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

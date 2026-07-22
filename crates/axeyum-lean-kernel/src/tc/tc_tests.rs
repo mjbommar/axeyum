@@ -12,8 +12,8 @@
 
 use crate::expr::ExprNode;
 use crate::level::LevelNode;
-use crate::tc::KernelError;
-use crate::{BinderInfo, Kernel, Lit, build_logic_prelude};
+use crate::tc::{KernelError, LocalContext, LocalDecl};
+use crate::{BinderInfo, Declaration, Kernel, Lit, build_logic_prelude};
 
 /// `Sort 0 : Sort 1`.
 #[test]
@@ -566,4 +566,58 @@ fn local_context_push_pop_lookup() {
     assert_eq!(ctx.type_of(f0), Some(s0));
     ctx.pop();
     assert_eq!(ctx.type_of(f0), None);
+}
+
+/// Projection inference never trusts field-count metadata enough to index an
+/// ill-shaped constructor telescope. This test injects an impossible
+/// environment state through the crate-private unchecked test seam and proves
+/// the trusted inference path still returns a typed error rather than panicking
+/// or manufacturing a field type.
+#[test]
+fn projection_rejects_inconsistent_constructor_telescope_metadata() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let structure_name = k.name_str(anon, "MalformedStructure");
+    let ctor_name = k.name_str(structure_name, "mk");
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let sort_one = k.sort(one);
+    let malformed_ctor_type = k.sort_zero();
+
+    k.env.insert_unchecked(Declaration::Inductive {
+        name: structure_name,
+        uparams: vec![],
+        ty: sort_one,
+        num_params: 0,
+        num_indices: 0,
+        ctor_names: vec![ctor_name],
+    });
+    k.env.insert_unchecked(Declaration::Constructor {
+        name: ctor_name,
+        uparams: vec![],
+        ty: malformed_ctor_type,
+        inductive: structure_name,
+        idx: 0,
+        num_fields: 1,
+    });
+
+    let value_fvar = 700;
+    let structure_type = k.const_(structure_name, vec![]);
+    let value = k.fvar(value_fvar);
+    let projection = k.proj(structure_name, 0, value);
+    let mut context = LocalContext::new();
+    context.push(LocalDecl {
+        fvar: value_fvar,
+        name: anon,
+        ty: structure_type,
+        info: BinderInfo::Default,
+    });
+    assert_eq!(
+        k.infer_in(projection, &mut context),
+        Err(KernelError::MalformedProjectionConstructor {
+            name: structure_name,
+            ctor: ctor_name,
+            field_index: 0,
+        })
+    );
 }
