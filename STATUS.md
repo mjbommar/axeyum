@@ -421,7 +421,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   regexp expansion ranges over every organizer `Logic`, then
   `Participation.get` silently filters non-Single-Query matches through the
   Single Query division table. That behavior is now fixture-covered; another
-  fresh-input rerun is next. No solver run or selection credit is granted yet.
+  retained attempt then completed all 450,472 metadata rows and proved the two
+  configured removal IDs match zero of them, making the official anti-join
+  idempotent. That exact absence is now audited; another fresh-input rerun is
+  next. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7184,6 +7187,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Recorded the official removal anti-join as idempotent.** The
+  third retained S1b attempt streamed all 450,472 metadata rows, then rejected
+  because the independent runner expected both configured removal IDs to be
+  present. Neither is present in the pinned metadata; the organizer's anti-join
+  therefore removes zero rows. The contract now distinguishes configured from
+  matched removals and freezes the exact zero-match fact. The retained negative
+  is
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744522957943433-eb81e506`;
+  no historical reduction or official sample was completed or inspected.
 
 - **2026-07-22 — Matched the organizer's two-stage logic expansion.** The
   second retained S1b attempt verified all 89 corrected inputs, then stopped

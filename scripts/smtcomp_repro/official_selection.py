@@ -559,8 +559,6 @@ def audit_selection(
     if len(by_id) != len(normalized):
         raise SelectionAuditError("duplicate benchmark ID")
     removed = set(removed_ids)
-    if not removed <= set(by_id):
-        raise SelectionAuditError("explicit removal names an unknown benchmark")
     if len(selected_ids) != len(set(selected_ids)):
         raise SelectionAuditError("official selected list contains a duplicate")
     selected = set(selected_ids)
@@ -637,7 +635,9 @@ def audit_selection(
     validate_decisions(decisions, expected_ids=set(by_id), selected_ids=selected)
     return {
         "competitive_logics": sorted(competitive),
+        "configured_removed_ids": sorted(removed),
         "decisions": decisions,
+        "matched_removed_ids": sorted(removed & set(by_id)),
         "schema": SCHEMA,
         "selection_sha256": sha256_bytes(
             ("".join(f"{benchmark_id}\n" for benchmark_id in sorted(selected))).encode("utf-8")

@@ -335,6 +335,13 @@ class OfficialSelectionTests(unittest.TestCase):
             decisions["non-incremental/QF_UF/2024-only-one-entry/noncompetitive.smt2"]["reason"],
             "excluded-noncompetitive-logic",
         )
+        unmatched = "non-incremental/QF_BV/already-absent/removed.smt2"
+        with_unmatched = self.audit_fixture(
+            removed_ids=[*self.fixture["removed_ids"], unmatched]
+        )
+        self.assertIn(unmatched, with_unmatched["configured_removed_ids"])
+        self.assertEqual(with_unmatched["matched_removed_ids"], self.fixture["removed_ids"])
+        self.assertEqual(with_unmatched["decisions"], result["decisions"])
 
     def test_streaming_historical_accumulator_matches_batch_result(self) -> None:
         known_ids = {
