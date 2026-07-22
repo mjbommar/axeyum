@@ -10153,6 +10153,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_split_fraction(expr, var),
         integrate_even_quartic_denominator(expr, var),
         integrate_abs_affine(expr, var),
+        integrate_nth_root_power(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -10166,6 +10167,31 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         }
     }
     None
+}
+
+/// `∫ c·x^{p/q} dx = c·q·x^{(p+q)/q}/(p+q)` where the integrand is `c·root_q(x)^p`
+/// (a fractional power of the variable). Writing `(p+q) = m·q + s`, the antiderivative
+/// is `c·(q/(p+q))·xᵐ·root_q(x)ˢ`. So `∫∛x = (3/4)·x·∛x`, `∫x^{2/3} = (3/5)·x·∛x²`.
+/// Certified by differentiate-and-check (which now closes via `root_q(u)^q = u`).
+fn integrate_nth_root_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (free, core) = split_var_free_factor(expr, var);
+    let is_the_var = |e: &CasExpr| matches!(e, CasExpr::Var(v) if v == var);
+    let (q, p) = match &core {
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg) if is_the_var(arg) => (*q, 1u32),
+        CasExpr::Pow(base, p) => match base.as_ref() {
+            CasExpr::Unary(UnaryFunc::NthRoot(q), arg) if is_the_var(arg) => (*q, *p),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let total = p.checked_add(q)?; // numerator of the new exponent `(p+q)/q`
+    let (m, s) = (total / q, total % q);
+    let mut power = if m == 0 { CasExpr::one() } else { CasExpr::var(var).pow(m) };
+    if s > 0 {
+        power = power * CasExpr::Unary(UnaryFunc::NthRoot(q), Box::new(CasExpr::var(var))).pow(s);
+    }
+    let coeff = Rational::checked_new(i128::from(q), i128::from(total))?;
+    Some(simplify(&(free * CasExpr::Const(coeff) * power)))
 }
 
 /// `∫ c·|g| dx = c·g·|g|/(2·slope)` where `g = slope·var + intercept` is affine — the
@@ -19168,6 +19194,18 @@ mod tests {
         // nth_root(2) routes to the sqrt head, nth_root(1) is the identity.
         assert_eq!(x().nth_root(2), x().sqrt());
         assert_eq!(x().nth_root(1), x());
+        // Fractional-power integration, certified by differentiate-and-check:
+        // ∫∛x = (3/4)x∛x, ∫x^{2/3} = (3/5)x∛x², ∫x^{5/3} = (3/8)x²∛x².
+        for integrand in [x().cbrt(), x().cbrt().pow(2), x().cbrt().pow(5), x().nth_root(4)] {
+            let result = integrate(&integrand, "x").expect("∫x^{p/q}");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert!(matches!(
+                equal(&result.antiderivative.differentiate("x"), &integrand),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
+        // Definite ∫₀^8 ∛x = (3/4)·8·2 = 12.
+        assert_equal(&definite_integrate(&x().cbrt(), "x", &CasExpr::int(0), &CasExpr::int(8)).unwrap().value, &CasExpr::int(12));
     }
 
     #[test]
