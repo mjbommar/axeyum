@@ -5598,6 +5598,87 @@ pub fn expand_log(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Expand `sin`/`cos` of a **compound or multiple angle** into a trigonometric
+/// form (the analogue of `SymPy`'s `expand_trig`): `sin(x+y) → sin x cos y +
+/// cos x sin y`, `cos(x+y) → cos x cos y − sin x sin y`, and (recursively)
+/// `sin(2x) → 2 sin x cos x`, `cos(3x) → …`. The angle is split when it is a sum
+/// or an integer multiple `n·θ` (`n ≥ 2`); otherwise the head is left intact.
+/// A sound, denotation-preserving rewrite (verifiable via [`equal`]).
+#[must_use]
+pub fn expand_trig(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos), arg) => {
+            let inner = expand_trig(arg);
+            if let Some((a, b)) = split_angle(&inner) {
+                let (sin_a, cos_a) = (expand_trig(&a.clone().sin()), expand_trig(&a.cos()));
+                let (sin_b, cos_b) = (expand_trig(&b.clone().sin()), expand_trig(&b.cos()));
+                match func {
+                    // sin(a+b) = sin a cos b + cos a sin b
+                    UnaryFunc::Sin => sin_a * cos_b + cos_a * sin_b,
+                    // cos(a+b) = cos a cos b − sin a sin b
+                    _ => cos_a * cos_b - sin_a * sin_b,
+                }
+            } else {
+                CasExpr::Unary(*func, Box::new(inner))
+            }
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(expand_trig(arg))),
+        CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(expand_trig).collect()),
+        CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(expand_trig).collect()),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(expand_trig(inner))),
+        CasExpr::Div(n, d) => {
+            CasExpr::Div(Box::new(expand_trig(n)), Box::new(expand_trig(d)))
+        }
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(expand_trig(base)), *exp),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Split a trig **angle** into `(a, b)` with `a + b` denoting the same angle, for
+/// the addition formulas: a top-level sum peels its first term; an integer multiple
+/// `n·θ` (`n ≥ 2`) splits as `θ + (n−1)·θ`. `None` for an atomic angle.
+fn split_angle(angle: &CasExpr) -> Option<(CasExpr, CasExpr)> {
+    match angle {
+        CasExpr::Add(terms) if terms.len() >= 2 => {
+            let first = terms[0].clone();
+            let rest = if terms.len() == 2 {
+                terms[1].clone()
+            } else {
+                CasExpr::Add(terms[1..].to_vec())
+            };
+            Some((first, rest))
+        }
+        // n·θ with an integer n ≥ 2 (θ being the coefficient-1 remainder).
+        CasExpr::Mul(_) => {
+            let factors = flatten_mul(angle);
+            let mut coeff = Rational::integer(1);
+            let mut rest: Vec<CasExpr> = Vec::new();
+            for factor in factors {
+                match factor {
+                    CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+                    other => rest.push(other),
+                }
+            }
+            if coeff.denominator() != 1 || coeff.numerator() < 2 || rest.is_empty() {
+                return None;
+            }
+            let theta = if rest.len() == 1 {
+                rest.into_iter().next()?
+            } else {
+                CasExpr::Mul(rest)
+            };
+            let n_minus_1 = coeff.checked_sub(Rational::integer(1))?;
+            let b = if n_minus_1 == Rational::integer(1) {
+                theta.clone()
+            } else {
+                CasExpr::Const(n_minus_1) * theta.clone()
+            };
+            Some((theta, b))
+        }
+        _ => None,
+    }
+}
+
 /// Apply the log laws to `ln(arg)` for a single (already log-expanded) argument.
 fn expand_log_argument(arg: &CasExpr) -> CasExpr {
     match arg {
@@ -9120,6 +9201,33 @@ mod tests {
             env.insert("x".to_owned(), Rational::integer(xn));
             assert_eq!(c.eval(&env), Some(Rational::integer(xn + 2)));
         }
+    }
+
+    #[test]
+    fn expand_trig_angle_formulas() {
+        let x = || v("x");
+        let y = || v("y");
+        // Every expansion must be a certified identity (equal to the original).
+        for angle_head in [
+            (x() + y()).sin(),
+            (x() + y()).cos(),
+            (CasExpr::int(2) * x()).sin(), // double angle
+            (CasExpr::int(3) * x()).cos(), // triple angle
+            (x() + y() + v("z")).sin(),    // three-term sum
+        ] {
+            let expanded = expand_trig(&angle_head);
+            assert!(
+                matches!(equal(&expanded, &angle_head), ZeroTest::Certified { equal: true, .. }),
+                "expand_trig not identity-preserving for {angle_head}"
+            );
+        }
+        // Exact form of the sum rule: sin(x+y) = sin x cos y + cos x sin y.
+        assert_equal(
+            &expand_trig(&(x() + y()).sin()),
+            &(x().sin() * y().cos() + x().cos() * y().sin()),
+        );
+        // Atomic angles are untouched.
+        assert_equal(&expand_trig(&x().sin()), &x().sin());
     }
 
     #[test]
