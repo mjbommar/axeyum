@@ -4054,6 +4054,14 @@ fn fold_trivial(expr: &CasExpr) -> CasExpr {
                         constant = product;
                     }
                     CasExpr::Mul(inner) => stack.extend(inner.into_iter().rev()),
+                    // A negated factor flips the running sign: `(−1)·(−x) → x`.
+                    CasExpr::Neg(inner) => match constant.checked_neg() {
+                        Some(negated) => {
+                            constant = negated;
+                            stack.push(*inner);
+                        }
+                        None => others.push(CasExpr::Neg(inner)),
+                    },
                     other => others.push(other),
                 }
             }
@@ -14488,6 +14496,12 @@ mod tests {
         assert_eq!(
             simplify(&CasExpr::Unary(UnaryFunc::Cos, Box::new(CasExpr::Add(vec![CasExpr::int(0), x()])))),
             x().cos()
+        );
+        // A negated factor flips the running product sign: (−1)·(−x) → x, −2·(−3x) → 6x.
+        assert_eq!(simplify(&CasExpr::Mul(vec![CasExpr::int(-1), CasExpr::Neg(Box::new(x()))])), x());
+        assert_equal(
+            &simplify(&CasExpr::Mul(vec![CasExpr::int(-2), CasExpr::Neg(Box::new(CasExpr::int(3) * x()))])),
+            &(CasExpr::int(6) * x()),
         );
     }
 
