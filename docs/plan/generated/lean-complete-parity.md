@@ -30,7 +30,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 - U2 official CI profiles: 17 contexts, 153 cells, 111 not-run CTest attempts, and 8 exact selection sets; 0 official executions and zero parity credit.
 - Lean execution evidence: 2 lane templates, 12 termination classes, 5 synthetic controls, and 19 mutation classes; 0 real runs and zero parity credit.
 - Lean process controls: 8/8 retained synthetic attempts, 40 exact files, and 16 raw streams; 0 case records, 0 completion records, 0 real runs, and zero parity credit.
-- Implementation ledger: 140 rows; `DONE`=24, `PARTIAL`=6, `TODO`=110, `BLOCKED`=0.
+- Implementation ledger: 140 rows; `DONE`=24, `PARTIAL`=7, `TODO`=109, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 

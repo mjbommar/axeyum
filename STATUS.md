@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.7.3 immutable checkpointing is source-first
+  preregistered; no store kill cell has run.** The
+  [plan](docs/plan/lean-execution-store-tl0.7.3-plan-2026-07-22.md) reuses the
+  exact accepted ADR-0344 local no-replace primitive without editing the
+  SMT-COMP lane, then adds strict Lean record/filename/self-hash validation and
+  completion-last closure over the interrupted/resumed synthetic fixture. Its
+  16 destructive cells cross dependency versus completion installation, four
+  exposed persistence boundaries, and worktree-local versus `/dev/shm`
+  storage. Eighteen mutation families cover overwrite, conflict/orphan,
+  namespace, lost-attempt, dependency/digest/order, projection, source, and
+  credit drift. This is planned local `SIGKILL` recovery, not power-loss, NFS,
+  host-loss, provider, or parity evidence.
+
 - **2026-07-22 — TL0.7.2 closes bounded process behavior without Lean, U2,
   completion, or parity credit.** The
   [plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
