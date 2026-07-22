@@ -364,6 +364,33 @@ Vandermonde. A big, high-value CAS merge is pending once the lane commits.
 
 **Health:** transient 82 °C peak (a lane's `just check`), back to 40 °C; no runaways.
 
+### Cycle 16 — 2026-07-22 (~14:15 EDT) — SMT S0/S1 selection + two process fixes
+
+**Merges (all gated green):** Lean M5 assurance (`34652338` — STATUS union-resolved,
+Lean-compat Python 55/55); SMT selection-authority chain `db791ef4` S0 →
+`f8878fee` adapt inputs → `16764d04` audit inputs → `0c81f06d` match official
+submissions (`seed 22731158→22731074`, `submissions 53→51`) → `eb81e506` filter
+global logic expansion by track. The SMT lane now has S0 authority + S1a format
+adapters + S1b selection-free live auditor — a *provably-official* population with
+independent audit.
+
+**Process fix #1 — second WIP slip, then hardened.** After a **flaky** gate result
+(see #2) I ran `git reset --hard HEAD~1`, which **wiped the pre-existing
+bench-results WIP** (same hazard class as the cycle-14 `git add -u`). Restored it
+from the 13:53 backup (nothing edits `~/axeyum/bench-results` — lanes use their own
+worktrees — so content was unchanged). **New standing pattern for gated merges:
+`git merge --no-ff --no-commit` → gate → `git commit` (green) or `git merge
+--abort` (red).** `merge --abort` preserves unstaged WIP; **`reset --hard` is
+banned** in this tree. Verified: WIP survives every merge since.
+
+**Process fix #2 — flaky gate observed.** `0c81f06d`'s `check-smtcomp-resume.sh`
+returned `FAILED (failures=1, skipped=1)` on the first run, then **exit 0 on two
+consecutive re-runs**. Almost certainly shared-state contention — the SMT lane
+runs the same Python tests concurrently in its own worktree, and the gate touches
+shared NAS/temp fixtures. **Integrator rule added: on a RED that doesn't reproduce,
+re-run twice before believing it; a single transient fail is not a red branch.**
+(Had I trusted the first fail, I'd have wrongly held back a green commit.)
+
 ---
 
 ## Cycle log
