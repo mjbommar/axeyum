@@ -11,13 +11,14 @@
 //! The initial profile is official `lean4export` format 3.1.0. It translates
 //! names, universe levels, the expression forms already represented by the
 //! kernel, safe non-inductive declarations, and ordered one- or multi-family
-//! inductive groups. It translates projections and natural literals and
+//! inductive groups. It translates projections and natural literals, compares
+//! kernel-derived nested-inductive auxiliary recursors by checked name, and
 //! rejects unsupported string literals, quotient packages, unsafe or partial
-//! declarations, nested groups, unknown records, and malformed/forward
-//! references. Reflexive metadata is descriptive; the independent kernel
-//! decides support from the translated terms. [`import_ndjson`] owns a private
-//! staging kernel and publishes it only after the complete stream succeeds, so
-//! an error cannot expose a partial environment.
+//! declarations, unknown records, and malformed/forward references. Reflexive
+//! and nested-count metadata are descriptive; the independent kernel decides
+//! support from the translated terms. [`import_ndjson`] owns a private staging
+//! kernel and publishes it only after the complete stream succeeds, so an error
+//! cannot expose a partial environment.
 //!
 //! Each completed [`ImportReport`] also carries ADR-0350's versioned canonical
 //! identity manifest: TL0.4-compatible axiom name/type hashes plus complete
@@ -264,6 +265,7 @@ struct ExportedInductiveFamily {
     ty: ExprId,
     num_params: usize,
     num_indices: usize,
+    num_nested: usize,
     constructor_names: Vec<NameId>,
     is_recursive: bool,
 }
@@ -724,11 +726,9 @@ impl<'kernel> ImportState<'kernel> {
             return Err(malformed(line, "inductive group has no family types"));
         }
 
-        // `numNested` is not admission authority. It is sufficient at this
-        // policy boundary only to distinguish a well-shaped nested export
-        // (one main recursor per source family plus the reported auxiliary
-        // recursors) from an ordinary malformed recursor population. M4 must
-        // derive and compare this count structurally before nested admission.
+        // `numNested` is descriptive wire metadata, never admission authority.
+        // Parse its group-wide shape now, then compare it only after the
+        // independent kernel has generated the checked recursor population.
         let nested_counts = types
             .iter()
             .map(|raw_type| {
@@ -744,32 +744,6 @@ impl<'kernel> ImportState<'kernel> {
         if nested_counts.iter().any(|&count| count != nested_count) {
             return Err(malformed(line, "mutual family numNested differs"));
         }
-        let expected_recursor_count = types
-            .len()
-            .checked_add(nested_count)
-            .ok_or_else(|| malformed(line, "inductive recursor count exceeds host width"))?;
-        if recursors.len() != expected_recursor_count && nested_count != 0 {
-            return Err(malformed(
-                line,
-                "nested inductive recursor count differs from numNested",
-            ));
-        }
-        if types.len() == 1 && recursors.len() != 1 && nested_count == 0 {
-            return Err(malformed(
-                line,
-                "single-family inductive must export one recursor",
-            ));
-        }
-        if recursors.len() != types.len() && nested_count == 0 {
-            return Err(malformed(
-                line,
-                "inductive group must export one recursor per family",
-            ));
-        }
-        if nested_count != 0 {
-            return Err(unsupported(line, "inductive-nested"));
-        }
-
         let group_names = types
             .iter()
             .map(|raw_type| {
@@ -782,7 +756,7 @@ impl<'kernel> ImportState<'kernel> {
         }
 
         let mut exported_families = Vec::with_capacity(types.len());
-        for raw_type in types {
+        for (raw_type, &num_nested) in types.iter().zip(&nested_counts) {
             let ty = object(raw_type, line, "inductive.type")?;
             exact_keys(
                 ty,
@@ -841,6 +815,7 @@ impl<'kernel> ImportState<'kernel> {
                     line,
                     "inductive.type.numIndices",
                 )?,
+                num_nested,
                 constructor_names: self.name_array(
                     required(ty, "ctors", line)?,
                     line,
@@ -1020,11 +995,76 @@ impl<'kernel> ImportState<'kernel> {
             )?;
         }
 
-        let expected_recursors = exported_families
+        let mut main_recursor_names = Vec::with_capacity(exported_families.len());
+        for family in &exported_families {
+            main_recursor_names.push(self.kernel.name_str(family.name, "rec"));
+        }
+        let first_main = self
+            .kernel
+            .environment()
+            .get(main_recursor_names[0])
+            .cloned()
+            .ok_or_else(|| malformed(line, "kernel did not generate source main recursor"))?;
+        let Declaration::Recursor { num_motives, .. } = first_main else {
+            return Err(malformed(
+                line,
+                "generated source main name is not a recursor",
+            ));
+        };
+        let derived_nested_count = usize::from(num_motives)
+            .checked_sub(exported_families.len())
+            .ok_or_else(|| {
+                malformed(
+                    line,
+                    "generated recursor motive count is smaller than source group",
+                )
+            })?;
+        if exported_families
             .iter()
-            .enumerate()
-            .map(|(index, family)| (self.kernel.name_str(family.name, "rec"), index))
-            .collect::<BTreeMap<_, _>>();
+            .any(|family| family.num_nested != derived_nested_count)
+        {
+            return Err(malformed(line, "generated/exported numNested differs"));
+        }
+        let expected_recursor_count = exported_families
+            .len()
+            .checked_add(derived_nested_count)
+            .ok_or_else(|| malformed(line, "inductive recursor count exceeds host width"))?;
+        if derived_nested_count != 0 && recursors.len() != expected_recursor_count {
+            return Err(malformed(
+                line,
+                "nested inductive recursor count differs from numNested",
+            ));
+        }
+        if derived_nested_count == 0 && exported_families.len() == 1 && recursors.len() != 1 {
+            return Err(malformed(
+                line,
+                "single-family inductive must export one recursor",
+            ));
+        }
+        if derived_nested_count == 0 && recursors.len() != exported_families.len() {
+            return Err(malformed(
+                line,
+                "inductive group must export one recursor per family",
+            ));
+        }
+
+        let mut expected_recursors = BTreeMap::new();
+        for (family_index, &name) in main_recursor_names.iter().enumerate() {
+            if expected_recursors
+                .insert(name, Some(family_index))
+                .is_some()
+            {
+                return Err(malformed(line, "kernel-derived recursor names repeat"));
+            }
+        }
+        for suffix in 1..=derived_nested_count {
+            let name = self
+                .kernel
+                .name_str(exported_families[0].name, format!("rec_{suffix}"));
+            if expected_recursors.insert(name, None).is_some() {
+                return Err(malformed(line, "kernel-derived recursor names repeat"));
+            }
+        }
         let mut recursor_records = BTreeMap::new();
         for raw_recursor in recursors {
             let rec = object(raw_recursor, line, "inductive.rec")?;
@@ -1032,7 +1072,7 @@ impl<'kernel> ImportState<'kernel> {
             if !expected_recursors.contains_key(&name) {
                 return Err(malformed(
                     line,
-                    "exported recursor name does not belong to the group",
+                    "exported recursor name does not belong to kernel-derived group",
                 ));
             }
             if recursor_records.insert(name, raw_recursor).is_some() {
@@ -1042,13 +1082,13 @@ impl<'kernel> ImportState<'kernel> {
         for (recursor_name, family_index) in expected_recursors {
             let raw_recursor = recursor_records
                 .get(&recursor_name)
-                .ok_or_else(|| malformed(line, "group family recursor record is missing"))?;
-            let family = &exported_families[family_index];
+                .ok_or_else(|| malformed(line, "kernel-derived recursor record is missing"))?;
             self.validate_generated_recursor(
                 raw_recursor,
-                family.name,
-                family.num_indices,
+                recursor_name,
+                family_index.map(|index| exported_families[index].num_indices),
                 &group_names,
+                derived_nested_count != 0,
                 line,
             )?;
         }
@@ -1150,9 +1190,10 @@ impl<'kernel> ImportState<'kernel> {
     fn validate_generated_recursor(
         &mut self,
         raw: &Value,
-        inductive: NameId,
-        exported_num_indices: usize,
+        expected_name: NameId,
+        exported_num_indices: Option<usize>,
         expected_all: &[NameId],
+        is_nested: bool,
         line: usize,
     ) -> Result<(), ImportError> {
         let rec = object(raw, line, "inductive.rec")?;
@@ -1174,13 +1215,12 @@ impl<'kernel> ImportState<'kernel> {
             line,
             "inductive.rec",
         )?;
-        self.validate_recursor_group_metadata(rec, expected_all, line)?;
+        self.validate_recursor_group_metadata(rec, expected_all, is_nested, line)?;
         let name = self.name(required(rec, "name", line)?, line, "inductive.rec.name")?;
-        let expected_name = self.kernel.name_str(inductive, "rec");
         if name != expected_name {
             return Err(malformed(
                 line,
-                "exported recursor name is not <inductive>.rec",
+                "exported recursor name differs from kernel-derived name",
             ));
         }
         let exported_type =
@@ -1235,7 +1275,9 @@ impl<'kernel> ImportState<'kernel> {
                 ));
             }
         }
-        if usize::from(num_indices) != exported_num_indices {
+        if let Some(exported_num_indices) = exported_num_indices
+            && usize::from(num_indices) != exported_num_indices
+        {
             return Err(malformed(
                 line,
                 "generated family index count differs from export",
@@ -1253,6 +1295,7 @@ impl<'kernel> ImportState<'kernel> {
         &self,
         rec: &Map<String, Value>,
         expected_all: &[NameId],
+        is_nested: bool,
         line: usize,
     ) -> Result<(), ImportError> {
         if boolean(
@@ -1263,6 +1306,9 @@ impl<'kernel> ImportState<'kernel> {
             return Err(unsupported(line, "declaration-unsafe"));
         }
         let is_k_target = boolean(required(rec, "k", line)?, line, "inductive.rec.k")?;
+        if is_nested && is_k_target {
+            return Err(malformed(line, "nested recursor may not be a K target"));
+        }
         if expected_all.len() > 1 && is_k_target {
             return Err(malformed(line, "mutual recursor may not be a K target"));
         }

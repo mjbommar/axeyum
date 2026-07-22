@@ -22,15 +22,9 @@ const WELL_FOUNDED: &str = include_str!(
 );
 
 #[derive(Clone, Copy)]
-enum ExpectedOutcome {
-    Complete {
-        counts: (usize, usize, usize, usize, usize),
-        required_names: &'static [&'static str],
-    },
-    Unsupported {
-        line: usize,
-        code: &'static str,
-    },
+struct ExpectedOutcome {
+    counts: (usize, usize, usize, usize, usize),
+    required_names: &'static [&'static str],
 }
 
 fn assert_control() {
@@ -58,45 +52,28 @@ fn assert_control() {
 }
 
 fn assert_outcome(case_id: &str, fixture: &str, expected: ExpectedOutcome) {
-    let result = import_ndjson(Cursor::new(fixture.as_bytes()), ImportLimits::default());
-    match (result, expected) {
+    let completed = import_ndjson(Cursor::new(fixture.as_bytes()), ImportLimits::default())
+        .unwrap_or_else(|error| panic!("{case_id}: unexpected typed outcome: {error:?}"));
+    let report = completed.report();
+    assert_eq!(
         (
-            Ok(completed),
-            ExpectedOutcome::Complete {
-                counts,
-                required_names,
-            },
-        ) => {
-            let report = completed.report();
-            assert_eq!(
-                (
-                    report.names,
-                    report.levels,
-                    report.expressions,
-                    report.declaration_records,
-                    report.admitted_declarations,
-                ),
-                counts,
-                "{case_id}"
-            );
-            for required in required_names {
-                assert!(
-                    report
-                        .declaration_identities
-                        .iter()
-                        .any(|identity| identity.name == *required),
-                    "{case_id}: missing completed declaration {required}"
-                );
-            }
-        }
-        (
-            Err(ImportError::Unsupported {
-                line: actual_line,
-                code: actual_code,
-            }),
-            ExpectedOutcome::Unsupported { line, code },
-        ) => assert_eq!((actual_line, actual_code), (line, code), "{case_id}"),
-        (actual, _) => panic!("{case_id}: unexpected typed outcome: {actual:?}"),
+            report.names,
+            report.levels,
+            report.expressions,
+            report.declaration_records,
+            report.admitted_declarations,
+        ),
+        expected.counts,
+        "{case_id}"
+    );
+    for required in expected.required_names {
+        assert!(
+            report
+                .declaration_identities
+                .iter()
+                .any(|identity| identity.name == *required),
+            "{case_id}: missing completed declaration {required}"
+        );
     }
 }
 
@@ -151,7 +128,7 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "recursive-indexed",
             RECURSIVE_INDEXED,
-            ExpectedOutcome::Complete {
+            ExpectedOutcome {
                 counts: (34, 4, 132, 4, 12),
                 required_names: &[
                     "AxeyumConstructMatrix.MiniVector",
@@ -163,7 +140,7 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "reflexive-higher-order",
             REFLEXIVE,
-            ExpectedOutcome::Complete {
+            ExpectedOutcome {
                 counts: (47, 3, 139, 6, 11),
                 required_names: &[
                     "AxeyumConstructMatrix.MiniAcc",
@@ -175,7 +152,7 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "mutual",
             MUTUAL,
-            ExpectedOutcome::Complete {
+            ExpectedOutcome {
                 counts: (75, 4, 305, 10, 26),
                 required_names: &[
                     "AxeyumConstructMatrix.EvenTree",
@@ -189,15 +166,21 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "nested",
             NESTED,
-            ExpectedOutcome::Unsupported {
-                line: 248,
-                code: "inductive-nested",
+            ExpectedOutcome {
+                counts: (70, 6, 322, 10, 22),
+                required_names: &[
+                    "AxeyumConstructMatrix.Rose",
+                    "AxeyumConstructMatrix.Rose.node",
+                    "AxeyumConstructMatrix.Rose.rec",
+                    "AxeyumConstructMatrix.Rose.rec_1",
+                    "AxeyumConstructMatrix.nestedWitness",
+                ],
             },
         ),
         (
             "well-founded",
             WELL_FOUNDED,
-            ExpectedOutcome::Complete {
+            ExpectedOutcome {
                 counts: (160, 5, 731, 23, 35),
                 required_names: &[
                     "Acc.rec",
@@ -238,11 +221,7 @@ fn reflexive_metadata_is_descriptive_while_boundaries_remain_fail_closed() {
     let nested = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
         group["types"][0]["numNested"] = json!(1);
     });
-    assert_malformed(
-        &nested,
-        148,
-        "nested inductive recursor count differs from numNested",
-    );
+    assert_malformed(&nested, 148, "generated/exported numNested differs");
 
     let unsafe_group = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
         group["types"][0]["isUnsafe"] = json!(true);
@@ -269,11 +248,26 @@ fn reflexive_metadata_is_descriptive_while_boundaries_remain_fail_closed() {
 fn nested_preflight_preserves_ordinary_singleton_recursor_validation() {
     for _ in 0..2 {
         assert_control();
-        assert_unsupported(NESTED, 248, "inductive-nested");
+        assert_outcome(
+            "nested",
+            NESTED,
+            ExpectedOutcome {
+                counts: (70, 6, 322, 10, 22),
+                required_names: &[
+                    "AxeyumConstructMatrix.Rose.rec",
+                    "AxeyumConstructMatrix.Rose.rec_1",
+                ],
+            },
+        );
     }
 
     let missing_auxiliary = mutate_inductive_record(NESTED, 248, |group| {
-        group["recs"].as_array_mut().unwrap().pop();
+        let recursors = group["recs"].as_array_mut().unwrap();
+        let auxiliary_index = recursors
+            .iter()
+            .position(|recursor| recursor["name"].as_u64() == Some(33))
+            .expect("nested construct fixture must contain Rose.rec_1");
+        recursors.remove(auxiliary_index);
     });
     assert_malformed(
         &missing_auxiliary,
@@ -325,7 +319,11 @@ fn nested_preflight_preserves_ordinary_singleton_recursor_validation() {
         let auxiliary = group["recs"][0].clone();
         group["recs"].as_array_mut().unwrap().push(auxiliary);
     });
-    assert_unsupported(&nested_mutual_shape, 233, "inductive-nested");
+    assert_malformed(
+        &nested_mutual_shape,
+        233,
+        "generated/exported numNested differs",
+    );
 }
 
 #[test]
