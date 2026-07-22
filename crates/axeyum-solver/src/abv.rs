@@ -490,14 +490,28 @@ pub fn check_qf_alia_lazy_row(
 /// This is deliberately an adapter: array reasoning remains in the CEGAR loop,
 /// while the scalar side handles integer arithmetic and UF congruence over the
 /// abstracted select/index terms. Every `sat` is still projected and replayed
-/// against the original array formula before it is returned.
+/// against the original array formula before it is returned. Until scalar
+/// `unsat` has an independently checked proof that can be lifted through the
+/// array abstraction, it remains an untrusted search result and declines to
+/// `unknown` at this adapter boundary.
 pub fn check_qf_auflia_lazy_row(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
 ) -> Result<CheckResult, SolverError> {
     let mut backend = UfliaDpllBackend;
-    check_qf_abv_lazy_row(&mut backend, arena, assertions, config)
+    match check_qf_abv_lazy_row(&mut backend, arena, assertions, config)? {
+        // The cheap, certificate-rechecked array refuters run before this
+        // adapter in `check_auto`, so their established UNSAT coverage is
+        // unaffected by this evidence gate.
+        CheckResult::Unsat => Ok(CheckResult::Unknown(UnknownReason {
+            kind: UnknownKind::Incomplete,
+            detail: "QF_AUFLIA lazy-ROW scalar refutation has no independently checked proof; \
+                     declining instead of exporting unsat"
+                .to_owned(),
+        })),
+        result => Ok(result),
+    }
 }
 
 /// Decides the pure declared-sort `QF_AX` array slice through the same lazy

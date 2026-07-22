@@ -1,183 +1,231 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
-**This folder is the single entry point to resume the SMT-COMP measurement /
-full-library inventory / gap-closing work stream.** Paused 2026-07-22.
+**This folder is the single entry point for the SMT-COMP measurement,
+full-library inventory, and gap-closing lane.** Updated 2026-07-22 after the
+fixture-only E1b integration and the second full-library soundness finding.
 
-Read this file top to bottom; every artifact and open thread is linked below.
+The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
+a source-balanced SMT-COMP-style population, followed by a measured and ranked
+gap-closing program. A run receives no score credit unless its selection,
+environment, resource envelope, attempt history, outputs, and shard completion
+are all checkable.
 
----
-
-## 1. What this work stream is
-
-Build a faithful, in-tree replica of the **entire SMT-COMP scoring pipeline**,
-run **axeyum against the whole SMT-LIB library** to get an honest per-logic
-decide/decline/**wrong** map, and turn the measured gaps into a **rank-ordered
-plan** to close the distance to Z3/cvc5/Bitwuzla. It also surfaced a **P0
-floating-point soundness bug** and produced a merge that needs finishing.
-
-The rank-ordered plan this feeds:
+The ranked program is
 [`../full-library-gap-closing-plan-2026-07-22.md`](../full-library-gap-closing-plan-2026-07-22.md).
+The active durability design is
+[`../smtcomp-resumable-run-design-2026-07-21.md`](../smtcomp-resumable-run-design-2026-07-21.md)
+under proposed
+[ADR-0344](../../research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md).
 
 ---
 
-## 2. Current-state snapshot (2026-07-22, at pause)
+## 1. Current bounded verdict
 
-### ⚠️ Blockers to know before touching anything
-- **`main` is RED (does not compile).** `crates/axeyum-solver/src/reconstruct/quantifier.rs:537`
-  has a non-exhaustive match — the Lean lane added `ExprNode::Proj`
-  (`axeyum-lean-kernel/src/expr.rs:162`) but never committed the match arm.
-  This was a **pre-existing broken commit on the Lean lane** (repro didn't
-  compile either); a merge of `repro/smtcomp-scoring` into `main` carried it
-  over. **Not lost work, not a bad merge — one missing match arm.** Fix belongs
-  to the Lean lane (correct `Proj` handling) or a sound-decline stopgap.
-- **Do not `git reset`/`revert` the merge blindly** — the CAS agent has live
-  uncommitted WIP in the `main` worktree (`/nas4/.../claude-axeyum-cas-work`);
-  a hard reset would destroy it. `main` and `repro` are both advancing under
-  other agents. Any reconciliation must be coordinated when worktrees are quiet.
-- **The running s4 binary is STALE (pre-FP-fix).** The staged
-  `/nas3/data/axeyum/harness/bin/axeyum-smtcomp` predates the FP soundness fix,
-  so its `WRONG` count keeps rising on FP benchmarks. **The measured decide/wrong
-  numbers from this run are provisional** until re-staged with the fixed binary.
+The measurement lane is **not ready for another credited 64,345-file run**.
 
-### Live s4 run
-- Config: SMT-COMP §6 selection (64,345 files, seed `20260721`), 300 s ceiling,
-  **s4 only, N=8** thread-pinned (thermal-safe — the fleet cooks at 92–99 °C
-  under full load; see gotchas). Distributed launcher: `scripts/smtcomp_repro/distribute_run.sh`.
-- Progress at pause: **~30 % (≈19.5k/64,345), WRONG=2** (both FP-family,
-  stale binary). Outputs on NAS: `/nas3/data/axeyum/harness/full-inventory/raw_selection/`
-  (`log_0..7.log`, `raw_*.json` on shard completion).
-- **Monitor lapsed** — no live WRONG alarm. On resume, re-arm a `WRONG` grep
-  over the shard logs.
+- E0 contract and E1a local persistence are complete.
+- E1b is now fixture-complete in the active runner: exact preflight identity,
+  immutable attempts/results/output sidecars, typed process outcomes,
+  observed/admitted verdict separation, completion-last publication, strict
+  duplicate rejection, a no-steal lease, and explicit stale recovery are all
+  executable.
+- E2 real one-host aggregate resource enforcement is open.
+- E3 multi-host allocation, host-loss recovery, and shared-storage or spool
+  transfer durability are open.
+- The independent official eligibility/status/difficulty selection ledger is
+  open. E1b's exact ordered per-file digest ledger does not substitute for it.
 
-### Git
-- Work committed on `repro/smtcomp-scoring` (the shared checkout at
-  `/home/mjbommar/projects/personal/axeyum`); merged into `main` (`87ff5335`+).
-- ~32 uncommitted files in this checkout = other lanes' live WIP (FP fix, Lean
-  fixtures, `STATUS.md`, frontier JSONs) — **not ours to commit.**
+The old s4 run remains useful only as a bug-discovery stream. It predates both
+soundness repairs, uses end-of-shard raw output, and does not satisfy E1b-E3; it
+receives zero measurement credit even if every shard eventually exits.
 
 ---
 
-## 3. DONE (with artifact paths)
+## 2. What landed in this increment
 
-- **Scoring-pipeline replica** — full SMT-COMP §7 scoring (all 5 tracks,
-  sequential, division parallel/PAR-2/sequential/24s/sat/unsat, disagreement
-  removal, Best-Overall/Biggest-Lead/Largest-Contribution rankings) + §6
-  selection + §5 resource-limited execution. **40+ unit tests.**
-  → `scripts/smtcomp_repro/{scoring,runner,selection,smtlib_meta,compete,inventory,select_library}.py`,
-  `tests/`.
-- **Competition CLI** (argv1 `.smt2` → `sat`/`unsat`/`unknown`) →
-  `crates/axeyum-bench/examples/smtcomp_cli.rs`.
-- **Distributed runner + clean-stop** (shard across s-hosts; kill children not
-  just parents to avoid orphan runaways) →
-  `scripts/smtcomp_repro/{distribute_run.sh,stop_run.sh}`.
-- **Full SMT-LIB 2024 fetched to NAS** — non-incremental **438,631** +
-  incremental **44,333** → `/nas3/data/axeyum/corpus/smtlib-2024/`.
-- **228-file pilot inventory** (complete, charted, 0 wrong) →
-  `bench-results/smtcomp-repro-20260721/` (README, JSON, PNG charts, `chart.py`).
-- **Rank-ordered gap-closing plan** →
-  `docs/plan/full-library-gap-closing-plan-2026-07-22.md`.
-- **SMT-COMP 2024 reference numbers gathered** (QF_BV 98 %, QF_ABV 99.7 %,
-  QF_LIA 94 %, QF_FP 92 %, UFLIA best 57 %) — inline in the plan.
-- **P0 FP wrong-`sat` found + isolated** — QF_ABVFP/QF_BVFP KLEE `query.26`,
-  `(fp.add roundTowardNegative …)`; repro preserved →
-  `bench-results/smtcomp-full-library-20260722/soundness-fp-wrong-sat/`.
-  **Root-cause fixed locally by the FP lane** (exact-zero sign under directed
-  rounding, add + fma); full-slice revalidation still open (see §4).
+### E1b runner/solver integration
 
----
+`compete.py --run-manifest ... --run-dir ...` now activates the v2 evidence
+path for one fixture-only solver. Before creating a run directory or starting a
+solver, it validates:
 
-## 4. IN PROGRESS / BLOCKED
+- ordered selected-list bytes and every benchmark's normalized ID, SHA-256,
+  and byte count;
+- selection, corpus, and environment artifacts;
+- solver executable bytes, command template, and configuration;
+- runner source identities, repository commit, dirty-tree content identity,
+  and Python toolchain identity;
+- track, shard mapping, output policy, and the complete declared resource
+  envelope.
 
-| Item | State | Owner / next |
-|---|---|---|
-| **`main` red — `ExprNode::Proj` match arm** | blocked | Lean lane commits the arm, or add a sound-decline stopgap; then main compiles |
-| **The merge (`repro`→`main`)** | landed but on a red tree | finish once the arm lands; reconcile when CAS/Lean worktrees quiet |
-| **s4 §6 run** | ~30 %, running, **stale binary** | let finish OR re-stage fixed binary and restart for trustworthy numbers |
-| **P0 FP fix revalidation** | fix local; not slice-revalidated | re-run QF_FP/QF_BVFP/QF_ABVFP selected slices → DISAGREE 0 |
-| **Branch/worktree topology** | tangled (repro vs main, 321 behind) | coordinated reconcile onto main (user-directed) |
+Execution acquires one exact-owner shard lease, publishes an immutable launch,
+captures byte-exact stdout/stderr and typed termination, installs the result and
+sidecars, records a separate best-effort terminal, and publishes completion
+last. Resume skips only complete validating checkpoints. A terminal-less old
+attempt remains visible in `unclosed_attempt_ids`; recovery must explicitly name
+the prior lease owner, and age alone never steals ownership.
 
----
+The runner preserves a response printed before watchdog termination under the
+registered SMT-COMP 2026 response policy. Wall timeout, ordinary signal,
+nonzero exit, evidenced CPU/memory resource termination, and runner error are
+separate states. Arbitrary signals are never guessed to be OOM. Legacy raw JSON
+is exported only after the entire bundle validates, and any duplicate
+benchmark/solver cell is rejected.
 
-## 5. REMAINING (rank-ordered — see the plan for detail)
+Detailed result:
+[`../smtcomp-resumable-runner-e1b-2026-07-22.md`](../smtcomp-resumable-runner-e1b-2026-07-22.md).
 
-From [`../full-library-gap-closing-plan-2026-07-22.md`](../full-library-gap-closing-plan-2026-07-22.md) §3:
+### QF_AUFLIA soundness gate
 
-0. **Fix P0 FP wrong-`sat`** + revalidate (soundness floor). *(fix landed; revalidate)*
-1. **Finish the measurement** — restart s4 run with the FIXED binary; on
-   completion run `inventory.py` → dated `bench-results/` record + charts;
-   feeds G1/G2/G3 of [`../gap-analysis-z3-lean-2026-07-21.md`](../gap-analysis-z3-lean-2026-07-21.md).
-2. **Strings** (QF_SLIA+QF_S ≈ 103k benchmarks, weak decide) — P2.7.
-3. **Quantifier sat-direction / MBQI (T2.6.5) + MAM (T2.6.1)** — biggest
-   capability gap (>100k quantified at ~0 %) — P2.6, gated on e-graph+CDCL(T).
-4. **CDCL(T) keystone migration** — P1.4/P1.5.
-5. **Nonlinear NIA/NRA frontier** — P2.5.
-6. **QF_BV/FP hard-tail perf** — P1.1/P1.2 measure-and-flip.
-7. **Proof/Lean denominator** — G5/G6.
-8. **Breadth backlog** — P2.10 (deferred).
+The old run's second WRONG marker was not FP-family noise:
+
+```text
+QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2
+expected sat; staged Axeyum unsat in 12.10 s
+```
+
+The exact file SHA-256 is
+`dc7f8f51be688669321c8a9a15f2543fc070bc3a4c55b81c763604c34fa73bde`.
+Current Axeyum reproduced `unsat`; cvc5 1.3.4 returned `sat`, including after
+Axeyum parsed and sharing-preservingly rewrote the script. The parser and stale
+binary are therefore not the cause.
+
+The lazy-ROW adapter's scalar QF_UFLIA search exported an unproved refutation of
+a satisfiable abstraction. The adapter now enforces the foundational evidence
+boundary: an unchecked scalar `unsat` becomes `unknown` until an independently
+checked proof can be lifted through the array abstraction. Certificate-rechecked
+array refuters still run first. The exact 2024 benchmark is committed in the
+curated QF_AUFLIA corpus with a no-wrong-verdict regression.
 
 ---
 
-## 6. Artifacts & locations (the full map)
+## 3. Live stale run snapshot
 
-**Repo (`/home/mjbommar/projects/personal/axeyum`):**
-- Harness: `scripts/smtcomp_repro/` — `scoring.py` `runner.py` `selection.py`
-  `smtlib_meta.py` `compete.py` `inventory.py` `select_library.py`
-  `distribute_run.sh` `stop_run.sh` `run_repro.sh` `tests/` (+ `provenance.py`
-  from another agent). Docs: `scripts/smtcomp_repro/README.md`, `RESULTS.md`.
-- CLI: `crates/axeyum-bench/examples/smtcomp_cli.rs`.
-- Plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`.
-- Bench records: `bench-results/smtcomp-repro-20260721/` (228-file + charts),
-  `bench-results/smtcomp-full-library-20260722/soundness-fp-wrong-sat/` (P0 repro).
+At the latest audit, the eight s4 shards had written 20,657 progress lines
+(about 32% of 64,345) and were processing QF_BV. No `raw_*.json` shard had been
+published. The exact two WRONG markers were:
 
-**NAS (`/nas3/data/axeyum/`, shared, ~16 TB free):**
-- Corpus: `corpus/smtlib-2024/non-incremental/non-incremental/<LOGIC>/…` (438,631),
-  `corpus/smtlib-2024/incremental/…` (44,333).
-- Run: `harness/full-inventory/selected.txt` (64,345), `selection_manifest.json`,
-  `raw_selection/` (shard logs + raw JSON).
-- Staged binaries (⚠ axeyum one is STALE): `harness/bin/{axeyum-smtcomp,cvc5,bitwuzla}`.
-- Staged harness copy: `harness/smtcomp_repro/*.py`.
+1. QF_ABVFP KLEE `query.26.smt2`: expected `unsat`, stale binary returned
+   `sat`; the exact-cancellation FP repair is on main.
+2. QF_AUFLIA `pipeline-invalid.smt2`: expected `sat`, stale and then-current
+   Axeyum returned `unsat`; this branch adds the sound decline above.
 
-**Reference solvers (repo, gitignored):** `references/smtcomp-solvers/{cvc5,bitwuzla}`.
+Run identity:
 
-**External reference:** SMT-COMP 2024 Single Query results —
-`https://smt-comp.github.io/2024/results/`.
+- selected list: 64,345 paths, seed `20260721`, SHA-256
+  `1f988de6efd8b0dd47ccbc14d7c61739f6e47f55a675fc705e7f58c7baf47609`;
+- staged Axeyum binary SHA-256
+  `ff36fc2d309966ad8e1f8b87096e09e1582567078d3f13ce21df5ec04c9a5d4f`;
+- host: s4, eight shards, `RAYON_NUM_THREADS=1`, 300-second ceiling;
+- logs: `/nas3/data/axeyum/harness/full-inventory/raw_selection/log_0..7.log`.
 
----
-
-## 7. Gotchas learned (don't relearn the hard way)
-
-- **Thermal:** s4/s5/s6/s7 hit **92–99 °C** under full core load (s4 also runs
-  our `llama-server`). Run **s4 only, N=8, thread-pinned** (`RAYON_NUM_THREADS=1`
-  so workers == active cores). Never full-load them.
-- **Orphan runaways:** `pkill -f compete.py` orphans `axeyum-smtcomp` children,
-  whose `--timeout-ms` does NOT fire on hard files → they run unbounded and pile
-  up, cooking the box. **Always stop with `scripts/smtcomp_repro/stop_run.sh`**
-  (kills children first).
-- **Multi-worktree fleet:** `main` lives in `/nas4/.../claude-axeyum-cas-work`;
-  many lanes (Lean-kernel, CAS, FP, codex) work in separate worktrees. This
-  checkout is on `repro/smtcomp-scoring`. Never `checkout`/`reset`/`branch -f`
-  another lane's live worktree.
-- **Alphabet skew:** `selected.txt` is sorted; quantified logics (`AUF*`,
-  `ALIA`, non-`QF_` `BV`/`LIA`) sort first and axeyum declines them → the early
-  running decide-rate reads low. The strong `QF_*` block comes later.
+Do not stop this diagnostic job by killing only `compete.py`; that orphans
+solver children. Use `scripts/smtcomp_repro/stop_run.sh` if an authorized stop
+is needed.
 
 ---
 
-## 8. Exact resume steps
+## 4. Executable gates
 
-1. **Un-break `main`** — get the Lean lane's `ExprNode::Proj` arm committed (or
-   add a sound-decline stopgap), confirm `cargo check --workspace` is clean.
-2. **Reconcile branches** onto `main` (user-directed; worktrees quiet).
-3. **Re-stage the FIXED axeyum CLI** to `/nas3/data/axeyum/harness/bin/` and
-   **restart the s4 §6 run** (`scripts/smtcomp_repro/distribute_run.sh
-   /nas3/data/axeyum/harness/full-inventory/selected.txt 300 <outdir> selection`),
-   re-arm a WRONG grep.
-4. On completion: `python3 scripts/smtcomp_repro/inventory.py <outdir>/raw_*.json
-   --solver axeyum --ceiling-s 300 --out inventory.json`; also score cvc5 +
-   bitwuzla on the same files (G3); commit a dated `bench-results/` record.
-5. Then pick up the plan at Rank 1 → 2 → 3
-   ([`../full-library-gap-closing-plan-2026-07-22.md`](../full-library-gap-closing-plan-2026-07-22.md)).
+The bounded E0/E1 gate is:
+
+```sh
+./scripts/check-smtcomp-resume.sh
+AXEYUM_FS_FIXTURE_PARENT=. PYTHONWARNINGS=error \
+  python3 -m unittest scripts.tests.test_smtcomp_resume_fs
+```
+
+It covers:
+
+- 18 contract invariants and 28 mutation/control scenarios;
+- local tmpfs and worktree-filesystem kill recovery;
+- real runner kills before and during fake-solver execution;
+- lease collision and explicit recovery;
+- interrupted/resumed versus uninterrupted canonical equivalence;
+- timeout-observed response admission;
+- typed exit/signal/resource outcomes and non-UTF-8 byte preservation;
+- output-sidecar mutation and duplicate raw-cell rejection; and
+- scoring, selection, provenance, and generated-contract checks.
+
+The QF_AUFLIA regression is:
+
+```sh
+CARGO_BUILD_JOBS=2 cargo test -p axeyum-solver --all-features \
+  --test int_array_sort public_pipeline_invalid_sat_never_exports_unchecked_auflia_unsat
+```
+
+`just check` includes the resumability gate and remains the branch-wide merge
+gate.
 
 ---
 
-*Paused 2026-07-22. Owner on resume: the SMT-COMP/quantifier measurement lane.*
+## 5. Remaining work, in dependency order
+
+1. **E2 — real one-host enforcement.** Bind one aggregate cgroup-v2 envelope
+   across runner and descendants; validate delegated-controller identity and
+   limits before launch; prove CPU/memory/PID/kill accounting on a tiny committed
+   corpus; reject overcommit and environment drift before any solver starts.
+2. **E3 — multi-host recovery.** Preallocate host/shard/resource ownership for
+   N>=3 hosts; prove host loss, retry, spool/shared-storage transfer, lease
+   recovery, complete-set validation, and canonical equivalence to an
+   uninterrupted control.
+3. **Selection identity.** Implement the official eligibility, status,
+   difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
+   Keep this policy artifact separate from the E1b execution ledger.
+4. **Fresh P0 slices.** Stage the repaired binary and rerun
+   QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
+   DISAGREE=0.
+5. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
+   the same versioned selection; publish the per-logic inventory and regenerate
+   the coverage-weighted parity matrix without combining incompatible regimes.
+
+The implementation rule for E2/E3 is the same as E1: build the mechanism and
+its destructive/interruption tests on a tiny corpus before spending the full
+population.
+
+---
+
+## 6. Artifact map
+
+Repository:
+
+- active harness: `scripts/smtcomp_repro/`;
+- aggregate gate: `scripts/check-smtcomp-resume.sh`;
+- v2 contract source and generated view:
+  `docs/plan/smtcomp-resumable-run-contract-v2.json` and
+  `docs/plan/generated/smtcomp-resumable-run-contract.{json,md}`;
+- E1a result: `docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md`;
+- E1b audit/result: `docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md` and
+  `docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md`;
+- candidate failure handoff:
+  `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
+- ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
+- preserved FP repro:
+  `bench-results/smtcomp-full-library-20260722/soundness-fp-wrong-sat/`;
+- preserved AUFLIA regression:
+  `corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/smtlib2024__array_benchmarks__misc__pipeline-invalid.smt2`.
+
+NAS (shared, corpus read-only in practice):
+
+- SMT-LIB 2024 corpus: `/nas3/data/axeyum/corpus/smtlib-2024/`;
+- old candidate identity: `/nas3/data/axeyum/harness/full-inventory/`;
+- stale run logs: `/nas3/data/axeyum/harness/full-inventory/raw_selection/`;
+- staged binaries: `/nas3/data/axeyum/harness/bin/`.
+
+---
+
+## 7. Resume protocol
+
+1. Read `PLAN.md`, this file, the roadmap, foundational DAG, and proposed
+   ADR-0344.
+2. Work in a dedicated `agent/smtcomp/*` worktree; never mutate the integration
+   checkout or another lane's NAS output.
+3. Confirm the old s4 process/log state and count literal `WRONG` lines without
+   treating the stale run as evidence.
+4. Take E2 next. Keep the v2 record schema and E1 gates fixed unless a failing
+   mutation demonstrates a necessary correction.
+5. Update `STATUS.md` and this file before handoff; push only a green topic
+   branch for the integration owner.
+
+*Owner: SMT-COMP measurement/full-library lane. Next milestone: E2 aggregate
+resource enforcement on one host, not another large run.*

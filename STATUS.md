@@ -22,7 +22,13 @@ exit-criteria'd tracks we advance one increment at a time.
   convention is fixed on `main`, bit-for-bit all-mode tests and a 600-script cvc5
   differential sweep are green, and both preserved full queries now return
   `unsat`. The complete QF_FP/QF_BVFP/QF_ABVFP selected slices must return to
-  DISAGREE = 0 before the broader soundness floor is called restored. (Two
+  DISAGREE = 0 before the broader soundness floor is called restored. The same
+  stale run also exposed a distinct QF_AUFLIA wrong-`unsat` on the declared-`sat`
+  `pipeline-invalid.smt2`. Current `main` reproduced it, and cvc5 1.3.4 plus an
+  Axeyum parse/write round-trip both returned `sat`, ruling out stale-binary and
+  parser artifacts. The lazy-ROW AUFLIA adapter now converts unchecked scalar
+  refutations to `unknown`, preserving the existing foundational evidence
+  boundary; the exact public benchmark is committed as a regression. (Two
   consumer-app wrong-safes were also found by earlier fuzzes and fixed.)
 - **Decide-rate (the central gap):** see the generated
   [SCOREBOARD](bench-results/SCOREBOARD.md) totals (authoritative; this line
@@ -388,6 +394,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   handoff docs are synchronized. Next: probe adjacent-binomial convolution and
   weighted squared-binomial identities through the same concrete-discovery plus
   symbolic-certificate gate.
+- **2026-07-22 — G1 E1b is fixture-complete, and the second full-library P0 is
+  sound-declined.** The opt-in resumable path now validates the exact ordered
+  benchmark ledger, corpus/selection/environment/solver/runner/toolchain
+  identity, acquires a no-steal shard lease, records attempt/terminal lifecycle,
+  captures byte-exact outputs and typed process outcomes, publishes completion
+  last, and exports legacy raw JSON only from a complete validating bundle.
+  Real process kills before and during fake-solver execution, lease contention,
+  explicit stale recovery, interruption equivalence, timeout-observed response
+  admission, output mutation, and duplicate rejection are executable gates in
+  `./scripts/check-smtcomp-resume.sh`. This grants no measurement credit: E2
+  aggregate cgroup enforcement, E3 multi-host loss/retry, shared-storage/spool
+  durability, and official selection identity remain. Separately, the live
+  stale run has exactly two WRONG markers: the repaired FP case and
+  QF_AUFLIA `pipeline-invalid.smt2` (declared/cvc5 `sat`, Axeyum `unsat`). The
+  latter reproduces on current code because the scalar UFLIA abstraction search
+  exports an unchecked refutation. The AUFLIA lazy-ROW adapter now enforces the
+  foundational rule that this result is `unknown` until a lifted checked proof
+  exists; existing certificate-rechecked array refuters remain ahead of it.
+  The exact 2024 benchmark and a no-wrong-verdict regression are committed.
 
 - **2026-07-22 — P0 FP wrong-`sat` is fixed on `main`; complete affected-slice
   validation is next.** The full-library run exposed exact finite cancellation
@@ -1100,19 +1125,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   observed-vs-admitted verdicts, content-addressed outputs, and complete policy/
   source/toolchain identity. It separates terminal-less failed attempts from later honest
   shard completion, rejects silent duplicate overwrite and identity/resource
-  drift, and requires a complete shard set before scoring. This is an in-memory
-  planning prototype, not production durability. E1a now implements the local
+  drift, and requires a complete shard set before scoring. E1a implements the local
   immutable record boundary and passes 8/8 real `SIGKILL` recovery cells over
   tmpfs and the worktree's ext-family filesystem. Identical records skip,
   conflicting/truncated artifacts quarantine without overwrite or promotion,
   filename/key drift rejects, and all recovered canonical bundles equal the
   uninterrupted control. This does not test power loss, NFS, solvers, leases,
-  cgroups, or remote hosts. Next: E1b integrates an opt-in writer and fake
-  solver into the active runner, makes completion last, rejects duplicate raw
-  merge, verifies output sidecars, preserves timeout-observed responses under
-  the SMT-COMP 2026 rule, removes signal-to-OOM guessing, and defines
-  single-owner recovery; E2-E3 then prove aggregate
-  enforcement and multi-host recovery. Do not rerun the 64,345-file candidate first.
+  cgroups, or remote hosts. E1b now integrates the opt-in writer and fake solver
+  into the active runner, makes completion last, rejects duplicate raw merge,
+  verifies byte-exact output sidecars, preserves timeout-observed responses
+  under the registered SMT-COMP 2026 policy, removes signal-to-OOM guessing,
+  records attempt lifecycle, and defines explicit single-owner recovery. Its
+  CLI rejects non-fixture resource envelopes. Next: E2-E3 prove real aggregate
+  enforcement and multi-host recovery, while the official-style selection
+  ledger remains independently open. Do not rerun the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle
   logs.** `docs/PROJECT-STATE.md` now separates implemented surface, committed
@@ -7077,6 +7103,19 @@ plan is built and committed on the current branch:
   gates pass under the 4 GiB/one-worker policy. No M0 computation stream or
   generated assurance artifact was observed. M2 native expansion/restoration
   is next under proposed ADR-0355.
+- **2026-07-22 — Completed fixture-only SMT-COMP resumable runner E1b and
+  sound-declined a current QF_AUFLIA wrong-`unsat`.** The opt-in runner now
+  validates exact run/selection/corpus/environment/solver/source/toolchain
+  identity before execution, owns each shard through an explicit lease, records
+  immutable attempts/results/output sidecars/terminals, and publishes completion
+  last. Real kill/resume, contention, timeout-response, typed-termination,
+  duplicate, and mutation gates pass; real resource envelopes remain rejected
+  pending E2-E3. Audit of the stale 64,345-file run found its second WRONG marker
+  at `QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2`. Current Axeyum also
+  returned `unsat`; cvc5 1.3.4 and cvc5 over Axeyum's parse/write round-trip both
+  returned `sat`. Because the scalar UFLIA refutation has no proof checker/lift,
+  the AUFLIA lazy-ROW adapter now returns `unknown` for that untrusted outcome.
+  The exact benchmark and regression freeze the soundness boundary.
 
 - **2026-07-22 — Completed TL2.14 M0 source/wire freeze without product
   observation.** A 2,917-byte explicit-recursor source compiles twice to one

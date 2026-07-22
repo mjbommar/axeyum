@@ -5,6 +5,8 @@
 //! with generic array model projection.
 #![cfg(feature = "full")]
 
+use std::time::Duration;
+
 use axeyum_ir::{Value, eval};
 use axeyum_smtlib::parse_script;
 use axeyum_solver::{CheckResult, SolverConfig, check_auto};
@@ -419,4 +421,26 @@ fn const_array_store_chain_same_default_is_not_refuted() {
     let assertions = script.checked_flat_view().to_vec();
     let result = check_auto(&mut script.arena, &assertions, &SolverConfig::default()).unwrap();
     assert_ne!(result, CheckResult::Unsat);
+}
+
+#[test]
+fn public_pipeline_invalid_sat_never_exports_unchecked_auflia_unsat() {
+    // SMT-LIB 2024 QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2 is
+    // labelled SAT and independently rechecked with cvc5. The scalar UFLIA
+    // search currently refutes its lazy-ROW abstraction, but that refutation
+    // has no independently checked proof. Preserve the sound public boundary:
+    // either find a replaying SAT model or decline, never export that UNSAT.
+    let mut script = parse_script(include_str!(
+        "../../../corpus/public-curated/non-incremental/QF_AUFLIA/cvc5-regress-clean/smtlib2024__array_benchmarks__misc__pipeline-invalid.smt2"
+    ))
+    .unwrap();
+    let assertions = script.checked_flat_view().to_vec();
+    let config = SolverConfig::default().with_timeout(Duration::from_secs(15));
+    let result = check_auto(&mut script.arena, &assertions, &config).unwrap();
+
+    assert_ne!(
+        result,
+        CheckResult::Unsat,
+        "a scalar UFLIA refutation without a lifted checked proof must decline"
+    );
 }

@@ -19,7 +19,7 @@ program remains
 (gaps **G0–G10** + its 10-item next-actions list). This document adds the
 *full-library empirical layer* those gaps were designed to measure (G1's
 coverage-weighted matrix, G2's production depth, G3's neutral correctness) and
-records **one P0 defect the run surfaced**. Read the two together; where they
+records **two P0 defects the run surfaced**. Read the two together; where they
 conflict, the *measured* number wins (that is literally G0).
 
 Cross-references use the existing plan spine: Track/Phase IDs from
@@ -31,12 +31,13 @@ and [`capability-matrix.md`](../research/08-planning/capability-matrix.md).
 
 ---
 
-## 0. P0 — Soundness defect found by the run (blocks every parity claim)
+## 0. P0 — Soundness defects found by the run (block every parity claim)
 
-The run caught a **wrong-`sat`** on a real SMT-LIB benchmark — the single most
-serious class of defect in the project (CLAUDE.md: *"We never ship a wrong
-sat/unsat"*). It invalidates the DISAGREE = 0 soundness floor until fixed, so it
-is **ahead of every decide-rate item below**.
+The stale run caught both directions of wrong verdict on real SMT-LIB
+benchmarks. They invalidate the DISAGREE = 0 soundness floor until repaired, so
+they are **ahead of every decide-rate item below**.
+
+### P0-A — FP wrong-`sat`
 
 - **File:** `QF_ABVFP/20170428-Liew-KLEE/imperial_synthetic_fadd_to_exact_zero_klee_float.x86_64/query.26.smt2`
   (declared `:status unsat`).
@@ -74,6 +75,32 @@ selects the exact-zero sign from the rounding mode for both add and FMA.
 4. This maps onto Track 3 **P3.0** (trust ledger) and the **P2.8** FP row
    ([`track-2-theories/README.md`](track-2-theories/README.md)); the fuzz-coverage
    rule is the FP analogue of the div/mod-by-0 lesson (ADR referenced in CLAUDE.md).
+
+### P0-B — QF_AUFLIA wrong-`unsat`
+
+- **File:** `QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2`, declared
+  `:status sat`; exact SHA-256
+  `dc7f8f51be688669321c8a9a15f2543fc070bc3a4c55b81c763604c34fa73bde`.
+- **Verdict disagreement:** the staged stale binary returned `unsat` in 12.10 s.
+  Current Axeyum reproduced `unsat`; cvc5 1.3.4 returned `sat` immediately.
+  cvc5 also returned `sat` after Axeyum parsed and sharing-preservingly rewrote
+  the script, ruling out a stale-binary or parser/round-trip explanation.
+- **Boundary:** the lazy-ROW adapter reduces arrays to a scalar QF_UFLIA
+  abstraction. Both Axeyum scalar searches refute this satisfiable abstraction,
+  but neither produces an independently checked proof that can be lifted through
+  the array abstraction. Exporting that search result contradicted the existing
+  foundational DAG contract: integer-bearing `unsat` without evidence must
+  decline.
+- **Repair:** the QF_AUFLIA lazy-ROW adapter now converts such unchecked scalar
+  refutations to `unknown`. Cheap certificate-rechecked array refuters still run
+  before the adapter, so proven array UNSAT coverage is retained. The exact
+  public benchmark is committed under the curated QF_AUFLIA corpus and pinned by
+  a no-wrong-verdict regression.
+
+**Exit criteria:** the exact regression never returns `unsat`; a future regain
+of this UNSAT coverage requires a small independently checked scalar proof plus
+an explicit lift through the array abstraction, not agreement between two
+untrusted search paths.
 
 > **Why the monitor missed it:** the alerts-only s4 monitor had lapsed between
 > re-arms; the wrong answer was caught by this analysis pass reading the shard
@@ -122,7 +149,9 @@ Two structural facts jump out:
 Three different measurements, kept explicitly separate (do not conflate — G0):
 
 - **axeyum @ s4** — the live full-library §6 run, 300 s ceiling, shared hardware.
-  Partial (~29 % through as of writing; skewed to the quantified block).
+  Partial (~32 % through at the latest audit) and running a stale binary. It is
+  diagnostic-only because it predates both P0 repairs and the E1b-E3 durability
+  protocol.
 - **axeyum @ SCOREBOARD** — the committed curated-regression decide-rate vs
   z3 4.13.3 ([`../../bench-results/SCOREBOARD.md`](../../bench-results/SCOREBOARD.md)):
   **753/992 ≈ 76 %, DISAGREE = 0** over 680 oracle-compared.
@@ -133,7 +162,7 @@ Three different measurements, kept explicitly separate (do not conflate — G0):
 |---|---:|---:|---|---|---|
 | **QF_ABVFP** | 18,129 | **90 %** | — | (in QF_FP family) | strong — **but P0 wrong-sat here** |
 | **QF_ABV** | 15,148 | **91 %** | 88 % (169/193) | Bitwuzla **99.7 %** (7,553/7,574) | close; hard-tail + budget |
-| **QF_AUFLIA** | small | 73 % | 71 % (5/7) | — | mid |
+| **QF_AUFLIA** | small | 73 % | 71 % (5/7) | — | mid; **P0 wrong-unsat in stale run** |
 | **QF_AUFBV** | small | 49 % | 56–93 % | — | mid |
 | **strings** QF_SLIA | 84,395 | *(not yet reached)* | **36 %** (18/50) — weak | cvc5-class ~65–80 % | **biggest volume gap** |
 | **strings** QF_S | 18,940 | *(not yet)* | 65 % (87/134) | — | volume + sat-direction |
@@ -169,9 +198,12 @@ existing priority orders in
 [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) (leverage
 order), and [`decide-rate-frontier-2026-06-28.md`](decide-rate-frontier-2026-06-28.md).
 
-### Rank 0 — Fix the P0 FP wrong-`sat` (soundness floor) — *fixed locally; slice validation open*
-See §0. Nothing else ships as "parity" until the three affected full-library
-slices are re-run at DISAGREE = 0. Track 3 **P3.0** / **P2.8**.
+### Rank 0 — Fix both P0 wrong verdicts (soundness floor)
+See §0. FP code repair and focused validation are complete, with full affected
+slices open. AUFLIA now sound-declines the unchecked scalar refutation and pins
+the exact benchmark. Nothing ships as "parity" until fresh affected slices use
+the repaired binary and return DISAGREE = 0. Track 3 **P3.0** / **P2.8** plus
+the foundational array/UFLIA evidence boundary.
 
 ### Rank 1 — Finish the measurement itself (G0–G3), because it re-ranks everything
 The s4 run *is* the instrument the current queue asked for. Complete it, then
@@ -288,27 +320,31 @@ specified but had not yet executed at full scale:
 
 ## 5. Concrete next actions (rank-ordered, checkable)
 
-1. **[P0 validation]** Review/land the exact-zero sign fix and re-run the full
-   QF_FP/QF_BVFP/QF_ABVFP selected slices → DISAGREE 0. The root cause, focused
-   tests, minimized regression, all-mode fuzz widening, 600-case cvc5 sweep, and
-   the two original full-query reruns are already green.
-2. **[measurement]** Let the s4 §6 run finish (thermally-safe config on s4 only,
-   N=8; s5–s7 available if scaled); keep a persistent `WRONG` grep on the shard
-   logs. On completion, run `inventory.py` → a dated `bench-results/` record with
-   the per-logic decide/decline/wrong table + charts (as the 228-file record).
-3. **[G3]** Score the same 64,345 files with cvc5 + Bitwuzla (already staged) →
+1. **[P0 validation]** Re-run the full QF_FP/QF_BVFP/QF_ABVFP selected slices
+   with the exact-zero repair and the QF_AUFLIA slice with the unchecked-UNSAT
+   gate → DISAGREE 0. Focused FP tests/fuzz and the exact AUFLIA regression are
+   already green.
+2. **[measurement durability]** E1b is fixture-complete. Implement E2 real
+   one-host aggregate enforcement and E3 multi-host loss/retry, then close the
+   independent official eligibility/status/difficulty selection ledger. The
+   currently running stale s4 job may inform diagnostics but receives no
+   measurement credit and must not be promoted merely because it finishes.
+3. **[measurement]** Only after (2), stage the repaired binary and execute the
+   selected population into a versioned resumable run; `inventory.py` then emits
+   the dated per-logic decide/decline/wrong record and charts.
+4. **[G3]** Score the same 64,345 files with cvc5 + Bitwuzla (already staged) →
    committed three-solver per-logic comparison; this *is* the "full universe"
    reference the earlier question asked for.
-4. **[G1]** Regenerate the coverage-weighted parity matrix from (2)+(3); reconcile
+5. **[G1]** Regenerate the coverage-weighted parity matrix from (3)+(4); reconcile
    with `SCOREBOARD.md` (different corpora — keep both, label clearly).
-5. **[Rank 4]** Land the CDCL(T) default-dispatch ADR + begin porting arrays onto
+6. **[Rank 4]** Land the CDCL(T) default-dispatch ADR + begin porting arrays onto
    the spine (unblocks Ranks 2–3).
-6. **[Rank 3]** Scope **T2.6.5** (general MBQI model-finding) + **T2.6.1** (MAM)
+7. **[Rank 3]** Scope **T2.6.5** (general MBQI model-finding) + **T2.6.1** (MAM)
    against the *measured* quantified-logic residual shapes from (2), not from
    estimates — pick mechanisms from real decline data (G4 discipline).
-7. **[Rank 2]** Scope the string decide-rate lever (cheap encoding first) against
+8. **[Rank 2]** Scope the string decide-rate lever (cheap encoding first) against
    the measured QF_SLIA/QF_S residuals once the run reaches them.
-8. **[Rank 6]** Flip + measure P1.1/P1.2 inprocessing on the QF_BV hard-tail
+9. **[Rank 6]** Flip + measure P1.1/P1.2 inprocessing on the QF_BV hard-tail
    families; PAR-2 delta vs Bitwuzla on the s4 QF_BV slice.
 
 ---
