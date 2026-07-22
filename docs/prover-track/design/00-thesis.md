@@ -89,7 +89,7 @@ on day one.
 
 | Constraint | Source |
 |---|---|
-| **P6.0 first.** The kernel admitted `False`; **zero fuzz**; positivity enforced only *vacuously*; **64** unproven prelude axioms; `Lit::Nat` truncation unguarded. Foundation **and** product. | ADR-0165; notes 01/06 |
+| **P6.0 first.** The kernel admitted `False`; **zero fuzz**; positivity enforced only *vacuously*; **65** runtime-ledgered but unproven prelude assumptions; `Lit::Nat` truncation unguarded. Foundation **and** product. | ADR-0165; TL0.4; notes 01/06 |
 | **`Refute` ships only after its checker.** A mistranslated goal returning `sat` is a confident wrong answer with nothing checking it — worse than none. | note 08 → P6.1c |
 | **Never invent a surface syntax.** LLMs score **0/33 across 660 attempts** on a low-resource formal language. Goals are **data**; where an agent must write, it writes SMT-LIB or Lean and we compile down. | note 10 |
 | **Binary certificates; checking throughput as a defended gate.** MM0 checks ZFC in **<200 ms**. `bv_decide`'s bottleneck is *kernel reduction*, not solve time — that is the axis to win. | note 11 |
@@ -148,7 +148,7 @@ Detail: [`03-architecture.md`](03-architecture.md) §10 and
 Stated first, per *Verification Theatre* — the undocumented boundary is what bites.
 
 - **In the TCB:** `axeyum-lean-kernel` (which admitted `False` on 2026-07-15), the
-  `check/` module, **64** unproven prelude axioms, `rustc`, **6 of 14** open
+  `check/` module, **65** unproven prelude assumptions, `rustc`, **6 of 14** open
   reduction-ledger entries.
 - **Not in the TCB:** the solver, the e-graph, PDR, the bridge, every tactic, any
   agent.

@@ -30,6 +30,12 @@ Last updated: 2026-07-21
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib
 > inventories while keeping the L0-L10 implementation program explicitly open.
+> TL0.4 now freezes the actual reconstruction-prelude trust boundary in a
+> [runtime-derived 65-row ledger](../../../docs/plan/generated/lean-axiom-ledger.md):
+> real 30, integer 34, string 1, with canonical type digests and mutation-tested
+> population drift checks. The former 64-row helper-call census omitted the
+> directly inserted string `append` axiom. Classification and discharge remain
+> open under TL3.2; inventory is not truth.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

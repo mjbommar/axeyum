@@ -278,7 +278,7 @@ Every item below was found by **running something**, not by reading it.
 | Finding | Status |
 |---|---|
 | **The kernel admitted `theorem bad : False`** — unrestricted `Prop` large elimination + proof irrelevance | **Fixed** (ADR-0165, `d26ad887`), exploit inverted into a regression + boundary matrix |
-| **64 unproven prelude axioms** (arith 30 + int 34), counted. ℝ's carrier is an opaque `Declaration::Axiom`; Lean accepts axioms **vacuously**; `#print axioms` is an *inventory, not a validation* | **Open** — T6.0.6 |
+| **65 unproven prelude assumptions** (real 30 + integer 34 + string `append` 1), runtime-inventoried and type-digested. Carriers, operations, and laws include opaque `Declaration::Axiom` values; Lean accepts axioms **vacuously**; the ledger is an *inventory, not a validation* | **Inventory DONE (TL0.4); classification/discharge OPEN** — T6.0.6/TL3.2 |
 | **Positivity is enforced only *vacuously*** — an accident of `ReflexiveOrNestedNotSupported`. Land the obvious next inductive gap and it **vanishes with no checker behind it** | **Open** — T6.0.2, the P0 pattern pre-loaded |
 | **`Lit::Nat` is `u128`; truncation guarded by nothing** — inert only because `UnsupportedLit` rejects literals first | **Open** — T6.0.4, an ordering hazard |
 | **ℝ and ℤ preludes cannot coexist — it panics.** 28 shared names; the gate *correctly rejected* rather than aliasing `add : R→R→R` onto `add : ℤ→ℤ→ℤ`, but the builder `.expect()`s | **Open** — T6.0.8 |
@@ -372,7 +372,7 @@ reliably than I did.
 ## What to do first
 
 1. **P6.0.** Not contingent on anything here. The kernel admitted `False`, has
-   zero fuzz, enforces positivity vacuously, carries 64 unproven axioms, and
+   zero fuzz, enforces positivity vacuously, carries 65 unproven assumptions, and
    P3.6/P3.7 route all their assurance through it. **And it is the product** — a
    kernel that admitted `False` cannot be anyone's independent check.
 2. **[ADR-0166](../research/09-decisions/adr-0166-alethe-target-reassessment.md).**

@@ -155,10 +155,12 @@ The useful relationship is therefore a bridge:
 | finite model replay and counterexamples | `decide`/`native_decide`-style bounded goals and refutation feedback | CIC-to-IR totality gate and replayed model-to-source mapping |
 | curriculum/example packs | selected theorem targets and regression cases | imported theorem identities and no-`sorry` evidence |
 
-The first mathlib milestone is not “implement mathlib.” It is to eliminate the
-current 64 arithmetic/integer plus one string prelude assumptions where
-possible, then import and independently check a small, pinned theorem slice that
-exercises the CAS/tactic crosswalk.
+The first mathlib milestone is not “implement mathlib.” It is to classify and
+then eliminate where possible the current **65** reconstruction-prelude
+assumptions (real 30, integer 34, string 1), then import and independently check
+a small, pinned theorem slice that exercises the CAS/tactic crosswalk. The
+[runtime-derived ledger](lean-axiom-ledger-v1.json) binds every admitted name to
+its canonical type; it does not yet prove any row true.
 
 ## 3. What official Lean actually does
 
@@ -433,8 +435,8 @@ Goal: measure real library compatibility and reduce Axeyum-created axioms.
 Order:
 
 1. export and inventory the exact Axeyum reconstruction prelude;
-2. classify all 64 current prelude axioms as expected external assumptions,
-   derivable theorems, kernel primitives, or defects;
+2. classify all 65 current prelude assumptions as expected external
+   assumptions, derivable theorems, primitive interfaces, or defects;
 3. discharge derivable axioms and fail on new unregistered axioms;
 4. import bounded slices of `Init` and `Std` chosen by construct coverage;
 5. import a pinned mathlib smoke slice: basic algebraic structures plus the
@@ -682,9 +684,9 @@ Non-claims until their gates are met:
    current hand-checked six-profile seed.
 6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
    completed-environment publication mutations.
-7. Inventory and type-digest the 64 arithmetic/integer plus one string prelude
-   assumptions; choose the first five to discharge from existing
-   arithmetic/CAS evidence.
+7. **DONE (inventory/digest):** retain the runtime-derived, type-digested
+   65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
+   five derivable assumptions to discharge from existing arithmetic/CAS evidence.
 8. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
    dependency-closed admissions gained per slice.
 9. Select one mathlib `norm_num` or `ring` theorem basis and implement one

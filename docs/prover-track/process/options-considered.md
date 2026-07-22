@@ -165,7 +165,7 @@ The work itself remains real and is owed regardless — it just is not a substit
 |---|---|---|
 | Quantified **UF** 0/5 (**not** quantified LIA — see above) | Track 2 | P6.6 attacks it by decomposition; Track 2 attacks it by deciding. Both, not either |
 | Trusted-reduction ledger — **6 of 14** `TrustId` variants open; `IntBlast`, `XorGaussian` "unsound with no recovery" at pedantic 3 | Track 3 | The layer inherits every hole |
-| **64** unproven prelude axioms | Track 3 / **T6.0.6** | Bounds what "kernel-checked" means for arithmetic |
+| **65** unproven prelude assumptions (64 arithmetic/integer + string `append`) | Track 3 / **T6.0.6** / TL3.2 | Bounds what "kernel-checked" means; TL0.4 now freezes names/types but does not prove them |
 | `sat` has no trust story | **P6.1c** | Counterexamples are unsound until it lands |
 
 *(v3 cited "6/14" here. Uncited and wrong: `trust.rs` defines 13 `TrustId`

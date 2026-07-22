@@ -369,6 +369,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — TL0.4 binds the actual 65-assumption prelude boundary.** A
+  runtime inventory constructs the real, integer, and string reconstruction
+  preludes in independent kernels and enumerates admitted `Declaration::Axiom`
+  values. The checked
+  [`lean-axiom-ledger-v1.json`](docs/plan/lean-axiom-ledger-v1.json) records 30
+  real, 34 integer, and one string assumption with canonical rendered type,
+  SHA-256 digest, source, owner, classification, and discharge fields; the
+  generated [65-row ledger](docs/plan/generated/lean-axiom-ledger.md) is
+  byte-stable. This corrects the old 64-row helper-call census, which missed
+  `axeyum.string.append` because it is inserted directly as
+  `Declaration::Axiom`. Seven mutation/contract tests reject missing, extra,
+  duplicate, renamed, type-mutated, illegally classified, or falsely
+  discharged rows, and `parity-docs` reconstructs the preludes under the 4 GiB
+  cap. Validation passes 177 kernel unit tests, four integration tests including
+  the official-Lean cross-check, all seven ledger tests, the full direct
+  `parity-docs` command set, generated-file checks, link checks, touched-file
+  rustfmt, and `git diff --check`. The single kernel doctest compiled but could
+  not link because both lld and GNU ld hit the host `/tmp`/user quota; 52 GiB of
+  regenerable incremental/example cache was removed without touching source or
+  evidence. Workspace-wide `cargo fmt --all --check` still fails on the same
+  pre-existing unrelated `axeyum-bench`/`axeyum-cas` drift. All 65 rows remain
+  explicitly `unclassified`/`unreviewed`; TL0.4 freezes the trust boundary but
+  does not prove it. Next: seed T6.0.3/TL2.15 seam fuzz, then execute projection
+  TL2.2-TL2.5; TL3.2 owns semantic classification and discharge targets.
+
 - **2026-07-21 — TL0.1/TL0.2 close the Lean ownership and assurance
   boundary.** ADR-0167 and ADR-0345 are accepted together: Track 6 owns the one
   goal/tactic engine; the Lean-system program owns versioned import,
@@ -389,9 +414,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   tests, full parity-doc suite, JSON check, generated-file check, and docs links
   are green. `cargo fmt --all --check` remains red on pre-existing committed
   formatting drift in unrelated `axeyum-bench`/`axeyum-cas` Rust files; this
-  slice does not rewrite them. Next: TL0.4 inventories and type-digests all 65
-  current prelude assumptions while T6.0.3/TL2.15 establishes the seam-fuzz
-  harness before projection TL2.2-TL2.5 changes kernel semantics.
+  slice does not rewrite them. TL0.4 follows immediately above; next is the
+  T6.0.3/TL2.15 seam-fuzz harness before projection TL2.2-TL2.5 changes kernel
+  semantics.
 
 - **2026-07-21 — the complete Lean-system implementation program is now an
   executable plan, not a list of missing subsystems.** The active
@@ -471,8 +496,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   review ADR-0345 and the crate/TCB boundary, implement projection
   representation/inference/constructor reduction, generate the remaining
   recursive-indexed/mutual/nested/reflexive fixtures plus the assurance matrix,
-  then type-digest the 64 prelude axioms before any native parser, Lake, LSP, or
-  compiler work. See the
+  then retain the now-landed runtime/type-digested 65-assumption ledger before
+  any native parser, Lake, LSP, or compiler work. See the
   [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md)
   and [official blocker census](docs/plan/lean4export-official-blocker-census-2026-07-21.md).
 

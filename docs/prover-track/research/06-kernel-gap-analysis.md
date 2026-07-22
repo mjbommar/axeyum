@@ -440,7 +440,8 @@ family shape (nullary-ctor `Prop` enum). That is a keyhole, not a corpus.
   land, that incidental rejection disappears and positivity (row #12) becomes
   load-bearing overnight.** This is the single highest-risk sequencing hazard in
   P6.0 after Finding B.
-- **The 64 arith/int prelude axioms are untested as to truth** (Finding A). The
+- **The 64 arithmetic/integer prelude axioms are untested as to truth**, as is
+  the string prelude's opaque `append` assumption (Finding A). The
   prelude tests (`arith_prelude_tests.rs`, 9; `int_prelude_tests.rs`, 7) build
   refutation proof *terms* on the axioms and `infer`-check them
   (`arith_prelude.rs:12-14`) — this validates the *reconstruction*, and assumes
@@ -574,10 +575,11 @@ Ordered by whether they *block* a goal layer or merely bound its scope.
 
 **Soundness obligations (the goal layer's results are only as good as these):**
 
-5. **Discharge the 64 arith/int prelude axioms against mathlib** (Finding A).
-   Until then, every LRA/LIA reconstruction rests on 64 unproven assertions
-   that no gate checks and that the real-Lean cross-check *structurally cannot*
-   catch (§3). This is the largest unguarded soundness surface in the crate.
+5. **Classify and discharge the 65 ledgered prelude assumptions** (Finding A).
+   Until then, every LRA/LIA reconstruction rests on 64 unproven arithmetic/
+   integer assertions, while string reconstruction rests on one opaque `append`
+   assumption. No official-Lean cross-check can establish those premises (§3).
+   This is the largest unguarded soundness surface in the crate.
    **XL as stated, but the first 80% is mechanical**: emit each axiom type as a
    mathlib obligation and discharge in CI.
 6. **A machine-checked axiom inventory.** Assert that each prelude declares
@@ -613,7 +615,7 @@ every gap except the prelude axioms (Finding A) and latent bignum truncation
 (Finding B) is deferred by rejection, with a rollback-clean admission gate and
 a negative test per boundary. **No second instance of the P0 permission pattern
 exists in the kernel rules.** The exposure has moved out of the kernel and into
-(a) the 64 unproven arithmetic axioms the reconstruction layer trusts, and
+(a) the 65 unproven prelude assumptions the reconstruction layer trusts, and
 (b) the sequencing hazards — bignum-after-`Lit`, and positivity-after-recursive
 inductives — either of which would let a P0-shaped defect back in by omission
 rather than by commission.
@@ -625,7 +627,7 @@ rather than by commission.
 Three corrections/extensions to the above, each checked by running code rather
 than reading it.
 
-### The axiom count is exactly 64, not "~74"
+### Historical helper-call census: 64, superseded by runtime population 65
 
 By census of `declare_axiom(` call sites:
 
@@ -639,7 +641,15 @@ By census of `declare_axiom(` call sites:
 
 The "~74" that circulated through the design docs was an estimate presented as a
 count — the same unsourced-number sin this track flagged twice and then committed
-a third time. Use **64**, or count again.
+a third time. This table correctly counts helper calls but incorrectly treats
+them as the complete runtime population.
+
+**Correction (runtime environment inventory, 2026-07-21):** constructing each
+prelude in an independent kernel yields **65** admitted assumptions: real 30,
+integer 34, and string 1. `axeyum.string.append` bypasses `declare_axiom(...)`
+and is inserted directly as `Declaration::Axiom`, so the helper-call census
+missed it. The [machine-checked ledger](../../plan/generated/lean-axiom-ledger.md)
+binds all 65 names to canonical type digests and supersedes this call-site count.
 
 ### The ℝ and ℤ preludes cannot coexist in one `Kernel` — and it panics
 

@@ -290,8 +290,9 @@ mutual, nested, and reflexive groups remain explicit declines.
    fixtures.
 3. Add duplicate-ID, truncation-at-every-record, oversized integer, deep JSON,
    unknown-field, and whole-stream publication mutations.
-4. Hash axiom names **and types**, then inventory the 64 Axeyum prelude axioms
-   against that stable identity.
+4. **DONE:** hash axiom names **and canonical types**, then bind the 65 actual
+   Axeyum prelude assumptions (real 30, integer 34, string 1) to that stable
+   [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
 6. Implement projection representation/inference/constructor reduction, then

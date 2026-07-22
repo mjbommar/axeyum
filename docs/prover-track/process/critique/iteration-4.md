@@ -4,6 +4,13 @@
 `ADR-0167`, `research/11-dedukti-and-substrates.md`.
 **Following:** [`iteration-3.md`](iteration-3.md).
 
+> **Historical-number correction (2026-07-21):** this review's 64-row figure
+> was the arithmetic/integer helper-call census, not the complete admitted
+> population. Runtime construction finds 65 assumptions: real 30, integer 34,
+> and the directly inserted string `append` axiom. The
+> [type-digested ledger](../../../plan/generated/lean-axiom-ledger.md) supersedes
+> the number below without rewriting the review's original reasoning.
+
 **Verdict up front: NEEDS REVISION.** The sixth premise is named in F1 and it is
 round 3's mistake with the sign flipped, exactly as feared. This round's other
 findings are consequences of it.

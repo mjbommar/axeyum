@@ -153,7 +153,7 @@ the interoperability and Track 6 plans.
 | TL0.1 | DONE | Accept or revise ADR-0345 and ADR-0167 together; record ownership of imports, mathlib, source, goals, and tactics. | — | S | Both ADRs use the ownership table in this plan; research question is closed. |
 | TL0.2 | DONE | Add `lean-compatibility-v1.json` schema with the eight assurance states and stable decline codes. | TL0.1 | M | Six mutation/contract tests reject illegal credit; the 12-row [generated matrix](generated/lean-compatibility.md) is byte-stable. |
 | TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, and host-independent options. | — | S | One manifest drives exporter, importer, and official-check tests. |
-| TL0.4 | TODO | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | Adding or changing an axiom fails CI until the ledger changes. |
+| TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
 | TL0.6 | TODO | Add generated construct, declaration-root, tactic, project, editor, and runtime scoreboards. | TL0.2 | M | Every profile has exact denominators and blocker categories. |
 | TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
@@ -219,7 +219,7 @@ dependency-closed library compatibility.
 | ID | Status | Task | Depends | Size | Exit artifact/gate |
 |---|---|---|---|---|---|
 | TL3.1 | TODO | Export and content-digest the exact logic, real, integer, and string reconstruction preludes. | TL1.7 | M | Complete dependency and axiom inventory is reproducible. |
-| TL3.2 | TODO | Classify the 64 arithmetic/integer axioms plus the string axiom as primitive, external assumption, derivable theorem, or defect. | TL0.4, TL3.1 | M | Every row has an owner and discharge target. |
+| TL3.2 | TODO | Classify all 65 ledgered assumptions (real 30, integer 34, string 1) as primitive interface, external assumption, derivable theorem, or defect. | TL0.4, TL3.1 | M | Every row has an accepted semantic class and concrete discharge target or retained-boundary rationale. |
 | TL3.3 | TODO | Namespace and make all preludes fallible/idempotent so logic/Real/Int/String coexist in one kernel; this fulfills T6.0.8 rather than duplicating it. | TL3.1 | M | Combined build has no collision or panic. |
 | TL3.4 | TODO | Discharge the first five derivable axioms using imported theorem dependencies or explicit kernel terms. | TL3.2 | M | Axiom count falls and official/Axeyum checks agree. |
 | TL3.5 | TODO | Discharge every derivable prelude axiom; retain irreducible assumptions only as explicit profile inputs. | TL3.4 | XL | Ledger has zero unclassified rows and no hidden additions. |
@@ -442,8 +442,8 @@ parallel lane:
 
 1. **DONE:** TL0.1 — reconcile and accept ADR-0345 and ADR-0167.
 2. **DONE:** TL0.2 — land the machine-readable capability schema and generated matrix.
-3. TL0.4 — land the axiom ledger schema and current 65-row inventory.
-4. T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
+3. **DONE:** TL0.4 — land the axiom ledger schema and current 65-row inventory.
+4. **NEXT:** T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
 5. TL2.2 — add `Proj` representation and exhaustive traversal tests.
 6. TL2.3 — add structure metadata and dependent projection inference.
 7. TL2.4 — add constructor projection reduction.

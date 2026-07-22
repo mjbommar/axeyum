@@ -71,10 +71,11 @@ state.
 > declarations and also reaches Nat literals and recursive-indexed inductives.
 > Three small streams are committed, the 570,807-byte String stream is bound by
 > source/command/hash, and 11 Rust plus eight Python tests hold the boundary.
-> Resume with projection representation/inference/reduction, the remaining
-> recursive-indexed/mutual/nested/reflexive fixture matrix, and type-digesting
-> the 64 arithmetic/integer plus one string prelude assumptions before dependent
-> native elaborator, Lake, LSP, or compiler work. The TL6.1-TL6.4 source/syntax
+> Resume with projection representation/inference/reduction and the remaining
+> recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
+> TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
+> string 1) by canonical type digest before dependent native elaborator, Lake,
+> LSP, or compiler work. The TL6.1-TL6.4 source/syntax
 > substrate may proceed independently after TL0. See
 > the
 > [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
@@ -94,8 +95,11 @@ state.
 > exact rows across eight independent assurance fields, three currently passing
 > profile rows, three explicit import declines, and ten source-bound decline
 > codes; six mutation/contract tests reject illegal parser/oracle-to-admission
-> credit. Continue with TL0.4's 65-row axiom ledger while seeding
-> T6.0.3/TL2.15, then execute projection TL2.2-TL2.5. Native parser/macros,
+> credit. TL0.4 is now closed by the 65-row runtime-derived
+> [axiom ledger](docs/plan/generated/lean-axiom-ledger.md): seven tests and the
+> normal gate reject population/name/type drift, while all rows remain honestly
+> unclassified for TL3.2. Continue with the T6.0.3/TL2.15 seam-fuzz seed, then
+> execute projection TL2.2-TL2.5. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

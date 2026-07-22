@@ -769,6 +769,10 @@ belongs in the gate, not in review.**
 - **The axiom count is exactly 64** (arith 30 + int 34; logic and string 0). Not
   "~74". I had published that estimate as a count in three documents — the third
   instance of the exact sin I kept flagging. Now counted.
+  **Correction, 2026-07-21:** this was only a `declare_axiom(...)` call-site
+  census. Runtime construction finds one additional directly inserted
+  `axeyum.string.append` axiom, for 65 total; the type-digested TL0.4 ledger is
+  authoritative.
 - **The ℝ and ℤ preludes cannot coexist in one `Kernel`, and it panics.** 28
   identically-named axioms off the same anonymous root. Probed directly: it fails
   at `prelude.rs:182` on `True` before even reaching the 28. **The gate behaved
@@ -1121,6 +1125,11 @@ I was correcting, and it is the fourth instance of the same failure in one sessi
 
 The counts are now: **64 axioms** (arith 30 + int 34, by `declare_axiom(` census)
 and **6 of 14** ledger entries open (by `is_certified()`).
+
+**Correction, 2026-07-21:** the text itself identifies the weak method. The
+runtime population is 65 because `axeyum.string.append` is inserted directly as
+`Declaration::Axiom`; TL0.4 now derives and type-digests the environment instead
+of treating helper-call grep as a census.
 
 **The lesson is not "check your numbers."** I knew that; I wrote it down twice and
 did it anyway. The lesson is that **a grep is not a census** — the failure was

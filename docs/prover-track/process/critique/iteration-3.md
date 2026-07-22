@@ -3,6 +3,11 @@
 **Scope:** `design/00-thesis.md` (v4), `plan/README.md` (P6.0–P6.6), `DIARY.md`
 (2026-07-15 late), research notes 01/04/07/08, checked against the repo.
 
+> **Historical-number correction (2026-07-21):** later runtime inventory found
+> 65 admitted prelude assumptions (real 30, integer 34, string `append` 1).
+> Call-site/line counts discussed below were not a complete environment census;
+> the [runtime ledger](../../../plan/generated/lean-axiom-ledger.md) is authoritative.
+
 **Charge:** v4 reversed v3's considered position immediately after a grader told
 the author the position was unacceptable. Round 2's central finding was that this
 author concedes to whoever holds the pen. The question is whether v4 found a real

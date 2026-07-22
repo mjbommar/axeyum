@@ -45,6 +45,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   executable eight-field assurance contract, K0-K6 profile gates, registered
   importer decline codes, exact current artifacts, and fail-closed implication
   checks preventing parser/oracle evidence from becoming independent admission.
+- [`lean-axiom-ledger-v1.json`](lean-axiom-ledger-v1.json) and generated
+  [`Lean prelude-axiom ledger`](generated/lean-axiom-ledger.md) — TL0.4's
+  runtime-derived 65-row population (real 30, integer 34, string 1), with each
+  admitted name bound to its canonical kernel-rendered type digest, source,
+  owner, classification, and discharge state. The gate rejects added, removed,
+  renamed, or type-mutated assumptions; semantic classification remains TL3.2.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

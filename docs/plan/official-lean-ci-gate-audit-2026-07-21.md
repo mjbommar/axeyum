@@ -120,7 +120,8 @@ solver-proof families and fixes the missing-binary skip. It does not prove:
 - that the workflow is remotely green; no run on this branch has yet supplied
   that evidence;
 - exhaustive acceptance of every module produced by every family;
-- truth of the 64 asserted arithmetic prelude axioms;
+- truth of the 65 reconstruction-prelude assumptions (64 arithmetic/integer
+  plus the opaque string `append` assumption);
 - absence of unexpected axioms beyond the existing `sorryAx` rejection; or
 - general Lean-core, mathlib, tactic, or ecosystem parity.
 

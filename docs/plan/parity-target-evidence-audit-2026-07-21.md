@@ -99,9 +99,10 @@ But the validation boundary is narrower than “Lean accepts it all”:
 - the kernel audit lists projections, literal/bignum handling, quotient
   computation, generalized recursive/indexed/mutual inductives, positivity,
   and an export/import reader as residual work; and
-- the LRA/LIA reconstruction preludes assert 64 arithmetic axioms. Official
-  Lean can check the generated theorem relative to those axioms, but that does
-  not prove the axioms true or discharge them against mathlib.
+- the LRA/LIA reconstruction preludes assert 64 arithmetic/integer axioms, and
+  the string prelude adds one opaque `append` assumption. Official Lean can
+  check generated theorems relative to those 65 assumptions, but that does not
+  prove them true or discharge them against mathlib.
 
 Lean itself includes parsing, macro expansion, elaboration, compilation, module
 handling, and much more around the kernel, as documented in the official
@@ -119,7 +120,7 @@ profile, and a fail-closed Lean tactic/import path.
 | General Z3 solving power | **Not measured** on a representative matched population | Finish durable official-style selection and run matched Z3/cvc5/Bitwuzla/Axeyum cells before assigning distance |
 | Z3-compatible product surface | Far: command/session/API and portfolio gaps are directly inventoried | Prioritize the ordered session contract and conformance, not another isolated theory seed |
 | Solver-proof export to Lean | Substantial implementation; local representative official-Lean acceptance is 71/71, remote and exhaustive acceptance are open | Archive a green remote attestation, then measure the exhaustive sweep without inflating representative coverage |
-| Declared Lean-core profile | Partial, with explicit kernel and axiom gaps | Build a differential profile and discharge the 64 arithmetic axioms |
+| Declared Lean-core profile | Partial, with explicit kernel and assumption gaps | Build a differential profile; classify and discharge or explicitly retain all 65 ledgered assumptions |
 | Full Lean system | Far and out of scope | Remove it from parity language and roadmap exit criteria |
 
 ## Roadmap changes implied by the audit
@@ -135,7 +136,8 @@ profile, and a fail-closed Lean tactic/import path.
 6. Archive the repaired non-skippable external-Lean job's first remote Lean
    version, 71/71 attestation, duration, RSS, and axiom inventory.
 7. Separate official-Lean source acceptance from validation of asserted prelude
-   mathematics; discharge the 64 arithmetic axioms independently.
+   mathematics; classify and independently discharge or retain the 65 ledgered
+   assumptions.
 8. Make a versioned Lean-core compatibility profile the kernel target.
 9. Make the fail-closed tactic/import bridge the user-facing Lean target.
 10. Keep full Lean language/toolchain parity explicitly out of scope.

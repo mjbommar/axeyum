@@ -164,8 +164,9 @@ The following remain deliberately open and must not be erased by this audit:
 - L1 fuzzing, axiom type digests, and large-stream publication;
 - L2 projections, arbitrary-precision literals, quotient, positivity, and
   recursive-indexed/reflexive/mutual admission;
-- L3 dependency-closed `Init`/`Std`/mathlib slices and discharge/classification
-  of the 64 arithmetic/integer plus one string reconstruction assumptions;
+- L3 dependency-closed `Init`/`Std`/mathlib slices and semantic
+  discharge/classification of the now runtime/type-digested 65 reconstruction
+  assumptions (real 30, integer 34, string 1);
 - L4 goals/holes/unification and L5 certificate tactics;
 - L6 native parser/macros and L4B elaboration;
 - L7 modules/caches/packages/Lake/`.olean` and L8 native editor/LSP;
