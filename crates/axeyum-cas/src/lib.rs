@@ -6673,6 +6673,99 @@ pub fn euler_polynomial(n: u32, var: &str) -> Option<CasExpr> {
     expand(&(CasExpr::Const(inv) * rf.num.to_expr()))
 }
 
+/// Build the degree-`n` member of an orthogonal-polynomial family from its
+/// three-term recurrence: given `p₀`, `p₁`, and `step(k, pₖ, pₖ₋₁) = pₖ₊₁`, iterate
+/// and keep each result in expanded (sum-of-monomials) polynomial form. `None` on
+/// overflow within a step.
+fn orthogonal_recurrence<F>(
+    n: u32,
+    p0: CasExpr,
+    p1: CasExpr,
+    step: F,
+) -> Option<CasExpr>
+where
+    F: Fn(u32, &CasExpr, &CasExpr) -> Option<CasExpr>,
+{
+    if n == 0 {
+        return Some(p0);
+    }
+    let mut prev = p0;
+    let mut curr = p1;
+    for k in 1..n {
+        let next = expand(&step(k, &curr, &prev)?)?;
+        prev = curr;
+        curr = next;
+    }
+    Some(curr)
+}
+
+/// The **Legendre polynomial** `Pₙ(x)`, as an exact [`CasExpr`], from the recurrence
+/// `(n+1)Pₙ₊₁ = (2n+1)x·Pₙ − n·Pₙ₋₁` with `P₀=1`, `P₁=x`. `P₂=(3x²−1)/2`,
+/// `P₃=(5x³−3x)/2`. Orthogonal on `[−1,1]` with weight `1`. `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, legendre_polynomial, equal, ZeroTest};
+/// // P₂(x) = (3x² − 1)/2.
+/// let p2 = legendre_polynomial(2, "x").unwrap();
+/// let expected = (CasExpr::int(3) * CasExpr::var("x").pow(2) - CasExpr::int(1)) / CasExpr::int(2);
+/// assert!(matches!(equal(&p2, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn legendre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    orthogonal_recurrence(n, CasExpr::int(1), x.clone(), |k, pk, pkm1| {
+        let two_k1 = CasExpr::int(i128::from(2 * k + 1));
+        let numerator = two_k1 * x.clone() * pk.clone() - CasExpr::int(i128::from(k)) * pkm1.clone();
+        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
+    })
+}
+
+/// The **physicists' Hermite polynomial** `Hₙ(x)`, from `Hₙ₊₁ = 2x·Hₙ − 2n·Hₙ₋₁`
+/// with `H₀=1`, `H₁=2x`. `H₂=4x²−2`, `H₃=8x³−12x`. Orthogonal on `ℝ` with weight
+/// `e^{−x²}`. `None` on overflow.
+#[must_use]
+pub fn hermite_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(2) * x.clone(), |k, hk, hkm1| {
+        Some(CasExpr::int(2) * x.clone() * hk.clone() - CasExpr::int(i128::from(2 * k)) * hkm1.clone())
+    })
+}
+
+/// The **Chebyshev polynomial of the first kind** `Tₙ(x)`, from `Tₙ₊₁ = 2x·Tₙ − Tₙ₋₁`
+/// with `T₀=1`, `T₁=x`. `T₂=2x²−1`, `T₃=4x³−3x`; `Tₙ(cos θ)=cos(nθ)`. `None` on
+/// overflow.
+#[must_use]
+pub fn chebyshev_t_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    orthogonal_recurrence(n, CasExpr::int(1), x.clone(), |_k, tk, tkm1| {
+        Some(CasExpr::int(2) * x.clone() * tk.clone() - tkm1.clone())
+    })
+}
+
+/// The **Chebyshev polynomial of the second kind** `Uₙ(x)`, from `Uₙ₊₁ = 2x·Uₙ −
+/// Uₙ₋₁` with `U₀=1`, `U₁=2x`. `U₂=4x²−1`, `U₃=8x³−4x`; `Uₙ(cos θ)=sin((n+1)θ)/sin θ`.
+/// `None` on overflow.
+#[must_use]
+pub fn chebyshev_u_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(2) * x.clone(), |_k, uk, ukm1| {
+        Some(CasExpr::int(2) * x.clone() * uk.clone() - ukm1.clone())
+    })
+}
+
+/// The **Laguerre polynomial** `Lₙ(x)`, from `(n+1)Lₙ₊₁ = (2n+1−x)Lₙ − n·Lₙ₋₁` with
+/// `L₀=1`, `L₁=1−x`. `L₂=(x²−4x+2)/2`, `L₃=(−x³+9x²−18x+6)/6`. Orthogonal on `[0,∞)`
+/// with weight `e^{−x}`. `None` on overflow.
+#[must_use]
+pub fn laguerre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(1) - x.clone(), |k, lk, lkm1| {
+        let coeff = CasExpr::int(i128::from(2 * k + 1)) - x.clone();
+        let numerator = coeff * lk.clone() - CasExpr::int(i128::from(k)) * lkm1.clone();
+        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
+    })
+}
+
 /// Fold every elementary head at an argument where it has an exact closed value:
 /// the trigonometric special values of [`evaluate_trig`] (`sin`/`cos`/`tan` at
 /// rational multiples of `π`) **plus** `exp(0)=1`, `ln(1)=0`, `sqrt(0)=0`,
@@ -14439,6 +14532,36 @@ mod tests {
             assert_equal(&en.differentiate("x"), &(CasExpr::int(i128::from(n)) * en_prev));
             let shifted = en.substitute("x", &(x() + CasExpr::int(1)));
             assert_equal(&(shifted + en), &(CasExpr::int(2) * x().pow(n)));
+        }
+    }
+
+    #[test]
+    fn orthogonal_polynomials() {
+        let x = || v("x");
+        // Legendre P₂=(3x²−1)/2, P₃=(5x³−3x)/2, P₄=(35x⁴−30x²+3)/8.
+        assert_equal(&legendre_polynomial(2, "x").unwrap(), &((CasExpr::int(3) * x().pow(2) - CasExpr::int(1)) / CasExpr::int(2)));
+        assert_equal(&legendre_polynomial(3, "x").unwrap(), &((CasExpr::int(5) * x().pow(3) - CasExpr::int(3) * x()) / CasExpr::int(2)));
+        assert_equal(&legendre_polynomial(4, "x").unwrap(), &((CasExpr::int(35) * x().pow(4) - CasExpr::int(30) * x().pow(2) + CasExpr::int(3)) / CasExpr::int(8)));
+        // Hermite (physicists') H₂=4x²−2, H₃=8x³−12x.
+        assert_equal(&hermite_polynomial(2, "x").unwrap(), &(CasExpr::int(4) * x().pow(2) - CasExpr::int(2)));
+        assert_equal(&hermite_polynomial(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(12) * x()));
+        // Chebyshev T₃=4x³−3x, U₃=8x³−4x.
+        assert_equal(&chebyshev_t_polynomial(3, "x").unwrap(), &(CasExpr::int(4) * x().pow(3) - CasExpr::int(3) * x()));
+        assert_equal(&chebyshev_u_polynomial(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(4) * x()));
+        // Laguerre L₂=(x²−4x+2)/2, L₃=(−x³+9x²−18x+6)/6.
+        assert_equal(&laguerre_polynomial(2, "x").unwrap(), &((x().pow(2) - CasExpr::int(4) * x() + CasExpr::int(2)) / CasExpr::int(2)));
+        assert_equal(&laguerre_polynomial(3, "x").unwrap(), &((CasExpr::int(-1) * x().pow(3) + CasExpr::int(9) * x().pow(2) - CasExpr::int(18) * x() + CasExpr::int(6)) / CasExpr::int(6)));
+        // Tₙ(cos θ) = cos(nθ): T₂(cos θ) = 2cos²θ − 1 = cos 2θ (checked via the zero-test).
+        let ct = chebyshev_t_polynomial(2, "x").unwrap().substitute("x", &v("t").cos());
+        assert!(matches!(
+            equal(&ct, &(CasExpr::int(2) * v("t").cos().pow(2) - CasExpr::int(1))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Chebyshev satisfies its ODE-free three-term identity: Tₙ₊₁ = 2x·Tₙ − Tₙ₋₁.
+        for n in 1..6u32 {
+            let recurrence = CasExpr::int(2) * x() * chebyshev_t_polynomial(n, "x").unwrap()
+                - chebyshev_t_polynomial(n - 1, "x").unwrap();
+            assert_equal(&chebyshev_t_polynomial(n + 1, "x").unwrap(), &recurrence);
         }
     }
 
