@@ -13,12 +13,12 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/raw-moment-order-twenty`, stacked on CAS parent `f08e97ef`; do not
+  `agent/cas/bignum-wz-base`, stacked on CAS parent `e5547fe2`; do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `524` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `525` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adw**). Keep both in sync when landing features.
+  latest is **Entry 37adx**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -142,8 +142,8 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), a direct squared-binomial falling-factorial family (regressed for
-orders `0..=33`), and Stirling-composed raw moments (regressed for orders
-`0..=33`). False near-misses correctly decline.
+orders `0..=255`), and Stirling-composed raw moments (regressed for orders
+`0..=35`). False near-misses correctly decline.
 
 ---
 
@@ -333,10 +333,21 @@ old preprocessor inspected only the top-level numerator and denominator, so the
 remaining exact products expanded into degree-36 polynomials. It now recursively
 collects factors across multiplication and division, reverses sides through a
 divisor, canonicalizes each polynomial factor and Gamma argument, and cancels
-only structurally equal pairs. The resulting quadratic quotient passes the
-unchanged symbolic equality gate through order 33. Order 34 passes that symbolic
-gate too, then declines at the exact base case because `34!` exceeds the `i128`
-rational domain.
+only structurally equal pairs. The resulting quadratic quotient first carried
+the unchanged symbolic equality gate through order 33.
+
+The exact finite-base checker now retains that checked-`i128` route first and
+falls back only from `Unknown` to a private `BigRational` evaluator for the
+fully concrete rational/positive-integer-Gamma fragment. It has explicit caps
+at Gamma argument 256 and power 1024; variables, other unary heads, poles, and
+larger operations decline. A certified-false symbolic or base result never
+falls back. Product leading scalars also accumulate in `BigRational` before one
+mandatory conversion of the final scalar to public `Rational`, and the bounded
+Gamma-shift span is 256. These exact changes remove the former `34!`, `2^127`,
+and 129-shift representation limits. The direct family certifies every order
+through 255. Order 256 still passes the compact symbolic quotient identity,
+then declines exactly because its base needs `Γ(257)`, outside the declared
+resource fragment.
 
 The raw compositor no longer expands every Stirling term over the full known
 common denominator `(2n)ₘ`. Before expansion, it removes every even factor
@@ -355,16 +366,18 @@ only bounded positive product powers, extracts exact polynomial leading
 scalars, makes factors monic, cancels structurally identical factors, and sorts
 the remaining factor lists deterministically. Structural equality closes the
 large but already factored cases; otherwise the prior exact monic
-numerator/denominator comparison remains the fail-closed fallback. This route
-extends `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 33. Regressions cover raw orders
-`0..=33`, exact direct-sum samples, the explicit compact order-11 form,
+numerator/denominator comparison remains the fail-closed fallback. Monic
+coefficient division now likewise uses bignum intermediates but accepts only
+final checked-`i128` values. This route extends
+`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 35. Regressions cover raw orders
+`0..=35`, exact direct-sum samples, the explicit compact order-11 form,
 pre-cancelled-term reconstruction, factor canonicalization, and tampered
-results, certificates, missing components, and the ceiling. Order 34 is now the
-shared boundary: its required falling-factorial component is outside the direct
-family because `34! > i128::MAX` at the exact base case. The independent
-concrete-sum control retains `n=8` through raw order 25; orders 26–33 use the
-nontrivial exact `n=2` sum because substituting their large factored forms at
-`n=8` exceeds the small `i128` equality checker's intermediate domain.
+results, certificates, missing components, and the ceiling. Raw order 36 is the
+first measured decline: its exact monic numerator has coefficients beyond the
+public `i128` rational domain. The independent concrete-sum control evaluates
+every high raw order at `n=8` with `BigInt` direct arithmetic and the bounded
+exact concrete evaluator, avoiding the small equality checker's intermediate
+domain without weakening the sample.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -384,13 +397,13 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Falling and raw moments now share the order-33 ceiling. Order 34 passes the
-   falling family’s symbolic quotient gate, then both exact base routes decline
-   because `34! > i128::MAX`; raw order 34 must include that component. Decide
-   deliberately whether a bignum exact base evaluator is worth the added trusted
-   arithmetic surface before widening either family. For fixed shifts,
-   investigate the `r=8` exact-growth decline only if a concrete use needs it.
+1. **Resume broad, timeout-bounded gap probing.** The moment families now have
+   explicit, independently measured resource boundaries rather than accidental
+   `i128` intermediates: direct order 256 needs `Γ(257)` beyond the bounded
+   concrete checker, while raw order 36 needs public coefficients beyond
+   `i128`. Extending either now requires a deliberate resource/data-model
+   decision, not another local cancellation. Fixed-shift `r=8` remains a focused
+   exact-growth candidate if a concrete use needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -452,9 +465,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor f08e97ef HEAD
+git merge-base --is-ancestor e5547fe2 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 524 unit + 147 doctests green
+# → 525 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

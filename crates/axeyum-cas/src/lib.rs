@@ -5037,6 +5037,33 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
 /// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
 type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 
+fn rational_to_big(value: Rational) -> BigRational {
+    BigRational::new(
+        BigInt::from(value.numerator()),
+        BigInt::from(value.denominator()),
+    )
+}
+
+fn big_rational_to_rational(value: &BigRational) -> Option<Rational> {
+    Rational::checked_new(value.numer().to_i128()?, value.denom().to_i128()?)
+}
+
+fn divide_rational_coefficients_big(
+    coefficients: &[Rational],
+    divisor: Rational,
+) -> Option<Vec<Rational>> {
+    if divisor.is_zero() {
+        return None;
+    }
+    let divisor = rational_to_big(divisor);
+    coefficients
+        .iter()
+        .map(|coefficient| {
+            big_rational_to_rational(&(rational_to_big(*coefficient) / divisor.clone()))
+        })
+        .collect()
+}
+
 const MAX_EXPANDED_PRODUCT_POWER: u32 = 64;
 
 fn collect_product_factors(
@@ -5067,8 +5094,8 @@ fn collect_product_factors(
 
 fn canonicalize_product_factors(
     factors: Vec<CasExpr>,
-) -> Option<(Rational, Vec<CasExpr>)> {
-    let mut scalar = Rational::integer(1);
+) -> Option<(BigRational, Vec<CasExpr>)> {
+    let mut scalar = BigRational::from_integer(BigInt::from(1));
     let mut canonical = Vec::new();
     for factor in factors {
         let factor = match factor {
@@ -5085,9 +5112,9 @@ fn canonicalize_product_factors(
             continue;
         };
         let Some(leading) = polynomial.terms.values().next_back().copied() else {
-            return Some((Rational::zero(), Vec::new()));
+            return Some((BigRational::zero(), Vec::new()));
         };
-        scalar = scalar.checked_mul(leading)?;
+        scalar *= rational_to_big(leading);
         let terms = polynomial
             .terms
             .into_iter()
@@ -5138,7 +5165,11 @@ fn cancel_common_product_factors(expr: &CasExpr) -> CasExpr {
         denominator_factors.remove(position);
         false
     });
-    let Some(scalar) = numerator_scalar.checked_div(denominator_scalar) else {
+    if denominator_scalar.is_zero() {
+        return expr.clone();
+    }
+    let scalar = numerator_scalar / denominator_scalar;
+    let Some(scalar) = big_rational_to_rational(&scalar) else {
         return expr.clone();
     };
     if scalar != Rational::integer(1) {
@@ -5226,6 +5257,88 @@ fn wz_symbolic_ratios(
     (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
 }
 
+const MAX_CONCRETE_BIGNUM_GAMMA_ARGUMENT: u32 = 256;
+const MAX_CONCRETE_BIGNUM_POWER: u32 = 1_024;
+
+/// Evaluate the fully concrete rational/positive-integer-Gamma fragment with
+/// exact bignum arithmetic. This is a bounded proof-checking fallback: variables,
+/// unsupported unary heads, Gamma poles/non-integers, and oversized operations
+/// decline rather than acquiring approximate semantics.
+fn eval_concrete_big_rational(expr: &CasExpr) -> Option<BigRational> {
+    match expr {
+        CasExpr::Const(value) => Some(rational_to_big(*value)),
+        CasExpr::Add(terms) => terms.iter().try_fold(BigRational::zero(), |sum, term| {
+            Some(sum + eval_concrete_big_rational(term)?)
+        }),
+        CasExpr::Mul(factors) => factors.iter().try_fold(
+            BigRational::from_integer(BigInt::from(1)),
+            |product, factor| Some(product * eval_concrete_big_rational(factor)?),
+        ),
+        CasExpr::Neg(inner) => Some(-eval_concrete_big_rational(inner)?),
+        CasExpr::Div(numerator, denominator) => {
+            let denominator = eval_concrete_big_rational(denominator)?;
+            if denominator.is_zero() {
+                return None;
+            }
+            Some(eval_concrete_big_rational(numerator)? / denominator)
+        }
+        CasExpr::Pow(base, exponent) if *exponent <= MAX_CONCRETE_BIGNUM_POWER => {
+            let mut base = eval_concrete_big_rational(base)?;
+            let mut exponent = *exponent;
+            let mut value = BigRational::from_integer(BigInt::from(1));
+            while exponent != 0 {
+                if exponent & 1 == 1 {
+                    value *= base.clone();
+                }
+                exponent >>= 1;
+                if exponent != 0 {
+                    base = base.clone() * base;
+                }
+            }
+            Some(value)
+        }
+        CasExpr::Unary(UnaryFunc::Gamma, argument) => {
+            let argument = eval_concrete_big_rational(argument)?;
+            if argument.denom() != &BigInt::from(1) {
+                return None;
+            }
+            let argument = argument.numer().to_u32()?;
+            if argument == 0 || argument > MAX_CONCRETE_BIGNUM_GAMMA_ARGUMENT {
+                return None;
+            }
+            let factorial = (1..argument).fold(BigInt::from(1), |value, factor| value * factor);
+            Some(BigRational::from_integer(factorial))
+        }
+        CasExpr::Var(_) | CasExpr::Pow(..) | CasExpr::Unary(..) => None,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn certifies_wz_base_case_big(
+    summand: &CasExpr,
+    rhs: &CasExpr,
+    n: &str,
+    k: &str,
+    base: i128,
+    k_lo: i128,
+    k_hi: i128,
+) -> bool {
+    let mut total = BigRational::zero();
+    for kk in k_lo..=k_hi {
+        let concrete = simplify(
+            &summand
+                .substitute(n, &CasExpr::int(base))
+                .substitute(k, &CasExpr::int(kk)),
+        );
+        let Some(value) = eval_concrete_big_rational(&concrete) else {
+            return false;
+        };
+        total += value;
+    }
+    let rhs = simplify(&rhs.substitute(n, &CasExpr::int(base)));
+    eval_concrete_big_rational(&rhs).is_some_and(|value| total == value)
+}
+
 /// Check a proposed WZ certificate symbolically, then check the finite base case.
 #[allow(clippy::many_single_char_names, clippy::too_many_arguments)]
 fn certifies_wz_sum(
@@ -5290,8 +5403,12 @@ fn certifies_wz_sum(
         Some(value) => CasExpr::Const(value),
         None => rhs_base,
     };
-    let base_check = equal(&total, &rhs_base);
-    matches!(base_check, ZeroTest::Certified { equal: true, .. })
+    match equal(&total, &rhs_base) {
+        ZeroTest::Certified { equal, .. } => equal,
+        ZeroTest::Unknown => {
+            certifies_wz_base_case_big(summand, rhs, n, k, base, k_lo, k_hi)
+        }
+    }
 }
 
 /// Prove the fixed-shift Vandermonde family
@@ -5336,8 +5453,9 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
 }
 
 /// Largest falling-factorial squared-binomial moment currently accepted by
-/// [`prove_squared_binomial_falling_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 33;
+/// [`prove_squared_binomial_falling_moment`]. The bound keeps the exact concrete
+/// base checker within its declared positive-integer-Gamma resource ceiling.
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 255;
 
 /// A proved falling-factorial squared-binomial moment
 /// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
@@ -5425,7 +5543,7 @@ pub fn prove_squared_binomial_falling_moment(
 /// [`prove_squared_binomial_moment`]. This can be lower than
 /// [`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT`] because the raw family also
 /// constructs and checks a compact Stirling-composed closed form.
-pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 33;
+pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 35;
 
 /// A proved squared-binomial raw moment
 /// `∑_k k^moment C(n,k)² = closed_form`, carrying the certified
@@ -5641,12 +5759,7 @@ fn big_rational_coefficients_to_multipoly(
 ) -> Option<MultiPoly> {
     let coefficients = coefficients
         .iter()
-        .map(|coefficient| {
-            Rational::checked_new(
-                coefficient.numer().to_i128()?,
-                coefficient.denom().to_i128()?,
-            )
-        })
+        .map(big_rational_to_rational)
         .collect::<Option<Vec<_>>>()?;
     Some(MultiPoly::from_univariate(var, &coefficients))
 }
@@ -5748,15 +5861,13 @@ fn squared_binomial_normalized_moment(moment: u32) -> Option<CasExpr> {
     }
     let numerator_lead = *numerator_coefficients.last()?;
     let denominator_lead = *denominator_coefficients.last()?;
-    let monic_numerator = numerator_coefficients
-        .iter()
-        .map(|coefficient| coefficient.checked_div(numerator_lead))
-        .collect::<Option<Vec<_>>>()?;
-    let monic_denominator = denominator_coefficients
-        .iter()
-        .map(|coefficient| coefficient.checked_div(denominator_lead))
-        .collect::<Option<Vec<_>>>()?;
-    let scalar = numerator_lead.checked_div(denominator_lead)?;
+    let monic_numerator =
+        divide_rational_coefficients_big(&numerator_coefficients, numerator_lead)?;
+    let monic_denominator =
+        divide_rational_coefficients_big(&denominator_coefficients, denominator_lead)?;
+    let scalar = big_rational_to_rational(
+        &(rational_to_big(numerator_lead) / rational_to_big(denominator_lead)),
+    )?;
     let factored_numerator = factor_small_integer_roots_or_retain(
         &monic_numerator,
         "n",
@@ -5838,6 +5949,10 @@ pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBino
 /// are the soundness gate: a wrong or under-fitted `R` fails them and the prover
 /// declines. The base case
 /// `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite summation.
+/// The checked-`i128` evaluator remains the first route. If it returns `Unknown`,
+/// a bounded exact `BigRational` evaluator handles only rational operations and
+/// positive-integer Gamma values; unsupported heads, poles, and resource-limit
+/// crossings still decline.
 /// `None` if too few concrete samples succeed, interpolation or symbolic verification
 /// declines, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
 #[must_use]
@@ -8564,7 +8679,7 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
 /// A cap on the rising-factorial length spanned when combining two `Γ` heads whose
 /// arguments differ by an integer, so a pathological offset cannot blow up the term.
 /// Far past any real `gammasimp`/Gosper certificate.
-const GAMMA_RATIO_SPAN_CAP: i128 = 128;
+const GAMMA_RATIO_SPAN_CAP: i128 = 256;
 
 /// Multiply a list of factors back into one expression (`[]` → `1`, `[x]` → `x`).
 fn build_product(mut factors: Vec<CasExpr>) -> CasExpr {
@@ -16667,6 +16782,16 @@ mod tests {
         CasExpr::var(name)
     }
 
+    fn big_binomial(n: u32, k: u32) -> BigInt {
+        let k = k.min(n - k);
+        let mut value = BigInt::from(1);
+        for index in 0..k {
+            value *= n - index;
+            value /= index + 1;
+        }
+        value
+    }
+
     fn assert_equal(a: &CasExpr, b: &CasExpr) {
         match equal(a, b) {
             ZeroTest::Certified { equal, witness } => {
@@ -17944,6 +18069,39 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn concrete_bignum_evaluator_is_exact_bounded_and_fail_closed() {
+        let factorial_34 = CasExpr::int(34).factorial();
+        let expected = (1u32..=34).fold(BigInt::from(1), |value, factor| value * factor);
+        let expected = BigRational::from_integer(expected);
+        assert_eq!(
+            eval_concrete_big_rational(&factorial_34),
+            Some(expected.clone())
+        );
+
+        let rational = (factorial_34.clone() + CasExpr::int(1)).pow(2)
+            / (factorial_34 + CasExpr::int(1));
+        assert_eq!(
+            eval_concrete_big_rational(&rational),
+            Some(expected + BigRational::from_integer(BigInt::from(1)))
+        );
+        assert!(eval_concrete_big_rational(&v("n")).is_none());
+        assert!(eval_concrete_big_rational(&CasExpr::int(0).gamma()).is_none());
+        assert!(
+            eval_concrete_big_rational(
+                &CasExpr::int(i128::from(MAX_CONCRETE_BIGNUM_GAMMA_ARGUMENT) + 1).gamma()
+            )
+            .is_none()
+        );
+        assert!(
+            eval_concrete_big_rational(
+                &CasExpr::int(2).pow(MAX_CONCRETE_BIGNUM_POWER.saturating_add(1))
+            )
+            .is_none()
+        );
+        assert!(eval_concrete_big_rational(&CasExpr::int(2).sqrt()).is_none());
+    }
+
     fn squared_binomial_moment_eleven_expected() -> CasExpr {
         let n = || v("n");
         n().pow(4)
@@ -18003,6 +18161,16 @@ mod tests {
                 assert_eq!(reconstructed, original, "moment={moment}, order={order}");
             }
         }
+
+        let large = (1i128 << 120) + 1;
+        let denominator = 1i128 << 20;
+        let coefficient = Rational::new(large, denominator);
+        let divisor = Rational::new(1, denominator);
+        assert!(coefficient.checked_div(divisor).is_none());
+        assert_eq!(
+            divide_rational_coefficients_big(&[coefficient], divisor),
+            Some(vec![Rational::integer(large)])
+        );
     }
 
     #[test]
@@ -18019,6 +18187,20 @@ mod tests {
             canonical_hypergeometric_product_ratio(&factored),
             canonical_hypergeometric_product_ratio(&canonical)
         );
+
+        let wide_product = build_product(
+            (0..128)
+                .map(|offset| CasExpr::int(2) * v("n") - CasExpr::int(offset))
+                .collect(),
+        );
+        let wide_quotient = CasExpr::Div(
+            Box::new(wide_product.clone()),
+            Box::new(wide_product),
+        );
+        assert_eq!(
+            simplify(&cancel_common_product_factors(&wide_quotient)),
+            CasExpr::one()
+        );
     }
 
     #[test]
@@ -18030,29 +18212,27 @@ mod tests {
                 .unwrap_or_else(|| panic!("squared-binomial moment {moment} must verify"));
             assert!(proof.is_certified());
 
-            // Substituting the high-order factored closed forms at n=8 exceeds
-            // the small checker's i128 intermediate domain from moment 26.
-            // Keep the stronger n=8 sample through 25 and use the nontrivial,
-            // exactly decidable n=2 sum for the remaining admitted members.
-            let sample_n = if moment <= 25 {
-                i128::from(moment.clamp(2, 8))
-            } else {
-                2
-            };
-            let mut direct = CasExpr::zero();
+            // Exercise every admitted high-order identity at n=8.  The direct
+            // sum and the independently evaluated closed form both need exact
+            // bignum arithmetic once the moment leaves the small i128 domain.
+            let sample_n = moment.clamp(2, 8);
+            let mut direct = BigInt::from(0);
             for sample_k in 0..=sample_n {
-                direct = direct
-                    + CasExpr::int(sample_k).pow(moment)
-                        * binomial_coefficient(&CasExpr::int(sample_n), &CasExpr::int(sample_k))
-                            .pow(2);
+                direct +=
+                    BigInt::from(sample_k).pow(moment) * big_binomial(sample_n, sample_k).pow(2);
             }
-            let sample_check = equal(
-                &direct,
-                &proof.closed_form.substitute("n", &CasExpr::int(sample_n)),
+            let closed_at_sample = simplify(
+                &proof
+                    .closed_form
+                    .substitute("n", &CasExpr::int(i128::from(sample_n))),
             );
-            assert!(
-                matches!(sample_check, ZeroTest::Certified { equal: true, .. }),
-                "moment {moment} direct sample at n={sample_n} failed: {sample_check:?}"
+            let closed_value = eval_concrete_big_rational(&closed_at_sample).unwrap_or_else(|| {
+                panic!("moment {moment} closed form at n={sample_n} must evaluate exactly")
+            });
+            assert_eq!(
+                closed_value,
+                BigRational::from_integer(direct),
+                "moment {moment} direct sample at n={sample_n}"
             );
             proofs.push(proof);
         }
@@ -18120,7 +18300,7 @@ mod tests {
         let eleventh_expected = squared_binomial_moment_eleven_expected();
         assert_equal(&eleventh.closed_form, &eleventh_expected);
 
-        let highest = proofs.last().expect("moment thirty-three proof exists");
+        let highest = proofs.last().expect("moment thirty-five proof exists");
 
         let mut false_proof = highest.clone();
         false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
@@ -18171,42 +18351,29 @@ mod tests {
                 .unwrap_or_else(|| panic!("falling-factorial moment {order} must verify"));
             assert!(proof.is_certified());
 
-            let sample_n = i128::from(order.max(2));
-            let mut direct = 0i128;
-            for sample_k in 0..=sample_n {
-                let falling = (0..order).try_fold(1i128, |value, index| {
-                    value.checked_mul(sample_k - i128::from(index))
+            let sample_n = if order <= 251 { order + 2 } else { order };
+            let mut direct = BigInt::from(0);
+            for sample_k in order..=sample_n {
+                let falling = (0..order).fold(BigInt::from(1), |value, index| {
+                    value * (sample_k - index)
                 });
-                let falling = falling.expect("sample falling factorial fits i128");
-                if falling == 0 {
-                    continue;
-                }
-                let binomial = ntheory::binomial(sample_n, sample_k)
-                    .expect("sample binomial coefficient fits i128");
-                let term = falling
-                    .checked_mul(
-                        binomial
-                            .checked_mul(binomial)
-                            .expect("sample binomial square fits i128"),
-                    )
-                    .expect("sample moment term fits i128");
-                direct = direct.checked_add(term).expect("sample moment sum fits i128");
+                let binomial = big_binomial(sample_n, sample_k);
+                direct += falling * binomial.pow(2);
             }
             let closed_at_sample = simplify(
                 &proof
                     .closed_form
-                    .substitute("n", &CasExpr::int(sample_n)),
+                    .substitute("n", &CasExpr::int(i128::from(sample_n))),
             );
-            let closed_value = closed_at_sample
-                .eval(&BTreeMap::new())
-                .expect("sample closed form evaluates exactly");
-            assert_eq!(closed_value, Rational::integer(direct));
+            let closed_value = eval_concrete_big_rational(&closed_at_sample)
+                .expect("sample closed form evaluates as an exact bignum rational");
+            assert_eq!(closed_value, BigRational::from_integer(direct));
             proofs.push(proof);
         }
 
         let mut false_proof = proofs
             .last()
-            .expect("order thirty-three proof exists")
+            .expect("order two hundred fifty-five proof exists")
             .clone();
         false_proof.certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
