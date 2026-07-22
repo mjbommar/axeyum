@@ -1,0 +1,109 @@
+{
+  "schema": "axeyum-lean-strict-positivity-m3-v1",
+  "stage": "official-and-product-observed",
+  "date": "2026-07-22",
+  "implementation_revision": "9a954695ed109e1b00877f1f28ef44e9caca4e1d",
+  "source_freeze": {
+    "path": "docs/plan/lean-strict-positivity-v1.json",
+    "sha256": "643e917ae429f173fa193a003cf073f4fe4435863e49557e9a1419646767f66a"
+  },
+  "lean": {
+    "version": "4.30.0",
+    "git_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "version_output": "Lean (version 4.30.0, x86_64-unknown-linux-gnu, commit d024af099ca4bf2c86f649261ebf59565dc8c622, Release)"
+  },
+  "official_runs": [
+    {
+      "repetition": 1,
+      "source": "construct-matrix-positive",
+      "exit_status": 0,
+      "outcome": "accepted",
+      "diagnostic_stream": null,
+      "max_rss_kib": 468120
+    },
+    {
+      "repetition": 1,
+      "source": "negative-domain",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 88584
+    },
+    {
+      "repetition": 1,
+      "source": "negative-mixed",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 86692
+    },
+    {
+      "repetition": 1,
+      "source": "negative-deep",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 88512
+    },
+    {
+      "repetition": 2,
+      "source": "construct-matrix-positive",
+      "exit_status": 0,
+      "outcome": "accepted",
+      "diagnostic_stream": null,
+      "max_rss_kib": 468432
+    },
+    {
+      "repetition": 2,
+      "source": "negative-domain",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 88652
+    },
+    {
+      "repetition": 2,
+      "source": "negative-mixed",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 86056
+    },
+    {
+      "repetition": 2,
+      "source": "negative-deep",
+      "exit_status": 1,
+      "outcome": "rejected",
+      "diagnostic_stream": "stdout",
+      "max_rss_kib": 88880
+    }
+  ],
+  "official_summary": {
+    "sources": 4,
+    "runs": 8,
+    "accepted": 2,
+    "rejected": 6,
+    "diagnostic_matches": 6,
+    "max_rss_kib": 468432
+  },
+  "synthetic_importer": {
+    "assurance": "synthetic-format-mutation-not-official-wire",
+    "base_fixture": "docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson",
+    "base_sha256": "91df1e44219483b213000b94b06016f9569dc648d0680d9ae91ff3198817db08",
+    "inserted_expression": "{\"forallE\":{\"binderInfo\":\"default\",\"body\":84,\"name\":10,\"type\":85},\"ie\":114}",
+    "group_mutation": "MiniNat.succ type 85 -> 114",
+    "expected_line": 151,
+    "expected_declaration": "MiniNat",
+    "expected_error": "NonPositiveInductiveOccurrence(field_index=0)",
+    "completed_import_published": false,
+    "test": "cargo test -p axeyum-lean-import --test strict_positivity_propagation"
+  },
+  "construct_matrix_regression": {
+    "registration": "docs/plan/lean-official-construct-matrix-v1.json",
+    "registration_sha256": "e76d334f4354eac297d447ae31b3f6f2b3460f99d0817af14e95faf30e8ef0d1",
+    "test": "cargo test -p axeyum-lean-import --test official_construct_matrix",
+    "control_repetitions": 10,
+    "decline_observations": 10,
+    "outcomes_unchanged": true
+  }
+}

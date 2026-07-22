@@ -7,9 +7,11 @@ Date: 2026-07-22
 Implementation checkpoint: [M1](../../plan/lean-strict-positivity-m1-2026-07-22.md)
 lands the trusted pre-insertion rule and typed failures;
 [M2](../../plan/lean-strict-positivity-m2-2026-07-22.md) closes the twelve-row
-public contract plus two byte-identical runs of a frozen 840-case grammar.
-Pinned-Lean/importer differential and final closure remain, so this ADR stays
-proposed.
+public contract plus two byte-identical runs of a frozen 840-case grammar. The
+[M3 result](../../plan/lean-strict-positivity-m3-2026-07-22.md) adds eight
+bounded pinned-Lean observations, the mandatory CI differential, typed
+synthetic importer propagation, and an unchanged construct matrix. Final M4
+closure remains, so this ADR stays proposed.
 
 ## Context
 

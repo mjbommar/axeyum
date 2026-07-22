@@ -167,9 +167,13 @@ state.
 > [M2 result](docs/plan/lean-strict-positivity-m2-2026-07-22.md) now closes all
 > twelve public rows and repeats a frozen 840-case fixed-seed grammar
 > byte-identically across `0p0i`/`1p0i`/`1p1i`, `Prop`/`Type`, depths zero
-> through four, and first/later constructor/field positions. M3's mandatory
-> pinned-Lean/import boundary and immutable construct-matrix regression are
-> next;
+> through four, and first/later constructor/field positions. The
+> [M3 result](docs/plan/lean-strict-positivity-m3-2026-07-22.md) now records
+> eight bounded pinned-Lean 4.30 observations (two accepts, six diagnostic-
+> matched rejects), makes that source population a required CI differential,
+> propagates the typed error through an explicitly synthetic importer mutation
+> without `CompletedImport`, and preserves all frozen construct-matrix
+> outcomes. M4 final gates, ADR closure, and TL2.12 handoff are next;
 > TL2.12 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

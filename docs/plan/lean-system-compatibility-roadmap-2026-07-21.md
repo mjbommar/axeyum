@@ -707,12 +707,13 @@ Non-claims until their gates are met:
    tests and exact fixtures, and the [final result](lean-official-construct-matrix-final-2026-07-22.md)
    closes bounded gates, ADR-0351, and handoff. The selected-family seed advances
    TL2.16 to PARTIAL but does not complete its full population.
-7. **WIP (M2 DONE; M3 NEXT) — TL2.11:** execute [ADR-0352 and its bounded plan](lean-strict-positivity-tl2.11-plan-2026-07-22.md).
+7. **WIP (M3 DONE; M4 NEXT) — TL2.11:** execute [ADR-0352 and its bounded plan](lean-strict-positivity-tl2.11-plan-2026-07-22.md).
    M0 froze negative sources and M1 landed the trusted Lean 4.30 single-family
    preflight before environment insertion. M2 now closes the twelve-row public
-   matrix and two byte-identical runs of a frozen 840-case grammar. M3 still
-   owns the pinned-Lean and importer differential plus immutable construct-
-   matrix regression. The nested diagnostic classification is a
+   matrix and two byte-identical runs of a frozen 840-case grammar. M3 now adds
+   eight pinned-Lean observations, mandatory CI, synthetic importer
+   propagation, and the immutable construct-matrix regression. M4 closure and
+   TL2.12 handoff remain. The nested diagnostic classification is a
    separate bounded TL1.8 hygiene follow-up, not semantic nested support.
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical

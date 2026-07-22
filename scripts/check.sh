@@ -32,6 +32,8 @@ step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_off
 step lean-construct-matrix python3 scripts/check-lean-official-construct-matrix.py --check
 step lean-strict-positivity-tests python3 -m unittest scripts.tests.test_lean_strict_positivity
 step lean-strict-positivity python3 scripts/check-lean-strict-positivity.py --check
+step lean-strict-positivity-m3-tests python3 -m unittest scripts.tests.test_lean_strict_positivity_m3
+step lean-strict-positivity-m3 python3 scripts/check-lean-strict-positivity-m3.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh

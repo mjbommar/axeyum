@@ -129,8 +129,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   failures, pre-insertion ordering evidence, and bounded 182-test kernel gate.
 - [`lean-strict-positivity-m2-2026-07-22.md`](lean-strict-positivity-m2-2026-07-22.md)
   — twelve-row public admission contract plus a fixed-seed 840-case grammar
-  repeated byte-identically across profiles, sorts, contexts, and ordering;
-  M3's pinned-Lean/import boundary remains open.
+  repeated byte-identically across profiles, sorts, contexts, and ordering.
+- [`lean-strict-positivity-m3-2026-07-22.md`](lean-strict-positivity-m3-2026-07-22.md)
+  and [`lean-strict-positivity-m3-v1.json`](lean-strict-positivity-m3-v1.json)
+  — eight bounded pinned-Lean observations, mandatory CI differential,
+  explicitly synthetic importer propagation, and unchanged frozen construct
+  matrix; M4 closure remains open.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

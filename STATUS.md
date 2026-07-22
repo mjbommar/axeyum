@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.11/T6.0.2 strict positivity M2 is complete; M3's
-  official/import boundary is next.** Proposed
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity M3 is complete; M4 closure
+  and handoff are next.** Proposed
   [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
   and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
   bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
@@ -398,9 +398,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact summary identity across three parameter/index profiles, both result
   sorts, depths zero through four, and constructor/field ordering. Exact typed
   failures compare the complete environment before/after. It does not widen
-  admission or complete TL2.11: M3 must run the immutable sources twice under
-  pinned Lean, add the mandatory official/import differential, and rerun the
-  frozen construct matrix.
+  admission or complete TL2.11. The
+  [M3 result](docs/plan/lean-strict-positivity-m3-2026-07-22.md) records eight
+  cgroup-bounded runs at exact Lean 4.30 commit `d024af09`: the positive source
+  accepts twice and all three negatives reject twice with the registered
+  diagnostic, at 468432 KiB maximum RSS. A required CI test repeats that exact
+  population and fails closed when Lean is required but absent. An explicitly
+  synthetic format mutation propagates `NonPositiveInductiveOccurrence` at
+  `MiniNat`, field zero, without returning `CompletedImport`; the immutable
+  construct matrix preserves ten controls and ten declines. M4 final gates,
+  ADR closure, research-question closure, and TL2.12 handoff remain.
 
 - **2026-07-22 — the official Lean construct-matrix selected-family milestone
   is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
@@ -6858,6 +6865,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.11 strict-positivity M3 official/import gate.**
+  Ran four immutable sources twice at exact pinned Lean 4.30 under the 3/4 GiB
+  systemd policy: two accepts and six diagnostic-matched rejects, max 468432
+  KiB RSS. Added the mandatory fail-closed CI differential, an explicitly
+  synthetic official-stream mutation that propagates the exact typed kernel
+  error without publication, and a machine-checked observation manifest. The
+  frozen construct matrix remains unchanged. M4 closure remains.
 
 - **2026-07-22 — Completed TL2.11 strict-positivity M2 public/generated gate.**
   Added a twelve-row `add_inductive` contract matrix and a fixed-seed 840-case

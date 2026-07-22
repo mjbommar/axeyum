@@ -200,6 +200,7 @@ jobs:
       - run: lean --version
       - run: cargo test -p axeyum-lean-kernel --test real_lean_inductive_crosscheck -- --nocapture
       - run: cargo test -p axeyum-lean-kernel --test real_lean_nat_literal_crosscheck -- --nocapture
+      - run: cargo test -p axeyum-lean-kernel --test real_lean_strict_positivity_crosscheck -- --nocapture
       # One module from every registered solver-proof family. The exhaustive
       # every-module sweep remains an explicit release/scheduled stress gate.
       # Resolve the installed binary explicitly so absence cannot become the
