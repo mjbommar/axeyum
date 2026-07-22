@@ -184,6 +184,23 @@ resource-bounded, cgroup-enforced) before scaling the full-library run — infra
 that makes the decide/decline/WRONG numbers trustworthy and the run safe to leave
 unattended on shared hot hosts. Complements the pending s4 re-stage action.
 
+Also merged (docs-only) since: SMT `c56b4168` preregister E3 multi-host durability.
+
+### Cycle 7 (heartbeat ~12:30 EDT) — no merge; lane-depth checkpoint
+
+**Lane WIP (read-only):**
+- **Lean** → M3 grammar, 3 files WIP (grammar is slow, hard work; steady).
+- **SMT** → E3 durability, 6 files WIP, very active (committed 6 min ago).
+- **CAS** → **123-line in-flight change in `lib.rs`** (103+/20−). *Not* a stall —
+  after the `probe_wz_next_tier.rs` exploration it folded the work into core and
+  is mid-implementation of the next hypergeometric tier (`₃F₂` Dixon/Saalschütz
+  direction), getting it green before committing. ~2 h on genuinely hard math.
+
+**Live s4 run:** progressed `[2356/8044] → [2591/8044]`, still writing (12:31),
+**WRONG still 2** (unchanged — same two stale-binary cases; re-stage still pending).
+
+**Health:** `/tmp` 8%, `/nas4` 68%, no runaways, 29 °C.
+
 ---
 
 ## Cycle log
