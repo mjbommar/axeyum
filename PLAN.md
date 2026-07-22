@@ -389,6 +389,16 @@ state.
 > adapter or incomplete-run substitution. The current generated matrix has one
 > satisfied K0 row, four of five K1 rows, and zero satisfied K2-K6 rows; TL2.14
 > completion is not full Lean parity.
+> TL0.6 is now partial: the fail-closed
+> [complete-parity registry](docs/plan/lean-complete-parity-v1.json) and
+> generated [Markdown](docs/plan/generated/lean-complete-parity.md)/
+> [JSON](docs/plan/generated/lean-complete-parity.json) reports seed exact
+> U0-U9, A0-A11, paired-outcome, and G1-G10 schemas. They derive the bounded
+> K-profile, construct, task, and axiom facts, reject incomplete denominators
+> and illegal promotions, and disable affirmative terminal claims while all
+> ten population authorities, all twelve axes, all terminal paired cells, and
+> all ten gates remain open. Next: freeze the executable U2 Lean-test authority
+> and populate exact paired records rather than promoting selected examples.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

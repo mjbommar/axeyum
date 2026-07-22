@@ -1,0 +1,423 @@
+{
+  "schema": "axeyum-lean-complete-parity-v1",
+  "as_of": "2026-07-22",
+  "contract": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+  "target": {
+    "lean_version": "4.30.0",
+    "lean_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+    "lean4export_version": "3.1.0",
+    "lean4export_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+    "mathlib_version": "4.30.0",
+    "mathlib_commit": "c5ea00351c28e24afc9f0f84379aa41082b1188f"
+  },
+  "population_state_definitions": {
+    "not_registered": "The population is named but has no executable registered authority.",
+    "inventory_only": "Retained inventory bounds the source area but is not an executable denominator.",
+    "bounded_profile": "A content-identified strict subset has executable evidence; the full population remains undefined or incomplete.",
+    "complete_authority": "The complete raw and normalized populations are content-identified, independently reproducible, and executable."
+  },
+  "axis_state_definitions": {
+    "not_started": "No executable paired evidence currently earns credit on this complete-parity axis.",
+    "partial": "Bounded retained evidence earns scoped credit, but at least one required population or terminal condition remains open.",
+    "complete": "Every required complete population passes the axis-specific terminal exit with retained paired evidence."
+  },
+  "populations": [
+    {
+      "id": "U0",
+      "label": "toolchain/bootstrap",
+      "owner": "L0",
+      "state": "inventory_only",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+          "detail": "Pinned release, source-tree inventory, bootstrap scope, and platform tiers."
+        },
+        {
+          "path": ".github/workflows/ci.yml",
+          "detail": "Current bounded official-Lean cross-check job; this is not the full bootstrap authority."
+        }
+      ],
+      "residual": "Freeze stage0/stage1/stage2 build, test, compiler, runtime, and bootstrap-equivalence manifests."
+    },
+    {
+      "id": "U1",
+      "label": "kernel/core",
+      "owner": "L2/T6.0",
+      "state": "bounded_profile",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-compatibility-v1.json",
+          "detail": "Twelve content-identified assurance rows across K0-K6."
+        },
+        {
+          "path": "docs/plan/lean-official-construct-matrix-v1.json",
+          "detail": "Seven selected official construct families with exact source, wire, and product evidence."
+        }
+      ],
+      "residual": "Define the dependency-closed complete core-term and declaration population, including invalid mutations."
+    },
+    {
+      "id": "U2",
+      "label": "official Lean tests",
+      "owner": "L0/L4-L9",
+      "state": "inventory_only",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+          "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
+        }
+      ],
+      "residual": "Derive the executable authority from CMake registration, piles, configuration, support files, and expected outputs."
+    },
+    {
+      "id": "U3",
+      "label": "core libraries",
+      "owner": "L3/L4/L7",
+      "state": "not_registered",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "Planned dependency-closed Init, Std, and Lean module work."
+        }
+      ],
+      "residual": "Register dependency-closed module, declaration, environment, and axiom identities."
+    },
+    {
+      "id": "U4",
+      "label": "Lake/projects",
+      "owner": "L7",
+      "state": "not_registered",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "Planned project, package, cache, and Lake profiles."
+        }
+      ],
+      "residual": "Register clean, incremental, offline, dependency, cache, and recovery project cells."
+    },
+    {
+      "id": "U5",
+      "label": "server/editor",
+      "owner": "L8",
+      "state": "not_registered",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "Planned LSP/RPC snapshot, transcript, edit, and cancellation profiles."
+        }
+      ],
+      "residual": "Register official server request populations and normalized versioned transcripts."
+    },
+    {
+      "id": "U6",
+      "label": "runtime/compiler",
+      "owner": "L9",
+      "state": "not_registered",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+          "detail": "Planned interpreter, compiler, runtime, FFI, and bootstrap profiles."
+        }
+      ],
+      "residual": "Register interpreter, compiled, WASM, effects, exception, FFI, and metaprogram comparisons."
+    },
+    {
+      "id": "U7",
+      "label": "mathlib",
+      "owner": "L10",
+      "state": "inventory_only",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+          "detail": "Pinned tag and file-tree inventory; explicitly not a build or test denominator."
+        }
+      ],
+      "residual": "Register all modules, dependency closures, build/test/tactic cells, declarations, axioms, and resources."
+    },
+    {
+      "id": "U8",
+      "label": "adversarial/security",
+      "owner": "L1/L2/L7/L8/L9",
+      "state": "bounded_profile",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean-compatibility-v1.json",
+          "detail": "Bounded malformed and unsupported import cases with fail-closed outcome classes."
+        },
+        {
+          "path": "scripts/tests/test_lean_compatibility.py",
+          "detail": "Mutation checks prevent illegal assurance credit in the bounded contract."
+        }
+      ],
+      "residual": "Register the complete malformed source/export/cache/protocol, exhaustion, crash, stale-publication, and disagreement campaigns."
+    },
+    {
+      "id": "U9",
+      "label": "platforms/releases",
+      "owner": "L0/L7/L9/L10",
+      "state": "inventory_only",
+      "raw_denominator": null,
+      "normalized_denominator": null,
+      "content_digest": null,
+      "evidence": [
+        {
+          "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
+          "detail": "Pinned release-asset inventory and required Tier-1/Tier-2 distinction."
+        }
+      ],
+      "residual": "Register install, package, offline, platform-tier, and current/current-minus-one migration cells."
+    }
+  ],
+  "axes": [
+    {
+      "id": "A0",
+      "label": "identity and measurement",
+      "owner": "L0",
+      "state": "partial",
+      "populations": ["U0", "U1", "U2", "U3", "U4", "U5", "U6", "U7", "U8", "U9"],
+      "evidence": [
+        {
+          "path": "docs/plan/lean-compatibility-v1.json",
+          "detail": "Bounded machine-readable assurance rows."
+        },
+        {
+          "path": "docs/plan/lean-official-construct-matrix-v1.json",
+          "detail": "Bounded exact source/wire/product identities."
+        }
+      ],
+      "residual": "Complete population authorities, paired records, attempts, resources, and completion identities remain open."
+    },
+    {
+      "id": "A1",
+      "label": "kernel semantics",
+      "owner": "L2/T6.0",
+      "state": "partial",
+      "populations": ["U1", "U8"],
+      "evidence": [
+        {
+          "path": "docs/plan/lean-official-construct-matrix-v1.json",
+          "detail": "Selected construct families have independent admission and computation evidence."
+        }
+      ],
+      "residual": "The complete registered core differential and mutation population do not yet exist."
+    },
+    {
+      "id": "A2",
+      "label": "import and serialization",
+      "owner": "L1/TL7.9",
+      "state": "partial",
+      "populations": ["U1", "U2", "U3", "U7", "U8"],
+      "evidence": [
+        {
+          "path": "docs/plan/lean-compatibility-v1.json",
+          "detail": "Pinned format-3.1 parser/translator/admission evidence for selected streams."
+        }
+      ],
+      "residual": "The complete wire population, large-stream durability, and olean adapter equivalence remain open."
+    },
+    {
+      "id": "A3",
+      "label": "parser, syntax, macros",
+      "owner": "L6",
+      "state": "not_started",
+      "populations": ["U2", "U3", "U7", "U8"],
+      "evidence": [],
+      "residual": "No native source parser/macro paired population currently earns parity credit."
+    },
+    {
+      "id": "A4",
+      "label": "elaboration and declarations",
+      "owner": "L4",
+      "state": "not_started",
+      "populations": ["U2", "U3", "U7", "U8"],
+      "evidence": [],
+      "residual": "No complete native elaboration comparison currently earns parity credit."
+    },
+    {
+      "id": "A5",
+      "label": "goals, tactics, automation",
+      "owner": "L5/Track 6",
+      "state": "not_started",
+      "populations": ["U2", "U3", "U7", "U8"],
+      "evidence": [],
+      "residual": "No native paired tactic/goal authority currently earns parity credit."
+    },
+    {
+      "id": "A6",
+      "label": "modules, caches, Lake",
+      "owner": "L7",
+      "state": "not_started",
+      "populations": ["U0", "U2", "U3", "U4", "U7", "U8", "U9"],
+      "evidence": [],
+      "residual": "No clean/incremental/offline project matrix currently earns parity credit."
+    },
+    {
+      "id": "A7",
+      "label": "editor and RPC",
+      "owner": "L8",
+      "state": "not_started",
+      "populations": ["U2", "U5", "U8", "U9"],
+      "evidence": [],
+      "residual": "No normalized native editor/RPC transcript matrix currently earns parity credit."
+    },
+    {
+      "id": "A8",
+      "label": "evaluator, compiler, runtime",
+      "owner": "L9",
+      "state": "not_started",
+      "populations": ["U0", "U2", "U3", "U6", "U7", "U8", "U9"],
+      "evidence": [],
+      "residual": "No native interpreter/compiler/runtime comparison currently earns parity credit."
+    },
+    {
+      "id": "A9",
+      "label": "libraries and trust closure",
+      "owner": "L3",
+      "state": "partial",
+      "populations": ["U1", "U3", "U7", "U8"],
+      "evidence": [
+        {
+          "path": "docs/plan/lean-axiom-ledger-v1.json",
+          "detail": "The current reconstruction-prelude assumptions are completely inventoried and type-digested."
+        }
+      ],
+      "residual": "All current assumptions remain unclassified and dependency-closed Init/Std/mathlib profiles remain open."
+    },
+    {
+      "id": "A10",
+      "label": "mathlib ecosystem",
+      "owner": "L10",
+      "state": "not_started",
+      "populations": ["U7", "U8", "U9"],
+      "evidence": [],
+      "residual": "The pinned mathlib module/build/test/tactic/runtime authority is not registered."
+    },
+    {
+      "id": "A11",
+      "label": "toolchain, CLI, platform, release",
+      "owner": "L0/L7/L9/L10",
+      "state": "not_started",
+      "populations": ["U0", "U4", "U6", "U9"],
+      "evidence": [],
+      "residual": "No full install/package/offline/platform/migration matrix currently earns parity credit."
+    }
+  ],
+  "outcome_classes": [
+    "agree-success",
+    "agree-reject",
+    "official-only",
+    "axeyum-only",
+    "semantic-mismatch",
+    "unadjudicated",
+    "not-run",
+    "invalid-run"
+  ],
+  "paired_cells": [],
+  "terminal_gates": [
+    {
+      "id": "G1",
+      "label": "complete U0-U9 authorities",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "No U0-U9 population is yet a complete authority."
+    },
+    {
+      "id": "G2",
+      "label": "complete A0-A11 axes",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "No A0-A11 axis is complete."
+    },
+    {
+      "id": "G3",
+      "label": "all paired cells agree",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "The terminal paired-cell population is not registered."
+    },
+    {
+      "id": "G4",
+      "label": "complete Lean build/test/bootstrap",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "The complete executable Lean test and bootstrap authority is not frozen or reproduced."
+    },
+    {
+      "id": "G5",
+      "label": "complete mathlib profile",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "The pinned mathlib build/test/tactic/runtime authority is not registered."
+    },
+    {
+      "id": "G6",
+      "label": "independent checking and trust evidence",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "Complete declaration/proof replay is absent and 65 current assumptions remain unclassified."
+    },
+    {
+      "id": "G7",
+      "label": "workflow failure and recovery campaigns",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "Clean, incremental, offline, cancellation, crash, and stale-state campaigns are incomplete."
+    },
+    {
+      "id": "G8",
+      "label": "full platform profile",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "Tier-1 run and Tier-2 build/package cells are not registered."
+    },
+    {
+      "id": "G9",
+      "label": "unified functional assurance performance evidence",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "No shared complete evidence population feeds all three dashboard classes."
+    },
+    {
+      "id": "G10",
+      "label": "published release and maintenance policy",
+      "state": "unsatisfied",
+      "evidence": [],
+      "residual": "No complete-parity release artifact or current/current-minus-one policy is published."
+    }
+  ],
+  "claim_surfaces": [
+    "README.md",
+    "docs/PROJECT-STATE.md",
+    "docs/plan/README.md",
+    "PLAN.md",
+    "STATUS.md"
+  ],
+  "terminal_claim_enabled": false
+}

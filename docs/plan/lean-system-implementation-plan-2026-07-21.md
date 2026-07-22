@@ -179,7 +179,7 @@ the interoperability and Track 6 plans.
 | TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, host-independent options, and the executable path used from every test working directory. The first corrected remote job failed before its representative sweep because `AXEYUM_LEAN_BIN` resolved to an unconfigured elan shim outside the repository directory. | — | S | One manifest drives exporter, importer, and official-check tests; a retained remote run reaches the exact 71/71 attestation. |
 | TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
-| TL0.6 | TODO | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
+| TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. Every U0-U9 authority and terminal paired cell remains incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
 | TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
 | TL0.8 | TODO | Correct or archive older conflicting scope prose and wire link checks to this plan. | TL0.1 | S | No live document says both “import nothing” and “import mathlib.” |
 
@@ -501,8 +501,9 @@ parallel lane:
     spine under accepted ADR-0352 through ADR-0355 and all retained gates.
 17. TL0.3 — correct the remote Lean executable identity across changed working
     directories and retain the first true remote 71/71 attestation.
-18. TL0.6 — freeze generated U0-U9 population authorities and A0-A11 paired
-    scoreboards before promoting another broad parity claim.
+18. TL0.6 — extend the landed fail-closed registry seed into complete U0-U9
+    population authorities and A0-A11 paired scoreboards before promoting
+    another broad parity claim.
 19. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
 20. TL3.4 — discharge the first five axioms.
 21. TL3.6 — export minimal `Init` roots and regenerate blocker priority.

@@ -405,20 +405,31 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   or return to broader timeout-bounded CAS gap probing.
 
 - **2026-07-22 — complete Lean 4.30 parity now has an explicit terminal
-  contract, without promoting the completed TL2.14 slice.** The new
+  contract and a fail-closed generated registry, without promoting the
+  completed TL2.14 slice.** The
   [contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md) transfers
   the SMT-LIB measurement rules—content-identified authoritative populations,
   exact paired overlap, typed one-sided/mismatch/unadjudicated/not-run results,
   layer-specific equivalence, and zero incomplete-run credit—to twelve native
   Lean behavioral axes over ten upstream populations. The current generated
   matrix remains one satisfied K0 row, four of five K1 rows, and zero satisfied
-  K2-K6 rows. The Lean v4.30.0 tree audit records 6,931 test-tree blobs / 4,035
+  K2-K6 rows. TL0.6 is now partial: the
+  [registry](docs/plan/lean-complete-parity-v1.json) and generated
+  [Markdown](docs/plan/generated/lean-complete-parity.md)/
+  [JSON](docs/plan/generated/lean-complete-parity.json) status derive current
+  K-profile, construct, task, and axiom facts, but publish zero complete U0-U9
+  authorities, zero complete A0-A11 axes, zero terminal paired cells, and zero
+  satisfied G1-G10 gates. Eight contract/mutation tests reject incomplete
+  denominators, missing evidence, illegal axis/gate credit, malformed paired
+  identity, and a premature terminal claim; CI and local parity-document gates
+  check both generated outputs and scan the live public claim surfaces. The
+  Lean v4.30.0 tree audit records 6,931 test-tree blobs / 4,035
   Lean test sources and the mathlib pin records 8,606 Lean files, but the
   contract explicitly refuses to treat those inventories as executable test
   denominators. The first corrected remote Lean CI job is reclassified from
   pending/unattempted to failed-before-sweep on working-directory-dependent
-  elan resolution. Next: close TL0.3's executable identity and TL0.6's generated
-  U0-U9/A0-A11 scoreboards before another broad parity claim.
+  elan resolution. Next: close TL0.3's executable identity, derive U2 from the
+  executable CTest/test-pile authority, and populate exact paired records.
 
 - **2026-07-22 — structured composition carries raw squared-binomial moments
   through order 19.** Raw order 11 was mathematically valid but hit two
@@ -7452,6 +7463,21 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Seeded TL0.6's fail-closed complete-Lean-parity registry.**
+  The exact U0-U9 populations, A0-A11 axes, eight paired outcomes, and G1-G10
+  terminal gates now have one validated machine-readable source and generated
+  Markdown/JSON reports. The generator content-identifies its source manifests
+  and derives K-profile, selected-construct, implementation-task, and axiom
+  summaries without converting them into terminal denominators. Eight
+  contract/mutation tests reject population/order drift, incomplete denominator
+  credit, complete axes over incomplete populations, hand-promoted derived
+  gates, malformed paired identities, missing evidence, and terminal-claim
+  laundering. Local
+  aggregate and both docs CI jobs check the generated reports; live public
+  status surfaces cannot affirm complete Lean parity while the terminal gate is
+  open. Current terminal credit remains honestly zero across complete
+  populations, complete axes, paired cells, and satisfied gates.
 
 - **2026-07-22 — Implemented ADR-0356 S2 verified corpus acquisition.** The
   new resumable runner binds the completed S1 audit, downloads all 90 release

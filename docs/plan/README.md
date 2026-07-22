@@ -49,6 +49,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   agreement/disagreement/not-run classes and layer-specific equivalence, and
   keeps the current K0/K1 slices separate from the unsatisfied K2-K6 and full-
   system gates.
+- [`lean-complete-parity-v1.json`](lean-complete-parity-v1.json), generated
+  [`Lean complete-parity status`](generated/lean-complete-parity.md), and
+  [machine-readable report](generated/lean-complete-parity.json) — TL0.6's
+  fail-closed registry seed for exact U0-U9 populations, A0-A11 axes, paired
+  outcome classes, G1-G10 terminal gates, and the public-claim guard. It
+  derives current bounded K-profile, construct, task, and axiom facts while
+  granting zero terminal denominator or paired-cell credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

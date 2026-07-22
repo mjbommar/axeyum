@@ -16,6 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: ./scripts/check-foundational-resources.sh
+      - run: python3 -m unittest scripts.tests.test_lean_complete_parity
+      - run: python3 scripts/gen-lean-complete-parity.py --check
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix
       - run: python3 scripts/check-lean-official-construct-matrix.py --check
       - run: python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check

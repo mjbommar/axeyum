@@ -21,6 +21,11 @@ and [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interop
 Executable task graph:
 [Lean 4.30 system implementation plan](lean-system-implementation-plan-2026-07-21.md).
 
+Executable terminal registry:
+[`lean-complete-parity-v1.json`](lean-complete-parity-v1.json), its generated
+[human-readable status](generated/lean-complete-parity.md), and the generated
+[content-identified report](generated/lean-complete-parity.json).
+
 ## 1. Verdict and purpose
 
 Axeyum is **not 100% done with Lean parity**. TL2.14 completed one important
@@ -56,10 +61,16 @@ The generated
 | K5 | evaluator/compiler/runtime | 0 | 1 |
 | K6 | pinned ecosystem/mathlib | 0 | 1 |
 
-The implementation ledger contains 123 `TL*` task rows at this revision: 20
-`DONE`, four `PARTIAL`, and 99 `TODO`. Those counts are an **unweighted task
-inventory**, not a percentage of Lean. A two-day contract task and a
-multi-month compiler task both count as one row.
+The complete-parity registry derives the current implementation-ledger counts
+directly from the task table instead of copying a second aggregate here. Those
+counts are an **unweighted task inventory**, not a percentage of Lean. A
+two-day contract task and a multi-month compiler task both count as one row.
+
+The same registry currently reports zero complete U0-U9 authorities, zero
+complete A0-A11 axes, zero registered terminal paired cells, and zero satisfied
+terminal gates. It separately retains the bounded K-profile, selected-
+construct, and axiom-ledger facts below. That is deliberate: making the
+terminal denominator explicit must not promote the evidence already in hand.
 
 The current positive evidence remains valuable:
 
@@ -341,8 +352,8 @@ The existing TL task graph remains authoritative. The complete-parity view
 groups it into reviewable waves:
 
 1. **P0 — contract and remote gate:** close TL0.3/TL0.5-TL0.8, fix the remote
-   Lean executable identity, generate the U0-U9 manifest schemas, and make
-   status derive from evidence.
+   Lean executable identity, extend the seeded U0-U9/A0-A11 registry into
+   complete population authorities, and make all status derive from evidence.
 2. **P1 — robust K0/K1:** close TL1 property/durability/API work,
    TL2.8-TL2.10, and generated TL2.15/TL2.16 breadth before broad libraries.
 3. **P2 — trust and library base:** classify/discharge the 65 assumptions,
@@ -375,8 +386,9 @@ Before another broad implementation claim:
 1. repair the remote Lean job so `AXEYUM_LEAN_BIN` resolves to the installed
    versioned executable from any working directory, then archive the first true
    71/71 remote attestation, duration, RSS, and axiom summary;
-2. extend TL0.6 from 12 selected artifacts to generated construct, source,
-   tactic, project, editor, runtime, ecosystem, and platform scoreboards;
+2. extend TL0.6's generated registry seed from bounded K0/K1 and selected-
+   construct evidence to content-identified complete construct, source, tactic,
+   project, editor, runtime, ecosystem, and platform authorities;
 3. freeze the exact Lean v4.30.0 test authority from CMake/test-pile semantics,
    not the 6,931-file tree count;
 4. freeze separate official populations for elaboration success, elaboration
@@ -391,8 +403,8 @@ Before another broad implementation claim:
 9. classify all 65 prelude assumptions before reporting broader proof parity;
 10. turn the pinned mathlib tree inventory into module/declaration/dependency/
     tactic/test manifests before assigning any coverage percentage; and
-11. add a documentation guard that rejects “complete Lean parity” unless the
-    terminal A0-A11/U0-U9 gate is backed by a published artifact.
+11. keep the landed documentation claim guard enforced and expand its live
+    claim-surface list when a new public status surface is introduced.
 
 ## 12. Primary sources
 
