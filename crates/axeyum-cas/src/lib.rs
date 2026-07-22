@@ -9858,6 +9858,79 @@ fn improper_gaussian_moment(
     })
 }
 
+/// Find a single `cos(a·var)` or `sin(a·var)` factor anywhere in `expr` (a linear
+/// argument, `a` a nonzero rational), returning the head and `a` — used to peel the
+/// oscillatory factor of a Fourier integral.
+fn find_linear_trig(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, Rational)> {
+    match expr {
+        CasExpr::Unary(head @ (UnaryFunc::Cos | UnaryFunc::Sin), arg)
+            if expr_contains_var(arg, var) =>
+        {
+            let poly = normalize(arg)?.to_univariate(var)?;
+            (poly::rat_degree(&poly)? == 1 && poly[0].is_zero()).then_some((*head, poly[1]))
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_linear_trig(t, var))
+        }
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => find_linear_trig(a, var),
+        CasExpr::Div(a, b) => find_linear_trig(a, var).or_else(|| find_linear_trig(b, var)),
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// `∫_{−∞}^∞ R(x)·{cos(ax) | sin(ax)} dx` for a rational `R = N(x)/(x²+q)` with `q >
+/// 0` and a polynomial numerator `N` of degree ≤ 1 (Fourier integral via the
+/// residue theorem, pole at `x = i√q`). By parity only the matching part survives:
+/// `∫ (c₁x+c₀)cos(ax)/(x²+q) = c₀·(π/√q)·e^{−a√q}` and `∫ (c₁x+c₀)sin(ax)/(x²+q) =
+/// c₁·π·e^{−a√q}` (`a > 0`). Closes `∫ cos x/(x²+1) = π/e`, `∫ x·sin x/(x²+1) = π/e`.
+/// The residue theorem is exact; certified by construction. `None` outside the form.
+fn improper_fourier_quadratic(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    if !matches!((&lower, &upper), (LimitPoint::NegInfinity, LimitPoint::PosInfinity)) {
+        return None;
+    }
+    let (head, a) = find_linear_trig(expr, var)?;
+    if a <= Rational::integer(0) {
+        return None; // need a > 0 (Jordan's lemma closes in the upper half-plane)
+    }
+    // Peel the oscillatory factor: `R = expr / trig(a·var)`.
+    let trig = CasExpr::Unary(head, Box::new(scaled_term(a, CasExpr::var(var))));
+    let rational = replace_subexpr(expr, &trig, &CasExpr::one());
+    if find_linear_trig(&rational, var).is_some() {
+        return None; // more than one oscillatory factor
+    }
+    let rf = normalize_rational(&rational)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    // Denominator must be `d₂·(x² + q)` with `q > 0`; numerator degree ≤ 1.
+    if poly::rat_degree(&den)? != 2 || !den[1].is_zero() || poly::rat_degree(&num)? >= 2 {
+        return None;
+    }
+    let q = den[0].checked_div(den[2])?;
+    if q <= Rational::integer(0) {
+        return None; // real poles — not this contour
+    }
+    let c0 = num.first().copied().unwrap_or_else(Rational::zero).checked_div(den[2])?;
+    let c1 = num.get(1).copied().unwrap_or_else(Rational::zero).checked_div(den[2])?;
+    let root = CasExpr::Const(q).sqrt(); // √q = b
+    let envelope = (CasExpr::Neg(Box::new(CasExpr::Const(a) * root.clone()))).exp(); // e^{−a√q}
+    // cos → even part `c₀/(x²+q)` survives; sin → odd part `c₁x/(x²+q)` survives.
+    let value = match head {
+        UnaryFunc::Cos => CasExpr::Const(c0) * (CasExpr::var("pi") / root) * envelope,
+        UnaryFunc::Sin => CasExpr::Const(c1) * CasExpr::var("pi") * envelope,
+        _ => return None,
+    };
+    Some(DefiniteIntegral {
+        value: simplify(&simplify_radicals(&value)),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// Decompose `expr` into `(c, p, has_exp)` for the form `c · x^p · e^{−x}` (`c`
 /// rational, `p` a rational power built from `x`, `√x`, and their reciprocals,
 /// `has_exp` whether an `e^{−x}` factor is present). Used to recognise a Gamma
@@ -9976,6 +10049,9 @@ pub fn improper_integrate(
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
+    }
+    if let Some(fourier) = improper_fourier_quadratic(expr, var, lower, upper) {
+        return Some(fourier);
     }
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
@@ -14569,6 +14645,24 @@ mod tests {
         ));
         assert_equal(&gauss(x().pow(3) * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
         assert_equal(&gauss(x() * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
+        // Fourier integrals via the residue theorem: ∫_{−∞}^∞ R(x)·{cos,sin}(ax)
+        // over x²+q (pole at i√q). ∫ cos x/(x²+1) = π/e, ∫ x·sin x/(x²+1) = π/e,
+        // ∫ cos 2x/(x²+1) = π/e², ∫ cos x/(x²+4) = π/(2e²).
+        let e = || CasExpr::int(1).exp();
+        assert!(matches!(
+            equal(&gauss(x().cos() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi") / e())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(x() * x().sin() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi") / e())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss((CasExpr::int(2) * x()).cos() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi") / e().pow(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Odd part vanishes: ∫ sin x/(x²+1) = 0.
+        assert_equal(&gauss(x().sin() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &CasExpr::zero());
         // Frullani integrals ∫₀^∞ (f(ax)−f(bx))/x = (f(0)−f(∞))·ln(b/a). The
         // antiderivative is Ci(ax)−Ci(bx) / Ei(−ax)−Ei(−bx), whose lower bound at 0
         // combines the log-singular heads to a finite value — a naïve `Ci(0)−Ci(0)`
