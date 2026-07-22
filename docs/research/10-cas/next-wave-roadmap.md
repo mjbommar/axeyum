@@ -54,8 +54,10 @@ elimination, Meijer-G table integration.
    many downstream items; build the RootOf interface first.
 9. **Smith / Hermite normal form** — `U·A·V=D` unimodularity cert. Unblocks
    Diophantine systems, module theory.
-10. **Laurent series + residues.** Thin generalization of `series` (multiply by
-    `xᵐ`), same truncation cert.
+10. **Laurent series + residues.** ✅ **SHIPPED** — `laurent_series` (rational), and
+    `series_at` now expands **transcendental poles** (`1/sin x = 1/x + x/6 + …`,
+    `1/(eˣ−1)`, `cot x`) by cancelling the common `xᵏ` and shifting the regular
+    quotient down; `residue`/`residue_meromorphic` for the residue cert.
 11. **Special functions with known-derivative rules** — Γ, B, erf, Bessel,
     polylog (extend the opaque-atom pattern with *known* derivative identities).
     One function/family per agent.

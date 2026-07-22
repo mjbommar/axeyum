@@ -112,8 +112,11 @@ linear recurrences (11, `solve_recurrence`) now **certify** (see
 **Still open:** full `RealAlgebraic`/RootOf wiring (17) — the residual exp-tower
 scaling (`exp(x/2)`) and Lazard–Rioboo–Trager (15) both need it; Zeilberger (needs
 the exp tower for its geometric fragment — now partly there); assumptions engine
-(34) — would upgrade `expand_log`/`√(x²)=|x|` to certified; special functions;
-Risch; multivariate factorization; Jordan form; Laurent/Puiseux.
+(34) — the sign layer + the log/exp positivity `refine` rules (`exp(ln x)=x`,
+`ln(xᵏ)=k ln x`, `ln(xy)=ln x+ln y` under `x,y>0`) now shipped, `√(x²)=|x|`/`abs`
+gated; special functions; Risch; multivariate factorization; **Puiseux**
+(Laurent + orthogonal-polynomial suite + transcendental-pole Laurent now shipped;
+Puiseux still needs fractional-power representation). Jordan form shipped.
 
 **Newly identified substrate blocker.** First-order linear ODEs (12) and linear
 recurrences (11) both need the zero-test to know `e^A·e^B = e^{A+B}`. The
