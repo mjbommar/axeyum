@@ -6868,18 +6868,22 @@ fn deep_normalize(expr: &CasExpr) -> CasExpr {
 /// (`Some(false)`) as `var → point`. Decided by the leading term's sign and, at
 /// `−∞`, the degree parity. `None` if `arg` is not a non-constant polynomial in `var`.
 fn arg_tends_to_infinity(arg: &CasExpr, var: &str, point: LimitPoint) -> Option<bool> {
-    let poly = normalize(arg)?.to_univariate(var)?;
-    let degree = poly::rat_degree(&poly)?;
-    if degree == 0 {
-        return None; // constant argument — bounded
+    // Numeric probe: sample `arg` at two large |var| values in the limit direction
+    // and confirm it grows without bound, returning the sign. This handles **surd
+    // coefficients** (`t/√3 → +∞`) that the polynomial path can't, since `normalize`
+    // rejects irrational coefficients.
+    let far = match point {
+        LimitPoint::PosInfinity => 1e6,
+        LimitPoint::NegInfinity => -1e6,
+        LimitPoint::Finite(_) => return None,
+    };
+    let near_value = evalf(arg, &[(var, far)])?;
+    let farther_value = evalf(arg, &[(var, far * 100.0)])?;
+    // Must actually be growing in magnitude (an unbounded argument), not bounded.
+    if farther_value.abs() <= near_value.abs() || near_value.abs() < 1e3 {
+        return None;
     }
-    let leading_positive = poly[degree].numerator() > 0;
-    match point {
-        LimitPoint::PosInfinity => Some(leading_positive),
-        // At −∞, the sign flips for odd degree.
-        LimitPoint::NegInfinity => Some(leading_positive == degree.is_multiple_of(2)),
-        LimitPoint::Finite(_) => None,
-    }
+    Some(farther_value > 0.0)
 }
 
 /// Like [`limit_exp_dominated`] but for exp factors with a **transcendental** rate,
@@ -7989,75 +7993,48 @@ pub fn numeric_integrate(
     Some(sum * step / 3.0)
 }
 
-/// `∫₀^{2π} k/(a + b·cos x) dx = 2πk/√(a²−b²)` (and the `sin` variant), for `a >
-/// |b| > 0`. Recognizes the integrand `k/(a + b·trig(x))` and the interval `[0, 2π]`.
-/// The value comes from the `z=e^{iθ}` contour (a residue inside the unit circle),
-/// so it is correct where FTC on the discontinuous `tan(x/2)` antiderivative is not.
-/// `None` if the shape/interval doesn't match or `a ≤ |b|` (divergent/complex).
+/// `∫₀^{2π} R(sin x, cos x) dx` for any **rational-trig** integrand, via the
+/// Weierstrass substitution `t = tan(x/2)`: as `x` runs `0 → 2π`, `t` sweeps all of
+/// ℝ, so the integral equals `∫_{−∞}^{∞}` of the (rational) `t`-integrand — computed
+/// by the improper integrator. Correct where FTC on the discontinuous `tan(x/2)`
+/// antiderivative is not (`∫₀^{2π}1/(2+cos x)=2π/√3`, `∫₀^{2π}1/(a+b cos x)ⁿ`, …).
+/// `None` unless the interval is `[0, 2π]`, the integrand is a function of trig of
+/// `x` alone, and the resulting `∫_{−∞}^{∞}` converges (certified).
 fn definite_full_period_rational_trig(
     expr: &CasExpr,
     var: &str,
     lower: &CasExpr,
     upper: &CasExpr,
 ) -> Option<CasExpr> {
+    if !contains_sin_or_cos(expr) {
+        return None;
+    }
     // Interval must be exactly [0, 2π].
-    if !matches!(
-        equal(lower, &CasExpr::zero()),
-        ZeroTest::Certified { equal: true, .. }
-    ) || !matches!(
-        equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
-        ZeroTest::Certified { equal: true, .. }
-    ) {
+    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+        || !matches!(
+            equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
+            ZeroTest::Certified { equal: true, .. }
+        )
+    {
         return None;
     }
-    let CasExpr::Div(num, den) = expr else {
-        return None;
-    };
-    let k = constant_term(num)?; // numerator must be a constant
-    // Denominator = a + b·trig(x): one constant term, one scaled sin/cos of x.
-    let mut a = Rational::zero();
-    let mut b: Option<Rational> = None;
-    let terms = match den.as_ref() {
-        CasExpr::Add(terms) => terms.clone(),
-        other => vec![other.clone()],
-    };
-    for term in &terms {
-        // Classify each additive term as a constant, or `coeff·sin/cos(x)`.
-        let mut coeff = Rational::integer(1);
-        let mut trig_seen = false;
-        let mut is_trig = true;
-        for factor in flatten_mul(term) {
-            match factor {
-                CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
-                CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, arg)
-                    if !trig_seen && matches!(arg.as_ref(), CasExpr::Var(v) if v == var) =>
-                {
-                    trig_seen = true;
-                }
-                _ => {
-                    is_trig = false;
-                    break;
-                }
-            }
-        }
-        if is_trig && trig_seen {
-            if b.is_some() {
-                return None; // more than one sinusoidal term
-            }
-            b = Some(coeff);
-        } else {
-            a = a.checked_add(constant_term(term)?)?;
-        }
-    }
-    let b = b?;
-    // Convergence/reality: a > |b|.
-    let discriminant = a.checked_mul(a)?.checked_sub(b.checked_mul(b)?)?;
-    if discriminant.numerator() <= 0 {
+    // Weierstrass substitution to a rational function of `t`, incl. the Jacobian.
+    let t = if var == "t" { "s" } else { "t" };
+    let tv = CasExpr::var(t);
+    let one_plus = CasExpr::int(1) + tv.clone().pow(2);
+    let sin_t = CasExpr::int(2) * tv.clone() / one_plus.clone();
+    let cos_t = (CasExpr::int(1) - tv.clone().pow(2)) / one_plus.clone();
+    let tan_t = CasExpr::int(2) * tv.clone() / (CasExpr::int(1) - tv.clone().pow(2));
+    let in_t = replace_trig_heads(&expand_trig(expr), var, &sin_t, &cos_t, &tan_t);
+    if expr_contains_var(&in_t, var) || contains_sin_or_cos(&in_t) {
         return None;
     }
-    // 2πk/√(a²−b²) (simplify_radicals collapses a perfect-square discriminant).
-    let two_pi_k = scaled_term(k.checked_mul(Rational::integer(2))?, CasExpr::var("pi"));
-    Some(simplify(&simplify_radicals(&(two_pi_k / CasExpr::Const(discriminant).sqrt()))))
+    let rational_t = cancel(&(in_t * (CasExpr::int(2) / one_plus)))?;
+    // ∫_{−∞}^{∞} of the rational t-integrand.
+    let integral = improper_integrate(&rational_t, t, LimitPoint::NegInfinity, LimitPoint::PosInfinity)?;
+    integral
+        .is_certified()
+        .then(|| simplify(&simplify_radicals(&integral.value)))
 }
 
 /// The **Fourier series** partial sum of `f` on `[−L, L]` up to `n_terms`
@@ -14398,11 +14375,19 @@ mod tests {
                 .value,
             &two_pi(),
         );
-        // ∫₀^{2π} 1/(2+sin x) = 2π/√3.
+        // Surd result via Weierstrass→improper: ∫₀^{2π} 1/(2+sin x) = 2π/√3.
         assert!(matches!(
             equal(
                 &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(2) + x().sin())), "x", &CasExpr::int(0), &two_pi()).unwrap().value,
                 &(two_pi() / CasExpr::int(3).sqrt()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Higher power (beyond a simple formula): ∫₀^{2π} 1/(2+cos x)² = 4π/(3√3).
+        assert!(matches!(
+            equal(
+                &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(2) + x().cos()).pow(2)), "x", &CasExpr::int(0), &two_pi()).unwrap().value,
+                &(CasExpr::int(4) * v("pi") / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
             ),
             ZeroTest::Certified { equal: true, .. }
         ));
