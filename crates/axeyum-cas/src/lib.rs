@@ -1899,8 +1899,11 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`
     // and expanding `ln(rational)` over a prime basis so log-arithmetic identities
     // like `2·ln2 − ln3 = ln(4/3)` decide) before we would assert `≠`.
-    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(a))));
-    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(b))));
+    // `combine_gamma_ratios` first applies `Γ(z+1)=z·Γ(z)` so integer-offset `Γ`
+    // ratios (`Γ(k+2)/Γ(k+1)`, `(k+1)!/k!`) collapse to rational functions the core
+    // can then decide; `fold_gamma` folds the constant-argument `Γ`s.
+    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(&combine_gamma_ratios(a)))));
+    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(&combine_gamma_ratios(b)))));
     match equal_core(&ca, &cb) {
         certified @ ZeroTest::Certified { .. } => certified,
         // The Euler form could not decide. Never surface a relation-blind
@@ -5099,6 +5102,12 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
         Some(trigsimp(expr)),
         Some(fold_trivial(expr)),
         cancel(&expand_trig(expr)),
+        // `gammasimp`: collapse integer-offset `Γ` ratios via `Γ(z+1)=z·Γ(z)`
+        // (`(k+1)!/k! → k+1`). Value-preserving by construction; only chosen when
+        // it shrinks the term, and re-`cancel`ed so the rising factorial cancels
+        // against any matching rational factor.
+        cancel(&combine_gamma_ratios(expr)),
+        Some(combine_gamma_ratios(expr)),
     ]
     .into_iter()
     .flatten()
@@ -7296,6 +7305,96 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
         CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(fold_gamma).collect()),
         CasExpr::Div(a, b) => CasExpr::Div(Box::new(fold_gamma(a)), Box::new(fold_gamma(b))),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// A cap on the rising-factorial length spanned when combining two `Γ` heads whose
+/// arguments differ by an integer, so a pathological offset cannot blow up the term.
+/// Far past any real `gammasimp`/Gosper certificate.
+const GAMMA_RATIO_SPAN_CAP: i128 = 128;
+
+/// Multiply a list of factors back into one expression (`[]` → `1`, `[x]` → `x`).
+fn build_product(mut factors: Vec<CasExpr>) -> CasExpr {
+    match factors.len() {
+        0 => CasExpr::int(1),
+        1 => factors.pop().unwrap(),
+        _ => CasExpr::Mul(factors),
+    }
+}
+
+/// Lower every `Γ` head to a canonical base by stripping the integer part of its
+/// argument via the functional equation `Γ(z+1) = z·Γ(z)` — the core of `SymPy`'s
+/// `gammasimp`/`combsimp`. `Γ(k+2) → (k+1)·k·Γ(k)`, `Γ(k−1) → Γ(k)/(k−1)`; a
+/// factorial `(k+1)! = Γ(k+2)` lowers the same way.
+///
+/// The rewrite is **expression-independent** (each `Γ` is lowered to the base with
+/// the *fractional* part of its argument, an absolute target), so two spellings of
+/// the same value reach a common `Γ` atom. That lets the zero-test decide both
+/// additive identities — `Γ(k+2) − (k+1)·Γ(k+1) = 0` — and ratio identities —
+/// `(k+1)!/k! = k+1` — after the shared `Γ(k)`/`Γ(k+1)` atom cancels in the normal
+/// form. Pure-constant arguments are left untouched (that is [`fold_gamma`]'s job,
+/// and lowering `Γ(2)` would spuriously introduce the pole `Γ(0)`).
+///
+/// Sound: only exact integer-step rising/falling factorials are introduced, capped
+/// at [`GAMMA_RATIO_SPAN_CAP`]; a non-integer or zero offset leaves the head as is.
+pub(crate) fn combine_gamma_ratios(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Gamma, arg) => {
+            let arg = combine_gamma_ratios(arg);
+            lower_gamma_to_base(&arg)
+                .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::Gamma, Box::new(arg)))
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(combine_gamma_ratios(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(combine_gamma_ratios(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(combine_gamma_ratios(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(combine_gamma_ratios).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(combine_gamma_ratios).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(combine_gamma_ratios(a)),
+            Box::new(combine_gamma_ratios(b)),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// `Γ(arg)` rewritten with the integer part `n = ⌊const term of arg⌋` stripped,
+/// against the base `base = arg − n`: for `n ≥ 1`, `∏_{t=0}^{n−1}(base+t)·Γ(base)`;
+/// for `n ≤ −1`, `Γ(base) / ∏_{t=1}^{−n}(base−t)`. `None` when there is nothing to
+/// lower — `n = 0`, a pure-constant argument (left to [`fold_gamma`]), the constant
+/// part is not extractable, or `|n|` exceeds [`GAMMA_RATIO_SPAN_CAP`].
+fn lower_gamma_to_base(arg: &CasExpr) -> Option<CasExpr> {
+    let poly = normalize(arg)?;
+    // A pure constant argument (`Γ(2)`, `Γ(5/2)`) is `fold_gamma`'s domain; lowering
+    // it would step toward the `Γ(0)` pole.
+    if poly.terms.keys().all(|m| m.powers.is_empty()) {
+        return None;
+    }
+    let constant = poly
+        .terms
+        .get(&Monomial::one())
+        .copied()
+        .unwrap_or_else(Rational::zero);
+    // ⌊constant⌋ (denominator is always positive), so the base keeps the fractional
+    // part in [0, 1) and only whole `Γ(z+1)=z·Γ(z)` steps are taken.
+    let n = constant.numerator().div_euclid(constant.denominator());
+    if n == 0 || n.abs() > GAMMA_RATIO_SPAN_CAP {
+        return None;
+    }
+    let base = arg.clone() - CasExpr::Const(Rational::integer(n));
+    let gamma_base = CasExpr::Unary(UnaryFunc::Gamma, Box::new(base.clone()));
+    if n > 0 {
+        // Γ(base+n) = (base+n−1)(base+n−2)···(base)·Γ(base).
+        let mut factors: Vec<CasExpr> = (0..n)
+            .map(|t| base.clone() + CasExpr::Const(Rational::integer(t)))
+            .collect();
+        factors.push(gamma_base);
+        Some(CasExpr::Mul(factors))
+    } else {
+        // Γ(base+n) = Γ(base) / [(base−1)(base−2)···(base+n)].
+        let denom: Vec<CasExpr> = (1..=-n)
+            .map(|t| base.clone() - CasExpr::Const(Rational::integer(t)))
+            .collect();
+        Some(CasExpr::Div(Box::new(gamma_base), Box::new(build_product(denom))))
     }
 }
 
@@ -20178,6 +20277,30 @@ mod tests {
         assert!(certified(&CasExpr::int(4).digamma(), &(CasExpr::rat(11, 6) - gam)));
         assert!(certified(&CasExpr::int(1).polygamma(1), &(v("pi").pow(2) / CasExpr::int(6))));
         assert!(certified(&CasExpr::int(2).polygamma(1), &(v("pi").pow(2) / CasExpr::int(6) - CasExpr::int(1))));
+    }
+
+    #[test]
+    fn gammasimp_integer_offset_ratios() {
+        // `gammasimp`/`combsimp`: collapse `Γ` ratios whose arguments differ by an
+        // integer via `Γ(z+1) = z·Γ(z)` — the functional equation the plain zero-test
+        // does not know (it treats `Γ(k+1)`, `Γ(k+2)` as independent atoms).
+        let k = || v("k");
+        let certified = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        // Γ(k+2)/Γ(k+1) = k+1  (i.e. (k+1)!/k! = k+1).
+        let r1 = (k() + CasExpr::int(2)).gamma() / (k() + CasExpr::int(1)).gamma();
+        assert_eq!(simplify(&r1), simplify(&(k() + CasExpr::int(1))));
+        // (k+1)!/k! written through the factorial builder collapses the same way.
+        let fac = (k() + CasExpr::int(1)).factorial() / k().factorial();
+        assert_eq!(simplify(&fac), simplify(&(k() + CasExpr::int(1))));
+        // Γ(k+3)/Γ(k) = k(k+1)(k+2)  — a three-term rising factorial.
+        let r2 = (k() + CasExpr::int(3)).gamma() / k().gamma();
+        assert!(certified(&r2, &(k() * (k() + CasExpr::int(1)) * (k() + CasExpr::int(2)))));
+        // Reciprocal direction: Γ(k)/Γ(k+2) = 1/(k(k+1)).
+        let r3 = k().gamma() / (k() + CasExpr::int(2)).gamma();
+        assert!(certified(&r3, &(CasExpr::int(1) / (k() * (k() + CasExpr::int(1))))));
+        // The combined form is genuinely a rational function of k now — no Γ heads left.
+        let ratio = (k() + CasExpr::int(3)).gamma() / (k() + CasExpr::int(1)).gamma();
+        assert!(!format!("{}", simplify(&ratio)).contains("gamma"));
     }
 
     #[test]

@@ -200,6 +200,10 @@ fn certifies_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> bool {
 fn consecutive_ratio(term: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
     let shifted = term.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
     let ratio = CasExpr::Div(Box::new(shifted), Box::new(term.clone()));
+    // Reduce integer-offset `Γ` ratios first, so a *hypergeometric* term carrying
+    // factorials/binomials (`t = k·k!`, ratio `(k+1)²/k`) yields an honest rational
+    // consecutive ratio. Elementary rational terms are unaffected.
+    let ratio = crate::simplify(&crate::combine_gamma_ratios(&ratio));
     let rf = normalize_rational(&ratio)?;
     let num = poly::rat_trim(rf.num.to_univariate(var)?);
     let den = poly::rat_trim(rf.den.to_univariate(var)?);
@@ -766,6 +770,35 @@ mod tests {
         let fake_factorial = CasExpr::Unary(UnaryFunc::Ln, Box::new(k.clone()));
         let term = CasExpr::Mul(vec![k, fake_factorial]);
         assert_eq!(gosper_sum(&term, "k"), None);
+    }
+
+    #[test]
+    fn hypergeometric_factorial_terms() {
+        // The classic Gosper domain: hypergeometric terms carrying real `Γ`-based
+        // factorials, whose consecutive ratio is rational (`t(k+1)/t(k)`) once the
+        // `Γ(z+1)=z·Γ(z)` lowering reduces it. Certification goes through the exact
+        // zero-test (which now knows that functional equation).
+        let k = || CasExpr::var("k");
+        let is = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+
+        // ∑ k·k! : antidifference S(k) = k! = Γ(k+1), since (k+1)! − k! = k·k!.
+        let s1 = certified_sum(&(k() * k().factorial()), "k");
+        assert!(is(&s1, &k().factorial()));
+
+        // ∑ (k²+k+1)·k! : antidifference k·k! = k·Γ(k+1).
+        let s2 = certified_sum(&((k().pow(2) + k() + CasExpr::int(1)) * k().factorial()), "k");
+        assert!(is(&s2, &(k() * k().factorial())));
+
+        // ∑ k/(k+1)! : antidifference −1/k! = −1/Γ(k+1).
+        let s3 = certified_sum(&(k() / (k() + CasExpr::int(1)).factorial()), "k");
+        assert!(is(&s3, &(CasExpr::int(-1) / k().factorial())));
+
+        // Definite value via telescoping: ∑_{k=1}^{4} k·k! = 5! − 1 = 119.
+        let def = crate::definite_sum(&(k() * k().factorial()), "k", &CasExpr::int(1), &CasExpr::int(4)).unwrap();
+        assert!(is(&def, &CasExpr::int(119)));
+
+        // Soundness: ∑ 1/k! is not Gosper-summable — decline, never a wrong answer.
+        assert_eq!(gosper_sum(&(CasExpr::int(1) / k().factorial()), "k"), None);
     }
 
     #[test]
