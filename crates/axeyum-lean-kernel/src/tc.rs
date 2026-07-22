@@ -19,9 +19,10 @@
 //! admission gate.
 //!
 //! **Deferred to a later slice** (and erroring cleanly if reached): literal
-//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]),
-//! inductive/recursor (ι) reduction, structure projections, and `Quotient`
-//! reduction. An unknown `Const` name returns [`KernelError::UnknownConst`].
+//! typing/reduction (`Lit` → [`KernelError::UnsupportedLit`]), structure-
+//! projection inference (`Proj` → [`KernelError::UnsupportedProj`]), and
+//! `Quotient` reduction. Inductive/recursor ι-reduction is implemented. An
+//! unknown `Const` name returns [`KernelError::UnknownConst`].
 //! `Opaque` declarations are admitted but never δ-unfold; `Axiom`s never
 //! unfold. None of these paths panic.
 //!
@@ -118,6 +119,10 @@ pub enum KernelError {
     /// A `Lit` reached inference. Literal typing needs inductive `Nat`/`String`
     /// declarations and their reduction rules, deferred to a later slice.
     UnsupportedLit,
+    /// A `Proj` reached inference. TL2.2 represents and traverses projections,
+    /// but structure metadata and dependent result-type inference land under
+    /// TL2.3. Until then admission rejects rather than guessing.
+    UnsupportedProj,
     /// A declaration with this name already exists in the environment;
     /// re-declaration is rejected.
     DeclarationExists {
@@ -1135,6 +1140,7 @@ impl Kernel {
                 Ok(self.sort(succ))
             }
             ExprNode::Const(name, levels) => self.infer_const(name, &levels),
+            ExprNode::Proj(_, _, _) => Err(KernelError::UnsupportedProj),
             ExprNode::Lit(_) => Err(KernelError::UnsupportedLit),
             ExprNode::App(..) => self.infer_app(e, ctx),
             ExprNode::Lam(name, dom, body, info) => {

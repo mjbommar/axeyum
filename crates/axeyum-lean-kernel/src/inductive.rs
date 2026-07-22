@@ -538,6 +538,7 @@ impl Kernel {
         match self.expr_node(e).clone() {
             ExprNode::Const(n, _) => n == target,
             ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => false,
+            ExprNode::Proj(_, _, structure) => self.mentions_const(structure, target),
             ExprNode::App(f, a) => self.mentions_const(f, target) || self.mentions_const(a, target),
             ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
                 self.mentions_const(ty, target) || self.mentions_const(body, target)

@@ -40,8 +40,10 @@ Last updated: 2026-07-21
 > [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
 > covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
 > fail-closed literals/reduction, with deterministic replay and 768 rejected
-> `False` admissions. Projection/eta and quotient seams remain uncredited until
-> their TL2 slices exist; projection TL2.2 is next.
+> `False` admissions. TL2.2 now represents projections throughout the kernel's
+> structural operations while leaving inference and wire translation
+> fail-closed. Projection/eta and quotient semantic seams remain uncredited;
+> dependent projection inference in TL2.3 is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

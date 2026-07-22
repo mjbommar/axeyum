@@ -191,7 +191,7 @@ official comparison.
 | ID | Status | Task | Depends | Size | Exit artifact/gate |
 |---|---|---|---|---|---|
 | TL2.1 | DONE | Admit existing core expressions/declarations plus flat, parametric-recursive, and direct-recursive non-indexed inductives. | TL1.2 | L | Official fixtures admit 8 and 11 declarations; recursor mutations reject. |
-| TL2.2 | TODO | Add first-class `Proj` representation to interning, metadata, de Bruijn operations, substitution, level substitution, traversal, hashing, and printers. | TL0.2, TL1.2 | L | Exhaustive traversal/mutation tests cover the new variant. |
+| TL2.2 | DONE | Add first-class `Proj` representation to interning, metadata, de Bruijn operations, substitution, level substitution, traversal, hashing, and printers. Inference and importer translation remain deliberately fail-closed. | TL0.2, TL1.2 | L | [Four integration tests plus renderer coverage](lean-projection-representation-tl2.2-2026-07-21.md) exhaust the structural payloads/operations and rollback boundary. |
 | TL2.3 | TODO | Preserve single-constructor structure metadata and infer dependent projection types. | TL2.2 | L | Wrong structure/index/telescope mutations reject; dependent second field infers. |
 | TL2.4 | TODO | Reduce projections of constructor applications, including universe-polymorphic and parameterized structures. | TL2.3 | M | Official projection closure independently admits and computes. |
 | TL2.5 | TODO | Add structure eta as a separate definitional-equality slice. | TL2.4 | M | Positive eta and false-equality controls agree with official Lean. |
@@ -204,7 +204,7 @@ official comparison.
 | TL2.12 | TODO | Generalize induction hypotheses for recursive-indexed and reflexive/higher-order fields. | TL2.11 | L | `Vector`- and `Acc`-shaped official fixtures admit and compute. |
 | TL2.13 | TODO | Admit mutual inductive groups with multiple motives and shared minors. | TL2.12 | L | Two-family mutual fixture and recursors agree with official Lean. |
 | TL2.14 | TODO | Implement frontend lowering for nested and well-founded definitions to mutual/reflexive core forms. | TL2.13, TL4.12 | XL | Exported and native-source forms elaborate to definitionally equal core declarations. |
-| TL2.15 | PARTIAL | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. The [T6.0.3 seed](lean-kernel-seam-fuzz-seed-2026-07-21.md) covers all four currently representable seams with 768 unique generated cases and deterministic summary replay. | TL2.2-TL2.13 as applicable | L | Current four-seam `kernel accepts False` class is live; projection/eta and quotient cases remain mandatory as those constructs land. |
+| TL2.15 | PARTIAL | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. The [T6.0.3 seed](lean-kernel-seam-fuzz-seed-2026-07-21.md) covers four semantic seams with 768 unique generated cases and deterministic summary replay. TL2.2 adds structural `Proj` terms but no projection inference/reduction seam yet. | TL2.2-TL2.13 as applicable | L | Current four-seam `kernel accepts False` class is live; projection/eta and quotient semantic cases remain mandatory as those constructs land. |
 | TL2.16 | TODO | Generate the parsed/translated/admitted/dual-admitted construct and root matrix. | TL0.6 | M | Matrix is generated from tests and exact fixtures, never hand-maintained. |
 
 L2 exits when the pinned construct matrix has no accidental parser-to-checker
@@ -444,8 +444,8 @@ parallel lane:
 2. **DONE:** TL0.2 — land the machine-readable capability schema and generated matrix.
 3. **DONE:** TL0.4 — land the axiom ledger schema and current 65-row inventory.
 4. **DONE:** T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
-5. **NEXT:** TL2.2 — add `Proj` representation and exhaustive traversal tests.
-6. TL2.3 — add structure metadata and dependent projection inference.
+5. **DONE:** TL2.2 — add `Proj` representation and exhaustive traversal tests.
+6. **NEXT:** TL2.3 — add structure metadata and dependent projection inference.
 7. TL2.4 — add constructor projection reduction.
 8. Translate official projection records and close the committed projection root.
 9. TL2.5 — add structure eta as its own differential slice.

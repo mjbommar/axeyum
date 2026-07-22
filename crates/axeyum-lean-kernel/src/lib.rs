@@ -606,6 +606,10 @@ impl Kernel {
                     .collect();
                 self.const_(name, levels)
             }
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.substitute_expr_levels_aux(structure, subst, memo);
+                self.proj(type_name, field_index, structure)
+            }
             ExprNode::App(f, a) => {
                 let f = self.substitute_expr_levels_aux(f, subst, memo);
                 let a = self.substitute_expr_levels_aux(a, subst, memo);
@@ -782,6 +786,7 @@ impl Kernel {
                 num_loose_bvars: i + 1,
                 has_fvars: false,
             },
+            ExprNode::Proj(_, _, structure) => self.expr_meta[structure.index()],
             ExprNode::App(f, a) => {
                 let mf = self.expr_meta[f.index()];
                 let ma = self.expr_meta[a.index()];
@@ -837,6 +842,15 @@ impl Kernel {
     /// A constant reference `name.{levels}`.
     pub fn const_(&mut self, name: NameId, levels: Vec<LevelId>) -> ExprId {
         self.intern_expr(ExprNode::Const(name, levels))
+    }
+
+    /// Project the zero-based non-parameter field `field_index` from
+    /// `structure`, whose inductive structure type is named `type_name`.
+    ///
+    /// This constructor records Lean's core expression exactly. TL2.3 owns
+    /// validation and dependent result-type inference; TL2.4 owns reduction.
+    pub fn proj(&mut self, type_name: NameId, field_index: u32, structure: ExprId) -> ExprId {
+        self.intern_expr(ExprNode::Proj(type_name, field_index, structure))
     }
 
     /// Application `fun arg`.
@@ -955,6 +969,10 @@ impl Kernel {
                 let i = (idx - offset) as usize;
                 subst.iter().rev().nth(i).copied().unwrap_or(e)
             }
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.instantiate_aux(structure, subst, offset, memo);
+                self.proj(type_name, field_index, structure)
+            }
             ExprNode::App(f, a) => {
                 let f = self.instantiate_aux(f, subst, offset, memo);
                 let a = self.instantiate_aux(a, subst, offset, memo);
@@ -1009,6 +1027,7 @@ impl Kernel {
             if !visited {
                 stack.push((expression, true));
                 match self.expr_node(expression) {
+                    ExprNode::Proj(_, _, structure) => stack.push((*structure, false)),
                     ExprNode::App(function, argument) => {
                         stack.push((*function, false));
                         stack.push((*argument, false));
@@ -1034,6 +1053,7 @@ impl Kernel {
             let child_present = |child: ExprId| presence[child.index()] == PRESENT;
             let found = match self.expr_node(expression) {
                 ExprNode::FVar(id) => targets.contains(id),
+                ExprNode::Proj(_, _, structure) => child_present(*structure),
                 ExprNode::App(function, argument) => {
                     child_present(*function) || child_present(*argument)
                 }
@@ -1072,6 +1092,10 @@ impl Kernel {
                 None => e,
             },
             ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => e,
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.abstract_aux(structure, fvars, offset, target_presence, memo);
+                self.proj(type_name, field_index, structure)
+            }
             ExprNode::App(f, a) => {
                 let f = self.abstract_aux(f, fvars, offset, target_presence, memo);
                 let a = self.abstract_aux(a, fvars, offset, target_presence, memo);
@@ -1167,6 +1191,12 @@ impl Kernel {
                 .get(&id)
                 .map_or(e, |&binder_depth| self.bvar(depth - binder_depth - 1)),
             ExprNode::BVar(_) | ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::Lit(_) => e,
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.close_scoped_fvars_aux(
+                    structure, depth, scope, markers, active, scopes, next_scope, memo,
+                );
+                self.proj(type_name, field_index, structure)
+            }
             ExprNode::App(function, argument) => {
                 let function = self.close_scoped_fvars_aux(
                     function, depth, scope, markers, active, scopes, next_scope, memo,
@@ -1264,6 +1294,10 @@ impl Kernel {
                 }
             }
             ExprNode::Sort(_) | ExprNode::Const(..) | ExprNode::FVar(_) | ExprNode::Lit(_) => e,
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.lift_loose_bvars(structure, cutoff, amount);
+                self.proj(type_name, field_index, structure)
+            }
             ExprNode::App(f, a) => {
                 let f = self.lift_loose_bvars(f, cutoff, amount);
                 let a = self.lift_loose_bvars(a, cutoff, amount);

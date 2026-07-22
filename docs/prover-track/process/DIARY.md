@@ -1360,8 +1360,25 @@ unchanged. The historical complete large-elimination exploit remains a separate
 regression.
 
 This closes the literal “zero fuzz” statement in the earlier diary entries. It
-does **not** close TL2.15: projection/eta and quotient do not exist yet, literals
-remain fail-closed rather than typed, and the harness is neither an official-Lean
+does **not** close TL2.15: at that seed point projection/eta and quotient did not
+exist, literals remain fail-closed rather than typed, and the harness is neither an official-Lean
 differential corpus nor a consistency proof. The next kernel work is therefore
 TL2.2 first-class `Proj`, followed by dependent inference, constructor reduction,
 and structure eta; each admitted seam must extend the same negative class.
+
+## 2026-07-21 — TL2.2 lands the projection term without laundering semantics
+
+The kernel now interns `Proj(structure_name, field_index, structure)` as a
+first-class expression. Every structural operation and both Lean renderers
+traverse it, and dedicated tests independently mutate all three payloads and
+exercise metadata, substitution, abstraction, lifting, closure, dependency
+collection, and rendering. The index is a target-stable `u32`; rendering
+converts its zero-based kernel meaning to Lean's one-based numeric field syntax.
+
+This commit deliberately stops before inference. `UnsupportedProj` rejects
+typing and declaration admission with rollback, while the import crate retains
+its line-81 `expr-projection` decline. Therefore the official projection root,
+the Nat/String roots that encounter projection first, and TL2.15 projection
+semantics receive no new admission credit. The next work is TL2.3 structure
+metadata and dependent field inference, followed by TL2.4 constructor reduction
+and only then wire translation of the committed closure.

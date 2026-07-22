@@ -123,10 +123,16 @@ LEAN_PATH=. .lake/build/bin/lean4export \
 
 ## Why projection is an L-sized trusted-kernel slice
 
+**Implementation checkpoint (2026-07-21):** item 1 below is complete under
+TL2.2, including structural/de Bruijn operations, both renderers, and exhaustive
+payload mutations. Inference remains explicitly unsupported and the importer
+still declines wire projections. This earns representation evidence only; the
+closure rows above do not change until TL2.3/TL2.4 validate and compute them.
+
 The census establishes priority, not implementation simplicity. Projection is
 a first-class Lean core expression, so it changes more than the importer:
 
-1. add `Proj(structure_name, field_index, structure)` to the kernel expression
+1. **DONE (TL2.2):** add `Proj(structure_name, field_index, structure)` to the kernel expression
    language and every structural traversal, hash-consing, de Bruijn operation,
    metadata computation, and renderer;
 2. preserve enough single-constructor structure metadata to validate the
@@ -155,9 +161,10 @@ after positive and false-equality controls pass both kernels.
 
 ## Updated next order
 
-1. Accept or revise ADR-0345's separate wire/checker boundary.
-2. Implement and adversarially test projection representation, inference, and
-   constructor reduction against the committed projection closure.
+1. **DONE:** accept ADR-0345's separate wire/checker boundary.
+2. **Representation DONE:** implement and adversarially test projection
+   representation. **Next:** TL2.3 inference and TL2.4 constructor reduction
+   against the committed projection closure.
 3. Re-run the Nat and String roots. Only after projection clears, freeze the
    next actual first declines.
 4. Replace `Lit::Nat(u128)` with an arbitrary-precision representation before

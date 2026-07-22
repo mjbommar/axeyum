@@ -172,7 +172,7 @@ returns successfully.
 | `succ`, `max`, `imax`, `param` levels | translated | dense/backward references required |
 | `bvar`, `sort`, `const`, `app`, `lam`, `forallE`, `letE` | translated | binder mode and every child reference validated |
 | `mdata` | semantically erased to its referenced expression | metadata object still shape-checked |
-| `proj` | typed decline `expr-projection` | kernel has no projection node/check/reduction yet |
+| `proj` | typed decline `expr-projection` | TL2.2 kernel representation exists; wire translation, inference, and reduction remain deliberately declined |
 | `natVal` | typed decline `literal-nat-bignum-and-typing` | bignum must precede literal typing |
 | `strVal` | typed decline `literal-string-typing` | kernel currently rejects literal inference |
 | safe `axiom` | kernel admitted and axiom name reported | type must check; proposition remains an assumption |
@@ -295,8 +295,9 @@ mutual, nested, and reflexive groups remain explicit declines.
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. Implement projection representation/inference/constructor reduction, then
-   rerun the literal closures before choosing the next slice.
+6. **Representation DONE (TL2.2):** implement projection
+   inference/constructor reduction, then rerun the literal closures before
+   choosing the next slice.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

@@ -669,29 +669,32 @@ Non-claims until their gates are met:
 - no independent-checking claim from official Lean acceptance alone;
 - no theorem-admission claim from NDJSON parsing alone.
 
-## 9. Immediate next ten actions
+## 9. Immediate next eleven actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
 2. Keep the eight Python and eleven Rust fixture/mutation/census tests in normal
    checks.
-3. Preserve the landed projection/Nat/quotient streams and the source/command/
+3. **TL2.2 DONE:** preserve first-class projection representation and its
+   fail-closed inference/import boundary; execute TL2.3 dependent inference and
+   TL2.4 constructor reduction before translating the official root.
+4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
    nested, and reflexive fixtures.
-4. Preserve byte-identical regeneration of both committed official fixtures and
+5. Preserve byte-identical regeneration of both committed official fixtures and
    carry the direct-recursive positive control beside every recursive-indexed
    negative so the boundary is attributed to indices, not recursion alone.
-5. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
+6. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
    current hand-checked six-profile seed.
-6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
+7. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
    completed-environment publication mutations.
-7. **DONE (inventory/digest):** retain the runtime-derived, type-digested
+8. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.
-8. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
+9. Export minimal pinned `Init`/`Std` roots and rank kernel work by aggregate
    dependency-closed admissions gained per slice.
-9. Select one mathlib `norm_num` or `ring` theorem basis and implement one
+10. Select one mathlib `norm_num` or `ring` theorem basis and implement one
    end-to-end CAS-certificate-to-kernel-term proof.
-10. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; after TL0 contracts,
+11. Resume Track 6 P6.0 fuzzing and P6.2 goal/hole work; after TL0 contracts,
     start TL6.1-TL6.4 as an independent source/syntax lane while L1-L3 drive the
     checker/import critical path. Lake, LSP, compiler, and `.olean` remain
     dependency-gated by their explicit TL tasks rather than globally forbidden.

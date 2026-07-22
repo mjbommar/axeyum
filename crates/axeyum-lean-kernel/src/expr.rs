@@ -10,10 +10,10 @@
 //! - `has_fvars` — whether any free variable occurs in the node.
 //!
 //! Ported from nanoda's `expr.rs`, adapted to axeyum's interned handles instead
-//! of a lifetime-tagged arena (ADR-0036). nanoda's `Proj` and arbitrary-precision
-//! `NatLit` are simplified here: there is no `Proj` in this slice, and `Lit::Nat`
-//! holds a `u128` (arbitrary-precision `Nat` is **deferred** to a later slice —
-//! see [`Lit`]).
+//! of a lifetime-tagged arena (ADR-0036). `Proj` is represented directly;
+//! inference, reduction, and structure eta land in their separately gated
+//! TL2.3--TL2.5 slices. `Lit::Nat` still holds a `u128` (arbitrary-precision
+//! `Nat` is **deferred** to TL2.6 — see [`Lit`]).
 
 use crate::level::LevelId;
 use crate::name::NameId;
@@ -86,6 +86,14 @@ pub enum ExprNode {
     Sort(LevelId),
     /// A constant reference with universe arguments.
     Const(NameId, Vec<LevelId>),
+    /// A structure projection: structure type name, zero-based field index,
+    /// and the structure-valued expression being projected.
+    ///
+    /// The field index excludes constructor parameters, matching Lean's core
+    /// `Expr::Proj` and `lean4export` format 3.1. It is a fixed-width `u32` so
+    /// the representation is deterministic across native and WASM targets;
+    /// wire values outside this range must decline before construction.
+    Proj(NameId, u32, ExprId),
     /// Function application `fun arg`.
     App(ExprId, ExprId),
     /// `fun (name : ty) => body` with binder info.

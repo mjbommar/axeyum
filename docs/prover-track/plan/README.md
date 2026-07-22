@@ -69,10 +69,12 @@ Seams, in priority order:
    rejects literals first. **Bignum lands before `Lit` typing** (T6.0.4), or ingest
    raises `LitTooWide`.
 
-The negative class is now live: **"the kernel accepts `False`."** Projection/eta
-and quotient cases remain explicit TL2.15 follow-ups because those constructs
-are not representable yet. Next implementation work is TL2.2 projection
-representation, with each new seam required to join the same negative class.
+The negative class is now live: **"the kernel accepts `False`."** TL2.2 now
+represents projections structurally while keeping inference/admission
+fail-closed; projection reduction/eta and quotient semantic cases remain
+explicit TL2.15 follow-ups. Next implementation work is TL2.3 dependent
+projection inference, with each new admitted seam required to join the same
+negative class.
 
 ## The five things not to get wrong
 

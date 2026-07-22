@@ -57,6 +57,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   admission/rollback invariants, reproduction seeds, and explicit non-credit
   for projection/eta, quotients, typed literals, and official-Lean differential
   fuzzing.
+- [`lean-projection-representation-tl2.2-2026-07-21.md`](lean-projection-representation-tl2.2-2026-07-21.md) —
+  TL2.2 result: first-class projection terms across all structural operations
+  and renderers, with exhaustive mutation/traversal tests and a deliberately
+  fail-closed inference/import boundary before TL2.3/TL2.4.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local

@@ -71,7 +71,13 @@ state.
 > declarations and also reaches Nat literals and recursive-indexed inductives.
 > Three small streams are committed, the 570,807-byte String stream is bound by
 > source/command/hash, and 11 Rust plus eight Python tests hold the boundary.
-> Resume with projection representation/inference/reduction and the remaining
+> TL2.2 now lands first-class projection representation across interning,
+> metadata, structural/de Bruijn operations, dependency traversal, and both
+> Lean renderers, with four integration tests plus a renderer unit test. It is
+> deliberately fail-closed at inference and wire translation, so the measured
+> official projection closure still receives no translated or admitted credit.
+> Resume with TL2.3 dependent projection inference, TL2.4 constructor
+> reduction, and the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -103,8 +109,8 @@ state.
 > 768 unique generated cases across the four currently representable kernel
 > seams, repeats the complete summary deterministically, and rejects every
 > attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
-> partial until projection/eta and quotient exist. Execute projection
-> TL2.2-TL2.5 next. Native parser/macros,
+> partial until projection/eta and quotient semantics exist. TL2.2 structural
+> representation is complete; execute TL2.3-TL2.5 next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the
