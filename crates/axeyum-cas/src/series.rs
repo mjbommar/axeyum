@@ -194,6 +194,68 @@ pub fn series(expr: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
     Some(expansion.to_expr(var))
 }
 
+/// The Laurent expansion at the origin of a ratio `N(x)/D(x)` with a pole there —
+/// `D` vanishes to order `m`, `N` to order `k < m`, giving a principal part of order
+/// `p = m − k`. Cancels the common `xᵏ`, divides the two regular series, and shifts
+/// the (regular) quotient down by `p` to emit the negative-power terms. Covers
+/// transcendental poles like `1/sin x`, `1/(eˣ−1)`, `cot x = cos x/sin x`. Returns
+/// `None` when `expr` is not a division or the ratio is regular (handled elsewhere).
+fn laurent_ratio_at_origin(expr: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return None;
+    };
+    // Denominator valuation `m` (lowest order with a nonzero coefficient).
+    let den_probe = coeffs_of(denominator, var, order.saturating_add(2))?;
+    let m = den_probe.coeffs.iter().position(|c| !c.is_zero())?;
+    if m == 0 {
+        return None; // no pole from the denominator — regular case
+    }
+    let num_probe = coeffs_of(numerator, var, order.saturating_add(2))?;
+    let k = num_probe
+        .coeffs
+        .iter()
+        .position(|c| !c.is_zero())
+        .unwrap_or(usize::MAX);
+    if k >= m {
+        return None; // removable / regular — handled by the normal series path
+    }
+    let pole = m - k; // order of the pole
+    // Need the regular quotient to order `order + pole` so that after the `x^{−pole}`
+    // shift the expansion runs from `x^{−pole}` up to `x^{order}`.
+    let target = order.checked_add(pole)?;
+    let top = coeffs_of(numerator, var, target.checked_add(k)?)?;
+    let bottom = coeffs_of(denominator, var, target.checked_add(m)?)?;
+    let top_shifted = Series::truncated(top.coeffs[k..].to_vec(), target);
+    let bottom_shifted = Series::truncated(bottom.coeffs[m..].to_vec(), target);
+    let quotient = top_shifted.div(&bottom_shifted)?;
+    // Emit `Σ_j q_j · x^{j − pole}` (negative exponents as `1/xⁿ`).
+    let pole_i = i64::try_from(pole).ok()?;
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (j, coefficient) in quotient.coeffs.iter().enumerate() {
+        if coefficient.is_zero() {
+            continue;
+        }
+        let exponent = i64::try_from(j).ok()? - pole_i;
+        terms.push(build_power_term(*coefficient, var, exponent)?);
+    }
+    match terms.len() {
+        0 => Some(CasExpr::zero()),
+        1 => terms.pop(),
+        _ => Some(CasExpr::Add(terms)),
+    }
+}
+
+/// `coefficient · varᵉ` for a possibly-negative integer exponent `e` (negative
+/// exponents rendered as `coefficient / var^{|e|}`).
+fn build_power_term(coefficient: Rational, var: &str, exponent: i64) -> Option<CasExpr> {
+    let coeff = CasExpr::Const(coefficient);
+    match exponent {
+        0 => Some(coeff),
+        e if e > 0 => Some(coeff * CasExpr::var(var).pow(u32::try_from(e).ok()?)),
+        e => Some(coeff / CasExpr::var(var).pow(u32::try_from(-e).ok()?)),
+    }
+}
+
 /// The `Taylor` polynomial of `expr` about an **arbitrary** center `var = center`,
 /// up to and including degree `order`, returned in powers of `(var − center)`.
 ///
@@ -227,6 +289,12 @@ pub fn series_at(expr: &CasExpr, var: &str, center: &CasExpr, order: usize) -> O
     if let Some(maclaurin) = series(&shifted, var, order) {
         // Re-express in powers of (var − center).
         return Some(maclaurin.substitute(var, &(CasExpr::var(var) - center.clone())));
+    }
+    // Laurent fallback: a ratio `N/D` with a pole at the center (`D` vanishes to a
+    // higher order than `N`) has a principal part of negative powers — `1/sin x =
+    // 1/x + x/6 + …`, `1/(eˣ−1) = 1/x − 1/2 + x/12 − …`, `cot x`, `csc x`.
+    if let Some(laurent) = laurent_ratio_at_origin(&shifted, var, order) {
+        return Some(laurent.substitute(var, &(CasExpr::var(var) - center.clone())));
     }
     // The rational-coefficient series ring declined — commonly because a head's
     // shifted argument needs a transcendental value at the center (e.g. `exp(x)`
@@ -599,6 +667,31 @@ mod tests {
     }
 
     #[test]
+    fn transcendental_laurent_series() {
+        use crate::{CasExpr as C, series_at};
+        let at0 = |e: &C, n| series_at(e, "x", &C::int(0), n).expect("Laurent");
+        // 1/sin x = 1/x + x/6 + 7x³/360 (odd principal part + Taylor tail).
+        let csc = at0(&(C::int(1) / var().sin()), 4);
+        let csc_expected = C::int(1) / var()
+            + C::rat(1, 6) * var()
+            + C::rat(7, 360) * var().pow(3);
+        assert_matches(&csc, &csc_expected);
+        // 1/(eˣ−1) = 1/x − 1/2 + x/12 − x³/720 (Bernoulli, pole form).
+        let bose = at0(&(C::int(1) / (var().exp() - C::int(1))), 3);
+        let bose_expected = C::int(1) / var() - C::rat(1, 2) + C::rat(1, 12) * var()
+            - C::rat(1, 720) * var().pow(3);
+        assert_matches(&bose, &bose_expected);
+        // cot x = cos x/sin x = 1/x − x/3 − x³/45.
+        let cot = at0(&(var().cos() / var().sin()), 4);
+        let cot_expected = C::int(1) / var() - C::rat(1, 3) * var() - C::rat(1, 45) * var().pow(3);
+        assert_matches(&cot, &cot_expected);
+        // Double pole: 1/(x·sin x) = 1/x² + 1/6 + 7x²/360.
+        let double = at0(&(C::int(1) / (var() * var().sin())), 2);
+        let double_expected = C::int(1) / var().pow(2) + C::rat(1, 6) + C::rat(7, 360) * var().pow(2);
+        assert_matches(&double, &double_expected);
+    }
+
+    #[test]
     fn removable_singularity_ratio_series() {
         use crate::CasExpr as C;
         // x/(eˣ−1) = 1 − x/2 + x²/12 − x⁴/720 (Bernoulli generating function): both
@@ -770,9 +863,11 @@ mod tests {
             + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * (var() - center);
         assert!(matches!(equal(&got, &expected), ZeroTest::Certified { equal: true, .. }));
 
-        // A pole at the center (1/x about 0) declines rather than emitting a
-        // non-finite coefficient.
-        assert!(series_at(&(CasExpr::int(1) / var()), "x", &CasExpr::int(0), 2).is_none());
+        // A simple pole at the center now expands as its Laurent series: 1/x → 1/x.
+        let pole = series_at(&(CasExpr::int(1) / var()), "x", &CasExpr::int(0), 2).expect("Laurent");
+        assert!(matches!(equal(&pole, &(CasExpr::int(1) / var())), ZeroTest::Certified { equal: true, .. }));
+        // A branch point (ln x about 0) has no Laurent series — still declines.
+        assert!(series_at(&var().ln(), "x", &CasExpr::int(0), 2).is_none());
     }
 
     #[test]
