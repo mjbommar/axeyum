@@ -32,6 +32,12 @@ printf '════ LANE DIGEST — main @ %s (%s) ════\n' \
 IFS=',' read -ra rows <<<"$LANES"
 for row in "${rows[@]}"; do
   IFS=':' read -r name br wt <<<"$row"
+  # Agents switch topic branches per milestone (e.g. CAS: vandermonde-wz →
+  # falling-moment-order-* → raw-moment-order-*). Derive the LIVE branch from the
+  # worktree HEAD rather than trusting the seed name, so the digest never watches
+  # a dead branch. Falls back to the seed if detached/unavailable.
+  livebr=$(git -C "$wt" branch --show-current 2>/dev/null)
+  [ -n "$livebr" ] && br="$livebr"
   ahead=$(git -C "$R" rev-list --count "main..$br" 2>/dev/null)
   last=$(git -C "$R" log -1 --format='%cr' "$br" 2>/dev/null)
   wip=$(git -C "$wt" status --porcelain 2>/dev/null | grep -c .)
