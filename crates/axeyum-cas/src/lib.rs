@@ -6766,6 +6766,57 @@ pub fn laguerre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
     })
 }
 
+/// The **Jacobi polynomial** `Pₙ^{(α,β)}(x)` for rational parameters `α, β`, the most
+/// general classical orthogonal family (Legendre `= P^{(0,0)}`, and the Gegenbauer /
+/// Chebyshev families are special cases). `P₀=1`, `P₁ = (α−β)/2 + (α+β+2)x/2`, then the
+/// standard three-term recurrence. Orthogonal on `[−1,1]` with weight
+/// `(1−x)^α(1+x)^β`. `None` on overflow or a degenerate parameter (a vanishing
+/// recurrence denominator, e.g. `α+β` a small negative integer).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, jacobi_polynomial, legendre_polynomial, equal, ZeroTest};
+/// use axeyum_ir::Rational;
+/// // P₃^{(0,0)}(x) = P₃(x) (Legendre).
+/// let j3 = jacobi_polynomial(3, Rational::integer(0), Rational::integer(0), "x").unwrap();
+/// assert!(matches!(equal(&j3, &legendre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn jacobi_polynomial(n: u32, alpha: Rational, beta: Rational, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    let two = Rational::integer(2);
+    // P₁ = (α−β)/2 + (α+β+2)/2 · x.
+    let p1_const = alpha.checked_sub(beta)?.checked_div(two)?;
+    let p1_x = alpha.checked_add(beta)?.checked_add(two)?.checked_div(two)?;
+    let p1 = CasExpr::Const(p1_const) + CasExpr::Const(p1_x) * x.clone();
+    orthogonal_recurrence(n, CasExpr::int(1), p1, |k, pk, pkm1| {
+        let kr = Rational::integer(i128::from(k));
+        // s = 2k + α + β.
+        let s = two.checked_mul(kr)?.checked_add(alpha)?.checked_add(beta)?;
+        let f1 = s.checked_add(Rational::integer(1))?; // 2k+α+β+1
+        let cx = s.checked_add(two)?.checked_mul(s)?; // (s+2)·s, coefficient of x
+        let cc = alpha.checked_mul(alpha)?.checked_sub(beta.checked_mul(beta)?)?; // α²−β²
+        // f2 = 2(k+α)(k+β)(s+2).
+        let f2 = two
+            .checked_mul(kr.checked_add(alpha)?)?
+            .checked_mul(kr.checked_add(beta)?)?
+            .checked_mul(s.checked_add(two)?)?;
+        // denom = 2(k+1)(k+α+β+1)·s.
+        let denom = two
+            .checked_mul(kr.checked_add(Rational::integer(1))?)?
+            .checked_mul(kr.checked_add(alpha)?.checked_add(beta)?.checked_add(Rational::integer(1))?)?
+            .checked_mul(s)?;
+        let inv = Rational::integer(1).checked_div(denom)?;
+        let coeff_x_pk = f1.checked_mul(cx)?.checked_mul(inv)?;
+        let coeff_pk = f1.checked_mul(cc)?.checked_mul(inv)?;
+        let coeff_pkm1 = f2.checked_mul(inv)?;
+        Some(
+            CasExpr::Const(coeff_x_pk) * x.clone() * pk.clone()
+                + CasExpr::Const(coeff_pk) * pk.clone()
+                - CasExpr::Const(coeff_pkm1) * pkm1.clone(),
+        )
+    })
+}
+
 /// The **Gegenbauer (ultraspherical) polynomial** `Cₙ^λ(x)` for a rational parameter
 /// `λ`, from `(k+1)Cₖ₊₁ = 2(k+λ)x·Cₖ − (k+2λ−1)·Cₖ₋₁` with `C₀=1`, `C₁=2λx`. This
 /// parametric family generalizes several classical ones: `λ=1` is the Chebyshev
@@ -14607,6 +14658,16 @@ mod tests {
         }
         // Explicit: C₂^{2}(x) = 12x² − 2.
         assert_equal(&gegenbauer_polynomial(2, Rational::integer(2), "x").unwrap(), &(CasExpr::int(12) * x().pow(2) - CasExpr::int(2)));
+        // Jacobi Pₙ^{(0,0)} = Legendre Pₙ (the most general classical family).
+        for n in 0..=5u32 {
+            assert_equal(
+                &jacobi_polynomial(n, Rational::integer(0), Rational::integer(0), "x").unwrap(),
+                &legendre_polynomial(n, "x").unwrap(),
+            );
+        }
+        // Explicit Jacobi: P₁^{(2,1)} = 1/2 + (5/2)x, P₂^{(1,1)} = (15x²−3)/4.
+        assert_equal(&jacobi_polynomial(1, Rational::integer(2), Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) + CasExpr::rat(5, 2) * x()));
+        assert_equal(&jacobi_polynomial(2, Rational::integer(1), Rational::integer(1), "x").unwrap(), &((CasExpr::int(15) * x().pow(2) - CasExpr::int(3)) / CasExpr::int(4)));
     }
 
     #[test]
