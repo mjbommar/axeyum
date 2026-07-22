@@ -1054,6 +1054,30 @@ Rounded out three surfaces beyond integration:
   `ln x`, resolving the `0·∞` form the series fallback can't (`x·ln x=0`, `1/ln x=0`); genuinely
   divergent forms decline.
 
-**427 unit + 142 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
-heads, multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch,
+**427 unit + 142 doctests, clippy-pedantic clean, WASM-green.**
+
+## 2026-07-21 — Entry 33: breadth wave — transforms, sums, factoring, asymptotes (433 tests)
+
+A broad parity sweep across many surfaces (each certified):
+
+- **Transforms.** Laplace **s-shift** `L{e^{at}f}=F(s−a)` (`L{e^t sin t}`, `L{t·e^t·sin t}` — flatten
+  the nested `Mul` and extract the exp as a shift); **inverse Laplace of irreducible quadratics** →
+  (damped) sinusoids `L⁻¹{1/((s−1)²+4)}=½e^t sin2t` (rational frequency, distributed sum so the
+  forward round-trip certifies).
+- **Summation.** `definite_sum` now routes geometric/hypergeometric via Gosper (`Σ_{0}^{3}2^k=15`,
+  symbolic `Σ_{0}^{n}2^k=2^{n+1}−1`). New **`infinite_sum`**: convergent `Σ_{k}^{∞}` = `lim_{k→∞}S(k)
+  − S(lower)` — geometric (`Σ2^{−k}=2`, via new `limit_geometric_decay`/`numeric_exp_rate` deciding a
+  transcendental rate's sign numerically) and **p-series `Σ1/kˢ=ζ(s)`** (`Σ1/k²=π²/6`, `Σ1/k⁴=π⁴/90`).
+- **Algebra.** `collect` (group terms by powers of a var); `expand_trig` (angle-addition/multiple-angle
+  → trig form, `sin(2x)`, identity-certified); **multivariate quadratic factorization** `x²−y²=(x−y)(x+y)`,
+  `x²±2xy+y²=(x±y)²` (new `rational_poly_sqrt` for the discriminant; certified by re-multiplication) —
+  the first slice of the multivariate-factorization frontier.
+- **Solve/limit/series.** `solve` `ln x=c⇒eᶜ`, `√x=c⇒c²`, polynomials in `eˣ`; the **`ln(exp u)=u`**
+  zero-test fold; `limit` `x·ln x→0`; `series` for `asin`/`asinh`.
+- **Special values & asymptotes.** Exact inverse-trig values (`atan(1)=π/4`, `asin(½)=π/6`, …);
+  **erf/atan horizontal asymptotes at ±∞** (`limit_asymptotic_head`) — closes the **Gaussian**
+  `∫_{−∞}^∞ e^{−x²}=√π` and `∫₀^∞1/(1+x²)=π/2`.
+
+**433 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining: Gamma/digamma
+heads, general multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch,
 arbitrary-precision N[expr,d].
