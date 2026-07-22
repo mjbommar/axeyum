@@ -1294,7 +1294,20 @@ basis (`y″+y=sin x`, `y″+4y=sin 3x`). Known limitation: trig forcing over a 
 (`y″−y=cos x`) still declines — `simplify` pushes the `e^{−x}` integrand into a denominator. Certified
 by substitution.
 
-**Session tally (Entries 37–37g): 18 substantial certified features** across integration (rational-trig
+---
+
+## 2026-07-22 — Entry 37h: trig equation solving — surd RHS & polynomial-in-trig (457 tests)
+
+- **Surd right-hand side.** `solve_trigonometric` accumulated the non-trig part as a `Rational` (via
+  `constant_term`), so `2cos x − √3 = 0` declined. Now it accumulates a `CasExpr` (classifying terms by
+  `expr_contains_var`), forms the target `f(var) = −C/A` symbolically, and matches the special-angle
+  table via the zero-test. Closes `2cos x−√3⇒{π/6,11π/6}`, `2sin x−√2⇒{π/4,3π/4}`.
+- **Polynomial in a trig head.** `solve_polynomial_in_trig`: substitute `sin(var)→u` (structural
+  `replace_subexpr`), require a degree-≥2 polynomial with no residual `var`, solve `P(u)=0`, then invert
+  `sin(var)=u₀` for each real root (out-of-range/complex roots yield no angles). Closes `sin²x=¼`,
+  `2sin²x−3sin x+1=0`, `2cos²x−1=0`.
+
+**Session tally (Entries 37–37h): 20 substantial certified features** across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
