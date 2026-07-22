@@ -252,6 +252,13 @@ def _require_safe_absolute_path(value: Path | str, field: str) -> Path:
     return Path(raw)
 
 
+def _require_e3_unit(value: str) -> str:
+    unit = _require_safe(value, "remote_unit")
+    if not unit.startswith("axeyum-smtcomp-e3-") or not unit.endswith(".service"):
+        raise ContractError("remote unit is outside the E3 namespace")
+    return unit
+
+
 def _decode_mount_path(value: str) -> str:
     return (
         value.replace("\\040", " ")
@@ -1186,7 +1193,7 @@ def remote_liveness(
     unit: str,
     launcher_pid: int,
 ) -> dict[str, Any]:
-    _require_safe(unit, "remote_unit")
+    _require_e3_unit(unit)
     helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
     if type(launcher_pid) is not int or launcher_pid <= 0:
         raise ContractError("invalid remote launcher PID")
@@ -1235,7 +1242,7 @@ def kill_remote_launcher(
 ) -> dict[str, Any]:
     """Kill only the registered launcher after proving exact cgroup membership."""
 
-    _require_safe(unit, "remote_unit")
+    _require_e3_unit(unit)
     helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
     if type(launcher_pid) is not int or launcher_pid <= 0:
         raise ContractError("invalid remote launcher PID")
@@ -1279,6 +1286,53 @@ def kill_remote_launcher(
         or evidence.get("signal") != signal.SIGKILL
     ):
         raise ContractError("remote kill evidence identity mismatch")
+    return evidence
+
+
+def remote_file_observation(
+    *, registration: dict[str, Any], remote_helper_path: Path, path: Path
+) -> dict[str, Any]:
+    """Observe a shared marker through the owning host's NFS client."""
+
+    helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
+    observed_path = _require_safe_absolute_path(path, "observed_path")
+    completed = subprocess.run(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            registration["ssh_target"],
+            "python3",
+            str(helper),
+            "observe-file",
+            "--path",
+            str(observed_path),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=20,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ContractError("remote file is not observable")
+    try:
+        evidence = json.loads(completed.stdout)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError("remote file observation is malformed") from exc
+    if completed.stdout != canonical_bytes(evidence):
+        raise ContractError("remote file observation is non-canonical")
+    if (
+        set(evidence) != {"path", "sha256", "bytes", "mtime_ns"}
+        or evidence.get("path") != str(observed_path)
+        or type(evidence.get("bytes")) is not int
+        or evidence["bytes"] < 0
+        or type(evidence.get("mtime_ns")) is not int
+        or evidence["mtime_ns"] < 0
+    ):
+        raise ContractError("remote file observation field mismatch")
+    _require_sha(evidence.get("sha256"), "remote file sha256")
     return evidence
 
 
@@ -1864,6 +1918,7 @@ def _liveness(unit: str, launcher_pid: int) -> dict[str, Any]:
 
 
 def _kill_launcher(unit: str, launcher_pid: int) -> dict[str, Any]:
+    _require_e3_unit(unit)
     state = _liveness(unit, launcher_pid)
     if state["unit_state"] not in {"active", "activating"} or not state["launcher_live"]:
         raise ContractError("registered launcher is not live in an active unit")
@@ -1886,6 +1941,19 @@ def _kill_launcher(unit: str, launcher_pid: int) -> dict[str, Any]:
     }
 
 
+def _observe_file(path: Path) -> dict[str, Any]:
+    observed_path = _require_safe_absolute_path(path, "observed_path")
+    if not observed_path.is_file() or observed_path.is_symlink():
+        raise ContractError("observed file is missing or not regular")
+    metadata = observed_path.stat()
+    return {
+        "path": str(observed_path),
+        "sha256": sha256_file(observed_path),
+        "bytes": metadata.st_size,
+        "mtime_ns": metadata.st_mtime_ns,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Axeyum E3 multi-host helper")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -1899,6 +1967,8 @@ def main() -> int:
     kill = subparsers.add_parser("kill-launcher")
     kill.add_argument("--unit", required=True)
     kill.add_argument("--launcher-pid", required=True, type=int)
+    observe = subparsers.add_parser("observe-file")
+    observe.add_argument("--path", required=True)
     args = parser.parse_args()
     try:
         if args.command == "probe":
@@ -1915,6 +1985,9 @@ def main() -> int:
             sys.stdout.buffer.write(
                 canonical_bytes(_kill_launcher(args.unit, args.launcher_pid))
             )
+            return 0
+        if args.command == "observe-file":
+            sys.stdout.buffer.write(canonical_bytes(_observe_file(Path(args.path))))
             return 0
         raise ContractError("unknown E3 helper command")
     except (ContractError, OSError, ValueError) as exc:
@@ -1944,6 +2017,7 @@ __all__ = [
     "prepare_run_directory",
     "recover_failed_shard",
     "remote_probe",
+    "remote_file_observation",
     "shared_filesystem_observation",
     "stage_execution_bundle",
     "start_allocation",
