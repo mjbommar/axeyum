@@ -665,8 +665,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact 450,472-file / 82,270,961,563-byte metadata-tree bijection published.
   A separate fresh process rehashed every archive and extracted file and
   reconstructed the canonical ledger and completion dependencies.
-  `selection_observed=false`; the committed twice-repeated S3 pinned producer
-  is next. No solver run or selection credit is granted yet.
+  `selection_observed=false`. The S3 producer implementation now materializes
+  two exact 88-file no-Git bundles, derives a hash-required 14-package runtime
+  closure from the pinned Poetry lock, executes the exact official cache-builder
+  AST and Polars 1.39.2 sampler in fresh one-thread environments, and requires
+  exact selected/per-logic repetition equality. Its bounded gate, commit, and
+  push must precede live use. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7434,6 +7438,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Implemented the preregistered ADR-0356 S3 official producer.**
+  The live-blocked entry point binds S1 and S2 completions, copies and rehashes
+  exactly 88 authority files into each of two no-Git bundles, derives the
+  minimal 14-package runtime closure from the frozen Poetry lock, and installs
+  only hash-listed artifacts. It freezes CPython 3.11.15, uv 0.11.1, Polars
+  1.39.2, one Polars thread, and the exact organizer `create_cache` AST before
+  invoking `smtcomp.selection.helper`. Five bounded tests cover bundle drift,
+  extras/links, dependency/hash drift, decorator-free cache AST extraction,
+  path/order mutations, and repetition drift. The implementation must be
+  committed and pushed before the first official sample is observed.
 
 - **2026-07-22 — Completed ADR-0356 S2 verified corpus acquisition.** The
   fresh retained attempt verified all 90 SMT-LIB 2025.08.04 release files,

@@ -63,7 +63,10 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   4,890,207,406 compressed bytes, then proved an exact 450,472-file,
   82,270,961,563-byte metadata/tree bijection across 89 logic trees. A fresh
   process rehashed every retained archive and extracted file. The official
-  sample remains unobserved; S3's twice-repeated pinned Polars producer is next.
+  sample remains unobserved. S3's twice-repeated pinned Polars producer now has
+  an 88-file no-Git bundle contract, hash-required lockfile runtime closure,
+  exact official cache-builder AST route, and fail-closed repetition checker;
+  its bounded gate and pre-observation commit are next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
