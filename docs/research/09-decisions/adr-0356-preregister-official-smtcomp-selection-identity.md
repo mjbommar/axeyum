@@ -55,6 +55,13 @@ It binds all of the following before a solver run can refer to it:
    current `old_criteria=false`, no status completion from previous results,
    cap constants 300/0.5/1000/0.1, two explicit removals, and new-family prefix
    `2025`.
+
+For exact executable identity, the historical predicate is the pinned code's
+`result != Unknown && cpu_time <= 1.0`, applied to every result in an admitted
+year. The adjacent source comment and rules prose describe solved `sat`/`unsat`
+rows more narrowly, but the code expression also treats any other answer enum
+as non-`Unknown`. The auditor records this discrepancy and matches the
+executable producer; it does not silently substitute the comment.
 4. The complete competitive/noncompetitive submission ledger, participation
    expansion, competitive-logic derivation, and seed derivation. The frozen
    upstream snapshot currently yields 53 submissions, 38 competitive
@@ -156,6 +163,9 @@ result is credited by this decision alone.
 - The old local selector uses Python `random`, per-logic CRC-adjusted seeds,
   immediate-parent family approximation, all logic directories, and an
   optional no-op difficulty hook. Its manifest cannot satisfy this decision.
+- The S1 fixture includes two sub-second `OutOfMemory` rows and confirms that
+  the pinned executable expression classifies the file as trivial. This is an
+  identity test for organizer behavior, not an endorsement of that predicate.
 
 ## Alternatives
 

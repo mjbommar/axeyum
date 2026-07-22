@@ -31,7 +31,7 @@
     {"id": "S09", "statement": "The two explicit removals occur before competitive-logic, difficulty, and cap selection."},
     {"id": "S10", "statement": "A file with any sat/unsat incoherence across 2018-2024 has no admitted historical year."},
     {"id": "S11", "statement": "A historical year is competitive only when it retains more than one result row."},
-    {"id": "S12", "statement": "A file is trivial only when it has an admitted year and every admitted year has only decided results at CPU time at most 1.0 seconds."},
+    {"id": "S12", "statement": "A file is trivial only when it has an admitted year and every admitted year has no Unknown result and every CPU time is at most 1.0 seconds, matching the pinned executable expression even for other answer enums."},
     {"id": "S13", "statement": "New means the complete normalized family string starts with 2025."},
     {"id": "S14", "statement": "Each competitive logic uses the pinned 300, 0.5, 1000, and 0.1 cap expression."},
     {"id": "S15", "statement": "Official output selects min(cap,new_count) new rows and fills the remainder with old rows."},
