@@ -10043,6 +10043,73 @@ fn definite_beta_integral(
     Some(simplify(&simplify_radicals(&simplify(&(CasExpr::Const(coefficient) * beta)))))
 }
 
+/// Find the argument `g` of the first `abs(g)` subexpression whose argument is
+/// **affine** (degree 1) in `var` — the piece with a sign change (breakpoint) that a
+/// piecewise definite integral must split at.
+fn find_affine_abs(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Abs, arg) if expr_contains_var(arg, var) => {
+            if let Some(poly) = normalize(arg).and_then(|p| p.to_univariate(var))
+                && poly::rat_degree(&poly) == Some(1)
+            {
+                return Some((**arg).clone());
+            }
+            find_affine_abs(arg, var)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => find_affine_abs(a, var),
+        CasExpr::Div(a, b) => find_affine_abs(a, var).or_else(|| find_affine_abs(b, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_affine_abs(t, var))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// A definite integral of an integrand containing `abs(g)` with `g` **affine** in
+/// `var`: split the interval at `g`'s root (a sign change), and on each piece replace
+/// `abs(g)` by `±g` (the definite sign of `g` there), integrating each piece exactly
+/// with [`definite_integrate`]. So `∫_{−1}^1 |x| dx = 1`, `∫₀^2 |x−1| dx = 1`,
+/// `∫_{−1}^2 x·|x| dx = 3`. Nested/multiple `abs` are handled by recursion (each
+/// piece re-enters this path for the next breakpoint). Each piece is certified, so
+/// the sum is exact.
+fn definite_integrate_abs(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let g = find_affine_abs(expr, var)?;
+    let poly = normalize(&g)?.to_univariate(var)?;
+    let root = poly.first()?.checked_neg()?.checked_div(*poly.get(1)?)?; // −b/a
+    let target = CasExpr::Unary(UnaryFunc::Abs, Box::new(g.clone()));
+    let lo_f = evalf(lower, &[])?;
+    let hi_f = evalf(upper, &[])?;
+    let root_f = evalf(&CasExpr::Const(root), &[])?;
+    // Integrate over `[a, b]` with `abs(g)` replaced by the definite sign of `g`.
+    let piece = |a: &CasExpr, b: &CasExpr| -> Option<CasExpr> {
+        let midpoint = f64::midpoint(evalf(a, &[])?, evalf(b, &[])?);
+        let signed = if evalf(&g, &[(var, midpoint)])? >= 0.0 {
+            g.clone()
+        } else {
+            CasExpr::Neg(Box::new(g.clone()))
+        };
+        let replaced = replace_subexpr(expr, &target, &signed);
+        let definite = definite_integrate(&replaced, var, a, b)?;
+        definite.is_certified().then_some(definite.value)
+    };
+    let value = if root_f > lo_f + 1e-9 && root_f < hi_f - 1e-9 {
+        let split = CasExpr::Const(root);
+        simplify(&(piece(lower, &split)? + piece(&split, upper)?))
+    } else {
+        piece(lower, upper)? // `g` keeps a constant sign across the whole interval
+    };
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// Dilogarithm integrals `∫₀^1 c·K(x) dx` where `K` is one of the four canonical
 /// kernels whose value is a classical `Li₂(±1)`:
 ///
@@ -10373,6 +10440,11 @@ pub fn definite_integrate(
             antiderivative: CasExpr::zero(),
             certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
         });
+    }
+    // Integrand with an `abs(affine)` — split at the breakpoint (piecewise), so the
+    // FTC path never has to differentiate a non-smooth `|·|`.
+    if let Some(result) = definite_integrate_abs(expr, var, lower, upper) {
+        return Some(result);
     }
     // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
     // `c·Li₂(±1)` via `ζ(2)`; no elementary antiderivative, so before the FTC path.
@@ -18504,6 +18576,26 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn definite_integrals_of_absolute_value() {
+        let x = || v("x");
+        let check = |integrand: CasExpr, lower: i128, upper: i128, want: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &CasExpr::int(lower), &CasExpr::int(upper)).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert_equal(&got.value, &want);
+        };
+        // ∫_{−1}^1 |x| = 1 (split at 0); ∫₀^2 |x−1| = 1 (split at 1).
+        check(x().abs(), -1, 1, CasExpr::int(1));
+        check((x() - CasExpr::int(1)).abs(), 0, 2, CasExpr::int(1));
+        // ∫_{−1}^2 x·|x| = 7/3 (−1/3 + 8/3); ∫₀^3 |2x−4| = 5 (split at 2).
+        check(x() * x().abs(), -1, 2, CasExpr::rat(7, 3));
+        check((CasExpr::int(2) * x() - CasExpr::int(4)).abs(), 0, 3, CasExpr::int(5));
+        // Constant sign, no interior breakpoint: ∫₁^2 |x| = 3/2.
+        check(x().abs(), 1, 2, CasExpr::rat(3, 2));
+        // Mixed integrand ∫_{−1}^1 (|x| + x²) = 1 + 2/3 = 5/3.
+        check(x().abs() + x().pow(2), -1, 1, CasExpr::rat(5, 3));
     }
 
     #[test]
