@@ -58,8 +58,9 @@ state.
 > expressions, and five records become 11 checked declarations with zero
 > axioms. The importer independently regenerates and compares each recursor;
 > the recursive fixture exposed alpha-renamed universe binders (`u_1` versus
-> `u.1`), now compared after explicit level substitution. Theorem-body and
-> recursor-rule plus projection mutations reject among fourteen Rust tests.
+> `u.1`), now compared after explicit level substitution. At that checkpoint,
+> theorem-body and recursor-rule plus projection mutations rejected among
+> fourteen Rust tests.
 > This is exact flat and direct-recursive fixture credit, not
 > `Init`/`Std`/mathlib or general kernel
 > credit. A direct `.olean` reader and full native ecosystem compatibility are
@@ -72,7 +73,8 @@ state.
 > the String closure already spans 290 declarations and also reaches Nat
 > literals and recursive-indexed inductives.
 > Three small streams are committed, the 570,807-byte String stream is bound by
-> source/command/hash, and 14 Rust plus eight Python tests hold the boundary.
+> source/command/hash, and the initial census used 14 Rust plus eight Python
+> tests to hold the boundary.
 > TL2.2 now lands first-class projection representation across interning,
 > metadata, structural/de Bruijn operations, dependency traversal, and both
 > Lean renderers, with four integration tests plus a renderer unit test. TL2.3
@@ -100,8 +102,12 @@ state.
 > renamed/reordered/malformed bootstraps reject, values above `u128` stay exact,
 > and a required pinned-Lean 4.30 differential agrees on positive and false
 > controls. The kernel gate passes 179 unit tests and 35 integration cases
-> across twelve binaries; 18 importer tests pass. Resume with TL1.3
-> transactional completed-environment publication, plus the remaining
+> across twelve binaries. TL1.3 now removes the caller-owned mutable-kernel
+> import API: format-3.1 streams stage in a private kernel and publish a
+> field-private `CompletedImport` only after full success. Late JSON, kernel,
+> unsupported, record-limit, and I/O failures return no environment; all 20
+> importer cases pass. Resume with TL1.4's record-by-record mutation corpus,
+> plus the remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -136,8 +142,9 @@ state.
 > partial until generated projection/reduction/eta and quotient semantic
 > families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
-> arbitrary-precision Nat storage and TL2.7 checked Nat literal semantics are
-> complete; execute TL1.3 transactional publication next. Native parser/macros,
+> arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, and
+> TL1.3 owned transactional publication are complete; execute TL1.4 mutation
+> generation next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

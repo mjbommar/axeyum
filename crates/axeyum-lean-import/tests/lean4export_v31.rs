@@ -1,6 +1,6 @@
 //! End-to-end and mutation tests for the official format-3.1 fixture.
 
-use std::io::Cursor;
+use std::io::{BufReader, Cursor, Read};
 
 use axeyum_lean_import::{ImportError, ImportLimits, import_ndjson};
 use axeyum_lean_kernel::{Kernel, KernelError};
@@ -17,13 +17,8 @@ const QUOTIENT_FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-quotient.ndjson");
 
 fn import(text: &str) -> Result<(Kernel, axeyum_lean_import::ImportReport), ImportError> {
-    let mut kernel = Kernel::new();
-    let report = import_ndjson(
-        Cursor::new(text.as_bytes()),
-        &mut kernel,
-        ImportLimits::default(),
-    )?;
-    Ok((kernel, report))
+    let completed = import_ndjson(Cursor::new(text.as_bytes()), ImportLimits::default())?;
+    Ok(completed.into_parts())
 }
 
 fn metadata() -> &'static str {
@@ -447,10 +442,8 @@ fn partial_definition_is_rejected() {
 
 #[test]
 fn resource_limits_reject_before_unbounded_import() {
-    let mut kernel = Kernel::new();
     let error = import_ndjson(
         Cursor::new(FIXTURE.as_bytes()),
-        &mut kernel,
         ImportLimits {
             max_line_bytes: 32,
             max_records: 10,
@@ -462,10 +455,8 @@ fn resource_limits_reject_before_unbounded_import() {
         ImportError::LineLimit { line: 1, limit: 32 }
     ));
 
-    let mut kernel = Kernel::new();
     let error = import_ndjson(
         Cursor::new(FIXTURE.as_bytes()),
-        &mut kernel,
         ImportLimits {
             max_line_bytes: 16 * 1024 * 1024,
             max_records: 1,
@@ -473,4 +464,98 @@ fn resource_limits_reject_before_unbounded_import() {
     )
     .unwrap_err();
     assert!(matches!(error, ImportError::RecordLimit { limit: 1 }));
+}
+
+#[derive(Debug)]
+struct LateFailingRead {
+    bytes: Vec<u8>,
+    position: usize,
+}
+
+impl Read for LateFailingRead {
+    fn read(&mut self, output: &mut [u8]) -> std::io::Result<usize> {
+        if self.position == self.bytes.len() {
+            return Err(std::io::Error::other(
+                "injected failure after valid records",
+            ));
+        }
+        let available = self.bytes.len() - self.position;
+        let count = available.min(output.len());
+        output[..count].copy_from_slice(&self.bytes[self.position..self.position + count]);
+        self.position += count;
+        Ok(count)
+    }
+}
+
+#[test]
+fn completed_import_publishes_kernel_and_matching_report_together() {
+    let completed = import_ndjson(Cursor::new(FIXTURE.as_bytes()), ImportLimits::default())
+        .expect("valid stream publishes one completed import");
+    assert_eq!(completed.report().admitted_declarations, 8);
+    assert_eq!(
+        completed.kernel().environment().len(),
+        completed.report().admitted_declarations
+    );
+
+    let (kernel, report) = completed.into_parts();
+    assert_eq!(kernel.environment().len(), report.admitted_declarations);
+}
+
+#[test]
+fn late_failures_never_return_a_partially_admitted_environment() {
+    let malformed_after_complete = format!("{FIXTURE}{{\"truncated\":");
+    let error = import_ndjson(
+        Cursor::new(malformed_after_complete.as_bytes()),
+        ImportLimits::default(),
+    )
+    .unwrap_err();
+    assert!(matches!(error, ImportError::Json { .. }), "{error:?}");
+
+    let tampered_final_declaration = FIXTURE.replace(
+        r#"{"ie":42,"lam":{"binderInfo":"default","body":4,"name":14,"type":40}}"#,
+        r#"{"ie":42,"lam":{"binderInfo":"default","body":39,"name":14,"type":40}}"#,
+    );
+    let error = import_ndjson(
+        Cursor::new(tampered_final_declaration.as_bytes()),
+        ImportLimits::default(),
+    )
+    .unwrap_err();
+    assert!(matches!(error, ImportError::Kernel { .. }), "{error:?}");
+
+    let error = import_ndjson(
+        Cursor::new(QUOTIENT_FIXTURE.as_bytes()),
+        ImportLimits::default(),
+    )
+    .unwrap_err();
+    assert!(
+        matches!(
+            error,
+            ImportError::Unsupported {
+                code: "quotient-package",
+                ..
+            }
+        ),
+        "{error:?}"
+    );
+
+    let record_limit = FIXTURE.lines().count() - 1;
+    let error = import_ndjson(
+        Cursor::new(FIXTURE.as_bytes()),
+        ImportLimits {
+            max_line_bytes: ImportLimits::default().max_line_bytes,
+            max_records: record_limit,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        matches!(error, ImportError::RecordLimit { limit } if limit == record_limit),
+        "{error:?}"
+    );
+
+    let failing = LateFailingRead {
+        bytes: FIXTURE.as_bytes().to_vec(),
+        position: 0,
+    };
+    let error = import_ndjson(BufReader::new(failing), ImportLimits::default()).unwrap_err();
+    assert!(matches!(error, ImportError::Io(_)), "{error:?}");
 }

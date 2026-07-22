@@ -54,9 +54,12 @@ Last updated: 2026-07-22
 > canonical `Nat` bootstrap and adds constructor-offset equality, successor
 > reduction, and one-layer recursor conversion. The exact official Nat root now
 > admits ten declarations with zero axioms and computes to `37`; bootstrap
-> mutations reject and a pinned-Lean 4.30 differential passes. Generated
+> mutations reject and a pinned-Lean 4.30 differential passes. TL1.3 now stages
+> each stream in a private kernel and publishes only an owned
+> `CompletedImport` after full success; late parser, kernel, unsupported,
+> resource, and I/O failures return no partial environment. Generated
 > projection/reduction/eta and quotient semantic seams remain uncredited;
-> TL1.3 transactional completed-environment publication is next.
+> TL1.4's record-by-record mutation corpus is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

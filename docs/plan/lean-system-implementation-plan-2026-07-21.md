@@ -170,7 +170,7 @@ broadening kernel semantics.
 |---|---|---|---|---|---|
 | TL1.1 | DONE | Parse metadata, names, levels, expressions, declarations, and group records into a separate Rust wire layer. | — | M | Flat and direct-recursive official fixtures inventory exactly. |
 | TL1.2 | DONE | Enforce dense IDs, backward references, exact fields/version, integer bounds, safety flags, and line/record limits. | — | M | Fourteen Rust tests retain stable first errors and projection wire mutations. |
-| TL1.3 | PARTIAL | Make whole-environment publication transactional rather than only declaration-transactional. | TL1.1 | M | Failed imports cannot expose a partial environment to callers. |
+| TL1.3 | DONE | Make whole-environment publication transactional rather than only declaration-transactional. | TL1.1 | M | [Owned completed publication](lean-import-transactional-publication-tl1.3-2026-07-22.md) stages in a private kernel and returns a field-private `CompletedImport` only after full success; late JSON, kernel, unsupported, record-limit, and I/O failures expose no environment. |
 | TL1.4 | TODO | Generate truncation-at-every-record, duplicate-ID, forward-reference, unknown-field, deep-JSON, Unicode, integer, cycle, and version mutations. | TL0.2 | L | Mutation corpus runs without panic and with stable decline classes. |
 | TL1.5 | TODO | Add property fuzzing for wire topology and semantic erasure of metadata. | TL1.4 | M | Fuzzer covers every record discriminant and metadata path. |
 | TL1.6 | TODO | Add streaming large-input checkpoints, aggregate byte/depth limits, and completion-last publication. | TL0.7 | M | Forced termination resumes without duplicate admission or lost provenance. |
@@ -451,8 +451,8 @@ parallel lane:
 9. **DONE:** TL2.5 — add structure eta as its own differential slice.
 10. **DONE:** TL2.6 — replace `u128` Nat storage with canonical arbitrary precision.
 11. **DONE:** TL2.7 — type Nat literals, implement checked constructor/literal conversion, and close the exact official Nat closure.
-12. **NEXT:** TL1.3 — make completed-environment publication transactional.
-13. TL1.4 — generate record-by-record and structural mutation corpora.
+12. **DONE:** TL1.3 — publish only owned completed environments after full-stream success.
+13. **NEXT:** TL1.4 — generate record-by-record and structural mutation corpora.
 14. TL1.7 — add axiom and declaration dependency digests.
 15. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
     official fixtures while the importer lane is independent.

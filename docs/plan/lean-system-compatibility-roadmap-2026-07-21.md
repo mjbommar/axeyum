@@ -262,10 +262,11 @@ export. The measured result is:
 LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
 ```
 
-Eighteen importer integration tests include flat, direct-recursive, projection,
+Twenty importer integration tests include flat, direct-recursive, projection,
 and Nat-literal positive fixtures; theorem-body, recursor-rule, projection, and
 Nat-bootstrap tampering; determinism, format drift, topology, safety, quotient
-declines, arbitrary-precision wire values, and resource controls.
+declines, arbitrary-precision wire values, resource controls, owned completed
+publication, and five late-failure classes.
 See the full
 [`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
 The second official fixture independently admits direct-recursive `MiniNat` and
@@ -675,14 +676,15 @@ Non-claims until their gates are met:
 ## 9. Immediate next eleven actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
-2. Keep the 14 Python compatibility/census tests, 18 importer cases, and the
+2. Keep the 14 Python compatibility/census tests, 20 importer cases, and the
    bounded native/pinned-Lean kernel gates in normal checks.
 3. **TL2.2-TL2.7 DONE:** preserve first-class projection representation,
    checked dependent inference, constructor reduction, exact official-root
    import/computation, and separately gated structure eta with pinned-Lean
    positive/rejecting controls, plus canonical arbitrary-precision Nat storage
-   and checked Nat literal typing/conversion. Resume TL1.3 transactional
-   publication; do not generalize exact K1 roots or K0 rules to broader native
+   and checked Nat literal typing/conversion. TL1.3 now publishes only an owned
+   completed environment after full-stream success. Resume TL1.4 mutation
+   generation; do not generalize exact K1 roots or K0 rules to broader native
    or ecosystem compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
@@ -692,9 +694,9 @@ Non-claims until their gates are met:
    negative so the boundary is attributed to indices, not recursion alone.
 6. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
    current hand-checked six-profile seed.
-7. **NEXT:** TL1.3 transactional completed-environment publication, followed by
-   TL1.4 truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
-   publication mutations.
+7. **TL1.3 DONE; NEXT TL1.4:** preserve owned completion-only publication while
+   adding truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field,
+   and publication mutations.
 8. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

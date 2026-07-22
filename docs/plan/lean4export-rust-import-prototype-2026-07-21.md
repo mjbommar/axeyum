@@ -158,11 +158,11 @@ record kinds, duplicate metadata, unknown fields, non-dense indices, forward
 references, integer narrowing, unsafe declarations, and partial definitions
 reject with typed errors.
 
-The reader is declaration-granularity transactional, not whole-stream
-transactional. A caller must import an untrusted stream into a fresh `Kernel`;
-that rule is stated in the public crate documentation. A later production
-project cache may publish a completed environment only after the full stream
-returns successfully.
+The reader now owns a private staging `Kernel` and returns a field-private
+`CompletedImport` only after the full stream succeeds. On malformed,
+unsupported, resource, I/O, or kernel rejection, the staging state is dropped
+and no environment or arena handle reaches the caller. This closes TL1.3
+without cloning or attempting partial rollback of kernel interners and caches.
 
 ## Translation profile
 
@@ -217,7 +217,7 @@ object and compare results.
 
 ## Negative matrix
 
-The fourteen Rust integration tests in
+The 20 Rust integration tests in
 [`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
 cover:
 
@@ -238,10 +238,13 @@ cover:
 | exported recursor-rule mutation | importer rejects the group | generated computation is compared |
 | partial definition | stable unsupported decline | unsafe/partial code cannot enter default profile |
 | line/record limits (two cells in one test) | resource rejection | bounded input contract |
+| completed publication | borrowed and consumed kernel length equals the matching report | success publishes one owned checked pair |
+| late failure matrix | appended JSON, final kernel rejection, quotient, late record limit, and post-stream I/O error return no completed environment | whole-environment transactionality |
 
-The Rust test count is fourteen; the remaining blocker-fixture test contains two
-cells, both projection mutation classes share one test, and the final resource
-test contains both line and record cells.
+Several tests contain multiple mutation cells: the blocker fixture, projection
+mutations, resource limits, arbitrary-precision values, and late-publication
+failure classes remain separated by assertions even when they share one test
+function.
 
 The earlier Python probe remains useful as an implementation-independent
 inventory oracle. Six reader tests plus two exact census/hash tests and the Rust
@@ -278,9 +281,10 @@ The initial parts of L1 and L2 are now implemented together:
 - flat, parametric-recursive, and direct-recursive non-indexed inductive
   admission with recursor comparison: **landed on the two fixtures**.
 
-L1 is not complete because there is no fuzz target, axiom type digest, completed
-wire-model separation for every unsupported variant, truncation/duplicate-ID/
-deep-nesting matrix, or large-stream checkpoint/publication protocol. L2 is not
+L1 is not complete because there is no fuzz target, declaration dependency
+digest, completed wire-model separation for every unsupported variant,
+truncation/duplicate-ID/deep-nesting matrix, or large-stream checkpoint/durable
+publication protocol. L2 is not
 complete because String literals, quotients, recursive-indexed, mutual, nested,
 and reflexive groups remain explicit declines.
 
@@ -291,18 +295,20 @@ and reflexive groups remain explicit declines.
    reflexive families.
 2. Add a generated parsed/translated/admitted/dual-admitted matrix from those
    fixtures.
-3. Add duplicate-ID, truncation-at-every-record, oversized integer, deep JSON,
-   unknown-field, and whole-stream publication mutations.
+3. **NEXT (TL1.4):** add duplicate-ID, truncation-at-every-record, oversized
+   integer, deep JSON, Unicode, cycle, version, unknown-field, and publication
+   mutations against the completed-import boundary.
 4. **DONE:** hash axiom names **and canonical types**, then bind the 65 actual
    Axeyum prelude assumptions (real 30, integer 34, string 1) to that stable
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. **Projection/eta/Nat slices DONE (TL2.2-TL2.7):** representation, dependent
+6. **Projection/eta/Nat/TL1.3 slices DONE:** representation, dependent
    inference, constructor reduction, wire translation, exact projection-root
    admission/computation, separately gated structure eta, arbitrary-precision
    Nat storage, checked literal semantics, and exact Nat-root admission/
-   computation are complete. Execute TL1.3 transactional publication next.
+   computation are complete; private staging now publishes only an owned
+   completed environment. Execute TL1.4 mutation generation next.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

@@ -10,11 +10,12 @@
 //! The initial profile is official `lean4export` format 3.1.0. It translates
 //! names, universe levels, the expression forms already represented by the
 //! kernel, safe non-inductive declarations, and one-family inductive groups.
-//! It translates projections and rejects unsupported literals, quotient
-//! packages, unsafe or partial declarations, mutual/nested/reflexive groups,
-//! unknown records, and malformed/forward references. Importing is
-//! transactional at declaration granularity, not whole-stream transactional;
-//! use a fresh [`Kernel`] for an untrusted stream.
+//! It translates projections and natural literals and rejects unsupported
+//! string literals, quotient packages, unsafe or partial declarations,
+//! mutual/nested/reflexive groups, unknown records, and malformed/forward
+//! references. [`import_ndjson`] owns a private staging kernel and publishes it
+//! only after the complete stream succeeds, so an error cannot expose a partial
+//! environment.
 
 #![forbid(unsafe_code)]
 
@@ -74,6 +75,57 @@ pub struct ImportReport {
     /// Imported axiom names. Their types were checked, but their propositions
     /// remain assumptions until discharged separately.
     pub axioms: Vec<String>,
+}
+
+/// One completely translated and independently admitted import.
+///
+/// This is the only successful publication boundary. Its fields are private so
+/// callers cannot construct a completed state from an unchecked kernel or a
+/// mismatched report. On import failure no `Kernel` or arena-relative handle is
+/// returned.
+///
+/// ```compile_fail
+/// use axeyum_lean_import::{CompletedImport, ImportReport};
+/// use axeyum_lean_kernel::Kernel;
+///
+/// let report = ImportReport {
+///     format_version: "3.1.0".into(),
+///     lean_version: "4.30.0".into(),
+///     lean_githash: "untrusted".into(),
+///     exporter_version: "3.1.0".into(),
+///     names: 0,
+///     levels: 0,
+///     expressions: 0,
+///     declaration_records: 0,
+///     admitted_declarations: 0,
+///     axioms: vec![],
+/// };
+/// let forged = CompletedImport { kernel: Kernel::new(), report };
+/// ```
+#[derive(Debug)]
+pub struct CompletedImport {
+    kernel: Kernel,
+    report: ImportReport,
+}
+
+impl CompletedImport {
+    /// Borrow the independently checked completed environment.
+    #[must_use]
+    pub fn kernel(&self) -> &Kernel {
+        &self.kernel
+    }
+
+    /// Borrow the inventory and provenance recorded at publication time.
+    #[must_use]
+    pub fn report(&self) -> &ImportReport {
+        &self.report
+    }
+
+    /// Transfer ownership of the completed kernel and its matching report.
+    #[must_use]
+    pub fn into_parts(self) -> (Kernel, ImportReport) {
+        (self.kernel, self.report)
+    }
 }
 
 /// A malformed, unsupported, resource-exhausting, or kernel-rejected import.
@@ -1050,14 +1102,24 @@ impl<'kernel> ImportState<'kernel> {
 ///
 /// The first record must be metadata for format 3.1.0. All subsequent records
 /// are validated in stream order; name, level, and expression indices must be
-/// dense and may only refer backward. Declarations enter the supplied kernel
-/// only through its checked admission gates.
+/// dense and may only refer backward. Declarations enter a private staging
+/// kernel only through its checked admission gates. The kernel is published in
+/// [`CompletedImport`] only after the complete stream succeeds.
 ///
 /// # Errors
 ///
 /// Returns [`ImportError`] for I/O, resource, syntax, topology, unsupported
 /// profile, or independent-kernel admission failures.
 pub fn import_ndjson<R: BufRead>(
+    reader: R,
+    limits: ImportLimits,
+) -> Result<CompletedImport, ImportError> {
+    let mut kernel = Kernel::new();
+    let report = import_into_staging_kernel(reader, &mut kernel, limits)?;
+    Ok(CompletedImport { kernel, report })
+}
+
+fn import_into_staging_kernel<R: BufRead>(
     mut reader: R,
     kernel: &mut Kernel,
     limits: ImportLimits,

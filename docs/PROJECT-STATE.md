@@ -156,8 +156,11 @@ Again, there are distinct targets:
   against a checked canonical bootstrap; constructor/literal equality,
   successor reduction, and recursor conversion close the exact official Nat
   root as ten declarations with zero axioms and a second required pinned-Lean
-  differential. Quotient and String literals are still absent. These are exact
-  K0/K1 slices, not general kernel parity.
+  differential. The importer now stages in a private kernel and returns an
+  owned `CompletedImport` only after the entire stream succeeds, so late parser,
+  resource, I/O, unsupported, or kernel failures expose no partial environment.
+  Quotient and String literals are still absent. These are exact K0/K1 slices,
+  not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
   rather than dismissed. Axeyum does not currently reproduce Lean's parser,
   macros, elaborator, unifier, tactic language, compiler, package ecosystem,

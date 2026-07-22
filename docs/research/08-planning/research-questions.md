@@ -717,6 +717,14 @@ Out of scope:
     reduction, and literal-major recursor conversion, but leave every other Nat
     operation to TL2.8. See
     [ADR-0347](../09-decisions/adr-0347-checked-lean-nat-literal-semantics.md).
+- [x] How can the streaming `lean4export` reader publish a checked environment
+      atomically without cloning or rolling back kernel arenas?
+  - Answer (2026-07-22): stage the complete stream in a private owned `Kernel`
+    and return a field-private `CompletedImport` only after EOF and every
+    translation/admission check succeed. Errors carry no kernel or arena handle;
+    the caller-supplied mutable-kernel API is removed rather than retained as a
+    documented footgun. See
+    [ADR-0348](../09-decisions/adr-0348-owned-lean-import-publication.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

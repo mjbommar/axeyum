@@ -6,7 +6,6 @@ use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 
 use axeyum_lean_import::{ImportLimits, import_ndjson};
-use axeyum_lean_kernel::Kernel;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = std::env::args_os()
@@ -18,8 +17,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         Box::new(BufReader::new(File::open(&path)?))
     };
-    let mut kernel = Kernel::new();
-    let report = import_ndjson(reader, &mut kernel, ImportLimits::default())?;
+    let completed = import_ndjson(reader, ImportLimits::default())?;
+    let report = completed.report();
     let axioms = if report.axioms.is_empty() {
         "none".to_owned()
     } else {
