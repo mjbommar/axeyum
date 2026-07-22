@@ -15,6 +15,7 @@ import json
 import os
 import platform
 import re
+import shutil
 import signal
 import subprocess
 import sys
@@ -33,7 +34,6 @@ sys.path.insert(0, str(SMTCOMP))
 from resume_fs import (  # noqa: E402
     CheckpointConflict,
     atomic_install_json,
-    read_canonical_json,
     recover_orphan_temporaries,
 )
 
@@ -99,6 +99,51 @@ EXPECTED_ORPHANS = {
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9.-]{0,127}\Z")
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
+MOUNT_FIELDS = {
+    "mount_point",
+    "mount_root",
+    "mount_source",
+    "fs_type",
+    "mount_options",
+    "super_options",
+    "mount_id",
+    "parent_mount_id",
+    "mount_major_minor",
+}
+STORAGE_DESCRIPTOR_FIELDS = {
+    "id",
+    "class_root",
+    "mount",
+    "stat_device",
+    "stat_fsid",
+    "statfs_magic",
+    "block_size",
+    "fragment_size",
+    "name_max",
+    "kernel",
+    "mechanism",
+    "process_interruption_proven",
+    "power_loss_proven",
+    "host_loss_proven",
+    "network_storage_proven",
+    "identity_sha256",
+}
+PROCESS_EVIDENCE_FIELDS = {
+    "command",
+    "command_sha256",
+    "environment",
+    "environment_sha256",
+    "executable_sha256",
+    "worker_sha256",
+    "primitive_sha256",
+    "pid",
+    "process_group_id",
+    "return_code",
+    "signal",
+    "marker_sha256",
+    "stdout",
+    "stderr",
+}
 NETWORK_FILESYSTEMS = {
     "9p",
     "afs",
@@ -236,6 +281,111 @@ def mount_identity(path: Path) -> dict[str, Any]:
     return max(candidates, key=lambda item: item[0])[1]
 
 
+def statfs_magic(path: Path) -> str:
+    executable = shutil.which("stat")
+    if executable is None:
+        raise StoreEvidenceError("statfs identity probe is unavailable")
+    try:
+        completed = subprocess.run(
+            [os.path.realpath(executable), "--file-system", "--format=%t", "--", str(path)],
+            cwd=ROOT,
+            env={"LANG": "C", "PATH": os.path.dirname(os.path.realpath(executable))},
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise StoreEvidenceError("statfs identity probe failed") from exc
+    value = completed.stdout.decode("ascii", errors="strict").strip()
+    if completed.returncode != 0 or not re.fullmatch(r"[0-9a-f]+", value):
+        raise StoreEvidenceError("statfs identity probe returned no Linux magic")
+    return value
+
+
+def validate_storage_descriptor(descriptor: Any) -> list[str]:
+    failures: list[str] = []
+    if not isinstance(descriptor, dict) or set(descriptor) != STORAGE_DESCRIPTOR_FIELDS:
+        return ["storage descriptor fields must be exact"]
+    class_id = descriptor.get("id")
+    mount = descriptor.get("mount")
+    if class_id not in STORAGE_CLASS_IDS:
+        failures.append("storage descriptor class drift")
+    if not isinstance(mount, dict) or set(mount) != MOUNT_FIELDS:
+        failures.append("storage mount identity fields must be exact")
+        mount = {}
+    for field in ("mount_point", "mount_root", "mount_source", "fs_type", "mount_major_minor"):
+        if not isinstance(mount.get(field), str) or not mount.get(field):
+            failures.append(f"storage mount {field} identity is required")
+    for field in ("mount_id", "parent_mount_id"):
+        value = mount.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            failures.append(f"storage mount {field} must be a nonnegative integer")
+    mount_options = mount.get("mount_options")
+    super_options = mount.get("super_options")
+    if not isinstance(mount_options, list) or not all(
+        isinstance(item, str) and item for item in mount_options
+    ):
+        failures.append("storage mount options must be non-empty strings")
+        mount_options = []
+    elif mount_options != sorted(set(mount_options)):
+        failures.append("storage mount options must be unique and sorted")
+    if not isinstance(super_options, list) or not all(
+        isinstance(item, str) and item for item in super_options
+    ):
+        failures.append("storage super options must be non-empty strings")
+    elif super_options != sorted(set(super_options)):
+        failures.append("storage super options must be unique and sorted")
+    if descriptor.get("identity_sha256") != object_digest(descriptor, "identity_sha256"):
+        failures.append("storage descriptor identity drift")
+    if descriptor.get("mechanism") != "o-excl-temp-file-fsync-hardlink-no-replace-directory-fsync-v1":
+        failures.append("storage mechanism drift")
+    if any(
+        descriptor.get(field) is not False
+        for field in (
+            "process_interruption_proven",
+            "power_loss_proven",
+            "host_loss_proven",
+            "network_storage_proven",
+        )
+    ):
+        failures.append("storage descriptor cannot preclaim interruption or durability")
+    fs_type = mount.get("fs_type")
+    if fs_type in NETWORK_FILESYSTEMS:
+        failures.append("network filesystem cannot enter TL0.7.3")
+    if "ro" in mount_options or "rw" not in mount_options:
+        failures.append("storage class must be an observed writable mount")
+    magic = descriptor.get("statfs_magic")
+    if not isinstance(magic, str) or not re.fullmatch(r"[0-9a-f]+", magic):
+        failures.append("storage statfs magic is invalid")
+    if fs_type in {"ext2", "ext3", "ext4"} and magic != "ef53":
+        failures.append("ext-family mount/statfs identity mismatch")
+    if class_id == STORAGE_CLASS_IDS[1]:
+        if fs_type != "tmpfs" or magic != "1021994":
+            failures.append("tmpfs storage class identity mismatch")
+        if Path(str(descriptor.get("class_root"))).resolve() != Path("/dev/shm").resolve():
+            failures.append("tmpfs storage class root drift")
+    if class_id == STORAGE_CLASS_IDS[0] and Path(str(descriptor.get("class_root"))).resolve() != ROOT:
+        failures.append("worktree storage class root drift")
+    class_root = Path(str(descriptor.get("class_root")))
+    mount_point = Path(str(mount.get("mount_point")))
+    if not class_root.is_absolute() or not mount_point.is_absolute():
+        failures.append("storage class and mount roots must be absolute")
+    else:
+        try:
+            class_root.resolve().relative_to(mount_point.resolve())
+        except ValueError:
+            failures.append("storage class root is outside its observed mount")
+    for field in ("stat_device", "stat_fsid", "block_size", "fragment_size", "name_max"):
+        value = descriptor.get(field)
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+            failures.append(f"storage descriptor {field} must be a nonnegative integer")
+    if not isinstance(descriptor.get("kernel"), str) or not descriptor["kernel"]:
+        failures.append("storage kernel identity is required")
+    return failures
+
+
 def capture_storage_class(class_id: str, parent: Path) -> dict[str, Any]:
     if class_id not in STORAGE_CLASS_IDS:
         raise StoreEvidenceError(f"unknown storage class: {class_id}")
@@ -258,6 +408,7 @@ def capture_storage_class(class_id: str, parent: Path) -> dict[str, Any]:
         "mount": mount,
         "stat_device": stat_result.st_dev,
         "stat_fsid": statvfs.f_fsid,
+        "statfs_magic": statfs_magic(parent),
         "block_size": statvfs.f_bsize,
         "fragment_size": statvfs.f_frsize,
         "name_max": statvfs.f_namemax,
@@ -270,12 +421,16 @@ def capture_storage_class(class_id: str, parent: Path) -> dict[str, Any]:
         "identity_sha256": "",
     }
     descriptor["identity_sha256"] = object_digest(descriptor, "identity_sha256")
+    failures = validate_storage_descriptor(descriptor)
+    if failures:
+        raise StoreEvidenceError("; ".join(failures))
     return descriptor
 
 
 def preflight_storage_class(descriptor: dict[str, Any]) -> None:
-    if descriptor.get("identity_sha256") != object_digest(descriptor, "identity_sha256"):
-        raise StoreEvidenceError("storage descriptor identity drift")
+    failures = validate_storage_descriptor(descriptor)
+    if failures:
+        raise StoreEvidenceError("; ".join(failures))
     parent = Path(descriptor["class_root"])
     with tempfile.TemporaryDirectory(prefix=".axeyum-lean-store-preflight-", dir=parent) as temporary:
         directory = Path(temporary)
@@ -383,8 +538,9 @@ def validate_store_manifest(manifest: Any) -> list[str]:
     if manifest.get("schema") != STORE_SCHEMA or claimed != expected_hash:
         failures.append("store manifest identity drift")
     storage = manifest.get("storage_class")
-    if not isinstance(storage, dict) or storage.get("identity_sha256") != object_digest(storage, "identity_sha256"):
-        failures.append("store storage-class identity drift")
+    storage_failures = validate_storage_descriptor(storage)
+    if storage_failures:
+        failures.extend(f"store {failure}" for failure in storage_failures)
     expected = build_store_manifest(storage) if isinstance(storage, dict) else None
     if expected is not None and manifest != expected:
         failures.append("store manifest differs from exact fixture/storage contract")
@@ -404,16 +560,22 @@ def _install_relative(root: Path, relative: str, value: dict[str, Any]) -> str:
         raise StoreEvidenceError(
             f"store namespace is not a real directory: {path.parent.as_posix()}"
         )
+    quarantine = root / "quarantine"
+    if quarantine.is_symlink() or (quarantine.exists() and not quarantine.is_dir()):
+        raise StoreEvidenceError("store quarantine must be a real directory")
     return atomic_install_json(
         directory,
         path.name,
         value,
-        quarantine_root=root / "quarantine",
+        quarantine_root=quarantine,
     )
 
 
 def initialize_store(root: Path, storage_class: dict[str, Any]) -> str:
-    if root.exists():
+    failures = validate_storage_descriptor(storage_class)
+    if failures:
+        raise StoreEvidenceError("; ".join(failures))
+    if root.is_symlink() or root.exists():
         raise StoreEvidenceError(f"store root must be new: {root}")
     root.mkdir(parents=True, mode=0o755)
     return atomic_install_json(
@@ -444,9 +606,15 @@ def _strict_namespace(root: Path, *, require_completion: bool) -> tuple[dict[str
     if not root.is_dir() or root.is_symlink():
         raise StoreEvidenceError("store root must be a real directory")
     allowed_top = {"store.json", "run", "attempts", "cases", "artifacts", "completion", "quarantine"}
-    extras = sorted(path.name for path in root.iterdir() if path.name not in allowed_top)
+    top_entries = list(root.iterdir())
+    extras = sorted(path.name for path in top_entries if path.name not in allowed_top)
     if extras:
         raise StoreEvidenceError(f"unexpected store entry: {extras[0]}")
+    for path in top_entries:
+        if path.name == "store.json":
+            continue
+        if path.is_symlink() or not path.is_dir():
+            raise StoreEvidenceError(f"store namespace is not a real directory: {path.name}")
     manifest_path = root / "store.json"
     if manifest_path.is_symlink() or not manifest_path.is_file():
         raise StoreEvidenceError("missing real store manifest")
@@ -589,11 +757,21 @@ def accepted_inventory(root: Path) -> list[dict[str, Any]]:
 
 
 def recover_store_orphans(root: Path) -> list[Path]:
+    if root.is_symlink() or not root.is_dir():
+        raise StoreEvidenceError("store root must be a real directory")
+    quarantine = root / "quarantine"
+    if quarantine.is_symlink() or (quarantine.exists() and not quarantine.is_dir()):
+        raise StoreEvidenceError("store quarantine must be a real directory")
     recovered = []
     for directory_name in ("run", "attempts", "cases", "artifacts", "completion"):
+        directory = root / directory_name
+        if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
+            raise StoreEvidenceError(
+                f"store namespace is not a real directory: {directory_name}"
+            )
         recovered.extend(
             recover_orphan_temporaries(
-                root / directory_name, quarantine_root=root / "quarantine"
+                directory, quarantine_root=quarantine
             )
         )
     return recovered
@@ -846,6 +1024,109 @@ def run_matrix(*, output_root: Path, worktree_parent: Path = ROOT, tmpfs_parent:
                 )
 
 
+def validate_process_evidence(
+    process: Any,
+    *,
+    target_path: str,
+    phase: str,
+    evidence_directory: Path,
+) -> list[str]:
+    failures: list[str] = []
+    if not isinstance(process, dict) or set(process) != PROCESS_EVIDENCE_FIELDS:
+        return ["kill cell process evidence fields must be exact"]
+    if process.get("return_code") != -signal.SIGKILL or process.get("signal") != signal.SIGKILL:
+        failures.append("kill cell is not a reaped SIGKILL")
+    pid = process.get("pid")
+    if (
+        not isinstance(pid, int)
+        or isinstance(pid, bool)
+        or pid <= 0
+        or process.get("process_group_id") != pid
+    ):
+        failures.append("kill cell process/group identity drift")
+    expected_environment = {
+        "LANG": "C.UTF-8",
+        "PYTHONHASHSEED": "0",
+        "PYTHONPATH": str(SMTCOMP),
+    }
+    if process.get("environment") != expected_environment:
+        failures.append("kill cell environment drift")
+    if process.get("environment_sha256") != digest(process.get("environment")):
+        failures.append("kill cell environment identity drift")
+    command = process.get("command")
+    expected_prefixes = (
+        os.path.realpath(sys.executable),
+        str(WORKER.resolve()),
+        "--directory",
+        None,
+        "--filename",
+        Path(target_path).name,
+        "--payload",
+        None,
+        "--stop-phase",
+        phase,
+        "--marker",
+        None,
+    )
+    if not isinstance(command, list) or len(command) != len(expected_prefixes):
+        failures.append("kill cell command fields drift")
+    else:
+        for actual, expected in zip(command, expected_prefixes, strict=True):
+            if expected is not None and actual != expected:
+                failures.append("kill cell command semantics drift")
+                break
+        if all(isinstance(command[index], str) for index in (3, 7, 11)):
+            target_directory = Path(command[3])
+            payload = Path(command[7])
+            marker = Path(command[11])
+            if (
+                target_directory.name != Path(target_path).parent.name
+                or target_directory.parent.name != "store"
+                or target_directory.parent.parent != payload.parent
+                or payload.parent != marker.parent
+                or payload.name != "payload.json"
+                or marker.name != "phase.marker"
+            ):
+                failures.append("kill cell ephemeral command paths drift")
+        else:
+            failures.append("kill cell command path types drift")
+    if process.get("command_sha256") != digest(command):
+        failures.append("kill cell command identity drift")
+    executable = Path(os.path.realpath(sys.executable))
+    if process.get("executable_sha256") != sha256_file(executable):
+        failures.append("kill cell executable identity drift")
+    if process.get("worker_sha256") != sha256_file(WORKER) or process.get("primitive_sha256") != sha256_file(PRIMITIVE):
+        failures.append("kill cell source identity drift")
+    for kind in ("stdout", "stderr"):
+        path = evidence_directory / f"{kind}.bin"
+        expected = process.get(kind)
+        if (
+            not isinstance(expected, dict)
+            or set(expected) != {"sha256", "bytes"}
+            or HEX64.fullmatch(str(expected.get("sha256"))) is None
+            or not isinstance(expected.get("bytes"), int)
+            or isinstance(expected.get("bytes"), bool)
+            or expected["bytes"] < 0
+            or path.is_symlink()
+            or not path.is_file()
+            or expected
+            != {
+                "sha256": sha256_file(path),
+                "bytes": path.stat().st_size,
+            }
+        ):
+            failures.append(f"kill cell {kind} identity drift")
+    marker = evidence_directory / "marker.bin"
+    if (
+        marker.is_symlink()
+        or not marker.is_file()
+        or marker.read_bytes() != (phase + "\n").encode()
+        or process.get("marker_sha256") != sha256_file(marker)
+    ):
+        failures.append("kill cell marker identity drift")
+    return failures
+
+
 def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_directory: Path) -> list[str]:
     failures: list[str] = []
     fields = {
@@ -894,32 +1175,42 @@ def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_direc
             failures.append("kill cell control identity drift")
         if cell.get("resume_outcome") != EXPECTED_RESUME_OUTCOME[phase]:
             failures.append("kill cell resume outcome drift")
-        if cell.get("orphan_count") != EXPECTED_ORPHANS[phase] or len(cell.get("orphan_records", [])) != EXPECTED_ORPHANS[phase]:
+        orphan_records = cell.get("orphan_records")
+        if not isinstance(orphan_records, list):
+            failures.append("kill cell orphan records must be a list")
+            orphan_records = []
+        valid_orphans = all(
+            isinstance(row, dict)
+            and set(row) == {"sha256", "bytes"}
+            and HEX64.fullmatch(str(row.get("sha256"))) is not None
+            and isinstance(row.get("bytes"), int)
+            and not isinstance(row.get("bytes"), bool)
+            and row["bytes"] >= 0
+            for row in orphan_records
+        )
+        if not valid_orphans:
+            failures.append("kill cell orphan record identity drift")
+        if cell.get("orphan_count") != EXPECTED_ORPHANS[phase] or len(orphan_records) != EXPECTED_ORPHANS[phase]:
             failures.append("kill cell orphan partition drift")
-    process = cell.get("process")
-    if not isinstance(process, dict):
-        failures.append("kill cell process evidence missing")
+    if target_role in TARGET_ROLES and phase in PHASES:
+        failures.extend(
+            validate_process_evidence(
+                cell.get("process"),
+                target_path=TARGET_PATHS[target_role],
+                phase=phase,
+                evidence_directory=evidence_directory,
+            )
+        )
     else:
-        if process.get("return_code") != -signal.SIGKILL or process.get("signal") != signal.SIGKILL:
-            failures.append("kill cell is not a reaped SIGKILL")
-        for kind in ("stdout", "stderr"):
-            path = evidence_directory / f"{kind}.bin"
-            expected = process.get(kind)
-            if not isinstance(expected, dict) or not path.is_file() or expected != {
-                "sha256": sha256_file(path),
-                "bytes": path.stat().st_size,
-            }:
-                failures.append(f"kill cell {kind} identity drift")
-        marker = evidence_directory / "marker.bin"
-        if not marker.is_file() or marker.read_bytes() != (str(phase) + "\n").encode() or process.get("marker_sha256") != sha256_file(marker):
-            failures.append("kill cell marker identity drift")
-        if process.get("worker_sha256") != sha256_file(WORKER) or process.get("primitive_sha256") != sha256_file(PRIMITIVE):
-            failures.append("kill cell source identity drift")
-        if process.get("command_sha256") != digest(process.get("command")) or process.get("environment_sha256") != digest(process.get("environment")):
-            failures.append("kill cell command/environment identity drift")
+        failures.append("kill cell process evidence cannot be attributed")
     baseline = storage_document["baseline_projection_sha256"].get(cell.get("storage_class_id"))
     if cell.get("baseline_projection_sha256") != baseline or cell.get("canonical_projection_sha256") != baseline:
         failures.append("kill cell projection differs from uninterrupted baseline")
+    for field in ("pre_inventory_sha256", "post_kill_inventory_sha256", "final_inventory_sha256"):
+        if HEX64.fullmatch(str(cell.get(field))) is None:
+            failures.append(f"kill cell {field} identity drift")
+    if cell.get("completion_sha256") != fixture_completion()["sha256"]:
+        failures.append("kill cell completion identity drift")
     if cell.get("fixture_id") != CONTROL_ID or cell.get("credit_class") != CREDIT_CLASS:
         failures.append("kill cell fixture/credit class drift")
     if cell.get("real_outcomes") != 0 or cell.get("parity_credit") != 0:
@@ -928,7 +1219,11 @@ def validate_cell(cell: Any, *, storage_document: dict[str, Any], evidence_direc
 
 
 def validate_evidence_root(evidence_root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    if evidence_root.is_symlink() or not evidence_root.is_dir():
+        raise StoreEvidenceError("store evidence root must be a real directory")
     storage_path = evidence_root / "storage-classes.json"
+    if storage_path.is_symlink() or not storage_path.is_file():
+        raise StoreEvidenceError("storage-classes evidence must be a real file")
     storage_document = load_canonical(storage_path)
     storage_fields = {
         "schema",
@@ -946,12 +1241,22 @@ def validate_evidence_root(evidence_root: Path) -> tuple[dict[str, Any], list[di
     )
     if storage_document.get("schema") != STORAGE_CLASSES_SCHEMA or storage_document.get("record_sha256") != expected_storage_hash:
         raise StoreEvidenceError("storage-classes identity drift")
+    if storage_document.get("process_interruption_only") is not True or storage_document.get("power_loss_proven") is not False:
+        raise StoreEvidenceError("storage-classes claim boundary drift")
     classes = storage_document.get("storage_classes")
     if not isinstance(classes, list) or [item.get("id") for item in classes] != list(STORAGE_CLASS_IDS):
         raise StoreEvidenceError("storage class order/population drift")
     for descriptor in classes:
-        if descriptor.get("identity_sha256") != object_digest(descriptor, "identity_sha256"):
-            raise StoreEvidenceError("storage descriptor identity drift")
+        failures = validate_storage_descriptor(descriptor)
+        if failures:
+            raise StoreEvidenceError("; ".join(failures))
+    baselines = storage_document.get("baseline_projection_sha256")
+    if (
+        not isinstance(baselines, dict)
+        or list(baselines) != list(STORAGE_CLASS_IDS)
+        or not all(HEX64.fullmatch(str(value)) for value in baselines.values())
+    ):
+        raise StoreEvidenceError("storage baseline identity drift")
     expected_ids = [
         _cell_id(class_id, target_role, phase)
         for class_id in STORAGE_CLASS_IDS
@@ -966,8 +1271,11 @@ def validate_evidence_root(evidence_root: Path) -> tuple[dict[str, Any], list[di
         directory = evidence_root / control_id
         if not directory.is_dir() or directory.is_symlink():
             raise StoreEvidenceError(f"kill cell directory missing: {control_id}")
-        if sorted(path.name for path in directory.iterdir()) != ["cell.json", "marker.bin", "stderr.bin", "stdout.bin"]:
+        entries = list(directory.iterdir())
+        if sorted(path.name for path in entries) != ["cell.json", "marker.bin", "stderr.bin", "stdout.bin"]:
             raise StoreEvidenceError(f"kill cell file population drift: {control_id}")
+        if any(path.is_symlink() or not path.is_file() for path in entries):
+            raise StoreEvidenceError(f"kill cell contains a non-file or symlink: {control_id}")
         cell = load_canonical(directory / "cell.json")
         failures = validate_cell(cell, storage_document=storage_document, evidence_directory=directory)
         if failures:
@@ -987,9 +1295,52 @@ def _evidence_manifest(evidence_root: Path) -> list[dict[str, Any]]:
     ]
 
 
-def build_result_authority(evidence_root: Path, *, implementation_revision: str) -> dict[str, Any]:
+def validate_implementation_revision(
+    implementation_revision: str, source_paths: list[Path]
+) -> None:
     if not HEX40.fullmatch(implementation_revision):
         raise StoreEvidenceError("implementation revision must be lowercase 40-hex")
+    git = shutil.which("git")
+    if git is None:
+        raise StoreEvidenceError("git is required to validate the implementation revision")
+    git = os.path.realpath(git)
+    try:
+        ancestry = subprocess.run(
+            [git, "merge-base", "--is-ancestor", implementation_revision, "HEAD"],
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise StoreEvidenceError("implementation revision ancestry check failed") from exc
+    if ancestry.returncode != 0:
+        raise StoreEvidenceError("implementation revision is not an ancestor of HEAD")
+    for path in source_paths:
+        relative = path.resolve().relative_to(ROOT).as_posix()
+        try:
+            committed = subprocess.run(
+                [git, "show", f"{implementation_revision}:{relative}"],
+                cwd=ROOT,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=10,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise StoreEvidenceError(
+                f"implementation revision source check failed: {relative}"
+            ) from exc
+        if committed.returncode != 0 or committed.stdout != path.read_bytes():
+            raise StoreEvidenceError(
+                f"implementation revision does not freeze current source: {relative}"
+            )
+
+
+def build_result_authority(evidence_root: Path, *, implementation_revision: str) -> dict[str, Any]:
     evidence_root = evidence_root.resolve()
     try:
         relative_evidence_root = evidence_root.relative_to(ROOT).as_posix()
@@ -1007,6 +1358,7 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         ROOT / "docs/plan/lean-execution-evidence-v1.json",
         ROOT / "docs/plan/lean-execution-process-v1.json",
     ]
+    validate_implementation_revision(implementation_revision, source_paths)
     phase_counts = Counter(cell["phase"] for cell in cells)
     target_counts = Counter(cell["target_role"] for cell in cells)
     class_counts = Counter(cell["storage_class_id"] for cell in cells)
