@@ -184,8 +184,10 @@ Again, there are distinct targets:
   frozen `MiniVector` and `MiniAcc` construct streams complete twice with exact
   generated/exported recursor comparison; separate computation streams reduce
   to the registered Vector and Acc normal forms in both official Lean and
-  Axeyum. Nested/well-founded frontend lowering and broad Lean admission remain
-  open. Mutual groups are complete under accepted ADR-0354: the unit is one
+  Axeyum. Kernel-side nested-inductive elimination and broad Lean admission
+  remain open; native nested/well-founded source elaboration is separately
+  staged in TL4.9/TL4.10. Mutual groups are complete under accepted ADR-0354:
+  the unit is one
   atomic ordered
   group with shared parameters, complete-group positivity, all motives/minors,
   target-family recursive calls, and all-or-nothing publication. Its M0
@@ -212,8 +214,12 @@ Again, there are distinct targets:
   pass. M5 preserves the historical assurance record while adding the current
   TL2.13 overlay: five rows are admitted, three are independently computation-
   checked, and one retains a typed decline. Every bounded final gate passes,
-  the obsolete live mutual decline is removed, and TL2.13 is DONE. TL2.14
-  frontend lowering is now the primary semantic path.
+  the obsolete live mutual decline is removed, and TL2.13 is DONE. A source-
+  backed dependency audit corrects the next task: TL2.14 is kernel-side nested-
+  inductive expansion/restoration under proposed ADR-0355; well-founded source
+  recursion remains native-elaborator task TL4.10. The already elaborated
+  well-founded root imports as 35 declarations with zero axioms, while the
+  nested root still has a typed non-admission boundary and no semantic credit.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

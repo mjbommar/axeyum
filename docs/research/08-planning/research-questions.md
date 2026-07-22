@@ -794,8 +794,9 @@ Out of scope:
     Preserve all constructor fields first and IHs second in source order; use
     one WHNF telescope-tail helper for minor types and rule right-hand sides;
     remove the importer's reflexive policy decline only after native support.
-    Mutual groups remain TL2.13 and frontend nested/well-founded lowering
-    remains TL2.14. See
+    Mutual groups remain TL2.13. A later dependency audit separates kernel-side
+    nested-inductive elimination in TL2.14 from source recursion elaboration in
+    TL4.9/TL4.10. See
     [accepted ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
     and the
     [TL2.12 execution plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
@@ -822,8 +823,9 @@ Out of scope:
     and minor. Each owner-family recursor then binds its own indices/major and
     returns its own motive. Restrict mutual predicates to `Prop`, disable mutual
     K-like reduction, infer-check every recursor, and commit all declarations or
-    none. Preserve `add_inductive` as a singleton wrapper and keep TL2.14
-    frontend lowering separate. See
+    none. Preserve `add_inductive` as a singleton wrapper. Nested-inductive
+    expansion/restoration is the next kernel admission transformation under
+    TL2.14; source recursion remains separate in TL4.9/TL4.10. See
     [accepted ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
     and the
     [TL2.13 execution plan](../../plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
@@ -857,7 +859,30 @@ Out of scope:
     [M5 result](../../plan/lean-mutual-inductive-groups-final-2026-07-22.md)
     preserves the historical assurance record, removes the obsolete live
     decline, closes every bounded gate, accepts the decision, and marks TL2.13
-    DONE. TL2.14 owns the distinct frontend-lowering question.
+    DONE. A subsequent source-backed audit corrects TL2.14 to the distinct
+    kernel-side nested-inductive elimination question.
+- [ ] How must nested inductive applications be expanded and restored, and
+      which layer owns well-founded recursion?
+  - Proposed answer (2026-07-22): follow pinned Lean 4.30's kernel boundary.
+    Discover applications of already admitted inductive containers whose
+    parameter tuple contains a new family; require complete parameter prefixes
+    and no loose bound variables; copy the container's complete mutual group
+    into structurally deduplicated auxiliary families; process copied
+    constructors recursively; check the expanded group through the existing
+    TL2.11--TL2.13 atomic path; then restore and publish only the source
+    families/constructors, main recursors, and deterministic `.rec_N` auxiliary
+    recursors. Derive and compare `numNested` and wire records rather than
+    trusting them. Keep native `termination_by`/`decreasing_by`,
+    `WellFounded.fix`, equation compilation, and recursive source metadata in
+    TL4.10. The already completing 35-declaration well-founded export is a core
+    control, not frontend credit. See the
+    [dependency audit](../../plan/lean-post-tl2.13-dependency-audit-2026-07-22.md),
+    [proposed ADR-0355](../09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md),
+    and the
+    [TL2.14 plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
+    P0 is complete; M0 source/wire/no-product freeze is next. Close this question
+    only when ADR-0355's native, generated, import, computation, mutation,
+    retention, and final gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

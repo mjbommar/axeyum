@@ -197,7 +197,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`lean-mutual-inductive-groups-final-2026-07-22.md`](lean-mutual-inductive-groups-final-2026-07-22.md)
   — M5's append-only assurance overlay, synchronized compatibility contract,
   final bounded gates, accepted ADR-0354, completed TL2.13, exact non-claims,
-  and TL2.14 frontend-lowering handoff.
+  and the historical TL2.14 handoff later corrected by the dependency audit.
+- [`lean-post-tl2.13-dependency-audit-2026-07-22.md`](lean-post-tl2.13-dependency-audit-2026-07-22.md)
+  — source-backed correction separating kernel-side nested-inductive
+  elimination from elaborator-side well-founded source recursion, with the
+  exact current nested and already-passing well-founded product boundaries.
+- [`lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md`](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
+  — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
+  native/importer/mutation/generated gates, P0-M6 milestones, resource bounds,
+  stop conditions, and exact source-elaboration non-claims.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

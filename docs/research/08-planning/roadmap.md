@@ -127,8 +127,11 @@ Last updated: 2026-07-22
 > importer/publication mutation classes. The
 > [M5 result](../../../docs/plan/lean-mutual-inductive-groups-final-2026-07-22.md)
 > preserves the historical assurance record, closes every bounded gate, accepts
-> the decision, and marks TL2.13 DONE. TL2.14 frontend lowering is next and
-> stays separate.
+> the decision, and marks TL2.13 DONE. A subsequent
+> [dependency audit](../../../docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
+> corrects TL2.14 to pinned Lean's kernel-side nested-inductive expansion and
+> restoration; well-founded source recursion remains TL4.10. Proposed ADR-0355
+> and its P0-M6 plan are committed; M0 source/wire freeze is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

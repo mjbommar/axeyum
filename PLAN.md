@@ -149,8 +149,9 @@ state.
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
 > TL2.11 strict positivity, TL2.12 recursive induction-hypothesis generation,
-> and TL2.13 mutual groups are now complete; TL2.14 frontend lowering is the
-> next preregistration-first admission slice.
+> and TL2.13 mutual groups are now complete. A post-TL2.13 dependency audit
+> corrects the next slice: TL2.14 is pinned-Lean kernel-side nested-inductive
+> expansion/restoration, while well-founded source recursion remains TL4.10.
 > Accepted ADR-0352 and the
 > [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
@@ -231,8 +232,9 @@ state.
 > >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
-> Mutual groups are now the primary TL2.13 semantic path; nested/well-founded
-> frontend lowering remains TL2.14.
+> Mutual groups were the primary TL2.13 semantic path. The subsequent
+> dependency audit separates kernel-side nested-inductive elimination in
+> TL2.14 from native nested/well-founded source elaboration in TL4.9/TL4.10.
 > TL2.13 is now complete under
 > [accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
 > and its
@@ -291,8 +293,18 @@ state.
 > preserves the historical matrix in an append-only TL2.13 overlay, records
 > five admitted rows, three independently computation-checked rows, and one
 > current decline, removes the obsolete live `inductive-mutual` decline, closes
-> every bounded gate, accepts ADR-0354, and marks TL2.13 DONE. TL2.14 frontend
-> lowering is next; one Lean/Rust worker and 4 GiB caps remain mandatory.
+> every bounded gate, accepts ADR-0354, and marks TL2.13 DONE. The
+> [post-TL2.13 dependency audit](docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
+> then corrects the next trust boundary: nested-inductive expansion is part of
+> pinned Lean 4.30's kernel admission path, while well-founded source recursion
+> is elaborator work and remains TL4.10. [Proposed ADR-0355](docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+> and the [TL2.14 P0--M6 plan](docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
+> preregister structural discovery, auxiliary-group expansion, ordinary atomic
+> checking, restoration, deterministic `.rec_N` publication, exact official
+> comparison, a >=640-case grammar, and retained 720/768/840 plus well-founded
+> controls. P0 is complete; M0 must freeze explicit auxiliary-recursor
+> computation and negative sources twice before any product observation. One
+> Lean/Rust worker and 4 GiB caps remain mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -314,7 +326,7 @@ state.
 > [machine-readable assurance contract](docs/plan/lean-compatibility-v1.json)
 > and [generated matrix](docs/plan/generated/lean-compatibility.md) retain 12
 > exact rows across eight independent assurance fields, five currently passing
-> profile rows, one explicit import decline, and eight source-bound decline
+> profile rows, one explicit import decline, and six source-bound decline
 > codes; six mutation/contract tests reject illegal parser/oracle-to-admission
 > credit. TL0.4 is now closed by the 65-row runtime-derived
 > [axiom ledger](docs/plan/generated/lean-axiom-ledger.md): seven tests and the
