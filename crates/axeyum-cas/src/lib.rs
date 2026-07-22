@@ -11449,11 +11449,219 @@ fn inverse_laplace_repeated_poles(f: &CasExpr, s: &str, t: &str) -> Option<CasEx
     }
 }
 
+const MAX_Z_POLYNOMIAL_DEGREE: usize = 32;
+const MAX_Z_REPEATED_POLE_MULTIPLICITY: usize = 32;
+
+fn big_factorial(value: usize) -> BigInt {
+    (1..=value).fold(BigInt::from(1), |factorial, factor| factorial * factor)
+}
+
+fn big_rational_power(value: Rational, exponent: usize) -> BigRational {
+    let value = rational_to_big(value);
+    (0..exponent).fold(BigRational::from_integer(BigInt::from(1)), |power, _| {
+        power * value.clone()
+    })
+}
+
+fn trim_big_polynomial(mut coefficients: Vec<BigRational>) -> Vec<BigRational> {
+    while coefficients.len() > 1 && coefficients.last().is_some_and(Zero::is_zero) {
+        coefficients.pop();
+    }
+    coefficients
+}
+
+fn add_big_polynomials(
+    lhs: &[BigRational],
+    rhs: &[BigRational],
+    max_degree: usize,
+) -> Option<Vec<BigRational>> {
+    let len = lhs.len().max(rhs.len());
+    if len.saturating_sub(1) > max_degree {
+        return None;
+    }
+    let mut sum = vec![BigRational::zero(); len];
+    for (index, coefficient) in lhs.iter().enumerate() {
+        sum[index] += coefficient.clone();
+    }
+    for (index, coefficient) in rhs.iter().enumerate() {
+        sum[index] += coefficient.clone();
+    }
+    Some(trim_big_polynomial(sum))
+}
+
+fn multiply_big_polynomials(
+    lhs: &[BigRational],
+    rhs: &[BigRational],
+    max_degree: usize,
+) -> Option<Vec<BigRational>> {
+    let lhs_degree = lhs.len().saturating_sub(1);
+    let rhs_degree = rhs.len().saturating_sub(1);
+    let degree = lhs_degree.checked_add(rhs_degree)?;
+    if degree > max_degree {
+        return None;
+    }
+    let mut product = vec![BigRational::zero(); degree + 1];
+    for (lhs_index, lhs_coefficient) in lhs.iter().enumerate() {
+        for (rhs_index, rhs_coefficient) in rhs.iter().enumerate() {
+            product[lhs_index + rhs_index] += lhs_coefficient.clone() * rhs_coefficient.clone();
+        }
+    }
+    Some(trim_big_polynomial(product))
+}
+
+fn power_big_polynomial(
+    base: &[BigRational],
+    mut exponent: u32,
+    max_degree: usize,
+) -> Option<Vec<BigRational>> {
+    let mut factor = base.to_vec();
+    let mut power = vec![BigRational::from_integer(BigInt::from(1))];
+    while exponent != 0 {
+        if exponent & 1 == 1 {
+            power = multiply_big_polynomials(&power, &factor, max_degree)?;
+        }
+        exponent >>= 1;
+        if exponent != 0 {
+            factor = multiply_big_polynomials(&factor, &factor, max_degree)?;
+        }
+    }
+    Some(power)
+}
+
+/// Read one bounded univariate polynomial with exact bignum intermediates. The
+/// result remains private; callers must still convert accepted output
+/// coefficients to the public checked-`i128` rational representation.
+fn big_univariate_coefficients(expr: &CasExpr, var: &str) -> Option<Vec<BigRational>> {
+    match expr {
+        CasExpr::Const(value) => Some(vec![rational_to_big(*value)]),
+        CasExpr::Var(name) if name == var => Some(vec![
+            BigRational::zero(),
+            BigRational::from_integer(BigInt::from(1)),
+        ]),
+        CasExpr::Add(terms) => terms
+            .iter()
+            .try_fold(vec![BigRational::zero()], |sum, term| {
+                add_big_polynomials(
+                    &sum,
+                    &big_univariate_coefficients(term, var)?,
+                    MAX_Z_POLYNOMIAL_DEGREE,
+                )
+            }),
+        CasExpr::Mul(factors) => factors.iter().try_fold(
+            vec![BigRational::from_integer(BigInt::from(1))],
+            |product, factor| {
+                multiply_big_polynomials(
+                    &product,
+                    &big_univariate_coefficients(factor, var)?,
+                    MAX_Z_POLYNOMIAL_DEGREE,
+                )
+            },
+        ),
+        CasExpr::Neg(inner) => Some(
+            big_univariate_coefficients(inner, var)?
+                .into_iter()
+                .map(core::ops::Neg::neg)
+                .collect(),
+        ),
+        CasExpr::Div(numerator, denominator) => {
+            let denominator = big_univariate_coefficients(denominator, var)?;
+            let [denominator] = denominator.as_slice() else {
+                return None;
+            };
+            if denominator.is_zero() {
+                return None;
+            }
+            Some(
+                big_univariate_coefficients(numerator, var)?
+                    .into_iter()
+                    .map(|coefficient| coefficient / denominator.clone())
+                    .collect(),
+            )
+        }
+        CasExpr::Pow(_, exponent) if *exponent > MAX_CONCRETE_BIGNUM_POWER => None,
+        CasExpr::Pow(base, exponent) => power_big_polynomial(
+            &big_univariate_coefficients(base, var)?,
+            *exponent,
+            MAX_Z_POLYNOMIAL_DEGREE,
+        ),
+        CasExpr::Var(_) | CasExpr::Unary(..) => None,
+    }
+}
+
+fn polynomial_geometric_z_transform(
+    coefficients: &[BigRational],
+    base: Rational,
+    z: &str,
+) -> Option<CasExpr> {
+    let degree = coefficients.len().checked_sub(1)?;
+    let mut falling_coefficients = vec![BigRational::zero(); degree + 1];
+    for (power, coefficient) in coefficients.iter().enumerate() {
+        if coefficient.is_zero() {
+            continue;
+        }
+        for (order, falling_coefficient) in
+            falling_coefficients.iter_mut().enumerate().take(power + 1)
+        {
+            let stirling = combinatorics::stirling_second(
+                u32::try_from(power).ok()?,
+                u32::try_from(order).ok()?,
+            )?;
+            *falling_coefficient +=
+                coefficient.clone() * BigRational::from_integer(BigInt::from(stirling));
+        }
+    }
+
+    // Compose all basis transforms over (z-a)^(degree+1) before converting
+    // coefficients back to public Rational. The numerator is
+    // z Σ_r q_r r! a^r (z-a)^(degree-r).
+    let linear = vec![
+        -rational_to_big(base),
+        BigRational::from_integer(BigInt::from(1)),
+    ];
+    let mut numerator = vec![BigRational::zero()];
+    for (order, coefficient) in falling_coefficients.into_iter().enumerate() {
+        if coefficient.is_zero() {
+            continue;
+        }
+        let scale = coefficient
+            * BigRational::from_integer(big_factorial(order))
+            * big_rational_power(base, order);
+        let mut contribution = vec![BigRational::zero()];
+        contribution.extend(power_big_polynomial(
+            &linear,
+            u32::try_from(degree - order).ok()?,
+            degree,
+        )?);
+        for coefficient in &mut contribution {
+            *coefficient *= scale.clone();
+        }
+        numerator = add_big_polynomials(&numerator, &contribution, degree + 1)?;
+    }
+    let numerator = trim_big_polynomial(numerator)
+        .iter()
+        .map(big_rational_to_rational)
+        .collect::<Option<Vec<_>>>()?;
+    if numerator.iter().all(|coefficient| coefficient.is_zero()) {
+        return Some(CasExpr::zero());
+    }
+    let z_var = CasExpr::var(z);
+    let denominator = z_var.clone() - CasExpr::Const(base);
+    let denominator = if degree == 0 {
+        denominator
+    } else {
+        denominator.pow(u32::try_from(degree + 1).ok()?)
+    };
+    Some(MultiPoly::from_univariate(z, &numerator).to_expr() / denominator)
+}
+
 /// The **(unilateral) Z-transform** `X(z) = Σ_{k≥0} x[k]·z^{−k}` of a discrete
-/// signal `x[n]`, over the geometric fragment: linear combinations of the unit
-/// step (`x[n]=1 → z/(z−1)`) and geometric sequences (`x[n]=aⁿ → z/(z−a)`, with
-/// `aⁿ` written as `exp(n·ln a)` for rational `a > 0`, cf. [`geometric_power`]).
-/// Returned as a rational function of `z`. `None` outside that fragment.
+/// signal `x[n]`, over the bounded polynomial-geometric fragment: linear
+/// combinations of `P(n)·aⁿ`, where `P` has rational coefficients and degree at
+/// most 32 and `a > 0` is rational. This includes the unit step
+/// (`x[n]=1 → z/(z−1)`), geometric sequences (`x[n]=aⁿ → z/(z−a)`), and e.g.
+/// `Z{n·aⁿ}=a·z/(z−a)²`, with `aⁿ` written as `exp(n·ln a)`, cf.
+/// [`geometric_power`]. Returned as a rational function of `z`. `None` outside
+/// that fragment or when final public rational coefficients overflow.
 ///
 /// Discrete counterpart of [`laplace_transform`]; pairs with [`inverse_z_transform`],
 /// which is round-trip-certified against this function.
@@ -11463,33 +11671,56 @@ pub fn z_transform(signal: &CasExpr, n: &str, z: &str) -> Option<CasExpr> {
         CasExpr::Add(terms) => terms.clone(),
         other => vec![other.clone()],
     };
-    let z_var = CasExpr::var(z);
-    let mut total = CasExpr::zero();
+    let mut contributions = Vec::new();
     for term in &terms {
-        let (coeff, base) = match_geometric_signal(term, n)?; // c·aⁿ (a = 1 for a step)
-        // Z{c·aⁿ} = c·z/(z − a).
-        let contribution =
-            CasExpr::Const(coeff) * z_var.clone() / (z_var.clone() - CasExpr::Const(base));
-        total = total + contribution;
+        let (coefficients, base) = match_polynomial_geometric_signal(term, n)?;
+        contributions.push(polynomial_geometric_z_transform(&coefficients, base, z)?);
     }
-    cancel(&total)
-}
-
-/// Match a discrete term `c·aⁿ` (with `aⁿ` written as `exp(n·ln a)`, `a > 0`) or a
-/// bare constant `c` (`a = 1`, the unit step), returning `(c, a)`. `None` otherwise.
-fn match_geometric_signal(term: &CasExpr, n: &str) -> Option<(Rational, Rational)> {
-    let mut coeff = Rational::integer(1);
-    let mut base: Option<Rational> = None;
-    for factor in flatten_mul(term) {
-        match factor {
-            CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
-            CasExpr::Unary(UnaryFunc::Exp, arg) if base.is_none() => {
-                base = Some(geometric_base(&arg, n)?);
-            }
-            _ => return None, // n-dependent non-geometric factor, or a second exp
+    match contributions.len() {
+        0 => Some(CasExpr::zero()),
+        1 => contributions.into_iter().next(),
+        _ => {
+            let total = CasExpr::Add(contributions);
+            Some(cancel(&total).unwrap_or(total))
         }
     }
-    Some((coeff, base.unwrap_or_else(|| Rational::integer(1))))
+}
+
+/// Match `P(n)·aⁿ`, returning the LSB-first rational coefficients of `P` and the
+/// positive rational base `a`. A polynomial without an exponential has `a=1`.
+fn match_polynomial_geometric_signal(
+    term: &CasExpr,
+    n: &str,
+) -> Option<(Vec<BigRational>, Rational)> {
+    let (negated, term) = match term {
+        CasExpr::Neg(inner) => (true, inner.as_ref()),
+        other => (false, other),
+    };
+    let mut base: Option<Rational> = None;
+    let mut polynomial_factors = Vec::new();
+    if negated {
+        polynomial_factors.push(CasExpr::int(-1));
+    }
+    for factor in flatten_mul(term) {
+        if let CasExpr::Unary(UnaryFunc::Exp, argument) = &factor
+            && let Some(candidate) = geometric_base(argument, n)
+        {
+            if base.replace(candidate).is_some() {
+                return None;
+            }
+            continue;
+        }
+        polynomial_factors.push(factor);
+    }
+    let polynomial = match polynomial_factors.len() {
+        0 => CasExpr::one(),
+        1 => polynomial_factors.into_iter().next()?,
+        _ => CasExpr::Mul(polynomial_factors),
+    };
+    Some((
+        big_univariate_coefficients(&polynomial, n)?,
+        base.unwrap_or_else(|| Rational::integer(1)),
+    ))
 }
 
 /// The base `a` if `arg` is `n·ln(a)` for a **positive rational** `a` (so
@@ -11499,7 +11730,7 @@ fn geometric_base(arg: &CasExpr, n: &str) -> Option<Rational> {
     let mut base: Option<Rational> = None;
     for factor in flatten_mul(arg) {
         match factor {
-            CasExpr::Var(v) if v == n => has_n = true,
+            CasExpr::Var(v) if v == n && !has_n => has_n = true,
             CasExpr::Unary(UnaryFunc::Ln, inner) if base.is_none() => {
                 let CasExpr::Const(a) = *inner else {
                     return None;
@@ -11516,11 +11747,14 @@ fn geometric_base(arg: &CasExpr, n: &str) -> Option<Rational> {
     if has_n { base } else { None }
 }
 
-/// The **inverse Z-transform** `x[n] = Z⁻¹{X}` of a proper rational `X(z)` with
-/// **simple rational poles**: from the partial fraction `X(z)/z = Σ Rⱼ/(z − aⱼ)`,
-/// `x[n] = Σ Rⱼ·aⱼⁿ` (with `aⁿ = exp(n·ln a)`). **Certified** by the round trip
-/// `Z{x[n]} = X(z)` (via [`z_transform`] and the zero-test). Returns `None` for an
-/// improper `X`, repeated/irrational/non-positive poles, or on overflow.
+/// The **inverse Z-transform** `x[n] = Z⁻¹{X}` of a proper rational `X(z)` whose
+/// poles are positive rationals. For a partial-fraction term
+/// `Cⱼ/(z−a)ʲ` in `X(z)/z`, the corresponding sequence is
+/// `Cⱼ·binomial(n,j−1)·a^(n−j+1)`. Pole multiplicity is bounded at 32. The result
+/// is **certified** by the
+/// exact round trip `Z{x[n]} = X(z)` (via [`z_transform`] and the zero-test).
+/// Returns `None` for an improper `X`, irrational/non-positive poles, a resource
+/// limit crossing, or overflow.
 ///
 /// ```
 /// use axeyum_cas::{CasExpr, inverse_z_transform, z_transform, equal, ZeroTest};
@@ -11545,22 +11779,65 @@ pub fn inverse_z_transform(transformed: &CasExpr, z: &str, n: &str) -> Option<Ca
     if deg_num >= deg_den {
         return None; // X(z)/z must be strictly proper (X proper)
     }
-    let mut poles: Vec<Rational> = Vec::new();
-    for root in ratint::rational_roots(&den)? {
-        if !poles.contains(&root) {
-            poles.push(root);
-        }
-    }
-    if poles.len() != deg_den {
-        return None; // need `deg_den` distinct rational poles (⇒ all simple)
-    }
-    let mut terms: Vec<CasExpr> = Vec::new();
+    let poles = ratint::rational_roots(&den)?;
+    let mut pole_data = Vec::with_capacity(poles.len());
+    let mut factored_degree = 0usize;
     for pole in poles {
         if pole.numerator() <= 0 {
             return None; // aⁿ = exp(n·ln a) needs a > 0
         }
-        let res = residue(&over_z, z, pole)?;
-        terms.push(res * geometric_power(pole, n));
+        let factor = [pole.checked_neg()?, Rational::integer(1)];
+        let mut residual_denominator = den.clone();
+        let mut multiplicity = 0usize;
+        while poly::rat_degree(&residual_denominator).unwrap_or(0) >= 1
+            && poly::eval_rat_poly(&residual_denominator, pole)?.is_zero()
+        {
+            multiplicity = multiplicity.checked_add(1)?;
+            if multiplicity > MAX_Z_REPEATED_POLE_MULTIPLICITY {
+                return None;
+            }
+            residual_denominator = poly::rat_exact_div(&residual_denominator, &factor)?;
+        }
+        if multiplicity == 0 {
+            return None;
+        }
+        factored_degree = factored_degree.checked_add(multiplicity)?;
+        pole_data.push((pole, multiplicity, residual_denominator));
+    }
+    if factored_degree != deg_den {
+        return None; // an irrational/non-rational factor remains
+    }
+
+    let numerator = MultiPoly::from_univariate(z, &num).to_expr();
+    let n_var = CasExpr::var(n);
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (pole, multiplicity, residual_denominator) in pole_data {
+        // H(z)=(z-a)^m X(z)/z is analytic at a. Its derivatives recover each
+        // principal-part coefficient C_j=H^(m-j)(a)/(m-j)!.
+        let analytic =
+            numerator.clone() / MultiPoly::from_univariate(z, &residual_denominator).to_expr();
+        for singular_order in 1..=multiplicity {
+            let derivative_order = multiplicity - singular_order;
+            let derivative = analytic.differentiate_n(z, derivative_order);
+            let at_pole =
+                simplify(&derivative.substitute(z, &CasExpr::Const(pole))).eval(&BTreeMap::new())?;
+            let principal = rational_to_big(at_pole)
+                / BigRational::from_integer(big_factorial(derivative_order));
+
+            let falling_order = singular_order - 1;
+            let sequence_denominator = BigRational::from_integer(big_factorial(falling_order))
+                * big_rational_power(pole, falling_order);
+            let scale = big_rational_to_rational(&(principal / sequence_denominator))?;
+            if scale.is_zero() {
+                continue;
+            }
+            let mut sequence = CasExpr::Const(scale)
+                * falling_factorial_product(&n_var, u32::try_from(falling_order).ok()?);
+            if pole != Rational::integer(1) {
+                sequence = sequence * geometric_power(pole, n);
+            }
+            terms.push(fold_trivial(&sequence));
+        }
     }
     // Build a *flat* sum (a nested `zero()+a+b` would defeat z_transform's Add match).
     let result = fold_trivial(&match terms.len() {
@@ -19092,6 +19369,234 @@ mod tests {
         // A non-positive pole (z/(z+1)) is declined (aⁿ needs a > 0).
         assert!(inverse_z_transform(&(z() / (z() + CasExpr::int(1))), "z", "n").is_none());
         let _ = n;
+    }
+
+    fn assert_z_transform_degree_ceiling() {
+        let n = || v("n");
+        let z = || v("z");
+        let highest = z_transform(&n().pow(32), "n", "z").expect("degree-32 transform");
+        let CasExpr::Div(actual_numerator, actual_denominator) = highest else {
+            panic!("single degree-32 transform preserves its exact quotient form");
+        };
+        let actual_numerator = big_univariate_coefficients(&actual_numerator, "z")
+            .expect("univariate degree-32 numerator");
+
+        // Independently generate the Eulerian row A(32,k):
+        // Z{n^m}=Σ_k A(m,k)z^(m-k)/(z-1)^(m+1).
+        let mut eulerian = vec![1i128];
+        for order in 2usize..=32 {
+            let previous = eulerian;
+            eulerian = vec![0; order];
+            for index in 0..order {
+                let left = if index == 0 {
+                    0
+                } else {
+                    i128::try_from(order - index)
+                        .expect("bounded Eulerian factor")
+                        .checked_mul(previous[index - 1])
+                        .expect("bounded Eulerian coefficient")
+                };
+                let right = if index == previous.len() {
+                    0
+                } else {
+                    i128::try_from(index + 1)
+                        .expect("bounded Eulerian factor")
+                        .checked_mul(previous[index])
+                        .expect("bounded Eulerian coefficient")
+                };
+                eulerian[index] = left.checked_add(right).expect("bounded Eulerian row sum");
+            }
+        }
+        let mut expected_numerator = vec![BigRational::zero(); 33];
+        for (index, coefficient) in eulerian.into_iter().enumerate() {
+            expected_numerator[32 - index] = BigRational::from_integer(BigInt::from(coefficient));
+        }
+        assert_eq!(actual_numerator, expected_numerator);
+        assert_eq!(*actual_denominator, (z() - CasExpr::int(1)).pow(33));
+        assert!(z_transform(&n().pow(33), "n", "z").is_none());
+    }
+
+    #[test]
+    fn z_transform_polynomial_geometric_sequences() {
+        let n = || v("n");
+        let z = || v("z");
+        let two_n = || geometric_power(Rational::integer(2), "n");
+
+        // Falling-factorial decomposition gives the standard unilateral pairs.
+        let n_two_n = n() * two_n();
+        let n_two_n_transform = CasExpr::int(2) * z() / (z() - CasExpr::int(2)).pow(2);
+        assert_equal(
+            &z_transform(&n_two_n, "n", "z").expect("Z{n 2^n}"),
+            &n_two_n_transform,
+        );
+
+        let n_squared_two_n = n().pow(2) * two_n();
+        let n_squared_two_n_transform =
+            CasExpr::int(2) * z() * (z() + CasExpr::int(2)) / (z() - CasExpr::int(2)).pow(3);
+        assert_equal(
+            &z_transform(&n_squared_two_n, "n", "z").expect("Z{n^2 2^n}"),
+            &n_squared_two_n_transform,
+        );
+
+        // A rational base and a genuine polynomial factor exercise the general
+        // conversion rather than a table of the two examples above.
+        let half = Rational::new(1, 2);
+        let half_n = geometric_power(half, "n");
+        let polynomial = CasExpr::int(3) * n().pow(2) - CasExpr::int(2) * n() + CasExpr::int(5);
+        let half_signal = polynomial * half_n;
+        let half_transform = CasExpr::rat(3, 2) * z() * (z() + CasExpr::rat(1, 2))
+            / (z() - CasExpr::rat(1, 2)).pow(3)
+            - z() / (z() - CasExpr::rat(1, 2)).pow(2)
+            + CasExpr::int(5) * z() / (z() - CasExpr::rat(1, 2));
+        assert_equal(
+            &z_transform(&half_signal, "n", "z").expect("rational-base polynomial transform"),
+            &half_transform,
+        );
+        let divided_polynomial_signal = ((n() + CasExpr::int(1)) / CasExpr::int(2)) * two_n();
+        let divided_polynomial_transform = z() / (z() - CasExpr::int(2)).pow(2)
+            + CasExpr::rat(1, 2) * z() / (z() - CasExpr::int(2));
+        assert_equal(
+            &z_transform(&divided_polynomial_signal, "n", "z")
+                .expect("divided rational-coefficient polynomial transform"),
+            &divided_polynomial_transform,
+        );
+        let nonlinear_exponent = (n() * n() * CasExpr::int(2).ln()).exp();
+        assert!(z_transform(&nonlinear_exponent, "n", "z").is_none());
+
+        // Independent exact coefficient check: after substituting z=1/w, the
+        // transform's Maclaurin coefficients must reproduce P(n)a^n. This
+        // exercises several degrees/bases without reusing the inverse route.
+        let w = v("w");
+        for base in [
+            Rational::new(1, 2),
+            Rational::integer(1),
+            Rational::integer(2),
+            Rational::integer(3),
+        ] {
+            for coefficients in [
+                vec![Rational::integer(1)],
+                vec![
+                    Rational::integer(2),
+                    Rational::integer(-3),
+                    Rational::integer(1),
+                ],
+                vec![
+                    Rational::new(1, 2),
+                    Rational::integer(-2),
+                    Rational::zero(),
+                    Rational::integer(1),
+                ],
+            ] {
+                let polynomial = MultiPoly::from_univariate("n", &coefficients).to_expr();
+                let signal = polynomial * geometric_power(base, "n");
+                let transform = z_transform(&signal, "n", "z").expect("bounded exact transform");
+                let generating =
+                    simplify(&transform.substitute("z", &(CasExpr::int(1) / w.clone())));
+                let actual = series_coefficients(&generating, "w", 8)
+                    .expect("transform is regular in reciprocal z");
+                let mut base_power = Rational::integer(1);
+                for index in 0..=8 {
+                    let polynomial_value = poly::eval_rat_poly(
+                        &coefficients,
+                        Rational::integer(
+                            i128::try_from(index).expect("bounded coefficient index fits i128"),
+                        ),
+                    )
+                    .expect("small exact polynomial sample");
+                    assert_eq!(
+                        actual.get(index).copied().unwrap_or_else(Rational::zero),
+                        polynomial_value
+                            .checked_mul(base_power)
+                            .expect("small exact sequence sample"),
+                        "base={base:?}, coefficients={coefficients:?}, index={index}"
+                    );
+                    base_power = base_power
+                        .checked_mul(base)
+                        .expect("small exact base power");
+                }
+            }
+        }
+        assert_z_transform_degree_ceiling();
+    }
+
+    #[test]
+    fn inverse_z_transform_repeated_positive_rational_poles() {
+        let n = || v("n");
+        let z = || v("z");
+        let two_n = || geometric_power(Rational::integer(2), "n");
+        let n_two_n = n() * two_n();
+        let n_two_n_transform = CasExpr::int(2) * z() / (z() - CasExpr::int(2)).pow(2);
+        let n_squared_two_n = n().pow(2) * two_n();
+        let n_squared_two_n_transform =
+            CasExpr::int(2) * z() * (z() + CasExpr::int(2)) / (z() - CasExpr::int(2)).pow(3);
+
+        // Repeated poles reconstruct polynomial-geometric sequences and are
+        // accepted only after the exact forward round trip succeeds.
+        let recovered_n_two_n =
+            inverse_z_transform(&n_two_n_transform, "z", "n").expect("double pole inverse");
+        assert_equal(&recovered_n_two_n, &n_two_n);
+        let recovered_n_squared_two_n =
+            inverse_z_transform(&n_squared_two_n_transform, "z", "n").expect("triple pole inverse");
+        assert_equal(&recovered_n_squared_two_n, &n_squared_two_n);
+
+        let unit_triple_pole = z() / (z() - CasExpr::int(1)).pow(3);
+        let unit_sequence = CasExpr::rat(1, 2) * falling_factorial(&n(), 2);
+        assert_equal(
+            &inverse_z_transform(&unit_triple_pole, "z", "n").expect("unit triple pole inverse"),
+            &unit_sequence,
+        );
+
+        let highest_multiplicity =
+            u32::try_from(MAX_Z_REPEATED_POLE_MULTIPLICITY).expect("bounded multiplicity fits u32");
+        for multiplicity in 1..=highest_multiplicity {
+            let pole = z() / (z() - CasExpr::int(1)).pow(multiplicity);
+            assert!(
+                inverse_z_transform(&pole, "z", "n").is_some(),
+                "unit pole multiplicity {multiplicity}"
+            );
+        }
+        let highest_unit_pole = z() / (z() - CasExpr::int(1)).pow(highest_multiplicity);
+        let highest_unit_sequence = CasExpr::Const(
+            Rational::checked_new(
+                1,
+                ntheory::factorial(i128::from(highest_multiplicity - 1))
+                    .expect("bounded factorial fits i128"),
+            )
+            .expect("bounded reciprocal factorial fits Rational"),
+        ) * falling_factorial(&n(), highest_multiplicity - 1);
+        let recovered_highest = inverse_z_transform(&highest_unit_pole, "z", "n")
+            .expect("highest admitted repeated pole");
+        assert_eq!(
+            big_univariate_coefficients(&recovered_highest, "n"),
+            big_univariate_coefficients(&highest_unit_sequence, "n"),
+            "highest admitted unit-pole sequence",
+        );
+
+        let mixed =
+            n_squared_two_n_transform.clone() + CasExpr::int(3) * z() / (z() - CasExpr::int(3));
+        let recovered_mixed = inverse_z_transform(&mixed, "z", "n")
+            .expect("mixed simple and repeated positive poles");
+        assert_equal(
+            &z_transform(&recovered_mixed, "n", "z").expect("mixed inverse round trip"),
+            &mixed,
+        );
+
+        // The real-positive representation and explicit resource bounds remain
+        // fail-closed; no alternating, irrational-pole, or unbounded expansion
+        // semantics are inferred.
+        assert!(inverse_z_transform(&(z() / (z() + CasExpr::int(1)).pow(2)), "z", "n").is_none());
+        assert!(
+            inverse_z_transform(&(z() / (z().pow(2) + CasExpr::int(1)).pow(2)), "z", "n").is_none()
+        );
+        assert!(
+            inverse_z_transform(
+                &(z() / (z() - CasExpr::int(2)).pow(highest_multiplicity + 1)),
+                "z",
+                "n"
+            )
+            .is_none()
+        );
+        assert!(inverse_z_transform(&(z().pow(2) / (z() - CasExpr::int(2))), "z", "n").is_none());
     }
 
     #[test]

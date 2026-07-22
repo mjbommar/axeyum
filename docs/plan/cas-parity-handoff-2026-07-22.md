@@ -13,12 +13,13 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/bignum-wz-base`, stacked on CAS parent `e5547fe2`; do not
+  `agent/cas/broad-gap-probe-next`, stacked on CAS parent `0133daa7`; do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `525` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `527` unit + `147` doctests, **all green**, workspace Clippy-clean,
+  strict stable/nightly rustdoc-green, wasm-green, links-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adx**). Keep both in sync when landing features.
+  latest is **Entry 37ady**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -144,6 +145,33 @@ Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), a direct squared-binomial falling-factorial family (regressed for
 orders `0..=255`), and Stirling-composed raw moments (regressed for orders
 `0..=35`). False near-misses correctly decline.
+
+**Bounded polynomial-geometric Z transforms**
+- A cross-area, timeout-bounded probe found that Fourier series (`|x|`, `e^x`),
+  representative inhomogeneous ODEs, positive-assumption radical refinement,
+  and polynomial-times-exponential Laplace pairs already succeeded. The concrete
+  standard declines were `Z{n·2ⁿ}`, `Z{n²·2ⁿ}`, and double/triple inverse-Z
+  poles, so this increment closes that measured gap rather than widening an
+  already-green family.
+- `z_transform` accepts linear combinations of `P(n)aⁿ`, where `P` has rational
+  coefficients and degree at most 32 and `a` is a positive rational. It converts
+  `P(n)=Σqᵣ(n)ᵣ` exactly and composes
+  `Z{(n)ᵣaⁿ}=r!aʳz/(z−a)ʳ⁺¹` over one known denominator with private
+  `BigRational` intermediates. Every final coefficient must still fit the public
+  checked-`i128` `Rational` domain.
+- `inverse_z_transform` accepts `X(z)/z` only when it is strictly proper and its
+  denominator factors completely into positive-rational poles of multiplicity
+  at most 32. For a pole `a` of multiplicity `m`, derivatives of
+  `H(z)=(z−a)^mX(z)/z` recover each principal-part coefficient; the corresponding
+  sequence is `Cⱼ binomial(n,j−1)a^(n−j+1)`. The result is returned only when the
+  exact forward transform certifies the original `X(z)`.
+- Regressions use independent reciprocal-power-series coefficients across four
+  bases and three polynomial shapes, an independently generated Eulerian row at
+  degree 32, every unit-pole multiplicity 1 through 32, mixed poles, and explicit
+  negative controls. Degree 33, multiplicity 33, nonlinear exponents,
+  non-positive/irrational poles, improper inputs, and overflow decline. The
+  foundational DAG and research-question register require no ADR: no public
+  operator, backend, evidence format, or logic fragment changed.
 
 ---
 
@@ -409,7 +437,7 @@ Ordered roughly by value:
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
    need a dedicated alternating-sign representation or a complex extension.
 3. **Continue gap-probing** — still productive. Areas not yet swept much:
-   more transforms (Z-transform edge cases, Fourier), 2nd-order variable-coeff
+   Fourier and additional inverse-transform families, 2nd-order variable-coeff
    ODEs, PDE separation, vector calculus (grad/div/curl), assumptions/`refine`,
    piecewise, elliptic integrals, `bessely`/`besselk` (second-kind / modified-2nd,
    via the proven `UnaryFunc::BesselI(u32)` parameterize-the-variant technique
@@ -465,9 +493,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor e5547fe2 HEAD
+git merge-base --is-ancestor 0133daa7 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 525 unit + 147 doctests green
+# → 527 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
