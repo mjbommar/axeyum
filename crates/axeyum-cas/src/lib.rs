@@ -3145,15 +3145,25 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     }
     let antiderivative_p = big_p.antiderivative;
 
-    // Integrating factor μ = exp(P); inner integrand μ·q.
-    let mu = antiderivative_p.clone().exp();
-    let inner = integrate(&(mu * q.clone()), var)?;
-    if !inner.is_certified() {
-        return None;
-    }
+    // Integrating factor μ = exp(P), reducing `exp(ln g) → g` (`p = 1/x ⇒ μ = x`).
+    // No `simplify` here — it would rewrite `exp(2x) → exp(x)²`, which the
+    // integrator does not recognise.
+    let mu = rewrite_exp_log(&antiderivative_p.clone().exp());
+    // Integrate `μ·q`. Try the raw product first (keeps `exp(2x)` intact); fall
+    // back to the simplified form only if that fails, since `simplify` collapses
+    // cancellations (`exp(−x)·eˣ = 1` for `y′ − y = eˣ`) but also rewrites
+    // `exp(2x) → exp(x)²`, which the integrator does not recognise.
+    let integrand = mu * q.clone();
+    let inner = [
+        integrate(&integrand, var),
+        integrate(&simplify(&integrand), var),
+    ]
+    .into_iter()
+    .flatten()
+    .find(CertifiedIntegral::is_certified)?;
 
     // y = exp(−P)·(R + C₀).
-    let neg_p = CasExpr::Neg(Box::new(antiderivative_p)).exp();
+    let neg_p = rewrite_exp_log(&CasExpr::Neg(Box::new(antiderivative_p)).exp());
     let solution = neg_p * (inner.antiderivative + CasExpr::var("C0"));
 
     // Certify: y′ + p·y − q ≡ 0.
@@ -5890,6 +5900,74 @@ fn rewrite_log_exp(expr: &CasExpr) -> CasExpr {
         ),
         CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(rewrite_log_exp(a)), *e),
         CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(rewrite_log_exp(a))),
+        other => other.clone(),
+    }
+}
+
+/// Match `c·ln(u)`, returning the rational constant `c` and the argument `u`.
+/// Handles `ln(u)` (`c=1`), `Neg`, and `Mul([const…, ln(u)])`. `None` otherwise.
+fn as_scaled_log(expr: &CasExpr) -> Option<(Rational, CasExpr)> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, u) => Some((Rational::integer(1), (**u).clone())),
+        CasExpr::Neg(inner) => {
+            let (c, u) = as_scaled_log(inner)?;
+            Some((c.checked_neg()?, u))
+        }
+        CasExpr::Mul(factors) => {
+            let mut coefficient = Rational::integer(1);
+            let mut arg: Option<CasExpr> = None;
+            for factor in factors {
+                if let CasExpr::Unary(UnaryFunc::Ln, u) = factor {
+                    if arg.is_some() {
+                        return None;
+                    }
+                    arg = Some((**u).clone());
+                } else {
+                    coefficient = coefficient.checked_mul(multipoly_as_constant(&normalize(factor)?)?)?;
+                }
+            }
+            Some((coefficient, arg?))
+        }
+        _ => None,
+    }
+}
+
+/// Rewrite `exp(ln(u)) → u` everywhere (the `ln→exp` right inverse), sound for
+/// `u > 0`. The dual of [`rewrite_log_exp`], generalized from the exp tower's
+/// rational `exp(ln v)=v` to an arbitrary `u` — needed for the integrating-factor
+/// method, where `μ = exp(∫p)` and `∫p = ln g` (e.g. `p = 1/x ⇒ μ = exp(ln x) = x`).
+fn rewrite_exp_log(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            // `exp(c·ln u) = u^c` for an integer `c` (covers `exp(ln x)=x`,
+            // `exp(−ln x)=1/x`, `exp(2·ln x)=x²`).
+            if let Some((c, u)) = as_scaled_log(arg)
+                && c.is_integer()
+            {
+                let base = rewrite_exp_log(&u);
+                if let Ok(power) = u32::try_from(c.numerator().unsigned_abs()) {
+                    let raised = match power {
+                        0 => CasExpr::one(),
+                        1 => base,
+                        _ => base.pow(power),
+                    };
+                    return if c.numerator() >= 0 {
+                        raised
+                    } else {
+                        CasExpr::int(1) / raised
+                    };
+                }
+            }
+            CasExpr::Unary(UnaryFunc::Exp, Box::new(rewrite_exp_log(arg)))
+        }
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(rewrite_exp_log).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(rewrite_exp_log).collect()),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(rewrite_exp_log(a))),
+        CasExpr::Div(a, b) => {
+            CasExpr::Div(Box::new(rewrite_exp_log(a)), Box::new(rewrite_exp_log(b)))
+        }
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(rewrite_exp_log(a)), *e),
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(rewrite_exp_log(a))),
         other => other.clone(),
     }
 }
@@ -11830,6 +11908,25 @@ mod tests {
         let sol3 =
             dsolve_first_order_linear(&CasExpr::int(-1), &x().pow(2), "x").expect("solvable");
         assert_equal(&(sol3.differentiate("x") - sol3.clone()), &x().pow(2));
+        // Variable coefficient p = k/x → integrating factor μ = exp(∫k/x) = x^k
+        // (via `exp(ln)` folding). y′ + y/x = 1 ⇒ residual y′ + y/x − 1 = 0.
+        let variable = dsolve_first_order_linear(&(CasExpr::int(1) / x()), &CasExpr::int(1), "x")
+            .expect("solvable");
+        assert_equal(
+            &(variable.differentiate("x") + variable.clone() / x() - CasExpr::int(1)),
+            &CasExpr::zero(),
+        );
+        // y′ + 2y/x = x  ⇒  μ = x².
+        let variable2 = dsolve_first_order_linear(&(CasExpr::int(2) / x()), &x(), "x")
+            .expect("solvable");
+        assert_equal(
+            &(variable2.differentiate("x") + CasExpr::int(2) * variable2.clone() / x() - x()),
+            &CasExpr::zero(),
+        );
+        // Resonant forcing y′ − y = eˣ (the integrand eˣ·e⁻ˣ = 1 must collapse).
+        let resonant = dsolve_first_order_linear(&CasExpr::int(-1), &x().exp(), "x")
+            .expect("solvable");
+        assert_equal(&(resonant.differentiate("x") - resonant.clone()), &x().exp());
     }
 
     #[test]
