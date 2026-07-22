@@ -245,11 +245,11 @@ fn reject_wrong_result_head() {
     assert!(!k.environment().contains(bad_ctor));
 }
 
-/// Reject: a **reflexive / higher-order** recursive field — a field whose type
-/// is a `Pi` ending in the inductive (`(Nat → I) → I`). Direct recursive fields
-/// are now admitted (slice 5), but reflexive ones are still deferred.
+/// Reject: a mixed-polarity higher-order field. Its codomain occurrence is
+/// positive, but its domain occurrence is negative and wins before the later
+/// reflexive-feature decline.
 #[test]
-fn reject_reflexive_recursive_field() {
+fn reject_non_positive_recursive_field() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let z = k.level_zero();
@@ -257,7 +257,8 @@ fn reject_reflexive_recursive_field() {
     let s1 = k.sort(one);
     let ind_name = k.name_str(anon, "Refl");
     let ind_const = k.const_(ind_name, vec![]);
-    // ctor: Π (_ : (Refl → Refl)), Refl — the field type is a Pi ending in I.
+    // ctor: Π (_ : (Refl → Refl)), Refl — the field type contains I on both
+    // sides of the inner Pi.
     let cn = k.name_str(anon, "node");
     let field_ty = k.pi(anon, ind_const, ind_const, BinderInfo::Default);
     let cty = k.pi(anon, field_ty, ind_const, BinderInfo::Default);
@@ -265,11 +266,147 @@ fn reject_reflexive_recursive_field() {
         .add_inductive(ind_name, &[], 0, s1, &[(cn, cty)])
         .unwrap_err();
     assert!(
-        matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
+        matches!(
+            err,
+            KernelError::NonPositiveInductiveOccurrence {
+                inductive,
+                ctor,
+                field_index: 0,
+            } if inductive == ind_name && ctor == cn
+        ),
         "got {err:?}"
     );
     assert!(!k.environment().contains(ind_name));
     assert!(!k.environment().contains(cn));
+}
+
+/// A negative occurrence is classified before constructor type inference and
+/// before provisional environment insertion. The dangling codomain would be an
+/// `UnknownConst` if the later type checker ran first.
+#[test]
+fn positivity_preflight_precedes_provisional_insertion_and_type_checking() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let ty = k.sort(one);
+    let ind_name = k.name_str(anon, "Preflight");
+    let ind_const = k.const_(ind_name, vec![]);
+    let unknown_name = k.name_str(anon, "MissingType");
+    let unknown = k.const_(unknown_name, vec![]);
+    let ctor = k.name_str(ind_name, "mk");
+    let negative = k.pi(anon, ind_const, unknown, BinderInfo::Default);
+    let ctor_ty = k.pi(anon, negative, ind_const, BinderInfo::Default);
+
+    let before: Vec<_> = k
+        .environment()
+        .iter()
+        .map(|(&name, declaration)| (name, declaration.clone()))
+        .collect();
+    let error = k
+        .add_inductive(ind_name, &[], 0, ty, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::NonPositiveInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 0,
+        }
+    );
+    let after: Vec<_> = k
+        .environment()
+        .iter()
+        .map(|(&name, declaration)| (name, declaration.clone()))
+        .collect();
+    assert_eq!(after, before);
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
+}
+
+/// A family nested below a foreign type constructor is not a valid raw kernel
+/// recursive application. Native nested-inductive lowering remains separate.
+#[test]
+fn reject_family_nested_under_foreign_head() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let sort_one = k.sort(one);
+    let wrapper = k.name_str(anon, "Wrapper");
+    let wrapper_ty = k.pi(anon, sort_one, sort_one, BinderInfo::Default);
+    k.add_declaration(Declaration::Axiom {
+        name: wrapper,
+        uparams: vec![],
+        ty: wrapper_ty,
+    })
+    .expect("Wrapper type former should admit");
+
+    let ind_name = k.name_str(anon, "NestedRaw");
+    let ind_const = k.const_(ind_name, vec![]);
+    let wrapper_const = k.const_(wrapper, vec![]);
+    let nested = k.app(wrapper_const, ind_const);
+    let ctor = k.name_str(ind_name, "mk");
+    let ctor_ty = k.pi(anon, nested, ind_const, BinderInfo::Default);
+    let error = k
+        .add_inductive(ind_name, &[], 0, sort_one, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::InvalidInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 0,
+        }
+    );
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
+    assert!(k.environment().contains(wrapper));
+}
+
+/// A recursive indexed application may not contain the family being declared
+/// inside one of its own index expressions (Lean issue #2125 boundary).
+#[test]
+fn reject_family_occurrence_inside_recursive_index() {
+    let mut k = Kernel::new();
+    let anon = k.anon();
+    let one = {
+        let zero = k.level_zero();
+        k.level_succ(zero)
+    };
+    let sort_one = k.sort(one);
+    let ind_name = k.name_str(anon, "SelfIndex");
+    let ind_const = k.const_(ind_name, vec![]);
+    let ind_ty = k.pi(anon, sort_one, sort_one, BinderInfo::Default);
+    let ctor = k.name_str(ind_name, "mk");
+
+    // mk : (A : Type) -> SelfIndex (SelfIndex A) -> SelfIndex A
+    let ctor_ty = {
+        let a_for_result = k.bvar(1);
+        let result = k.app(ind_const, a_for_result);
+        let a_for_field = k.bvar(0);
+        let inner_index = k.app(ind_const, a_for_field);
+        let recursive_field = k.app(ind_const, inner_index);
+        let inner = k.pi(anon, recursive_field, result, BinderInfo::Default);
+        k.pi(anon, sort_one, inner, BinderInfo::Default)
+    };
+    let error = k
+        .add_inductive(ind_name, &[], 0, ind_ty, &[(ctor, ctor_ty)])
+        .unwrap_err();
+    assert_eq!(
+        error,
+        KernelError::InvalidInductiveOccurrence {
+            inductive: ind_name,
+            ctor,
+            field_index: 1,
+        }
+    );
+    assert!(!k.environment().contains(ind_name));
+    assert!(!k.environment().contains(ctor));
 }
 
 /// Admit: an inductive whose type has a leading `Pi` not declared as a

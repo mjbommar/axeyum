@@ -157,7 +157,14 @@ state.
 > sources before any kernel semantic change; the
 > [M0 result](docs/plan/lean-strict-positivity-m0-2026-07-22.md) now binds four
 > hashes, six ordered rule classes, exact resources/commands, and eight
-> fail-closed tests with no new observation. M1 trusted preflight is next;
+> fail-closed tests with no new observation. The subsequent
+> [M1 trusted-preflight result](docs/plan/lean-strict-positivity-m1-2026-07-22.md)
+> now adds the two typed failures and the exact Lean 4.30 single-family rule
+> before provisional environment insertion. The bounded kernel gate passes
+> 182 unit tests; focused clippy and rustdoc are clean; direct-recursive
+> computation and the positive recursive-indexed/reflexive feature declines
+> remain unchanged. M2's twelve-row public matrix and deterministic >=256-case
+> grammar are next;
 > TL2.12 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

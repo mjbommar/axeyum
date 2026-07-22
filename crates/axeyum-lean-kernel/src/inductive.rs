@@ -23,9 +23,17 @@
 //! (`List`, `Option`, `Prod`, `Sum`), the slice-5 recursive types (`Nat`,
 //! trees), and the slice-4 enums/structures.
 //!
+//! Every non-parameter constructor field first passes Lean 4.30's strict-
+//! positivity rule (ADR-0352/TL2.11): after WHNF, no occurrence is accepted; a
+//! `Pi` is accepted only when its domain contains no `I` and its codomain is
+//! recursively positive; every other occurrence must be the exact `I p… idx…`
+//! application with fixed parameters, complete index arity, and occurrence-free
+//! indices. This preflight runs before provisional environment insertion.
+//!
 //! A field is a **direct recursive field** iff its type is exactly `I p_1…p_m`
-//! (only for a **non-indexed** family, `k = 0`); direct recursive fields are
-//! trivially strictly-positive, so no positivity analysis is required here.
+//! (only for a **non-indexed** family, `k = 0`). The positivity guard is broader
+//! than the currently admitted recursive profile: positive recursive-indexed
+//! and reflexive fields pass it, then retain their explicit feature declines.
 //!
 //! **Deferred** (and rejected explicitly, never guessed): **recursive
 //! constructors on an indexed inductive** (recursion + indices together, e.g.
@@ -95,7 +103,9 @@ impl Kernel {
     /// 1. no declaration with the inductive's (or any constructor's) name exists;
     /// 2. `ty` opens `num_params` parameter binders then `num_indices` index
     ///    binders and then WHNFs to a `Sort`;
-    /// 3. each constructor's type re-binds the **same** `num_params` parameters
+    /// 3. every non-parameter constructor field passes Lean 4.30 strict
+    ///    positivity before any provisional environment insertion;
+    /// 4. each constructor's type re-binds the **same** `num_params` parameters
     ///    (their types def-eq to the inductive's), then a telescope of fields
     ///    whose types type-check and whose result head is the inductive applied
     ///    to those parameters in order followed by `num_indices` index argument
@@ -110,7 +120,11 @@ impl Kernel {
     /// [`KernelError::InductiveTypeNotASort`] if `ty`'s param+index-stripped tail
     /// is not a `Sort`, [`KernelError::RecursiveIndexedNotSupported`] for a
     /// recursive field on an indexed family (deferred),
-    /// [`KernelError::ReflexiveOrNestedNotSupported`] for a reflexive/nested
+    /// [`KernelError::NonPositiveInductiveOccurrence`] for a family occurrence
+    /// in a function domain, [`KernelError::InvalidInductiveOccurrence`] for a
+    /// containing term that is not a valid family application,
+    /// [`KernelError::ReflexiveOrNestedNotSupported`] for a positive but
+    /// unsupported reflexive/nested
     /// recursive field, [`KernelError::RecursiveInductiveNotSupported`] for an
     /// ill-shaped recursive self-reference, [`KernelError::ConstructorResultMismatch`] /
     /// [`KernelError::MalformedConstructorType`] for a wrong/ill-formed
@@ -210,7 +224,22 @@ impl Kernel {
         // applied result head and for the major premise's type.
         let ind_const = self.mk_ind_const(name, uparams);
 
-        // (3) Check each constructor and collect its opened field locals.
+        // TL2.11 / ADR-0352: positivity is a distinct trusted preflight, not an
+        // accidental consequence of the later feature-decline paths. Run it
+        // before the temporary `Inductive` declaration is inserted below.
+        for &(ctor_name, ctor_ty) in ctors {
+            self.check_constructor_positivity(
+                name,
+                ind_const,
+                num_params,
+                num_indices,
+                &params,
+                ctor_name,
+                ctor_ty,
+            )?;
+        }
+
+        // (4) Check each constructor and collect its opened field locals.
         //
         // We register the Inductive declaration FIRST (so field types and the
         // recursor type, which reference `Const(I, …)`, resolve), then validate
@@ -326,6 +355,160 @@ impl Kernel {
     fn mk_ind_const(&mut self, name: NameId, uparams: &[NameId]) -> ExprId {
         let levels = uparams.iter().map(|&u| self.level_param(u)).collect();
         self.const_(name, levels)
+    }
+
+    /// Check Lean 4.30 strict positivity for every non-parameter field in one
+    /// constructor telescope, before the family is inserted into the
+    /// environment. Malformed parameter telescopes are left to the existing
+    /// typed constructor check so this preflight does not steal unrelated error
+    /// classifications.
+    #[allow(clippy::too_many_arguments)]
+    fn check_constructor_positivity(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_params: usize,
+        num_indices: usize,
+        params: &[LocalDecl],
+        ctor_name: NameId,
+        ctor_ty: ExprId,
+    ) -> Result<(), KernelError> {
+        let mut ctx = LocalContext::new();
+        let mut param_values = Vec::with_capacity(num_params);
+        for param in params.iter().take(num_params) {
+            ctx.bump_fresh_above(param.fvar);
+            ctx.push(*param);
+            param_values.push(self.fvar(param.fvar));
+        }
+
+        let mut cursor = self.whnf(ctor_ty);
+        for &param in &param_values {
+            let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
+                return Ok(());
+            };
+            cursor = self.instantiate(body, &[param]);
+            cursor = self.whnf(cursor);
+        }
+
+        let mut field_index = 0_u32;
+        while let ExprNode::Pi(bname, domain, body, info) = self.expr_node(cursor).clone() {
+            self.check_positive_occurrence(
+                ind_name,
+                ind_const,
+                num_indices,
+                &param_values,
+                ctor_name,
+                field_index,
+                domain,
+                &mut ctx,
+            )?;
+
+            let fvar = ctx.fresh_fvar();
+            let local = LocalDecl {
+                fvar,
+                name: bname,
+                ty: domain,
+                info,
+            };
+            ctx.push(local);
+            let value = self.fvar(fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+            field_index = field_index
+                .checked_add(1)
+                .ok_or(KernelError::MalformedConstructorType { ctor: ctor_name })?;
+        }
+        Ok(())
+    }
+
+    /// Lean 4.30's `check_positivity` rule for the currently representable
+    /// single-family declaration profile.
+    #[allow(clippy::too_many_arguments)]
+    fn check_positive_occurrence(
+        &mut self,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        param_values: &[ExprId],
+        ctor_name: NameId,
+        field_index: u32,
+        term: ExprId,
+        ctx: &mut LocalContext,
+    ) -> Result<(), KernelError> {
+        let term = self.whnf(term);
+        if !self.mentions_const(term, ind_name) {
+            return Ok(());
+        }
+
+        if let ExprNode::Pi(bname, domain, body, info) = self.expr_node(term).clone() {
+            if self.mentions_const(domain, ind_name) {
+                return Err(KernelError::NonPositiveInductiveOccurrence {
+                    inductive: ind_name,
+                    ctor: ctor_name,
+                    field_index,
+                });
+            }
+            let fvar = ctx.fresh_fvar();
+            let local = LocalDecl {
+                fvar,
+                name: bname,
+                ty: domain,
+                info,
+            };
+            ctx.push(local);
+            let value = self.fvar(fvar);
+            let body = self.instantiate(body, &[value]);
+            let result = self.check_positive_occurrence(
+                ind_name,
+                ind_const,
+                num_indices,
+                param_values,
+                ctor_name,
+                field_index,
+                body,
+                ctx,
+            );
+            ctx.pop();
+            return result;
+        }
+
+        if self.is_valid_positive_inductive_application(
+            term,
+            ind_name,
+            ind_const,
+            num_indices,
+            param_values,
+        ) {
+            return Ok(());
+        }
+
+        Err(KernelError::InvalidInductiveOccurrence {
+            inductive: ind_name,
+            ctor: ctor_name,
+            field_index,
+        })
+    }
+
+    /// Whether `term` is exactly `I params indices`, with the declared universe
+    /// instantiation and no family occurrence inside an index.
+    fn is_valid_positive_inductive_application(
+        &self,
+        term: ExprId,
+        ind_name: NameId,
+        ind_const: ExprId,
+        num_indices: usize,
+        param_values: &[ExprId],
+    ) -> bool {
+        let (head, args) = self.unfold_apps(term);
+        if head != ind_const || args.len() != param_values.len() + num_indices {
+            return false;
+        }
+        if args[..param_values.len()] != param_values[..] {
+            return false;
+        }
+        args[param_values.len()..]
+            .iter()
+            .all(|&index| !self.mentions_const(index, ind_name))
     }
 
     /// Check one constructor of a parametric, possibly indexed inductive: open

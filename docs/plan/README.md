@@ -124,6 +124,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   and [`lean-strict-positivity-v1.json`](lean-strict-positivity-v1.json) —
   four hash-frozen sources, six ordered rule classes, bounded command/resource
   registration, and eight fail-closed tests with no premature observation.
+- [`lean-strict-positivity-m1-2026-07-22.md`](lean-strict-positivity-m1-2026-07-22.md)
+  — trusted single-family positivity preflight, typed polarity/application
+  failures, pre-insertion ordering evidence, and bounded 182-test kernel gate;
+  M2's full public matrix and generated grammar remain open.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

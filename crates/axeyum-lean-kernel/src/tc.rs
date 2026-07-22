@@ -222,12 +222,38 @@ pub enum KernelError {
         /// The constructor whose result was wrong.
         ctor: crate::name::NameId,
     },
+    /// A constructor field contains the inductive family being declared in the
+    /// domain of a function type. Such a negative occurrence violates Lean's
+    /// strict-positivity condition and is rejected before the inductive is
+    /// provisionally inserted into the environment.
+    NonPositiveInductiveOccurrence {
+        /// The inductive family whose occurrence is negative.
+        inductive: crate::name::NameId,
+        /// The constructor containing the offending field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
+    /// A constructor field contains the inductive family being declared, but
+    /// not as a Lean-valid strictly-positive family application: the head,
+    /// universe instantiation, fixed parameters, index arity, or occurrence-
+    /// free index condition is invalid.
+    InvalidInductiveOccurrence {
+        /// The inductive family whose occurrence is invalid.
+        inductive: crate::name::NameId,
+        /// The constructor containing the offending field.
+        ctor: crate::name::NameId,
+        /// Zero-based index among the constructor's non-parameter fields.
+        field_index: u32,
+    },
     /// A constructor field mentioned the inductive type being declared in a
     /// shape this slice does not handle. Slice 5 admits **direct** recursive
     /// fields (a field whose type is exactly `Const(I, uparams)`); this error is
     /// reserved for the disallowed shapes that still need the deferred recursive
-    /// machinery (positivity, parameters/indices) — e.g. a recursive occurrence
-    /// applied to arguments such as `I a` (a parametric/indexed self-reference).
+    /// machinery (parameters/indices and induction hypotheses) — e.g. a
+    /// strictly-positive recursive occurrence whose later semantic support is
+    /// still deferred. Non-positive and invalid occurrences have distinct
+    /// variants above.
     RecursiveInductiveNotSupported {
         /// The inductive whose constructor was recursive.
         inductive: crate::name::NameId,
