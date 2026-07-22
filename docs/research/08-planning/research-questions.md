@@ -890,8 +890,13 @@ Out of scope:
     twice without Axeyum observation. M1 now moves the exact official nested
     row from accidental malformed cardinality to the typed
     `inductive-nested` decline before admission, while malformed recursor-count
-    variants and the well-founded/720/768/840 controls remain exact. M2 native
-    expansion/restoration is next. Close this question only when ADR-0355's
+    variants and the well-founded/720/768/840 controls remain exact. The
+    [M2 result](../../plan/lean-nested-inductive-elimination-m2-2026-07-22.md)
+    now implements the proposed native discovery/copy/fixed-point/check/restore
+    rule with exact `.rec_N` publication, rollback-aware private group metadata,
+    23 focused native cases, final-surface inference, and cross-boundary
+    computation. M3's generated grammar and mutation teeth are next. Close this
+    question only when ADR-0355's
     native, generated, import, computation, mutation, retention, and final
     gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import

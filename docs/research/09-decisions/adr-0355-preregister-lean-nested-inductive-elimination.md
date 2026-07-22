@@ -145,6 +145,30 @@ ADR-0355 may be accepted only when:
     foundational resources, links, staged audit, push, and local/tracking/remote
     equality pass under the registered 4 GiB/one-worker policy.
 
+## M2 evidence
+
+The [M2 native result](../../plan/lean-nested-inductive-elimination-m2-2026-07-22.md)
+implements exit-gate foundations 3--6 without changing importer policy:
+
+- a private rollback-aware index recovers each existing container's complete
+  checked ordered mutual group without changing declaration identity;
+- discovery checks the exact head/arity/occurrence/no-loose-variable rule and
+  structural deduplication;
+- complete groups are specialized, queued to a fixed point, and checked once by
+  the unchanged TL2.11--TL2.13 atomic worker;
+- temporary declarations are cloned, rolled back with both caches cleared,
+  recursively restored, leakage-checked, and published as the source surface
+  plus exact string `.rec_N` auxiliary recursors; and
+- all restored recursor constants are staged before every closed rule body is
+  inferred, preserving main/auxiliary cross-recursion.
+
+Twenty-three focused tests cover the named native shape matrix, typed early and
+late rollbacks, exact final inference, and `main -> rec_1 -> main` computation.
+The semantic implementation is `96b6fbd4da7e20277b338f59983fbe7316b31d22`.
+ADR-0355 remains proposed: M3--M6 still own generated mutation coverage,
+official import/comparison, registered computation streams, assurance, and the
+final aggregate gates.
+
 ## Alternatives
 
 ### Lower nested groups only in the importer

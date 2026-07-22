@@ -316,10 +316,19 @@ state.
 > `Unsupported(inductive-nested)`, preserves malformed ordinary and nested
 > count variants, and retains the well-founded and 720/768/840 controls. It
 > grants no admission and observes none of the M0 computation streams. One
-> Lean/Rust worker and 4 GiB caps remain mandatory.
-> This stream is paused cleanly after M1. Resume from the single authoritative
+> Lean/Rust worker and 4 GiB caps remain mandatory. The
+> [M2 native result](docs/plan/lean-nested-inductive-elimination-m2-2026-07-22.md)
+> now implements private structural discovery, complete checked-container
+> copying, fixed-point expansion, one unchanged atomic group check, recursive
+> source-surface restoration, exact string `.rec_N` publication, and cache-
+> safe transaction rollback. Twenty-three focused tests cover parameters,
+> indices, universes, mutual/empty/depth-two containers, typed failures, exact
+> final inference, retry, and `main -> rec_1 -> main` computation. The complete
+> kernel/importer suites and retained populations pass; importer policy and M0
+> streams remain untouched.
+> This stream is paused cleanly after M2. Resume from the single authoritative
 > [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md), which
-> records the exact pushed state, M2's first edit, remaining M3--M6 work,
+> records the exact pushed state, M3's generated-grammar task, remaining M3--M6 work,
 > ownership constraints, commands, and stop conditions.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

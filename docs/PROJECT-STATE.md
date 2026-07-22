@@ -184,9 +184,11 @@ Again, there are distinct targets:
   frozen `MiniVector` and `MiniAcc` construct streams complete twice with exact
   generated/exported recursor comparison; separate computation streams reduce
   to the registered Vector and Acc normal forms in both official Lean and
-  Axeyum. Kernel-side nested-inductive elimination and broad Lean admission
-  remain open; native nested/well-founded source elaboration is separately
-  staged in TL4.9/TL4.10. Mutual groups are complete under accepted ADR-0354:
+  Axeyum. Kernel-side nested-inductive elimination is now live for M2's
+  structurally registered container shapes; official nested import and broad
+  Lean admission remain open, while native nested/well-founded source
+  elaboration is separately staged in TL4.9/TL4.10. Mutual groups are complete
+  under accepted ADR-0354:
   the unit is one
   atomic ordered
   group with shared parameters, complete-group positivity, all motives/minors,
@@ -222,12 +224,17 @@ Again, there are distinct targets:
   nested root still has a typed non-admission boundary and no semantic credit.
   TL2.14 M0 now freezes three explicit main/auxiliary recursor computations,
   one exact negative kernel diagnostic, and 114,596 bytes of twice-identical
-  official streams without product observation. M1 now parses the claimed
+  official streams without product observation. M1 parses the claimed
   group-wide auxiliary count before recursor policy and moves the exact nested
   row to typed `inductive-nested` non-admission before the kernel gate, while
   malformed count variants and the well-founded/720/768/840 controls remain
-  exact. M2 native expansion/restoration is next; nested admission and
-  computation remain open.
+  exact. M2 now implements native structural discovery, complete container-
+  group copying, fixed-point expansion, unchanged atomic checking, recursive
+  source-surface restoration, deterministic `.rec_N` publication, and
+  transaction/cache rollback. Twenty-three focused native tests include exact
+  final inference and `main -> rec_1 -> main` computation. Official importer
+  admission and frozen-stream computation remain M4/M5 work; M3's >=640-case
+  generated grammar and forced mutation teeth are next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
