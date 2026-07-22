@@ -5042,26 +5042,27 @@ fn wz_symbolic_ratios(
     n: &str,
     k: &str,
 ) -> (CasExpr, CasExpr) {
-    let current_ratio = simplify(&combine_gamma_ratios(&CasExpr::Div(
+    let compact_ratio = |ratio: CasExpr| {
+        let combined = combine_gamma_ratios(&ratio);
+        gosper::cancel_common_monomial_expression(&combined)
+            .map_or_else(|| simplify(&combined), |ratio| simplify(&ratio))
+    };
+    let current_ratio = compact_ratio(CasExpr::Div(
         Box::new(summand.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)))),
         Box::new(summand.clone()),
-    )));
+    ));
     let summand_current = simplify(summand);
     let summand_next = simplify(&summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
-    let summand_outer_ratio = simplify(&combine_gamma_ratios(&CasExpr::Div(
+    let summand_outer_ratio = compact_ratio(CasExpr::Div(
         Box::new(summand_next),
         Box::new(summand_current),
-    )));
+    ));
     let rhs_current = simplify(rhs);
     let rhs_next = simplify(&rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
-    let rhs_inverse_raw = combine_gamma_ratios(&CasExpr::Div(
+    let rhs_inverse = compact_ratio(CasExpr::Div(
         Box::new(rhs_current),
         Box::new(rhs_next),
     ));
-    let rhs_inverse = gosper::cancel_common_monomial_expression(&rhs_inverse_raw).map_or_else(
-        || simplify(&rhs_inverse_raw),
-        |ratio| simplify(&ratio),
-    );
     (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
 }
 
@@ -5072,14 +5073,15 @@ fn wz_symbolic_ratios(
 /// over all `k` collapses the right side to `0`, so `S(n) = ∑_k f(n,k)` is constant,
 /// and `S(base) = 1` pins it to `1` — i.e. `∑_k F(n,k) = rhs(n)`.
 ///
-/// `R` is **discovered** by running [`gosper_sum`] on the WZ term at several concrete
-/// `n` and interpolating the certificate's coefficients over `n`; the answer is then
-/// **verified symbolically** — `equal(G(n,k+1) − G(n,k), f(n+1,k) − f(n,k))` must
-/// certify with `n, k` both symbolic. That symbolic check (not the interpolation) is
-/// the soundness gate: a wrong or under-fitted `R` fails it and the prover declines.
-/// The base case `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite
-/// summation. `None` if any concrete Gosper run, the interpolation, the symbolic
-/// verification, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
+/// `R` is **discovered** by running [`gosper_sum`] or an exact structured-ratio fallback
+/// on the WZ term at several concrete `n` and interpolating the certificate's
+/// coefficients over `n`; the answer is then **verified symbolically** —
+/// `equal(G(n,k+1) − G(n,k), f(n+1,k) − f(n,k))` must certify with `n, k` both
+/// symbolic. That symbolic check (not the interpolation) is the soundness gate: a wrong
+/// or under-fitted `R` fails it and the prover declines. The base case
+/// `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite summation.
+/// `None` if too few concrete samples succeed, interpolation or symbolic verification
+/// declines, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
 #[must_use]
 #[allow(clippy::many_single_char_names)] // n, k, f, g, h, r are the standard names here
 pub fn prove_wz_sum(
@@ -5097,8 +5099,8 @@ pub fn prove_wz_sum(
     // declines or overflows. Symbolic ratio specialization keeps many larger samples
     // compact, but the symbolic verification below is the real gate, so missing samples
     // remain a completeness loss rather than a soundness concern.
-    const TARGET: usize = 12;
-    const SCAN: i128 = 24;
+    const TARGET: usize = 16;
+    const SCAN: i128 = 32;
     let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
     // Derive the two small rational quotients while `n` is still symbolic, then
     // specialize them per sample. This avoids rebuilding their equivalent gamma
@@ -17222,6 +17224,29 @@ mod tests {
     }
 
     #[test]
+    fn wilf_zeilberger_fixed_shift_four_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(4)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(4)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 4, 0, 0)
+            .expect("fixed-shift-four binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(4))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() + CasExpr::int(1))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(3)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 4, 0, 0).is_none());
+    }
+
+    #[test]
     fn wilf_zeilberger_squared_binomial_moments() {
         let n = || v("n");
         let k = || v("k");
@@ -17356,6 +17381,67 @@ mod tests {
                 * (n().pow(3) + CasExpr::int(4) * n().pow(2)
                     + CasExpr::int(2) * n()
                     - CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_fifth_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(5) * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(2) + CasExpr::int(2) * n() - CasExpr::int(5))
+            * central
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("fifth squared-binomial moment is WZ-provable");
+        let inner = CasExpr::int(2) * k().pow(4) * n().pow(5)
+            + CasExpr::int(7) * k().pow(4) * n().pow(4)
+            - CasExpr::int(15) * k().pow(4) * n().pow(3)
+            - CasExpr::int(20) * k().pow(4) * n().pow(2)
+            + CasExpr::int(38) * k().pow(4) * n()
+            - CasExpr::int(12) * k().pow(4)
+            - CasExpr::int(3) * k().pow(3) * n().pow(6)
+            - CasExpr::int(17) * k().pow(3) * n().pow(5)
+            - CasExpr::int(4) * k().pow(3) * n().pow(4)
+            + CasExpr::int(60) * k().pow(3) * n().pow(3)
+            + CasExpr::int(8) * k().pow(3) * n().pow(2)
+            - CasExpr::int(68) * k().pow(3) * n()
+            + CasExpr::int(24) * k().pow(3)
+            + CasExpr::int(9) * k().pow(2) * n().pow(6)
+            + CasExpr::int(39) * k().pow(2) * n().pow(5)
+            - CasExpr::int(60) * k().pow(2) * n().pow(3)
+            + CasExpr::int(24) * k().pow(2) * n().pow(2)
+            + CasExpr::int(26) * k().pow(2) * n()
+            - CasExpr::int(12) * k().pow(2)
+            - CasExpr::int(9) * k() * n().pow(6)
+            - CasExpr::int(35) * k() * n().pow(5)
+            - CasExpr::int(31) * k() * n().pow(4)
+            - CasExpr::int(21) * k() * n().pow(3)
+            - CasExpr::int(12) * k() * n().pow(2)
+            + CasExpr::int(4) * k() * n()
+            + CasExpr::int(3) * n().pow(6)
+            + CasExpr::int(11) * n().pow(5)
+            + CasExpr::int(31) * n().pow(4)
+            + CasExpr::int(41) * n().pow(3)
+            + CasExpr::int(18) * n().pow(2);
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k().pow(3)
+                * (n() - CasExpr::int(2))
+                * (n() - CasExpr::int(1))
+                * (n() + CasExpr::int(2))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (k() - n() - CasExpr::int(1)).pow(2)
+                * (n().pow(2) + CasExpr::int(4) * n() - CasExpr::int(2)));
         assert!(matches!(
             equal(&certificate, &expected),
             ZeroTest::Certified { equal: true, .. }

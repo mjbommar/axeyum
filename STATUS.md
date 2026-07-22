@@ -374,6 +374,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — proof-carrying CAS closes fixed-shift four and the fifth
+  squared-binomial moment.** `prove_wz_sum` now certifies
+  `∑C(n,k)C(n,k+4)=C(2n,n−4)` and
+  `∑k⁵C(n,k)²=n⁴(n+1)(n²+2n−5)C(2n,n)/(8(2n−3)(2n−1))`, checks the exact
+  returned certificates, and declines `rhs+1` controls. Every symbolic WZ ratio
+  now cancels common canonical gamma atoms before concrete specialization; this
+  removes the `Γ(n)` factorial overflow that previously cut fifth-moment samples
+  off at `n=12`. The exact sample target is 16 (scan bound 32), enough to reject
+  under-fit rational coefficients and aligned with the existing dimension-16
+  bignum solve cap. The fully symbolic WZ equality gate remains mandatory. The
+  CAS topic stack passes 518 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, documentation-link validation, and
+  `git diff --check`. Next: turn the observed `r=0..4` certificate pattern into
+  a checked family route and derive the moment family before adding another
+  isolated tier.
+
 - **2026-07-22 — proof-carrying CAS closes fixed-shift three and the fourth
   squared-binomial moment.** The public WZ route now certifies
   `∑C(n,k)C(n,k+3)=C(2n,n−3)` and
