@@ -6284,16 +6284,17 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
         return Some(expand(&total).unwrap_or(total));
     }
 
-    // Decompose the term into constant `c`, power `t^power`, and a transcendental
-    // base `g ∈ {1, e^{at}, sin, cos}`.
-    let factors: Vec<CasExpr> = match f {
-        CasExpr::Mul(factors) => factors.clone(),
-        other => vec![other.clone()],
-    };
+    // Decompose the term into constant `c`, power `t^power`, an `exp(a·t)` **shift**
+    // (`L{e^{at}g}=G(s−a)`), and a transcendental base `g ∈ {1, sin, cos}`. The
+    // exp is always extracted as a shift, which subsumes `L{e^{at}} = 1/(s−a)` and
+    // enables `L{e^{at}·sin(bt)}` etc.
+    let factors = flatten_mul(f); // flatten the left-nested `*` tree
     let mut coefficient = Rational::integer(1);
     let mut power = 0u32;
     let mut base = CasExpr::int(1);
     let mut base_seen = false;
+    let mut shift = Rational::zero();
+    let mut shift_seen = false;
     for factor in &factors {
         match factor {
             CasExpr::Const(c) => coefficient = coefficient.checked_mul(*c)?,
@@ -6301,9 +6302,18 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
             CasExpr::Pow(inner, exp) if matches!(&**inner, CasExpr::Var(n) if n == t) => {
                 power = power.checked_add(*exp)?;
             }
-            CasExpr::Unary(UnaryFunc::Exp | UnaryFunc::Sin | UnaryFunc::Cos, _) => {
+            CasExpr::Unary(UnaryFunc::Exp, arg) => {
+                // exp argument must be linear a·t (no constant term).
+                let arg_poly = normalize(arg)?.to_univariate(t)?;
+                if poly::rat_degree(&arg_poly)? != 1 || !arg_poly[0].is_zero() || shift_seen {
+                    return None;
+                }
+                shift = arg_poly[1];
+                shift_seen = true;
+            }
+            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _) => {
                 if base_seen {
-                    return None; // more than one transcendental factor — unsupported
+                    return None; // more than one sinusoidal factor — unsupported
                 }
                 base = factor.clone();
                 base_seen = true;
@@ -6312,8 +6322,12 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
         }
     }
 
-    // L{g}(s), then L{t^power · g} = (−1)^power d^power/ds^power L{g}.
+    // G(s) = L{g}; the shift gives G(s−a); then L{t^power · e^{at} · g} =
+    // (−1)^power d^power/ds^power G(s−a).
     let mut transform = laplace_base(&base, t, s)?;
+    if shift_seen {
+        transform = transform.substitute(s, &(CasExpr::var(s) - CasExpr::Const(shift)));
+    }
     transform = transform.differentiate_n(s, power as usize);
     let sign = if power.is_multiple_of(2) {
         coefficient
@@ -9623,6 +9637,23 @@ mod tests {
         holds(
             t() * (CasExpr::int(2) * t()).exp(),
             CasExpr::int(1) / (s() - CasExpr::int(2)).pow(2),
+        );
+        // s-shift rule L{e^{at}f(t)} = F(s−a): L{e^{t}·sin t} = 1/((s−1)²+1),
+        // L{e^{2t}·cos t} = (s−2)/((s−2)²+1).
+        holds(
+            t().exp() * t().sin(),
+            CasExpr::int(1) / ((s() - CasExpr::int(1)).pow(2) + CasExpr::int(1)),
+        );
+        holds(
+            (CasExpr::int(2) * t()).exp() * t().cos(),
+            (s() - CasExpr::int(2))
+                / ((s() - CasExpr::int(2)).pow(2) + CasExpr::int(1)),
+        );
+        // Combined: L{t·e^{t}·sin t} = 2(s−1)/((s−1)²+1)².
+        holds(
+            t() * t().exp() * t().sin(),
+            (CasExpr::int(2) * (s() - CasExpr::int(1)))
+                / ((s() - CasExpr::int(1)).pow(2) + CasExpr::int(1)).pow(2),
         );
         // Linearity: L{3t + 2e^{t}} = 3/s² + 2/(s−1).
         holds(
