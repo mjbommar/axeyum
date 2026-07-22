@@ -7,6 +7,10 @@ Date: 2026-07-22
 Execution plan:
 [TL2.14 nested-inductive plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
 
+M0 evidence:
+[source/wire freeze](../../plan/lean-nested-inductive-elimination-m0-2026-07-22.md)
+and [machine registration](../../plan/lean-nested-inductive-elimination-v1.json)
+
 Dependency audit:
 [post-TL2.13 trust-boundary audit](../../plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
 

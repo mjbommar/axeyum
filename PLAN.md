@@ -302,8 +302,17 @@ state.
 > preregister structural discovery, auxiliary-group expansion, ordinary atomic
 > checking, restoration, deterministic `.rec_N` publication, exact official
 > comparison, a >=640-case grammar, and retained 720/768/840 plus well-founded
-> controls. P0 is complete; M0 must freeze explicit auxiliary-recursor
-> computation and negative sources twice before any product observation. One
+> controls. P0 and M0 are now complete. The
+> [M0 source/wire result](docs/plan/lean-nested-inductive-elimination-m0-2026-07-22.md)
+> freezes a 2,917-byte positive source and 260-byte negative source, one
+> byte-identical OLEAN digest, the exact no-local-variable kernel diagnostic,
+> and three root-specific streams totaling 114,596 bytes / 2,022 records. The
+> explicit recursors cover ordinary, indexed-container, and repeated-container
+> nesting; the latter proves two structurally identical applications reuse one
+> auxiliary family. Wire recursor order differs across the three groups, so
+> later comparison is name/rule based. Thirteen fail-closed tests enforce the
+> no-product-observation boundary. M1 corrects only the current nested
+> recursor-count diagnostic preflight next; no admission is authorized. One
 > Lean/Rust worker and 4 GiB caps remain mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

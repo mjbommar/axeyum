@@ -206,6 +206,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
   native/importer/mutation/generated gates, P0-M6 milestones, resource bounds,
   stop conditions, and exact source-elaboration non-claims.
+- [`lean-nested-inductive-elimination-m0-2026-07-22.md`](lean-nested-inductive-elimination-m0-2026-07-22.md)
+  and [`lean-nested-inductive-elimination-v1.json`](lean-nested-inductive-elimination-v1.json)
+  — M0's twice-reproduced positive/negative sources, three byte-identical
+  auxiliary-recursor streams, exact nested group inventories and variable wire
+  order, frozen future populations, and fail-closed no-product boundary.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

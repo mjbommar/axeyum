@@ -131,7 +131,10 @@ Last updated: 2026-07-22
 > [dependency audit](../../../docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
 > corrects TL2.14 to pinned Lean's kernel-side nested-inductive expansion and
 > restoration; well-founded source recursion remains TL4.10. Proposed ADR-0355
-> and its P0-M6 plan are committed; M0 source/wire freeze is next.
+> and its P0-M6 plan are committed. M0 now freezes three explicit recursor
+> computations, one exact negative diagnostic, and 114,596 bytes of twice-
+> identical official streams without product observation. M1 diagnostic
+> preflight is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
