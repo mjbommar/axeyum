@@ -1348,7 +1348,9 @@ scoped effort rather than a risky mid-session refactor.
 
 **Log arithmetic in the zero-test** (Entry 37o): many integral results are sums of `ln(rational)` that didn't certify against a compact form (`∫₁² 1/(x(x+1)) = 2ln2−ln3` vs `ln(4/3)`, read as distinct atoms). `expand_log_over_primes` rewrites `ln(p/q)` into its prime basis `Σeᵢln(pᵢ)−Σfⱼln(qⱼ)` (`ntheory::factorize`), applied in `equal`'s canonicalization. So `ln6=ln2+ln3`, `3ln2=ln8`, `ln(1/2)=−ln2` decide — while distinct logs (`ln2` vs `ln3`) still don't certify (sound).
 
-**Session tally (Entries 37–37o): 33 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+**Transcendental residues** (Entry 37p): `residue` handled only rational functions; `residue_meromorphic` computes `Res f(x)/(x−a)ⁿ = f^{(n−1)}(a)/(n−1)!` for an analytic (transcendental) numerator over a pure power — `Res₀ cos x/x=1`, `eˣ/x²=1`, `sin x/x⁴=−1/6`, `Res₁ eˣ/(x−1)²=e`.
+
+**Session tally (Entries 37–37p): 35 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
