@@ -9033,13 +9033,14 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         other => (vec![other.clone()], None),
     };
     for (idx, factor) in factors.iter().enumerate() {
-        let CasExpr::Pow(base, n) = factor else {
-            continue;
+        // A factor `g(x)ⁿ` (an explicit power) or a bare `g(x)` (implicit `n = 1`,
+        // giving the `∫k·g′·g = k·g²/2` case — `∫arctan x/(1+x²)`). Skip a bare
+        // constant/variable (handled by the polynomial path).
+        let (base, n): (&CasExpr, u32) = match factor {
+            CasExpr::Pow(base, power) if *power >= 1 => (base.as_ref(), *power),
+            CasExpr::Const(_) | CasExpr::Var(_) | CasExpr::Pow(_, _) => continue,
+            other => (other, 1),
         };
-        let n = *n;
-        if n == 0 {
-            continue;
-        }
         // The cofactor is the product of every other numerator factor, over the
         // denominator when present.
         let mut others: Vec<CasExpr> = factors
@@ -9071,7 +9072,7 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         let Some(coeff) = k.checked_div(Rational::integer(i128::from(n + 1))) else {
             continue;
         };
-        return Some(scaled_term(coeff, base.as_ref().clone().pow(n + 1)));
+        return Some(scaled_term(coeff, base.clone().pow(n + 1)));
     }
     None
 }
@@ -13655,6 +13656,15 @@ mod tests {
     #[test]
     fn power_of_inner_integrals() {
         let x = || v("x");
+        // n=1 reverse power rule ∫g′·g = g²/2 (a bare base, not a Pow).
+        for (integrand, anti) in [
+            (x().atan() / (CasExpr::int(1) + x().pow(2)), CasExpr::rat(1, 2) * x().atan().pow(2)),
+            (x().ln() / x(), CasExpr::rat(1, 2) * x().ln().pow(2)),
+        ] {
+            let r = integrate(&integrand, "x").expect("n=1 power-of-inner");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative, &anti);
+        }
         // ∫ k·g′·gⁿ = (k/(n+1))·gⁿ⁺¹ — transcendental inners the poly path can't expand.
         for integrand in [
             x().ln().pow(2) / x(),                             // ∫(ln x)²/x = (ln x)³/3
