@@ -2549,6 +2549,58 @@ fn constant_term(expr: &CasExpr) -> Option<Rational> {
 /// clean integer `n` when the right-hand side is `aⁿ`. Closes `2^x = 8 ⇒ 3`,
 /// `2^x = 1/8 ⇒ −3`. `None` when the base is not rational or the RHS is not an
 /// integer power of it (a non-integer `log` is left symbolic elsewhere).
+/// Solve a **Lambert-W** equation `k·x·e^{a·x} + C = 0` (`a`, `k` rational, `C`
+/// var-free): rearranged to `x·e^{a·x} = d` with `d = −C/k`, multiplying by `a` gives
+/// `(ax)e^{ax} = a·d`, so `ax = W(a·d)` and `x = W(a·d)/a`. Covers `x·eˣ = c ⇒ W(c)`.
+fn solve_lambert(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let terms = match expr {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    // Split into the single var-dependent term and a var-free constant remainder.
+    let mut lambert_term: Option<CasExpr> = None;
+    let mut constant = CasExpr::zero();
+    for term in terms {
+        if expr_contains_var(&term, var) {
+            if lambert_term.is_some() {
+                return None;
+            }
+            lambert_term = Some(term);
+        } else {
+            constant = constant + term;
+        }
+    }
+    let lambert_term = lambert_term?;
+    // The term must be `k·x·e^{a·x}`: exactly one `x`, one `exp(a·x)`, constants else.
+    let mut coefficient = Rational::integer(1);
+    let mut rate: Option<Rational> = None;
+    let mut has_x = false;
+    for factor in flatten_mul(&lambert_term) {
+        match factor {
+            CasExpr::Const(c) => coefficient = coefficient.checked_mul(c)?,
+            CasExpr::Var(v) if v == var && !has_x => has_x = true,
+            CasExpr::Unary(UnaryFunc::Exp, arg) if rate.is_none() => {
+                let poly = normalize(&arg)?.to_univariate(var)?;
+                if poly::rat_degree(&poly)? != 1 || !poly[0].is_zero() {
+                    return None;
+                }
+                rate = Some(poly[1]);
+            }
+            _ => return None, // a second x/exp or a foreign factor
+        }
+    }
+    let (a, true) = (rate?, has_x) else {
+        return None;
+    };
+    if a.is_zero() || coefficient.is_zero() {
+        return None;
+    }
+    // d = −C/k; x = W(a·d)/a.
+    let d = simplify(&(CasExpr::Neg(Box::new(constant)) / CasExpr::Const(coefficient)));
+    let arg = simplify(&(CasExpr::Const(a) * d));
+    Some(vec![simplify(&(arg.lambert_w() / CasExpr::Const(a)))])
+}
+
 fn solve_power_equation(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     let terms = match expr {
         CasExpr::Add(terms) => terms.clone(),
@@ -3155,6 +3207,10 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     }
     // Exponential-base equations `a^x = c` (e.g. `2^x = 8 ⇒ 3`).
     if let Some(roots) = solve_power_equation(expr, var) {
+        return Some(roots);
+    }
+    // Lambert-W equations `x·eˣ = c ⇒ x = W(c)`.
+    if let Some(roots) = solve_lambert(expr, var) {
         return Some(roots);
     }
     // Polynomials in `eˣ` (e.g. `e^{2x} − 3e^x + 2`) — solve for `u = eˣ`.
@@ -19875,6 +19931,16 @@ mod tests {
             let wv = evalf(&v("t").lambert_w(), &[("t", xv)]).unwrap();
             close(wv * wv.exp(), xv);
         }
+        // solve x·eˣ = c → W(c): x·eˣ−2=0 ⇒ W(2); 2x·eˣ−6=0 ⇒ W(3); x·e^{2x}−3 ⇒ W(6)/2.
+        let one_root = |eqn: &CasExpr| -> f64 {
+            let roots = solve(eqn, "x").expect("Lambert solvable");
+            assert_eq!(roots.len(), 1);
+            evalf(&roots[0], &[]).unwrap()
+        };
+        close(one_root(&(x() * x().exp() - CasExpr::int(2))), evalf(&CasExpr::int(2).lambert_w(), &[]).unwrap());
+        close(one_root(&(CasExpr::int(2) * x() * x().exp() - CasExpr::int(6))), evalf(&CasExpr::int(3).lambert_w(), &[]).unwrap());
+        // x·e^x = e ⇒ x = 1.
+        close(one_root(&(x() * x().exp() - CasExpr::int(1).exp())), 1.0);
     }
 
     #[test]
