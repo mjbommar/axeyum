@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-21
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 428 tests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 431 tests, clippy-clean)
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
@@ -13,10 +13,10 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 
 | Area | Functions | Certified |
 |---|---|---|
-| Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `simplify`, `trigsimp`, `normalize`, `equal` (zero-test w/ witness, **Euler-sound for related trig atoms**) | equal ✓ |
+| Core | `differentiate`/`differentiate_n`, `substitute`, `expand`, `collect` (group by powers), `simplify`, `trigsimp`, `normalize`, `equal` (zero-test w/ witness, **Euler-sound for related trig atoms**) | equal ✓ |
 | Rational | `cancel` (uni+multivariate), `apart`, `factor`, `factor_univariate_over_q`/`factor_expr` (full ℤ/ℚ, Berlekamp–Zassenhaus), `poly_gcd`, `poly_div`, `resultant`, `discriminant`, `cyclotomic_polynomial`, `degree`/`coeff`/`leading_coeff` | factor/apart/factor_expr ✓ |
 | Equations | `solve` (rational, quadratic w/ simplified surds, **complex**, degree-≥3 factoring over ℚ; **elementary transcendental** `eˣ−5⇒ln5`, `ln x−2⇒e²`, `√x−3⇒9`; **polynomial in eˣ** `e^{2x}−3e^x+2⇒{0,ln2}`); `solve_polynomial_system` (bivariate, Sylvester resultant); `real_roots` → `AlgebraicReal` (RootOf, any degree), `real_root_intervals`/`count_real_roots` (Sturm), `approximate_real_roots`; `solve_polynomial_inequality` | rational + radical + transcendental + system ✓; Sturm-certified |
-| Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric) | ✓ |
+| Summation | `sum_polynomial` (telescoping), `gosper_sum` (indefinite hypergeometric), `infinite_sum` (**convergent** Σ_{k}^∞ — geometric `Σr^k=1/(1−r)`, p-series `Σ1/k²=π²/6` via ζ) | ✓ |
 | Summation (definite) | `definite_sum` (Σ over bounds — polynomial via telescoping, **geometric/hypergeometric via Gosper**: `Σ 2^k = 2^{n+1}−1`, `Σ k·2^k`), `gosper_sum` | ✓ |
 | Complex analysis | `residue` (at a pole), `laurent_series` (principal part), `modulus`, `roots_of_unity` | exact |
 | Approximation | `approx`: Padé, Lagrange/Newton interpolation; `least_squares_polynomial`, `rationalize` (f64→ℚ), `series_reversion` (compositional inverse) | exact |
@@ -24,7 +24,7 @@ return a wrong answer). Runnable demos: `examples/certified_calculus.rs`,
 | Analysis | `limit` (rational; transcendental `0/0` via series — `sin x/x=1`, `tan x/x=1`; **exponential dominance** at ±∞ — `x²/eˣ=0`; **log-vs-power** at 0 — `x·ln x=0`), `series`/`series_at`/`laurent_series` (incl. `tan`, `asin`, `asinh`), `sum_polynomial`, `evalf` (f64), finite calculus | limit/sum ✓ |
 | Transforms | `laplace_transform` (poly×{1,sin,cos} with the **s-shift rule** `L{e^{at}f}=F(s−a)` — `L{e^t sin t}`, `L{t·e^t·sin t}`) + `inverse_laplace` (simple real poles **and irreducible quadratics** → damped sinusoids `L⁻¹{1/((s−1)²+4)}=½e^t sin2t`, rational frequency), `z_transform` + `inverse_z_transform` (discrete; simple poles); all round-trip-certified | ✓ |
 | ODEs / recurrences | `dsolve_homogeneous`, `dsolve_inhomogeneous` (polynomial forcing), `dsolve_first_order_linear` (integrating factor), `dsolve_separable`, `dsolve_exact`, `dsolve_bernoulli`, `solve_recurrence` (rational **and** quadratic-irrational roots — incl. **Fibonacci**/Binet); `wronskian` | ✓ (substitute-and-check) |
-| Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable**; trig-equation solving via `solve` (`2sin x−1⇒π/6,5π/6`, principal in [0,2π)) | values compute; identities ✓ |
+| Trig | `evaluate_trig` (exact values at π/12 multiples), `rewrite_exp` (Euler) → **all polynomial trig identities decidable**, `expand_trig` (angle-addition/multiple-angle → trig form); trig-equation solving via `solve` (`2sin x−1⇒π/6,5π/6`, principal in [0,2π)) | values compute; identities ✓ |
 | Complex | `imaginary_unit` (`I²=−1`), `conjugate`, `real_part`, `imaginary_part`, `modulus`, `roots_of_unity` | ✓ |
 | Linear algebra | `Matrix`: +/−/×, determinant (+ Bareiss), RREF, solve, inverse, `adjugate`/`cofactor`, `pow`, `hadamard`/`kronecker`, `null_space`, `lu`, `rank`, `trace`, char-poly, `eigenvalues`/`eigenvectors`, `minimal_polynomial`, `diagonalize` (P·D·P⁻¹), `jordan_form` (P·J·P⁻¹, **defective** via generalized eigenvectors), `matrix_exp` (e^{At}, rational spectrum incl. defective), `linear_ode_system` (x′=Ax), Hermite/Smith, `gram_schmidt`; `companion_matrix`, `solve_linear_system`, `least_squares_polynomial` | det/solve/eigvec/diag/jordan/matexp/ODE/companion ✓; A·P=P·J ✓ |
 | Logic / sets | `boolean::BoolExpr` (truth tables, tautology/SAT, DNF/CNF, Quine–McCluskey); `sets::RealSet` (interval unions, set algebra, measure); `interval_arith::Interval` (rigorous enclosures) | truth-table / exact ✓ |
