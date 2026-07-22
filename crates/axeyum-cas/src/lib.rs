@@ -980,6 +980,39 @@ impl MultiPoly {
         Some(out)
     }
 
+    /// Reduce **even powers of an `abs` atom** using `|u|² = u²` (real `u`):
+    /// `abs(u)^exp = u^(exp − exp mod 2) · abs(u)^(exp mod 2)`. `abs_args` maps each
+    /// `abs`-atom key to its normalized argument `u`. Sound over the reals (the whole
+    /// system's domain), mirroring [`fold_radical`]'s `(√u)² = u`. A lone `abs(u)`
+    /// (exp 1) is left as the atom — `|u| ≠ u` in general.
+    fn fold_abs(&self, abs_args: &BTreeMap<String, MultiPoly>) -> Option<MultiPoly> {
+        const ABS: &str = "\0abs:";
+        let has_abs_sq = self.terms.keys().any(|m| {
+            m.powers
+                .iter()
+                .any(|(var, &e)| e >= 2 && var.starts_with(ABS) && abs_args.contains_key(var))
+        });
+        if !has_abs_sq {
+            return Some(self.clone());
+        }
+        let mut out = MultiPoly::zero();
+        for (mono, coeff) in &self.terms {
+            let mut term = MultiPoly::constant(*coeff);
+            for (var, &exp) in &mono.powers {
+                let factor = if exp >= 2 && var.starts_with(ABS) && abs_args.contains_key(var) {
+                    // |u|^exp = u^(even part) · |u|^(parity).
+                    let even = abs_args[var].pow(exp - exp % 2)?;
+                    even.mul(&MultiPoly::single_var_pow(var, exp % 2))?
+                } else {
+                    MultiPoly::single_var_pow(var, exp)
+                };
+                term = term.mul(&factor)?;
+            }
+            out = out.add(&term)?;
+        }
+        Some(out)
+    }
+
     /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
     /// `exp == 0`).
     fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
@@ -1796,11 +1829,22 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     collect_atom_dictionary(a, &mut atoms);
     collect_atom_dictionary(b, &mut atoms);
     let mut radicands: BTreeMap<String, MultiPoly> = BTreeMap::new();
+    let mut abs_args: BTreeMap<String, MultiPoly> = BTreeMap::new();
     for (key, atom) in &atoms {
-        if let CasExpr::Unary(UnaryFunc::Sqrt, arg) = atom
-            && let Some(poly) = normalize(arg)
-        {
-            radicands.insert(key.clone(), poly);
+        match atom {
+            // Radicand of a `sqrt` atom for `(√u)² = u`.
+            CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
+                if let Some(poly) = normalize(arg) {
+                    radicands.insert(key.clone(), poly);
+                }
+            }
+            // Argument of an `abs` atom for `|u|² = u²`.
+            CasExpr::Unary(UnaryFunc::Abs, arg) => {
+                if let Some(poly) = normalize(arg) {
+                    abs_args.insert(key.clone(), poly);
+                }
+            }
+            _ => {}
         }
     }
     match ad
@@ -1808,6 +1852,7 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
         .and_then(|w| w.fold_imaginary())
         .and_then(|w| w.fold_pythagorean())
         .and_then(|w| w.fold_radical(&radicands))
+        .and_then(|w| w.fold_abs(&abs_args))
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
@@ -9948,6 +9993,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
         integrate_even_quartic_denominator(expr, var),
+        integrate_abs_affine(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -9961,6 +10007,21 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         }
     }
     None
+}
+
+/// `∫ c·|g| dx = c·g·|g|/(2·slope)` where `g = slope·var + intercept` is affine — the
+/// antiderivative of an absolute value of a linear argument. `d/dx[g|g|/(2·slope)] =
+/// |g|` holds via `g·sign(g) = g²/|g| = |g|`, which the zero-test now certifies
+/// (`|u|² = u²`), so this is verified by the usual differentiate-and-check.
+fn integrate_abs_affine(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (free, core) = split_var_free_factor(expr, var);
+    let CasExpr::Unary(UnaryFunc::Abs, g) = &core else {
+        return None;
+    };
+    let [_, slope] = univariate_affine(g, var)?;
+    let antiderivative =
+        free * (**g).clone() * core.clone() / (CasExpr::int(2) * CasExpr::Const(slope));
+    Some(simplify(&antiderivative))
 }
 
 /// A definite integral `∫ₐᵇ f dx` evaluated by the fundamental theorem of
@@ -18845,6 +18906,38 @@ mod tests {
         check((x() / CasExpr::int(3)).floor(), 0, 6, CasExpr::int(3));
         // Polynomial × step: ∫₀^3 x·floor(x) = 0 + ∫₁^2 x + ∫₂^3 2x = 3/2 + 5 = 13/2.
         check(x() * x().floor(), 0, 3, CasExpr::rat(13, 2));
+    }
+
+    #[test]
+    fn zero_test_folds_abs_squared() {
+        let x = || v("x");
+        // |u|² = u² is decided (real domain); odd powers keep one |·| factor.
+        assert!(matches!(equal(&x().abs().pow(2), &x().pow(2)), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(equal(&(x().pow(2) / x().abs()), &x().abs()), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(equal(&x().abs().pow(3), &(x().pow(2) * x().abs())), ZeroTest::Certified { equal: true, .. }));
+        // Soundness: |x| = x, |x| = −x, |x|² = x³ must NOT certify equal.
+        assert!(!matches!(equal(&x().abs(), &x()), ZeroTest::Certified { equal: true, .. }));
+        assert!(!matches!(equal(&x().abs(), &CasExpr::Neg(Box::new(x()))), ZeroTest::Certified { equal: true, .. }));
+        assert!(!matches!(equal(&x().abs().pow(2), &x().pow(3)), ZeroTest::Certified { equal: true, .. }));
+    }
+
+    #[test]
+    fn integrate_absolute_value_of_affine() {
+        let x = || v("x");
+        // ∫|x| = x|x|/2, certified by differentiate-and-check (needs |u|²=u²).
+        for integrand in [
+            x().abs(),
+            (CasExpr::int(2) * x() - CasExpr::int(4)).abs(),
+            CasExpr::int(3) * x().abs(),
+            (x() - CasExpr::int(1)).abs(),
+        ] {
+            let result = integrate(&integrand, "x").expect("∫|affine|");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert!(matches!(
+                equal(&result.antiderivative.differentiate("x"), &integrand),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
     }
 
     #[test]
