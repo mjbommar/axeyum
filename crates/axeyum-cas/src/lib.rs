@@ -10166,6 +10166,98 @@ fn definite_integrate_step_function(
     })
 }
 
+/// Find `(head, g)` for the first `abs(sin(g))`/`abs(cos(g))` subexpression whose trig
+/// argument `g` is **affine** in `var` — a periodic sign change at the trig zeros.
+fn find_abs_of_trig(expr: &CasExpr, var: &str) -> Option<(UnaryFunc, CasExpr)> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Abs, arg) => {
+            if let CasExpr::Unary(head @ (UnaryFunc::Sin | UnaryFunc::Cos), inner) = &**arg
+                && univariate_affine(inner, var).is_some()
+            {
+                return Some((*head, (**inner).clone()));
+            }
+            find_abs_of_trig(arg, var)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => find_abs_of_trig(a, var),
+        CasExpr::Div(a, b) => find_abs_of_trig(a, var).or_else(|| find_abs_of_trig(b, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_abs_of_trig(t, var))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// A definite integral of an integrand containing `abs(sin(g))` or `abs(cos(g))` with
+/// `g` affine in `var`: split at the trig zeros in the interval — `sin(g)=0` at
+/// `g=kπ`, `cos(g)=0` at `g=(k+½)π` — and on each piece replace the `abs` by `±` the
+/// trig (its definite sign there), integrating each piece exactly. So
+/// `∫₀^π |sin x| = 2`, `∫₀^{2π} |sin x| = 4`, `∫₀^{2π} |cos x| = 4`.
+fn definite_integrate_abs_periodic(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let (head, affine) = find_abs_of_trig(expr, var)?;
+    let [intercept, slope] = univariate_affine(&affine, var)?;
+    let (slope_f, intercept_f) = (evalf(&CasExpr::Const(slope), &[])?, evalf(&CasExpr::Const(intercept), &[])?);
+    let lo_f = evalf(lower, &[])?;
+    let hi_f = evalf(upper, &[])?;
+    // The trig argument `g = slope·x + intercept` at the endpoints.
+    let (arg_lo, arg_hi) = (slope_f * lo_f + intercept_f, slope_f * hi_f + intercept_f);
+    let (arg_min, arg_max) = if arg_lo < arg_hi { (arg_lo, arg_hi) } else { (arg_hi, arg_lo) };
+    let pi = std::f64::consts::PI;
+    // Zeros of `sin(g)` at `g=kπ`; of `cos(g)` at `g=(2k+1)π/2`. Enumerate the `k`
+    // whose zero lands strictly inside the interval; cap to avoid a runaway range.
+    #[allow(clippy::cast_possible_truncation)]
+    let (k_lo, k_hi) = ((arg_min / pi).floor() as i128 - 1, (arg_max / pi).ceil() as i128 + 1);
+    if k_hi - k_lo > 100_000 {
+        return None;
+    }
+    let mut breakpoints: Vec<(CasExpr, f64)> = Vec::new();
+    for k in k_lo..=k_hi {
+        // `g = m·π`, with `m = k` (sin) or `m = k + 1/2` (cos).
+        let m = match head {
+            UnaryFunc::Sin => Rational::integer(k),
+            UnaryFunc::Cos => Rational::checked_new(2 * k + 1, 2)?,
+            _ => return None,
+        };
+        // Solve `slope·x + intercept = m·π` → `x = (m·π − intercept)/slope`.
+        let x_k = (CasExpr::Const(m) * CasExpr::var("pi") - CasExpr::Const(intercept))
+            / CasExpr::Const(slope);
+        let x_k_f = evalf(&x_k, &[])?;
+        if x_k_f > lo_f + 1e-9 && x_k_f < hi_f - 1e-9 {
+            breakpoints.push((simplify(&x_k), x_k_f));
+        }
+    }
+    breakpoints.sort_by(|a, b| a.1.total_cmp(&b.1));
+    let mut bounds = vec![lower.clone()];
+    bounds.extend(breakpoints.into_iter().map(|(e, _)| e));
+    bounds.push(upper.clone());
+    let target = CasExpr::Unary(UnaryFunc::Abs, Box::new(CasExpr::Unary(head, Box::new(affine.clone()))));
+    let trig = CasExpr::Unary(head, Box::new(affine.clone()));
+    let mut total = CasExpr::zero();
+    for window in bounds.windows(2) {
+        let midpoint = f64::midpoint(evalf(&window[0], &[])?, evalf(&window[1], &[])?);
+        let signed = if evalf(&trig, &[(var, midpoint)])? >= 0.0 {
+            trig.clone()
+        } else {
+            CasExpr::Neg(Box::new(trig.clone()))
+        };
+        let replaced = replace_subexpr(expr, &target, &signed);
+        let definite = definite_integrate(&replaced, var, &window[0], &window[1])?;
+        if !definite.is_certified() {
+            return None;
+        }
+        total = total + definite.value;
+    }
+    Some(DefiniteIntegral {
+        value: simplify(&evaluate_trig(&fold_elementary_constants(&total))),
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// A definite integral of an integrand containing `abs(g)` with `g` **affine** in
 /// `var`: split the interval at `g`'s root (a sign change), and on each piece replace
 /// `abs(g)` by `±g` (the definite sign of `g` there), integrating each piece exactly
@@ -10549,6 +10641,10 @@ pub fn definite_integrate(
     }
     // Step function `floor(affine)`/`ceiling(affine)` — split at integer crossings.
     if let Some(result) = definite_integrate_step_function(expr, var, lower, upper) {
+        return Some(result);
+    }
+    // `abs(sin(affine))`/`abs(cos(affine))` — split at the periodic trig zeros.
+    if let Some(result) = definite_integrate_abs_periodic(expr, var, lower, upper) {
         return Some(result);
     }
     // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
@@ -18722,6 +18818,25 @@ mod tests {
         check((x() / CasExpr::int(3)).floor(), 0, 6, CasExpr::int(3));
         // Polynomial × step: ∫₀^3 x·floor(x) = 0 + ∫₁^2 x + ∫₂^3 2x = 3/2 + 5 = 13/2.
         check(x() * x().floor(), 0, 3, CasExpr::rat(13, 2));
+    }
+
+    #[test]
+    fn definite_integrals_of_abs_trig() {
+        let x = || v("x");
+        let pi = || v("pi");
+        let check = |integrand: CasExpr, lower: CasExpr, upper: CasExpr, want: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &lower, &upper).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert_equal(&got.value, &want);
+        };
+        // ∫₀^π |sin x| = 2; ∫₀^{2π} |sin x| = 4; ∫₀^{2π} |cos x| = 4; ∫₀^π |cos x| = 2.
+        check(x().sin().abs(), CasExpr::int(0), pi(), CasExpr::int(2));
+        check(x().sin().abs(), CasExpr::int(0), CasExpr::int(2) * pi(), CasExpr::int(4));
+        check(x().cos().abs(), CasExpr::int(0), CasExpr::int(2) * pi(), CasExpr::int(4));
+        check(x().cos().abs(), CasExpr::int(0), pi(), CasExpr::int(2));
+        // Scaled frequency ∫₀^{2π} |sin 2x| = 4; polynomial × abs-trig ∫₀^π x·|sin x| = π.
+        check((CasExpr::int(2) * x()).sin().abs(), CasExpr::int(0), CasExpr::int(2) * pi(), CasExpr::int(4));
+        check(x() * x().sin().abs(), CasExpr::int(0), pi(), pi());
     }
 
     #[test]
