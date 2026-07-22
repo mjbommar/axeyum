@@ -7768,6 +7768,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_trig_inner_substitution(expr, var),
         integrate_tan_substitution(expr, var),
         integrate_poly_over_sqrt_linear(expr, var),
+        integrate_poly_times_general_exp(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -8190,6 +8191,63 @@ fn integrate_poly_times_exp(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let q_expr = MultiPoly::from_univariate(var, &q_coeffs).to_expr();
     let arg_expr = MultiPoly::from_univariate(var, &arg_poly).to_expr();
     Some(CasExpr::Mul(vec![q_expr, arg_expr.exp()]))
+}
+
+/// ∫ p(x)·e^{c·x+d} dx for a polynomial `p` and a **symbolic constant** rate `c`
+/// (e.g. `c = ln 2`, so `e^{x·ln 2} = 2ˣ`): `Q(x)·e^{c·x+d}` where `Q` solves
+/// `Q′ + c·Q = p` by the exact upper-triangular recurrence `qⱼ = (pⱼ −
+/// (j+1)·qⱼ₊₁)/c`. Complements [`integrate_poly_times_exp`] (rational rate) for the
+/// irrational-rate case — `∫x·2ˣ = (x/ln2 − 1/ln²2)·2ˣ`. Certified downstream.
+fn integrate_poly_times_general_exp(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    let mut exp_arg: Option<CasExpr> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        if let CasExpr::Unary(UnaryFunc::Exp, arg) = factor {
+            if exp_arg.is_some() {
+                return None;
+            }
+            exp_arg = Some((**arg).clone());
+        } else {
+            rest.push(factor.clone());
+        }
+    }
+    let exp_arg = exp_arg?;
+    // The rate c is the coefficient of `var` in the exp argument: it must be a
+    // constant (x-free) and NOT rational (the rational case has a cleaner finder).
+    // Fold first so a residual `x·0` term doesn't leave a spurious free `var`;
+    // `cancel` also cleans the rate (e.g. `1·ln2 + x·0 → ln 2`) for tidy coefficients.
+    let derivative = exp_arg.differentiate(var);
+    let rate = cancel(&derivative).unwrap_or_else(|| simplify(&derivative));
+    if expr_contains_var(&rate, var) || constant_term(&rate).is_some() {
+        return None;
+    }
+    let p = normalize(&CasExpr::Mul(rest))?.to_univariate(var)?;
+    let degree = poly::rat_degree(&p)?;
+    // Solve qⱼ = (pⱼ − (j+1)·qⱼ₊₁)/c top-down (qⱼ are CasExpr in c).
+    let mut q: Vec<CasExpr> = vec![CasExpr::zero(); degree + 1];
+    for j in (0..=degree).rev() {
+        let p_j = CasExpr::Const(p.get(j).copied().unwrap_or_else(Rational::zero));
+        let next = if j < degree {
+            CasExpr::Const(Rational::integer(i128::try_from(j + 1).ok()?)) * q[j + 1].clone()
+        } else {
+            CasExpr::zero()
+        };
+        q[j] = fold_trivial(&((p_j - next) / rate.clone()));
+    }
+    // Q(x) = Σ qⱼ xʲ.
+    let mut q_expr = CasExpr::zero();
+    for (j, coeff) in q.into_iter().enumerate() {
+        let power = if j == 0 {
+            coeff
+        } else {
+            CasExpr::Mul(vec![coeff, CasExpr::var(var).pow(u32::try_from(j).ok()?)])
+        };
+        q_expr = q_expr + power;
+    }
+    Some(CasExpr::Mul(vec![fold_trivial(&q_expr), exp_arg.exp()]))
 }
 
 /// Integrate `p(x)·sin(a·x+b)` or `p(x)·cos(a·x+b)` for a polynomial `p` and
@@ -14163,6 +14221,26 @@ mod tests {
             &integrate(&(x() / (x().pow(4) + CasExpr::int(1))), "x").unwrap().antiderivative,
             &(CasExpr::rat(1, 2) * x().pow(2).atan()),
         );
+    }
+
+    #[test]
+    fn poly_times_general_base_exponential() {
+        let x = || v("x");
+        let exp_of = |g: CasExpr| CasExpr::Unary(UnaryFunc::Exp, Box::new(g));
+        // ∫p·bˣ with irrational rate ln b, e.g. 2ˣ = exp(x·ln2): certified (display is
+        // value-equivalent; we check via differentiate-and-check).
+        for integrand in [
+            x() * exp_of(x() * CasExpr::int(2).ln()),         // x·2ˣ
+            x().pow(2) * exp_of(x() * CasExpr::int(2).ln()),  // x²·2ˣ
+            x() * exp_of(x() * CasExpr::int(3).ln()),         // x·3ˣ
+        ] {
+            let r = integrate(&integrand, "x").expect("p·bˣ integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert!(matches!(
+                equal(&r.antiderivative.differentiate("x"), &integrand),
+                ZeroTest::Certified { equal: true, .. }
+            ));
+        }
     }
 
     #[test]
