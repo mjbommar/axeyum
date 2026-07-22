@@ -360,6 +360,7 @@ def load_bundle(root: Path) -> Bundle:
         "multi-host-terminals",
         "multi-host-outputs",
         "multi-host-recoveries",
+        "multi-host-fault.json",
         "multi-host-completion.json",
     }
     if not root.is_dir():

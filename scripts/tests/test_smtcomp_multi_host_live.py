@@ -16,6 +16,7 @@ sys.path.insert(0, str(SMTCOMP))
 
 from multi_host import (  # noqa: E402
     allocation,
+    build_fault_observation,
     build_host_command,
     build_plan,
     canonical_outcome_projection,
@@ -24,6 +25,7 @@ from multi_host import (  # noqa: E402
     finish_allocation,
     host_registration,
     install_host_command,
+    install_fault_observation,
     kill_remote_launcher,
     prepare_run_directory,
     recover_failed_shard,
@@ -229,27 +231,30 @@ class E3LiveGate(unittest.TestCase):
         registration: dict,
         helper: Path,
         prior_marker_mtime_ns: int,
-    ) -> dict:
+    ) -> tuple[dict, dict]:
         deadline = time.monotonic() + 15
         preflight_path = run_dir / "resource-sessions" / session_id / "preflight.json"
         shard_attempts = run_dir / "attempts" / "0"
         while time.monotonic() < deadline:
-            marker_observed = False
+            marker_observation = None
             try:
-                marker_observed = (
-                    remote_file_observation(
-                        registration=registration,
-                        remote_helper_path=helper,
-                        path=marker,
-                    )["mtime_ns"]
-                    > prior_marker_mtime_ns
+                observed = remote_file_observation(
+                    registration=registration,
+                    remote_helper_path=helper,
+                    path=marker,
                 )
+                if observed["mtime_ns"] > prior_marker_mtime_ns:
+                    marker_observation = observed
             except ContractError:
                 pass
-            if marker_observed and preflight_path.is_file() and shard_attempts.is_dir():
+            if (
+                marker_observation is not None
+                and preflight_path.is_file()
+                and shard_attempts.is_dir()
+            ):
                 attempts = list(shard_attempts.glob("*.json"))
                 if attempts:
-                    return read_canonical_json(preflight_path)
+                    return read_canonical_json(preflight_path), marker_observation
             time.sleep(0.05)
         self.fail(
             "failed allocation did not publish marker, resource preflight, and shard attempt"
@@ -419,7 +424,7 @@ class E3LiveGate(unittest.TestCase):
             }
             try:
                 if mode == "loss-retry":
-                    preflight = self.wait_for_failure_point(
+                    preflight, marker_observation = self.wait_for_failure_point(
                         run_dir,
                         marker,
                         sessions["initial-0"],
@@ -431,12 +436,21 @@ class E3LiveGate(unittest.TestCase):
                         f"{run['resource_enforcement']['unit_prefix']}-"
                         f"{sessions['initial-0']}.service"
                     )
-                    kill_remote_launcher(
+                    kill_observation = kill_remote_launcher(
                         registration=registrations[0],
                         remote_helper_path=helper,
                         unit=unit,
                         launcher_pid=preflight["launcher_pid"],
                     )
+                    fault_record = build_fault_observation(
+                        plan=plan,
+                        run=run,
+                        command=read_canonical_json(commands["initial-0"]),
+                        preflight=preflight,
+                        marker_observation=marker_observation,
+                        kill_observation=kill_observation,
+                    )
+                    install_fault_observation(run_dir, fault_record)
             finally:
                 terminals = {
                     allocation_id: finish_allocation(handle, timeout=30)
@@ -497,8 +511,15 @@ class E3LiveGate(unittest.TestCase):
             canonical_outcome_projection(evidence["loss-retry"]),
         )
         self.assertEqual(completions["control"]["unclosed_allocation_attempt_ids"], [])
+        self.assertIsNone(completions["control"]["fault_record_sha256"])
         self.assertEqual(
             completions["loss-retry"]["unclosed_allocation_attempt_ids"], []
+        )
+        self.assertEqual(
+            completions["loss-retry"]["fault_record_sha256"],
+            read_canonical_json(
+                evidence["loss-retry"] / "multi-host-fault.json"
+            )["record_sha256"],
         )
         loss_resources = read_canonical_json(
             evidence["loss-retry"] / "resource-completion.json"

@@ -61,6 +61,7 @@ COMMAND_SCHEMA = "axeyum.smtcomp-host-command.v1"
 ATTEMPT_SCHEMA = "axeyum.smtcomp-host-allocation-attempt.v1"
 TERMINAL_SCHEMA = "axeyum.smtcomp-host-allocation-terminal.v1"
 RECOVERY_SCHEMA = "axeyum.smtcomp-host-recovery.v1"
+FAULT_SCHEMA = "axeyum.smtcomp-host-fault-observation.v1"
 COMPLETION_SCHEMA = "axeyum.smtcomp-multi-host-completion.v1"
 
 SAFE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}\Z")
@@ -177,6 +178,24 @@ RECOVERY_FIELDS = {
     "quarantine_path",
     "record_sha256",
 }
+FAULT_FIELDS = {
+    "schema",
+    "plan_sha256",
+    "run_identity_sha256",
+    "allocation_id",
+    "resource_session_id",
+    "marker_path",
+    "marker_sha256",
+    "marker_bytes",
+    "marker_content_hex",
+    "marker_mtime_ns",
+    "remote_unit",
+    "launcher_pid",
+    "cgroup_path",
+    "signal",
+    "killed_at_ns",
+    "record_sha256",
+}
 COMPLETION_FIELDS = {
     "schema",
     "plan_sha256",
@@ -187,6 +206,7 @@ COMPLETION_FIELDS = {
     "resource_session_ids",
     "canonical_bundle_sha256",
     "resource_completion_sha256",
+    "fault_record_sha256",
     "completed_at_ns",
     "record_sha256",
 }
@@ -446,6 +466,7 @@ def environment_manifest(observations: list[dict[str, Any]]) -> dict[str, Any]:
             "schema": ENVIRONMENT_SCHEMA,
             "host_count": len(validated),
             "hostnames": sorted(value["hostname"] for value in validated),
+            "shared_filesystem": validated[0]["shared_filesystem"],
             **common,
         }
     )
@@ -1012,6 +1033,62 @@ def install_host_command(run_dir: Path, command: dict[str, Any]) -> Path:
     return run_dir / "multi-host-commands" / f"{allocation_id}.json"
 
 
+def build_fault_observation(
+    *,
+    plan: dict[str, Any],
+    run: dict[str, Any],
+    command: dict[str, Any],
+    preflight: dict[str, Any],
+    marker_observation: dict[str, Any],
+    kill_observation: dict[str, Any],
+) -> dict[str, Any]:
+    """Bind the preregistered marker and exact launcher kill into evidence."""
+
+    validate_plan(plan, run)
+    fault = plan["fault_injection"]
+    if fault["kind"] != "kill-host-runner-after-marker":
+        raise ContractError("plan does not authorize a host fault observation")
+    allocation_id = fault["allocation_id"]
+    if (
+        command.get("allocation_id") != allocation_id
+        or command.get("session_id") != preflight.get("session_id")
+        or preflight.get("launcher_pid") != kill_observation.get("launcher_pid")
+        or marker_observation.get("path") != fault["marker_path"]
+        or kill_observation.get("unit")
+        != f"{run['resource_enforcement']['unit_prefix']}-{command['session_id']}.service"
+    ):
+        raise ContractError("fault observation ownership mismatch")
+    return _sealed(
+        {
+            "schema": FAULT_SCHEMA,
+            "plan_sha256": plan["plan_sha256"],
+            "run_identity_sha256": run["identity_sha256"],
+            "allocation_id": allocation_id,
+            "resource_session_id": command["session_id"],
+            "marker_path": marker_observation["path"],
+            "marker_sha256": marker_observation["sha256"],
+            "marker_bytes": marker_observation["bytes"],
+            "marker_content_hex": marker_observation["content_hex"],
+            "marker_mtime_ns": marker_observation["mtime_ns"],
+            "remote_unit": kill_observation["unit"],
+            "launcher_pid": kill_observation["launcher_pid"],
+            "cgroup_path": kill_observation["cgroup_path"],
+            "signal": kill_observation["signal"],
+            "killed_at_ns": kill_observation["killed_at_ns"],
+        }
+    )
+
+
+def install_fault_observation(run_dir: Path, record: dict[str, Any]) -> Path:
+    atomic_install_json(
+        run_dir,
+        "multi-host-fault.json",
+        record,
+        quarantine_root=run_dir / "quarantine",
+    )
+    return run_dir / "multi-host-fault.json"
+
+
 def execute_host_command(command_manifest: Path) -> int:
     command = read_canonical_json(command_manifest)
     validate_host_command(command, require_local_hostname=True)
@@ -1331,15 +1408,22 @@ def remote_file_observation(
     if completed.stdout != canonical_bytes(evidence):
         raise ContractError("remote file observation is non-canonical")
     if (
-        set(evidence) != {"path", "sha256", "bytes", "mtime_ns"}
+        set(evidence) != {"path", "sha256", "bytes", "content_hex", "mtime_ns"}
         or evidence.get("path") != str(observed_path)
         or type(evidence.get("bytes")) is not int
         or evidence["bytes"] < 0
+        or evidence["bytes"] > 4096
         or type(evidence.get("mtime_ns")) is not int
         or evidence["mtime_ns"] < 0
     ):
         raise ContractError("remote file observation field mismatch")
     _require_sha(evidence.get("sha256"), "remote file sha256")
+    try:
+        content = bytes.fromhex(evidence.get("content_hex", ""))
+    except ValueError as exc:
+        raise ContractError("remote file observation content is malformed") from exc
+    if len(content) != evidence["bytes"] or sha256_bytes(content) != evidence["sha256"]:
+        raise ContractError("remote file observation content mismatch")
     return evidence
 
 
@@ -1662,6 +1746,72 @@ def _load_recoveries(
     return recoveries
 
 
+def _load_fault_observation(
+    run_dir: Path,
+    plan: dict[str, Any],
+    run: dict[str, Any],
+    commands: dict[str, dict[str, Any]],
+    attempts: dict[str, list[dict[str, Any]]],
+    terminals: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    path = run_dir / "multi-host-fault.json"
+    fault = plan["fault_injection"]
+    if fault["kind"] == "none":
+        if path.exists():
+            raise ContractError("non-fault plan contains a fault observation")
+        return None
+    if not path.is_file() or path.is_symlink():
+        raise ContractError("fault-injection plan lacks its exact observation")
+    record = read_canonical_json(path)
+    if set(record) != FAULT_FIELDS or record.get("schema") != FAULT_SCHEMA:
+        raise ContractError("fault observation field/schema mismatch")
+    _validate_seal(record)
+    allocation_id = fault["allocation_id"]
+    command = commands.get(allocation_id)
+    rows = attempts.get(allocation_id, [])
+    if command is None or len(rows) != 1:
+        raise ContractError("fault observation lacks its allocation attempt")
+    launch = rows[0]
+    preflight = read_canonical_json(
+        run_dir / "resource-sessions" / command["session_id"] / "preflight.json"
+    )
+    expected_unit = (
+        f"{run['resource_enforcement']['unit_prefix']}-{command['session_id']}.service"
+    )
+    content_hex = record.get("marker_content_hex")
+    try:
+        marker_content = bytes.fromhex(content_hex)
+    except (TypeError, ValueError) as exc:
+        raise ContractError("fault marker content is malformed") from exc
+    terminal = terminals.get(launch["attempt_id"])
+    if (
+        record.get("plan_sha256") != plan["plan_sha256"]
+        or record.get("run_identity_sha256") != run["identity_sha256"]
+        or record.get("allocation_id") != allocation_id
+        or record.get("resource_session_id") != command["session_id"]
+        or record.get("marker_path") != fault["marker_path"]
+        or record.get("remote_unit") != expected_unit
+        or record.get("launcher_pid") != preflight.get("launcher_pid")
+        or Path(str(record.get("cgroup_path", ""))).name != expected_unit
+        or record.get("signal") != signal.SIGKILL
+        or terminal is not None
+        and terminal.get("status") == "completed"
+    ):
+        raise ContractError("fault observation ownership mismatch")
+    _require_sha(record.get("marker_sha256"), "fault marker sha256")
+    for field in ("marker_bytes", "marker_mtime_ns", "launcher_pid", "killed_at_ns"):
+        if type(record.get(field)) is not int or record[field] < 0:
+            raise ContractError(f"invalid fault observation field: {field}")
+    if (
+        record["marker_bytes"] > 4096
+        or len(marker_content) != record["marker_bytes"]
+        or sha256_bytes(marker_content) != record["marker_sha256"]
+        or record["killed_at_ns"] < launch["started_at_ns"]
+    ):
+        raise ContractError("fault marker/kill observation mismatch")
+    return record
+
+
 def validate_multi_host_state(
     run_dir: Path,
     bundle: Any,
@@ -1678,6 +1828,9 @@ def validate_multi_host_state(
         run_dir, plan, inspect_shared_root=inspect_shared_root
     )
     recoveries = _load_recoveries(run_dir, plan, run)
+    fault_observation = _load_fault_observation(
+        run_dir, plan, run, commands, attempts, terminals
+    )
     allocations = {row["allocation_id"]: row for row in plan["allocations"]}
     initial_ids = {
         allocation_id
@@ -1796,6 +1949,11 @@ def validate_multi_host_state(
     if resource_completion.get("unclosed_session_ids") != recovered_session_ids:
         raise ContractError("resource completion has unaccounted unclosed sessions")
     computed["resource_completion_sha256"] = resource_completion["record_sha256"]
+    computed["fault_record_sha256"] = (
+        fault_observation["record_sha256"]
+        if fault_observation is not None
+        else None
+    )
     if require_completion:
         completion = read_canonical_json(run_dir / "multi-host-completion.json")
         if set(completion) != COMPLETION_FIELDS or completion.get("schema") != COMPLETION_SCHEMA:
@@ -1812,6 +1970,11 @@ def validate_multi_host_state(
                 + [row["started_at_ns"] for row in all_launches]
                 + [row["ended_at_ns"] for row in terminals.values()]
                 + [row["observed_at_ns"] for row in recoveries]
+                + (
+                    [fault_observation["killed_at_ns"]]
+                    if fault_observation is not None
+                    else []
+                )
             )
         ):
             raise ContractError("invalid multi-host completion timestamp")
@@ -1953,10 +2116,14 @@ def _observe_file(path: Path) -> dict[str, Any]:
     if not observed_path.is_file() or observed_path.is_symlink():
         raise ContractError("observed file is missing or not regular")
     metadata = observed_path.stat()
+    if metadata.st_size > 4096:
+        raise ContractError("observed file exceeds the bounded marker size")
+    content = observed_path.read_bytes()
     return {
         "path": str(observed_path),
-        "sha256": sha256_file(observed_path),
-        "bytes": metadata.st_size,
+        "sha256": sha256_bytes(content),
+        "bytes": len(content),
+        "content_hex": content.hex(),
         "mtime_ns": metadata.st_mtime_ns,
     }
 
@@ -2011,6 +2178,7 @@ __all__ = [
     "COMPLETION_FIELDS",
     "PLAN_FIELDS",
     "allocation",
+    "build_fault_observation",
     "build_host_command",
     "build_multi_host_completion",
     "build_plan",
@@ -2019,6 +2187,7 @@ __all__ = [
     "finalize_multi_host_run",
     "finish_allocation",
     "host_registration",
+    "install_fault_observation",
     "kill_remote_launcher",
     "local_host_observation",
     "prepare_run_directory",

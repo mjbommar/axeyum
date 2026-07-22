@@ -138,14 +138,24 @@ coordinator refuses recovery if the unit is active, the launcher PID is live,
 the lease owner differs, the retry is not preregistered, or the environment
 class differs.
 
+### Fault observation
+
+Schema: `axeyum.smtcomp-host-fault-observation.v1`
+
+For the destructive loss control, an immutable record binds the plan/run,
+allocation and resource session, marker path/content/hash/time, exact transient
+unit and cgroup path, launcher PID, `SIGKILL`, kill time, and its own hash. A
+`kind: none` plan rejects this artifact; a kill plan cannot complete without it.
+
 ### Multi-host completion
 
 Schema: `axeyum.smtcomp-multi-host-completion.v1`
 
 Completion binds plan/run IDs, all allocation attempt IDs, unclosed allocation
 attempt IDs, recovery IDs, all resource session IDs, the full E1 canonical
-bundle hash, the E2 resource-completion hash, completion time, and its own
-record hash. Raw export requires this record for an E3 run.
+bundle hash, the E2 resource-completion hash, the optional fault-observation
+hash, completion time, and its own record hash. Raw export requires this record
+for an E3 run.
 
 ## Source and command transport
 
