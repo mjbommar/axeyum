@@ -12469,6 +12469,19 @@ mod tests {
             equal(&gaussian.value, &v("pi").sqrt()),
             ZeroTest::Certified { equal: true, .. }
         ));
+        // Surd-atan asymptotes (irreducible quadratics with non-square discriminant):
+        // ∫_{−∞}^∞ 1/(x²+x+1) = 2π/√3, ∫_{−∞}^∞ 1/(x²+2x+2) = π.
+        assert!(matches!(
+            equal(
+                &improper_integrate(&(CasExpr::int(1) / (x().pow(2) + x() + CasExpr::int(1))), "x", LimitPoint::NegInfinity, LimitPoint::PosInfinity).unwrap().value,
+                &(CasExpr::int(2) * v("pi") / CasExpr::int(3).sqrt()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert_equal(
+            &improper_integrate(&(CasExpr::int(1) / (x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(2))), "x", LimitPoint::NegInfinity, LimitPoint::PosInfinity).unwrap().value,
+            &v("pi"),
+        );
         // ∫₀^∞ 1/(1+x²) = π/2 (arctan → π/2); ∫_{−∞}^∞ = π.
         let arctan_half = improper_integrate(
             &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
