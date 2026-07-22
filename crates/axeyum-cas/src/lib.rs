@@ -2434,6 +2434,7 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     };
     let mut func: Option<UnaryFunc> = None;
     let mut coeff = Rational::integer(1);
+    let mut frequency = 1usize; // the multiple-angle factor `m` in `f(m·var)`
     // The non-trig part accumulates as a `CasExpr` so a **surd** right-hand side is
     // allowed (`2·cos x − √3 = 0`, `cos x = √3/2`).
     let mut constant = CasExpr::zero();
@@ -2443,16 +2444,17 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
             constant = constant + term.clone();
             continue;
         }
-        // Otherwise the term must be `A·f(var)` with a single trig head.
-        let mut trig_here: Option<UnaryFunc> = None;
+        // Otherwise the term must be `A·f(m·var)` with a single trig head and a
+        // linear argument `m·var` (integer `m ≥ 1` — a multiple angle).
+        let mut trig_here: Option<(UnaryFunc, CasExpr)> = None;
         let mut term_coeff = Rational::integer(1);
         for factor in flatten_mul(term) {
             match factor {
                 CasExpr::Const(c) => term_coeff = term_coeff.checked_mul(c)?,
                 CasExpr::Unary(f @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg)
-                    if trig_here.is_none() && matches!(&*arg, CasExpr::Var(v) if v == var) =>
+                    if trig_here.is_none() && expr_contains_var(&arg, var) =>
                 {
-                    trig_here = Some(f);
+                    trig_here = Some((f, (*arg).clone()));
                 }
                 _ => return None, // non-constant/non-trig factor, or a second head
             }
@@ -2460,18 +2462,30 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
         if func.is_some() {
             return None; // more than one trig term
         }
-        func = Some(trig_here?);
+        let (head, arg) = trig_here?;
+        // The argument must be `m·var` with integer `m ≥ 1` (no constant term).
+        let arg_poly = normalize(&arg)?.to_univariate(var)?;
+        if poly::rat_degree(&arg_poly)? != 1
+            || !arg_poly[0].is_zero()
+            || !arg_poly[1].is_integer()
+            || arg_poly[1] <= Rational::integer(0)
+        {
+            return None;
+        }
+        frequency = usize::try_from(arg_poly[1].numerator()).ok()?;
+        func = Some(head);
         coeff = term_coeff;
     }
     let func = func?;
-    // f(var) = −C/A (`C` a possibly-surd constant expression).
+    // f(m·var) = −C/A (`C` a possibly-surd constant expression).
     let target = simplify(&(CasExpr::Neg(Box::new(constant)) / CasExpr::Const(coeff)));
     let pi = CasExpr::var("pi");
     let mut roots: Vec<CasExpr> = Vec::new();
-    // Scan the tabulated angles k·π/12 in [0, 2π): k = 0..24.
+    // Scan the tabulated angles θ = k·π/12 in [0, 2π) for the *argument* `m·var`.
     for k in 0..24u32 {
-        let angle = fold_trivial(&(CasExpr::Const(Rational::new(i128::from(k), 12)) * pi.clone()));
-        let value = evaluate_trig(&CasExpr::Unary(func, Box::new(angle.clone())));
+        let theta_coeff = Rational::new(i128::from(k), 12); // θ = theta_coeff·π
+        let theta = fold_trivial(&(CasExpr::Const(theta_coeff) * pi.clone()));
+        let value = evaluate_trig(&CasExpr::Unary(func, Box::new(theta.clone())));
         // Skip `tan` poles, where the value stays an unevaluated *trig* head. (A
         // surd value like `√3` is `Unary(Sqrt, …)` — a legitimate match, not a pole.)
         if matches!(
@@ -2480,11 +2494,15 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
         ) {
             continue;
         }
-        if matches!(
-            equal(&value, &target),
-            ZeroTest::Certified { equal: true, .. }
-        ) {
-            // Certify against the original equation.
+        if !matches!(equal(&value, &target), ZeroTest::Certified { equal: true, .. }) {
+            continue;
+        }
+        // `m·var = θ + 2πj` ⇒ `var = (θ + 2πj)/m = ((θ_coeff + 2j)/m)·π`, for
+        // `j = 0..m`, gives every solution in `[0, 2π)` — built as a clean `r·π`.
+        for j in 0..frequency {
+            let angle_coeff = (theta_coeff + Rational::integer(2 * i128::try_from(j).ok()?))
+                .checked_div(Rational::integer(i128::try_from(frequency).ok()?))?;
+            let angle = fold_trivial(&scaled_term(angle_coeff, pi.clone()));
             let residual = expr.substitute(var, &angle);
             if matches!(
                 equal(&evaluate_trig(&residual), &CasExpr::zero()),
@@ -15219,6 +15237,13 @@ mod tests {
         let surd_tan = solve(&(x().tan() - CasExpr::int(3).sqrt()), "x").unwrap();
         assert!(surd_tan.contains(&(CasExpr::rat(1, 3) * pi())));
         assert!(surd_tan.contains(&(CasExpr::rat(4, 3) * pi())));
+        // Multiple angle: sin 2x = 0 ⇒ {0, π/2, π, 3π/2}; sin 3x = 0 has 6 roots in
+        // [0, 2π): each principal θ with sin θ = 0 lifts to (θ + 2πj)/m.
+        let double = solve(&(CasExpr::int(2) * x()).sin(), "x").unwrap();
+        assert_eq!(double.len(), 4);
+        assert!(double.contains(&(CasExpr::rat(1, 2) * pi())));
+        assert!(double.contains(&(CasExpr::rat(3, 2) * pi())));
+        assert_eq!(solve(&(CasExpr::int(3) * x()).sin(), "x").unwrap().len(), 6);
         // Polynomial in sin: sin²x = ¼ ⇒ sin x = ±½ ⇒ {π/6, 5π/6, 7π/6, 11π/6}.
         let quad = solve(&(x().sin().pow(2) - CasExpr::rat(1, 4)), "x").unwrap();
         assert_eq!(quad.len(), 4);
