@@ -9,13 +9,14 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 
 ## 1. TL;DR state
 
-- **Branch:** `main` (commit directly here — *no feature branches*, per user
-  directive "main branch! never split branches"). Local `main` == `origin/main`.
-- **Tests:** `503` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
-- **Working tree:** clean, everything committed and pushed to `origin/main`.
+- **Branch/worktree discipline:** follow the current
+  [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
+  work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
+  branch, and leave `main` to the integration owner.
+- **Tests:** `504` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adg**). Keep both in sync when landing features.
+  latest is **Entry 37adh**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -38,18 +39,20 @@ The tmpfs `/tmp` hits **"Disk quota exceeded"** when the ~147 doctests link
 concurrently. **Always** point `TMPDIR` at a roomy disk:
 
 ```bash
-export TMPDIR="$CLAUDE_JOB_DIR/tmp/doctmp"   # or any dir on /nas4 (805 G free)
-mkdir -p "$TMPDIR"
-TMPDIR="$TMPDIR" cargo test -p axeyum-cas          # etc.
+export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"
+mkdir -p "$AXEYUM_CAS_TMP"
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas          # etc.
 ```
 Without this, doctests fail with a spurious linker `LLVM ERROR: IO failure`.
 
 ### Commit / push cadence
-Commit after each feature with the full gate green. Push directly to main:
+Commit after each feature with the full gate green, using pathspec-only staging
+and commits. Push the owned topic branch for the integration owner:
 ```bash
-git push origin HEAD:main
+git add crates/axeyum-cas/src/... docs/research/10-cas/...
+git commit -- <same owned paths>
+git push -u origin HEAD
 ```
-End commit messages with the `Co-Authored-By: Claude Opus 4.8 (1M context)` trailer.
 
 ### Doc sync on every feature
 - bump the test count in `docs/research/10-cas/README.md` (the
@@ -149,26 +152,28 @@ Pipeline:
    fails here and the prover declines. This leans on gammasimp + the atom-ordering
    fix.
 
-Enabling gosper fixes (both landed): `reduce_fraction` divides out the common
+Enabling Gosper fixes: `reduce_fraction` divides out the common
 integer **content** (binomial ratios carry a huge content that overflowed the
-dispersion resultant); `nonneg_integer_dispersion` scans `j=0..64` by evaluation
-instead of the overflow-prone full rational-root finder.
+dispersion machinery); `nonneg_integer_dispersion` now scans `j=0..64` by direct
+shifted polynomial GCD instead of materializing an overflow-prone symbolic
+resultant; and consecutive-ratio extraction cancels exact common monomial content
+before requiring a univariate ratio.
 
 Base-case gotcha: avoid `n` where a binomial hits the `Γ(0)` pole (e.g. `C(0,1)`)
 — use `base ≥ 1` with a clean `k` range.
 
-### The next open Zeilberger item: `∑ₖ C(n,k)² = C(2n,n)` (Vandermonde)
-Still declines. **Root cause is upstream of the WZ machinery:** the WZ term's
-consecutive ratio `h(k+1)/h(k)` does **not** reduce to a rational function of `k`
-even at concrete `n`. `combine_gamma_ratios` lowers a single Γ fine, but for
-**squared** Γ terms inside a *difference* (`C(n,k)² = Γ(n+1)²/(Γ(k+1)²Γ(n−k+1)²)`),
-the lowering produces degree-~10 polynomials that don't cancel cleanly and residual
-`Γ` survives, so `gosper_sum` declines. This is a **deeper gammasimp problem**
-(squared-Γ-sum ratio reduction), not an interpolation problem. Two possible
-angles: (a) better cancellation of squared Γ ratios in `combine_gamma_ratios`
-(possibly needs bignum to avoid the degree-10 coefficient blowup), or (b) a
-dedicated hypergeometric-ratio path that computes `h(k+1)/h(k)` from the term's
-known Pochhammer structure without fully expanding.
+### Vandermonde is closed: `∑ₖ C(n,k)² = C(2n,n)`
+
+`prove_wz_sum` now returns
+`R(n,k)=k²(2k−3n−3)/(2(2n+1)(k−n−1)²)` and symbolically rechecks the WZ
+telescoping identity. The earlier decline had three completeness causes: the
+common `Γ(−k)^6Γ(k)^6k^m` monomial was not cancelled before the univariate gate,
+the symbolic dispersion resultant overflowed even when its required shifted GCD
+was small, and substituting into the already-formed normalized quotient expanded
+large exact intermediates. Exact monomial-content cancellation, direct bounded
+shifted-GCD scanning, and separately specializing/folding the summand and RHS
+close those seams. The final WZ equality checker is unchanged; a false
+`C(2n,n)+1` near-miss still declines.
 
 ---
 
@@ -176,8 +181,10 @@ known Pochhammer structure without fully expanding.
 
 Ordered roughly by value:
 
-1. **Vandermonde `∑C(n,k)²=C(2n,n)`** — see §5. Unblocks a whole class of
-   squared-binomial sums.
+1. **Broaden certified creative telescoping beyond Vandermonde.** Probe the
+   adjacent-binomial convolution `∑C(n,k)C(n,k+1)=C(2n,n−1)` and weighted
+   squared-binomial moments; retain only identities whose concrete discovery and
+   fully symbolic WZ check both close.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -231,11 +238,11 @@ Design invariants (hold the line):
 
 ```bash
 cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
-export TMPDIR="$CLAUDE_JOB_DIR/tmp/doctmp"; mkdir -p "$TMPDIR"
-git rev-parse --abbrev-ref HEAD        # → main
-git rev-list --count origin/main..main # → 0 (in sync)
-TMPDIR="$TMPDIR" cargo test -p axeyum-cas   # → 503 + 147 green
+export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"; mkdir -p "$AXEYUM_CAS_TMP"
+git rev-parse --abbrev-ref HEAD        # → agent/cas/...
+git merge-base --is-ancestor origin/main HEAD
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 504 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
-up from §6 (Vandermonde is the highest-value unblock; otherwise resume the
-gap-probing loop). Commit to `main` directly; sync README count + diary each time.
+up from §6 or resume the gap-probing loop. Push the green owned topic branch;
+sync README count + diary each time.

@@ -374,6 +374,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — proof-carrying CAS closes the Vandermonde WZ gap; broader
+  creative telescoping is next.** `prove_wz_sum` now proves
+  `∑ₖ C(n,k)² = C(2n,n)` and returns
+  `R(n,k)=k²(2k−3n−3)/(2(2n+1)(k−n−1)²)`, with the fully symbolic WZ identity
+  checked by the existing exact zero-test and a false `C(2n,n)+1` control still
+  declining. Concrete discovery now cancels exact common gamma-monomial content
+  before its univariate gate, scans bounded dispersion candidates by direct
+  shifted GCD instead of an overflow-prone symbolic resultant, and folds the
+  specialized summand/RHS before division to avoid representation-induced
+  `i128` blow-up. The lane passes 504 unit tests, 147 doctests, warning-denied
+  all-target Clippy, and `wasm32-unknown-unknown`. Capability, diary, and CAS
+  handoff docs are synchronized. Next: probe adjacent-binomial convolution and
+  weighted squared-binomial identities through the same concrete-discovery plus
+  symbolic-certificate gate.
+
 - **2026-07-22 — P0 FP wrong-`sat` is fixed on `main`; complete affected-slice
   validation is next.** The full-library run exposed exact finite cancellation
   under `roundTowardNegative` being lowered to `+0` instead of `-0`. The same

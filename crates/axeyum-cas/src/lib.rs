@@ -5078,8 +5078,19 @@ pub fn prove_wz_sum(
         ni += 1;
         let ni = ni_now;
         let sample = (|| {
-            let f_ni = simplify(&f.substitute(n, &CasExpr::int(ni)));
-            let f_ni1 = simplify(&f.substitute(n, &CasExpr::int(ni + 1)));
+            // Specialize and fold the summand/RHS separately before forming their
+            // quotient. For gamma-based binomials this preserves the compact
+            // `(constant / gamma-product)^power / constant` shape; substituting into
+            // the already-formed symbolic quotient expands the same value into a
+            // much larger rational expression and can exhaust exact `i128`
+            // intermediates before Gosper sees its small consecutive ratio.
+            let specialize = |value| {
+                let numerator = simplify(&summand.substitute(n, &CasExpr::int(value)));
+                let denominator = simplify(&rhs.substitute(n, &CasExpr::int(value)));
+                simplify(&CasExpr::Div(Box::new(numerator), Box::new(denominator)))
+            };
+            let f_ni = specialize(ni);
+            let f_ni1 = specialize(ni + 1);
             // WZ term h(k) = f(n+1,k) − f(n,k); its k-antidifference is the certificate
             // G_ni(k) = R(ni,k)·f(ni,k).
             let h = simplify(&(f_ni1 - f_ni.clone()));
@@ -17024,6 +17035,42 @@ mod tests {
         // interpolation over the concrete samples.
         let rhs_sq = n() * (n() + CasExpr::int(1)) * two_n.clone() / CasExpr::int(4);
         assert!(prove_wz_sum(&(k().pow(2) * binomial_coefficient(&n(), &k())), "n", "k", &rhs_sq, 2, 0, 2).is_some());
+
+        // Vandermonde's identity ∑ C(n,k)² = C(2n,n). This exercises squared
+        // gamma towers in the concrete Gosper discovery path; the returned
+        // certificate is still checked against the fully symbolic WZ identity.
+        let vandermonde_term = binomial_coefficient(&n(), &k()).pow(2);
+        let vandermonde_rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let vandermonde = prove_wz_sum(
+            &vandermonde_term,
+            "n",
+            "k",
+            &vandermonde_rhs,
+            1,
+            0,
+            1,
+        )
+        .expect("Vandermonde's identity is WZ-provable");
+        let expected = k().pow(2) * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(3))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&vandermonde, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(
+            prove_wz_sum(
+                &vandermonde_term,
+                "n",
+                "k",
+                &(vandermonde_rhs + CasExpr::int(1)),
+                1,
+                0,
+                1,
+            )
+            .is_none()
+        );
 
         // Soundness: a FALSE identity ∑_k C(n,k) = 3ⁿ must not be "proven".
         let three_n = geometric_power(Rational::new(3, 1), "n");
