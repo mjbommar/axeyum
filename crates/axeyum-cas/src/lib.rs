@@ -7910,6 +7910,20 @@ pub fn definite_integrate(
     lower: &CasExpr,
     upper: &CasExpr,
 ) -> Option<DefiniteIntegral> {
+    // Full-period rational-trig closed form: `∫₀^{2π} k/(a+b·cos x) dx =
+    // 2πk/√(a²−b²)` (and the `sin` variant). The Weierstrass antiderivative
+    // `tan(x/2)` is discontinuous at π, so FTC would give a wrong value — this exact
+    // formula (from the `z=e^{iθ}` unit-circle contour) is used instead.
+    if let Some(value) = definite_full_period_rational_trig(expr, var, lower, upper) {
+        return Some(DefiniteIntegral {
+            value,
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified {
+                equal: true,
+                witness: MultiPoly::zero(),
+            },
+        });
+    }
     // Symmetry shortcut: an odd integrand over a symmetric interval `[−a, a]`
     // integrates to 0 — provable even when no antiderivative is found.
     if function_parity(expr, var) == Parity::Odd
@@ -7973,6 +7987,77 @@ pub fn numeric_integrate(
         sum += weight * node(point)?;
     }
     Some(sum * step / 3.0)
+}
+
+/// `∫₀^{2π} k/(a + b·cos x) dx = 2πk/√(a²−b²)` (and the `sin` variant), for `a >
+/// |b| > 0`. Recognizes the integrand `k/(a + b·trig(x))` and the interval `[0, 2π]`.
+/// The value comes from the `z=e^{iθ}` contour (a residue inside the unit circle),
+/// so it is correct where FTC on the discontinuous `tan(x/2)` antiderivative is not.
+/// `None` if the shape/interval doesn't match or `a ≤ |b|` (divergent/complex).
+fn definite_full_period_rational_trig(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    // Interval must be exactly [0, 2π].
+    if !matches!(
+        equal(lower, &CasExpr::zero()),
+        ZeroTest::Certified { equal: true, .. }
+    ) || !matches!(
+        equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
+        ZeroTest::Certified { equal: true, .. }
+    ) {
+        return None;
+    }
+    let CasExpr::Div(num, den) = expr else {
+        return None;
+    };
+    let k = constant_term(num)?; // numerator must be a constant
+    // Denominator = a + b·trig(x): one constant term, one scaled sin/cos of x.
+    let mut a = Rational::zero();
+    let mut b: Option<Rational> = None;
+    let terms = match den.as_ref() {
+        CasExpr::Add(terms) => terms.clone(),
+        other => vec![other.clone()],
+    };
+    for term in &terms {
+        // Classify each additive term as a constant, or `coeff·sin/cos(x)`.
+        let mut coeff = Rational::integer(1);
+        let mut trig_seen = false;
+        let mut is_trig = true;
+        for factor in flatten_mul(term) {
+            match factor {
+                CasExpr::Const(c) => coeff = coeff.checked_mul(c)?,
+                CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, arg)
+                    if !trig_seen && matches!(arg.as_ref(), CasExpr::Var(v) if v == var) =>
+                {
+                    trig_seen = true;
+                }
+                _ => {
+                    is_trig = false;
+                    break;
+                }
+            }
+        }
+        if is_trig && trig_seen {
+            if b.is_some() {
+                return None; // more than one sinusoidal term
+            }
+            b = Some(coeff);
+        } else {
+            a = a.checked_add(constant_term(term)?)?;
+        }
+    }
+    let b = b?;
+    // Convergence/reality: a > |b|.
+    let discriminant = a.checked_mul(a)?.checked_sub(b.checked_mul(b)?)?;
+    if discriminant.numerator() <= 0 {
+        return None;
+    }
+    // 2πk/√(a²−b²) (simplify_radicals collapses a perfect-square discriminant).
+    let two_pi_k = scaled_term(k.checked_mul(Rational::integer(2))?, CasExpr::var("pi"));
+    Some(simplify(&simplify_radicals(&(two_pi_k / CasExpr::Const(discriminant).sqrt()))))
 }
 
 /// The **Fourier series** partial sum of `f` on `[−L, L]` up to `n_terms`
@@ -14291,6 +14376,36 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn full_period_rational_trig_definite_integrals() {
+        let x = || v("x");
+        let two_pi = || CasExpr::int(2) * v("pi");
+        // ∫₀^{2π} k/(a+b·cos x) = 2πk/√(a²−b²) — correct where FTC on the
+        // discontinuous tan(x/2) antiderivative gives a wrong 0.
+        // ∫₀^{2π} 1/(5+3cos x) = 2π/√16 = π/2.
+        assert_equal(
+            &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(5) + CasExpr::int(3) * x().cos())), "x", &CasExpr::int(0), &two_pi())
+                .unwrap()
+                .value,
+            &(CasExpr::rat(1, 2) * v("pi")),
+        );
+        // ∫₀^{2π} 3/(5+4cos x) = 6π/√9 = 2π.
+        assert_equal(
+            &definite_integrate(&(CasExpr::int(3) / (CasExpr::int(5) + CasExpr::int(4) * x().cos())), "x", &CasExpr::int(0), &two_pi())
+                .unwrap()
+                .value,
+            &two_pi(),
+        );
+        // ∫₀^{2π} 1/(2+sin x) = 2π/√3.
+        assert!(matches!(
+            equal(
+                &definite_integrate(&(CasExpr::int(1) / (CasExpr::int(2) + x().sin())), "x", &CasExpr::int(0), &two_pi()).unwrap().value,
+                &(two_pi() / CasExpr::int(3).sqrt()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
