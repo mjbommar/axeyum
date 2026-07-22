@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: paused cleanly after M0; M1 diagnostic preflight is next
+Status: paused cleanly after M1; M2 native expansion and restoration is next
 
 Date paused: 2026-07-22
 
@@ -13,26 +13,28 @@ and the decision gate remains
 
 ## Resume contract
 
-- Work in `/home/mjbommar/projects/personal/axeyum`.
-- Do **not** change branches. Other agents may be editing the shared worktree.
-- At pause time the active branch was `repro/smtcomp-scoring`, and local HEAD,
-  its tracking ref, and the remote branch all resolved to
-  `e102670ecbfe4645f732430dbf28ff1ccecf21a8`.
-- Reverify the current branch and refs; do not switch back if another actor has
-  intentionally advanced them.
-- No partial M1 product edits existed at pause time in
-  `crates/axeyum-lean-import/src/lib.rs` or
-  `crates/axeyum-lean-import/tests/official_construct_matrix.rs`.
-- The worktree contained unrelated concurrent FP, IR, BV, SMT-LIB, query,
-  rewrite, benchmark, corpus, and review changes. Inspect ownership again and
-  stage only files or hunks owned by this stream.
+- Work in the isolated topic worktree
+  `/home/mjbommar/projects/personal/axeyum-lean-nested` on branch
+  `agent/lean/nested-inductive-elimination`.
+- The topic branch tracks `origin/agent/lean/nested-inductive-elimination` and
+  was created from synchronized `main` revision
+  `48fece10d1c93cf8cf8df7c2d4875ea18cdafa8e`.
+- M1's semantic implementation is
+  `893afc1f0de3ca60972b3eaf4d84ff0b3d6c66e7`.
+- Reverify the current branch, local HEAD, tracking ref, and remote ref before
+  editing. Do not switch, reset, restore, or force any other live worktree.
+- No partial M2 edits exist at this checkpoint. Inspect ownership again before
+  touching `crates/axeyum-lean-kernel/src/inductive.rs` or its tests.
+- The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
+  unrelated dirty benchmark/corpus/review artifacts and remains untouched by
+  this lane.
 - Add, commit, push, and verify each bounded milestone. Never accumulate
   several milestones into an unpushed worktree.
 
 ## What is complete
 
-The dependency correction, preregistration, and evidence freeze are complete
-and pushed:
+The dependency correction, preregistration, evidence freeze, and diagnostic
+preflight are complete and pushed:
 
 1. TL2.13 atomic mutual-inductive groups completed at `340cf721`.
 2. P0 corrected the boundary and preregistered TL2.14 at `def1000f`:
@@ -40,11 +42,17 @@ and pushed:
    native well-founded/source recursion remains elaborator work in TL4.10.
 3. M0 froze the official source and wire evidence at `e102670e`, without
    allowing Axeyum to observe or import the new streams.
+4. M1 corrected the nested diagnostic boundary at `893afc1f`: a well-shaped
+   main-plus-auxiliary recursor population now returns typed
+   `Unsupported("inductive-nested")` before admission, while ordinary malformed
+   singleton counts retain their exact error.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
 and its fail-closed machine contract is
 [lean-nested-inductive-elimination-v1.json](lean-nested-inductive-elimination-v1.json).
+The complete M1 result is
+[lean-nested-inductive-elimination-m1-2026-07-22.md](lean-nested-inductive-elimination-m1-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -79,7 +87,7 @@ and its fail-closed machine contract is
   `IndexedRose [IndexedRose.rec_1, IndexedRose.rec]`, and
   `RepeatRose [RepeatRose.rec, RepeatRose.rec_1]`. Later comparison must use
   checked names and owned rules, never array position.
-- The existing nested construct still fails at line 248 with
+- The M0 baseline observed the existing nested construct fail at line 248 with
   `Malformed("single-family inductive must export one recursor")`.
 - The well-founded control completes with 35 declarations and zero axioms.
 - Thirteen checker tests freeze the evidence and prevent premature product
@@ -104,47 +112,36 @@ M0 changed only documents, fixtures, registrations, and checkers. A workspace
 Rust build was deliberately not claimed: it was not required for the evidence
 freeze, and unrelated concurrent Rust edits existed in the shared worktree.
 
-## Exact next milestone: M1 diagnostic preflight
+## M1 result
 
-M1 is deliberately narrow. In `import_inductive` in
-`crates/axeyum-lean-import/src/lib.rs`, the current single-family path checks
-`types.len() == 1 && recursors.len() != 1` before recognizing `numNested`.
-That turns the valid nested shape of one main plus one auxiliary recursor into
-an accidental `Malformed` result.
+M1 parses consistent `numNested` metadata first, checks the claimed recursor
+population as source-family count plus auxiliary count, and returns
+`Unsupported("inductive-nested")` before any kernel admission. Missing or extra
+nested recursors remain malformed; ordinary singleton records with zero or two
+recursors retain the exact historical malformed message. The official nested
+row and its direct-recursive control repeat twice, the well-founded import
+still completes, and the 720/768/840 summaries remain exact. The complete
+importer suite, warning-denied Clippy/rustdoc, M0 contracts, and documentation
+gates pass. No M0 computation stream was observed by the importer and no
+generated assurance artifact changed.
 
-The next implementation must:
+## Exact next milestone: M2 native expansion and restoration
 
-1. Parse and validate the relevant inductive metadata, including `numNested`,
-   before applying the non-nested singleton recursor-count policy, or add an
-   equivalently narrow typed preflight.
-2. Move the frozen nested construct outcome to exactly
-   `ImportError::Unsupported { code: "inductive-nested", ... }`.
-3. Produce no admitted declaration, partial publication, or `CompletedImport`.
-4. Preserve the exact non-nested policy: malformed one-family declarations
-   with zero or two recursors remain malformed when `numNested == 0`.
-5. Repeat the frozen nested case twice and retain the well-founded and
-   720/768/840 controls.
-6. Keep all three new M0 computation streams outside the importer. M4, not M1,
-   owns their first product observation.
-7. Commit, push, and verify local/tracking/remote equality before M2.
+M2 must implement private structural discovery, complete auxiliary-container
+group copying, fixed-point queuing, final-surface restoration, deterministic
+`.rec_N` publication, and transaction-wide rollback while reusing TL2.13's
+one atomic group checker. It owns the plan's named native positive/negative
+matrix and final-surface inference checks.
 
-Add focused importer tests in
-`crates/axeyum-lean-import/tests/official_construct_matrix.rs` or the nearest
-existing focused test surface. Include synthetic recursor-count variants so
-the new preflight cannot accidentally weaken ordinary singleton validation.
+Before implementation, bind a bounded M2 plan to the exact official Lean 4.30
+algorithm and inspect the current kernel transaction, checked group metadata,
+name-generation, substitution, dependency, inference, and reduction helpers.
+Do not pass any M0 computation stream to the importer; M4 owns first product
+observation. Stop and amend ADR-0355 if the existing atomic group path cannot
+check the expanded group without a second semantic implementation.
 
-Do not silently rewrite the historical official construct matrix. The M0
-checker can project a future `tl2_14_update`, but M5 owns the append-only
-assurance overlay and removal of the live nested decline. Before changing any
-generated assurance artifact earlier, inspect its contract and amend the plan
-explicitly if necessary.
+## Remaining milestones after M2
 
-## Remaining milestones after M1
-
-- **M2 — native expansion and restoration:** implement private structural
-  discovery, complete auxiliary-container group copying, fixed-point queuing,
-  final-surface restoration, deterministic `.rec_N` publication, and
-  transaction-wide rollback while reusing TL2.13's one atomic group checker.
 - **M3 — deterministic generated grammar:** run at least 640 unique public-path
   profiles twice, close expansion/reuse/restoration mutation teeth, and retain
   exact 720/768/840 population descriptors.
@@ -166,19 +163,21 @@ stop conditions, and explicit non-claims remain binding in the
 ## First commands on resume
 
 ```sh
-cd /home/mjbommar/projects/personal/axeyum
+cd /home/mjbommar/projects/personal/axeyum-lean-nested
 git branch --show-current
 git rev-parse HEAD
 git rev-parse '@{upstream}'
+git ls-remote --heads origin agent/lean/nested-inductive-elimination
 git status --short
 python3 scripts/check-lean-nested-inductive-elimination.py --check
 python3 -m unittest scripts.tests.test_lean_nested_inductive_elimination
-sed -n '710,815p' crates/axeyum-lean-import/src/lib.rs
-sed -n '1,300p' crates/axeyum-lean-import/tests/official_construct_matrix.rs
+sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
+sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then record a bounded M1 plan, inspect current ownership one more time, and
-make the preflight/test edits with small reviewable patches.
+Then record a bounded M2 plan, inspect current ownership one more time, and
+advance the private expansion/restoration representation with small reviewable
+patches.
 
 ## Tools and resource envelope
 

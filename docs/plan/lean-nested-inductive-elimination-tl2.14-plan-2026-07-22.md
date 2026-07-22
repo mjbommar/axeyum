@@ -1,6 +1,6 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: paused cleanly after M0; M1 diagnostic preflight next
+Status: paused cleanly after M1; M2 native expansion and restoration next
 
 Date: 2026-07-22
 
@@ -259,11 +259,22 @@ Status: **complete**. See the
 
 ### M1 — correct diagnostic preflight
 
+Status: **complete**. See the
+[M1 result](lean-nested-inductive-elimination-m1-2026-07-22.md).
+
 - parse type metadata before applying recursor-count policy;
 - derive the expected main+auxiliary recursor population shape;
 - move the exact nested row to `Unsupported(inductive-nested)` only;
 - prove no admission, no partial publication, and unchanged controls;
 - commit, push, and verify remote equality.
+
+The importer now requires one consistent `numNested` count across the source
+families and an exact source-family-plus-auxiliary recursor population before
+returning the typed decline. Missing/extra nested recursors and inconsistent
+mutual metadata remain malformed; ordinary zero/two-recursor singleton errors
+are unchanged. The complete importer suite, repeated official nested and well-
+founded controls, and exact 720/768/840 populations pass. No M0 computation
+stream was observed and the historical assurance record is untouched.
 
 ### M2 — native expansion and restoration
 

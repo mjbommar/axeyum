@@ -473,10 +473,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   applications. Wire recursor order varies (`.rec_1,.rec` versus
   `.rec,.rec_1`), so later comparison is by checked name and owned rules.
   Thirteen fail-closed tests and both aggregate documentation gates enforce the
-  no-product-observation boundary. M1 changes only diagnostic preflight next:
-  move the existing row from accidental `Malformed` to registered
-  `Unsupported(inductive-nested)` without admission or `CompletedImport`. This
-  stream is paused cleanly after M0; resume from the single authoritative
+  no-product-observation boundary. The subsequent
+  [M1 result](docs/plan/lean-nested-inductive-elimination-m1-2026-07-22.md)
+  parses one consistent group-wide `numNested` count before recursor policy,
+  requires the exact source-family-plus-auxiliary population, and moves the
+  official row to `Unsupported(inductive-nested)` before admission. Missing or
+  extra nested recursors, inconsistent mutual metadata, and ordinary zero/two-
+  recursor singletons retain typed malformed outcomes. The complete importer
+  suite and exact well-founded/720/768/840 controls pass; no M0 computation
+  stream or assurance artifact is observed. This stream is paused cleanly
+  after M1; resume M2 native expansion/restoration from the authoritative
   [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md).
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
@@ -6986,7 +6992,7 @@ plan is built and committed on the current branch:
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups followed in TL2.13; a later audit separates TL2.14 kernel nested elimination from TL4.9/TL4.10 source elaboration. |
 | P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. |
-| P3.6 / TL2.14 | Nested-inductive kernel elimination | **TODO (P0/M0 complete; ADR-0355 proposed)** — the dependency audit corrects the former frontend framing: nested expansion/restoration is a pinned-Lean kernel admission transformation; well-founded source recursion remains TL4.10. M0 freezes three explicit auxiliary-recursion computations and one exact negative diagnostic, with 114,596 bytes / 2,022 wire records reproduced twice and no product observation. The P0--M6 plan retains exact structural discovery, complete auxiliary-container copying, atomic group checking, restored `.rec_N` publication, >=640 generated cases, exact official computation, and the 720/768/840 plus well-founded controls. M1 diagnostic preflight is next. |
+| P3.6 / TL2.14 | Nested-inductive kernel elimination | **WIP (P0/M0/M1 complete; ADR-0355 proposed)** — the dependency audit corrects the former frontend framing: nested expansion/restoration is a pinned-Lean kernel admission transformation; well-founded source recursion remains TL4.10. M0 freezes three explicit auxiliary-recursion computations and one exact negative diagnostic, with 114,596 bytes / 2,022 wire records reproduced twice and no product observation. M1 moves the exact official nested row from accidental malformed cardinality to typed `Unsupported(inductive-nested)` before admission while preserving malformed count variants and the well-founded/720/768/840 controls. M2 native expansion/restoration is next; the P0--M6 plan still requires structural discovery, complete auxiliary-container copying, atomic group checking, restored `.rec_N` publication, >=640 generated cases, and exact official computation. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -7040,6 +7046,22 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.14 M1 diagnostic preflight without nested
+  admission.** `import_inductive` now parses one consistent group-wide
+  `numNested` value before applying ordinary recursor cardinality, derives the
+  claimed source-family-plus-auxiliary wire shape, and returns exact
+  `Unsupported(inductive-nested)` before family translation or kernel
+  admission. Missing/extra nested recursors and inconsistent mutual metadata
+  remain malformed; non-nested singleton records with zero or two recursors
+  retain their exact error. Four focused construct-matrix tests repeat the
+  official nested/control rows and close singleton/mutual count mutations. The
+  complete 41-test importer integration suite, well-founded 35-declaration
+  control, 720/768/840 deterministic populations, warning-denied Clippy and
+  rustdoc, M0 contract, parity, compatibility, foundational-resource, and link
+  gates pass under the 4 GiB/one-worker policy. No M0 computation stream or
+  generated assurance artifact was observed. M2 native expansion/restoration
+  is next under proposed ADR-0355.
 
 - **2026-07-22 — Completed TL2.14 M0 source/wire freeze without product
   observation.** A 2,917-byte explicit-recursor source compiles twice to one

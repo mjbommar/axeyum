@@ -311,12 +311,15 @@ state.
 > nesting; the latter proves two structurally identical applications reuse one
 > auxiliary family. Wire recursor order differs across the three groups, so
 > later comparison is name/rule based. Thirteen fail-closed tests enforce the
-> no-product-observation boundary. M1 corrects only the current nested
-> recursor-count diagnostic preflight next; no admission is authorized. One
+> no-product-observation boundary. M1 now parses a consistent `numNested`
+> population before recursor-count policy, moves the exact nested row to typed
+> `Unsupported(inductive-nested)`, preserves malformed ordinary and nested
+> count variants, and retains the well-founded and 720/768/840 controls. It
+> grants no admission and observes none of the M0 computation streams. One
 > Lean/Rust worker and 4 GiB caps remain mandatory.
-> This stream is paused cleanly after M0. Resume from the single authoritative
+> This stream is paused cleanly after M1. Resume from the single authoritative
 > [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md), which
-> records the exact pushed state, M1's first edit, remaining M2--M6 work,
+> records the exact pushed state, M2's first edit, remaining M3--M6 work,
 > ownership constraints, commands, and stop conditions.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

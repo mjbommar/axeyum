@@ -882,9 +882,13 @@ Out of scope:
     [TL2.14 plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
     P0 and M0 are complete: three explicit main/auxiliary recursor computations,
     one exact negative diagnostic, and 114,596 bytes / 2,022 records reproduce
-    twice without Axeyum observation. M1 diagnostic preflight is next. Close
-    this question only when ADR-0355's native, generated, import, computation,
-    mutation, retention, and final gates pass.
+    twice without Axeyum observation. M1 now moves the exact official nested
+    row from accidental malformed cardinality to the typed
+    `inductive-nested` decline before admission, while malformed recursor-count
+    variants and the well-founded/720/768/840 controls remain exact. M2 native
+    expansion/restoration is next. Close this question only when ADR-0355's
+    native, generated, import, computation, mutation, retention, and final
+    gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
