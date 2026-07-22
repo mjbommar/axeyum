@@ -190,5 +190,5 @@ M3 next must:
 3. import both frozen official target streams twice with completion-only
    publication;
 4. compare official/generated recursor types, rules, counts, and field counts;
-5. execute the registered official computations; and
-6. reject every importer type/rule/metadata/publication mutation.
+5. reject every importer type/rule/metadata/publication mutation; and
+6. hand the still-unobserved computation streams to M4.

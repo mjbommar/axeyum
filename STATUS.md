@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.12 M2 generalized native semantics is complete; M3
-  importer policy and exact official streams are next.**
+- **2026-07-22 — TL2.12 M3 exact official construct imports are complete; M4
+  computation differential and assurance update are next.**
   [Proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
   and the
   [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
@@ -389,7 +389,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   fail-closed tests bind source/stream/baseline hashes, roots and normal forms,
   pins/resources/commands, semantic/claim/case/mutation/generated/stop
   contracts, and reject any premature Axeyum observation. The Rust product has
-  not run on either new stream. The
+  not run on either M0 computation stream. The
   [M1 result](docs/plan/lean-recursive-induction-hypotheses-m1-2026-07-22.md)
   routes direct recursion through one WHNF telescope-tail classifier and
   reopener shared by minor types and rule right-hand sides. The
@@ -401,11 +401,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   widening. Stable metadata retains only field position and telescope depth;
   reconstruction disagreement returns `RecursiveFieldShapeMismatch`. Exact
   `MiniNat.rec`/`MiniList.rec` declaration identities, Nat/List computations,
-  182 kernel units, and both generated summaries remain green. M3-M4 own the
-  narrow importer-policy change, both twice-complete official imports,
-  mutations, and pinned computation differential. Every milestone is bounded
-  to one Lean/two Rust workers and 4 GiB, then added, committed, pushed, and
-  remote-verified. Mutual is TL2.13; nested/well-founded lowering is TL2.14.
+  182 kernel units, and both generated summaries remain green. The
+  [M3 result](docs/plan/lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+  makes `isReflexive` descriptive metadata and completes both frozen construct
+  targets twice with exact official/generated recursor comparison. The
+  pre-elaborated well-founded stream also completes through `Acc.rec`; this is
+  bounded kernel import, not source elaboration. Mutual/nested retain their
+  typed outcomes, and metadata plus late-publication mutations pass. No M0
+  computation stream has entered the Rust product. M4 owns the selected
+  computations, pinned differential, and assurance update. Every milestone is
+  bounded to one Lean/two Rust workers and 4 GiB, then added, committed, pushed,
+  and remote-verified. Mutual is TL2.13; nested/well-founded lowering is TL2.14.
 
 - **2026-07-22 — TL2.11/T6.0.2 strict positivity is complete; TL2.12 is
   next.** Accepted
@@ -6857,7 +6863,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
-| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M2 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule now covers direct, indexed, higher-order, and combined native fields. M0 freezes the baseline and two official streams; M1 installs the shared classifier/reopener; M2 admits ten positive rows, retains four typed negatives, rejects ten native mutation classes, and repeats a 768-case public-path grammar plus the 840-case positivity control. M3-M4 own first official importer observation, exact recursor/computation comparison, metadata/publication mutations, and pinned differential evidence. Mutual/nested/well-founded remain TL2.13/TL2.14 |
+| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M3 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M2 freeze the streams, install the shared representation, close fourteen native rows, ten native mutations, 768 recursive profiles, and the 840-case positivity control. M3 completes both official construct targets twice with exact recursor comparison; the pre-elaborated well-founded stream also completes through `Acc.rec`, while mutual/nested retain typed outcomes. M4 owns official computation and assurance evidence. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14 |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6911,6 +6917,18 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.12 M3 exact official construct imports.** The
+  importer now parses `isReflexive` as descriptive metadata and leaves
+  structural authority with the independent kernel. `MiniVector` and `MiniAcc`
+  construct streams complete twice with exact generated/exported recursor
+  comparison; the mandatory well-founded row also completes through `Acc.rec`
+  without a frontend-support claim. Mutual and nested retain typed outcomes.
+  Metadata flips, unsafe/nested/multi-family boundaries, and late recursor
+  type/count/rule/`nfields` mutations all fail closed without partial
+  publication. The 32 importer integration tests, one compile-fail doctest,
+  focused clippy, and rustdoc pass. M4 owns the first computation-stream product
+  observation and assurance regeneration.
 
 - **2026-07-22 — Completed TL2.12 M2 generalized native recursion without an
   official-stream product observation.** The one M1 telescope-tail

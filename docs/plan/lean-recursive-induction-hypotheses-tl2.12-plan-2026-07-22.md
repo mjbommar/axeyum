@@ -1,6 +1,6 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: M2 generalized native semantics complete; M3 importer policy and exact official streams are next
+Status: M3 importer policy and exact official streams complete; M4 computation differential and assurance update are next
 
 Date: 2026-07-22
 
@@ -8,7 +8,7 @@ Decision gate:
 [proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Current checkpoint:
-[M2 native-semantics result](lean-recursive-induction-hypotheses-m2-2026-07-22.md)
+[M3 importer result](lean-recursive-induction-hypotheses-m3-2026-07-22.md)
 
 Parents:
 
@@ -300,11 +300,16 @@ pass. No new official stream was passed to the importer. See the
 
 ### M3 — importer policy and exact official streams
 
-- narrowly remove the supported reflexive metadata decline;
-- import both frozen target streams twice with completion-only publication;
-- compare generated official recursors and execute selected reductions;
-- add importer type/rule/metadata mutations and preserve all other declines;
-- commit and push.
+**Complete.** `isReflexive` is now strictly parsed descriptive metadata; the
+kernel structure remains authoritative. Both target construct streams complete
+twice with exact generated/exported constructor and recursor comparison. The
+mandatory regression also shows that the pre-elaborated well-founded stream now
+completes through `Acc.rec`, without claiming frontend support. Mutual and
+nested boundaries retain their typed outcomes. Metadata flips, unsafe/nested/
+multi-family boundaries, late recursor type/count/rule/`nfields` faults, and
+completion-only publication pass. No M0 computation stream was run; M4 owns
+that first product observation. See the
+[M3 result](lean-recursive-induction-hypotheses-m3-2026-07-22.md).
 
 ### M4 — pinned computation differential and assurance update
 

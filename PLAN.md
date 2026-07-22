@@ -210,8 +210,15 @@ state.
 > partition and M2's deliberate 186-case admission widening. The 182 kernel
 > units, direct-recursive identities, focused clippy, and rustdoc pass. No new
 > official stream was passed to the importer; M3 owns its first product
-> observation and the remaining metadata/publication mutations. Exact official
-> recursor comparison, the new >=512-case
+> observation and the remaining metadata/publication mutations. The subsequent
+> [M3 importer result](docs/plan/lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+> now treats `isReflexive` as descriptive metadata and completes both frozen
+> construct targets twice with exact generated/exported recursor comparison.
+> The mandatory regression also completes the pre-elaborated well-founded
+> stream through `Acc.rec`, while mutual and nested retain typed declines.
+> Synthetic metadata and late recursor mutations prove kernel authority and
+> completion-only publication. No M0 computation stream has entered the Rust
+> product; M4 owns that observation and the assurance-matrix update. The new >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups remain TL2.13; nested/well-founded frontend lowering remains

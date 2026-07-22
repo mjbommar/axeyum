@@ -727,8 +727,12 @@ Non-claims until their gates are met:
    [M2 result](lean-recursive-induction-hypotheses-m2-2026-07-22.md) now admits
    all ten positive native rows, retains four typed transactional negatives,
    rejects ten native mutation classes, and repeats the 768-case recursive
-   grammar and retained 840-case positivity control. M3 now owns the first
-   official-stream product observation and importer-policy widening. The
+   grammar and retained 840-case positivity control. The
+   [M3 result](lean-recursive-induction-hypotheses-m3-2026-07-22.md) now
+   completes both construct targets twice with exact recursor comparison and
+   closes metadata/publication mutations. The pre-elaborated well-founded
+   stream also completes through `Acc.rec`; mutual/nested retain typed
+   boundaries. M4 owns computation and assurance evidence. The
    [execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
    requires both frozen official streams, exact generated-recursor comparison,
    selected computation, a >=512-case grammar, and the existing 840-case
@@ -737,7 +741,7 @@ Non-claims until their gates are met:
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path is TL2.12 M3, with every TL2.11 guard retained.
+   primary semantic path is TL2.12 M4, with every TL2.11 guard retained.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

@@ -734,13 +734,16 @@ impl<'kernel> ImportState<'kernel> {
         )? {
             return Err(unsupported(line, "declaration-unsafe"));
         }
-        if boolean(
+        // Lean's `isReflexive` flag describes how the frontend classified the
+        // group; it is not permission to bypass or deny the independent
+        // kernel's structural positivity/recursive-field checks. TL2.12 parses
+        // the bit strictly, then lets `Kernel::add_inductive` decide from the
+        // translated type and constructor terms.
+        boolean(
             required(ty, "isReflexive", line)?,
             line,
             "inductive.type.isReflexive",
-        )? {
-            return Err(unsupported(line, "inductive-reflexive"));
-        }
+        )?;
         if u64_value(
             required(ty, "numNested", line)?,
             line,
