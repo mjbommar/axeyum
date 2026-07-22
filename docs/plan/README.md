@@ -233,6 +233,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   public declaration/dependency/iota observer, 16 transactional restoration
   mutations, bounded stop-review validator amendment, retained controls, and
   M4 exact-import handoff.
+- [`lean-nested-inductive-elimination-m4-plan-2026-07-22.md`](lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
+  — M4's preimplementation freeze: kernel-derived auxiliary count, exact
+  name-keyed main/auxiliary comparison, four twice-imported official streams,
+  20 rejecting wire/publication mutation classes, order non-authority, retained
+  controls, and the explicit M5 non-computation boundary.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

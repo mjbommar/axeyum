@@ -344,6 +344,12 @@ state.
 > authoritative [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md),
 > which records M4's exact official-import task, remaining M4--M6 work,
 > ownership constraints, commands, and stop conditions.
+> The [M4 importer plan](docs/plan/lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
+> is now frozen before Rust edits: derive the auxiliary population from checked
+> main-recursor motives, compare the complete wire surface by generated name,
+> import four exact official streams twice, and close 20 rejecting mutations
+> plus order non-authority without changing kernel, fixtures, identity,
+> assurance, or the live decline.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

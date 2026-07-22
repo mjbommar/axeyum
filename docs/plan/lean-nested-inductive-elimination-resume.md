@@ -191,6 +191,14 @@ the preregistered wire metadata/order/type/rule/publication mutations. The
 well-founded 35-declaration/zero-axiom root and exact 720/768/840/640 generated
 controls remain mandatory.
 
+The
+[M4 exact importer plan](lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
+is frozen before implementation. It derives the auxiliary count from checked
+main-recursor motive metadata, compares the complete name-keyed main/auxiliary
+surface, binds four twice-imported official inventories, freezes 20 rejecting
+wire/publication classes plus order non-authority controls, and leaves all
+kernel, fixture, identity, assurance, and live-decline artifacts untouched.
+
 M4 must not claim cross-nested normal-form computation merely because the
 official declarations import. M5 owns reproduction of the registered normal
 forms, the assurance overlay, and removal of the live decline.
@@ -227,10 +235,8 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then inspect M4 ownership and importer transaction boundaries, preregister the
-exact importer/wire mutation implementation if the existing P0--M6 plan is not
-sufficiently concrete, and remove only the structural nested decline without
-claiming M5 computation credit.
+Then reverify M4 ownership and implement the frozen exact importer plan. Remove
+only the structural nested decline without claiming M5 computation credit.
 
 ## Tools and resource envelope
 
