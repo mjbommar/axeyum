@@ -81,10 +81,14 @@ Last updated: 2026-07-22
 > direct-recursive controls, including the nested stream's `Malformed`
 > misclassification, without admission changes. The
 > [M4 assurance result](../../../docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
-> now generates seven implication-checked rows; TL2.16 is PARTIAL for this
-> selected population. M5 final validation and handoff are next. TL1.5 property fuzzing is
-> dependency-ready; TL2.11
-> positivity remains mandatory before recursive admission widens.
+> now generates seven implication-checked rows; M5 and TL2.11 strict positivity
+> are complete. TL2.16 is PARTIAL for this selected population. TL1.5 property
+> fuzzing is dependency-ready. TL2.12 is now preregistered under
+> [proposed ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md):
+> one telescope-based rule covers direct, indexed, and higher-order recursive
+> fields; M0 must freeze the machine contract and actual recursor-computation
+> source before admission changes, and the completed TL2.11 guard remains
+> mandatory throughout.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

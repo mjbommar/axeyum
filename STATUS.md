@@ -369,6 +369,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL2.12 recursive induction hypotheses are preregistered; M0
+  is next and no admission has widened.**
+  [Proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+  and the
+  [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
+  bind direct, recursive-indexed, higher-order, and combined indexed/higher-
+  order fields to one Lean 4.30 rule: `u : Pi xs, I params indices` receives
+  `Pi xs, motive indices (u xs)`, while its computation rule passes
+  `fun xs => I.rec params motive minors indices (u xs)` to the minor. Existing
+  direct recursion is the empty-telescope/empty-index control. The plan freezes
+  exact `MiniVector`/`MiniAcc` stream hashes, makes constructor-only witnesses
+  ineligible for computation credit, and requires a supplemental official
+  recursor-computation source, exact generated-recursor comparison, native iota
+  normal forms, >=512 deterministic recursive profiles, and the unchanged
+  840-case positivity grammar. M0 must commit the machine contract and source
+  freeze before semantic observation; M1 must preserve direct-recursive identity
+  under the shared representation before M2 widens native admission. M3-M4 own
+  the narrow importer-policy change, both twice-complete official imports,
+  mutations, and pinned computation differential. Every milestone is bounded
+  to one Lean/two Rust workers and 4 GiB, then added, committed, pushed, and
+  remote-verified. Mutual is TL2.13; nested/well-founded lowering is TL2.14.
+
 - **2026-07-22 — TL2.11/T6.0.2 strict positivity is complete; TL2.12 is
   next.** Accepted
   [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
@@ -6819,6 +6841,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
+| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (preregistered, ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined fields. M0 next freezes the machine contract and official recursor-computation source before semantics; M1 must preserve direct-recursive identity; M2-M4 own native admission, exact official importer comparison, selected iota computation, >=512 generated profiles, and the unchanged 840-case positivity gate. Mutual/nested/well-founded remain TL2.13/TL2.14 |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6872,6 +6895,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL2.12 recursive-indexed plus
+  reflexive/higher-order induction hypotheses.** Proposed ADR-0353 and a bounded
+  M0--M5 plan now reduce all supported recursive fields to one telescope/index
+  rule, pin the Lean 4.30 implementation authority and exact official stream
+  hashes, separate constructor admission from recursor computation, register
+  native/mutation/generated/official gates, preserve TL2.11 and transactional
+  import controls, and freeze stop/resource/commit-push discipline. No kernel or
+  importer semantics changed; M0 machine registration and supplemental official
+  computation-source freeze are next.
 
 - **2026-07-22 — Completed TL2.11/T6.0.2 and accepted ADR-0352.** The final
   bounded pass closes 182 kernel unit, 38 kernel integration, 30 importer

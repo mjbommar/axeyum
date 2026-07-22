@@ -148,7 +148,8 @@ state.
 > closes the bounded kernel/importer, contract, parity, foundational-resource,
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
-> TL2.11 strict positivity remains the first semantic widening prerequisite.
+> TL2.11 strict positivity is now complete as the first semantic widening
+> prerequisite; TL2.12 is the next preregistration-first admission slice.
 > Accepted ADR-0352 and the
 > [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
 > now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
@@ -180,6 +181,22 @@ state.
 > reflexive induction-hypothesis generation. No inductive admission widened in
 > TL2.11; all direct-recursive, non-positive, generated, importer-publication,
 > and construct-matrix controls remain mandatory for TL2.12.
+> TL2.12 is now concretely preregistered by
+> [proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+> and its
+> [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
+> The trusted rule is singular: a positive recursive field
+> `u : Pi xs, I params indices` receives
+> `u_ih : Pi xs, motive indices (u xs)`, and its iota rule supplies the matching
+> recursively computed function. Empty telescopes/indices recover the existing
+> direct case. M0 next binds a machine-readable contract and a dedicated
+> official `Vector`/`Acc` recursor-computation source; M1 must route direct
+> recursion through the shared representation without identity drift before M2
+> widens admission. Exact official recursor comparison, a new >=512-case
+> recursive grammar, the existing 840-case positivity grammar, completion-only
+> import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
+> Mutual groups remain TL2.13; nested/well-founded frontend lowering remains
+> TL2.14.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -226,9 +243,9 @@ state.
 > the [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
 > and [M5 handoff](docs/plan/lean-official-construct-matrix-final-2026-07-22.md).
 > Do not conflate the bounded nested diagnostic-classification follow-up with
-> semantic nested support. TL1.5 property
-> fuzzing is dependency-ready, but TL2.11 positivity remains mandatory before
-> recursive admission widens. Native
+> semantic nested support. TL1.5 property fuzzing is dependency-ready. TL2.11's
+> completed positivity guard remains mandatory during TL2.12 recursive
+> admission widening. Native
 > parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are

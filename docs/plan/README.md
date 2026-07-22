@@ -138,6 +138,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`lean-strict-positivity-final-2026-07-22.md`](lean-strict-positivity-final-2026-07-22.md)
   — M4 final bounded gates, accepted ADR-0352, completed TL2.11/T6.0.2, exact
   non-claims, and the preregistration-first TL2.12 handoff.
+- [`lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md`](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
+  — proposed ADR-0353's unified `Pi telescope, motive indices (field args)`
+  rule, native/official computation gates, mutation grammar, resource bounds,
+  stop conditions, and M0--M5 commit/push sequence for TL2.12.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

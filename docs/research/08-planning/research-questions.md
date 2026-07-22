@@ -783,6 +783,22 @@ Out of scope:
     [accepted ADR-0352](../09-decisions/adr-0352-preregister-lean-strict-positivity.md),
     the [TL2.11 execution plan](../../plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md),
     and the [final result](../../plan/lean-strict-positivity-final-2026-07-22.md).
+- [ ] What exact induction-hypothesis and computation-rule construction should
+      admit recursive-indexed and reflexive/higher-order fields without
+      duplicating trusted semantics?
+  - Proposed answer (2026-07-22): treat direct, indexed, higher-order, and
+    combined indexed+higher-order recursive fields as empty/nonempty cases of
+    one rule. If `u : Pi xs, I P indices`, generate
+    `u_ih : Pi xs, motive indices (u xs)` and pass
+    `fun xs => I.rec P motive minors indices (u xs)` to the minor premise.
+    Preserve all constructor fields first and IHs second in source order; use
+    one WHNF telescope-tail helper for minor types and rule right-hand sides;
+    remove the importer's reflexive policy decline only after native support.
+    Mutual groups remain TL2.13 and frontend nested/well-founded lowering
+    remains TL2.14. See
+    [proposed ADR-0353](../09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
+    and the
+    [TL2.12 execution plan](../../plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
