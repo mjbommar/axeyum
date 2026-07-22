@@ -17,10 +17,12 @@
 
 use std::collections::BTreeSet;
 
-use super::{CheckedCtor, CheckedFamily, CheckedInductiveGroup, InductiveFamilySpec};
+use super::{
+    CheckedCtor, CheckedFamily, CheckedInductiveGroup, InductiveFamilySpec, NestedExpansion,
+};
 use crate::env::Declaration;
 use crate::expr::ExprNode;
-use crate::tc::KernelError;
+use crate::tc::{KernelError, LocalContext, LocalDecl};
 use crate::{BinderInfo, Kernel};
 
 /// Declare an enum-style inductive `name : Sort 1` with the given nullary
@@ -2416,4 +2418,839 @@ fn mutual_recursor_contract_mutations_are_rejected_or_detectably_distinct() {
         "late-complete-group-rollback",
     ]);
     assert_eq!(registered.len(), 16);
+}
+
+fn nested_mutation_fixture(
+    k: &mut Kernel,
+    suffix: &str,
+) -> (Vec<InductiveFamilySpec>, NestedExpansion) {
+    let root = k.anon();
+    let binder = k.name_str(root, "x");
+    let box_name = k.name_str(root, format!("NestedMutationBox{suffix}"));
+    let wrap = k.name_str(box_name, "wrap");
+    let empty = k.name_str(box_name, "empty");
+    let type_ = {
+        let zero = k.level_zero();
+        let one = k.level_succ(zero);
+        k.sort(one)
+    };
+    let box_type = k.pi(binder, type_, type_, BinderInfo::Implicit);
+    let box_const = k.const_(box_name, vec![]);
+    let value_domain = k.bvar(0);
+    let result_parameter = k.bvar(1);
+    let result = k.app(box_const, result_parameter);
+    let wrap_body = k.pi(binder, value_domain, result, BinderInfo::Default);
+    let wrap_type = k.pi(binder, type_, wrap_body, BinderInfo::Implicit);
+    let empty_parameter = k.bvar(0);
+    let empty_result = k.app(box_const, empty_parameter);
+    let empty_type = k.pi(binder, type_, empty_result, BinderInfo::Implicit);
+    k.add_inductive(
+        box_name,
+        &[],
+        1,
+        box_type,
+        &[(wrap, wrap_type), (empty, empty_type)],
+    )
+    .expect("mutation container admits");
+
+    let rose = k.name_str(root, format!("NestedMutationRose{suffix}"));
+    let node = k.name_str(rose, "node");
+    let rose_const = k.const_(rose, vec![]);
+    let box_rose = k.app(box_const, rose_const);
+    let prop = k.sort_zero();
+    let specialized_parameter = k.pi(binder, prop, rose_const, BinderInfo::StrictImplicit);
+    let specialized_box = k.app(box_const, specialized_parameter);
+    let tail = k.pi(binder, specialized_box, rose_const, BinderInfo::Implicit);
+    let node_type = k.pi(binder, box_rose, tail, BinderInfo::Default);
+    let source = vec![InductiveFamilySpec::new(
+        rose,
+        type_,
+        vec![(node, node_type)],
+    )];
+    let expansion = k
+        .expand_nested_inductive_group(&[], 0, &source)
+        .expect("canonical nested fixture expands");
+    assert_eq!(expansion.auxiliaries.len(), 2);
+    (source, expansion)
+}
+
+fn inductive_environment_snapshot(k: &Kernel) -> Vec<(crate::NameId, Declaration)> {
+    k.environment()
+        .iter()
+        .map(|(&name, declaration)| (name, declaration.clone()))
+        .collect()
+}
+
+fn run_rejecting_nested_restoration_mutation<Before, After>(
+    suffix: &str,
+    mutate_before_check: Before,
+    mutate_after_check: After,
+) -> KernelError
+where
+    Before: FnOnce(&mut Kernel, &mut NestedExpansion, &[InductiveFamilySpec]),
+    After: FnOnce(&mut Kernel, &NestedExpansion, &[InductiveFamilySpec]),
+{
+    let mut k = Kernel::new();
+    let (source, mut expansion) = nested_mutation_fixture(&mut k, suffix);
+    let before = inductive_environment_snapshot(&k);
+    let result = k.with_inductive_transaction(|kernel| {
+        mutate_before_check(kernel, &mut expansion, &source);
+        let temporary_checkpoint = kernel.env.checkpoint();
+        kernel.add_inductive_group(&[], 0, &expansion.families)?;
+        mutate_after_check(kernel, &expansion, &source);
+        kernel.restore_nested_inductive_group(&source, &expansion, temporary_checkpoint)
+    });
+    let error = result.expect_err("forced malformed nested artifact must reject");
+    assert_eq!(inductive_environment_snapshot(&k), before);
+    k.add_mutual_inductive(&[], 0, &source)
+        .expect("rollback preserves the checked container and permits retry");
+    error
+}
+
+fn run_rejecting_nested_const_publication_mutation(suffix: &str) -> KernelError {
+    let mut k = Kernel::new();
+    let (source, expansion) = nested_mutation_fixture(&mut k, suffix);
+    let before = inductive_environment_snapshot(&k);
+    let result = k.with_inductive_transaction(|kernel| {
+        kernel.add_inductive_group(&[], 0, &expansion.families)?;
+        let temporary_names = kernel.nested_temporary_names(&expansion);
+        let temporary = expansion.auxiliaries[0].auxiliary_family;
+        let leaked = kernel.const_(temporary, vec![]);
+        let public_probe = kernel.name_str(source[0].name, "constLeakProbe");
+        kernel.ensure_nested_published_type(public_probe, leaked, &temporary_names)
+    });
+    let error = result.expect_err("temporary Const publication mutant rejects");
+    assert_eq!(inductive_environment_snapshot(&k), before);
+    k.add_mutual_inductive(&[], 0, &source)
+        .expect("transactional Const leak rejection permits a valid retry");
+    error
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn nested_restoration_malformed_mutations_reject_transactionally() {
+    let swapped = run_rejecting_nested_restoration_mutation(
+        "SwappedAuxiliaries",
+        |_, expansion, _| {
+            expansion.auxiliaries.swap(0, 1);
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        swapped,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let dropped = run_rejecting_nested_restoration_mutation(
+        "DroppedAuxiliary",
+        |_, expansion, _| {
+            expansion.auxiliaries.pop();
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        dropped,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let duplicate = run_rejecting_nested_restoration_mutation(
+        "DuplicateSpecialization",
+        |_, expansion, _| {
+            expansion.auxiliaries.push(expansion.auxiliaries[0].clone());
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        duplicate,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let shifted_freshness = run_rejecting_nested_restoration_mutation(
+        "ShiftedFreshness",
+        |_, expansion, _| {
+            expansion.next_aux_index += 1;
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        shifted_freshness,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let wrong_specialization = run_rejecting_nested_restoration_mutation(
+        "WrongSpecialization",
+        |kernel, expansion, _| {
+            expansion.auxiliaries[0].nested_application = kernel.sort_zero();
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        wrong_specialization,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let missing_family = run_rejecting_nested_restoration_mutation(
+        "MissingFamilyMap",
+        |kernel, expansion, _| {
+            let root = kernel.anon();
+            expansion.auxiliaries[0].original_family =
+                kernel.name_str(root, "missingNestedOriginalFamily");
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        missing_family,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let missing_constructor = run_rejecting_nested_restoration_mutation(
+        "MissingConstructor",
+        |_, expansion, _| {
+            expansion.auxiliaries[0].constructors.clear();
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        missing_constructor,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let missing_recursor = run_rejecting_nested_restoration_mutation(
+        "MissingRecursor",
+        |kernel, expansion, _| {
+            let root = kernel.anon();
+            expansion.auxiliaries[0].auxiliary_family =
+                kernel.name_str(root, "missingNestedAuxiliary");
+        },
+        |_, _, _| {},
+    );
+    assert!(matches!(
+        missing_recursor,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let wrong_temporary_owner = run_rejecting_nested_restoration_mutation(
+        "WrongTemporaryOwner",
+        |_, _, _| {},
+        |kernel, expansion, source| {
+            let temporary_constructor = expansion.auxiliaries[0].constructors[0].0;
+            let mut declaration = kernel.env.get(temporary_constructor).unwrap().clone();
+            let Declaration::Constructor { inductive, .. } = &mut declaration else {
+                unreachable!();
+            };
+            *inductive = source[0].name;
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(
+        wrong_temporary_owner,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let wrong_temporary_index = run_rejecting_nested_restoration_mutation(
+        "WrongTemporaryIndex",
+        |_, _, _| {},
+        |kernel, expansion, _| {
+            let temporary_constructor = expansion.auxiliaries[0].constructors[0].0;
+            let mut declaration = kernel.env.get(temporary_constructor).unwrap().clone();
+            let Declaration::Constructor { idx, .. } = &mut declaration else {
+                unreachable!();
+            };
+            *idx = idx.saturating_add(1);
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(
+        wrong_temporary_index,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let wrong_temporary_type = run_rejecting_nested_restoration_mutation(
+        "WrongTemporaryType",
+        |_, _, _| {},
+        |kernel, expansion, _| {
+            let temporary_constructor = expansion.auxiliaries[0].constructors[0].0;
+            let mut declaration = kernel.env.get(temporary_constructor).unwrap().clone();
+            let Declaration::Constructor { ty, .. } = &mut declaration else {
+                unreachable!();
+            };
+            *ty = kernel.sort_zero();
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(
+        wrong_temporary_type,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let const_leak = run_rejecting_nested_const_publication_mutation("ConstLeak");
+    assert!(matches!(
+        const_leak,
+        KernelError::NestedInductiveRestorationLeak { .. }
+    ));
+
+    let projection_leak = run_rejecting_nested_restoration_mutation(
+        "ProjectionLeak",
+        |_, _, _| {},
+        |kernel, expansion, _| {
+            let temporary_rec = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+            let mut declaration = kernel.env.get(temporary_rec).unwrap().clone();
+            let temporary = expansion.auxiliaries[0].auxiliary_family;
+            let leaked = kernel.proj(temporary, 0, declaration.ty());
+            let Declaration::Recursor { ty, .. } = &mut declaration else {
+                unreachable!();
+            };
+            *ty = leaked;
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(
+        projection_leak,
+        KernelError::NestedInductiveRestorationLeak { .. }
+    ));
+
+    let dangling_rule = run_rejecting_nested_restoration_mutation(
+        "DanglingRule",
+        |_, _, _| {},
+        |kernel, expansion, _| {
+            let temporary_rec = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+            let mut declaration = kernel.env.get(temporary_rec).unwrap().clone();
+            let root = kernel.anon();
+            let unknown = kernel.name_str(root, "danglingNestedRule");
+            let Declaration::Recursor { rec_rules, .. } = &mut declaration else {
+                unreachable!();
+            };
+            rec_rules[0].value = kernel.const_(unknown, vec![]);
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(dangling_rule, KernelError::UnknownConst { .. }));
+
+    let wrong_restored_type = run_rejecting_nested_restoration_mutation(
+        "WrongRestoredType",
+        |_, _, _| {},
+        |kernel, _, source| {
+            let source_constructor = source[0].constructors[0].0;
+            let mut declaration = kernel.env.get(source_constructor).unwrap().clone();
+            let Declaration::Constructor { ty, .. } = &mut declaration else {
+                unreachable!();
+            };
+            *ty = kernel.sort_zero();
+            kernel.env.insert_unchecked(declaration);
+        },
+    );
+    assert!(matches!(
+        wrong_restored_type,
+        KernelError::NestedInductiveRestorationMismatch { .. }
+    ));
+
+    let late_collision = run_rejecting_nested_restoration_mutation(
+        "LatePublicCollision",
+        |_, _, _| {},
+        |kernel, _, source| {
+            let main_rec = kernel.name_str(source[0].name, "rec");
+            let rec_1 = kernel.name_append_after(main_rec, 1);
+            let ty = kernel.sort_zero();
+            kernel
+                .add_declaration(Declaration::Axiom {
+                    name: rec_1,
+                    uparams: vec![],
+                    ty,
+                })
+                .expect("late public collision stages inside the outer transaction");
+        },
+    );
+    assert!(matches!(
+        late_collision,
+        KernelError::DeclarationExists { .. }
+    ));
+
+    let registered = BTreeSet::from([
+        "swapped-auxiliary-order",
+        "dropped-auxiliary-record",
+        "forced-duplicate-specialization",
+        "shifted-private-freshness",
+        "missing-auxiliary-family-map",
+        "wrong-specialized-parameter",
+        "missing-auxiliary-constructor-map",
+        "missing-auxiliary-recursor-map",
+        "temporary-constructor-owner",
+        "temporary-constructor-index",
+        "temporary-constructor-type",
+        "temporary-const-publication-leak",
+        "temporary-projection-type-leak",
+        "dangling-closed-rule-after-recursor-staging",
+        "wrong-restored-type-after-source-staging",
+        "late-public-rec-1-collision",
+    ]);
+    assert_eq!(registered.len(), 16);
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ObservedNestedRecursor {
+    name: crate::NameId,
+    uparams: Vec<crate::NameId>,
+    ty: crate::ExprId,
+    num_motives: u16,
+    num_minors: u16,
+    num_params: u16,
+    num_indices: u16,
+    rules: Vec<(crate::NameId, u16, crate::ExprId)>,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct NestedRecursorSurface {
+    recursors: Vec<ObservedNestedRecursor>,
+    exact_dependencies:
+        std::collections::BTreeMap<(crate::NameId, crate::NameId, crate::NameId), usize>,
+}
+
+fn nested_test_count_constant(
+    k: &Kernel,
+    expression: crate::ExprId,
+    target: crate::NameId,
+) -> usize {
+    match k.expr_node(expression).clone() {
+        ExprNode::Const(name, _) => usize::from(name == target),
+        ExprNode::Proj(_, _, structure) => nested_test_count_constant(k, structure, target),
+        ExprNode::App(function, argument) => {
+            nested_test_count_constant(k, function, target)
+                + nested_test_count_constant(k, argument, target)
+        }
+        ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+            nested_test_count_constant(k, ty, target) + nested_test_count_constant(k, body, target)
+        }
+        ExprNode::Let(_, ty, value, body) => {
+            nested_test_count_constant(k, ty, target)
+                + nested_test_count_constant(k, value, target)
+                + nested_test_count_constant(k, body, target)
+        }
+        ExprNode::Sort(_) | ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => 0,
+    }
+}
+
+fn observe_nested_recursor_surface(
+    k: &mut Kernel,
+    source: &[InductiveFamilySpec],
+    expansion: &NestedExpansion,
+) -> NestedRecursorSurface {
+    let main_rec = k.name_str(source[0].name, "rec");
+    let mut names = vec![main_rec];
+    names.extend(
+        (1..=expansion.auxiliaries.len())
+            .map(|index| k.name_append_after(main_rec, u64::try_from(index).unwrap())),
+    );
+    let temporary_names = k.nested_temporary_names(expansion);
+    let mut recursors = Vec::with_capacity(names.len());
+    let mut exact_dependencies = std::collections::BTreeMap::new();
+    for &name in &names {
+        let declaration = k.env.get(name).expect("public recursor exists").clone();
+        let Declaration::Recursor {
+            uparams,
+            ty,
+            rec_rules,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            ..
+        } = declaration
+        else {
+            panic!("observed declaration is a recursor");
+        };
+        let inferred = k.infer(ty).expect("observed public recursor type infers");
+        assert!(matches!(k.expr_node(inferred), ExprNode::Sort(_)));
+        k.reject_nested_temporary_names(ty, &temporary_names)
+            .expect("observed public recursor type has no temporary name");
+        let mut rules = Vec::with_capacity(rec_rules.len());
+        for rule in rec_rules {
+            k.infer(rule.value)
+                .expect("observed public computation rule infers");
+            k.reject_nested_temporary_names(rule.value, &temporary_names)
+                .expect("observed public rule has no temporary name");
+            for &target in &names {
+                let count = nested_test_count_constant(k, rule.value, target);
+                if count > 0 {
+                    exact_dependencies.insert((name, rule.ctor_name, target), count);
+                }
+            }
+            rules.push((rule.ctor_name, rule.num_fields, rule.value));
+        }
+        recursors.push(ObservedNestedRecursor {
+            name,
+            uparams,
+            ty,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            rules,
+        });
+    }
+    NestedRecursorSurface {
+        recursors,
+        exact_dependencies,
+    }
+}
+
+fn run_observed_nested_restoration_mutation<After>(
+    mutate_after_check: After,
+) -> Result<NestedRecursorSurface, KernelError>
+where
+    After: FnOnce(&mut Kernel, &NestedExpansion, &[InductiveFamilySpec]),
+{
+    let mut k = Kernel::new();
+    let (source, expansion) = nested_mutation_fixture(&mut k, "ObservedMutation");
+    let before = inductive_environment_snapshot(&k);
+    let result = k.with_inductive_transaction(|kernel| {
+        let temporary_checkpoint = kernel.env.checkpoint();
+        kernel.add_inductive_group(&[], 0, &expansion.families)?;
+        mutate_after_check(kernel, &expansion, &source);
+        kernel.restore_nested_inductive_group(&source, &expansion, temporary_checkpoint)
+    });
+    match result {
+        Ok(()) => Ok(observe_nested_recursor_surface(&mut k, &source, &expansion)),
+        Err(error) => {
+            assert_eq!(inductive_environment_snapshot(&k), before);
+            k.add_mutual_inductive(&[], 0, &source)
+                .expect("a rejected observed mutation permits a valid retry");
+            Err(error)
+        }
+    }
+}
+
+fn replace_nested_test_constant(
+    k: &mut Kernel,
+    expression: crate::ExprId,
+    from: crate::NameId,
+    to: crate::NameId,
+) -> crate::ExprId {
+    match k.expr_node(expression).clone() {
+        ExprNode::Const(name, levels) if name == from => k.const_(to, levels),
+        ExprNode::Proj(type_name, field, structure) => {
+            let structure = replace_nested_test_constant(k, structure, from, to);
+            k.proj(type_name, field, structure)
+        }
+        ExprNode::App(function, argument) => {
+            let function = replace_nested_test_constant(k, function, from, to);
+            let argument = replace_nested_test_constant(k, argument, from, to);
+            k.app(function, argument)
+        }
+        ExprNode::Lam(name, ty, body, info) => {
+            let ty = replace_nested_test_constant(k, ty, from, to);
+            let body = replace_nested_test_constant(k, body, from, to);
+            k.lam(name, ty, body, info)
+        }
+        ExprNode::Pi(name, ty, body, info) => {
+            let ty = replace_nested_test_constant(k, ty, from, to);
+            let body = replace_nested_test_constant(k, body, from, to);
+            k.pi(name, ty, body, info)
+        }
+        ExprNode::Let(name, ty, value, body) => {
+            let ty = replace_nested_test_constant(k, ty, from, to);
+            let value = replace_nested_test_constant(k, value, from, to);
+            let body = replace_nested_test_constant(k, body, from, to);
+            k.let_(name, ty, value, body)
+        }
+        ExprNode::Sort(_)
+        | ExprNode::Const(..)
+        | ExprNode::BVar(_)
+        | ExprNode::FVar(_)
+        | ExprNode::Lit(_) => expression,
+    }
+}
+
+fn swap_nested_test_pi_binders(
+    k: &mut Kernel,
+    expression: crate::ExprId,
+    offset: usize,
+) -> crate::ExprId {
+    let mut context = LocalContext::new();
+    let mut prefix = Vec::with_capacity(offset);
+    let mut cursor = expression;
+    for _ in 0..offset {
+        let ExprNode::Pi(name, ty, body, info) = k.expr_node(cursor).clone() else {
+            panic!("registered recursor prefix is a Pi telescope");
+        };
+        let fvar = context.fresh_fvar();
+        let local = LocalDecl {
+            fvar,
+            name,
+            ty,
+            info,
+        };
+        context.push(local);
+        prefix.push(local);
+        let value = k.fvar(fvar);
+        cursor = k.instantiate(body, &[value]);
+    }
+    let ExprNode::Pi(first_name, first_ty, first_body, first_info) = k.expr_node(cursor).clone()
+    else {
+        panic!("first registered adjacent binder exists");
+    };
+    let first_fvar = context.fresh_fvar();
+    let first = LocalDecl {
+        fvar: first_fvar,
+        name: first_name,
+        ty: first_ty,
+        info: first_info,
+    };
+    context.push(first);
+    let first_value = k.fvar(first_fvar);
+    cursor = k.instantiate(first_body, &[first_value]);
+    let ExprNode::Pi(second_name, second_ty, second_body, second_info) =
+        k.expr_node(cursor).clone()
+    else {
+        panic!("second registered adjacent binder exists");
+    };
+    let second_fvar = context.fresh_fvar();
+    let second = LocalDecl {
+        fvar: second_fvar,
+        name: second_name,
+        ty: second_ty,
+        info: second_info,
+    };
+    context.push(second);
+    let second_value = k.fvar(second_fvar);
+    let body = k.instantiate(second_body, &[second_value]);
+    let swapped = k.abstr_pi_telescope(&[second, first], body);
+    k.abstr_pi_telescope(&prefix, swapped)
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn nested_restoration_type_correct_mutations_are_detectably_distinct() {
+    let baseline = run_observed_nested_restoration_mutation(|_, _, _| {})
+        .expect("unmutated temporary artifact restores");
+    assert_eq!(
+        baseline
+            .recursors
+            .iter()
+            .map(|recursor| recursor.name)
+            .collect::<BTreeSet<_>>()
+            .len(),
+        baseline.recursors.len(),
+        "the independent observer sees distinct main/auxiliary recursor names"
+    );
+
+    let motives = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { num_motives, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *num_motives = num_motives.saturating_sub(1);
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("motive metadata mutation remains inferable");
+    assert_ne!(
+        motives.recursors[1].num_motives,
+        baseline.recursors[1].num_motives
+    );
+
+    let minors = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { num_minors, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *num_minors = num_minors.saturating_sub(1);
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("minor metadata mutation remains inferable");
+    assert_ne!(
+        minors.recursors[1].num_minors,
+        baseline.recursors[1].num_minors
+    );
+
+    let params = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { num_params, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *num_params = num_params.saturating_add(1);
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("parameter metadata mutation remains inferable");
+    assert_ne!(
+        params.recursors[1].num_params,
+        baseline.recursors[1].num_params
+    );
+
+    let indices = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { num_indices, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *num_indices = num_indices.saturating_add(1);
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("index metadata mutation remains inferable");
+    assert_ne!(
+        indices.recursors[1].num_indices,
+        baseline.recursors[1].num_indices
+    );
+
+    let motive_order = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let swapped = swap_nested_test_pi_binders(kernel, declaration.ty(), 0);
+        let Declaration::Recursor { ty, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *ty = swapped;
+        kernel.env.insert_unchecked(declaration);
+    });
+    match motive_order {
+        Ok(observed) => assert_ne!(observed.recursors[1].ty, baseline.recursors[1].ty),
+        Err(error) => assert!(matches!(
+            error,
+            KernelError::TypeMismatch { .. } | KernelError::UnboundFVar { .. }
+        )),
+    }
+
+    let minor_order = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor {
+            ty, num_motives, ..
+        } = &declaration
+        else {
+            unreachable!();
+        };
+        let swapped = swap_nested_test_pi_binders(kernel, *ty, usize::from(*num_motives));
+        let Declaration::Recursor { ty, .. } = &mut declaration else {
+            unreachable!();
+        };
+        *ty = swapped;
+        kernel.env.insert_unchecked(declaration);
+    });
+    match minor_order {
+        Ok(observed) => assert_ne!(observed.recursors[1].ty, baseline.recursors[1].ty),
+        Err(error) => assert!(matches!(
+            error,
+            KernelError::TypeMismatch { .. } | KernelError::UnboundFVar { .. }
+        )),
+    }
+
+    let nfields = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { rec_rules, .. } = &mut declaration else {
+            unreachable!();
+        };
+        rec_rules[0].num_fields = rec_rules[0].num_fields.saturating_add(1);
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("rule nfields mutation remains inferable");
+    assert_ne!(
+        nfields.recursors[1].rules[0].1,
+        baseline.recursors[1].rules[0].1
+    );
+
+    let rule_constructor = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let Declaration::Recursor { rec_rules, .. } = &mut declaration else {
+            unreachable!();
+        };
+        rec_rules[0].ctor_name = rec_rules[1].ctor_name;
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("rule-constructor metadata mutation remains inferable");
+    assert_ne!(
+        rule_constructor.recursors[1].rules[0].0,
+        baseline.recursors[1].rules[0].0
+    );
+
+    let rule_value = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let replacement = kernel.sort_zero();
+        let Declaration::Recursor { rec_rules, .. } = &mut declaration else {
+            unreachable!();
+        };
+        rec_rules[0].value = replacement;
+        kernel.env.insert_unchecked(declaration);
+    })
+    .expect("closed rule-value mutation remains inferable");
+    assert_ne!(
+        rule_value.recursors[1].rules[0].2,
+        baseline.recursors[1].rules[0].2
+    );
+
+    let universes = run_observed_nested_restoration_mutation(|kernel, expansion, _| {
+        let recursor = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let mut declaration = kernel.env.get(recursor).unwrap().clone();
+        let root = kernel.anon();
+        let extra = kernel.name_str(root, "extraNestedUniverse");
+        let Declaration::Recursor { uparams, .. } = &mut declaration else {
+            unreachable!();
+        };
+        uparams.push(extra);
+        kernel.env.insert_unchecked(declaration);
+    });
+    match universes {
+        Ok(observed) => assert_ne!(observed.recursors[1].uparams, baseline.recursors[1].uparams),
+        Err(error) => assert!(matches!(error, KernelError::UniverseArityMismatch { .. })),
+    }
+
+    let recursive_target = run_observed_nested_restoration_mutation(|kernel, expansion, source| {
+        let first = kernel.name_str(expansion.auxiliaries[0].auxiliary_family, "rec");
+        let second = kernel.name_str(expansion.auxiliaries[1].auxiliary_family, "rec");
+        let main = kernel.name_str(source[0].name, "rec");
+        let mut declaration = kernel.env.get(main).unwrap().clone();
+        let Declaration::Recursor { rec_rules, .. } = &mut declaration else {
+            unreachable!();
+        };
+        rec_rules[0].value =
+            replace_nested_test_constant(kernel, rec_rules[0].value, first, second);
+        kernel.env.insert_unchecked(declaration);
+    });
+    match recursive_target {
+        Ok(observed) => assert_ne!(
+            observed.exact_dependencies, baseline.exact_dependencies,
+            "a surviving recursive-target mutation changes the exact observer map"
+        ),
+        Err(error) => assert!(matches!(
+            error,
+            KernelError::TypeMismatch { .. } | KernelError::UniverseArityMismatch { .. }
+        )),
+    }
+
+    let registered = BTreeSet::from([
+        "motive-count",
+        "minor-count",
+        "motive-and-minor-telescope-order",
+        "recursor-parameter-count",
+        "recursor-index-count",
+        "recursor-universe-parameters",
+        "rule-constructor",
+        "rule-nfields",
+        "rule-value",
+        "recursive-target",
+        "inference-and-exact-dependency-observer",
+    ]);
+    assert_eq!(registered.len(), 11);
+}
+
+#[test]
+fn nested_temporary_name_scanner_rejects_const_and_projection_type_mutants() {
+    let mut k = Kernel::new();
+    let (_source, expansion) = nested_mutation_fixture(&mut k, "LeakScanner");
+    let temporary_names = k.nested_temporary_names(&expansion);
+    let temporary = expansion.auxiliaries[0].auxiliary_family;
+    let temporary_const = k.const_(temporary, vec![]);
+    assert_eq!(
+        k.reject_nested_temporary_names(temporary_const, &temporary_names),
+        Err(KernelError::NestedInductiveRestorationLeak { name: temporary })
+    );
+    let structure = k.sort_zero();
+    let projection = k.proj(temporary, 0, structure);
+    assert_eq!(
+        k.reject_nested_temporary_names(projection, &temporary_names),
+        Err(KernelError::NestedInductiveRestorationLeak { name: temporary })
+    );
 }

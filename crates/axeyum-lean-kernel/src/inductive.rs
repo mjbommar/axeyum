@@ -162,6 +162,7 @@ struct NestedAuxiliaryFamily {
 /// Deterministic result of the private nested-inductive expansion prepass.
 struct NestedExpansion {
     original_family_count: usize,
+    uparams: Vec<NameId>,
     outer_params: Vec<LocalDecl>,
     families: Vec<InductiveFamilySpec>,
     auxiliaries: Vec<NestedAuxiliaryFamily>,
@@ -333,6 +334,7 @@ impl Kernel {
         expansion: &NestedExpansion,
         temporary_checkpoint: usize,
     ) -> Result<(), KernelError> {
+        self.validate_nested_temporary_group(source_families, expansion)?;
         let first_source = source_families[0].name;
         let main_rec_name = self.name_str(first_source, "rec");
         let mut recursor_name_map = Vec::with_capacity(expansion.auxiliaries.len());
@@ -510,6 +512,173 @@ impl Kernel {
             .collect::<Vec<_>>();
         self.env.register_inductive_group(&family_names);
         Ok(())
+    }
+
+    /// Validate that the checked temporary group still denotes the exact
+    /// expansion artifact that restoration is about to consume.  The ordinary
+    /// inductive worker remains the only semantic checker; this is a bounded
+    /// integrity check over its published declaration metadata and the
+    /// expansion's one-to-one restoration maps.
+    #[allow(clippy::too_many_lines)]
+    fn validate_nested_temporary_group(
+        &mut self,
+        source_families: &[InductiveFamilySpec],
+        expansion: &NestedExpansion,
+    ) -> Result<(), KernelError> {
+        let mismatch = |name| KernelError::NestedInductiveRestorationMismatch { name };
+        let Some(first_source) = source_families.first().map(|family| family.name) else {
+            return Err(mismatch(expansion.families[0].name));
+        };
+        if expansion.original_family_count != source_families.len()
+            || expansion.families.len()
+                != expansion.original_family_count + expansion.auxiliaries.len()
+        {
+            return Err(mismatch(first_source));
+        }
+        for (expanded, source) in expansion.families[..expansion.original_family_count]
+            .iter()
+            .zip(source_families)
+        {
+            if expanded.name != source.name
+                || expanded.ty != source.ty
+                || expanded
+                    .constructors
+                    .iter()
+                    .map(|(name, _)| *name)
+                    .ne(source.constructors.iter().map(|(name, _)| *name))
+            {
+                return Err(mismatch(source.name));
+            }
+        }
+
+        let mut nested_applications = BTreeSet::new();
+        let mut auxiliary_names = BTreeSet::new();
+        for (index, auxiliary) in expansion.auxiliaries.iter().enumerate() {
+            let family = &expansion.families[expansion.original_family_count + index];
+            if family.name != auxiliary.auxiliary_family
+                || !nested_applications.insert(auxiliary.nested_application)
+                || !auxiliary_names.insert(auxiliary.auxiliary_family)
+            {
+                return Err(mismatch(auxiliary.auxiliary_family));
+            }
+            let (head, parameters) = self.unfold_apps(auxiliary.nested_application);
+            if !matches!(self.expr_node(head), ExprNode::Const(name, _) if *name == auxiliary.original_family)
+            {
+                return Err(mismatch(auxiliary.auxiliary_family));
+            }
+            let Some(Declaration::Inductive {
+                num_params,
+                ctor_names,
+                ..
+            }) = self.env.get(auxiliary.original_family)
+            else {
+                return Err(mismatch(auxiliary.original_family));
+            };
+            if parameters.len() != usize::from(*num_params)
+                || auxiliary.constructors.len() != family.constructors.len()
+                || auxiliary.constructors.len() != ctor_names.len()
+            {
+                return Err(mismatch(auxiliary.auxiliary_family));
+            }
+            for ((&(temporary, original), &(family_constructor, _)), &expected_original) in
+                auxiliary
+                    .constructors
+                    .iter()
+                    .zip(&family.constructors)
+                    .zip(ctor_names)
+            {
+                if temporary != family_constructor || original != expected_original {
+                    return Err(mismatch(auxiliary.auxiliary_family));
+                }
+            }
+        }
+
+        let temporary_base = self.name_str(first_source, "_nested");
+        let mut expected_next = 1_u64;
+        for auxiliary in &expansion.auxiliaries {
+            let crate::name::NameNode::Num(parent, suffix) =
+                self.name_node(auxiliary.auxiliary_family)
+            else {
+                return Err(mismatch(auxiliary.auxiliary_family));
+            };
+            if *parent != temporary_base {
+                return Err(mismatch(auxiliary.auxiliary_family));
+            }
+            expected_next = expected_next.max(suffix.saturating_add(1));
+        }
+        if expansion.next_aux_index != expected_next {
+            return Err(mismatch(first_source));
+        }
+
+        for family in &expansion.families {
+            let Some(Declaration::Inductive {
+                name,
+                uparams,
+                ty,
+                num_params,
+                num_indices,
+                ctor_names,
+                ..
+            }) = self.env.get(family.name).cloned()
+            else {
+                return Err(mismatch(family.name));
+            };
+            let expected_binders = Self::nested_pi_binder_count(self, family.ty);
+            let expected_indices = expected_binders
+                .checked_sub(expansion.outer_params.len())
+                .ok_or_else(|| mismatch(family.name))?;
+            if name != family.name
+                || uparams != expansion.uparams
+                || ty != family.ty
+                || usize::from(num_params) != expansion.outer_params.len()
+                || usize::from(num_indices) != expected_indices
+                || ctor_names
+                    != family
+                        .constructors
+                        .iter()
+                        .map(|(constructor, _)| *constructor)
+                        .collect::<Vec<_>>()
+            {
+                return Err(mismatch(family.name));
+            }
+            for (constructor_index, &(constructor, expected_ty)) in
+                family.constructors.iter().enumerate()
+            {
+                let Some(Declaration::Constructor {
+                    name,
+                    uparams,
+                    ty,
+                    inductive,
+                    idx,
+                    num_fields,
+                }) = self.env.get(constructor).cloned()
+                else {
+                    return Err(mismatch(constructor));
+                };
+                let expected_fields = Self::nested_pi_binder_count(self, expected_ty)
+                    .checked_sub(expansion.outer_params.len())
+                    .ok_or_else(|| mismatch(constructor))?;
+                if name != constructor
+                    || uparams != expansion.uparams
+                    || ty != expected_ty
+                    || inductive != family.name
+                    || usize::from(idx) != constructor_index
+                    || usize::from(num_fields) != expected_fields
+                {
+                    return Err(mismatch(constructor));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn nested_pi_binder_count(&self, mut expression: ExprId) -> usize {
+        let mut count = 0;
+        while let ExprNode::Pi(_, _, body, _) = self.expr_node(expression) {
+            count += 1;
+            expression = *body;
+        }
+        count
     }
 
     fn name_append_after(&mut self, name: NameId, index: u64) -> NameId {
@@ -781,6 +950,7 @@ impl Kernel {
         let checked = self.check_mutual_inductive_preflight(uparams, num_params, families)?;
         let mut expansion = NestedExpansion {
             original_family_count: families.len(),
+            uparams: uparams.to_vec(),
             outer_params: checked.params,
             families: families.to_vec(),
             auxiliaries: Vec::new(),
