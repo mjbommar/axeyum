@@ -34,6 +34,12 @@ from resume_contract import (  # noqa: E402
     result_key,
     seal_record,
 )
+from resource_enforcement import (  # noqa: E402
+    COMPLETION_FIELDS,
+    PREFLIGHT_FIELDS,
+    TERMINAL_FIELDS,
+    fixture_enforcement,
+)
 
 SOURCE = ROOT / "docs" / "plan" / "smtcomp-resumable-run-contract-v2.json"
 OUTPUT_JSON = ROOT / "docs" / "plan" / "generated" / "smtcomp-resumable-run-contract.json"
@@ -44,7 +50,7 @@ def fake_sha(label: str) -> str:
     return hashlib.sha256(label.encode("utf-8")).hexdigest()
 
 
-def _identity() -> dict[str, Any]:
+def _identity(enforcement: dict[str, Any]) -> dict[str, Any]:
     solver_id = "axeyum"
     solver_binary = fake_sha("solver-binary")
     solver_command = fake_sha("solver-command")
@@ -78,6 +84,7 @@ def _identity() -> dict[str, Any]:
         "shard_count": 2,
         "shard_mapping": "striped-index-v1",
         "environment_class_sha256": fake_sha("fixture-host-class"),
+        "resource_enforcement_sha256": digest(enforcement),
         "resource_policy_sha256": fake_sha("fixture-resource-policy"),
         "output_capture_policy_sha256": fake_sha("fixture-output-policy"),
         "verdict_policy": VERDICT_POLICY,
@@ -155,18 +162,14 @@ def _terminal(
 
 
 def make_bundle(interrupted: bool = False) -> Bundle:
-    identity = _identity()
+    enforcement = fixture_enforcement(1_073_741_824)
+    identity = _identity(enforcement)
     identity_hash = digest(identity)
     run = {
         "schema": RUN_SCHEMA,
         "identity": identity,
         "identity_sha256": identity_hash,
-        "resource_enforcement": {
-            "kind": "fixture-cgroup-v2",
-            "enforcement_id": fake_sha("fixture-cgroup"),
-            "worker_slots": 2,
-            "aggregate_memory_bytes": 2_147_483_648,
-        },
+        "resource_enforcement": enforcement,
     }
 
     attempt_for_sequence = {
@@ -204,7 +207,8 @@ def make_bundle(interrupted: bool = False) -> Bundle:
                 "pid": 1000 + int(shard_id) + pid_offset,
                 "assigned_count": len(assigned),
                 "launched_at_ns": 1_000_000 + pid_offset,
-                "enforcement_id": fake_sha("fixture-cgroup"),
+                "enforcement_id": enforcement["enforcement_id"],
+                "resource_session_id": None,
                 "environment_class_sha256": identity["environment_class_sha256"],
                 "terminal": terminal,
             }
@@ -418,6 +422,9 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
         "attempt_launch_fields": ATTEMPT_LAUNCH_FIELDS,
         "attempt_terminal_fields": ATTEMPT_TERMINAL_FIELDS,
         "shard_completion_fields": SHARD_COMPLETION_FIELDS,
+        "resource_session_preflight_fields": PREFLIGHT_FIELDS,
+        "resource_session_terminal_fields": TERMINAL_FIELDS,
+        "resource_completion_fields": COMPLETION_FIELDS,
     }
     for source_name, implemented in declared_fields.items():
         if set(source.get(source_name, [])) != implemented:
@@ -485,6 +492,19 @@ def evaluate(source: dict[str, Any]) -> dict[str, Any]:
             row["observed"] == "accept" for row in rows if row["name"] == "timeout_response_retained"
         ),
         "baseline_output_sha256": hashlib.sha256(baseline).hexdigest(),
+        "artifact_fields": {
+            name: source[name]
+            for name in (
+                "run_identity_fields",
+                "result_record_fields",
+                "attempt_launch_fields",
+                "attempt_terminal_fields",
+                "shard_completion_fields",
+                "resource_session_preflight_fields",
+                "resource_session_terminal_fields",
+                "resource_completion_fields",
+            )
+        },
         "v1_corrections": source["v1_corrections"],
         "invariants": source["invariants"],
         "scenarios": rows,
@@ -500,7 +520,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         "[`docs/plan/smtcomp-resumable-run-contract-v2.json`](../smtcomp-resumable-run-contract-v2.json). "
         "Regenerate with `python3 scripts/gen-smtcomp-resume-contract.py`.",
         "",
-        "Status: prototype; supersedes v1 before production integration; no full-library rerun is authorized.",
+        "Status: E2 one-host integrated; E3 and official selection remain required before a full-library rerun.",
         "",
         "## Result",
         "",
@@ -515,6 +535,14 @@ def render_markdown(report: dict[str, Any]) -> str:
         "",
     ]
     lines.extend(f"- {item}" for item in report["v1_corrections"])
+    lines.extend(["", "## E2 resource evidence schemas", ""])
+    for name in (
+        "resource_session_preflight_fields",
+        "resource_session_terminal_fields",
+        "resource_completion_fields",
+    ):
+        fields = ", ".join(f"`{field}`" for field in report["artifact_fields"][name])
+        lines.append(f"- **{name}** — {fields}")
     lines.extend(["", "## Invariants", ""])
     lines.extend(f"- **{row['id']}** — {row['statement']}" for row in report["invariants"])
     lines.extend(
@@ -543,7 +571,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Implementation boundary",
             "",
-            "The v2 in-memory/E1a filesystem prototypes and E1b fixture-only `compete.py` adapter now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, duplicate rejection, and canonical scoring projection. E1b deliberately rejects non-fixture resource envelopes; E2 must add real aggregate enforcement before any measurement run receives credit.",
+            "The v2 in-memory/E1a filesystem prototypes, E1b fixture adapter, and E2 `compete.py --host-run` path now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, strict duplicate rejection, canonical scoring projection, and one-host aggregate cgroup evidence. E3 multi-host loss/retry and the independent official selection ledger still block a credited full-library run.",
             "",
             "Legacy raw mode still suppresses a parsed response on wall timeout for artifact compatibility. The v2 adapter preserves and admits that response under its registered policy, uses checked typed termination, and names memory exhaustion only when an enforcement layer supplies explicit resource evidence.",
             "",

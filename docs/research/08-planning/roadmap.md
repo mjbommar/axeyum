@@ -182,9 +182,12 @@ Last updated: 2026-07-22
 > runner and fake solver with completion-last output, strict duplicate rejection,
 > typed termination, observed/admitted verdict preservation, byte-exact output
 > sidecars, attempt lifecycle, and explicit single-owner lease recovery. It
-> rejects real resource envelopes and grants no measurement credit. E2-E3 must
-> still prove aggregate resource enforcement and multi-host loss/retry on a tiny
-> corpus before the 64,345-file candidate may be rerun; the official-style
+> grants no measurement credit by itself. E2 now passes the required live
+> delegated user-systemd/cgroup-v2 gate for exact one-host aggregate memory,
+> swap, CPU, and PID enforcement, bounded workers, immutable controller
+> evidence, fail-before-launch mutations, and destructive host-runner
+> kill/resume. E3 must still prove multi-host loss/retry and transfer durability
+> on a tiny corpus before the 64,345-file candidate may be rerun; the official-style
 > selection identity remains independently open. This is measurement
 > infrastructure under G1, not a new solver or foundation phase.
 

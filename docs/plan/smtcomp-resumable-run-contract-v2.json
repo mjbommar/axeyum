@@ -1,6 +1,6 @@
 {
   "schema": "axeyum.smtcomp-resumable-run-contract.v2",
-  "status": "e1b-fixture-integrated",
+  "status": "e2-one-host-integrated",
   "supersedes": "axeyum.smtcomp-resumable-run-contract.v1",
   "scope": "single-solver local SMT-COMP-style distributed execution; not official competition infrastructure",
   "canonical_json": "UTF-8, sorted object keys, compact separators, one trailing LF",
@@ -12,7 +12,8 @@
     "Retain exit, signal, resource-limit, peak-RSS, and content-addressed output facts.",
     "Separate the scoring wall time, which is bounded by the registered limit, from runner elapsed time that may include watchdog kill and reap overhead.",
     "Partition each terminal's durable result set into newly installed and skipped prior records.",
-    "Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity."
+    "Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity.",
+    "Bind every measurement attempt to one immutable aggregate-resource session while retaining terminal-less killed sessions explicitly."
   ],
   "run_identity_fields": [
     "contract_schema",
@@ -37,6 +38,7 @@
     "shard_count",
     "shard_mapping",
     "environment_class_sha256",
+    "resource_enforcement_sha256",
     "resource_policy_sha256",
     "output_capture_policy_sha256",
     "verdict_policy"
@@ -80,6 +82,7 @@
     "assigned_count",
     "launched_at_ns",
     "enforcement_id",
+    "resource_session_id",
     "environment_class_sha256",
     "terminal"
   ],
@@ -107,6 +110,44 @@
     "attempt_ids",
     "unclosed_attempt_ids"
   ],
+  "resource_session_preflight_fields": [
+    "schema",
+    "session_id",
+    "run_identity_sha256",
+    "enforcement_id",
+    "environment_class_sha256",
+    "host_id",
+    "launcher_pid",
+    "started_at_ns",
+    "snapshot",
+    "record_sha256"
+  ],
+  "resource_session_terminal_fields": [
+    "schema",
+    "session_id",
+    "run_identity_sha256",
+    "enforcement_id",
+    "status",
+    "worker_exit_codes",
+    "memory_peak_bytes",
+    "pids_peak",
+    "memory_events_delta",
+    "cpu_stat_delta",
+    "pids_events_delta",
+    "ended_at_ns",
+    "record_sha256"
+  ],
+  "resource_completion_fields": [
+    "schema",
+    "run_identity_sha256",
+    "enforcement_id",
+    "session_ids",
+    "terminal_session_ids",
+    "unclosed_session_ids",
+    "observed_peak_memory_bytes",
+    "completed_at_ns",
+    "record_sha256"
+  ],
   "invariants": [
     {"id": "R1", "statement": "Run identity binds corpus, selection, one solver configuration, runner, source tree, toolchain, limits, shard mapping, policies, and measurement environment before launch."},
     {"id": "R2", "statement": "A result key binds normalized benchmark identity, exact input bytes, and solver-configuration identity."},
@@ -117,14 +158,14 @@
     {"id": "R7", "statement": "Every launch attempt has an immutable launch manifest; a missing terminal is preserved and explicitly accounted by a later shard completion manifest."},
     {"id": "R8", "statement": "A shard is complete only when all and only assigned keys validate, its result-set hash matches, and every launch attempt is terminal or explicitly recorded as unclosed."},
     {"id": "R9", "statement": "Central merge rejects missing or non-complete shard manifests and never treats partial coverage as a scoreable run."},
-    {"id": "R10", "statement": "Per-process and aggregate host memory limits have named enforcement identities; declared concurrency cannot exceed the enforced aggregate budget."},
+    {"id": "R10", "statement": "Per-process limits and the exact aggregate cgroup-v2 memory, swap, CPU, PID, OOM-group, and worker-slot envelope have a content-derived enforcement identity; declared concurrency cannot exceed its memory or CPU budget."},
     {"id": "R11", "statement": "Every result uses the preregistered environment class; a retry on a different class is a new measurement run."},
     {"id": "R12", "statement": "Canonical scoring projection is independent of shard, host, attempt, and filesystem enumeration order."},
     {"id": "R13", "statement": "On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical scoring bytes are identical even though lifecycle evidence differs."},
     {"id": "R14", "statement": "Temporary, conflicting, malformed, and failed-attempt artifacts are retained outside the accepted immutable record set."},
     {"id": "R15", "statement": "Observed solver response and scoring-admitted response are separate; the SMT-COMP 2026 policy admits a response even after timeout or abnormal termination."},
     {"id": "R16", "statement": "Termination is a checked tagged state over exit, signal, and evidenced resource-limit facts; an arbitrary signal is never relabeled as memory exhaustion, and scoring wall time remains bounded separately from runner overhead."},
-    {"id": "R17", "statement": "Every result names its installing attempt, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets."},
+    {"id": "R17", "statement": "Every result names its installing attempt, every E2 attempt names its aggregate resource session, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets."},
     {"id": "R18", "statement": "Stdout and stderr are content-addressed with exact byte counts; production validation must verify their sidecars before score export."}
   ],
   "scenarios": [
@@ -160,7 +201,7 @@
   "declines": [
     "V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.",
     "This prototype does not make the 2024 cap/family selection official or representative.",
-    "The E1b compete.py adapter is fixture-only and grants no measurement credit; it does not launch remotely, enforce real aggregate cgroups, prove NFS durability, or recover a host loss.",
+    "The E2 compete.py host adapter enforces one real cgroup-v2 envelope and records killed sessions, but it does not launch across hosts, prove NFS durability, transfer a spool, or recover a lost host allocation.",
     "It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.",
     "It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.",
     "It does not replace BenchExec for an official competition rehearsal."

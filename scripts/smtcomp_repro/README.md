@@ -23,7 +23,7 @@ Section references in the code point at that document.
 | D. Division scoring: parallel, PAR-2, sequential, 24s, sat, unsat; disagreement removal | §7.2 | `scoring.py` | **done** |
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + local shard execution | — | `compete.py`, `run_repro.sh` | **bounded slice** |
-| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, ADR-0344 | **E0/E1 fixture-complete; E2-E3 measurement execution open** |
+| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, `resource_enforcement.py`, ADR-0344 | **E0-E2 complete; E3 multi-host execution open** |
 | —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
 Scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
@@ -41,9 +41,11 @@ Six E1b integration tests add exact-byte preflight, deterministic
 interruption/resume equivalence, real kills before/during solver execution,
 lease contention/recovery, timeout-response admission, sidecar mutation, and
 complete-only raw export. Five runner tests freeze typed exit/signal/resource
-states and byte-exact output. `./scripts/check-smtcomp-resume.sh` runs the whole
-bounded gate. The E1b CLI rejects non-fixture resource envelopes; E2 must land
-before any measurement run uses it.
+states and byte-exact output. E2 adds portable resource-contract tests plus
+live delegated user-systemd/cgroup-v2 tests for exact aggregate limits, bounded
+two-worker execution, evidence mutation, host-runner kill, and explicit resumed
+completion. `./scripts/check-smtcomp-resume.sh` runs the portable bounded gate;
+`AXEYUM_REQUIRE_SMTCOMP_CGROUP=1` makes live E2 support mandatory.
 
 ## Reproduce
 
@@ -52,7 +54,7 @@ before any measurement run uses it.
 scripts/smtcomp_repro/run_repro.sh corpus/qfbv-curated 20 40 single_query
 
 # Small local shard experiment only. Current raw dumping is end-of-shard and
-# must not be used for a large distributed run before ADR-0344 E1-E3:
+# must not be used for a large distributed run before ADR-0344 E3:
 python3 scripts/smtcomp_repro/compete.py --corpus corpus/qfbv-curated \
     --solver axeyum=target/release/examples/smtcomp_cli \
     --shard 0/2 --dump-raw /tmp/raw0.json ...        # local
@@ -65,12 +67,14 @@ in the
 [`full-library handoff`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
 and generated
 [`resumable-run contract`](../../docs/plan/generated/smtcomp-resumable-run-contract.md).
-The local kill-tested boundary and its remaining E1b-E3 work are in the
+The local kill-tested boundary is in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
 The source-backed v2 process-schema correction and narrow integration seams are
 in the [`E1b audit`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md).
-Their fixture-only implementation and remaining E2-E3 boundary are in the
+The fixture-only runner implementation is in the
 [`E1b result`](../../docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md).
+The one-host aggregate enforcement result and remaining E3 boundary are in the
+[`E2 result`](../../docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md).
 
 ## Tracks
 

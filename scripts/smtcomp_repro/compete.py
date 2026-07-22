@@ -371,6 +371,28 @@ def print_scoreboard(report: dict) -> None:
     print()
 
 
+def _without_options(argv: list[str], options_with_values: set[str], flags: set[str]) -> list[str]:
+    """Remove exact orchestration-only options from a parsed CLI argument list."""
+
+    cleaned: list[str] = []
+    skip_value = False
+    for token in argv:
+        if skip_value:
+            skip_value = False
+            continue
+        if token in flags:
+            continue
+        if token in options_with_values:
+            skip_value = True
+            continue
+        if any(token.startswith(f"{option}=") for option in options_with_values):
+            continue
+        cleaned.append(token)
+    if skip_value:
+        raise ValueError("orchestration option lacks its value")
+    return cleaned
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="SMT-COMP scoring reproduction")
     ap.add_argument("--corpus", default=None)
@@ -398,9 +420,12 @@ def main() -> int:
     ap.add_argument("--score-raw", nargs="+", default=None,
                     help="score these raw-result JSON files instead of executing")
     ap.add_argument("--run-manifest", default=None,
-                    help="canonical v2 E1b run manifest (requires --run-dir)")
+                    help="canonical v2 resumable run manifest (requires --run-dir)")
     ap.add_argument("--run-dir", default=None,
-                    help="immutable resumable evidence directory (E1b fixtures only)")
+                    help="immutable resumable evidence directory")
+    ap.add_argument("--host-run", action="store_true",
+                    help="run every registered shard inside one E2 aggregate cgroup")
+    ap.add_argument("--resource-session-id", default=None, help=argparse.SUPPRESS)
     ap.add_argument("--selection-manifest", default=None,
                     help="selection identity artifact required by resumable mode")
     ap.add_argument("--corpus-manifest", default=None,
@@ -436,7 +461,27 @@ def main() -> int:
     resumable = args.run_manifest is not None or args.run_dir is not None
     if resumable:
         from resume_contract import ContractError
-        from resume_runner import execute_resumable, export_legacy_raw
+        from resume_fs import validate_bundle_directory
+        from resume_runner import (
+            execute_resumable,
+            export_legacy_raw,
+            preflight_resumable,
+            sha256_file,
+        )
+        from resource_enforcement import (
+            build_preflight,
+            build_resource_completion,
+            build_terminal,
+            cgroup_snapshot,
+            configure_current_cgroup,
+            install_preflight,
+            install_resource_completion,
+            install_terminal,
+            new_session_id,
+            run_under_systemd,
+            run_worker_pool,
+            validate_enforcement,
+        )
 
         try:
             if not args.run_manifest or not args.run_dir:
@@ -447,8 +492,10 @@ def main() -> int:
                 raise ContractError("resumable mode requires --file-list and forbids --corpus")
             if args.limit is not None or args.out:
                 raise ContractError("resumable mode forbids --limit and --out")
-            if not args.shard:
-                raise ContractError("resumable mode requires --shard I/J")
+            if args.host_run and args.shard:
+                raise ContractError("--host-run owns all shards and forbids --shard")
+            if not args.host_run and not args.shard:
+                raise ContractError("resumable shard mode requires --shard I/J")
             if not all(
                 (args.selection_manifest, args.corpus_manifest, args.environment_manifest)
             ):
@@ -458,37 +505,173 @@ def main() -> int:
             if args.mem_gb is None:
                 raise ContractError("resumable mode requires an explicit --mem-gb")
             if track != Track.SINGLE_QUERY:
-                raise ContractError("E1b resumable records currently support single_query only")
-            if "/" not in args.shard:
-                raise ContractError("resumable mode requires --shard I/J")
-            shard_index, shard_count = (int(value) for value in args.shard.split("/", 1))
+                raise ContractError("resumable records currently support single_query only")
             spec = solvers[0]
             command_template = list(spec.cmd_template)
             if args.internal_timeout_ms is not None and spec.name == "axeyum":
                 command_template.extend(["--timeout-ms", str(args.internal_timeout_ms)])
             root = Path(__file__).resolve().parents[2]
+            run_manifest = Path(args.run_manifest)
+            run_dir = Path(args.run_dir)
+            file_list = Path(args.file_list)
+            selection_manifest = Path(args.selection_manifest)
+            corpus_manifest = Path(args.corpus_manifest)
+            environment_manifest = Path(args.environment_manifest)
+            wall_limit_ms = round(args.wall_limit * 1000)
+            memory_limit_bytes = round(args.mem_gb * 1024**3)
+
+            if args.host_run:
+                claimed = json.loads(run_manifest.read_text(encoding="utf-8"))
+                shard_count = claimed.get("identity", {}).get("shard_count")
+                if not isinstance(shard_count, int):
+                    raise ContractError("run manifest lacks a valid shard count")
+                run, identity, run_hash, _inputs = preflight_resumable(
+                    run_manifest=run_manifest,
+                    repository_root=root,
+                    source_root=Path(__file__).resolve().parent,
+                    file_list=file_list,
+                    selection_manifest=selection_manifest,
+                    corpus_manifest=corpus_manifest,
+                    environment_manifest=environment_manifest,
+                    solver_id=spec.name,
+                    command_template=command_template,
+                    track=track.value,
+                    wall_limit_ms=wall_limit_ms,
+                    memory_limit_bytes=memory_limit_bytes,
+                    cores=args.cores,
+                    shard_index=None,
+                    shard_count=shard_count,
+                    benchmark_id_marker=args.benchmark_id_marker,
+                    resource_session_id=args.resource_session_id,
+                    require_active_enforcement=False,
+                )
+                enforcement = validate_enforcement(run, require_measurement=True)
+
+                if args.resource_session_id is None:
+                    if (run_dir / "resource-completion.json").exists():
+                        validate_bundle_directory(
+                            run_dir,
+                            require_output_sidecars=True,
+                            require_resource_evidence=True,
+                        )
+                        if args.dump_raw:
+                            export_legacy_raw(run_dir, Path(args.dump_raw))
+                        return 0
+                    session_id = new_session_id(run_hash)
+                    inside = [
+                        sys.executable,
+                        str(Path(__file__).resolve()),
+                        *sys.argv[1:],
+                        "--resource-session-id",
+                        session_id,
+                    ]
+                    return run_under_systemd(
+                        enforcement=enforcement,
+                        session_id=session_id,
+                        command=inside,
+                    )
+
+                session_id = args.resource_session_id
+                configure_current_cgroup(enforcement, session_id=session_id)
+                initial_snapshot = cgroup_snapshot()
+                preflight = build_preflight(
+                    run=run,
+                    session_id=session_id,
+                    environment_class_sha256=sha256_file(environment_manifest),
+                    snapshot=initial_snapshot,
+                )
+                install_preflight(run_dir, preflight)
+                child_args = _without_options(
+                    sys.argv[1:],
+                    {"--resource-session-id", "--dump-raw", "--shard"},
+                    {"--host-run"},
+                )
+                commands = [
+                    [
+                        sys.executable,
+                        str(Path(__file__).resolve()),
+                        *child_args,
+                        "--resource-session-id",
+                        session_id,
+                        "--shard",
+                        f"{shard}/{shard_count}",
+                    ]
+                    for shard in range(shard_count)
+                ]
+                try:
+                    worker_codes = run_worker_pool(
+                        commands, enforcement["worker_slots"]
+                    )
+                except (ContractError, OSError):
+                    worker_codes = [125] * shard_count
+                    install_terminal(
+                        run_dir,
+                        build_terminal(
+                            preflight=preflight,
+                            final_snapshot=cgroup_snapshot(),
+                            enforcement=enforcement,
+                            worker_exit_codes=worker_codes,
+                        ),
+                    )
+                    raise
+                terminal = build_terminal(
+                    preflight=preflight,
+                    final_snapshot=cgroup_snapshot(),
+                    enforcement=enforcement,
+                    worker_exit_codes=worker_codes,
+                )
+                install_terminal(run_dir, terminal)
+                if any(code != 0 for code in worker_codes):
+                    return 2
+                validate_bundle_directory(
+                    run_dir,
+                    require_output_sidecars=True,
+                    require_resource_evidence=False,
+                )
+                install_resource_completion(
+                    run_dir,
+                    build_resource_completion(run=run, run_dir=run_dir),
+                )
+                validate_bundle_directory(
+                    run_dir,
+                    require_output_sidecars=True,
+                    require_resource_evidence=True,
+                )
+                if args.dump_raw:
+                    export_legacy_raw(run_dir, Path(args.dump_raw))
+                    print(f"wrote raw results {args.dump_raw}", file=sys.stderr)
+                return 0
+
+            if args.resource_session_id is not None and not args.shard:
+                raise ContractError("resource session requires host or shard mode")
+            if "/" not in args.shard:
+                raise ContractError("resumable mode requires --shard I/J")
+            shard_index, shard_count = (int(value) for value in args.shard.split("/", 1))
             complete = execute_resumable(
-                run_manifest=Path(args.run_manifest),
-                run_dir=Path(args.run_dir),
+                run_manifest=run_manifest,
+                run_dir=run_dir,
                 repository_root=root,
                 source_root=Path(__file__).resolve().parent,
-                file_list=Path(args.file_list),
-                selection_manifest=Path(args.selection_manifest),
-                corpus_manifest=Path(args.corpus_manifest),
-                environment_manifest=Path(args.environment_manifest),
+                file_list=file_list,
+                selection_manifest=selection_manifest,
+                corpus_manifest=corpus_manifest,
+                environment_manifest=environment_manifest,
                 solver_id=spec.name,
                 command_template=command_template,
                 track=track.value,
-                wall_limit_ms=round(args.wall_limit * 1000),
-                memory_limit_bytes=round(args.mem_gb * 1024**3),
+                wall_limit_ms=wall_limit_ms,
+                memory_limit_bytes=memory_limit_bytes,
                 cores=args.cores,
                 shard_index=shard_index,
                 shard_count=shard_count,
                 benchmark_id_marker=args.benchmark_id_marker,
                 verbose=not args.quiet,
+                resource_session_id=args.resource_session_id,
             )
             if complete and args.dump_raw:
-                export_legacy_raw(Path(args.run_dir), Path(args.dump_raw))
+                if args.resource_session_id is not None:
+                    raise ContractError("shard workers cannot export aggregate raw output")
+                export_legacy_raw(run_dir, Path(args.dump_raw))
                 print(f"wrote raw results {args.dump_raw}", file=sys.stderr)
             elif args.dump_raw:
                 print("run remains incomplete; raw export withheld", file=sys.stderr)

@@ -320,6 +320,8 @@ def load_bundle(root: Path) -> Bundle:
         "selection.json",
         "leases",
         "quarantine",
+        "resource-sessions",
+        "resource-completion.json",
     }
     if not root.is_dir():
         raise ContractError(f"missing run directory: {root}")
@@ -414,8 +416,17 @@ def verify_output_sidecars(root: Path, records: list[dict[str, Any]]) -> None:
                 raise ContractError(f"{stream} sidecar byte-count mismatch")
 
 
-def validate_bundle_directory(root: Path, *, require_output_sidecars: bool = False) -> bytes:
+def validate_bundle_directory(
+    root: Path,
+    *,
+    require_output_sidecars: bool = False,
+    require_resource_evidence: bool = True,
+) -> bytes:
     bundle = load_bundle(root)
     if require_output_sidecars:
         verify_output_sidecars(root, bundle.records)
+    if require_resource_evidence:
+        from resource_enforcement import validate_resource_evidence
+
+        validate_resource_evidence(root, bundle)
     return merge_complete(bundle)

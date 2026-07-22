@@ -136,8 +136,9 @@ parity-docs:
     python3 scripts/gen-smtlib-session-contract.py --check
     python3 scripts/check-parity-docs.py
 
-# ADR-0344 E0/E1: contract generation, immutable filesystem recovery, active
-# runner lifecycle/sidecars/lease/export, and the legacy scoring pipeline.
+# ADR-0344 E0-E2: contract generation, immutable filesystem recovery, active
+# runner lifecycle/sidecars/lease/export, one-host aggregate cgroup evidence,
+# and the legacy scoring pipeline.
 smtcomp-resume:
     ./scripts/check-smtcomp-resume.sh
 

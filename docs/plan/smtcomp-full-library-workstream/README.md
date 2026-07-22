@@ -1,8 +1,8 @@
 # SMT-COMP Full-Library Work Stream — RESUME HERE
 
 **This folder is the single entry point for the SMT-COMP measurement,
-full-library inventory, and gap-closing lane.** Updated 2026-07-22 after the
-fixture-only E1b integration and the second full-library soundness finding.
+full-library inventory, and gap-closing lane.** Updated 2026-07-22 after E2
+one-host aggregate enforcement and the second full-library soundness finding.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -29,14 +29,17 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   observed/admitted verdict separation, completion-last publication, strict
   duplicate rejection, a no-steal lease, and explicit stale recovery are all
   executable.
-- E2 real one-host aggregate resource enforcement is open.
+- E2 is complete on one delegated user-systemd/cgroup-v2 host: exact aggregate
+  memory/swap/CPU/PID limits, bounded shard concurrency, immutable controller
+  evidence, host-runner kill, explicit unclosed-session recovery, overcommit,
+  environment drift, and evidence tamper are executable gates.
 - E3 multi-host allocation, host-loss recovery, and shared-storage or spool
   transfer durability are open.
 - The independent official eligibility/status/difficulty selection ledger is
   open. E1b's exact ordered per-file digest ledger does not substitute for it.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
-soundness repairs, uses end-of-shard raw output, and does not satisfy E1b-E3; it
+soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
 receives zero measurement credit even if every shard eventually exits.
 
 ---
@@ -74,6 +77,28 @@ benchmark/solver cell is rejected.
 
 Detailed result:
 [`../smtcomp-resumable-runner-e1b-2026-07-22.md`](../smtcomp-resumable-runner-e1b-2026-07-22.md).
+
+### E2 one-host aggregate enforcement
+
+`compete.py --host-run` now launches all registered shards under one transient
+user-systemd service. The service cgroup contains the host runner, at most the
+registered number of shard workers, every solver process, and descendants.
+Before workers start, the adapter validates the registered unit identity,
+limits, controllers, path/inode, and launcher membership; only then does it
+configure and read back `memory.oom.group=1` and validate the complete snapshot.
+The exact limits include `memory.max`, zero `memory.swap.max`, `cpu.max`, and
+`pids.max`.
+
+Each immutable resource session records those facts plus baseline counter maps.
+Its terminal records worker exits, memory/PID peaks, and deltas for
+`memory.events`, `cpu.stat`, and `pids.events`. Every E2 attempt names its
+session. Killing the in-cgroup host runner leaves an honest terminal-less
+attempt and resource session; systemd kills the rest of the control group, and
+the next session completes only after exact-owner lease recovery. Raw export
+requires self-hashed resource completion as well as the E1 result bundle.
+
+Detailed result:
+[`../smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`](../smtcomp-one-host-resource-enforcement-e2-2026-07-22.md).
 
 ### QF_AUFLIA soundness gate
 
@@ -127,15 +152,20 @@ is needed.
 
 ## 4. Executable gates
 
-The bounded E0/E1 gate is:
+The bounded E0-E2 gate is:
 
 ```sh
 ./scripts/check-smtcomp-resume.sh
+AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
 AXEYUM_FS_FIXTURE_PARENT=. PYTHONWARNINGS=error \
   python3 -m unittest scripts.tests.test_smtcomp_resume_fs
 ```
 
-It covers:
+The first command runs the portable gate and auto-skips live cgroup cells if
+the host lacks the required delegation. The second makes the live E2 cells
+mandatory. The filesystem override repeats E1a on the worktree filesystem.
+
+Together they cover:
 
 - 18 contract invariants and 28 mutation/control scenarios;
 - local tmpfs and worktree-filesystem kill recovery;
@@ -144,7 +174,9 @@ It covers:
 - interrupted/resumed versus uninterrupted canonical equivalence;
 - timeout-observed response admission;
 - typed exit/signal/resource outcomes and non-UTF-8 byte preservation;
-- output-sidecar mutation and duplicate raw-cell rejection; and
+- output-sidecar mutation and duplicate raw-cell rejection;
+- exact cgroup descriptor/controller validation, two-worker bounded execution,
+  resource-evidence mutation, and killed-host-runner recovery; and
 - scoring, selection, provenance, and generated-contract checks.
 
 The QF_AUFLIA regression is:
@@ -161,25 +193,21 @@ gate.
 
 ## 5. Remaining work, in dependency order
 
-1. **E2 — real one-host enforcement.** Bind one aggregate cgroup-v2 envelope
-   across runner and descendants; validate delegated-controller identity and
-   limits before launch; prove CPU/memory/PID/kill accounting on a tiny committed
-   corpus; reject overcommit and environment drift before any solver starts.
-2. **E3 — multi-host recovery.** Preallocate host/shard/resource ownership for
+1. **E3 — multi-host recovery.** Preallocate host/shard/resource ownership for
    N>=3 hosts; prove host loss, retry, spool/shared-storage transfer, lease
    recovery, complete-set validation, and canonical equivalence to an
    uninterrupted control.
-3. **Selection identity.** Implement the official eligibility, status,
+2. **Selection identity.** Implement the official eligibility, status,
    difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
    Keep this policy artifact separate from the E1b execution ledger.
-4. **Fresh P0 slices.** Stage the repaired binary and rerun
+3. **Fresh P0 slices.** Stage the repaired binary and rerun
    QF_FP/QF_BVFP/QF_ABVFP plus QF_AUFLIA under the completed protocol. Require
    DISAGREE=0.
-5. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
+4. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.
 
-The implementation rule for E2/E3 is the same as E1: build the mechanism and
+The implementation rule for E3 is the same as E1-E2: build the mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
 population.
 
@@ -197,6 +225,7 @@ Repository:
 - E1a result: `docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md`;
 - E1b audit/result: `docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md` and
   `docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md`;
+- E2 result: `docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -222,10 +251,10 @@ NAS (shared, corpus read-only in practice):
    checkout or another lane's NAS output.
 3. Confirm the old s4 process/log state and count literal `WRONG` lines without
    treating the stale run as evidence.
-4. Take E2 next. Keep the v2 record schema and E1 gates fixed unless a failing
+4. Take E3 next. Keep the v2 result schema and E1-E2 gates fixed unless a failing
    mutation demonstrates a necessary correction.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
-*Owner: SMT-COMP measurement/full-library lane. Next milestone: E2 aggregate
-resource enforcement on one host, not another large run.*
+*Owner: SMT-COMP measurement/full-library lane. Next milestone: E3 N>=3
+multi-host loss/retry and transfer durability, not another large run.*

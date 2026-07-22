@@ -106,7 +106,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md`](../../docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
 - [`docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md`](../../docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
 
-**Next safe action:** Review ADR-0343/0344 and the accepted fixture-only E1b result; then implement E2 real one-host aggregate resource enforcement and E3 multi-host loss/recovery before rerunning the 64,345-file candidate. The independent official eligibility/status/difficulty selection ledger also remains required.
+**Next safe action:** Review ADR-0343/0344 and the accepted E1b/E2 results; then implement E3 multi-host allocation, loss/recovery, and transfer durability before rerunning the 64,345-file candidate. The independent official eligibility/status/difficulty selection ledger also remains required.
 
 <a id="g2"></a>
 

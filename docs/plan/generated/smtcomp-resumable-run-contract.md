@@ -2,7 +2,7 @@
 
 > **Generated; do not edit by hand.** Source: [`docs/plan/smtcomp-resumable-run-contract-v2.json`](../smtcomp-resumable-run-contract-v2.json). Regenerate with `python3 scripts/gen-smtcomp-resume-contract.py`.
 
-Status: prototype; supersedes v1 before production integration; no full-library rerun is authorized.
+Status: E2 one-host integrated; E3 and official selection remain required before a full-library rerun.
 
 ## Result
 
@@ -10,7 +10,7 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 - Executable scenarios: **28** (5 accepted controls, 23 rejected mutations)
 - Interrupted/resumed scoring projection byte-identical to uninterrupted: **true**
 - Response observed before a forced timeout remains admitted: **true**
-- Canonical baseline SHA-256: `31f0271a5e34e951aedfacded5f436a9d906684e032b3f4efce62623e9c95588`
+- Canonical baseline SHA-256: `c49348ca02406ff0c1c675e632cfd1c8a03b72f80d36c3c1fbde53d37724ffd4`
 
 ## Why v1 was insufficient
 
@@ -21,6 +21,13 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 - Separate the scoring wall time, which is bounded by the registered limit, from runner elapsed time that may include watchdog kill and reap overhead.
 - Partition each terminal's durable result set into newly installed and skipped prior records.
 - Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity.
+- Bind every measurement attempt to one immutable aggregate-resource session while retaining terminal-less killed sessions explicitly.
+
+## E2 resource evidence schemas
+
+- **resource_session_preflight_fields** — `schema`, `session_id`, `run_identity_sha256`, `enforcement_id`, `environment_class_sha256`, `host_id`, `launcher_pid`, `started_at_ns`, `snapshot`, `record_sha256`
+- **resource_session_terminal_fields** — `schema`, `session_id`, `run_identity_sha256`, `enforcement_id`, `status`, `worker_exit_codes`, `memory_peak_bytes`, `pids_peak`, `memory_events_delta`, `cpu_stat_delta`, `pids_events_delta`, `ended_at_ns`, `record_sha256`
+- **resource_completion_fields** — `schema`, `run_identity_sha256`, `enforcement_id`, `session_ids`, `terminal_session_ids`, `unclosed_session_ids`, `observed_peak_memory_bytes`, `completed_at_ns`, `record_sha256`
 
 ## Invariants
 
@@ -33,14 +40,14 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 - **R7** — Every launch attempt has an immutable launch manifest; a missing terminal is preserved and explicitly accounted by a later shard completion manifest.
 - **R8** — A shard is complete only when all and only assigned keys validate, its result-set hash matches, and every launch attempt is terminal or explicitly recorded as unclosed.
 - **R9** — Central merge rejects missing or non-complete shard manifests and never treats partial coverage as a scoreable run.
-- **R10** — Per-process and aggregate host memory limits have named enforcement identities; declared concurrency cannot exceed the enforced aggregate budget.
+- **R10** — Per-process limits and the exact aggregate cgroup-v2 memory, swap, CPU, PID, OOM-group, and worker-slot envelope have a content-derived enforcement identity; declared concurrency cannot exceed its memory or CPU budget.
 - **R11** — Every result uses the preregistered environment class; a retry on a different class is a new measurement run.
 - **R12** — Canonical scoring projection is independent of shard, host, attempt, and filesystem enumeration order.
 - **R13** — On a deterministic fake-solver fixture, interrupted-plus-resumed and uninterrupted canonical scoring bytes are identical even though lifecycle evidence differs.
 - **R14** — Temporary, conflicting, malformed, and failed-attempt artifacts are retained outside the accepted immutable record set.
 - **R15** — Observed solver response and scoring-admitted response are separate; the SMT-COMP 2026 policy admits a response even after timeout or abnormal termination.
 - **R16** — Termination is a checked tagged state over exit, signal, and evidenced resource-limit facts; an arbitrary signal is never relabeled as memory exhaustion, and scoring wall time remains bounded separately from runner overhead.
-- **R17** — Every result names its installing attempt, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets.
+- **R17** — Every result names its installing attempt, every E2 attempt names its aggregate resource session, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets.
 - **R18** — Stdout and stderr are content-addressed with exact byte counts; production validation must verify their sidecars before score export.
 
 ## Failure and recovery matrix
@@ -65,8 +72,8 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 | F16 | `overlapping_assignment` | reject | reject | n/a | overlapping shard assignment |
 | F17 | `unaccounted_crash` | reject | reject | n/a | unaccounted terminal-less attempt |
 | F18 | `accounted_prior_crash` | accept | accept | true | validated |
-| F19 | `missing_resource_enforcement` | reject | reject | n/a | missing aggregate resource enforcement |
-| F20 | `aggregate_memory_overcommit` | reject | reject | n/a | aggregate memory budget overcommitted |
+| F19 | `missing_resource_enforcement` | reject | reject | n/a | resource enforcement field set mismatch |
+| F20 | `aggregate_memory_overcommit` | reject | reject | n/a | resource enforcement identity mismatch |
 | F21 | `environment_class_drift` | reject | reject | n/a | measurement environment drift |
 | F22 | `truncated_record` | reject | reject | n/a | record field set mismatch |
 | F23 | `attempt_attribution_drift` | reject | reject | n/a | terminal new-result attribution mismatch |
@@ -80,13 +87,13 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 
 - V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.
 - This prototype does not make the 2024 cap/family selection official or representative.
-- The E1b compete.py adapter is fixture-only and grants no measurement credit; it does not launch remotely, enforce real aggregate cgroups, prove NFS durability, or recover a host loss.
+- The E2 compete.py host adapter enforces one real cgroup-v2 envelope and records killed sessions, but it does not launch across hosts, prove NFS durability, transfer a spool, or recover a lost host allocation.
 - It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.
 - It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.
 - It does not replace BenchExec for an official competition rehearsal.
 
 ## Implementation boundary
 
-The v2 in-memory/E1a filesystem prototypes and E1b fixture-only `compete.py` adapter now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, duplicate rejection, and canonical scoring projection. E1b deliberately rejects non-fixture resource envelopes; E2 must add real aggregate enforcement before any measurement run receives credit.
+The v2 in-memory/E1a filesystem prototypes, E1b fixture adapter, and E2 `compete.py --host-run` path now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, strict duplicate rejection, canonical scoring projection, and one-host aggregate cgroup evidence. E3 multi-host loss/retry and the independent official selection ledger still block a credited full-library run.
 
 Legacy raw mode still suppresses a parsed response on wall timeout for artifact compatibility. The v2 adapter preserves and admits that response under its registered policy, uses checked typed termination, and names memory exhaustion only when an enforcement layer supplies explicit resource evidence.

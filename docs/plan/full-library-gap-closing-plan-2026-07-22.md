@@ -324,8 +324,9 @@ specified but had not yet executed at full scale:
    with the exact-zero repair and the QF_AUFLIA slice with the unchecked-UNSAT
    gate → DISAGREE 0. Focused FP tests/fuzz and the exact AUFLIA regression are
    already green.
-2. **[measurement durability]** E1b is fixture-complete. Implement E2 real
-   one-host aggregate enforcement and E3 multi-host loss/retry, then close the
+2. **[measurement durability]** E1b is fixture-complete and E2 now passes exact
+   one-host aggregate cgroup enforcement and destructive recovery gates.
+   Implement E3 multi-host loss/retry and transfer durability, then close the
    independent official eligibility/status/difficulty selection ledger. The
    currently running stale s4 job may inform diagnostics but receives no
    measurement credit and must not be promoted merely because it finishes.

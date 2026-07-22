@@ -46,6 +46,7 @@ RUN_IDENTITY_FIELDS = {
     "shard_count",
     "shard_mapping",
     "environment_class_sha256",
+    "resource_enforcement_sha256",
     "resource_policy_sha256",
     "output_capture_policy_sha256",
     "verdict_policy",
@@ -89,6 +90,7 @@ ATTEMPT_LAUNCH_FIELDS = {
     "assigned_count",
     "launched_at_ns",
     "enforcement_id",
+    "resource_session_id",
     "environment_class_sha256",
     "terminal",
 }
@@ -276,16 +278,11 @@ class Bundle:
 
 
 def _validate_resources(run: dict[str, Any]) -> None:
-    resources = run.get("resource_enforcement")
-    if not resources or resources.get("kind") in (None, "none"):
-        raise ContractError("missing aggregate resource enforcement")
-    if not resources.get("enforcement_id"):
-        raise ContractError("missing resource enforcement identity")
-    aggregate = resources.get("aggregate_memory_bytes", 0)
-    workers = resources.get("worker_slots", 0)
-    per_worker = run["identity"].get("memory_limit_bytes", 0)
-    if workers <= 0 or aggregate <= 0 or workers * per_worker > aggregate:
-        raise ContractError("aggregate memory budget overcommitted")
+    # Imported lazily to keep the canonical contract primitives usable by the
+    # resource-evidence module without an import cycle at module initialization.
+    from resource_enforcement import validate_enforcement
+
+    validate_enforcement(run)
 
 
 def _measurement_projection(record: dict[str, Any]) -> dict[str, Any]:
@@ -331,6 +328,8 @@ def validate_run(run: dict[str, Any]) -> tuple[dict[str, Any], str]:
     if identity["solver_config_sha256"] != expected_solver_config:
         raise ContractError("solver configuration digest mismatch")
     _validate_resources(run)
+    if identity["resource_enforcement_sha256"] != digest(run["resource_enforcement"]):
+        raise ContractError("resource enforcement digest mismatch")
     return identity, run["identity_sha256"]
 
 
@@ -402,6 +401,13 @@ def merge_complete(bundle: Bundle) -> bytes:
                 raise ContractError("attempt assigned count mismatch")
             if attempt["enforcement_id"] != run["resource_enforcement"]["enforcement_id"]:
                 raise ContractError("attempt enforcement mismatch")
+            session_id = attempt["resource_session_id"]
+            kind = run["resource_enforcement"]["kind"]
+            if kind.startswith("fixture-"):
+                if session_id is not None:
+                    raise ContractError("fixture attempt names a resource session")
+            elif not isinstance(session_id, str) or not session_id:
+                raise ContractError("measurement attempt lacks a resource session")
             if attempt["environment_class_sha256"] != environment:
                 raise ContractError("attempt environment drift")
 

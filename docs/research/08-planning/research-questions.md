@@ -657,8 +657,12 @@ Out of scope:
     integration now adds exact preflight identity, the active runner and fake
     solver, typed termination, observed/admitted verdicts, byte-exact output
     sidecars, attempt lifecycle, completion-last export, duplicate rejection,
-    and explicit single-owner lease recovery. The question remains open until
-    E2-E3 prove real aggregate resource enforcement and multi-host loss/retry;
+    and explicit single-owner lease recovery. E2 now proves exact aggregate
+    memory/swap/CPU/PID enforcement over one bounded user-systemd/cgroup-v2
+    service, immutable controller evidence, fail-before-launch overcommit and
+    environment rejection, and destructive host-runner kill/resume with an
+    explicit terminal-less resource session. The question remains open until
+    E3 proves multi-host allocation, loss/retry, and transfer durability;
     official eligibility/status/difficulty selection identity is a separate
     prerequisite. The 64,345-case candidate must not be rerun first.
 

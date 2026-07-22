@@ -1,9 +1,9 @@
-"""Opt-in E1b adapter from ``compete.py`` to resumable v2 evidence.
+"""Opt-in E1b/E2 adapter from ``compete.py`` to resumable v2 evidence.
 
-This module deliberately accepts only fixture resource envelopes.  E1b proves
-the active runner, immutable checkpoints, attempt lifecycle, output sidecars,
-and compatibility export.  E2 must add and validate real aggregate resource
-enforcement before this path is authorized for a measurement run.
+E1b proves the active runner, immutable checkpoints, attempt lifecycle, output
+sidecars, and compatibility export on fixtures. E2 binds and validates the
+real one-host aggregate enforcement descriptor and active cgroup session before
+measurement shard execution.
 """
 
 from __future__ import annotations
@@ -45,6 +45,16 @@ from resume_fs import (
     validate_bundle_directory,
     verify_output_sidecars,
 )
+from resource_enforcement import (
+    CGROUP_KIND,
+    FIXTURE_KIND,
+    cgroup_enforcement,
+    cgroup_snapshot,
+    fixture_enforcement,
+    resource_policy_for,
+    validate_enforcement,
+    validate_snapshot,
+)
 from runner import RunResult, run_solver_metered
 from smtlib_meta import read_meta
 
@@ -56,17 +66,12 @@ OUTPUT_CAPTURE_POLICY = {
     "parser": "last-sat-unsat-unknown-token-v1",
     "sidecars": "sha256-content-addressed",
 }
-RESOURCE_POLICY = {
-    "stage": "E1b",
-    "child_memory": "rlimit-as-best-effort",
-    "peak_rss": "linux-proc-vmhwm-sampled-10ms",
-    "aggregate_enforcement": "fixture-only-no-measurement-credit",
-}
 RUNNER_SOURCE_NAMES = (
     "compete.py",
     "resume_contract.py",
     "resume_fs.py",
     "resume_runner.py",
+    "resource_enforcement.py",
     "runner.py",
     "scoring.py",
     "smtlib_meta.py",
@@ -185,7 +190,7 @@ def _solver_binary(command_template: list[str]) -> Path:
     return binary
 
 
-def fixture_run_manifest(
+def _run_manifest(
     *,
     repository_root: Path,
     source_root: Path,
@@ -200,9 +205,8 @@ def fixture_run_manifest(
     memory_limit_bytes: int,
     cores: int,
     shard_count: int,
+    enforcement: dict[str, Any],
 ) -> dict[str, Any]:
-    """Build a canonical E1b fake-run manifest for executable gate fixtures."""
-
     binary_sha256 = sha256_file(_solver_binary(command_template))
     command_sha256 = solver_command_sha256(command_template)
     solver_config_sha256 = digest(
@@ -235,28 +239,100 @@ def fixture_run_manifest(
         "shard_count": shard_count,
         "shard_mapping": "striped-index-v1",
         "environment_class_sha256": sha256_file(environment_manifest),
-        "resource_policy_sha256": digest(RESOURCE_POLICY),
+        "resource_enforcement_sha256": digest(enforcement),
+        "resource_policy_sha256": digest(resource_policy_for(enforcement)),
         "output_capture_policy_sha256": digest(OUTPUT_CAPTURE_POLICY),
         "verdict_policy": VERDICT_POLICY,
     }
-    enforcement = {
-        "kind": "fixture-e1b-no-measurement-credit",
-        "enforcement_id": digest(
-            {
-                "kind": "fixture-e1b-no-measurement-credit",
-                "memory_limit_bytes": memory_limit_bytes,
-                "worker_slots": 1,
-            }
-        ),
-        "worker_slots": 1,
-        "aggregate_memory_bytes": memory_limit_bytes,
-    }
-    return {
+    run = {
         "schema": "axeyum.smtcomp-run.v2",
         "identity": identity,
         "identity_sha256": digest(identity),
         "resource_enforcement": enforcement,
     }
+    validate_run(run)
+    return run
+
+
+def fixture_run_manifest(
+    *,
+    repository_root: Path,
+    source_root: Path,
+    file_list: Path,
+    selection_manifest: Path,
+    corpus_manifest: Path,
+    environment_manifest: Path,
+    solver_id: str,
+    command_template: list[str],
+    track: str,
+    wall_limit_ms: int,
+    memory_limit_bytes: int,
+    cores: int,
+    shard_count: int,
+) -> dict[str, Any]:
+    """Build a canonical E1b fake-run manifest for executable gate fixtures."""
+
+    return _run_manifest(
+        repository_root=repository_root,
+        source_root=source_root,
+        file_list=file_list,
+        selection_manifest=selection_manifest,
+        corpus_manifest=corpus_manifest,
+        environment_manifest=environment_manifest,
+        solver_id=solver_id,
+        command_template=command_template,
+        track=track,
+        wall_limit_ms=wall_limit_ms,
+        memory_limit_bytes=memory_limit_bytes,
+        cores=cores,
+        shard_count=shard_count,
+        enforcement=fixture_enforcement(memory_limit_bytes),
+    )
+
+
+def cgroup_run_manifest(
+    *,
+    repository_root: Path,
+    source_root: Path,
+    file_list: Path,
+    selection_manifest: Path,
+    corpus_manifest: Path,
+    environment_manifest: Path,
+    solver_id: str,
+    command_template: list[str],
+    track: str,
+    wall_limit_ms: int,
+    memory_limit_bytes: int,
+    cores: int,
+    shard_count: int,
+    worker_slots: int,
+    aggregate_memory_bytes: int,
+    pids_max: int,
+) -> dict[str, Any]:
+    """Build a canonical E2 one-host measurement manifest."""
+
+    enforcement = cgroup_enforcement(
+        worker_slots=worker_slots,
+        aggregate_memory_bytes=aggregate_memory_bytes,
+        aggregate_cpu_cores=worker_slots * cores,
+        pids_max=pids_max,
+    )
+    return _run_manifest(
+        repository_root=repository_root,
+        source_root=source_root,
+        file_list=file_list,
+        selection_manifest=selection_manifest,
+        corpus_manifest=corpus_manifest,
+        environment_manifest=environment_manifest,
+        solver_id=solver_id,
+        command_template=command_template,
+        track=track,
+        wall_limit_ms=wall_limit_ms,
+        memory_limit_bytes=memory_limit_bytes,
+        cores=cores,
+        shard_count=shard_count,
+        enforcement=enforcement,
+    )
 
 
 def _normalize_benchmark_id(path: str, marker: str) -> str:
@@ -380,10 +456,13 @@ def _validate_preflight(
     wall_limit_ms: int,
     memory_limit_bytes: int,
     cores: int,
-    shard_index: int,
+    shard_index: int | None,
     shard_count: int,
+    resource_session_id: str | None,
+    require_active_enforcement: bool,
 ) -> tuple[dict[str, Any], str]:
     identity, run_hash = validate_run(run)
+    enforcement = validate_enforcement(run)
     checks = {
         "selection_manifest_sha256": sha256_file(selection_manifest),
         "selected_list_sha256": sha256_file(file_list),
@@ -394,7 +473,8 @@ def _validate_preflight(
         "source_tree_state_sha256": source_tree_state_sha256(repository_root),
         "toolchain_identity_sha256": toolchain_identity_sha256(),
         "environment_class_sha256": sha256_file(environment_manifest),
-        "resource_policy_sha256": digest(RESOURCE_POLICY),
+        "resource_enforcement_sha256": digest(enforcement),
+        "resource_policy_sha256": digest(resource_policy_for(enforcement)),
         "output_capture_policy_sha256": digest(OUTPUT_CAPTURE_POLICY),
     }
     for field, observed in checks.items():
@@ -415,11 +495,73 @@ def _validate_preflight(
     for field, observed in scalar_checks.items():
         if identity[field] != observed:
             raise ContractError(f"preflight identity mismatch: {field}")
-    if not 0 <= shard_index < shard_count:
+    if shard_index is not None and not 0 <= shard_index < shard_count:
         raise ContractError("shard index is outside the registered shard count")
-    if not str(run["resource_enforcement"].get("kind", "")).startswith("fixture-"):
-        raise ContractError("E1b only authorizes fixture resource envelopes; E2 is open")
+    if enforcement["kind"] == FIXTURE_KIND:
+        if resource_session_id is not None:
+            raise ContractError("fixture execution cannot name a resource session")
+    elif enforcement["kind"] == CGROUP_KIND:
+        if require_active_enforcement:
+            if resource_session_id is None:
+                raise ContractError("E2 shard execution requires a resource session")
+            validate_snapshot(
+                cgroup_snapshot(), enforcement, session_id=resource_session_id
+            )
+    else:
+        raise ContractError("unsupported aggregate resource enforcement")
     return identity, run_hash
+
+
+def preflight_resumable(
+    *,
+    run_manifest: Path,
+    repository_root: Path,
+    source_root: Path,
+    file_list: Path,
+    selection_manifest: Path,
+    corpus_manifest: Path,
+    environment_manifest: Path,
+    solver_id: str,
+    command_template: list[str],
+    track: str,
+    wall_limit_ms: int,
+    memory_limit_bytes: int,
+    cores: int,
+    shard_index: int | None,
+    shard_count: int,
+    benchmark_id_marker: str,
+    resource_session_id: str | None = None,
+    require_active_enforcement: bool = False,
+) -> tuple[dict[str, Any], dict[str, Any], str, list[BenchmarkInput]]:
+    """Validate all immutable inputs without creating the run directory."""
+
+    run = read_canonical_json(run_manifest)
+    identity, run_hash = _validate_preflight(
+        run=run,
+        repository_root=repository_root,
+        source_root=source_root,
+        file_list=file_list,
+        selection_manifest=selection_manifest,
+        corpus_manifest=corpus_manifest,
+        environment_manifest=environment_manifest,
+        solver_id=solver_id,
+        command_template=command_template,
+        track=track,
+        wall_limit_ms=wall_limit_ms,
+        memory_limit_bytes=memory_limit_bytes,
+        cores=cores,
+        shard_index=shard_index,
+        shard_count=shard_count,
+        resource_session_id=resource_session_id,
+        require_active_enforcement=require_active_enforcement,
+    )
+    inputs = load_benchmark_inputs(
+        file_list,
+        selection_manifest=selection_manifest,
+        marker=benchmark_id_marker,
+        solver_config_sha256=identity["solver_config_sha256"],
+    )
+    return run, identity, run_hash, inputs
 
 
 def _selection_artifact(
@@ -670,14 +812,14 @@ def execute_resumable(
     shard_count: int,
     benchmark_id_marker: str,
     verbose: bool,
+    resource_session_id: str | None = None,
     runner: Runner = run_solver_metered,
     phase_hook: PhaseHook | None = None,
 ) -> bool:
     """Execute one resumable shard and return whether the whole run is complete."""
 
-    run = read_canonical_json(run_manifest)
-    identity, run_hash = _validate_preflight(
-        run=run,
+    run, identity, run_hash, inputs = preflight_resumable(
+        run_manifest=run_manifest,
         repository_root=repository_root,
         source_root=source_root,
         file_list=file_list,
@@ -692,12 +834,9 @@ def execute_resumable(
         cores=cores,
         shard_index=shard_index,
         shard_count=shard_count,
-    )
-    inputs = load_benchmark_inputs(
-        file_list,
-        selection_manifest=selection_manifest,
-        marker=benchmark_id_marker,
-        solver_config_sha256=identity["solver_config_sha256"],
+        benchmark_id_marker=benchmark_id_marker,
+        resource_session_id=resource_session_id,
+        require_active_enforcement=True,
     )
     assignments = _assignments(inputs, shard_count)
     shard_id = str(shard_index)
@@ -734,7 +873,12 @@ def execute_resumable(
             for index in range(shard_count)
         )
         if complete:
-            validate_bundle_directory(run_dir, require_output_sidecars=True)
+            validate_bundle_directory(
+                run_dir,
+                require_output_sidecars=True,
+                require_resource_evidence=run["resource_enforcement"]["kind"]
+                == FIXTURE_KIND,
+            )
         return complete
 
     owner_id = f"{shard_id}-{os.getpid()}-{uuid.uuid4().hex}"
@@ -761,6 +905,7 @@ def execute_resumable(
         "assigned_count": len(assigned),
         "launched_at_ns": started_ns,
         "enforcement_id": run["resource_enforcement"]["enforcement_id"],
+        "resource_session_id": resource_session_id,
         "environment_class_sha256": identity["environment_class_sha256"],
         "terminal": None,
     }
@@ -884,7 +1029,12 @@ def execute_resumable(
         for index in range(shard_count)
     )
     if complete:
-        validate_bundle_directory(run_dir, require_output_sidecars=True)
+        validate_bundle_directory(
+            run_dir,
+            require_output_sidecars=True,
+            require_resource_evidence=run["resource_enforcement"]["kind"]
+            == FIXTURE_KIND,
+        )
     return complete
 
 
@@ -923,8 +1073,10 @@ def export_legacy_raw(run_dir: Path, destination: Path) -> None:
 
 __all__ = [
     "LeaseConflict",
+    "cgroup_run_manifest",
     "execute_resumable",
     "export_legacy_raw",
     "fixture_run_manifest",
+    "preflight_resumable",
     "selection_input_manifest",
 ]

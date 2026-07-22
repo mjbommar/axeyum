@@ -270,6 +270,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   separates observed from scoring-admitted responses, replaces signal-to-OOM
   guessing with typed termination, attributes results to attempts, and freezes
   the opt-in one-solver E1b seams without changing the active runner.
+- [`smtcomp-resumable-runner-e1b-2026-07-22.md`](smtcomp-resumable-runner-e1b-2026-07-22.md) —
+  fixture-only active-runner integration with exact preflight, immutable
+  attempts/results/sidecars, typed termination, lease recovery, and
+  completion-gated raw export.
+- [`smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`](smtcomp-one-host-resource-enforcement-e2-2026-07-22.md) —
+  one-host user-systemd/cgroup-v2 aggregate memory, swap, CPU, and PID
+  enforcement with bounded workers, immutable counter evidence, and destructive
+  host-runner kill/resume tests; E3 multi-host durability remains open.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

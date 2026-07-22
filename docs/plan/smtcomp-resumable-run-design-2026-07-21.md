@@ -1,6 +1,6 @@
 # Resumable distributed benchmark execution
 
-Status: E0/v2, E1a filesystem, and fixture-only E1b runner integration landed; E2-E3 open
+Status: E0-E2 landed; E3 multi-host recovery open
 Date: 2026-07-21
 
 ## Plain-English outcome
@@ -22,7 +22,11 @@ repository's ext-family filesystem. The subsequent
 [E1b result](smtcomp-resumable-runner-e1b-2026-07-22.md) integrates the active
 runner, typed outcomes, exact benchmark preflight, sidecars, attempts, leases,
 completion-last export, and duplicate rejection under a fixture-only resource
-envelope. E2 aggregate enforcement and E3 multi-host recovery remain open.
+envelope. The subsequent
+[E2 result](smtcomp-one-host-resource-enforcement-e2-2026-07-22.md) binds the
+host runner, bounded shard workers, solvers, and descendants into one exact
+cgroup-v2 service and records immutable controller evidence. E3 multi-host
+recovery remains open.
 
 ## Current implementation audit
 
@@ -215,6 +219,19 @@ reliability boundary but not as a measurement executor.
 
 Exit: forced process kill and host-runner kill both preserve accepted records;
 resource overcommit and environment drift fail before solver launch.
+
+**E2 result:** `compete.py --host-run` now creates one transient user-systemd
+service whose cgroup contains the host runner, a bounded shard-worker pool, all
+solver processes, and descendants. The content-derived enforcement descriptor
+and exact memory/swap/CPU/PID/OOM-group limits are run identity. Immutable
+preflight/terminal/completion artifacts retain the cgroup path/inode,
+membership, controller limits, `memory.peak`, `pids.peak`, and counter deltas.
+Every E2 attempt names its session; a killed host runner leaves an explicit
+terminal-less session and attempt, then resumes through named lease recovery.
+The committed four-case/two-worker control, kill/resume control, overcommit and
+environment drift negatives, and evidence-tamper gate pass under required live
+cgroup execution. E2 is complete for one host; it grants no multi-host or
+official-selection credit.
 
 ### E3 — Multi-host rehearsal
 

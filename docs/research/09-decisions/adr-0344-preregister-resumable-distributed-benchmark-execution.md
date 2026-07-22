@@ -110,6 +110,16 @@ coverage, soundness, or OOM-cause claim.
   contrary to SMT-COMP 2026 section 7.1.2, and guesses that every other signal
   means memory exhaustion. V2 represents observed/admitted verdicts and typed
   process outcomes without granting a retroactive result correction.
+- The [E1b runner result](../../plan/smtcomp-resumable-runner-e1b-2026-07-22.md)
+  integrates exact preflight, immutable attempts/results/output sidecars,
+  typed termination, explicit lease recovery, completion-last publication,
+  and fail-closed raw export into the active runner on committed fixtures.
+- The [E2 one-host result](../../plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md)
+  passes the required live delegated user-systemd/cgroup-v2 gate. It enforces
+  and reads back exact aggregate memory, zero swap, CPU bandwidth, and PID
+  limits over a bounded worker pool; records controller counters; rejects
+  overcommit and environment drift before launch; and preserves honest
+  terminal-less resource sessions across destructive host-runner kill/resume.
 
 ## Alternatives
 
@@ -137,12 +147,13 @@ Large runs can become restartable without mixing configurations or hiding
 failed attempts. E1a proves the local record primitive. The subsequent
 [E1b result](../../plan/smtcomp-resumable-runner-e1b-2026-07-22.md) integrates
 exact preflight, typed execution, sidecars, attempts, leases, completion-last
-export, and duplicate rejection into a fixture-only `compete.py` mode. E2-E3
-still own real aggregate resource control and multi-host recovery; the adapter
-rejects non-fixture envelopes until then.
+export, and duplicate rejection into a fixture-only `compete.py` mode. E2 is
+now complete: the one-host adapter and its immutable resource evidence pass the
+required live cgroup-v2 gate. E3 still owns multi-host allocation, host-loss
+recovery, and shared-storage or spool-transfer durability.
 
 The cost is more artifact structure and a staged implementation before another
 large run. Result files must remain immutable, retries need fresh attempt IDs,
 environment classes need definition, and production filesystem durability must
-be tested rather than assumed. G1 advances E1-E3 before corpus execution; the
+be tested rather than assumed. G1 advances E3 before corpus execution; the
 official-style selection ledger and neutral-oracle runs remain separate work.

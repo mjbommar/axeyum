@@ -1,10 +1,145 @@
 {
   "accepted_scenarios": 5,
-  "baseline_output_sha256": "31f0271a5e34e951aedfacded5f436a9d906684e032b3f4efce62623e9c95588",
+  "artifact_fields": {
+    "attempt_launch_fields": [
+      "attempt_id",
+      "run_identity_sha256",
+      "shard_id",
+      "host_id",
+      "pid",
+      "assigned_count",
+      "launched_at_ns",
+      "enforcement_id",
+      "resource_session_id",
+      "environment_class_sha256",
+      "terminal"
+    ],
+    "attempt_terminal_fields": [
+      "status",
+      "exit_code",
+      "signal",
+      "wall_time_ns",
+      "peak_rss_bytes",
+      "completed_count",
+      "result_set_sha256",
+      "durable_result_keys",
+      "new_result_keys",
+      "skipped_result_keys",
+      "missing_result_keys",
+      "ended_at_ns"
+    ],
+    "resource_completion_fields": [
+      "schema",
+      "run_identity_sha256",
+      "enforcement_id",
+      "session_ids",
+      "terminal_session_ids",
+      "unclosed_session_ids",
+      "observed_peak_memory_bytes",
+      "completed_at_ns",
+      "record_sha256"
+    ],
+    "resource_session_preflight_fields": [
+      "schema",
+      "session_id",
+      "run_identity_sha256",
+      "enforcement_id",
+      "environment_class_sha256",
+      "host_id",
+      "launcher_pid",
+      "started_at_ns",
+      "snapshot",
+      "record_sha256"
+    ],
+    "resource_session_terminal_fields": [
+      "schema",
+      "session_id",
+      "run_identity_sha256",
+      "enforcement_id",
+      "status",
+      "worker_exit_codes",
+      "memory_peak_bytes",
+      "pids_peak",
+      "memory_events_delta",
+      "cpu_stat_delta",
+      "pids_events_delta",
+      "ended_at_ns",
+      "record_sha256"
+    ],
+    "result_record_fields": [
+      "schema",
+      "run_identity_sha256",
+      "result_key",
+      "benchmark_id",
+      "benchmark_sha256",
+      "solver_id",
+      "solver_config_sha256",
+      "shard_id",
+      "sequence",
+      "attempt_id",
+      "environment_class_sha256",
+      "expected_status",
+      "observed_status",
+      "reported_status",
+      "verdict_admission",
+      "termination_class",
+      "exit_code",
+      "signal",
+      "resource_limit_kind",
+      "wall_time_ns",
+      "runner_elapsed_ns",
+      "cpu_time_ns",
+      "peak_rss_bytes",
+      "stdout_sha256",
+      "stdout_bytes",
+      "stderr_sha256",
+      "stderr_bytes",
+      "record_sha256"
+    ],
+    "run_identity_fields": [
+      "contract_schema",
+      "run_schema",
+      "result_schema",
+      "selection_manifest_sha256",
+      "selected_list_sha256",
+      "corpus_identity_sha256",
+      "solver_id",
+      "solver_binary_sha256",
+      "solver_command_sha256",
+      "solver_config_sha256",
+      "runner_source_sha256",
+      "repository_commit",
+      "source_tree_state_sha256",
+      "toolchain_identity_sha256",
+      "track",
+      "wall_limit_ms",
+      "cpu_limit_ms",
+      "memory_limit_bytes",
+      "cores",
+      "shard_count",
+      "shard_mapping",
+      "environment_class_sha256",
+      "resource_enforcement_sha256",
+      "resource_policy_sha256",
+      "output_capture_policy_sha256",
+      "verdict_policy"
+    ],
+    "shard_completion_fields": [
+      "state",
+      "run_identity_sha256",
+      "assigned_count",
+      "completed_count",
+      "missing_result_keys",
+      "result_set_sha256",
+      "attempt_ids",
+      "unclosed_attempt_ids"
+    ]
+  },
+  "baseline_output_sha256": "c49348ca02406ff0c1c675e632cfd1c8a03b72f80d36c3c1fbde53d37724ffd4",
   "declines": [
     "V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.",
     "This prototype does not make the 2024 cap/family selection official or representative.",
-    "The E1b compete.py adapter is fixture-only and grants no measurement credit; it does not launch remotely, enforce real aggregate cgroups, prove NFS durability, or recover a host loss.",
+    "The E2 compete.py host adapter enforces one real cgroup-v2 envelope and records killed sessions, but it does not launch across hosts, prove NFS durability, transfer a spool, or recover a lost host allocation.",
     "It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.",
     "It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.",
     "It does not replace BenchExec for an official competition rehearsal."
@@ -50,7 +185,7 @@
     },
     {
       "id": "R10",
-      "statement": "Per-process and aggregate host memory limits have named enforcement identities; declared concurrency cannot exceed the enforced aggregate budget."
+      "statement": "Per-process limits and the exact aggregate cgroup-v2 memory, swap, CPU, PID, OOM-group, and worker-slot envelope have a content-derived enforcement identity; declared concurrency cannot exceed its memory or CPU budget."
     },
     {
       "id": "R11",
@@ -78,7 +213,7 @@
     },
     {
       "id": "R17",
-      "statement": "Every result names its installing attempt, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets."
+      "statement": "Every result names its installing attempt, every E2 attempt names its aggregate resource session, and each terminal partitions its durable keys into disjoint newly installed and previously skipped sets."
     },
     {
       "id": "R18",
@@ -326,7 +461,7 @@
       ],
       "name": "missing_resource_enforcement",
       "observed": "reject",
-      "reason": "missing aggregate resource enforcement"
+      "reason": "resource enforcement field set mismatch"
     },
     {
       "canonical_byte_equal": null,
@@ -337,7 +472,7 @@
       ],
       "name": "aggregate_memory_overcommit",
       "observed": "reject",
-      "reason": "aggregate memory budget overcommitted"
+      "reason": "resource enforcement identity mismatch"
     },
     {
       "canonical_byte_equal": null,
@@ -435,7 +570,7 @@
   ],
   "schema": "axeyum.smtcomp-resumable-run-contract-report.v2",
   "source_schema": "axeyum.smtcomp-resumable-run-contract.v2",
-  "status": "e1b-fixture-integrated",
+  "status": "e2-one-host-integrated",
   "supersedes": "axeyum.smtcomp-resumable-run-contract.v1",
   "timeout_response_retained": true,
   "v1_corrections": [
@@ -445,6 +580,7 @@
     "Retain exit, signal, resource-limit, peak-RSS, and content-addressed output facts.",
     "Separate the scoring wall time, which is bounded by the registered limit, from runner elapsed time that may include watchdog kill and reap overhead.",
     "Partition each terminal's durable result set into newly installed and skipped prior records.",
-    "Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity."
+    "Bind verdict-admission, output-capture, resource, toolchain, source-tree, and solver-configuration policies into run identity.",
+    "Bind every measurement attempt to one immutable aggregate-resource session while retaining terminal-less killed sessions explicitly."
   ]
 }

@@ -394,18 +394,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   handoff docs are synchronized. Next: probe adjacent-binomial convolution and
   weighted squared-binomial identities through the same concrete-discovery plus
   symbolic-certificate gate.
-- **2026-07-22 — G1 E1b is fixture-complete, and the second full-library P0 is
-  sound-declined.** The opt-in resumable path now validates the exact ordered
-  benchmark ledger, corpus/selection/environment/solver/runner/toolchain
+- **2026-07-22 — G1 E2 one-host resource enforcement is complete, and the
+  second full-library P0 is sound-declined.** The opt-in resumable path now
+  validates the exact ordered benchmark ledger and the
+  corpus/selection/environment/solver/runner/toolchain
   identity, acquires a no-steal shard lease, records attempt/terminal lifecycle,
   captures byte-exact outputs and typed process outcomes, publishes completion
   last, and exports legacy raw JSON only from a complete validating bundle.
   Real process kills before and during fake-solver execution, lease contention,
   explicit stale recovery, interruption equivalence, timeout-observed response
-  admission, output mutation, and duplicate rejection are executable gates in
-  `./scripts/check-smtcomp-resume.sh`. This grants no measurement credit: E2
-  aggregate cgroup enforcement, E3 multi-host loss/retry, shared-storage/spool
-  durability, and official selection identity remain. Separately, the live
+  admission, output mutation, and duplicate rejection are executable gates.
+  `compete.py --host-run` now places the host runner, bounded shard workers,
+  solvers, and descendants in one transient user-systemd/cgroup-v2 service;
+  exact memory/swap/CPU/PID limits, controller counters, overcommit/environment
+  rejection, evidence tamper, and destructive host-runner kill/resume pass with
+  `AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh`. This
+  completes E2 but grants no large-run measurement credit: E3 multi-host
+  loss/retry, shared-storage/spool durability, and official selection identity
+  remain. Separately, the live
   stale run has exactly two WRONG markers: the repaired FP case and
   QF_AUFLIA `pipeline-invalid.smt2` (declared/cvc5 `sat`, Axeyum `unsat`). The
   latter reproduces on current code because the scalar UFLIA abstraction search
@@ -1152,8 +1158,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   verifies byte-exact output sidecars, preserves timeout-observed responses
   under the registered SMT-COMP 2026 policy, removes signal-to-OOM guessing,
   records attempt lifecycle, and defines explicit single-owner recovery. Its
-  CLI rejects non-fixture resource envelopes. Next: E2-E3 prove real aggregate
-  enforcement and multi-host recovery, while the official-style selection
+  E2 now launches all registered shards under one exact aggregate
+  user-systemd/cgroup-v2 envelope, records immutable preflight/counter/terminal
+  evidence, rejects resource overcommit and environment drift before launch,
+  and preserves terminal-less resource sessions through host-runner kill and
+  explicit lease recovery. Next: E3 proves multi-host allocation, loss/retry,
+  and transfer durability, while the official-style selection
   ledger remains independently open. Do not rerun the 64,345-file candidate first.
 
 - **2026-07-21 — the public project state no longer requires reading the battle
@@ -7136,14 +7146,24 @@ plan is built and committed on the current branch:
   gates pass under the 4 GiB/one-worker policy. No M0 computation stream or
   generated assurance artifact was observed. M2 native expansion/restoration
   is next under proposed ADR-0355.
+- **2026-07-22 — Completed SMT-COMP E2 one-host aggregate resource
+  enforcement.** `compete.py --host-run` now launches all registered shards in
+  one transient user-systemd/cgroup-v2 service with exact memory/swap/CPU/PID
+  limits, bounded concurrency, controller readback, immutable preflight and
+  terminal counter evidence, and resource-completion-gated raw export. Portable
+  mutation tests and required live two-worker/destructive host-runner kill and
+  explicit recovery tests pass; E3 multi-host durability and the independent
+  official selection ledger remain open.
+
 - **2026-07-22 — Completed fixture-only SMT-COMP resumable runner E1b and
   sound-declined a current QF_AUFLIA wrong-`unsat`.** The opt-in runner now
   validates exact run/selection/corpus/environment/solver/source/toolchain
   identity before execution, owns each shard through an explicit lease, records
   immutable attempts/results/output sidecars/terminals, and publishes completion
   last. Real kill/resume, contention, timeout-response, typed-termination,
-  duplicate, and mutation gates pass; real resource envelopes remain rejected
-  pending E2-E3. Audit of the stale 64,345-file run found its second WRONG marker
+  duplicate, and mutation gates pass; that E1b mode still rejects real resource
+  envelopes. E2 is now complete and E3 remains pending. Audit of the stale
+  64,345-file run found its second WRONG marker
   at `QF_AUFLIA/array_benchmarks/misc/pipeline-invalid.smt2`. Current Axeyum also
   returned `unsat`; cvc5 1.3.4 and cvc5 over Axeyum's parse/write round-trip both
   returned `sat`. Because the scalar UFLIA refutation has no proof checker/lift,
