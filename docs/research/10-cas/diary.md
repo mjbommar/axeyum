@@ -1279,7 +1279,22 @@ Two more parity fills:
   reconstruction). Closes `1/s²→t`, `1/s³→t²/2`, `1/(s−1)²→t·e^t`, and mixed `1/(s²(s−1))→e^t−1−t`.
   Round-trip certified.
 
-**Session tally (Entries 37–37f): 17 substantial certified features** across integration (rational-trig
+---
+
+## 2026-07-22 — Entry 37g: inhomogeneous ODEs via variation of parameters (457 tests)
+
+`dsolve_inhomogeneous` handled only polynomial forcing. Added a 2nd-order **variation of parameters**
+fallback for arbitrary integrable forcing: extract the homogeneous basis `y₁,y₂` (substitute `C0,C1`;
+**`fold_trivial`, not `simplify`** — the latter rewrites `e^{−x}→1/eˣ`, which the integrator can't
+invert), Wronskian `W`, then `y_p = y₁∫(−y₂g/aW) + y₂∫(y₁g/aW)`. A new **`merge_exp_products`** combines
+exponential products/quotients into an integrable form (`eˣ·e^{−x}=1`, `e^{2x}/e^{3x}=e^{−x}`, and
+crucially **not** `e^{2x}→exp(x)²` which `simplify` does and `integrate` rejects). Closes exponential
+forcing including resonance (`y″−y=eˣ`, `y″−3y′+2y=eˣ`, `y″−2y′+y=eˣ`) and trig forcing over a complex
+basis (`y″+y=sin x`, `y″+4y=sin 3x`). Known limitation: trig forcing over a **real-exponential** basis
+(`y″−y=cos x`) still declines — `simplify` pushes the `e^{−x}` integrand into a denominator. Certified
+by substitution.
+
+**Session tally (Entries 37–37g): 18 substantial certified features** across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
