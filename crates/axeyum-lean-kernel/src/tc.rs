@@ -246,25 +246,21 @@ pub enum KernelError {
         /// Zero-based index among the constructor's non-parameter fields.
         field_index: u32,
     },
-    /// A constructor field mentioned the inductive type being declared in a
-    /// shape this slice does not handle. Slice 5 admits **direct** recursive
-    /// fields (a field whose type is exactly `Const(I, uparams)`); this error is
-    /// reserved for the disallowed shapes that still need the deferred recursive
-    /// machinery (parameters/indices and induction hypotheses) — e.g. a
-    /// strictly-positive recursive occurrence whose later semantic support is
-    /// still deferred. Non-positive and invalid occurrences have distinct
-    /// variants above.
+    /// A constructor field mentioned the inductive type being declared in an
+    /// unsupported recursive shape. Valid single-family telescope-tail
+    /// recursion is admitted by ADR-0353; this compatibility variant remains
+    /// for malformed or future recursive forms outside that boundary.
+    /// Non-positive and invalid occurrences have distinct variants above.
     RecursiveInductiveNotSupported {
         /// The inductive whose constructor was recursive.
         inductive: crate::name::NameId,
         /// The recursive constructor.
         ctor: crate::name::NameId,
     },
-    /// A constructor field mentioned the inductive type being declared in a
-    /// **higher-order / reflexive** position — a field whose type is a `Pi`
-    /// ending in `I` (e.g. `(A → I) → I`), or any non-direct occurrence of `I`.
-    /// Reflexive and nested recursion are deferred to a later slice; this slice
-    /// admits only *bare* `Const(I, uparams)` recursive fields.
+    /// A constructor field contains an occurrence nested under a foreign head,
+    /// or another unsupported shape historically grouped with reflexive/nested
+    /// recursion. A positive `Pi` telescope ending directly in the exact family
+    /// application is supported; this variant does not reject that shape.
     ReflexiveOrNestedNotSupported {
         /// The inductive whose constructor used a reflexive/nested occurrence.
         inductive: crate::name::NameId,
@@ -285,18 +281,16 @@ pub enum KernelError {
     /// As of ADR-0036 slice 7, **non-recursive** indexed families (`Eq`, and
     /// finite indexed enums) are supported; this variant is retained for
     /// back-compatibility but is no longer produced by `add_inductive` for a
-    /// bare index. Recursive constructors on an indexed family are rejected with
-    /// [`KernelError::RecursiveIndexedNotSupported`] instead.
+    /// bare index.
     IndicesNotSupported {
         /// The inductive whose type had indices.
         inductive: crate::name::NameId,
     },
-    /// A constructor of an **indexed** inductive had a **recursive field** (a
-    /// field whose type is the inductive applied to arguments). Recursion and
-    /// indices together (e.g. `Vector.cons`) need induction-hypothesis motive
-    /// applications over the recursive occurrence's indices, deferred past
-    /// ADR-0036 slice 7. Non-recursive indexed families (`Eq`) and
-    /// recursive non-indexed families (`Nat`, `List`) are both supported.
+    /// Compatibility error for recursive-indexed fields. ADR-0353 admits valid
+    /// single-family occurrences and generates motive applications at the
+    /// recursive field's own indices, so `add_inductive` no longer emits this
+    /// variant for a valid `Vector`-shaped field. Importer policy or older
+    /// callers may still expose the typed code while staged support is widened.
     RecursiveIndexedNotSupported {
         /// The indexed inductive whose constructor was recursive.
         inductive: crate::name::NameId,

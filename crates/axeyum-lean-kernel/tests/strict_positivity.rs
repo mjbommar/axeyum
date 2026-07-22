@@ -8,14 +8,15 @@ use std::collections::BTreeSet;
 use axeyum_lean_kernel::{BinderInfo, Declaration, ExprId, Kernel, KernelError, NameId};
 
 const GENERATOR_SEED: u64 = 0x4158_5053_5452_4943;
-const EXPECTED_GENERATED_SUMMARY: &str = "schema=axeyum-lean-strict-positivity-grammar-v1\n\
+const EXPECTED_GENERATED_SUMMARY: &str = "schema=axeyum-lean-strict-positivity-grammar-v2\n\
 seed=4158505354524943\n\
 cases=840\n\
-outcomes=admit:174,recursive-indexed:42,reflexive:144,non-positive:270,invalid:210\n\
+admission=admit:360,recursive-indexed:0,reflexive:0,non-positive:270,invalid:210\n\
+tl2.11-baseline-outcomes=admit:174,recursive-indexed:42,reflexive:144,non-positive:270,invalid:210\n\
 profiles=0p0i:240,1p0i:270,1p1i:330\n\
 sorts=prop:420,type:420\n\
 depths=0:168,1:168,2:168,3:168,4:168\n\
-descriptor-fnv1a64=02985687422aa0ff\n";
+tl2.11-descriptor-fnv1a64=02985687422aa0ff\n";
 
 /// The repository's dependency-free fixed-seed generator. Grammar corners are
 /// exhaustive; this stream selects orthogonal ordering variations and adds its
@@ -167,7 +168,26 @@ struct CaseSpec {
     expected: Expected,
 }
 
-fn expected_for(profile: Profile, production: Production, context_depth: usize) -> Expected {
+fn expected_for(_profile: Profile, production: Production, _context_depth: usize) -> Expected {
+    match production {
+        Production::NoOccurrence
+        | Production::Canonical
+        | Production::PositivePi
+        | Production::LetCanonical => Expected::Admit,
+        Production::NegativeDomain | Production::MixedPolarity | Production::DeepNegative => {
+            Expected::NonPositive
+        }
+        Production::WrongParameter
+        | Production::NestedApplication
+        | Production::SelfIndex
+        | Production::WrongIndexArity => Expected::Invalid,
+    }
+}
+
+/// The exact pre-TL2.12 public outcomes are retained only to prove that the
+/// completed TL2.11 case population and descriptor did not move when M2
+/// deliberately changes positive feature admission.
+fn tl211_expected_for(profile: Profile, production: Production, context_depth: usize) -> Expected {
     match production {
         Production::NoOccurrence => Expected::Admit,
         Production::Canonical | Production::LetCanonical => {
@@ -658,6 +678,7 @@ fn fnv1a(mut digest: u64, bytes: &[u8]) -> u64 {
 fn run_generated_grammar() -> String {
     let mut ids = BTreeSet::new();
     let mut outcome_counts = [0_usize; 5];
+    let mut tl211_outcome_counts = [0_usize; 5];
     let mut profile_counts = [0_usize; 3];
     let mut sort_counts = [0_usize; 2];
     let mut depth_counts = [0_usize; 5];
@@ -683,13 +704,14 @@ fn run_generated_grammar() -> String {
                         );
                         assert!(ids.insert(id.clone()), "duplicate generated id: {id}");
                         let expected = expected_for(profile, production, context_depth);
+                        let tl211_expected = tl211_expected_for(profile, production, context_depth);
                         let descriptor = format!(
                             "{id}|{}|{}|{}|{context_depth}|{preceding_fields}|{}|{}|{case_seed:016x}\n",
                             profile.label(),
                             family_sort.label(),
                             production.label(),
                             usize::from(preceding_constructor),
-                            expected.label()
+                            tl211_expected.label()
                         );
                         digest = fnv1a(digest, descriptor.as_bytes());
                         run_case(&CaseSpec {
@@ -704,6 +726,7 @@ fn run_generated_grammar() -> String {
                         });
                         cases += 1;
                         outcome_counts[expected.index()] += 1;
+                        tl211_outcome_counts[tl211_expected.index()] += 1;
                         profile_counts[profile_index] += 1;
                         sort_counts[sort_index] += 1;
                         *depth_count += 1;
@@ -715,25 +738,33 @@ fn run_generated_grammar() -> String {
 
     assert!(cases >= 256, "generated grammar shrank to {cases} cases");
     assert_eq!(ids.len(), cases, "generated cases are not identity-unique");
-    assert!(outcome_counts.iter().all(|&count| count > 0));
+    assert!(outcome_counts[0] > 0 && outcome_counts[3] > 0 && outcome_counts[4] > 0);
+    assert_eq!((outcome_counts[1], outcome_counts[2]), (0, 0));
+    assert!(tl211_outcome_counts.iter().all(|&count| count > 0));
     assert!(profile_counts.iter().all(|&count| count > 0));
     assert!(sort_counts.iter().all(|&count| count > 0));
     assert!(depth_counts.iter().all(|&count| count > 0));
 
     format!(
-        "schema=axeyum-lean-strict-positivity-grammar-v1\n\
+        "schema=axeyum-lean-strict-positivity-grammar-v2\n\
          seed={GENERATOR_SEED:016x}\n\
          cases={cases}\n\
-         outcomes=admit:{},recursive-indexed:{},reflexive:{},non-positive:{},invalid:{}\n\
+         admission=admit:{},recursive-indexed:{},reflexive:{},non-positive:{},invalid:{}\n\
+         tl2.11-baseline-outcomes=admit:{},recursive-indexed:{},reflexive:{},non-positive:{},invalid:{}\n\
          profiles=0p0i:{},1p0i:{},1p1i:{}\n\
          sorts=prop:{},type:{}\n\
          depths=0:{},1:{},2:{},3:{},4:{}\n\
-         descriptor-fnv1a64={digest:016x}\n",
+         tl2.11-descriptor-fnv1a64={digest:016x}\n",
         outcome_counts[0],
         outcome_counts[1],
         outcome_counts[2],
         outcome_counts[3],
         outcome_counts[4],
+        tl211_outcome_counts[0],
+        tl211_outcome_counts[1],
+        tl211_outcome_counts[2],
+        tl211_outcome_counts[3],
+        tl211_outcome_counts[4],
         profile_counts[0],
         profile_counts[1],
         profile_counts[2],

@@ -2,7 +2,7 @@
 //! admission gate, recursor generation (with induction hypotheses, parameters,
 //! and **indices**), and ι-reduction in WHNF.
 //!
-//! ## Scope — parametric, direct-recursive, and (non-recursive) indexed
+//! ## Scope — parametric, indexed, and single-family recursive
 //!
 //! This slice supports inductive types that are **parametric** (`m` leading
 //! parameter binders fixed across the family) and **indexed** (`k` further
@@ -30,18 +30,16 @@
 //! application with fixed parameters, complete index arity, and occurrence-free
 //! indices. This preflight runs before provisional environment insertion.
 //!
-//! A field is a **direct recursive field** iff its type is exactly `I p_1…p_m`
-//! (only for a **non-indexed** family, `k = 0`). The positivity guard is broader
-//! than the currently admitted recursive profile: positive recursive-indexed
-//! and reflexive fields pass it, then retain their explicit feature declines.
+//! A field is recursive when WHNF opens a possibly empty `Pi` telescope whose
+//! tail is exactly `I p_1…p_m idx_1…idx_k`. Its induction hypothesis preserves
+//! that telescope and applies the motive to the recursive occurrence's own
+//! indices and fully applied field value. Empty telescopes/indices recover the
+//! historical direct case; nonempty indices and telescopes cover `Vector`- and
+//! `Acc`-shaped single-family recursion.
 //!
-//! **Deferred** (and rejected explicitly, never guessed): **recursive
-//! constructors on an indexed inductive** (recursion + indices together, e.g.
-//! `Vector.cons` — a field mentioning `I` when `num_indices > 0`, reported as
-//! [`KernelError::RecursiveIndexedNotSupported`]), **higher-order / reflexive**
-//! recursive fields (`(A → I p…)` — a field whose type is a `Pi` ending in `I`,
-//! reported as [`KernelError::ReflexiveOrNestedNotSupported`]), nested and
-//! mutual inductives.
+//! **Deferred** (and rejected explicitly, never guessed): mutual inductives,
+//! nested occurrences under a foreign type constructor, malformed family
+//! applications, and frontend lowering for well-founded/nested definitions.
 //!
 //! `Prop` elimination follows Lean's syntactic-subsingleton rule. An inductive
 //! whose result universe is provably nonzero may eliminate into an arbitrary
@@ -63,15 +61,16 @@
 //!            (major : I p_1…p_m), motive major`
 //!   where the parameters come **before** the motive (Lean convention), and each
 //!   minor premise `m_i` adds, after its `k` field binders, **one
-//!   induction-hypothesis binder `ih_j : motive f_j` per recursive field `f_j`**
-//!   (in field order). The parameters are threaded into both the constructor
-//!   application `c_i p_1…p_m fields…` and the recursive `motive` applications.
+//!   induction-hypothesis binder per recursive field `f_j`** (in field order).
+//!   For `f_j : Pi xs, I p… indices`, that binder has type
+//!   `Pi xs, motive indices (f_j xs)`. The parameters are threaded into both
+//!   the constructor application and recursive motive applications.
 //! - one [`RecRule`] per constructor, with
 //!   `value = λ params motive m_1 … m_n (fields_i…),
 //!            m_i fields_i… (I.rec params motive m… f_j)…`
 //!   — the ι-RHS applies the minor to the fields and then to one recursive call
-//!   `I.rec params motive minors… f_j` per recursive field `f_j` (the
-//!   parameters are threaded into each recursive call).
+//!   `fun xs => I.rec params motive minors… indices (f_j xs)` per recursive
+//!   field `f_j` (with empty lambdas/indices in the direct case).
 //!
 //! The generated recursor's type is itself `infer`-checked (a self-check):
 //! a wrong recursor (e.g. a mis-indexed induction hypothesis or a mis-threaded
@@ -110,22 +109,19 @@ impl Kernel {
     ///    whose types type-check and whose result head is the inductive applied
     ///    to those parameters in order followed by `num_indices` index argument
     ///    expressions. A field type may be non-recursive (it does not mention
-    ///    `I`) or — only for a **non-indexed** family — a **direct recursive
-    ///    field** (its type is exactly `I p_1…p_m`). A field mentioning `I` on an
-    ///    indexed family, or any other non-direct occurrence of `I`, is rejected.
+    ///    `I`) or may WHNF to a possibly empty `Pi` telescope ending in the exact
+    ///    family application `I p_1…p_m idx_1…idx_k`. Fixed parameters, complete
+    ///    index arity, occurrence-free indices, and positivity are mandatory.
     ///
     /// # Errors
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
     /// [`KernelError::InductiveTypeNotASort`] if `ty`'s param+index-stripped tail
-    /// is not a `Sort`, [`KernelError::RecursiveIndexedNotSupported`] for a
-    /// recursive field on an indexed family (deferred),
-    /// [`KernelError::NonPositiveInductiveOccurrence`] for a family occurrence
+    /// is not a `Sort`, [`KernelError::NonPositiveInductiveOccurrence`] for a family occurrence
     /// in a function domain, [`KernelError::InvalidInductiveOccurrence`] for a
     /// containing term that is not a valid family application,
-    /// [`KernelError::ReflexiveOrNestedNotSupported`] for a positive but
-    /// unsupported reflexive/nested
-    /// recursive field, [`KernelError::RecursiveInductiveNotSupported`] for an
+    /// [`KernelError::ReflexiveOrNestedNotSupported`] for an unsupported nested
+    /// occurrence, [`KernelError::RecursiveInductiveNotSupported`] for an
     /// ill-shaped recursive self-reference, [`KernelError::ConstructorResultMismatch`] /
     /// [`KernelError::MalformedConstructorType`] for a wrong/ill-formed
     /// constructor result or parameter prefix, or any [`KernelError`] surfaced
@@ -162,8 +158,8 @@ impl Kernel {
 
         // (2) The inductive's type must itself type-check (its type infers to a
         // Sort-of-a-Sort) and, after opening `num_params` parameter binders,
-        // WHNF to a `Sort` (parametric, non-indexed). A remaining `Pi` is an
-        // index (deferred); any other head is ill-typed.
+        // WHNF to a `Sort`. Any remaining `Pi` binders are indices; any other
+        // head is ill-typed.
         let mut ctx = LocalContext::new();
         let ty_ty = self.infer_core(ty, &mut ctx)?;
         let ty_ty = self.whnf(ty_ty);
@@ -289,8 +285,8 @@ impl Kernel {
             }
         }
 
-        // Constructor checking is the trusted point at which direct recursive
-        // fields are classified. Persist the aggregate bit on the inductive so
+        // Constructor checking is the trusted point at which recursive fields
+        // are classified. Persist the aggregate bit on the inductive so
         // structure eta can implement Lean's exact `is_non_rec_structure`
         // predicate without re-scanning raw constructor syntax later.
         let is_recursive = checked
@@ -521,16 +517,12 @@ impl Kernel {
     /// applied to the shared parameters then `num_indices` index argument
     /// expressions). Returns the opened **field** locals (outer-to-inner; the
     /// parameters are *not* included) together with stable recursive-field
-    /// descriptors (ascending by field position; always empty for an indexed
-    /// family while recursive-indexed admission is deferred).
+    /// descriptors (ascending by field position).
     ///
-    /// A field is a **direct recursive field** (recorded) only on a non-indexed
-    /// family (`num_indices == 0`) and only if its type is exactly `I p_1…p_m`.
-    /// On an indexed family any field mentioning `I` ⇒
-    /// [`KernelError::RecursiveIndexedNotSupported`]. Otherwise a `Pi` ending in
-    /// `I` (reflexive/higher-order) ⇒
-    /// [`KernelError::ReflexiveOrNestedNotSupported`]; a self-reference applied
-    /// to the wrong arguments ⇒ [`KernelError::RecursiveInductiveNotSupported`].
+    /// A recursive field WHNFs to a possibly empty `Pi` telescope ending in the
+    /// exact family application with fixed parameters and complete indices.
+    /// Invalid parameters/indices, non-positive domains, and occurrences nested
+    /// under a foreign head retain typed fail-closed errors.
     #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
     fn check_ctor(
         &mut self,
@@ -580,17 +572,6 @@ impl Kernel {
             cursor = self.whnf(cursor);
         }
 
-        // The expected applied-inductive head `I p_1…p_m` (the inductive applied
-        // to the constructor's own parameter fvars, in order). This is both the
-        // shape of a direct recursive field and the required telescope result.
-        let ind_applied = {
-            let mut app = ind_const;
-            for p in &param_locals {
-                let fv = self.fvar(p.fvar);
-                app = self.app(app, fv);
-            }
-            app
-        };
         let mut fields: Vec<LocalDecl> = Vec::new();
         let param_values: Vec<ExprId> = param_locals
             .iter()
@@ -625,19 +606,13 @@ impl Kernel {
                 None,
                 &mut ctx,
             );
-            if self.mentions_const(dom, ind_name)
-                && let Some(recursive_field) = self.classify_recursive_field_under_m1_declines(
-                    ind_name,
-                    ind_const,
-                    num_indices,
-                    ctor_name,
-                    dom,
-                    ind_applied,
-                    fields.len(),
-                    recursive_shape,
-                )?
-            {
-                recursive_fields.push(recursive_field);
+            if let Some(shape) = recursive_shape {
+                recursive_fields.push(RecursiveField {
+                    field_index: fields.len(),
+                    telescope_depth: shape.telescope.len(),
+                });
+            } else if self.mentions_const(dom, ind_name) {
+                return Err(self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom));
             }
             let fvar = ctx.fresh_fvar();
             let decl = LocalDecl {
@@ -688,53 +663,6 @@ impl Kernel {
             .iter()
             .all(|field| args.contains(field));
         Ok((fields, recursive_fields, exposes_non_prop_fields))
-    }
-
-    /// Apply M1's frozen admission policy to a structurally recursive field
-    /// after the shared WHNF helper has inspected it. Only the exact historical
-    /// direct surface form receives metadata. Every other surface form keeps
-    /// its pre-M1 feature-decline precedence until M2 explicitly widens it.
-    #[allow(clippy::too_many_arguments)]
-    fn classify_recursive_field_under_m1_declines(
-        &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
-        ctor_name: NameId,
-        dom: ExprId,
-        ind_applied: ExprId,
-        field_index: usize,
-        recursive_shape: Option<OpenedRecursiveField>,
-    ) -> Result<Option<RecursiveField>, KernelError> {
-        if dom == ind_applied {
-            let Some(shape) = recursive_shape else {
-                return Err(KernelError::RecursiveFieldShapeMismatch {
-                    inductive: ind_name,
-                    ctor: ctor_name,
-                    field_index: u32::try_from(field_index).unwrap_or(u32::MAX),
-                });
-            };
-            return Ok(Some(RecursiveField {
-                field_index,
-                telescope_depth: shape.telescope.len(),
-            }));
-        }
-        if matches!(self.expr_node(dom), ExprNode::Pi(..)) {
-            return Err(KernelError::ReflexiveOrNestedNotSupported {
-                inductive: ind_name,
-                ctor: ctor_name,
-            });
-        }
-        if num_indices != 0 {
-            let (head, _) = self.unfold_apps(dom);
-            if head == ind_const {
-                return Err(KernelError::RecursiveIndexedNotSupported {
-                    inductive: ind_name,
-                    ctor: ctor_name,
-                });
-            }
-        }
-        Err(self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom))
     }
 
     /// Open one field through Lean's shared recursive-argument shape: WHNF at
@@ -853,11 +781,11 @@ impl Kernel {
         Ok(opened)
     }
 
-    /// Classify a field type `dom` that mentions `I` but is **not** the direct
-    /// field `I p_1…p_m`, into the appropriate deferred-error.
+    /// Classify a field type `dom` that mentions `I` but did not match the
+    /// supported WHNF telescope-tail shape.
     ///
-    /// - a `Pi` whose telescope ends in `I` (a reflexive/higher-order field,
-    ///   e.g. `(A → I p…)`) ⇒ [`KernelError::ReflexiveOrNestedNotSupported`];
+    /// - a `Pi` containing an invalid or nested occurrence ⇒
+    ///   [`KernelError::ReflexiveOrNestedNotSupported`];
     /// - a self-reference applied to the **wrong** arguments (`I a…` where the
     ///   args are not the parameters) ⇒
     ///   [`KernelError::RecursiveInductiveNotSupported`];
@@ -870,7 +798,8 @@ impl Kernel {
         ctor_name: NameId,
         dom: ExprId,
     ) -> KernelError {
-        // A `Pi`-headed field that ultimately yields `I` is reflexive/nested.
+        // A remaining `Pi`-headed occurrence failed the valid recursive-tail
+        // classifier, so it is malformed or nested rather than admissible.
         if matches!(self.expr_node(dom), ExprNode::Pi(..)) {
             return KernelError::ReflexiveOrNestedNotSupported {
                 inductive: ind_name,
@@ -924,13 +853,11 @@ struct CheckedCtor {
     /// The leading parameters are *not* included here.
     fields: Vec<LocalDecl>,
     /// Stable descriptors for the recursive fields, ascending by 0-based field
-    /// position (within `fields`, parameters excluded). M1 records only the
-    /// already-supported empty-telescope/empty-index direct shape; the
-    /// telescope depth is retained so M2 can generalize without replacing this
-    /// metadata boundary.
+    /// position (within `fields`, parameters excluded). The descriptor retains
+    /// only the field position and telescope depth; context-specific binders,
+    /// indices, and applied values are rederived for each trusted use.
     /// One induction hypothesis (in the recursor's minor premise) and one
     /// recursive call (in the ι-rule) is generated per entry, in this order.
-    /// Empty for an indexed inductive (recursive-indexed is deferred).
     recursive_fields: Vec<RecursiveField>,
     /// Whether every non-`Prop` field is exposed as an exact argument of this
     /// constructor's result. For a sole constructor of a potentially-`Prop`

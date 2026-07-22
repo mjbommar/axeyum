@@ -96,14 +96,14 @@ pub struct RecRule {
 /// constants additionally carry a closed `value`. Definitions carry a
 /// [`ReducibilityHint`] driving lazy-delta side choice.
 ///
-/// The inductive layer (ADR-0036, through slice 7) adds
+/// The inductive layer (ADR-0036 and ADR-0353) adds
 /// [`Declaration::Inductive`], [`Declaration::Constructor`], and
-/// [`Declaration::Recursor`], supporting **parametric**, **recursive**
-/// (non-indexed), and **non-recursive indexed** inductive types (enums,
-/// structures, `Nat`/`List`/`Prod`/`Sum`, and `Eq`). Recursive constructors on
-/// an indexed family, reflexive/nested fields, and mutual inductives are
-/// deferred to later slices and rejected explicitly by the admission gate
-/// rather than guessed.
+/// [`Declaration::Recursor`], supporting parametric/indexed single-family
+/// inductives and recursive fields whose WHNF is a possibly empty `Pi`
+/// telescope ending in the exact family application. This includes enums,
+/// structures, `Nat`/`List`/`Prod`/`Sum`, `Eq`, and `Vector`/`Acc`-shaped
+/// recursion. Mutual inductives and occurrences nested under foreign heads are
+/// deferred and rejected explicitly rather than guessed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Declaration {
     /// `axiom name : ty` — an asserted constant with no definitional value.
@@ -172,7 +172,7 @@ pub enum Declaration {
         /// Number of index binders after the parameters. Projection inference
         /// validates the projected value's complete parameter/index spine.
         num_indices: u16,
-        /// Whether any checked constructor has a direct recursive field.
+        /// Whether any checked constructor has a recursive field.
         /// Structure eta is legal only when this is false, matching Lean's
         /// `is_non_rec_structure` predicate.
         is_recursive: bool,
@@ -180,8 +180,8 @@ pub enum Declaration {
         ctor_names: Vec<NameId>,
     },
     /// A constructor `c : Π params fields, I params indices` of inductive
-    /// `inductive`. Field types may mention `I` as a **direct recursive field**
-    /// (only on a non-indexed family).
+    /// `inductive`. A recursive field may open a `Pi` telescope and end in the
+    /// exact indexed family application accepted by the positivity gate.
     Constructor {
         /// The constructor's name.
         name: NameId,

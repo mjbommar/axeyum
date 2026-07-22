@@ -6,8 +6,9 @@
 //! families (`List`, `Option`, `Prod`, `Sum`), and the slice-7 **indexed**
 //! families (`Eq` — the backbone — plus a simple indexed enum), with the
 //! dependent-motive `Eq.rec` self-check, its ι-reduction on `refl`, and a
-//! transport that computes; plus the rejections the trusted gate must catch
-//! (recursive-indexed, wrong parameters, reflexive fields).
+//! transport that computes; recursive-indexed and higher-order recursive
+//! families; plus the malformed/non-positive rejections the trusted gate must
+//! catch.
 #![allow(
     clippy::many_single_char_names,
     clippy::similar_names,
@@ -1927,13 +1928,10 @@ fn eq_rec_transport_computes() {
     );
 }
 
-/// Reject: a **recursive** field on an **indexed** inductive (recursion +
-/// indices together, e.g. a `Vector.cons`-shaped constructor) ⇒
-/// `RecursiveIndexedNotSupported`. We build a 1-index family `V : Nat → Sort 1`
-/// with `cons : Π (n : Nat), V n → V (succ n)` — the field `V n` is recursive
-/// AND the family is indexed.
+/// A direct recursive field on an indexed family receives an IH at the field's
+/// own index, and its computation rule recursively evaluates that field.
 #[test]
-fn reject_recursive_indexed_field() {
+fn recursive_indexed_field_admits_and_computes() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let (nat, _nat_rec, [_zero, succ]) = declare_nat(&mut k);
@@ -1963,15 +1961,54 @@ fn reject_recursive_indexed_field() {
         let n_name = k.name_str(anon, "n");
         k.pi(n_name, nat_const, inner, BinderInfo::Default)
     };
-    let err = k
-        .add_inductive(vname, &[], 0, ty, &[(cons, cons_ty)])
-        .unwrap_err();
-    assert!(
-        matches!(err, KernelError::RecursiveIndexedNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(vname));
-    assert!(!k.environment().contains(cons));
+    k.add_inductive(vname, &[], 0, ty, &[(cons, cons_ty)])
+        .expect("recursive indexed family should admit");
+    let rec_name = k.name_str(vname, "rec");
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let rec_level = match rec_decl {
+        Declaration::Recursor {
+            ref uparams,
+            num_motives,
+            num_minors,
+            num_indices,
+            ..
+        } => {
+            assert_eq!((num_motives, num_minors, num_indices), (1, 1, 1));
+            k.level_param(uparams[0])
+        }
+        _ => panic!("V.rec should be a recursor"),
+    };
+
+    let motive = k.fvar(100);
+    let minor = k.fvar(101);
+    let n = k.fvar(102);
+    let tail = k.fvar(103);
+    let cons_c = k.const_(cons, vec![]);
+    let major = {
+        let app = k.app(cons_c, n);
+        k.app(app, tail)
+    };
+    let succ_n = k.app(succ_c, n);
+    let rec_c = k.const_(rec_name, vec![rec_level]);
+    let application = {
+        let app = k.app(rec_c, motive);
+        let app = k.app(app, minor);
+        let app = k.app(app, succ_n);
+        k.app(app, major)
+    };
+    let recursive_call = {
+        let rec_c = k.const_(rec_name, vec![rec_level]);
+        let app = k.app(rec_c, motive);
+        let app = k.app(app, minor);
+        let app = k.app(app, n);
+        k.app(app, tail)
+    };
+    let expected = {
+        let app = k.app(minor, n);
+        let app = k.app(app, tail);
+        k.app(app, recursive_call)
+    };
+    assert_eq!(k.whnf(application), expected);
 }
 
 /// A simple **indexed enum** with two constructors landing at different index
@@ -2094,12 +2131,11 @@ fn reject_ctor_wrong_param() {
     assert!(!k.environment().contains(mk));
 }
 
-/// Reject: a reflexive recursive field in a parametric inductive — a field whose
-/// type is a `Pi` ending in `I α` (`(Nat → List α) → List α` shape). Direct
-/// recursive fields (`List α`) are admitted (slice 6); reflexive ones are still
-/// deferred.
+/// A higher-order recursive field receives a telescope-shaped IH, and its
+/// computation rule supplies a lambda that recursively evaluates every field
+/// application.
 #[test]
-fn reject_parametric_reflexive_field() {
+fn parametric_higher_order_field_admits_and_computes() {
     let mut k = Kernel::new();
     let anon = k.anon();
     let u = k.name_str(anon, "u");
@@ -2127,15 +2163,60 @@ fn reject_parametric_reflexive_field() {
         let inner = k.pi(f_name, f_ty, refl_a_res, BinderInfo::Default);
         k.pi(alpha_name, sort_u, inner, BinderInfo::Default)
     };
-    let err = k
-        .add_inductive(refl, &[u], 1, ty, &[(node, node_ty)])
-        .unwrap_err();
-    assert!(
-        matches!(err, KernelError::ReflexiveOrNestedNotSupported { .. }),
-        "got {err:?}"
-    );
-    assert!(!k.environment().contains(refl));
-    assert!(!k.environment().contains(node));
+    k.add_inductive(refl, &[u], 1, ty, &[(node, node_ty)])
+        .expect("higher-order recursive family should admit");
+    let rec_name = k.name_str(refl, "rec");
+    let rec_decl = k.environment().get(rec_name).unwrap().clone();
+    let family_level = match rec_decl {
+        Declaration::Recursor {
+            ref uparams,
+            num_motives,
+            num_minors,
+            num_indices,
+            ..
+        } => {
+            assert_eq!((num_motives, num_minors, num_indices), (1, 1, 0));
+            assert_eq!(
+                uparams.len(),
+                1,
+                "potentially-Prop family eliminates to Prop"
+            );
+            k.level_param(uparams[0])
+        }
+        _ => panic!("PRefl.rec should be a recursor"),
+    };
+
+    let alpha = k.fvar(100);
+    let motive = k.fvar(101);
+    let minor = k.fvar(102);
+    let field = k.fvar(103);
+    let node_c = k.const_(node, vec![family_level]);
+    let major = {
+        let app = k.app(node_c, alpha);
+        k.app(app, field)
+    };
+    let rec_c = k.const_(rec_name, vec![family_level]);
+    let application = {
+        let app = k.app(rec_c, alpha);
+        let app = k.app(app, motive);
+        let app = k.app(app, minor);
+        k.app(app, major)
+    };
+    let ih = {
+        let x = k.bvar(0);
+        let field_x = k.app(field, x);
+        let rec_c = k.const_(rec_name, vec![family_level]);
+        let app = k.app(rec_c, alpha);
+        let app = k.app(app, motive);
+        let app = k.app(app, minor);
+        let body = k.app(app, field_x);
+        k.lam(anon, alpha, body, BinderInfo::Default)
+    };
+    let expected = {
+        let app = k.app(minor, field);
+        k.app(app, ih)
+    };
+    assert_eq!(k.whnf(application), expected);
 }
 
 /// Determinism for a parametric inductive: building `List` twice yields the same

@@ -201,9 +201,17 @@ state.
 > field position/telescope depth, reconstruction mismatch is a typed error, the
 > exact `MiniNat.rec`/`MiniList.rec` declaration identities and computations are
 > unchanged, and both feature declines plus the frozen 840-case summary remain
-> intact. M2 next may deliberately widen native admission; importer policy must
-> remain unchanged until M3. Exact official recursor
-> comparison, a new >=512-case
+> intact. The subsequent
+> [M2 native-semantics result](docs/plan/lean-recursive-induction-hypotheses-m2-2026-07-22.md)
+> now admits all ten positive native rows through the one telescope/index-aware
+> rule, retains four typed transactional negatives, rejects all ten native
+> mutation classes, and repeats a 768-case public-path grammar byte-identically.
+> The frozen 840-case population separately records its exact TL2.11 baseline
+> partition and M2's deliberate 186-case admission widening. The 182 kernel
+> units, direct-recursive identities, focused clippy, and rustdoc pass. No new
+> official stream was passed to the importer; M3 owns its first product
+> observation and the remaining metadata/publication mutations. Exact official
+> recursor comparison, the new >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups remain TL2.13; nested/well-founded frontend lowering remains

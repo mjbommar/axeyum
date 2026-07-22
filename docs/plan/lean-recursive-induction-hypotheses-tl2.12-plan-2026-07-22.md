@@ -1,6 +1,6 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: M1 shared representation complete; M2 generalized native semantics is next and no recursive admission has widened
+Status: M2 generalized native semantics complete; M3 importer policy and exact official streams are next
 
 Date: 2026-07-22
 
@@ -8,7 +8,7 @@ Decision gate:
 [proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Current checkpoint:
-[M1 shared-representation result](lean-recursive-induction-hypotheses-m1-2026-07-22.md)
+[M2 native-semantics result](lean-recursive-induction-hypotheses-m2-2026-07-22.md)
 
 Parents:
 
@@ -288,11 +288,15 @@ frozen 840-case positivity summary remain unchanged. See the
 
 ### M2 — generalized native IH and computation rules
 
-- generate telescope/index-aware IH types and recursive rule arguments;
-- enable the registered native positive rows;
-- add all native computation and mutation checks;
-- repeat the new generated grammar and completed positivity grammar;
-- run bounded kernel gates, then commit and push.
+**Complete.** One telescope/index-aware rule now admits all ten positive native
+rows and preserves all four negative transactional classes. A fixed 768-case
+public-path grammar repeats byte-identically and covers every applicable native
+semantic mutation; a separate contract rejects recursor type, minor, rule, and
+field-count corruption. The retained 840-case population reports both its exact
+TL2.11 baseline partition and M2's deliberate 186-case admission widening. The
+182-test kernel suite, direct-recursive identities, focused clippy, and rustdoc
+pass. No new official stream was passed to the importer. See the
+[M2 result](lean-recursive-induction-hypotheses-m2-2026-07-22.md).
 
 ### M3 — importer policy and exact official streams
 
