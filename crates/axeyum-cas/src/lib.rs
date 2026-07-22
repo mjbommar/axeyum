@@ -6817,6 +6817,33 @@ pub fn jacobi_polynomial(n: u32, alpha: Rational, beta: Rational, var: &str) -> 
     })
 }
 
+/// The **generalized (associated) Laguerre polynomial** `Lₙ^{(α)}(x)` for a rational
+/// parameter `α`, from `(k+1)Lₖ₊₁ = (2k+1+α−x)Lₖ − (k+α)Lₖ₋₁` with `L₀=1`,
+/// `L₁=1+α−x`. Reduces to the ordinary [`laguerre_polynomial`] at `α=0`. Orthogonal on
+/// `[0,∞)` with weight `xᵅe^{−x}`; appears in the radial hydrogen wavefunctions.
+/// `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, generalized_laguerre_polynomial, laguerre_polynomial, equal, ZeroTest};
+/// use axeyum_ir::Rational;
+/// // L₃^{(0)}(x) = L₃(x).
+/// let l3 = generalized_laguerre_polynomial(3, Rational::integer(0), "x").unwrap();
+/// assert!(matches!(equal(&l3, &laguerre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn generalized_laguerre_polynomial(n: u32, alpha: Rational, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    let l1 = CasExpr::Const(Rational::integer(1).checked_add(alpha)?) - x.clone();
+    orthogonal_recurrence(n, CasExpr::int(1), l1, |k, lk, lkm1| {
+        // (2k+1+α) − x.
+        let scalar = Rational::integer(i128::from(2 * k + 1)).checked_add(alpha)?;
+        let coeff = CasExpr::Const(scalar) - x.clone();
+        let k_alpha = Rational::integer(i128::from(k)).checked_add(alpha)?;
+        let numerator = coeff * lk.clone() - CasExpr::Const(k_alpha) * lkm1.clone();
+        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
+    })
+}
+
 /// The **Gegenbauer (ultraspherical) polynomial** `Cₙ^λ(x)` for a rational parameter
 /// `λ`, from `(k+1)Cₖ₊₁ = 2(k+λ)x·Cₖ − (k+2λ−1)·Cₖ₋₁` with `C₀=1`, `C₁=2λx`. This
 /// parametric family generalizes several classical ones: `λ=1` is the Chebyshev
@@ -14668,6 +14695,14 @@ mod tests {
         // Explicit Jacobi: P₁^{(2,1)} = 1/2 + (5/2)x, P₂^{(1,1)} = (15x²−3)/4.
         assert_equal(&jacobi_polynomial(1, Rational::integer(2), Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) + CasExpr::rat(5, 2) * x()));
         assert_equal(&jacobi_polynomial(2, Rational::integer(1), Rational::integer(1), "x").unwrap(), &((CasExpr::int(15) * x().pow(2) - CasExpr::int(3)) / CasExpr::int(4)));
+        // Generalized Laguerre Lₙ^{(0)} = Lₙ; explicit L₂^{(1)} = x²/2 − 3x + 3.
+        for n in 0..=5u32 {
+            assert_equal(
+                &generalized_laguerre_polynomial(n, Rational::integer(0), "x").unwrap(),
+                &laguerre_polynomial(n, "x").unwrap(),
+            );
+        }
+        assert_equal(&generalized_laguerre_polynomial(2, Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) * x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(3)));
     }
 
     #[test]
