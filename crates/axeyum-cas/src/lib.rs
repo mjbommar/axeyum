@@ -10429,6 +10429,89 @@ fn improper_sinc_squared_integral(
     })
 }
 
+/// Find a single `e^{k·var}` factor anywhere in `expr` (a linear argument with zero
+/// constant term), returning the rate `k` (a nonzero rational). Mirrors
+/// [`find_linear_trig`] for the exponential factor of a Laplace-type integrand.
+fn find_linear_exp_rate(expr: &CasExpr, var: &str) -> Option<Rational> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, arg) if expr_contains_var(arg, var) => {
+            let poly = normalize(arg)?.to_univariate(var)?;
+            (poly::rat_degree(&poly)? == 1 && poly[0].is_zero() && !poly[1].is_zero())
+                .then_some(poly[1])
+        }
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_linear_exp_rate(t, var))
+        }
+        CasExpr::Neg(a) | CasExpr::Pow(a, _) | CasExpr::Unary(_, a) => find_linear_exp_rate(a, var),
+        CasExpr::Div(a, b) => find_linear_exp_rate(a, var).or_else(|| find_linear_exp_rate(b, var)),
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// The **exponential frequency integral** `∫₀^∞ c·e^{−a x}·sin(b x)/x dx =
+/// c·arctan(b/a)` (`a > 0`) — the Laplace transform of the sinc kernel. Its value is
+/// the genuine symbolic `atan(b/a)` (folded to `π/4` etc. for special ratios), no
+/// elementary antiderivative. Rates `a`, `b` are read off the `e^{−a x}` and
+/// `sin(b x)` factors; the constant `c` is recovered numerically then **proven** by
+/// the zero-test `equal(expr, c·e^{−a x}sin(b x)/x)`; a numeric quadrature guards it.
+/// `∫₀^∞ e^{−x}sin x/x = π/4`, `∫₀^∞ e^{−x}sin(√3 x)/x` would need surd `b` (declines).
+fn improper_exp_sinc_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let LimitPoint::Finite(z) = &lower else {
+        return None;
+    };
+    if !z.is_zero() || !matches!(upper, LimitPoint::PosInfinity) {
+        return None;
+    }
+    let (head, b) = find_linear_trig(expr, var)?;
+    if head != UnaryFunc::Sin || b.is_zero() {
+        return None;
+    }
+    let rate = find_linear_exp_rate(expr, var)?;
+    if rate >= Rational::zero() {
+        return None; // need `e^{−a x}`, `a > 0`, for convergence
+    }
+    let a = rate.checked_neg()?;
+    let vx = CasExpr::var(var);
+    let kernel = (CasExpr::Const(rate) * vx.clone()).exp() * (CasExpr::Const(b) * vx.clone()).sin() / vx;
+    let a_f = evalf(&CasExpr::Const(a), &[])?;
+    let ratio = |point: f64| -> Option<f64> {
+        let den = evalf(&kernel, &[(var, point)])?;
+        if den.abs() < 1e-9 {
+            return None;
+        }
+        Some(evalf(expr, &[(var, point)])? / den)
+    };
+    let (Some(r1), Some(r2), Some(r3)) = (ratio(0.3), ratio(0.8), ratio(1.7)) else {
+        return None;
+    };
+    if (r1 - r2).abs() > 1e-6 || (r1 - r3).abs() > 1e-6 {
+        return None;
+    }
+    let coeff = rationalize(r1, 10_000)?;
+    let scaled = simplify(&(CasExpr::Const(coeff) * kernel));
+    if !matches!(equal(&simplify(expr), &scaled), ZeroTest::Certified { equal: true, .. }) {
+        return None;
+    }
+    // `c·arctan(b/a)`; `evaluate_trig` folds special ratios (`atan 1 = π/4`).
+    let value = simplify(&evaluate_trig(&(CasExpr::Const(coeff) * CasExpr::Const(b.checked_div(a)?).atan())));
+    // Numeric guard: integrand is finite at 0 (`→ b`) and decays like `e^{−a x}`.
+    let approx = numeric_integrate(expr, var, 1e-6, 40.0 / a_f + 10.0, 20_000)?;
+    let exact = evalf(&value, &[])?;
+    if (approx - exact).abs() > 1e-2 * (1.0 + exact.abs()) {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// Find a single `cos(a·var)` or `sin(a·var)` factor anywhere in `expr` (a linear
 /// argument, `a` a nonzero rational), returning the head and `a` — used to peel the
 /// oscillatory factor of a Fourier integral.
@@ -10649,6 +10732,9 @@ pub fn improper_integrate(
     }
     if let Some(sinc) = improper_sinc_squared_integral(expr, var, lower, upper) {
         return Some(sinc);
+    }
+    if let Some(freq) = improper_exp_sinc_integral(expr, var, lower, upper) {
+        return Some(freq);
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
@@ -15322,6 +15408,16 @@ mod tests {
         // Alternate spelling sin²x/x², and the divergent (cos x/x)² declines.
         assert_equal(&gauss(x().sin().pow(2) / x().pow(2), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(2)));
         assert!(improper_integrate(&(x().cos() / x()).pow(2), "x", zero(), LimitPoint::PosInfinity).is_none());
+        // Exponential frequency integral ∫₀^∞ e^{−a x}sin(b x)/x = arctan(b/a).
+        // ∫₀^∞ e^{−x}sin x/x = atan 1 = π/4; ∫₀^∞ e^{−x}sin(2x)/x = atan 2 (symbolic).
+        assert_equal(&gauss((CasExpr::int(-1) * x()).exp() * x().sin() / x(), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(4)));
+        assert!(matches!(
+            equal(&gauss((CasExpr::int(-1) * x()).exp() * (CasExpr::int(2) * x()).sin() / x(), zero(), LimitPoint::PosInfinity), &CasExpr::int(2).atan()),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // e^{−2x}sin(2x)/x = atan(1) = π/4; a constant multiple scales the value.
+        assert_equal(&gauss((CasExpr::int(-2) * x()).exp() * (CasExpr::int(2) * x()).sin() / x(), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(4)));
+        assert_equal(&gauss(CasExpr::int(3) * (CasExpr::int(-1) * x()).exp() * x().sin() / x(), zero(), LimitPoint::PosInfinity), &(CasExpr::int(3) * v("pi") / CasExpr::int(4)));
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
         assert!(matches!(
