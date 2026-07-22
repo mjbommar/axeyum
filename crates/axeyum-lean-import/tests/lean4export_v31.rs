@@ -172,7 +172,7 @@ fn official_blocker_fixtures_have_stable_first_declines() {
     let cases = [
         // Projection is now translated/admitted, exposing the literal record as
         // the exact next blocker in this dependency closure.
-        (NAT_LITERAL_FIXTURE, 125, "literal-nat-bignum-and-typing"),
+        (NAT_LITERAL_FIXTURE, 125, "literal-nat-typing"),
         (QUOTIENT_FIXTURE, 65, "quotient-package"),
     ];
     for (fixture, expected_line, expected_code) in cases {
@@ -186,6 +186,46 @@ fn official_blocker_fixtures_have_stable_first_declines() {
             "{error:?}",
         );
     }
+}
+
+#[test]
+fn nat_literal_wire_values_are_validated_without_fixed_width_narrowing() {
+    let values = [
+        "340282366920938463463374607431768211455", // 2^128 - 1
+        "340282366920938463463374607431768211456", // 2^128
+        "340282366920938463463374607431768211457", // 2^128 + 1
+        "13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031",
+    ];
+    for value in values {
+        let text = format!("{}\n{{\"ie\":0,\"natVal\":\"{value}\"}}\n", metadata());
+        let error = import(&text).unwrap_err();
+        assert!(
+            matches!(
+                error,
+                ImportError::Unsupported {
+                    line: 2,
+                    code: "literal-nat-typing"
+                }
+            ),
+            "{value}: {error:?}"
+        );
+    }
+}
+
+#[test]
+fn malformed_nat_literal_wire_values_reject_before_the_typing_boundary() {
+    for value in ["", "+1", "-1", " 1", "1 ", "1_0", "12a"] {
+        let text = format!("{}\n{{\"ie\":0,\"natVal\":\"{value}\"}}\n", metadata());
+        let error = import(&text).unwrap_err();
+        assert!(
+            matches!(error, ImportError::Malformed { line: 2, .. }),
+            "{value:?}: {error:?}"
+        );
+    }
+
+    let text = format!("{}\n{{\"ie\":0,\"natVal\":1}}\n", metadata());
+    let error = import(&text).unwrap_err();
+    assert!(matches!(error, ImportError::Malformed { line: 2, .. }));
 }
 
 #[test]

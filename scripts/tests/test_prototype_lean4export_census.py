@@ -48,7 +48,7 @@ class CensusTests(unittest.TestCase):
                 "lean4export-v4.30-nat-literal.ndjson",
                 "8cdb40da9441b77d140f1c794ac04e6dc941fee7466004bf3595ae43c6782603",
                 (30, 4, 90, 5),
-                ("expr-projection", "literal-nat-bignum-and-typing"),
+                ("expr-projection", "literal-nat-typing"),
             ),
             (
                 "quotient",

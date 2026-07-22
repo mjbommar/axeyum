@@ -84,16 +84,22 @@ state.
 > enables validated format-3.1 `proj` translation, and closes the exact official
 > projection root: 61 expressions become nine admitted declarations and
 > `importPairLeft (ImportPair.mk 0 1)` computes to `0`; wrong name/index
-> mutations reject at the kernel gate. The Nat root's exact first decline moves
-> to `literal-nat-bignum-and-typing` at line 125. TL2.5 now adds symmetric
+> mutations reject at the kernel gate. TL2.5 now adds symmetric
 > structure eta for exactly saturated constructors of checked one-constructor,
 > zero-index, non-recursive inductives. Seven native families cover false
 > equality, universes, parameters, dependencies, and indexed/recursive
 > exclusions; a required local run against pinned Lean 4.30 accepts the
 > reconstruction by `rfl` and rejects the duplicated-field mutation. The
-> bounded kernel gate now records 179 unit tests and 25 integration cases
-> across nine binaries. Resume with TL2.6 arbitrary-precision Nat storage
-> before literal typing, and the remaining
+> bounded kernel gate at that checkpoint recorded 179 unit tests and 25
+> integration cases across nine binaries. TL2.6 now replaces `Lit::Nat(u128)`
+> with canonical `NatLit(BigUint)` storage. Values below, at, and above `2^128`
+> plus a much larger decimal survive parsing, interning, structural operations,
+> Lean rendering, importer validation, and the expanded deterministic seam-fuzz
+> family. Inference still fails closed, and the Nat root's exact first decline
+> is now `literal-nat-typing` at line 125. The kernel gate records 179 unit
+> tests and 29 integration cases across ten binaries; 16 importer tests pass.
+> Resume with TL2.7 literal typing and constructor/literal conversion, plus the
+> remaining
 > recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
@@ -127,8 +133,9 @@ state.
 > attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
 > partial until generated projection/reduction/eta and quotient semantic
 > families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
-> constructor reduction/import, and TL2.5 structure eta are complete; execute
-> TL2.6 arbitrary-precision Nat storage next. Native parser/macros,
+> constructor reduction/import, TL2.5 structure eta, and TL2.6
+> arbitrary-precision Nat storage are complete; execute TL2.7 Nat literal
+> typing next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

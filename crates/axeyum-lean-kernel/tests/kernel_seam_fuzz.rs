@@ -16,7 +16,7 @@
 //! every generated case.
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, KernelError, Lit, NameId, build_logic_prelude,
+    BinderInfo, Declaration, ExprId, Kernel, KernelError, Lit, NameId, NatLit, build_logic_prelude,
 };
 
 const PROP_CASES: usize = 192;
@@ -558,6 +558,8 @@ enum LiteralCorner {
     NatZero,
     NatOne,
     NatMax,
+    NatAboveU128,
+    NatHuge,
     NatRandom,
     StringEmpty,
     StringAscii,
@@ -566,18 +568,20 @@ enum LiteralCorner {
 }
 
 impl LiteralCorner {
-    const COUNT: usize = 8;
+    const COUNT: usize = 10;
 
     fn from_index(index: usize) -> Self {
         match index {
             0 => Self::NatZero,
             1 => Self::NatOne,
             2 => Self::NatMax,
-            3 => Self::NatRandom,
-            4 => Self::StringEmpty,
-            5 => Self::StringAscii,
-            6 => Self::StringUnicode,
-            7 => Self::StringNul,
+            3 => Self::NatAboveU128,
+            4 => Self::NatHuge,
+            5 => Self::NatRandom,
+            6 => Self::StringEmpty,
+            7 => Self::StringAscii,
+            8 => Self::StringUnicode,
+            9 => Self::StringNul,
             _ => panic!("literal corner index out of range: {index}"),
         }
     }
@@ -588,13 +592,23 @@ impl LiteralCorner {
 
     fn value(self, rng: &mut Lcg) -> Lit {
         match self {
-            Self::NatZero => Lit::Nat(0),
-            Self::NatOne => Lit::Nat(1),
-            Self::NatMax => Lit::Nat(u128::MAX),
+            Self::NatZero => Lit::nat(0_u8),
+            Self::NatOne => Lit::nat(1_u8),
+            Self::NatMax => Lit::nat(u128::MAX),
+            Self::NatAboveU128 => Lit::Nat(
+                NatLit::from_decimal("340282366920938463463374607431768211456")
+                    .expect("2^128 is a valid natural literal"),
+            ),
+            Self::NatHuge => Lit::Nat(
+                NatLit::from_decimal(
+                    "13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031",
+                )
+                .expect("large decimal is a valid natural literal"),
+            ),
             Self::NatRandom => {
                 let high = u128::from(rng.next_u64());
                 let low = u128::from(rng.next_u64());
-                Lit::Nat((high << 64) | low)
+                Lit::nat((high << 64) | low)
             }
             Self::StringEmpty => Lit::Str(String::new()),
             Self::StringAscii => Lit::Str(format!("seam-{:016x}", rng.next_u64())),
@@ -606,7 +620,7 @@ impl LiteralCorner {
 
 /// Wrap an intentionally untyped literal beneath beta/zeta redexes. WHNF may
 /// reduce the wrapper structurally, but inference/admission must still reach the
-/// literal and return `UnsupportedLit` until TL2.6/TL2.7 land.
+/// literal and return `UnsupportedLit` until TL2.7 lands.
 fn wrap_untyped_literal(k: &mut Kernel, literal: ExprId, depth: usize) -> ExprId {
     let anon = k.anon();
     let annotation = k.sort_zero();

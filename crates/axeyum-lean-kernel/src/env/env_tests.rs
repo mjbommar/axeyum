@@ -462,7 +462,7 @@ fn theorem_admits_and_infers() {
 #[test]
 fn deferred_lit_still_errors() {
     let mut k = Kernel::new();
-    let n = k.lit(Lit::Nat(3));
+    let n = k.lit(Lit::nat(3_u8));
     let err = k.infer(n).unwrap_err();
     assert!(matches!(err, KernelError::UnsupportedLit), "got {err:?}");
 }

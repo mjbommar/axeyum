@@ -130,6 +130,9 @@ dependencies = [
 [[package]]
 name = "axeyum-lean-kernel"
 version = "0.1.0"
+dependencies = [
+ "num-bigint",
+]
 
 [[package]]
 name = "axeyum-property"

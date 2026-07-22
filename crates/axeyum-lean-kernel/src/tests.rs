@@ -656,11 +656,11 @@ fn lift_respects_binder_cutoff() {
 #[test]
 fn lit_nodes_are_closed() {
     let mut k = Kernel::new();
-    let n = k.lit(Lit::Nat(123));
+    let n = k.lit(Lit::nat(123_u8));
     let s = k.lit(Lit::Str("hi".into()));
     assert_eq!(k.num_loose_bvars(n), 0);
     assert!(!k.has_fvars(s));
-    let n2 = k.lit(Lit::Nat(123));
+    let n2 = k.lit(Lit::nat(123_u8));
     assert_eq!(n, n2);
     assert_ne!(n, s);
 }

@@ -49,8 +49,13 @@ Last updated: 2026-07-21
 > structure eta for exactly saturated constructors of checked one-constructor,
 > zero-index, non-recursive inductives. Seven native control families pass, and
 > pinned Lean 4.30 accepts the reconstruction while rejecting its duplicated-
-> field mutation. Generated projection/reduction/eta and quotient semantic
-> seams remain uncredited; TL2.6 arbitrary-precision Nat storage is next.
+> field mutation. TL2.6 now replaces the `u128` ceiling with canonical
+> `NatLit(BigUint)` storage: below/at/above-`2^128` values and a much larger
+> decimal survive interning, structural operations, rendering, importer
+> validation, and the expanded seam-fuzz family without granting typing credit.
+> The official Nat root now reaches `literal-nat-typing` at line 125.
+> Generated projection/reduction/eta and quotient semantic seams remain
+> uncredited; TL2.7 Nat literal typing is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

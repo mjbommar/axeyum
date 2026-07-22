@@ -77,7 +77,7 @@ class ProbeTests(unittest.TestCase):
             set(result.blockers),
             {
                 "expr-projection",
-                "literal-nat-bignum-and-typing",
+                "literal-nat-typing",
                 "literal-string-typing",
                 "quotient-package",
             },

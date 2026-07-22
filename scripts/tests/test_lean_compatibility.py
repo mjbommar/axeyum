@@ -34,7 +34,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
         second = GEN.render(copy.deepcopy(self.data))
         self.assertEqual(first, second)
         self.assertIn("| `K1-import` |", first)
-        self.assertIn("`literal-nat-bignum-and-typing`", first)
+        self.assertIn("`literal-nat-typing`", first)
 
     def test_translation_cannot_receive_credit_without_parsing(self) -> None:
         row = self.row("lean4export-flat-fixture")
@@ -66,7 +66,7 @@ class LeanCompatibilityContractTests(unittest.TestCase):
 
         self.data = GEN.load_manifest()
         row = self.row("lean4export-flat-fixture")
-        row["decline_codes"] = ["literal-nat-bignum-and-typing"]
+        row["decline_codes"] = ["literal-nat-typing"]
         self.assertTrue(
             any("decline code without a declined assurance" in failure for failure in self.failures())
         )

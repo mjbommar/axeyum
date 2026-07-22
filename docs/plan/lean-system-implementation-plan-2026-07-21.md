@@ -195,7 +195,7 @@ official comparison.
 | TL2.3 | DONE | Preserve checked single-constructor parameter/index metadata and infer universe-polymorphic, indexed, and dependent projection types with Lean's Prop-elimination restriction. | TL2.2 | L | [Four integration families plus an injected-metadata mutation](lean-projection-inference-tl2.3-2026-07-21.md) reject wrong names/shapes/arity/fields and infer dependent second fields. |
 | TL2.4 | DONE | Reduce projections of constructor applications, including universe-polymorphic and parameterized structures; translate validated format-3.1 projection records. | TL2.3 | M | [Native reduction tests plus the exact official projection closure](lean-projection-reduction-tl2.4-2026-07-21.md) independently admit nine declarations, compute the selected field, and reject name/index mutations. |
 | TL2.5 | DONE | Add structure eta as a separate definitional-equality slice, restricted to exactly saturated constructors of checked one-constructor, zero-index, non-recursive inductives. | TL2.4 | M | [Seven native families plus the required pinned-Lean positive/rejecting differential](lean-structure-eta-tl2.5-2026-07-21.md) cover symmetry, zero-field and multi-constructor boundaries, wrong fields/types, parameters, universes, dependencies, and indexed/recursive exclusions. |
-| TL2.6 | TODO | Replace `Lit::Nat(u128)` with arbitrary-precision storage before enabling literal typing. | TL1.7 | M | Values below/at/above 2^128 round-trip; no narrowing path exists. |
+| TL2.6 | DONE | Replace `Lit::Nat(u128)` with arbitrary-precision storage before enabling literal typing. | TL1.2 | M | [Canonical `NatLit(BigUint)` storage](lean-nat-literal-storage-tl2.6-2026-07-22.md) round-trips below/at/above `2^128`; importer mutations prove the decimal wire path does not narrow while inference remains fail-closed. The former TL1.7 dependency was removed because declaration digests do not govern expression payload representation. |
 | TL2.7 | TODO | Type Nat literals and implement constructor/literal conversion. | TL2.6, TL2.4 | M | Official Nat-literal closure admits; unary and literal forms are definitionally equal. |
 | TL2.8 | TODO | Implement accelerated Nat operations behind independently checked reductions or guarded trusted primitives. | TL2.7, TL0.4 | L | Per-operation mutation tests and large-value differential corpus pass. |
 | TL2.9 | TODO | Type and reduce String literals through `String.mk`/character/list constructors. | TL2.7 | L | String root advances past literals with exact next blocker reported. |
@@ -449,13 +449,13 @@ parallel lane:
 7. **DONE:** TL2.4 — add constructor projection reduction.
 8. **DONE:** translate official projection records and close the committed projection root; the Nat root now declines on literal typing at line 125.
 9. **DONE:** TL2.5 — add structure eta as its own differential slice.
-10. TL1.3 — make completed-environment publication transactional.
-11. TL1.4 — generate record-by-record and structural mutation corpora.
-12. TL1.7 — add axiom and declaration dependency digests.
-13. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
+10. **DONE:** TL2.6 — replace `u128` Nat storage with canonical arbitrary precision.
+11. **NEXT:** TL2.7 — type Nat literals and rerun the literal closure.
+12. TL1.3 — make completed-environment publication transactional.
+13. TL1.4 — generate record-by-record and structural mutation corpora.
+14. TL1.7 — add axiom and declaration dependency digests.
+15. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
     official fixtures while the importer lane is independent.
-14. **NEXT:** TL2.6 — replace `u128` Nat storage with arbitrary precision.
-15. TL2.7 — type Nat literals and rerun the literal closures.
 16. TL2.11 — implement positivity before widening inductive admission.
 17. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
 18. TL3.4 — discharge the first five axioms.

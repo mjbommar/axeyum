@@ -1590,7 +1590,7 @@ mod tests {
         let prop = k.sort_zero();
         let mut closed = prop;
         for value in 0..600_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             closed = k.app(closed, argument);
         }
         let body = k.app(closed, closed);
@@ -1615,7 +1615,7 @@ mod tests {
         // serializer pass and must preserve every repeated closed DAG node
         // regardless of the source proof's size.
         for value in 0..16_500_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             chain = k.app(chain, argument);
         }
         let root = k.app(chain, chain);
@@ -1660,7 +1660,7 @@ mod tests {
         let mut k = Kernel::new();
         let mut chain = k.sort_zero();
         for value in 0..20_000_u128 {
-            let argument = k.lit(crate::Lit::Nat(value));
+            let argument = k.lit(crate::Lit::nat(value));
             chain = k.app(chain, argument);
         }
 

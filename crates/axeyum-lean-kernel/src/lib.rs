@@ -70,7 +70,7 @@ use std::ops::Index;
 
 pub use arith_prelude::{ArithPrelude, build_arith_prelude};
 pub use env::{Declaration, Environment, RecRule, ReducibilityHint};
-pub use expr::{BinderInfo, ExprId, ExprNode, Lit};
+pub use expr::{BinderInfo, ExprId, ExprNode, Lit, NatLit};
 pub use int_prelude::{IntPrelude, build_int_prelude};
 pub use level::{LevelId, LevelNode};
 pub use name::{NameId, NameNode};

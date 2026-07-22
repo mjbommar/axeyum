@@ -107,11 +107,11 @@
       "source_marker": "\"inductive-reflexive\""
     },
     {
-      "code": "literal-nat-bignum-and-typing",
-      "meaning": "Natural literals await arbitrary-precision storage and kernel typing.",
+      "code": "literal-nat-typing",
+      "meaning": "Natural literals have arbitrary-precision storage but await kernel typing and reduction.",
       "owner": "axeyum-lean-kernel",
       "source_path": "crates/axeyum-lean-import/src/lib.rs",
-      "source_marker": "\"literal-nat-bignum-and-typing\""
+      "source_marker": "\"literal-nat-typing\""
     },
     {
       "code": "literal-string-typing",
@@ -259,7 +259,7 @@
         "workflow_reproduced": "not_attempted",
         "runtime_reproduced": "not_attempted"
       },
-      "decline_codes": ["literal-nat-bignum-and-typing"],
+      "decline_codes": ["literal-nat-typing"],
       "evidence": [
         {
           "kind": "fixture",
@@ -269,10 +269,10 @@
         {
           "kind": "test",
           "path": "crates/axeyum-lean-import/tests/lean4export_v31.rs",
-          "detail": "After projection translation, the stable first decline is literal-nat-bignum-and-typing at line 125."
+          "detail": "After arbitrary-precision decimal validation, the stable first decline is literal-nat-typing at line 125."
         }
       ],
-      "residual": "Projection is cleared; arbitrary-precision Nat storage and literal typing are now the exact first blockers."
+      "residual": "Projection and arbitrary-precision Nat storage are cleared; literal typing is now the exact first blocker."
     },
     {
       "id": "lean4export-projection-root",

@@ -676,12 +676,13 @@ Non-claims until their gates are met:
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
 2. Keep the eight Python and fourteen Rust fixture/mutation/census tests in normal
    checks.
-3. **TL2.2-TL2.5 DONE:** preserve first-class projection representation,
+3. **TL2.2-TL2.6 DONE:** preserve first-class projection representation,
    checked dependent inference, constructor reduction, exact official-root
    import/computation, and separately gated structure eta with pinned-Lean
-   positive/rejecting controls. Proceed to TL2.6 arbitrary-precision Nat
-   storage; do not generalize one K1 root or one K0 eta rule to broader native
-   or ecosystem compatibility.
+   positive/rejecting controls, plus canonical arbitrary-precision Nat storage
+   and no-narrowing importer validation. Proceed to TL2.7 literal typing; do
+   not generalize one K1 root or one K0 rule to broader native or ecosystem
+   compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
    hash-bound String closure; generate the remaining recursive-indexed, mutual,
    nested, and reflexive fixtures.

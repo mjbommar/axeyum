@@ -701,6 +701,14 @@ Out of scope:
     `Sort 0`. A generated adversarial matrix and a mandatory real-Lean
     flat-inductive/iota CI test guard the boundary. See
     [ADR-0165](../09-decisions/adr-0165-lean-compatible-prop-large-elimination.md).
+- [x] How should the independent Lean kernel represent natural literals before
+      it implements literal typing and reduction?
+  - Answer (2026-07-22): use a canonical `NatLit` newtype over pure-Rust
+    `BigUint`, parse official decimal payloads without any fixed-width
+    conversion, and keep inference fail-closed until the separately gated
+    TL2.7 slice. Values around and far above `2^128` must round-trip through
+    interning, structural operations, rendering, and importer validation. See
+    [ADR-0346](../09-decisions/adr-0346-arbitrary-precision-lean-nat-literals.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

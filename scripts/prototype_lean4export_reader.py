@@ -202,7 +202,7 @@ def probe_lines(lines: Iterable[str], *, require_format: str = FORMAT_VERSION) -
             elif kind == "natVal":
                 if not isinstance(value, str) or not value.isdigit():
                     raise ProbeError(f"line {line_number}.natVal: expected decimal string")
-                blockers.add("literal-nat-bignum-and-typing")
+                blockers.add("literal-nat-typing")
             elif kind == "strVal":
                 if not isinstance(value, str):
                     raise ProbeError(f"line {line_number}.strVal: expected string")

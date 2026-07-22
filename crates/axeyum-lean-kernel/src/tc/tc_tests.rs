@@ -336,7 +336,7 @@ fn error_const_unknown() {
 #[test]
 fn error_lit_unsupported() {
     let mut k = Kernel::new();
-    let n = k.lit(Lit::Nat(7));
+    let n = k.lit(Lit::nat(7_u8));
     let err = k.infer(n).unwrap_err();
     assert!(matches!(err, KernelError::UnsupportedLit), "got {err:?}");
 }
