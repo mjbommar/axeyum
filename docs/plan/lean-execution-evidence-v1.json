@@ -1,0 +1,357 @@
+{
+  "schema": "axeyum-lean-execution-evidence-v1",
+  "as_of": "2026-07-22",
+  "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
+  "preregistration": {
+    "commit": "ff8f8dd4b71c3c488ce53229f4301527d5e9d360",
+    "published_before_implementation": true,
+    "plan_sha256": "0f38bb7944de77a0df28d122c9c1190af3865c8ecc9778cc243135df191f0c37"
+  },
+  "source_inputs": [
+    {
+      "path": "docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md",
+      "sha256": "0f38bb7944de77a0df28d122c9c1190af3865c8ecc9778cc243135df191f0c37",
+      "binding": "preregistered-current-file"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-ci-profiles-v1.json",
+      "sha256": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
+      "binding": "current-file"
+    },
+    {
+      "path": "docs/plan/lean-complete-parity-v1.json",
+      "sha256": "f2fc71509b4f557265a853ebb7666071b7b67d8553c0951ae1f91b736059ab78",
+      "binding": "preregistered-baseline"
+    },
+    {
+      "path": "scripts/mem-run.sh",
+      "sha256": "25740241696f08480874e7b63214d62cfdf24eef766a3169c59b3af788498c63",
+      "binding": "current-file"
+    },
+    {
+      "path": "docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md",
+      "sha256": "3faef4ae21a1b61739812c524d76f1efc2d7e473b1a59d7d3921594ec0a475ed",
+      "binding": "current-file"
+    },
+    {
+      "path": "docs/research/09-decisions/adr-0345-preregister-lean-system-interoperability.md",
+      "sha256": "7af3ba0c11dd320d2ad9859dd5cac1ba06a25c26e5fee6670095d7fe51386a0a",
+      "binding": "current-file"
+    },
+    {
+      "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
+      "sha256": "1e23a4e77be3c4ee348b7c19f88511254045ae17a53c102a5f64ba9384981de4",
+      "binding": "preregistered-baseline"
+    }
+  ],
+  "lane_policies": [
+    {
+      "id": "standard-local-4g",
+      "purpose": "bounded local development and contract evidence",
+      "producer_class": "local-process",
+      "memory_limit_bytes": 4294967296,
+      "memory_scope": "per-process-address-space",
+      "memory_enforcement": "explicit-rlimit-as",
+      "required_mem_limit_gb": 4,
+      "worker_limit": 2,
+      "durability_class": "contract-only-until-tl0.7.3",
+      "credit_class": "development-only"
+    },
+    {
+      "id": "official-export-8g",
+      "purpose": "bounded official Lean exporter adapter",
+      "producer_class": "official-adapter-process",
+      "memory_limit_bytes": 8589934592,
+      "memory_scope": "per-process-address-space",
+      "memory_enforcement": "explicit-rlimit-as",
+      "required_mem_limit_gb": 8,
+      "worker_limit": 1,
+      "durability_class": "contract-only-until-tl0.7.3",
+      "credit_class": "adapter-export-only"
+    }
+  ],
+  "taxonomies": {
+    "termination_classes": [
+      "exited",
+      "signaled",
+      "wall-timeout",
+      "cpu-timeout",
+      "memory-limit",
+      "pids-limit",
+      "disk-limit",
+      "cancelled",
+      "runner-lost",
+      "launch-failed",
+      "preflight-invalid",
+      "unknown-termination"
+    ],
+    "case_outcomes": [
+      "passed",
+      "failed",
+      "skipped",
+      "not-run",
+      "invalid-run"
+    ],
+    "metric_states": [
+      "observed",
+      "not-observed",
+      "not-enforced"
+    ],
+    "artifact_kinds": [
+      "stdout",
+      "stderr",
+      "junit",
+      "diagnostic",
+      "controller"
+    ]
+  },
+  "record_contracts": {
+    "run": [
+      "id",
+      "lane_id",
+      "system_profile",
+      "credit_class",
+      "source_sha256",
+      "executable_sha256",
+      "configuration_sha256",
+      "command",
+      "command_sha256",
+      "working_directory",
+      "environment",
+      "environment_sha256",
+      "selection_set_id",
+      "selection_case_ids",
+      "selection_sha256",
+      "resource_envelope",
+      "resource_envelope_sha256",
+      "platform",
+      "platform_sha256",
+      "artifact_policy",
+      "artifact_policy_sha256",
+      "identity_sha256"
+    ],
+    "attempt": [
+      "id",
+      "run_id",
+      "sequence",
+      "recorded_before_launch",
+      "assigned_case_ids",
+      "terminal",
+      "artifact_ids",
+      "sha256"
+    ],
+    "attempt_terminal": [
+      "class",
+      "exit_code",
+      "signal",
+      "events",
+      "wall_time",
+      "cpu_time",
+      "peak_rss"
+    ],
+    "case": [
+      "id",
+      "run_id",
+      "attempt_id",
+      "selection_set_id",
+      "outcome",
+      "junit_name",
+      "artifact_ids",
+      "sha256"
+    ],
+    "artifact": [
+      "id",
+      "kind",
+      "sha256",
+      "bytes",
+      "provider",
+      "provider_artifact_id",
+      "expires_at",
+      "durable_copy",
+      "record_sha256"
+    ],
+    "completion": [
+      "run_id",
+      "state",
+      "attempt_ids",
+      "terminal_less_attempt_ids",
+      "case_ids",
+      "case_records_sha256",
+      "artifact_ids",
+      "artifact_records_sha256",
+      "installed_last",
+      "sha256"
+    ],
+    "credits": [
+      "real_runs",
+      "executed_attempts",
+      "completed_cases",
+      "official_outcomes",
+      "axeyum_outcomes",
+      "paired_cells",
+      "performance_rows"
+    ]
+  },
+  "checkpoint_policy": {
+    "canonical_json": true,
+    "self_hashes": true,
+    "temporary_same_directory": true,
+    "flush_and_fsync_file": true,
+    "atomic_install": true,
+    "fsync_directory": true,
+    "overwrite_existing": false,
+    "duplicate_is_conflict": true,
+    "resume_skips_only_valid_record": true,
+    "completion_installed_last": true,
+    "junit_is_sidecar_not_authority": true,
+    "ctest_failover_is_not_checkpoint_authority": true
+  },
+  "credit_predicates": [
+    "prelaunch-run-identity-required",
+    "all-and-only-assigned-cases-required",
+    "raw-artifact-and-case-record-required",
+    "resource-classification-requires-enforcement-evidence",
+    "all-attempts-including-terminal-less-accounted",
+    "actual-platform-identity-required",
+    "matched-effective-resources-required-for-performance",
+    "adapter-evidence-cannot-fill-native-profile",
+    "incomplete-or-invalid-zero-credit",
+    "synthetic-controls-zero-credit"
+  ],
+  "synthetic_controls": [
+    {
+      "id": "clean-complete",
+      "detail": "two passed cases and completion-last closure"
+    },
+    {
+      "id": "failed-case-complete",
+      "detail": "one passed and one failed case retained in a complete run"
+    },
+    {
+      "id": "interrupted-resumed",
+      "detail": "terminal-less first attempt retained beside a completing retry"
+    },
+    {
+      "id": "incomplete",
+      "detail": "partial diagnostic bundle with no completion or credit"
+    },
+    {
+      "id": "preflight-invalid",
+      "detail": "preflight-invalid attempt with no launched cases or credit"
+    }
+  ],
+  "mutation_classes": [
+    {
+      "id": "source-identity-drift",
+      "detail": "source, schema, producer, or preregistration identity drift"
+    },
+    {
+      "id": "lane-policy-drift",
+      "detail": "lane cap, concurrency, purpose, enforcement, or credit-class drift"
+    },
+    {
+      "id": "implicit-wrapper-default",
+      "detail": "64 GiB wrapper default presented as an explicit 4/8 GiB lane"
+    },
+    {
+      "id": "malformed-resource",
+      "detail": "missing, zero, unitless, or contradictory resource field"
+    },
+    {
+      "id": "runner-substitution",
+      "detail": "runner label substituted without actual platform identity"
+    },
+    {
+      "id": "run-identity-drift",
+      "detail": "command, environment, directory, selection, or resource change under one run ID"
+    },
+    {
+      "id": "attempt-closure",
+      "detail": "attempt omission, duplication, sequence drift, or invalid assignment overlap"
+    },
+    {
+      "id": "guessed-termination",
+      "detail": "OOM, timeout, or signal class without matching evidence"
+    },
+    {
+      "id": "case-closure",
+      "detail": "missing, duplicate, unexpected, reordered, or identity-drifted case"
+    },
+    {
+      "id": "case-attribution",
+      "detail": "case attributed to the wrong attempt or selection set"
+    },
+    {
+      "id": "artifact-identity",
+      "detail": "stdout, stderr, JUnit, diagnostic, or controller hash/size drift"
+    },
+    {
+      "id": "sidecar-only-completion",
+      "detail": "JUnit or provider conclusion substituted for case closure"
+    },
+    {
+      "id": "artifact-retention",
+      "detail": "provider artifact lacks expiry and durable-copy identity"
+    },
+    {
+      "id": "checkpoint-conflict",
+      "detail": "duplicate, overwritten, conflicting, or self-hash-reused checkpoint"
+    },
+    {
+      "id": "completion-order",
+      "detail": "completion installed early or names a wrong record-set digest"
+    },
+    {
+      "id": "lost-attempt",
+      "detail": "resumed completion omits an earlier terminal-less attempt"
+    },
+    {
+      "id": "incomplete-credit",
+      "detail": "incomplete or invalid bundle receives result, denominator, performance, or parity credit"
+    },
+    {
+      "id": "profile-promotion",
+      "detail": "adapter/export evidence promoted to native-system credit"
+    },
+    {
+      "id": "contract-outcome",
+      "detail": "contract-only authority carries a real outcome or terminal promotion"
+    }
+  ],
+  "observed": {
+    "real_runs": 0,
+    "executed_attempts": 0,
+    "completed_cases": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0
+  },
+  "milestones": [
+    {
+      "id": "TL0.7.1",
+      "state": "contract-only"
+    },
+    {
+      "id": "TL0.7.2",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.7.3",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.7.4",
+      "state": "not-run"
+    },
+    {
+      "id": "TL0.6.3",
+      "state": "blocked-on-tl0.7"
+    }
+  ],
+  "residual": [
+    "Implement forced process exit, signal, timeout, and evidence-backed limit capture in TL0.7.2.",
+    "Prove immutable filesystem checkpoints, conflict handling, kill/resume, and completion-last publication in TL0.7.3.",
+    "Run no-credit pinned-Lean and official-export controls in TL0.7.4 before any U2 execution."
+  ]
+}

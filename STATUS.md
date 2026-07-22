@@ -383,20 +383,34 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.7 Lean execution evidence is preregistered before any
-  process observation.** The
-  [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) freezes
-  exact upstream/registry/decision/wrapper identities; explicit 4 GiB standard
-  and 8 GiB official-export lane templates; concrete run, resource, attempt,
-  case, artifact, and completion records; twelve typed termination classes;
-  immutable completion-last checkpoint/resume rules; nineteen fail-closed
-  mutations; and zero-outcome credit predicates. It records two corrections:
-  Lean CI resolves `NPROC` from the live runner and supplies no job-wide memory
-  cap, while generic `mem-run.sh` defaults to 64 GiB unless 4/8 GiB is explicit.
-  Runner labels, CTest/JUnit, provider conclusions, and expiring artifacts are
-  therefore not completion evidence by themselves. Next: publish this
-  source-first boundary, then implement TL0.7.1's machine authority and
-  synthetic validator without running Lean.
+- **2026-07-22 — TL0.7.2 process behavior is source-first preregistered; no
+  probe has run.** The
+  [plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
+  freezes the exact Linux launch, 4/8 GiB `RLIMIT_AS`, prelaunch/raw-output/
+  terminal record order, process-group timeout cleanup, conservative metric
+  states, and evidence-only terminal classification. Eight ordered synthetic
+  controls cover zero/nonzero exit, self-signal, a descendant-bearing wall
+  timeout, cooperative memory-limit evidence in both lanes, launch failure,
+  and preflight failure. Sixteen mutation families reject guessed OOM,
+  signal-as-timeout, surviving descendants, missing metrics represented as
+  zero, and any case/completion/real/parity promotion. This plan must be pushed
+  before implementation or the first process probe.
+
+- **2026-07-22 — TL0.7.1 closes the machine execution-evidence contract with
+  zero process or parity outcomes.** The source-first
+  [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) was pushed
+  at `ff8f8dd4` before implementation. The
+  [result](docs/plan/lean-execution-evidence-tl0.7.1-2026-07-22.md),
+  [authority](docs/plan/lean-execution-evidence-v1.json), and generated
+  [summary](docs/plan/generated/lean-execution-evidence.md) now retain explicit
+  4 GiB standard/8 GiB exporter templates, twelve typed termination classes,
+  exact immutable run/attempt/case/artifact/completion contracts, five valid
+  synthetic lifecycle controls, and nineteen fail-closed mutation classes
+  covered by twelve tests. The contract rejects implicit 64 GiB wrapper use,
+  runner-label hardware inference, guessed OOM, JUnit/provider-only completion,
+  lost retries, and adapter-to-native promotion. Real runs, executed attempts,
+  completed cases, official/Axeyum outcomes, paired cells, and performance rows
+  all remain zero. Next: TL0.7.2's forced process behavior, not U2 execution.
 
 - **2026-07-22 — TL0.6.2 closes official CI profile derivation without
   claiming execution or parity.** The source-first
@@ -7577,6 +7591,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL0.7.1's contract-only Lean execution authority.**
+  Two explicit local lanes, twelve evidence-gated termination classes, seven
+  immutable record families, five synthetic lifecycle controls, and nineteen
+  mutation classes validate with every real result counter at zero. Process
+  launch/cleanup and forced exit/signal/timeout/limit evidence remain TL0.7.2.
 
 - **2026-07-22 — Preregistered TL0.7 execution-resource and completion
   evidence.** The plan separates lane policy, immutable run identity, attempts,

@@ -312,6 +312,33 @@ Totals are always accompanied by exact overlap. `agree-success = N` alone is
 insufficient without the `official-only`, `axeyum-only`, mismatch,
 unadjudicated, and not-run denominators.
 
+### 7.1 TL0.7.1 execution-evidence checkpoint
+
+The [TL0.7.1 result](lean-execution-evidence-tl0.7.1-2026-07-22.md),
+[machine authority](lean-execution-evidence-v1.json), and generated
+[summary](generated/lean-execution-evidence.md) now make the resource/attempt/
+completion portion of this record executable as a contract. Two explicit
+local lane templates cover 4 GiB standard and 8 GiB official-export processes;
+twelve termination classes distinguish exit, signal, wall/CPU timeout,
+memory/PID/disk limit, cancellation, runner loss, launch/preflight failure, and
+unknown termination. Limit classes require matching enforcement evidence.
+
+Run identity precedes launch; attempts, cases, and raw artifacts are immutable;
+resume retains terminal-less attempts; completion is installed last over exact
+record-set digests. CTest/JUnit, logs, runner labels, provider conclusions, and
+expiring artifacts do not independently prove completion. Five synthetic
+controls and nineteen mutation classes validate representation only. Every real
+run/outcome/pair/performance counter remains zero, so TL0.7.1 grants no U2 or
+terminal credit. TL0.7.2--TL0.7.4 must prove actual process and durability
+behavior before TL0.6.3 begins.
+
+TL0.7.2 is now governed by a separate
+[source-first process-adapter plan](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md).
+It freezes eight synthetic process controls, including both registered
+`RLIMIT_AS` lanes and a descendant-bearing timeout, while forbidding case,
+completion, U2, or parity credit. This preregistration is not process evidence;
+TL0.7.2 remains partial until the retained controls and mutation gate exist.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

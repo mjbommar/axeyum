@@ -60,6 +60,13 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(u2_ci["derivation"]["ctest_attempts"], 111)
         self.assertEqual(u2_ci["derivation"]["selection_sets"], 8)
         self.assertEqual(u2_ci["outcomes"]["official_executed_attempts"], 0)
+        execution = first["bounded_snapshot"]["execution_evidence_authority"]
+        self.assertEqual(execution["lane_policies"], 2)
+        self.assertEqual(execution["termination_classes"], 12)
+        self.assertEqual(execution["synthetic_controls"], 5)
+        self.assertEqual(execution["mutation_classes"], 19)
+        self.assertTrue(execution["all_synthetic_controls_valid"])
+        self.assertEqual(execution["observed"]["real_runs"], 0)
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
@@ -68,6 +75,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("scripts/gen-lean-complete-parity.py", source_paths)
         self.assertIn("docs/plan/lean-u2-test-authority-v1.json", source_paths)
         self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
