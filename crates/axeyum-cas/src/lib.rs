@@ -1862,6 +1862,83 @@ impl ZeroTest {
     }
 }
 
+/// The canonicalizing rewrite applied to each side before the *inequality* re-check
+/// in [`equal`]: it collapses the identities the bare rational-function core treats
+/// as independent atoms, so genuine equalities decide instead of being reported `≠`.
+/// In order: `combine_gamma_ratios` (`Γ(z+1)=z·Γ(z)`, so `(k+1)!/k!→k+1` and factorial
+/// telescopers reduce), `fold_gamma_reflection` (`Γ(z)Γ(1−z)=π/sin πz`), `fold_gamma`
+/// (constant-argument `Γ`), `evaluate_trig` (special-angle `sin(π/4)=√2/2`, even/odd),
+/// `rewrite_exp`/`rewrite_log_exp` (Euler form + `ln(exp u)=u`), and
+/// `expand_log_over_primes` (`2ln2−ln3=ln(4/3)`). Every step is value-preserving.
+fn canonicalize_for_equality(expr: &CasExpr) -> CasExpr {
+    expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&evaluate_trig(&fold_gamma(
+        &fold_gamma_reflection(&combine_gamma_ratios(expr)),
+    )))))
+}
+
+/// Apply the reflection formula `Γ(z)·Γ(1−z) = π/sin(πz)` to every product of two
+/// `Γ` heads whose arguments sum to `1`. This connects the two fractional towers the
+/// integer-stripping [`combine_gamma_ratios`] leaves distinct (`Γ(¼)` and `Γ(¾)`),
+/// so `Γ(¼)Γ(¾) = π√2`, `Γ(⅓)Γ(⅔) = 2π/√3` decide once `evaluate_trig` folds the
+/// resulting special-angle sine. Sound: only exact `a+b=1` pairs are combined, into
+/// the exact reflection value.
+fn fold_gamma_reflection(expr: &CasExpr) -> CasExpr {
+    // Recurse into children first (same structural walk as `fold_gamma`).
+    let expr = match expr {
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_gamma_reflection(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_gamma_reflection(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(fold_gamma_reflection(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(fold_gamma_reflection).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(fold_gamma_reflection).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(fold_gamma_reflection(a)),
+            Box::new(fold_gamma_reflection(b)),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    };
+    if !matches!(&expr, CasExpr::Mul(_)) {
+        return expr;
+    }
+    // Flatten nested products so a `Γ` exposed by lowering (`Γ(5/4) → (1/4)·Γ(1/4)`)
+    // is visible alongside the other factors.
+    let factors = flatten_mul(&expr);
+    // Gamma factors and their arguments, in factor order.
+    let gammas: Vec<(usize, CasExpr)> = factors
+        .iter()
+        .enumerate()
+        .filter_map(|(i, f)| match f {
+            CasExpr::Unary(UnaryFunc::Gamma, arg) => Some((i, (**arg).clone())),
+            _ => None,
+        })
+        .collect();
+    // Find the first pair whose arguments sum to exactly 1.
+    for x in 0..gammas.len() {
+        for y in (x + 1)..gammas.len() {
+            let sum = gammas[x].1.clone() + gammas[y].1.clone();
+            if normalize(&sum).and_then(|p| multipoly_as_constant(&p))
+                != Some(Rational::integer(1))
+            {
+                continue;
+            }
+            let (i, z) = (gammas[x].0, gammas[x].1.clone());
+            let j = gammas[y].0;
+            // π / sin(π·z), keeping the remaining factors.
+            let reflection = CasExpr::var("pi")
+                / CasExpr::Unary(UnaryFunc::Sin, Box::new(CasExpr::var("pi") * z));
+            let rest: Vec<CasExpr> = factors
+                .iter()
+                .enumerate()
+                .filter(|(idx, _)| *idx != i && *idx != j)
+                .map(|(_, f)| f.clone())
+                .collect();
+            let mut out = vec![reflection];
+            out.extend(rest);
+            return build_product(out);
+        }
+    }
+    expr
+}
+
 /// Decide whether two rational-function-fragment expressions are equal.
 ///
 /// The two sides are normalized to `a/b` and `c/d` and compared by
@@ -1899,11 +1976,8 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`
     // and expanding `ln(rational)` over a prime basis so log-arithmetic identities
     // like `2·ln2 − ln3 = ln(4/3)` decide) before we would assert `≠`.
-    // `combine_gamma_ratios` first applies `Γ(z+1)=z·Γ(z)` so integer-offset `Γ`
-    // ratios (`Γ(k+2)/Γ(k+1)`, `(k+1)!/k!`) collapse to rational functions the core
-    // can then decide; `fold_gamma` folds the constant-argument `Γ`s.
-    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(&combine_gamma_ratios(a)))));
-    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(&combine_gamma_ratios(b)))));
+    let ca = canonicalize_for_equality(a);
+    let cb = canonicalize_for_equality(b);
     match equal_core(&ca, &cb) {
         certified @ ZeroTest::Certified { .. } => certified,
         // The Euler form could not decide. Never surface a relation-blind
@@ -7364,16 +7438,19 @@ pub(crate) fn combine_gamma_ratios(expr: &CasExpr) -> CasExpr {
 /// part is not extractable, or `|n|` exceeds [`GAMMA_RATIO_SPAN_CAP`].
 fn lower_gamma_to_base(arg: &CasExpr) -> Option<CasExpr> {
     let poly = normalize(arg)?;
-    // A pure constant argument (`Γ(2)`, `Γ(5/2)`) is `fold_gamma`'s domain; lowering
-    // it would step toward the `Γ(0)` pole.
-    if poly.terms.keys().all(|m| m.powers.is_empty()) {
-        return None;
-    }
     let constant = poly
         .terms
         .get(&Monomial::one())
         .copied()
         .unwrap_or_else(Rational::zero);
+    // A pure *integer* constant (`Γ(2)`, `Γ(5)`) is `fold_gamma`'s domain; stripping
+    // its integer part would step onto the `Γ(0)` pole. A non-integer constant
+    // (`Γ(5/4)`, `Γ(−1/2)`) is safe — its base keeps a fractional part in (0, 1) — as
+    // is any argument with a symbolic part (base = symbol + fraction, never a pole).
+    let pure_constant = poly.terms.keys().all(|m| m.powers.is_empty());
+    if pure_constant && constant.denominator() == 1 {
+        return None;
+    }
     // ⌊constant⌋ (denominator is always positive), so the base keeps the fractional
     // part in [0, 1) and only whole `Γ(z+1)=z·Γ(z)` steps are taken.
     let n = constant.numerator().div_euclid(constant.denominator());
@@ -20301,6 +20378,28 @@ mod tests {
         // The combined form is genuinely a rational function of k now — no Γ heads left.
         let ratio = (k() + CasExpr::int(3)).gamma() / (k() + CasExpr::int(1)).gamma();
         assert!(!format!("{}", simplify(&ratio)).contains("gamma"));
+    }
+
+    #[test]
+    fn gamma_reflection_and_special_angle_trig() {
+        let certified = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        let g = |num: i128, den: i128| CasExpr::rat(num, den).gamma();
+        let pi = || v("pi");
+        // Reflection Γ(z)Γ(1−z) = π/sin(πz) at rational z, folding the special-angle sine:
+        // Γ(¼)Γ(¾) = π/sin(π/4) = π√2; Γ(⅓)Γ(⅔) = π/sin(π/3) = 2π/√3; Γ(½)² = π.
+        assert!(certified(&(g(1, 4) * g(3, 4)), &(pi() * CasExpr::int(2).sqrt())));
+        assert!(certified(&(g(1, 3) * g(2, 3)), &(CasExpr::int(2) * pi() / CasExpr::int(3).sqrt())));
+        assert!(certified(&(g(1, 2) * g(1, 2)), &pi()));
+        // A shifted pair still reflects after integer-stripping: Γ(5/4)Γ(3/4) =
+        // (1/4)·Γ(¼)Γ(¾) = π√2/4 (since Γ(5/4) = (1/4)Γ(¼)).
+        assert!(certified(&(g(5, 4) * g(3, 4)), &(pi() * CasExpr::int(2).sqrt() / CasExpr::int(4))));
+        // Special-angle trig identities now decide through the zero-test itself.
+        assert!(certified(&(pi() / CasExpr::int(4)).sin(), &(CasExpr::int(2).sqrt() / CasExpr::int(2))));
+        assert!(certified(&(pi() / CasExpr::int(3)).cos(), &CasExpr::rat(1, 2)));
+        assert!(certified(&(pi() / CasExpr::int(6)).sin(), &CasExpr::rat(1, 2)));
+        assert!(certified(&(pi() / CasExpr::int(4)).tan(), &CasExpr::int(1)));
+        // Soundness: a non-identity does not certify (Γ(¼)Γ(¾) ≠ π).
+        assert!(!certified(&(g(1, 4) * g(3, 4)), &pi()));
     }
 
     #[test]
