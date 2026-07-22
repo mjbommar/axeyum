@@ -139,6 +139,34 @@ duplicate. **Left untouched** — outside the three monitored lanes; awaiting th
 owner's call. **Integrator note:** the `--all-features` baseline now has exactly
 this ONE known red — any *other* `--all-features` failure is a real new regression.
 
+### Cycle 5 (heartbeat ~12:00 EDT) — no merge; macro checkpoint + live-run soundness
+
+**Docs merged since cycle 4:** Lean `70c1c7e7` (M2 completion) + `ead963c8`
+(preregister M3 grammar) — both docs-only, merge-clean.
+
+**All three lanes active mid-work (uncommitted WIP, nothing to integrate yet):**
+- **Lean** → `nested_inductive_grammar.rs` (M3, TDD: test first) — post-TL2.14.
+- **SMT** → resumable-run contract + `compete.py`/`gen-contract` (10 files).
+- **CAS** → `examples/probe_wz_next_tier.rs` — probing the **next hypergeometric
+  tier past Vandermonde** (the Dixon/Saalschütz `₃F₂` direction flagged in the tracker).
+
+**Live s4 full-library run — soundness alarm re-checked (README said it lapsed):**
+scan of `/nas3/.../raw_selection/log_*.log` → **WRONG = 2**, and *both are already
+fixed in code on `main`*:
+- `pipeline-invalid.smt2  exp=sat got=unsat  <<< WRONG` — the QF_AUFLIA
+  wrong-`unsat` that this session's `0121874b` (AUFLIA sound-decline) targets.
+- `query.26.smt2  exp=unsat got=sat  <<< WRONG` — the P0 FP wrong-`sat` (KLEE),
+  fixed by the FP lane (on `main` at baseline).
+Both are the **stale s4 binary** (pre-fix), exactly as the README warned. Rough
+verdict mix so far: unsat ≈10.4k, sat ≈4.8k, **unknown ≈14.9k**, timeout ≈0.95k —
+the high `unknown` is the proof-carrying profile (declines, never wrong).
+**→ Action for the SMT lane: re-stage s4 with a fresh `main` build; the WRONG
+count should go to 0**, converting the AUFLIA case to a sound `unknown` and the
+FP case to a correct `unsat`. This is the payoff loop: merges on `main` → measured
+soundness on the full library.
+
+**Health:** `/tmp` 8%, `/nas4` 68%, no runaways, 29 °C — all green.
+
 ---
 
 ## Cycle log
