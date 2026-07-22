@@ -67,3 +67,33 @@ This is the proof-carrying discipline working: decline precisely, then extend.
 
 **Watch-items.** Lean edited shared `PLAN.md`/`STATUS.md`; if CAS/SMT touch them
 too, expect doc-level merge conflicts — resolve by union, never clobber a lane's lines.
+
+### Cycle 2 — 2026-07-22 (~11:05 EDT) — trigger: CAS commit (found at monitor arm)
+
+**Micro.**
+- **CAS** — merged `c9e6f48f feat(cas): certify Vandermonde via WZ` (non-ff merge
+  → main `4b0cef35`). This closes the **highest-value open CAS gap** I'd flagged:
+  `∑ₖ C(n,k)² = C(2n,n)`. The 137-line `gosper.rs` change adds the squared-Γ
+  ratio reduction that previously blocked it. Verified it's a *real* certificate,
+  not a shortcut: the test drives `prove_wz_sum` (symbolic WZ soundness gate) AND
+  includes a **negative test** — `prove_wz_sum(…, rhs+1)` must return `None`
+  (rejects the false identity). Scope in-lane (CAS crate + docs + STATUS.md;
+  STATUS.md auto-merged union-clean vs Lean's edit — the predicted conflict did
+  not bite).
+  **Gate: GREEN** — `cargo test -p axeyum-cas --lib` = **504 passed** (was 503;
+  `wilf_zeilberger_binomial_sum_proofs` now covers Vandermonde); `cargo check
+  --workspace` exit 0. **Pushed.**
+- **Lean** — quiet since M1 (tip `99ec3e3e`, already on main).
+- **SMT-COMP** — still no commit (tip `48fece10`); lane warming up.
+
+**Macro.** CAS parity vs SymPy takes a real step: the WZ machinery now handles
+**squared-binomial hypergeometric sums**, not just linear `∑k·C(n,k)` /
+`∑k²·C(n,k)`. Vandermonde is the canonical "can your CAS do nontrivial binomial
+identities" test — SymPy does it via `hyperexpand`/Gosper; we now do it *with a
+checked certificate*. Next natural CAS targets on the same machinery: Dixon /
+Saalschütz `₃F₂` identities and alternating sums (still blocked on `(−1)ᵏ`
+representation — the open structural item).
+
+**Note.** The SMT-COMP resume README warned `main` was RED (missing
+`ExprNode::Proj` match arm in `quantifier.rs:537`). That blocker is **already
+resolved upstream** — `cargo check --workspace` is green at `4b0cef35`.
