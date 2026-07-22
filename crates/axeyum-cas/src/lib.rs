@@ -6546,6 +6546,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
     }
+    // `lim exp(g) = exp(lim g)` when the inner limit is finite — resolves `1^∞`
+    // forms written as `exp(g)`, e.g. `(1+1/x)^x = exp(x·ln(1+1/x)) → e`. Falls
+    // through if the inner limit doesn't exist (leaving `exp`-dominance to decide).
+    if let CasExpr::Unary(UnaryFunc::Exp, inner) = expr
+        && let Some(inner_limit) = limit(inner, var, point)
+    {
+        return Some(simplify(&fold_elementary_constants(&inner_limit.exp())));
+    }
     // At ±∞, an exponential dominates any rational factor: `R(x)·∏exp(cᵢx)^{±} → 0`
     // when the net exponential rate decays (e.g. `x²/eˣ → 0`).
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
@@ -6573,6 +6581,18 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
         && let Some(value) = limit_bounded_decay(expr, var, point)
     {
         return Some(value);
+    }
+    // Reciprocal substitution `x → 1/t`, reducing an ∞-limit to `t → 0` where the
+    // series machinery applies — `x·ln(1+1/x) → ln(1+t)/t → 1`. Tried last. The
+    // substitution leaves nested reciprocals `1/(1/t)` inside function arguments,
+    // which `deep_normalize` (bottom-up `cancel`) folds back to `t`.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
+        let fresh = if var == "t" { "s" } else { "t" };
+        let reciprocal =
+            deep_normalize(&expr.substitute(var, &(CasExpr::int(1) / CasExpr::var(fresh))));
+        if let Some(value) = limit(&reciprocal, fresh, LimitPoint::Finite(Rational::zero())) {
+            return Some(value);
+        }
     }
     // At `x → 0⁺`, a positive power of `x` beats any power of `ln x`
     // (`x·ln x → 0`, `x²·(ln x)³ → 0`), resolving the `0·∞` form the series
@@ -6799,6 +6819,25 @@ fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> 
         }
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// Bottom-up `cancel`: normalize each subexpression (including function arguments,
+/// which `cancel` alone cannot reach) as a rational function, folding nested
+/// reciprocals like `1/(1/t) → t`. Used to clean up after the reciprocal
+/// substitution in `limit`.
+fn deep_normalize(expr: &CasExpr) -> CasExpr {
+    let rebuilt = match expr {
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(deep_normalize(a))),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(deep_normalize(a))),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(deep_normalize(a)), *e),
+        CasExpr::Div(a, b) => {
+            CasExpr::Div(Box::new(deep_normalize(a)), Box::new(deep_normalize(b)))
+        }
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(deep_normalize).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(deep_normalize).collect()),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    };
+    cancel(&rebuilt).unwrap_or(rebuilt)
 }
 
 /// Whether a polynomial argument `arg` tends to `+∞` (`Some(true)`) or `−∞`
@@ -11034,6 +11073,29 @@ mod tests {
         );
         // Growth diverges (no finite limit): eˣ/x → +∞.
         assert!(limit(&(x().exp() / x()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn limit_of_compound_interest_e() {
+        let x = || v("x");
+        let exp_of = |g: CasExpr| CasExpr::Unary(UnaryFunc::Exp, Box::new(g));
+        let ln_of = |a: CasExpr| CasExpr::Unary(UnaryFunc::Ln, Box::new(a));
+        // (1+1/x)^x = exp(x·ln(1+1/x)) → e (the 1^∞ form, via reciprocal substitution).
+        let to_e = limit(
+            &exp_of(x() * ln_of(CasExpr::int(1) + CasExpr::int(1) / x())),
+            "x",
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert_equal(&to_e, &CasExpr::int(1).exp());
+        // (1+2/x)^x → e².
+        let to_e_squared = limit(
+            &exp_of(x() * ln_of(CasExpr::int(1) + CasExpr::int(2) / x())),
+            "x",
+            LimitPoint::PosInfinity,
+        )
+        .unwrap();
+        assert_equal(&to_e_squared, &CasExpr::int(2).exp());
     }
 
     #[test]
