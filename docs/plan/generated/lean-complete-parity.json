@@ -28,7 +28,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "a73b980011cfe22dcecaa28d96dee8aa86ae37f672ecb733bc764050e8bed890"
+      "sha256": "fe790bd2612f425e8fbaf1b8b9fdf05a5a21cabce5baf4de6d437043e8878100"
     },
     {
       "path": "docs/plan/lean-u2-test-authority-v1.json",
@@ -190,8 +190,8 @@
       "rows": 136,
       "status_counts": {
         "DONE": 21,
-        "PARTIAL": 5,
-        "TODO": 110,
+        "PARTIAL": 6,
+        "TODO": 109,
         "BLOCKED": 0
       }
     }

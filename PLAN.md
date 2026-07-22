@@ -396,14 +396,17 @@ state.
 > U0-U9, A0-A11, paired-outcome, and G1-G10 schemas. They derive the bounded
 > K-profile, construct, task, and axiom facts, reject incomplete denominators
 > and illegal promotions, and disable affirmative terminal claims while all
-> all ten population authorities, all twelve axes, all terminal paired cells,
+> ten population authorities, all twelve axes, all terminal paired cells,
 > and all ten gates remain open. TL0.6.1 now adds the bounded
 > [U2 CMake/CTest authority](docs/plan/lean-u2-test-authority-2026-07-22.md):
 > 3,678 default and 3,723 full-Lake registrations are content-bound across
 > exact commands, properties, outputs, and 7,004 support files, but official
 > executions, Axeyum executions, and paired cells remain zero. Next:
-> TL0.6.2 must derive the pinned official CI platform/preset/filter/stage/
-> rebootstrap execution profiles before exact paired records are populated.
+> TL0.6.2's [preregistered plan](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md)
+> now freezes 17 official-repository contexts, 153 candidate matrix cells, and
+> the platform/preset/filter/stage/rebootstrap derivation contract before
+> selected counts are observed. That derivation must close before exact paired
+> records are populated.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
