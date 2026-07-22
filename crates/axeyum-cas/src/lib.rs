@@ -5793,7 +5793,10 @@ pub fn euler_polynomial(n: u32, var: &str) -> Option<CasExpr> {
 fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(func, arg) => {
-            let inner = fold_elementary_constants(arg);
+            // Simplify the folded argument so that e.g. `Si(2·0)` collapses its
+            // argument to the literal `0` the constant patterns below match on
+            // (`simplify` does not otherwise recurse into head arguments).
+            let inner = simplify(&fold_elementary_constants(arg));
             match (func, &inner) {
                 (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan, _) => {
                     trig_special_value(*func, &inner)
@@ -5803,9 +5806,19 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
                 (UnaryFunc::Ln, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::zero()
                 }
-                (UnaryFunc::Atan | UnaryFunc::Erf, CasExpr::Const(c)) if c.is_zero() => {
-                    CasExpr::zero()
-                }
+                // Odd integral-functions vanishing at the origin (`Ci`/`Ei`/`Chi`
+                // are excluded — they diverge at 0).
+                (
+                    UnaryFunc::Atan
+                    | UnaryFunc::Erf
+                    | UnaryFunc::Si
+                    | UnaryFunc::Shi
+                    | UnaryFunc::FresnelS
+                    | UnaryFunc::FresnelC
+                    | UnaryFunc::Asin
+                    | UnaryFunc::Asinh,
+                    CasExpr::Const(c),
+                ) if c.is_zero() => CasExpr::zero(),
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if c.is_zero() => CasExpr::zero(),
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::one()
@@ -6810,11 +6823,24 @@ fn expr_contains_var(expr: &CasExpr, var: &str) -> bool {
 /// horizontal asymptote (`erf→±1`, `atan→±π/2`); recurse structurally otherwise.
 fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> CasExpr {
     match expr {
-        CasExpr::Unary(head @ (UnaryFunc::Erf | UnaryFunc::Atan), arg) => {
+        // Odd heads with a horizontal asymptote: value `+magnitude` as the argument
+        // → +∞, `−magnitude` as → −∞.
+        CasExpr::Unary(
+            head @ (UnaryFunc::Erf
+            | UnaryFunc::Atan
+            | UnaryFunc::Si
+            | UnaryFunc::FresnelS
+            | UnaryFunc::FresnelC),
+            arg,
+        ) => {
             if let Some(positive) = arg_tends_to_infinity(arg, var, point) {
                 let magnitude = match head {
                     UnaryFunc::Erf => CasExpr::int(1),
-                    _ => scaled_term(Rational::new(1, 2), CasExpr::var("pi")), // atan → π/2
+                    // Si → π/2 (Dirichlet: ∫₀^∞ sin x/x = Si(∞) = π/2).
+                    UnaryFunc::Atan | UnaryFunc::Si => {
+                        scaled_term(Rational::new(1, 2), CasExpr::var("pi"))
+                    }
+                    _ => CasExpr::rat(1, 2), // Fresnel S, C → 1/2
                 };
                 return if positive {
                     magnitude
@@ -6823,6 +6849,14 @@ fn substitute_asymptotic_heads(expr: &CasExpr, var: &str, point: LimitPoint) -> 
                 };
             }
             CasExpr::Unary(*head, Box::new(substitute_asymptotic_heads(arg, var, point)))
+        }
+        // Ci(+∞) = 0 (only for a positively-diverging argument; Ci is undefined on
+        // the negative reals).
+        CasExpr::Unary(UnaryFunc::Ci, arg) => {
+            if arg_tends_to_infinity(arg, var, point) == Some(true) {
+                return CasExpr::zero();
+            }
+            CasExpr::Unary(UnaryFunc::Ci, Box::new(substitute_asymptotic_heads(arg, var, point)))
         }
         CasExpr::Unary(head, arg) => {
             CasExpr::Unary(*head, Box::new(substitute_asymptotic_heads(arg, var, point)))
@@ -12651,6 +12685,20 @@ mod tests {
         ));
         assert_equal(&gauss(x().pow(3) * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
         assert_equal(&gauss(x() * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
+        // Dirichlet integral ∫₀^∞ sin x/x = Si(∞) = π/2 (and the scaled sin(2x)/x
+        // also π/2 — Si(2·0) folds to 0). Fresnel ∫₀^∞ sin(πx²/2) = S(∞) = 1/2.
+        assert!(matches!(
+            equal(&gauss(x().sin() / x(), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss((CasExpr::int(2) * x()).sin() / x(), zero(), LimitPoint::PosInfinity), &(v("pi") / CasExpr::int(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert_equal(
+            &gauss((v("pi") * x().pow(2) / CasExpr::int(2)).sin(), zero(), LimitPoint::PosInfinity),
+            &CasExpr::rat(1, 2),
+        );
         // Surd-atan asymptotes (irreducible quadratics with non-square discriminant):
         // ∫_{−∞}^∞ 1/(x²+x+1) = 2π/√3, ∫_{−∞}^∞ 1/(x²+2x+2) = π.
         assert!(matches!(
