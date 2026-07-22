@@ -278,6 +278,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   one-host user-systemd/cgroup-v2 aggregate memory, swap, CPU, and PID
   enforcement with bounded workers, immutable counter evidence, and destructive
   host-runner kill/resume tests; E3 multi-host durability remains open.
+- [`smtcomp-multi-host-durability-e3-plan-2026-07-22.md`](smtcomp-multi-host-durability-e3-plan-2026-07-22.md) —
+  preregistered three-host shared-NFS allocation, exact host-loss recovery,
+  content-bound source staging, completion, and canonical-equivalence gates.
 - [`generated/proof-gap-matrix.md`](generated/proof-gap-matrix.md) — generated
   per-instance/per-evidence proof pipeline: baseline UNSAT, evidence-audit
   outcome, certification, independent checking, trust holes, Lean

@@ -33,8 +33,8 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   memory/swap/CPU/PID limits, bounded shard concurrency, immutable controller
   evidence, host-runner kill, explicit unclosed-session recovery, overcommit,
   environment drift, and evidence tamper are executable gates.
-- E3 multi-host allocation, host-loss recovery, and shared-storage or spool
-  transfer durability are open.
+- E3 multi-host allocation, host-loss recovery, and shared-storage durability
+  are preregistered; implementation and destructive N>=3 gates are open.
 - The independent official eligibility/status/difficulty selection ledger is
   open. E1b's exact ordered per-file digest ledger does not substitute for it.
 
@@ -196,7 +196,8 @@ gate.
 1. **E3 — multi-host recovery.** Preallocate host/shard/resource ownership for
    N>=3 hosts; prove host loss, retry, spool/shared-storage transfer, lease
    recovery, complete-set validation, and canonical equivalence to an
-   uninterrupted control.
+   uninterrupted control. Follow the frozen
+   [E3 plan](../smtcomp-multi-host-durability-e3-plan-2026-07-22.md).
 2. **Selection identity.** Implement the official eligibility, status,
    difficulty, release, seed, cap/family, corpus-tree, and exact-file ledger.
    Keep this policy artifact separate from the E1b execution ledger.
@@ -226,6 +227,7 @@ Repository:
 - E1b audit/result: `docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md` and
   `docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md`;
 - E2 result: `docs/plan/smtcomp-one-host-resource-enforcement-e2-2026-07-22.md`;
+- E3 plan: `docs/plan/smtcomp-multi-host-durability-e3-plan-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;

@@ -20,6 +20,13 @@ into auditable partial evidence or safely resume it. The
 [contract matrix](../../plan/generated/smtcomp-resumable-run-contract.md)
 provide the evidence for this decision.
 
+The concrete E3 shared-storage mechanism and N>=3 destructive controls are
+preregistered in the
+[E3 plan](../../plan/smtcomp-multi-host-durability-e3-plan-2026-07-22.md).
+It binds the exact observed NFSv4.1 host class, preallocated initial/retry
+ownership, content-addressed source staging, remote allocation attempts,
+fail-closed lease recovery, and multi-host completion before implementation.
+
 ## Decision
 
 **Require immutable per-result checkpoints, exact run identity, explicit
