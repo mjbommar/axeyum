@@ -28,6 +28,7 @@ OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-complete-parity.md"
 COMPATIBILITY = ROOT / "docs" / "plan" / "lean-compatibility-v1.json"
 CONSTRUCT_MATRIX = ROOT / "docs" / "plan" / "lean-official-construct-matrix-v1.json"
 AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
+U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -607,6 +608,27 @@ def axiom_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_test_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_test_authority_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-test-authority.py",
+    )
+    data = load_json(U2_AUTHORITY)
+    failures = checker.validate_manifest(data)
+    if failures:
+        raise RuntimeError("invalid U2 test authority: " + "; ".join(failures))
+    report = checker.summarize(data)
+    return {
+        "scope": data["scope"],
+        "profiles": report["profiles"],
+        "selection_relation": report["selection_relation"],
+        "content": report["content"],
+        "kind_counts": report["kind_counts"],
+        "output_policy_counts": report["output_policy_counts"],
+        "outcomes": report["outcomes"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -624,10 +646,13 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         COMPATIBILITY,
         CONSTRUCT_MATRIX,
         AXIOM_LEDGER,
+        U2_AUTHORITY,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
         ROOT / "scripts" / "tests" / "test_lean_complete_parity.py",
+        ROOT / "scripts" / "gen-lean-u2-test-authority.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_test_authority.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -655,6 +680,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "compatibility": compatibility_snapshot(),
             "construct_matrix": construct_snapshot(),
             "axiom_ledger": axiom_snapshot(),
+            "u2_test_authority": u2_test_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -723,6 +749,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     compatibility = bounded["compatibility"]
     construct = bounded["construct_matrix"]
     axioms = bounded["axiom_ledger"]
+    u2_tests = bounded["u2_test_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -772,6 +799,13 @@ def render_markdown(report: dict[str, Any]) -> str:
                 f"`{key}`={value}" for key, value in axioms["classifications"].items()
             )
             + ".",
+            f"- U2 registration authority: "
+            f"{u2_tests['profiles'][0]['registered']} default and "
+            f"{u2_tests['profiles'][1]['registered']} full-Lake CTest cases; "
+            f"{u2_tests['outcomes']['official_executed']} official executions, "
+            f"{u2_tests['outcomes']['axeyum_executed']} Axeyum executions, and "
+            f"{u2_tests['outcomes']['paired_registered']} paired cells. "
+            "This is bounded registration evidence, not complete U2 authority.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

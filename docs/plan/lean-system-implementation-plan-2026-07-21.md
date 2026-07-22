@@ -179,9 +179,23 @@ the interoperability and Track 6 plans.
 | TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, host-independent options, and the executable path used from every test working directory. The first corrected remote job failed before its representative sweep because `AXEYUM_LEAN_BIN` resolved to an unconfigured elan shim outside the repository directory. | — | S | One manifest drives exporter, importer, and official-check tests; a retained remote run reaches the exact 71/71 attestation. |
 | TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
-| TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. Every U0-U9 authority and terminal paired cell remains incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
+| TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. U2 now has a [bounded executable registration authority](lean-u2-test-authority-2026-07-22.md) for 3,678 default / 3,723 full-Lake CTest cases, while official executions, Axeyum executions, all terminal U0-U9 authorities, and terminal paired cells remain incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
 | TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
 | TL0.8 | TODO | Correct or archive older conflicting scope prose and wire link checks to this plan. | TL0.1 | S | No live document says both “import nothing” and “import mathlib.” |
+
+### TL0.6 U2 official-test execution slices
+
+The CTest registration count is a prerequisite, not an execution or parity
+result. U2 therefore advances through these separately reviewable slices:
+
+| ID | Status | Task | Depends | Size | Exit artifact/gate |
+|---|---|---|---|---|---|
+| TL0.6.1 | DONE | Freeze the pinned default and full-Lake selections from CMake/CTest semantics, including commands, properties, primary/support/sidecar content, output policy, exclusions, and ordered digests. | TL0.3, TL0.6 | M | The [U2 authority](lean-u2-test-authority-v1.json), generated [summary](generated/lean-u2-test-authority.md), eight mutation/contract tests, and optional pinned-upstream reproduction agree on 3,678/3,723 cases while recording zero outcomes. |
+| TL0.6.2 | TODO | Evaluate the pinned workflow into exact event, check-level, platform, preset, `CTEST_OPTIONS`, `LAKE_CI`, target-stage, rebootstrap, stage-3, benchmark, primary/secondary, and skip profiles. | TL0.6.1 | M | A generated official profile manifest proves which normalized case IDs each active workflow cell selects; disabled/commented jobs receive no execution credit. |
+| TL0.6.3 | TODO | Execute and retain the official profiles with executable/configuration/environment/resource/attempt/completion identities, JUnit, logs, artifacts, and typed invalid/incomplete outcomes. | TL0.6.2, TL0.7 | XL | Every selected official case has retained per-attempt evidence; aggregate totals reconstruct only from completed case records. |
+| TL0.6.4 | TODO | Classify every U2 case by required native Axeyum surface and dependency closure: kernel/import, parser/macro, elaborator, tactic/meta, modules/Lake, editor/RPC, compiler/runtime, FFI, or adversarial. | TL0.6.1, TL1-TL9 | L | No case is silently delegated to official Lean or credited to a lower K/A profile; unsupported surfaces have stable owners and decline codes. |
+| TL0.6.5 | TODO | Run matched native Axeyum cases incrementally and publish exact overlap, official-only, Axeyum-only, mismatch, unadjudicated, not-run, invalid-run, assurance, and resource fields. | TL0.6.3, TL0.6.4 | XL | Every paired row satisfies the terminal cell schema and independently checked accepted declarations/proofs retain trust evidence. |
+| TL0.6.6 | TODO | Review and promote U2 only after the complete declared platform/profile matrix and all both-system outcomes close without unexplained mismatch or missing completion evidence. | TL0.6.5 | M | U2 becomes `complete_authority`; otherwise it remains bounded with an exact residual and no terminal denominator promotion. |
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
@@ -501,9 +515,10 @@ parallel lane:
     spine under accepted ADR-0352 through ADR-0355 and all retained gates.
 17. TL0.3 — correct the remote Lean executable identity across changed working
     directories and retain the first true remote 71/71 attestation.
-18. TL0.6 — extend the landed fail-closed registry seed into complete U0-U9
-    population authorities and A0-A11 paired scoreboards before promoting
-    another broad parity claim.
+18. TL0.6.2 — derive the pinned official CI event/check-level/platform/preset/
+    filter/stage/rebootstrap execution profiles over the landed 3,678/3,723
+    U2 registration selections; then continue U0-U9 authorities and A0-A11
+    paired scoreboards without promoting another broad parity claim.
 19. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
 20. TL3.4 — discharge the first five axioms.
 21. TL3.6 — export minimal `Init` roots and regenerate blocker priority.

@@ -218,6 +218,30 @@ are:
 | U8 — adversarial/security | malformed source/export/cache/protocol inputs, resource exhaustion, crash/panic, stale publication, and checker-disagreement campaigns |
 | U9 — platforms/releases | every official platform at its pinned-release support tier, published release-asset shapes, packaging/install/offline cells, and current/current-minus-one migration profiles |
 
+### 5.1 U2 registration checkpoint
+
+The first U2 derivation is now retained in the
+[official-test registration authority](lean-u2-test-authority-2026-07-22.md),
+its [machine-readable case manifest](lean-u2-test-authority-v1.json), and its
+generated [summary](generated/lean-u2-test-authority.md). Pinned Lean's own
+CMake registration yields 3,678 default cases and 3,723 cases with
+`LAKE_CI=ON`; the latter adds 45 Lake directories. The 3,723-case selection is
+content-bound to 7,004 Git-tracked test/example files, exact normalized CTest
+commands and properties, primary and sidecar identities, output policies, and
+over-approximating support subtrees. The 3,660 pile glob candidates close as
+3,639 registered, seven `.no_test` exclusions, three runner-name exclusions,
+and eleven benchmark-only cases with no test runner.
+
+This advances U2 from raw inventory to a bounded registration profile only.
+The authority deliberately records zero official executions, zero Axeyum
+executions, and zero paired cells. The pinned workflow's platform, event/check
+level, preset, filter, target-stage, rebootstrap, resource, and completion
+predicates still need executable derivation. In particular, release check
+level 3 does not imply `LAKE_CI=ON`; that switch is controlled separately by
+the `lake-ci` pull-request label. U2 cannot become `complete_authority` until
+the resulting official profile matrix and matched native Axeyum outcomes are
+retained case by case.
+
 The initial unqualified full profile requires the official Tier-1 test matrix
 for the pinned release and build/package cells for every official Tier-2
 target, with the weaker upstream support tier preserved rather than silently

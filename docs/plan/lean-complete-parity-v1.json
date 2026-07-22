@@ -66,17 +66,25 @@
       "id": "U2",
       "label": "official Lean tests",
       "owner": "L0/L4-L9",
-      "state": "inventory_only",
+      "state": "bounded_profile",
       "raw_denominator": null,
       "normalized_denominator": null,
       "content_digest": null,
       "evidence": [
         {
+          "path": "docs/plan/lean-u2-test-authority-v1.json",
+          "detail": "Pinned CMake/CTest registration authority for 3,678 default and 3,723 full-Lake cases, with exact content, command, property, sidecar, output-policy, and support-scope identities; outcomes remain not run."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-test-authority.md",
+          "detail": "Generated bounded profile summary and explicit non-terminal residual."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Derive the executable authority from CMake registration, piles, configuration, support files, and expected outputs."
+      "residual": "Derive official CI platform/preset/filter/resource/attempt identities, retain official and native Axeyum executions, and register exact matched outcomes; registration alone is not complete U2 authority."
     },
     {
       "id": "U3",

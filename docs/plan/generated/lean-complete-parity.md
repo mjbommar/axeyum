@@ -26,7 +26,8 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
   - `K6-ecosystem`: 0/1 rows satisfy that bounded profile.
 - Selected construct matrix: 7 rows; 6 official accepts, 1 official rejects, 6 independently admitted, 4 computation-checked, and 0 current declines.
 - Axiom ledger: 65 rows; `unclassified`=65.
-- Implementation ledger: 130 rows; `DONE`=20, `PARTIAL`=5, `TODO`=105, `BLOCKED`=0.
+- U2 registration authority: 3678 default and 3723 full-Lake CTest cases; 0 official executions, 0 Axeyum executions, and 0 paired cells. This is bounded registration evidence, not complete U2 authority.
+- Implementation ledger: 136 rows; `DONE`=21, `PARTIAL`=5, `TODO`=110, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 
@@ -34,7 +35,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 |---|---|---|---|---:|---:|---|---|
 | `U0` | toolchain/bootstrap | `L0` | `inventory_only` | - | - | [lean4-complete-parity-contract-2026-07-22.md](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md); [ci.yml](../../../.github/workflows/ci.yml) | Freeze stage0/stage1/stage2 build, test, compiler, runtime, and bootstrap-equivalence manifests. |
 | `U1` | kernel/core | `L2/T6.0` | `bounded_profile` | - | - | [lean-compatibility-v1.json](../../../docs/plan/lean-compatibility-v1.json); [lean-official-construct-matrix-v1.json](../../../docs/plan/lean-official-construct-matrix-v1.json) | Define the dependency-closed complete core-term and declaration population, including invalid mutations. |
-| `U2` | official Lean tests | `L0/L4-L9` | `inventory_only` | - | - | [lean4-complete-parity-contract-2026-07-22.md](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md) | Derive the executable authority from CMake registration, piles, configuration, support files, and expected outputs. |
+| `U2` | official Lean tests | `L0/L4-L9` | `bounded_profile` | - | - | [lean-u2-test-authority-v1.json](../../../docs/plan/lean-u2-test-authority-v1.json); [lean-u2-test-authority.md](../../../docs/plan/generated/lean-u2-test-authority.md); [lean4-complete-parity-contract-2026-07-22.md](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md) | Derive official CI platform/preset/filter/resource/attempt identities, retain official and native Axeyum executions, and register exact matched outcomes; registration alone is not complete U2 authority. |
 | `U3` | core libraries | `L3/L4/L7` | `not_registered` | - | - | [lean-system-implementation-plan-2026-07-21.md](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md) | Register dependency-closed module, declaration, environment, and axiom identities. |
 | `U4` | Lake/projects | `L7` | `not_registered` | - | - | [lean-system-implementation-plan-2026-07-21.md](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md) | Register clean, incremental, offline, dependency, cache, and recovery project cells. |
 | `U5` | server/editor | `L8` | `not_registered` | - | - | [lean-system-implementation-plan-2026-07-21.md](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md) | Register official server request populations and normalized versioned transcripts. |

@@ -110,6 +110,8 @@ parity-docs:
     python3 -m unittest scripts.tests.test_parity_evidence
     python3 -m unittest scripts.tests.test_prototype_lean4export_reader
     python3 -m unittest scripts.tests.test_lean_compatibility
+    python3 -m unittest scripts.tests.test_lean_u2_test_authority
+    python3 scripts/gen-lean-u2-test-authority.py --check
     python3 -m unittest scripts.tests.test_lean_complete_parity
     python3 -m unittest scripts.tests.test_lean_official_construct_matrix
     python3 scripts/check-lean-official-construct-matrix.py --check
