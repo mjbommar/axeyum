@@ -201,6 +201,25 @@ Also merged (docs-only) since: SMT `c56b4168` preregister E3 multi-host durabili
 
 **Health:** `/tmp` 8%, `/nas4` 68%, no runaways, 29 °C.
 
+### Cycle 8 — 2026-07-22 (~12:40 EDT) — trigger: SMT commit
+
+**Micro.** SMT `99e542af E3 multi-host durability gate` (→ main `a345588c`).
+Large: **`multi_host.py` +1909**, `test_smtcomp_multi_host.py` +790,
+`test_smtcomp_multi_host_live.py` +491, plus `compete.py`/`resource_enforcement.py`/
+`resume_fs`/`resume_runner` updates and E3 kill/durability fixtures. Python only,
+no Rust. **Gate: GREEN** — unit tests 6/6 OK; official `check-smtcomp-resume.sh`
+E0–E3 exit 0 (`invariants=18 scenarios=28 accept=5 reject=23`); the `_live`
+multi-host test **skips gracefully** without real infra (not a failure). Diary
+integrity verified across the merge (my cycles 1–7 preserved).
+
+**Macro.** E1→E2→E3 in one session: the SMT harness is now resumable
+(byte-equal), one-host resource-bounded (cgroup), and **multi-host durable** —
+i.e., a full-library run can be sharded across hosts, survive a host dying
+mid-shard, and resume without double-counting or losing verdicts. This is the
+infra that makes an *honest, reproducible* decide/decline/WRONG map of all of
+SMT-LIB feasible — the prerequisite for the z3/cvc5 parity measurement the whole
+lane exists to produce.
+
 ---
 
 ## Cycle log
