@@ -202,6 +202,9 @@ pub enum UnaryFunc {
     Bi,
     /// The derivative `Bi′(x)` of the Airy function `Bi`.
     BiPrime,
+    /// The **Lambert W function** (principal branch) `W(x)`, the inverse of
+    /// `w ↦ w·eʷ`. Its derivative is self-closing: `W′(x) = W(x)/(x·(1+W(x)))`.
+    LambertW,
 }
 
 impl UnaryFunc {
@@ -250,6 +253,7 @@ impl UnaryFunc {
             UnaryFunc::AiPrime => "AiPrime",
             UnaryFunc::Bi => "Bi",
             UnaryFunc::BiPrime => "BiPrime",
+            UnaryFunc::LambertW => "LambertW",
             UnaryFunc::Asin => "asin",
             UnaryFunc::Acos => "acos",
             UnaryFunc::Asinh => "asinh",
@@ -343,6 +347,11 @@ impl UnaryFunc {
             UnaryFunc::AiPrime => u() * CasExpr::Unary(UnaryFunc::Ai, Box::new(u())),
             UnaryFunc::Bi => CasExpr::Unary(UnaryFunc::BiPrime, Box::new(u())),
             UnaryFunc::BiPrime => u() * CasExpr::Unary(UnaryFunc::Bi, Box::new(u())),
+            // d/du W(u) = W(u)/(u·(1+W(u))) — self-closing.
+            UnaryFunc::LambertW => {
+                let w = CasExpr::Unary(UnaryFunc::LambertW, Box::new(u()));
+                w.clone() / (u() * (CasExpr::int(1) + w))
+            }
             // d/du u^{1/q} = (1/q)·u^{1/q}/u.
             UnaryFunc::NthRoot(degree) => {
                 CasExpr::Const(Rational::checked_new(1, i128::from(degree)).unwrap_or_else(Rational::zero))
@@ -464,6 +473,12 @@ impl CasExpr {
     #[must_use]
     pub fn airy_bi(self) -> Self {
         CasExpr::Unary(UnaryFunc::Bi, Box::new(self))
+    }
+
+    /// The **Lambert W function** (principal branch) `W(self)`, inverse of `w·eʷ`.
+    #[must_use]
+    pub fn lambert_w(self) -> Self {
+        CasExpr::Unary(UnaryFunc::LambertW, Box::new(self))
     }
 
     /// The **error function** `erf(self)` as a symbolic head.
@@ -7905,6 +7920,7 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::AiPrime => airy_f64(value, false).1,
                 UnaryFunc::Bi => airy_f64(value, true).0,
                 UnaryFunc::BiPrime => airy_f64(value, true).1,
+                UnaryFunc::LambertW => lambert_w_f64(value),
                 UnaryFunc::NthRoot(degree) => {
                     let exponent = 1.0 / f64::from(*degree);
                     if value >= 0.0 {
@@ -7918,6 +7934,33 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
             })
         }
     }
+}
+
+/// Numeric **Lambert W** (principal branch `W₀`) for [`evalf`], via Halley's
+/// iteration on `w·eʷ = x`. Defined for `x ≥ −1/e`; below that returns `NaN`.
+fn lambert_w_f64(x: f64) -> f64 {
+    if x < -1.0 / std::f64::consts::E {
+        return f64::NAN;
+    }
+    // Initial guess: `ln(1+x)` up to `x = e` (where `ln x ≤ 1` makes the log-log
+    // form blow up), else `ln x − ln ln x`.
+    let mut w = if x < std::f64::consts::E {
+        (1.0 + x).ln()
+    } else {
+        x.ln() - x.ln().ln()
+    };
+    for _ in 0..60 {
+        let e = w.exp();
+        let f = w * e - x;
+        // Halley step.
+        let denom = e * (w + 1.0) - (w + 2.0) * f / (2.0 * w + 2.0);
+        let delta = f / denom;
+        w -= delta;
+        if delta.abs() < 1e-15 * (1.0 + w.abs()) {
+            break;
+        }
+    }
+    w
 }
 
 /// Numeric **Airy functions** `(Ai, Ai′)` (or `(Bi, Bi′)` when `second`) for
@@ -19812,6 +19855,26 @@ mod tests {
         close(evalf(&CasExpr::int(1).si(), &[]).unwrap(), 0.946_083);
         close(evalf(&CasExpr::int(1).ci(), &[]).unwrap(), 0.337_404);
         close(evalf(&CasExpr::int(1).ei(), &[]).unwrap(), 1.895_118);
+    }
+
+    #[test]
+    fn lambert_w_function() {
+        let x = || v("x");
+        // Derivative W′(x) = W(x)/(x·(1+W(x))) (self-closing).
+        let w = CasExpr::Unary(UnaryFunc::LambertW, Box::new(x()));
+        assert!(matches!(
+            equal(&x().lambert_w().differentiate("x"), &(w.clone() / (x() * (CasExpr::int(1) + w)))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // evalf against references; the defining equation W(x)·e^{W(x)} = x holds.
+        let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-5, "{got} vs {want}");
+        close(evalf(&CasExpr::int(0).lambert_w(), &[]).unwrap(), 0.0);
+        close(evalf(&CasExpr::int(1).exp().lambert_w(), &[]).unwrap(), 1.0);
+        close(evalf(&CasExpr::int(1).lambert_w(), &[]).unwrap(), 0.567_143); // omega constant
+        for xv in [0.5_f64, 2.0, 5.0, 10.0] {
+            let wv = evalf(&v("t").lambert_w(), &[("t", xv)]).unwrap();
+            close(wv * wv.exp(), xv);
+        }
     }
 
     #[test]
