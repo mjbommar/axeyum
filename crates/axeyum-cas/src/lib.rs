@@ -88,7 +88,9 @@ pub use groebner::{groebner_basis, ideal_contains, reduce};
 pub use matrix::Matrix;
 pub use mvpoly::MvPoly;
 pub use normalforms::{hermite_normal_form, smith_normal_form};
-pub use orthopoly::{chebyshev_t, chebyshev_u, hermite, laguerre, legendre};
+pub use orthopoly::{
+    chebyshev_t, chebyshev_u, gegenbauer, generalized_laguerre, hermite, jacobi, laguerre, legendre,
+};
 pub use permutation::Permutation;
 pub use series::{series, series_at};
 pub use sets::{RealSet, finite_set};
@@ -6859,208 +6861,6 @@ pub fn euler_polynomial(n: u32, var: &str) -> Option<CasExpr> {
     };
     let inv = Rational::integer(1).checked_div(c)?;
     expand(&(CasExpr::Const(inv) * rf.num.to_expr()))
-}
-
-/// Build the degree-`n` member of an orthogonal-polynomial family from its
-/// three-term recurrence: given `p₀`, `p₁`, and `step(k, pₖ, pₖ₋₁) = pₖ₊₁`, iterate
-/// and keep each result in expanded (sum-of-monomials) polynomial form. `None` on
-/// overflow within a step.
-fn orthogonal_recurrence<F>(
-    n: u32,
-    p0: CasExpr,
-    p1: CasExpr,
-    step: F,
-) -> Option<CasExpr>
-where
-    F: Fn(u32, &CasExpr, &CasExpr) -> Option<CasExpr>,
-{
-    if n == 0 {
-        return Some(p0);
-    }
-    let mut prev = p0;
-    let mut curr = p1;
-    for k in 1..n {
-        let next = expand(&step(k, &curr, &prev)?)?;
-        prev = curr;
-        curr = next;
-    }
-    Some(curr)
-}
-
-/// The **Legendre polynomial** `Pₙ(x)`, as an exact [`CasExpr`], from the recurrence
-/// `(n+1)Pₙ₊₁ = (2n+1)x·Pₙ − n·Pₙ₋₁` with `P₀=1`, `P₁=x`. `P₂=(3x²−1)/2`,
-/// `P₃=(5x³−3x)/2`. Orthogonal on `[−1,1]` with weight `1`. `None` on overflow.
-///
-/// ```
-/// use axeyum_cas::{CasExpr, legendre_polynomial, equal, ZeroTest};
-/// // P₂(x) = (3x² − 1)/2.
-/// let p2 = legendre_polynomial(2, "x").unwrap();
-/// let expected = (CasExpr::int(3) * CasExpr::var("x").pow(2) - CasExpr::int(1)) / CasExpr::int(2);
-/// assert!(matches!(equal(&p2, &expected), ZeroTest::Certified { equal: true, .. }));
-/// ```
-#[must_use]
-pub fn legendre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    orthogonal_recurrence(n, CasExpr::int(1), x.clone(), |k, pk, pkm1| {
-        let two_k1 = CasExpr::int(i128::from(2 * k + 1));
-        let numerator = two_k1 * x.clone() * pk.clone() - CasExpr::int(i128::from(k)) * pkm1.clone();
-        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
-    })
-}
-
-/// The **physicists' Hermite polynomial** `Hₙ(x)`, from `Hₙ₊₁ = 2x·Hₙ − 2n·Hₙ₋₁`
-/// with `H₀=1`, `H₁=2x`. `H₂=4x²−2`, `H₃=8x³−12x`. Orthogonal on `ℝ` with weight
-/// `e^{−x²}`. `None` on overflow.
-#[must_use]
-pub fn hermite_polynomial(n: u32, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(2) * x.clone(), |k, hk, hkm1| {
-        Some(CasExpr::int(2) * x.clone() * hk.clone() - CasExpr::int(i128::from(2 * k)) * hkm1.clone())
-    })
-}
-
-/// The **Chebyshev polynomial of the first kind** `Tₙ(x)`, from `Tₙ₊₁ = 2x·Tₙ − Tₙ₋₁`
-/// with `T₀=1`, `T₁=x`. `T₂=2x²−1`, `T₃=4x³−3x`; `Tₙ(cos θ)=cos(nθ)`. `None` on
-/// overflow.
-#[must_use]
-pub fn chebyshev_t_polynomial(n: u32, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    orthogonal_recurrence(n, CasExpr::int(1), x.clone(), |_k, tk, tkm1| {
-        Some(CasExpr::int(2) * x.clone() * tk.clone() - tkm1.clone())
-    })
-}
-
-/// The **Chebyshev polynomial of the second kind** `Uₙ(x)`, from `Uₙ₊₁ = 2x·Uₙ −
-/// Uₙ₋₁` with `U₀=1`, `U₁=2x`. `U₂=4x²−1`, `U₃=8x³−4x`; `Uₙ(cos θ)=sin((n+1)θ)/sin θ`.
-/// `None` on overflow.
-#[must_use]
-pub fn chebyshev_u_polynomial(n: u32, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(2) * x.clone(), |_k, uk, ukm1| {
-        Some(CasExpr::int(2) * x.clone() * uk.clone() - ukm1.clone())
-    })
-}
-
-/// The **Laguerre polynomial** `Lₙ(x)`, from `(n+1)Lₙ₊₁ = (2n+1−x)Lₙ − n·Lₙ₋₁` with
-/// `L₀=1`, `L₁=1−x`. `L₂=(x²−4x+2)/2`, `L₃=(−x³+9x²−18x+6)/6`. Orthogonal on `[0,∞)`
-/// with weight `e^{−x}`. `None` on overflow.
-#[must_use]
-pub fn laguerre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    orthogonal_recurrence(n, CasExpr::int(1), CasExpr::int(1) - x.clone(), |k, lk, lkm1| {
-        let coeff = CasExpr::int(i128::from(2 * k + 1)) - x.clone();
-        let numerator = coeff * lk.clone() - CasExpr::int(i128::from(k)) * lkm1.clone();
-        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
-    })
-}
-
-/// The **Jacobi polynomial** `Pₙ^{(α,β)}(x)` for rational parameters `α, β`, the most
-/// general classical orthogonal family (Legendre `= P^{(0,0)}`, and the Gegenbauer /
-/// Chebyshev families are special cases). `P₀=1`, `P₁ = (α−β)/2 + (α+β+2)x/2`, then the
-/// standard three-term recurrence. Orthogonal on `[−1,1]` with weight
-/// `(1−x)^α(1+x)^β`. `None` on overflow or a degenerate parameter (a vanishing
-/// recurrence denominator, e.g. `α+β` a small negative integer).
-///
-/// ```
-/// use axeyum_cas::{CasExpr, jacobi_polynomial, legendre_polynomial, equal, ZeroTest};
-/// use axeyum_ir::Rational;
-/// // P₃^{(0,0)}(x) = P₃(x) (Legendre).
-/// let j3 = jacobi_polynomial(3, Rational::integer(0), Rational::integer(0), "x").unwrap();
-/// assert!(matches!(equal(&j3, &legendre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
-/// ```
-#[must_use]
-pub fn jacobi_polynomial(n: u32, alpha: Rational, beta: Rational, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    let two = Rational::integer(2);
-    // P₁ = (α−β)/2 + (α+β+2)/2 · x.
-    let p1_const = alpha.checked_sub(beta)?.checked_div(two)?;
-    let p1_x = alpha.checked_add(beta)?.checked_add(two)?.checked_div(two)?;
-    let p1 = CasExpr::Const(p1_const) + CasExpr::Const(p1_x) * x.clone();
-    orthogonal_recurrence(n, CasExpr::int(1), p1, |k, pk, pkm1| {
-        let kr = Rational::integer(i128::from(k));
-        // s = 2k + α + β.
-        let s = two.checked_mul(kr)?.checked_add(alpha)?.checked_add(beta)?;
-        let f1 = s.checked_add(Rational::integer(1))?; // 2k+α+β+1
-        let cx = s.checked_add(two)?.checked_mul(s)?; // (s+2)·s, coefficient of x
-        let cc = alpha.checked_mul(alpha)?.checked_sub(beta.checked_mul(beta)?)?; // α²−β²
-        // f2 = 2(k+α)(k+β)(s+2).
-        let f2 = two
-            .checked_mul(kr.checked_add(alpha)?)?
-            .checked_mul(kr.checked_add(beta)?)?
-            .checked_mul(s.checked_add(two)?)?;
-        // denom = 2(k+1)(k+α+β+1)·s.
-        let denom = two
-            .checked_mul(kr.checked_add(Rational::integer(1))?)?
-            .checked_mul(kr.checked_add(alpha)?.checked_add(beta)?.checked_add(Rational::integer(1))?)?
-            .checked_mul(s)?;
-        let inv = Rational::integer(1).checked_div(denom)?;
-        let coeff_x_pk = f1.checked_mul(cx)?.checked_mul(inv)?;
-        let coeff_pk = f1.checked_mul(cc)?.checked_mul(inv)?;
-        let coeff_pkm1 = f2.checked_mul(inv)?;
-        Some(
-            CasExpr::Const(coeff_x_pk) * x.clone() * pk.clone()
-                + CasExpr::Const(coeff_pk) * pk.clone()
-                - CasExpr::Const(coeff_pkm1) * pkm1.clone(),
-        )
-    })
-}
-
-/// The **generalized (associated) Laguerre polynomial** `Lₙ^{(α)}(x)` for a rational
-/// parameter `α`, from `(k+1)Lₖ₊₁ = (2k+1+α−x)Lₖ − (k+α)Lₖ₋₁` with `L₀=1`,
-/// `L₁=1+α−x`. Reduces to the ordinary [`laguerre_polynomial`] at `α=0`. Orthogonal on
-/// `[0,∞)` with weight `xᵅe^{−x}`; appears in the radial hydrogen wavefunctions.
-/// `None` on overflow.
-///
-/// ```
-/// use axeyum_cas::{CasExpr, generalized_laguerre_polynomial, laguerre_polynomial, equal, ZeroTest};
-/// use axeyum_ir::Rational;
-/// // L₃^{(0)}(x) = L₃(x).
-/// let l3 = generalized_laguerre_polynomial(3, Rational::integer(0), "x").unwrap();
-/// assert!(matches!(equal(&l3, &laguerre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
-/// ```
-#[must_use]
-pub fn generalized_laguerre_polynomial(n: u32, alpha: Rational, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    let l1 = CasExpr::Const(Rational::integer(1).checked_add(alpha)?) - x.clone();
-    orthogonal_recurrence(n, CasExpr::int(1), l1, |k, lk, lkm1| {
-        // (2k+1+α) − x.
-        let scalar = Rational::integer(i128::from(2 * k + 1)).checked_add(alpha)?;
-        let coeff = CasExpr::Const(scalar) - x.clone();
-        let k_alpha = Rational::integer(i128::from(k)).checked_add(alpha)?;
-        let numerator = coeff * lk.clone() - CasExpr::Const(k_alpha) * lkm1.clone();
-        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
-    })
-}
-
-/// The **Gegenbauer (ultraspherical) polynomial** `Cₙ^λ(x)` for a rational parameter
-/// `λ`, from `(k+1)Cₖ₊₁ = 2(k+λ)x·Cₖ − (k+2λ−1)·Cₖ₋₁` with `C₀=1`, `C₁=2λx`. This
-/// parametric family generalizes several classical ones: `λ=1` is the Chebyshev
-/// `Uₙ`, and `λ=½` is the Legendre `Pₙ`. `None` on overflow.
-///
-/// ```
-/// use axeyum_cas::{CasExpr, gegenbauer_polynomial, legendre_polynomial, equal, ZeroTest};
-/// use axeyum_ir::Rational;
-/// // C₃^{1/2}(x) = P₃(x) (Legendre).
-/// let c3 = gegenbauer_polynomial(3, Rational::new(1, 2), "x").unwrap();
-/// assert!(matches!(equal(&c3, &legendre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
-/// ```
-#[must_use]
-pub fn gegenbauer_polynomial(n: u32, lambda: Rational, var: &str) -> Option<CasExpr> {
-    let x = CasExpr::var(var);
-    let c1 = CasExpr::Const(Rational::integer(2).checked_mul(lambda)?) * x.clone();
-    orthogonal_recurrence(n, CasExpr::int(1), c1, |k, ck, ckm1| {
-        // 2(k+λ): `2k + 2λ`.
-        let two_k_lambda = Rational::integer(i128::from(2 * k)).checked_add(
-            Rational::integer(2).checked_mul(lambda)?,
-        )?;
-        // (k + 2λ − 1).
-        let k_two_lambda = Rational::integer(i128::from(k))
-            .checked_add(Rational::integer(2).checked_mul(lambda)?)?
-            .checked_sub(Rational::integer(1))?;
-        let numerator = CasExpr::Const(two_k_lambda) * x.clone() * ck.clone()
-            - CasExpr::Const(k_two_lambda) * ckm1.clone();
-        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
-    })
 }
 
 /// Fold every elementary head at an argument where it has an exact closed value:
@@ -15172,61 +14972,61 @@ mod tests {
     fn orthogonal_polynomials() {
         let x = || v("x");
         // Legendre P₂=(3x²−1)/2, P₃=(5x³−3x)/2, P₄=(35x⁴−30x²+3)/8.
-        assert_equal(&legendre_polynomial(2, "x").unwrap(), &((CasExpr::int(3) * x().pow(2) - CasExpr::int(1)) / CasExpr::int(2)));
-        assert_equal(&legendre_polynomial(3, "x").unwrap(), &((CasExpr::int(5) * x().pow(3) - CasExpr::int(3) * x()) / CasExpr::int(2)));
-        assert_equal(&legendre_polynomial(4, "x").unwrap(), &((CasExpr::int(35) * x().pow(4) - CasExpr::int(30) * x().pow(2) + CasExpr::int(3)) / CasExpr::int(8)));
+        assert_equal(&legendre(2, "x").unwrap(), &((CasExpr::int(3) * x().pow(2) - CasExpr::int(1)) / CasExpr::int(2)));
+        assert_equal(&legendre(3, "x").unwrap(), &((CasExpr::int(5) * x().pow(3) - CasExpr::int(3) * x()) / CasExpr::int(2)));
+        assert_equal(&legendre(4, "x").unwrap(), &((CasExpr::int(35) * x().pow(4) - CasExpr::int(30) * x().pow(2) + CasExpr::int(3)) / CasExpr::int(8)));
         // Hermite (physicists') H₂=4x²−2, H₃=8x³−12x.
-        assert_equal(&hermite_polynomial(2, "x").unwrap(), &(CasExpr::int(4) * x().pow(2) - CasExpr::int(2)));
-        assert_equal(&hermite_polynomial(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(12) * x()));
+        assert_equal(&hermite(2, "x").unwrap(), &(CasExpr::int(4) * x().pow(2) - CasExpr::int(2)));
+        assert_equal(&hermite(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(12) * x()));
         // Chebyshev T₃=4x³−3x, U₃=8x³−4x.
-        assert_equal(&chebyshev_t_polynomial(3, "x").unwrap(), &(CasExpr::int(4) * x().pow(3) - CasExpr::int(3) * x()));
-        assert_equal(&chebyshev_u_polynomial(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(4) * x()));
+        assert_equal(&chebyshev_t(3, "x").unwrap(), &(CasExpr::int(4) * x().pow(3) - CasExpr::int(3) * x()));
+        assert_equal(&chebyshev_u(3, "x").unwrap(), &(CasExpr::int(8) * x().pow(3) - CasExpr::int(4) * x()));
         // Laguerre L₂=(x²−4x+2)/2, L₃=(−x³+9x²−18x+6)/6.
-        assert_equal(&laguerre_polynomial(2, "x").unwrap(), &((x().pow(2) - CasExpr::int(4) * x() + CasExpr::int(2)) / CasExpr::int(2)));
-        assert_equal(&laguerre_polynomial(3, "x").unwrap(), &((CasExpr::int(-1) * x().pow(3) + CasExpr::int(9) * x().pow(2) - CasExpr::int(18) * x() + CasExpr::int(6)) / CasExpr::int(6)));
+        assert_equal(&laguerre(2, "x").unwrap(), &((x().pow(2) - CasExpr::int(4) * x() + CasExpr::int(2)) / CasExpr::int(2)));
+        assert_equal(&laguerre(3, "x").unwrap(), &((CasExpr::int(-1) * x().pow(3) + CasExpr::int(9) * x().pow(2) - CasExpr::int(18) * x() + CasExpr::int(6)) / CasExpr::int(6)));
         // Tₙ(cos θ) = cos(nθ): T₂(cos θ) = 2cos²θ − 1 = cos 2θ (checked via the zero-test).
-        let ct = chebyshev_t_polynomial(2, "x").unwrap().substitute("x", &v("t").cos());
+        let ct = chebyshev_t(2, "x").unwrap().substitute("x", &v("t").cos());
         assert!(matches!(
             equal(&ct, &(CasExpr::int(2) * v("t").cos().pow(2) - CasExpr::int(1))),
             ZeroTest::Certified { equal: true, .. }
         ));
         // Chebyshev satisfies its ODE-free three-term identity: Tₙ₊₁ = 2x·Tₙ − Tₙ₋₁.
         for n in 1..6u32 {
-            let recurrence = CasExpr::int(2) * x() * chebyshev_t_polynomial(n, "x").unwrap()
-                - chebyshev_t_polynomial(n - 1, "x").unwrap();
-            assert_equal(&chebyshev_t_polynomial(n + 1, "x").unwrap(), &recurrence);
+            let recurrence = CasExpr::int(2) * x() * chebyshev_t(n, "x").unwrap()
+                - chebyshev_t(n - 1, "x").unwrap();
+            assert_equal(&chebyshev_t(n + 1, "x").unwrap(), &recurrence);
         }
         // Gegenbauer Cₙ^λ generalizes: λ=1 → Chebyshev Uₙ, λ=½ → Legendre Pₙ.
         for n in 0..=5u32 {
             assert_equal(
-                &gegenbauer_polynomial(n, Rational::integer(1), "x").unwrap(),
-                &chebyshev_u_polynomial(n, "x").unwrap(),
+                &gegenbauer(n, Rational::integer(1), "x").unwrap(),
+                &chebyshev_u(n, "x").unwrap(),
             );
             assert_equal(
-                &gegenbauer_polynomial(n, Rational::new(1, 2), "x").unwrap(),
-                &legendre_polynomial(n, "x").unwrap(),
+                &gegenbauer(n, Rational::new(1, 2), "x").unwrap(),
+                &legendre(n, "x").unwrap(),
             );
         }
         // Explicit: C₂^{2}(x) = 12x² − 2.
-        assert_equal(&gegenbauer_polynomial(2, Rational::integer(2), "x").unwrap(), &(CasExpr::int(12) * x().pow(2) - CasExpr::int(2)));
+        assert_equal(&gegenbauer(2, Rational::integer(2), "x").unwrap(), &(CasExpr::int(12) * x().pow(2) - CasExpr::int(2)));
         // Jacobi Pₙ^{(0,0)} = Legendre Pₙ (the most general classical family).
         for n in 0..=5u32 {
             assert_equal(
-                &jacobi_polynomial(n, Rational::integer(0), Rational::integer(0), "x").unwrap(),
-                &legendre_polynomial(n, "x").unwrap(),
+                &jacobi(n, Rational::integer(0), Rational::integer(0), "x").unwrap(),
+                &legendre(n, "x").unwrap(),
             );
         }
         // Explicit Jacobi: P₁^{(2,1)} = 1/2 + (5/2)x, P₂^{(1,1)} = (15x²−3)/4.
-        assert_equal(&jacobi_polynomial(1, Rational::integer(2), Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) + CasExpr::rat(5, 2) * x()));
-        assert_equal(&jacobi_polynomial(2, Rational::integer(1), Rational::integer(1), "x").unwrap(), &((CasExpr::int(15) * x().pow(2) - CasExpr::int(3)) / CasExpr::int(4)));
+        assert_equal(&jacobi(1, Rational::integer(2), Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) + CasExpr::rat(5, 2) * x()));
+        assert_equal(&jacobi(2, Rational::integer(1), Rational::integer(1), "x").unwrap(), &((CasExpr::int(15) * x().pow(2) - CasExpr::int(3)) / CasExpr::int(4)));
         // Generalized Laguerre Lₙ^{(0)} = Lₙ; explicit L₂^{(1)} = x²/2 − 3x + 3.
         for n in 0..=5u32 {
             assert_equal(
-                &generalized_laguerre_polynomial(n, Rational::integer(0), "x").unwrap(),
-                &laguerre_polynomial(n, "x").unwrap(),
+                &generalized_laguerre(n, Rational::integer(0), "x").unwrap(),
+                &laguerre(n, "x").unwrap(),
             );
         }
-        assert_equal(&generalized_laguerre_polynomial(2, Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) * x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(3)));
+        assert_equal(&generalized_laguerre(2, Rational::integer(1), "x").unwrap(), &(CasExpr::rat(1, 2) * x().pow(2) - CasExpr::int(3) * x() + CasExpr::int(3)));
     }
 
     #[test]
