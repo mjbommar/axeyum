@@ -49,8 +49,10 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   importing organizer code. The first S1b live input attempt is retained as a
   negative: it stopped before metadata reduction on the official regexp-valued
   logic shape and exposed that the organizer's submission glob is
-  non-recursive. The corrected fixture-green runner now awaits a fresh
-  selection-free input run; it cannot produce a selected set.
+  non-recursive. A second retained attempt proved that regexp expansion ranges
+  over the complete `Logic` enum before `Participation.get` filters it through
+  the selected track's divisions. The corrected fixture-green runner now
+  awaits a fresh selection-free input run; it cannot produce a selected set.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it

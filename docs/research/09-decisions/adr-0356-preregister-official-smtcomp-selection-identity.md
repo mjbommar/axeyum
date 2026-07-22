@@ -168,6 +168,10 @@ result is credited by this decision alone.
 - The S1 fixture includes two sub-second `OutOfMemory` rows and confirms that
   the pinned executable expression classifies the file as trivial. This is an
   identity test for organizer behavior, not an endorsement of that predicate.
+- Submission logic regexps expand against the complete organizer `Logic` enum;
+  `Participation.get` then retains only matches present in the selected track's
+  division table. The independent adapter preserves this two-stage filtering,
+  including valid logics that are irrelevant to Single Query.
 
 ## Alternatives
 

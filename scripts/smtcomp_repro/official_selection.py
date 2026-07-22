@@ -336,6 +336,16 @@ def extract_single_query_divisions(defs_source: bytes) -> dict[str, list[str]]:
     return dict(sorted(output.items()))
 
 
+def extract_official_logics(defs_source: bytes) -> set[str]:
+    """Extract every organizer ``Logic`` value without importing its code."""
+    try:
+        module = ast.parse(defs_source.decode("utf-8"), filename="pinned-smtcomp-defs.py")
+    except (UnicodeDecodeError, SyntaxError) as error:
+        raise SelectionAuditError("cannot parse pinned organizer definitions") from error
+    enum_values = _extract_enum_values(module)
+    return set(enum_values["Logic"].values())
+
+
 def extract_removed_benchmark_ids(defs_source: bytes) -> set[str]:
     """Extract the two pre-selection removals from pinned ``defs.py`` by AST."""
     try:
@@ -404,9 +414,12 @@ def extract_removed_benchmark_ids(defs_source: bytes) -> set[str]:
 def adapt_official_submissions(
     documents: Sequence[Mapping[str, Any]],
     divisions: Mapping[str, Sequence[str]],
+    all_logics: set[str],
 ) -> list[dict[str, Any]]:
     """Expand official submission divisions/logics into normalized SQ rows."""
     valid_logics = {logic for logics in divisions.values() for logic in logics}
+    if not valid_logics <= all_logics:
+        raise SelectionAuditError("SingleQuery table contains an unknown official logic")
     normalized = []
     for document in documents:
         if not isinstance(document, Mapping):
@@ -452,7 +465,7 @@ def adapt_official_submissions(
                 except re.error as error:
                     raise SelectionAuditError("official logic regexp is invalid") from error
                 explicit_logics = sorted(
-                    logic for logic in valid_logics if pattern.fullmatch(logic)
+                    logic for logic in all_logics if pattern.fullmatch(logic)
                 )
             elif isinstance(explicit_logics_value, list):
                 explicit_logics = explicit_logics_value
@@ -463,9 +476,10 @@ def adapt_official_submissions(
                     raise SelectionAuditError(f"unknown official division: {division!r}")
                 expanded.update(divisions[division])
             for logic in explicit_logics:
-                if logic not in valid_logics:
-                    raise SelectionAuditError(f"unknown official SingleQuery logic: {logic!r}")
-                expanded.add(logic)
+                if not isinstance(logic, str) or logic not in all_logics:
+                    raise SelectionAuditError(f"unknown official logic: {logic!r}")
+                if logic in valid_logics:
+                    expanded.add(logic)
             if expanded:
                 normalized_participations.append(
                     {"logics": sorted(expanded), "track": "single-query"}

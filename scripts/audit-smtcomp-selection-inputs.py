@@ -27,6 +27,7 @@ from scripts.smtcomp_repro.official_selection import (
     canonical_json_bytes,
     competitive_logics,
     division_cap,
+    extract_official_logics,
     extract_removed_benchmark_ids,
     extract_single_query_divisions,
     normalize_benchmark,
@@ -296,10 +297,12 @@ def run(authority_path: Path, output_dir: Path) -> dict[str, Any]:
     defs_path = input_root / "smtcomp/defs.py"
     defs_source = defs_path.read_bytes()
     divisions = extract_single_query_divisions(defs_source)
+    all_logics = extract_official_logics(defs_source)
     removed_ids = extract_removed_benchmark_ids(defs_source)
     submissions = adapt_official_submissions(
         _load_submission_documents(authority, input_root),
         divisions,
+        all_logics,
     )
     competitive = competitive_logics(submissions)
     competitive_submissions = [row for row in submissions if row["competitive"]]

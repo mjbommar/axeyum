@@ -9,6 +9,7 @@ class Division:
 
 
 class Logic:
+    QF_AUFBVLIA = "QF_AUFBVLIA"
     QF_BV = "QF_BV"
     QF_IDL = "QF_IDL"
     QF_LIA = "QF_LIA"
@@ -30,6 +31,6 @@ tracks: dict[Track, dict[Division, set[Logic]]] = {
         Division.QF_LinearIntArith: {Logic.QF_IDL, Logic.QF_LIA},
     },
     Track.Parallel: {
-        Division.QF_Bitvec: {Logic.QF_BV},
+        Division.QF_Bitvec: {Logic.QF_AUFBVLIA, Logic.QF_BV},
     },
 }
