@@ -1,15 +1,15 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: M5 complete; M6 final closure next
+Status: ADR-0355 acceptance and TL2.14 DONE effective upon containing-commit publication
 
-Date paused: 2026-07-22
+Date completed: 2026-07-22
 
 This is the single resume entry point for the current Lean work stream. Read
 this file first when work resumes, then follow its links only as needed. The
-authoritative full execution contract remains the
+authoritative completed execution contract remains the
 [TL2.14 P0--M6 plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md),
-and the decision gate remains
-[proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md).
+and the publication-conditional accepted decision is
+[ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md).
 
 ## Resume contract
 
@@ -29,10 +29,12 @@ and the decision gate remains
   `f03dfcdf2b3e49d86a5bb9ad00aeef20c99926ee`.
 - M5's exact computation test checkpoint is
   `edfa7924adde416393db74325bf29ce280e3f8a7`.
+- M5's complete assurance checkpoint is
+  `346523387b164d828bf9f66aa68068550dc27392`.
 - Reverify the current branch, local HEAD, tracking ref, and remote ref before
   editing. Do not switch, reset, restore, or force any other live worktree.
-- No partial M6 edits exist at this checkpoint. Inspect final reconciliation
-  ownership again before accepting ADR-0355 or marking TL2.14 complete.
+- TL2.14 has no remaining milestone. Any broader source/elaboration or kernel
+  work requires its own roadmap task and decision boundary.
 - The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
   unrelated dirty benchmark/corpus/review artifacts and remains untouched by
   this lane.
@@ -68,6 +70,10 @@ preflight are complete and pushed:
 8. M5 reproduced the pinned OLEAN digest twice, checked all three registered
    normal forms twice at `edfa7924`, appended the TL2.14 assurance overlay, and
    removed the obsolete live nested decline after every support gate passed.
+9. M6 independently mapped all twelve ADR exits, repeated positive and negative
+   pinned-Lean controls, ran every bounded final aggregate, synchronized the
+   live project surfaces, and made ADR-0355 acceptance/TL2.14 DONE effective
+   upon containing-commit publication.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
@@ -83,6 +89,8 @@ The complete M4 result is
 [lean-nested-inductive-elimination-m4-2026-07-22.md](lean-nested-inductive-elimination-m4-2026-07-22.md).
 The complete M5 result is
 [lean-nested-inductive-elimination-m5-2026-07-22.md](lean-nested-inductive-elimination-m5-2026-07-22.md).
+The complete M6 result is
+[lean-nested-inductive-elimination-final-2026-07-22.md](lean-nested-inductive-elimination-final-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -214,24 +222,30 @@ advances the current matrix to seven rows, six admitted, four computation-
 checked, and zero current declines. The obsolete live `inductive-nested` code
 is removed; all five unrelated codes and every historical view remain exact.
 
-## Exact next milestone: M6 final closure
+## Final M6 result
 
-M6 must run every final bounded gate, audit all ADR-0355 exits, decide the ADR,
-and reconcile every live project-state surface without changing the accepted
-M0--M5 evidence. It may mark TL2.14 complete only if the complete aggregate is
-green and every registered exit is evidenced.
+M6 maps all twelve ADR-0355 exits to committed evidence and repeats the final
+aggregate under the one-worker/4 GiB policy. Positive Lean compilation produces
+the frozen OLEAN digest twice; the negative source repeats its exact registered
+diagnostic twice. Complete kernel/importer all-target tests and separate
+doctests, exact generated populations and retained controls, strict tooling,
+73 related Python contracts, current and historical generators/checkers,
+parity documents, foundational resources, links, shell syntax, and staged audit
+pass. ADR-0355 is accepted and TL2.14 is DONE once the containing topic-branch
+commit is pushed with local/tracking/remote equality.
 
-## Remaining milestone after M5
+## Remaining work
 
-- **M6 — final closure:** run every bounded final gate, decide ADR-0355 from its
-  preregistered exits, and synchronize PLAN, STATUS, roadmaps, generated docs,
-  and the final handoff.
+No TL2.14 milestone remains. Native source syntax/elaboration, pattern and
+equation compilation, recursion/termination evidence, broader library
+admission, TL2.15/TL2.16, and ecosystem/runtime compatibility remain separate
+roadmap work and receive no credit from this lane.
 
 The detailed positive/negative matrices, mutation list, generated grammar,
 stop conditions, and explicit non-claims remain binding in the
 [full execution plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
 
-## First commands on resume
+## Verification commands after handoff
 
 ```sh
 cd /home/mjbommar/projects/personal/axeyum-lean-nested
@@ -246,8 +260,9 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then audit the ADR-0355 exits and M6 reconciliation ownership. Do not rewrite
-M0--M5 history or accept the ADR before the final aggregate is green.
+No TL2.14 implementation should resume from this file. Use these commands only
+to verify the completed topic branch; start broader work from its own roadmap
+entry and isolated worktree.
 
 ## Tools and resource envelope
 

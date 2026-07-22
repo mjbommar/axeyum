@@ -297,7 +297,7 @@ state.
 > [post-TL2.13 dependency audit](docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
 > then corrects the next trust boundary: nested-inductive expansion is part of
 > pinned Lean 4.30's kernel admission path, while well-founded source recursion
-> is elaborator work and remains TL4.10. [Proposed ADR-0355](docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+> is elaborator work and remains TL4.10. [Accepted ADR-0355](docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
 > and the [TL2.14 P0--M6 plan](docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
 > preregister structural discovery, auxiliary-group expansion, ordinary atomic
 > checking, restoration, deterministic `.rec_N` publication, exact official
@@ -342,8 +342,8 @@ state.
 > commit `6a2afdd5` is pushed with local/tracking/remote equality. Importer
 > policy and all M0 computation streams remain untouched. The authoritative
 > [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md)
-> now records M6's final-closure task, the remaining M6 work,
-> ownership constraints, commands, and stop conditions.
+> now records the completed P0--M6 evidence, accepted decision, verification
+> commands, ownership constraints, and final handoff.
 > The [M4 importer plan](docs/plan/lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
 > froze the requirements to derive the auxiliary population from checked
 > main-recursor motives, compare the complete wire surface by generated name,
@@ -370,8 +370,14 @@ state.
 > removes only the obsolete live `inductive-nested` code. Five unrelated live
 > codes remain exact. Complete kernel/importer suites, exact 640/720/768/840
 > and well-founded 35/0 controls, strict tooling, 73 related Python contract
-> tests, generated documents, foundational resources, and links pass. M6 final
-> aggregate closure and ADR-0355 disposition are next.
+> tests, generated documents, foundational resources, and links pass. The
+> [M6 final result](docs/plan/lean-nested-inductive-elimination-final-2026-07-22.md)
+> maps every ADR exit, freshly repeats the positive and negative pinned-Lean
+> controls plus the complete bounded aggregate, and makes ADR-0355 acceptance
+> and TL2.14 DONE effective when its containing commit is pushed with local/
+> tracking/remote equality. Native source parsing/elaboration, recursion compilation
+> and termination, broad libraries, and ecosystem/runtime compatibility remain
+> separate work.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

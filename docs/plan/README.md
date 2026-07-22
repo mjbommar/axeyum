@@ -204,11 +204,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   exact current nested and already-passing well-founded product boundaries.
 - [`lean-nested-inductive-elimination-resume.md`](lean-nested-inductive-elimination-resume.md)
   — **single resume entry point** for TL2.14 work: exact pushed state,
-  completed P0/M0/M1/M2/M3/M4/M5 evidence, M6's final-closure task and
-  remaining work,
-  validation commands, ownership rules, resource caps, and stop conditions.
+  completed P0/M0/M1/M2/M3/M4/M5/M6 evidence, accepted decision, validation
+  commands, ownership rules, resource caps, and final handoff.
 - [`lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md`](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
-  — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
+  — accepted ADR-0355's trusted expansion/restoration rule, source/wire freeze,
   native/importer/mutation/generated gates, P0-M6 milestones, resource bounds,
   stop conditions, and exact source-elaboration non-claims.
 - [`lean-nested-inductive-elimination-m0-2026-07-22.md`](lean-nested-inductive-elimination-m0-2026-07-22.md)
@@ -252,6 +251,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M5's twice-reproduced pinned-Lean digest, explicit 3/3/5-successor Axeyum
   normal forms, append-only TL2.14 overlay, 7/6/4/0 current matrix, five-code
   compatibility state, historical hashes, bounded gates, and M6 handoff.
+- [`lean-nested-inductive-elimination-final-2026-07-22.md`](lean-nested-inductive-elimination-final-2026-07-22.md)
+  — M6's twelve-gate ADR audit, fresh positive/negative pinned-Lean replay,
+  final bounded aggregate, accepted ADR-0355, completed TL2.14, exact non-
+  claims, and broader Lean-program handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

@@ -745,11 +745,11 @@ Non-claims until their gates are met:
    selected computation, a >=512-case grammar, and the existing 840-case
    positivity gate. The nested diagnostic classification is a
    separate bounded TL1.8 hygiene follow-up, not semantic nested support.
-8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
+8. **TL1.3-TL1.4, TL1.7, and TL2.14 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path is TL2.14 nested-inductive kernel elimination, with
-   every TL2.11-TL2.13 guard retained. **TL2.13 is complete under accepted
+   completed nested-inductive kernel path retains every TL2.11-TL2.13 guard.
+   **TL2.13 is complete under accepted
    ADR-0354:** one
    ordered atomic group gate owns shared parameters/universes, group-wide
    positivity, per-family indices, all motives/minors, target-family recursive
@@ -787,7 +787,7 @@ Non-claims until their gates are met:
    [post-TL2.13 audit](lean-post-tl2.13-dependency-audit-2026-07-22.md) corrects
    the next boundary: pinned Lean performs nested-inductive expansion inside
    kernel admission, while well-founded source recursion remains TL4.10
-   elaborator work. [Proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
+   elaborator work. [Accepted ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
    and the [TL2.14 plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
    preregister the exact expansion/restoration path. The
    [M0 result](lean-nested-inductive-elimination-m0-2026-07-22.md) now freezes
@@ -795,7 +795,20 @@ Non-claims until their gates are met:
    diagnostic, with 114,596 bytes / 2,022 records reproduced byte-identically
    twice and no Axeyum observation. The already-completing 35-declaration
    well-founded core stream remains a control, not new frontend credit. M1
-   corrects only the nested diagnostic preflight next.
+   first establishes typed non-admission. M2 lands structural discovery,
+   complete-container copying, fixed-point expansion, atomic checking,
+   restoration, and `.rec_N` publication. M3 repeats 640 unique profiles twice
+   and closes the restoration mutation surface. M4 imports the construct and
+   all three computation streams twice with exact declaration comparison. M5
+   checks the registered 3/3/5-successor normal forms twice, appends the
+   history-preserving assurance overlay at 7 rows / 6 admitted / 4 computation-
+   checked / 0 current declines, and removes only the obsolete live nested
+   decline. The
+   [M6 final result](lean-nested-inductive-elimination-final-2026-07-22.md)
+   closes exits 1--11 and every non-publication component of exit 12; containing-
+   commit push/ref equality finalizes accepted ADR-0355 and TL2.14 DONE. Native
+   nested/well-founded source elaboration remains
+   TL4.9/TL4.10 work; no broad `Init`/`Std`/mathlib or ecosystem credit follows.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

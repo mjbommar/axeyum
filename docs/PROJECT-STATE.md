@@ -171,9 +171,11 @@ Again, there are distinct targets:
   invariance plus type/body/dependency mutation sensitivity.
   A completed source-first/wire-second official construct matrix freezes
   recursive-indexed, reflexive, mutual, nested, and well-founded exports before
-  product measurement. Its current TL2.12 overlay records four independently
-  admitted rows, two separately computation-checked rows, and two typed
-  declines while retaining the historical pre-widening observation. TL2.11
+  product measurement. Append-only TL2.12, TL2.13, and TL2.14 overlays retain
+  each historical pre-widening view while the current matrix records seven
+  rows, six independently admitted rows, four independently computation-
+  checked rows, one official-source rejection, and zero transactional declines.
+  TL2.11
   supplies the semantic prerequisite: a pre-insertion Lean 4.30 single-family
   strict-positivity guard
   with exact typed failures, twelve public rows, a twice-repeated 840-case
@@ -184,11 +186,11 @@ Again, there are distinct targets:
   frozen `MiniVector` and `MiniAcc` construct streams complete twice with exact
   generated/exported recursor comparison; separate computation streams reduce
   to the registered Vector and Acc normal forms in both official Lean and
-  Axeyum. Kernel-side nested-inductive elimination is now live for M2's
-  structurally registered container shapes; official nested import and broad
-  Lean admission remain open, while native nested/well-founded source
-  elaboration is separately staged in TL4.9/TL4.10. Mutual groups are complete
-  under accepted ADR-0354:
+  Axeyum. Kernel-side nested-inductive elimination is now complete for the
+  registered native and official population under accepted ADR-0355, while
+  broad Lean admission and native nested/well-founded source elaboration remain
+  separately staged in TL4.9/TL4.10. Mutual groups are complete under accepted
+  ADR-0354:
   the unit is one
   atomic ordered
   group with shared parameters, complete-group positivity, all motives/minors,
@@ -218,10 +220,10 @@ Again, there are distinct targets:
   checked, and one retains a typed decline. Every bounded final gate passes,
   the obsolete live mutual decline is removed, and TL2.13 is DONE. A source-
   backed dependency audit corrects the next task: TL2.14 is kernel-side nested-
-  inductive expansion/restoration under proposed ADR-0355; well-founded source
+  inductive expansion/restoration under accepted ADR-0355; well-founded source
   recursion remains native-elaborator task TL4.10. The already elaborated
-  well-founded root imports as 35 declarations with zero axioms, while the
-  nested root still has a typed non-admission boundary and no semantic credit.
+  well-founded root imports as 35 declarations with zero axioms; that remains a
+  core control rather than frontend credit.
   TL2.14 M0 now freezes three explicit main/auxiliary recursor computations,
   one exact negative kernel diagnostic, and 114,596 bytes of twice-identical
   official streams without product observation. M1 parses the claimed
@@ -245,9 +247,14 @@ Again, there are distinct targets:
   motives, imports the construct and all three frozen computation streams twice
   at 22/34/34/34 declarations and zero axioms, compares exact main/auxiliary
   contracts, and closes 20 wire/publication classes plus order non-authority.
-  Exact 640/720/768/840 and well-founded 35/0 controls remain green. Explicit
-  selected normal forms, the assurance overlay, and live-decline removal remain
-  M5 work.
+  M5 confirms all three registered theorem proofs and 3/3/5-successor normal
+  forms twice, appends a history-preserving TL2.14 overlay at seven rows / six
+  admitted / four computation-checked / zero current declines, and removes only
+  the obsolete live nested decline. M6 maps every ADR exit and repeats the
+  bounded positive/negative pinned-Lean, complete kernel/importer, exact
+  640/720/768/840, well-founded 35/0, strict tooling, contract, generated-
+  document, parity, foundational-resource, and link gates. ADR-0355 acceptance
+  and TL2.14 DONE become final upon containing-commit push/ref equality.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

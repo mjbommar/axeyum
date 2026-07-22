@@ -130,7 +130,7 @@ Last updated: 2026-07-22
 > the decision, and marks TL2.13 DONE. A subsequent
 > [dependency audit](../../../docs/plan/lean-post-tl2.13-dependency-audit-2026-07-22.md)
 > corrects TL2.14 to pinned Lean's kernel-side nested-inductive expansion and
-> restoration; well-founded source recursion remains TL4.10. Proposed ADR-0355
+> restoration; well-founded source recursion remains TL4.10. Accepted ADR-0355
 > and its P0-M6 plan are committed. M0 now freezes three explicit recursor
 > computations, one exact negative diagnostic, and 114,596 bytes of twice-
 > identical official streams without product observation. M1 now corrects the
@@ -153,8 +153,20 @@ Last updated: 2026-07-22
 > now derives auxiliary identity from checked motives, imports four official
 > streams twice at 22/34/34/34 declarations and zero axioms, compares exact
 > main/auxiliary contracts, and closes 20 wire/publication classes plus order
-> non-authority. M5 explicit registered normal forms, assurance, and live-
-> decline removal are next.
+> non-authority. The
+> [M5 result](../../../docs/plan/lean-nested-inductive-elimination-m5-2026-07-22.md)
+> checks all three theorem proofs and registered 3/3/5-successor normal forms
+> twice, appends the history-preserving TL2.14 overlay at seven rows / six
+> admitted / four computation-checked / zero current declines, and removes only
+> the obsolete live nested decline. The
+> [M6 final result](../../../docs/plan/lean-nested-inductive-elimination-final-2026-07-22.md)
+> closes exits 1--11 and every non-publication component of exit 12, repeats
+> the bounded positive and negative pinned-Lean controls plus complete kernel/
+> importer and exact
+> 640/720/768/840 gates, and makes ADR-0355 acceptance and TL2.14 DONE final
+> upon containing-commit push/ref equality. Native source
+> parsing, inductive/recursion elaboration, termination, broad libraries, and
+> ecosystem/runtime support remain separate roadmap work.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

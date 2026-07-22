@@ -861,9 +861,9 @@ Out of scope:
     decline, closes every bounded gate, accepts the decision, and marks TL2.13
     DONE. A subsequent source-backed audit corrects TL2.14 to the distinct
     kernel-side nested-inductive elimination question.
-- [ ] How must nested inductive applications be expanded and restored, and
+- [x] How must nested inductive applications be expanded and restored, and
       which layer owns well-founded recursion?
-  - Proposed answer (2026-07-22): follow pinned Lean 4.30's kernel boundary.
+  - Answer (2026-07-22): follow pinned Lean 4.30's kernel boundary.
     Discover applications of already admitted inductive containers whose
     parameter tuple contains a new family; require complete parameter prefixes
     and no loose bound variables; copy the container's complete mutual group
@@ -877,7 +877,7 @@ Out of scope:
     TL4.10. The already completing 35-declaration well-founded export is a core
     control, not frontend credit. See the
     [dependency audit](../../plan/lean-post-tl2.13-dependency-audit-2026-07-22.md),
-    [proposed ADR-0355](../09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md),
+    [accepted ADR-0355](../09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md),
     and the
     [TL2.14 plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
     P0 and M0 are complete: three explicit main/auxiliary recursor computations,
@@ -899,10 +899,17 @@ Out of scope:
     [M4 result](../../plan/lean-nested-inductive-elimination-m4-2026-07-22.md)
     derives auxiliary identity from checked motives, imports four official
     streams twice at 22/34/34/34 declarations and zero axioms, and closes 20
-    wire/publication classes plus order non-authority. M5 explicit normal forms
-    and assurance are next. Close this question only when ADR-0355's
-    native, generated, import, computation, mutation, retention, and final
-    gates pass.
+    wire/publication classes plus order non-authority. The
+    [M5 result](../../plan/lean-nested-inductive-elimination-m5-2026-07-22.md)
+    checks all three registered 3/3/5-successor normal forms twice, appends the
+    history-preserving 7/6/4/0 assurance overlay, and removes only the obsolete
+    live nested decline. The
+    [M6 final result](../../plan/lean-nested-inductive-elimination-final-2026-07-22.md)
+    closes the native, generated, import, computation, mutation, retention,
+    positive/negative pinned-Lean, and non-publication final bounded gates.
+    Containing-commit push/ref equality finalizes accepted ADR-0355 and TL2.14
+    DONE. Native source elaboration and well-founded recursion
+    remain TL4.9/TL4.10 rather than silently moving into this kernel result.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
