@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.7.2 process behavior is source-first preregistered; no
+  probe has run.** The
+  [plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
+  freezes the exact Linux launch, 4/8 GiB `RLIMIT_AS`, prelaunch/raw-output/
+  terminal record order, process-group timeout cleanup, conservative metric
+  states, and evidence-only terminal classification. Eight ordered synthetic
+  controls cover zero/nonzero exit, self-signal, a descendant-bearing wall
+  timeout, cooperative memory-limit evidence in both lanes, launch failure,
+  and preflight failure. Sixteen mutation families reject guessed OOM,
+  signal-as-timeout, surviving descendants, missing metrics represented as
+  zero, and any case/completion/real/parity promotion. This plan must be pushed
+  before implementation or the first process probe.
+
 - **2026-07-22 — TL0.7.1 closes the machine execution-evidence contract with
   zero process or parity outcomes.** The source-first
   [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) was pushed

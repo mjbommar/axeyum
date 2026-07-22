@@ -420,6 +420,12 @@ state.
 > twelve mutation tests, and zero real outcomes. TL0.7.2 process behavior,
 > TL0.7.3 durability, TL0.7.4 no-credit controls, and all official outcomes
 > remain open; exact paired records remain later TL0.6.5 work.
+> TL0.7.2 now has a source-first
+> [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
+> that freezes exact Linux launch/cleanup semantics, eight 4/8 GiB synthetic
+> controls, sixteen mutation families, conservative wall/CPU/RSS evidence, and
+> the no-case/no-completion/no-parity boundary before any process probe. This
+> preregistration is not execution evidence; TL0.7.2 remains partial.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
