@@ -2073,6 +2073,85 @@ fn solve_transcendental(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     }
 }
 
+/// Rewrite an expression that is a **polynomial in `eˣ`** into a polynomial in a
+/// fresh variable `u = eˣ`, mapping each `exp(k·x)` (`k` a positive integer, no
+/// constant term) to `uᵏ`. Returns `None` if `var` appears outside such an `exp`
+/// (a mixed equation), or if any `exp` argument is not a positive-integer multiple
+/// of `x` — i.e. outside the `u = eˣ` substitution fragment.
+fn exp_to_power(expr: &CasExpr, var: &str, u: &str) -> Option<CasExpr> {
+    match expr {
+        CasExpr::Const(_) => Some(expr.clone()),
+        CasExpr::Var(v) => {
+            if v == var {
+                None // a bare `x` — not a pure polynomial in eˣ
+            } else {
+                Some(expr.clone())
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            let arg_poly = normalize(arg)?.to_univariate(var)?;
+            if poly::rat_degree(&arg_poly)? != 1
+                || !arg_poly[0].is_zero()
+                || arg_poly[1].denominator() != 1
+                || arg_poly[1].numerator() <= 0
+            {
+                return None; // exp arg not a positive-integer multiple of x
+            }
+            let k = u32::try_from(arg_poly[1].numerator()).ok()?;
+            Some(CasExpr::var(u).pow(k))
+        }
+        CasExpr::Unary(_, _) => None, // any other head of x → outside the fragment
+        CasExpr::Add(items) => Some(CasExpr::Add(
+            items.iter().map(|t| exp_to_power(t, var, u)).collect::<Option<_>>()?,
+        )),
+        CasExpr::Mul(items) => Some(CasExpr::Mul(
+            items.iter().map(|t| exp_to_power(t, var, u)).collect::<Option<_>>()?,
+        )),
+        CasExpr::Neg(a) => Some(CasExpr::Neg(Box::new(exp_to_power(a, var, u)?))),
+        CasExpr::Div(a, b) => Some(CasExpr::Div(
+            Box::new(exp_to_power(a, var, u)?),
+            Box::new(exp_to_power(b, var, u)?),
+        )),
+        CasExpr::Pow(a, e) => Some(CasExpr::Pow(Box::new(exp_to_power(a, var, u)?), *e)),
+    }
+}
+
+/// Solve an equation that is a **polynomial in `eˣ`** — `P(eˣ) = 0` — by treating
+/// `u = eˣ` as the unknown (`exp(k·x) ↦ uᵏ`). Each **positive rational** root `u`
+/// gives a real solution `x = ln u`; non-positive or non-rational roots (no real
+/// `x`, or outside the certifiable fragment) are dropped. Certified by
+/// back-substitution (the exp tower reduces `e^{k·ln u} = uᵏ`). Covers
+/// `e^{2x} − 3e^x + 2 ⇒ {0, ln 2}`.
+fn solve_exp_polynomial(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    let u = if var == "u" { "w" } else { "u" };
+    let u_expr = exp_to_power(expr, var, u)?;
+    // Must genuinely involve u (else there was no exp of x at all).
+    let coeffs = normalize(&u_expr)?.to_univariate(u)?;
+    if poly::rat_degree(&coeffs)? < 1 {
+        return None;
+    }
+    let u_roots = solve(&MultiPoly::from_univariate(u, &coeffs).to_expr(), u)?;
+    let mut roots: Vec<CasExpr> = Vec::new();
+    for u_root in u_roots {
+        // Only positive rational roots yield a certifiable real x = ln u.
+        let CasExpr::Const(u_val) = u_root else {
+            continue;
+        };
+        if u_val.numerator() <= 0 {
+            continue;
+        }
+        let root = fold_trivial(&fold_elementary_constants(&CasExpr::Const(u_val).ln()));
+        if matches!(
+            equal(&expr.substitute(var, &root), &CasExpr::zero()),
+            ZeroTest::Certified { equal: true, .. }
+        ) && !roots.contains(&root)
+        {
+            roots.push(root);
+        }
+    }
+    (!roots.is_empty()).then_some(roots)
+}
+
 /// The coefficient of `yⁱ` in a polynomial `f`, as a [`CasExpr`] in the remaining
 /// variables: `[∂ⁱ_y f / i!]|_{y=0}`. (Uses the differentiate/substitute kernels,
 /// so it is exact for polynomial `f`.)
@@ -2287,6 +2366,10 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Elementary transcendental equations `A·exp(ax+b)+C=0`, `A·ln(ax+b)+C=0`
     // fall outside the polynomial fragment; try them first.
     if let Some(roots) = solve_transcendental(expr, var) {
+        return Some(roots);
+    }
+    // Polynomials in `eˣ` (e.g. `e^{2x} − 3e^x + 2`) — solve for `u = eˣ`.
+    if let Some(roots) = solve_exp_polynomial(expr, var) {
         return Some(roots);
     }
     // Trigonometric equations `A·f(var)+C=0` (f ∈ {sin,cos,tan}) — principal
@@ -11543,6 +11626,24 @@ mod tests {
         let rsq = solve(&(x().sqrt() - CasExpr::int(3)), "x").expect("solvable");
         assert_equal(&rsq[0], &CasExpr::int(9));
         assert!(solve(&(x().sqrt() + CasExpr::int(1)), "x").is_none());
+        // Polynomial in eˣ: e^{2x} − 5e^x + 6 ⇒ {ln 2, ln 3} (u = eˣ = 2, 3).
+        let rexp = solve(
+            &((CasExpr::int(2) * x()).exp() - CasExpr::int(5) * x().exp() + CasExpr::int(6)),
+            "x",
+        )
+        .expect("solvable");
+        assert_eq!(rexp.len(), 2);
+        assert!(rexp.iter().any(|r| matches!(equal(r, &CasExpr::int(2).ln()), ZeroTest::Certified { equal: true, .. })));
+        assert!(rexp.iter().any(|r| matches!(equal(r, &CasExpr::int(3).ln()), ZeroTest::Certified { equal: true, .. })));
+        // Negative eˣ-root dropped: e^{2x} + e^x − 6 ⇒ only ln 2 (u = 2; u = −3 unreal).
+        let rneg = solve(
+            &((CasExpr::int(2) * x()).exp() + x().exp() - CasExpr::int(6)),
+            "x",
+        )
+        .expect("solvable");
+        assert_eq!(rneg.len(), 1);
+        // A mixed equation (x·eˣ) is not a polynomial in eˣ — declined here.
+        assert!(solve_exp_polynomial(&(x() * x().exp()), "x").is_none());
         // A polynomial still routes to the polynomial solver.
         assert_eq!(
             solve(&(x().pow(2) - CasExpr::int(4)), "x").unwrap().len(),
