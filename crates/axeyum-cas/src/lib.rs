@@ -7997,6 +7997,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_sqrt_quadratic(expr, var),
         integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
+        integrate_even_quartic_denominator(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -10484,6 +10485,78 @@ fn integrate_partial_fraction_term(term: &CasExpr, var: &str) -> Option<CasExpr>
 /// coefficients; otherwise it is built with a **symbolic surd** `√(4ad − b²)`
 /// (e.g. `∫1/(x²+x+1) = (2/√3)·atan((2x+1)/√3)`). The surd squares away under
 /// differentiation, so either way the certificate is rational.
+/// Integrate `k / (x⁴ + p·x² + q)` — a depressed **even quartic** denominator with
+/// a constant numerator — via its real quadratic factorization, which is generally
+/// over a quadratic surd field (so it lies beyond the ℚ-partial-fraction path).
+///
+/// - **`p² < 4q`** (`q > 0`): `D = (x²+αx+β)(x²−αx+β)` with `β = √q`, `α = √(2β−p)`.
+///   `1/D = (Ax+B)/(x²+αx+β) + (−Ax+B)/(x²−αx+β)`, `A = 1/(2αβ)`, `B = 1/(2β)`;
+///   each quadratic integrates to a `ln` + `atan` (shared `√(4β−α²) = √(2β+p)`).
+///   Closes `∫1/(x⁴+1) = …` (α = √2), `∫1/(x⁴+q)`.
+/// - **`p² > 4q`, `p > 0`**: `D = (x²+β₁)(x²+β₂)`, `β₁,₂ = (p∓√(p²−4q))/2 > 0`;
+///   `∫ = 1/(β₂−β₁)[ (1/√β₁)atan(x/√β₁) − (1/√β₂)atan(x/√β₂) ]` (surd `βᵢ`).
+///
+/// Certified downstream by differentiate-and-check (the surd zero-test handles the
+/// `√`-atoms), so a mis-derivation declines rather than returning a wrong value.
+fn integrate_even_quartic_denominator(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let rf = normalize_rational(expr)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    // Constant numerator, quartic even denominator `d₄x⁴ + d₂x² + d₀`.
+    if poly::rat_degree(&num)? != 0 || poly::rat_degree(&den)? != 4 {
+        return None;
+    }
+    if !den[1].is_zero() || !den[3].is_zero() {
+        return None;
+    }
+    let d4 = den[4];
+    let p = den[2].checked_div(d4)?;
+    let q = den[0].checked_div(d4)?;
+    let k = num[0].checked_div(d4)?;
+    if q <= Rational::integer(0) {
+        return None; // real roots (x² = positive) — handled by the rational path
+    }
+    let x = || CasExpr::var(var);
+    let four_q = Rational::integer(4).checked_mul(q)?;
+    let p_squared = p.checked_mul(p)?;
+    let scale = CasExpr::Const(k);
+
+    if p_squared < four_q {
+        // Case A: β = √q, α = √(2β−p), shared discriminant √(2β+p).
+        let beta = CasExpr::Const(q).sqrt();
+        let alpha = (CasExpr::int(2) * beta.clone() - CasExpr::Const(p)).sqrt();
+        let disc = (CasExpr::int(2) * beta.clone() + CasExpr::Const(p)).sqrt();
+        let a_coeff = CasExpr::int(1) / (CasExpr::int(2) * alpha.clone() * beta.clone());
+        let b_coeff = CasExpr::int(1) / (CasExpr::int(2) * beta.clone());
+        let quad_plus = x().pow(2) + alpha.clone() * x() + beta.clone();
+        let quad_minus = x().pow(2) - alpha.clone() * x() + beta.clone();
+        // (A/2)(ln(quad₊) − ln(quad₋)).
+        let log_part = (a_coeff.clone() / CasExpr::int(2)) * (quad_plus.ln() - quad_minus.ln());
+        // (B − Aα/2)·(2/disc)·(atan((2x+α)/disc) + atan((2x−α)/disc)).
+        let atan_coeff = (b_coeff - a_coeff * alpha.clone() / CasExpr::int(2))
+            * (CasExpr::int(2) / disc.clone());
+        let atan_part = atan_coeff
+            * (((CasExpr::int(2) * x() + alpha.clone()) / disc.clone()).atan()
+                + ((CasExpr::int(2) * x() - alpha) / disc).atan());
+        // Fold the constant surds (`√1→1`, `√(2·√1−0)→√2`) so the zero-test keys
+        // them on canonical `√`-atoms rather than nested unsimplified forms.
+        return Some(simplify_radicals(&fold_elementary_constants(&(scale * (log_part + atan_part)))));
+    }
+    if p_squared > four_q && p > Rational::integer(0) {
+        // Case B: D = (x²+β₁)(x²+β₂), β₂−β₁ = √(p²−4q).
+        let disc = CasExpr::Const(p_squared.checked_sub(four_q)?).sqrt();
+        let beta1 = (CasExpr::Const(p) - disc.clone()) / CasExpr::int(2);
+        let beta2 = (CasExpr::Const(p) + disc.clone()) / CasExpr::int(2);
+        let (root1, root2) = (beta1.clone().sqrt(), beta2.clone().sqrt());
+        let term1 = (CasExpr::int(1) / root1.clone()) * (x() / root1).atan();
+        let term2 = (CasExpr::int(1) / root2.clone()) * (x() / root2).atan();
+        return Some(simplify_radicals(&fold_elementary_constants(
+            &(scale * ((term1 - term2) / disc)),
+        )));
+    }
+    None // p² = 4q: repeated quadratic factor, not handled here
+}
+
 fn integrate_irreducible_quadratic(var: &str, cc: &[Rational], dd: &[Rational]) -> Option<CasExpr> {
     let a = dd[2];
     let b = dd.get(1).copied().unwrap_or_else(Rational::zero);
@@ -14542,6 +14615,19 @@ mod tests {
             let r = integrate(&integrand, "x").expect("log-derivative");
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
+        }
+        // Even quartic denominators via the real (surd) quadratic factorization,
+        // which is beyond the ℚ-partial-fraction path. ℚ-irreducible `x⁴+1`
+        // (Case A: α=√2), `x⁴+9` (β=3, α=√6); the certificate handles the surds.
+        for integrand in [
+            CasExpr::int(1) / (x().pow(4) + CasExpr::int(1)),
+            CasExpr::int(2) / (x().pow(4) + CasExpr::int(1)),
+            CasExpr::int(1) / (x().pow(4) + CasExpr::int(9)),
+            CasExpr::int(1) / (x().pow(4) + CasExpr::int(16)),
+        ] {
+            let r = integrate(&integrand, "x").expect("even quartic denominator");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
     }
 
