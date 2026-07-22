@@ -5,7 +5,7 @@
   "preregistration": {
     "plan_commit": "8bad614645137164eafec6ab6cf068e5035695b5",
     "plan_sha256": "77b9af8ad012d907c2aa8297008066117d476f0e8018a33278a5104892044263",
-    "implementation_revision": "c4b59d862383bf35a1e1c47f50172893313809d8",
+    "implementation_revision": "afe7db6e04c78fcbce04c6f502268ce2d9934121",
     "plan_published_before_implementation": true,
     "implementation_published_before_kill_matrix": true
   },
@@ -16,11 +16,11 @@
     },
     {
       "path": "scripts/lean_execution_store.py",
-      "sha256": "01d4b6b3cc45f08a748478835215fce45e6dd08f535e461106f33e6e80a9de4a"
+      "sha256": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679"
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "5a386e04006de9bbc9d10c71993a00099c56e2b9781df78631b7455ca292ba6c"
+      "sha256": "1ef995ace9fccd59af05640c5b256782b9183e9c9665101df99127a24b65d72f"
     },
     {
       "path": "scripts/smtcomp_repro/resume_fs.py",
@@ -53,7 +53,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/cell.json",
       "bytes": 2498,
-      "sha256": "d47ef41fd9ab20fb6bc0db2c137998d4c8b5c57cf4939656bd732d62d6541fc4"
+      "sha256": "8a76aeb36f01000360fb474b2a6f2478453e031e164c52ab4e6e89d77e65a303"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-commit/marker.bin",
@@ -73,7 +73,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/cell.json",
       "bytes": 2599,
-      "sha256": "8f147884faab84c8099986c82fa93a709038b5d9c19028cb9f9e49cb6739790d"
+      "sha256": "0a6894f124e951df306933b297bd0b8fac1c5b708588cfc2638f20eda5ee2dcb"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-final-link/marker.bin",
@@ -93,7 +93,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/cell.json",
       "bytes": 2594,
-      "sha256": "307aa6c5c6ea8debffe1a9937f170a1a434801bf7b8adb60698f9b4fe9f5f20a"
+      "sha256": "3adc7d5ad9e78b204e9014027d6ea57473faffb2e50fe07dd94302782c3002c2"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--after-temp-fsync/marker.bin",
@@ -113,7 +113,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/cell.json",
       "bytes": 2505,
-      "sha256": "5f663ec94461156fe44e8c8427c8c58b35e9153b5fc1def06eb825e52a850ed3"
+      "sha256": "ec4f89de2b62148cadc47e17c0d32020d043fffd65f47c31595db4e94a8731d7"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--completion--before-temp-open/marker.bin",
@@ -133,7 +133,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/cell.json",
       "bytes": 2480,
-      "sha256": "1daf51f2a56d7a6aae699d0850ac49a1ce40a7a29c1d8d3db554611f6b1ee5e2"
+      "sha256": "a300c3d2cad92a45b22d7ecf7923c58a45d2f2cdcba856eaa78649402c19ccaa"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-commit/marker.bin",
@@ -153,7 +153,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/cell.json",
       "bytes": 2581,
-      "sha256": "83b2ae2801e0bc316495a4b3d307d444ea98d7e4948899616f3544c3278fbfae"
+      "sha256": "6ba43ac0f986a57041b6423187a49116722e03d3613dc86f0e038f8790c8d9ed"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-final-link/marker.bin",
@@ -173,7 +173,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/cell.json",
       "bytes": 2576,
-      "sha256": "5a9b5e1b62b05ff3aa6727efa5044b647a22f8069534212e92928bb65c1b41ed"
+      "sha256": "2010ecd44603d4ad8fe53890cc14a2087c271fbf39e2fde9bf9bda9c3f344ef6"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--after-temp-fsync/marker.bin",
@@ -193,7 +193,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/cell.json",
       "bytes": 2487,
-      "sha256": "36c66dcbb1307d3f13c2d9fa336453fd37cc972a08a4ac68839d87875a0d8800"
+      "sha256": "d73688beadddd773b01713bf270f4b5eecd5031646c436299812931656761b5d"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/tmpfs--dependency--before-temp-open/marker.bin",
@@ -213,7 +213,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/cell.json",
       "bytes": 2639,
-      "sha256": "c3e385cf14f676b258f366a34766a6c6feeb8b062150c328bc9e84444d7911be"
+      "sha256": "201ddaa8f78a11d5d267fe7f38d5048ab62b1a87f1253cdd2f820f16ef5814b8"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-commit/marker.bin",
@@ -233,7 +233,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/cell.json",
       "bytes": 2740,
-      "sha256": "440efc9ce22a36149a713e650e7a406982c880a24b181e9ffa0138bf011583ac"
+      "sha256": "392c8db2355d0550b80c900dc25de232e117ea88edc6c926775ea86c2a4ae18b"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-final-link/marker.bin",
@@ -253,7 +253,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/cell.json",
       "bytes": 2735,
-      "sha256": "d1209b96f9d1eb84632f79f4d9a42be4ff9b0a185f1f4db540254589abaa0e90"
+      "sha256": "e3d776d2799466b60ae5710548cc9ce4106dd3b4bdc3047bfa82975b992d28cb"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--after-temp-fsync/marker.bin",
@@ -273,7 +273,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/cell.json",
       "bytes": 2646,
-      "sha256": "004ddd9f38809867be17b3c5cab254f1a7b5bea9711afe2fd815f53ea8df9893"
+      "sha256": "ff5e5c22bb85d085028893f6cd3fc27eceb6aefbd70e1ace704f6da80c5d054c"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--completion--before-temp-open/marker.bin",
@@ -293,7 +293,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/cell.json",
       "bytes": 2621,
-      "sha256": "7cf2c84a1c53a22fbb3c3384274d8b0bf64c80e36d0f3fc68f560311db96217c"
+      "sha256": "1596273a8ad06f01bbdfea868365c61a2597c2a594906462e412b86839dbb72c"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-commit/marker.bin",
@@ -313,7 +313,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/cell.json",
       "bytes": 2722,
-      "sha256": "611018554b4154d38bcaab2baa22cbb76f97cf7373d132a3bc7e861891c83dc8"
+      "sha256": "17fddd6f42c419b540c05477d552a81136ff6893bfebc093e5e4435c640720a8"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-final-link/marker.bin",
@@ -333,7 +333,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/cell.json",
       "bytes": 2717,
-      "sha256": "05cb855402688011c304235d52b312a79dbb03072e1a95dfe73e1392031f813e"
+      "sha256": "3dc13b4264ad1ce6fbbbe707e83a3c83363d76b429bd60a199cc4290e9de04e4"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--after-temp-fsync/marker.bin",
@@ -353,7 +353,7 @@
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/cell.json",
       "bytes": 2628,
-      "sha256": "0d24488a3d02002fb5adefd1ea338873f93e837d26b520c0ef7c946de1dd432d"
+      "sha256": "02859c716a9000b5474728e2b9b79ac470949685d70df7491aad988fb928c7b9"
     },
     {
       "path": "docs/plan/evidence/lean-execution-store-tl0.7.3/worktree--dependency--before-temp-open/marker.bin",
@@ -466,17 +466,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/store/cases",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-5djgvlrq/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-5djgvlrq/payload.json",
           "--stop-phase",
           "before_temp_open",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dsjxzd38/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-5djgvlrq/phase.marker"
         ],
-        "command_sha256": "1093138ff59944dce75453dbf515480eccf1b425b2e15de45ffa1864b7357862",
+        "command_sha256": "5b806a7ceda797df15c8122f386224bb15a3dc4bc9e76ddacca6f65580ed4788",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -485,9 +485,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
-        "pid": 3473493,
+        "pid": 3482246,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473493,
+        "process_group_id": 3482246,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -501,7 +501,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "8506177594db48c3668e89ab0a48535830711065ea01e0edfd02586497bcb0ca",
+      "record_sha256": "17098ebbedcd08e9e515970e6319727c045f67e9c7ef5fe0cf9bcb6848918295",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -533,17 +533,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/store/cases",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dm44391u/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dm44391u/payload.json",
           "--stop-phase",
           "after_temp_fsync",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-gpk_z7f8/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-dm44391u/phase.marker"
         ],
-        "command_sha256": "74d7c6437262ecd2ef7a9de2a060971cc4bd2bdb8486104992794f27bbf6adfe",
+        "command_sha256": "7196364cc1bd1324b3c85719009946ad8a6f3e11922273c9559f6ae6309c6da8",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -552,9 +552,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
-        "pid": 3473495,
+        "pid": 3482268,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473495,
+        "process_group_id": 3482268,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -568,7 +568,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "66acafba446dfa2998f8af37ed2b740d85082932a0a1880cd0a6d2c709f90cbd",
+      "record_sha256": "60717e03067b8c48c4f7ddb3437ea9adb1f72cca88493b94bdf64ea6193b7098",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -600,17 +600,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/store/cases",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-8f_ko8ni/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-8f_ko8ni/payload.json",
           "--stop-phase",
           "after_final_link",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-9aaagmgb/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-8f_ko8ni/phase.marker"
         ],
-        "command_sha256": "8d4551868e66dfcfc5aa17727a59b392f3164b460296fbfd18d5af0edff36d8f",
+        "command_sha256": "154724dd78635c9d052a14c38ec14144dd31f67ceb0b8b3d4d3a26cfc305b7a9",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -619,9 +619,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
-        "pid": 3473496,
+        "pid": 3482269,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473496,
+        "process_group_id": 3482269,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -635,7 +635,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "c870ddbe89af31c66d91c83e6453c9fa2a1e0998f3c808417f3f711416bba888",
+      "record_sha256": "3fdc04cf477eb6da0e0ba1d742df84448c720f83280d67b4aff632295575f9df",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -662,17 +662,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/store/cases",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-g5j60zjq/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-g5j60zjq/payload.json",
           "--stop-phase",
           "after_commit",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-assln9q8/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-g5j60zjq/phase.marker"
         ],
-        "command_sha256": "d96b1feced1c339031c68748d3c291a511e2e5e9de2a2b505ee13f6cb1ede1da",
+        "command_sha256": "3761ae9111e2850ae50b117427e7189a0af28546e667fab59d86d21667861c4c",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -681,9 +681,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
-        "pid": 3473519,
+        "pid": 3482270,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473519,
+        "process_group_id": 3482270,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -697,7 +697,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "e31d1d7cb2baec1b1b23246a411af82a05ddff7608176f6edf6cd2067cc96ee7",
+      "record_sha256": "bb34d37838b689ae4fcfc08f0e14ac0f43459fcf79ed308566daa90f6fbc4c64",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -724,17 +724,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/store/completion",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-kg3wfpiy/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-kg3wfpiy/payload.json",
           "--stop-phase",
           "before_temp_open",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-o5awh8gu/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-kg3wfpiy/phase.marker"
         ],
-        "command_sha256": "1660b40fdacd0b449ba87b3dcfb3e915071e916e71e33067dcda6dffcc36246d",
+        "command_sha256": "a657b6382bdfc7abeb7084ff1634f0e712f3a2e29cea851ae9a630e6503c61d0",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -743,9 +743,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
-        "pid": 3473520,
+        "pid": 3482271,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473520,
+        "process_group_id": 3482271,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -759,7 +759,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "b7f0a221acc264956b28f59286cfbe3263b9d437fc4f7d181c1b3783b715d82a",
+      "record_sha256": "d9458b2d63c8fb33efd24a1203f8e66c22aeb7b05b7faef5bca9c3ed75643dea",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -791,17 +791,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/store/completion",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-v2v28eki/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-v2v28eki/payload.json",
           "--stop-phase",
           "after_temp_fsync",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-cpxfmtgs/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-v2v28eki/phase.marker"
         ],
-        "command_sha256": "cee050ff1441470c8fff01de1b7773bc697316b1bfe376b014cc32df897f0f79",
+        "command_sha256": "0ccc25cfec0400f1d432126b23d80f00905d455d949a795a6d91ff5f60d5a461",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -810,9 +810,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
-        "pid": 3473521,
+        "pid": 3482272,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473521,
+        "process_group_id": 3482272,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -826,7 +826,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "175dd8653b2fbbf95444338d09fbe30b5d4d41e3cebf99d1064d26186bb8ad21",
+      "record_sha256": "086cce8b3d8db63a9c7fdbc4ca3cafe6ef9feb6d4e5392db37ddc0b82cf7489a",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -858,17 +858,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/store/completion",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3c4szabo/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3c4szabo/payload.json",
           "--stop-phase",
           "after_final_link",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3lo7792d/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-3c4szabo/phase.marker"
         ],
-        "command_sha256": "409eb08c1d2a06c5eabf8bb5c2a543fb911868272aea634b1240a456bd308d07",
+        "command_sha256": "889d1ab7fa57777de80266c36135737e31014ab3c755ce25d186a246aa3fc9c1",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -877,9 +877,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
-        "pid": 3473541,
+        "pid": 3482273,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473541,
+        "process_group_id": 3482273,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -893,7 +893,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "76990a4b6181910f2f93887eecfbf2b21025b14535351b627fc2589626e332b2",
+      "record_sha256": "6ee413971e40079f3c0fab178bef08c4a5339b42974c656bf3b8b9b0c25ccc46",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -920,17 +920,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/store/completion",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-k1oaid__/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/payload.json",
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-k1oaid__/payload.json",
           "--stop-phase",
           "after_commit",
           "--marker",
-          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-ke0t2vdm/phase.marker"
+          "/home/mjbommar/projects/personal/axeyum-lean-parity/.axeyum-lean-store-cell-k1oaid__/phase.marker"
         ],
-        "command_sha256": "ca86e6d75ad6d244bc79f8540d13d4c21b56cb4335ad2ed5ee464120f84c3b84",
+        "command_sha256": "dddbb612f4edc84b4e9ed0da751eef88ff7749d9c54133ccbef7d992c7e17084",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -939,9 +939,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
-        "pid": 3473545,
+        "pid": 3482274,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473545,
+        "process_group_id": 3482274,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -955,7 +955,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "a6663d35719e1f63b04274cf63587886d6fe770505cee76277ac459458459550",
+      "record_sha256": "3574facb4387df3bd6d3811e9fc1604ec49b1d53c911be700cb23eb165f4b720",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-local-worktree-hardlink-fsync-v1",
@@ -982,17 +982,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/store/cases",
+          "/dev/shm/.axeyum-lean-store-cell-bpwmn3ew/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-bpwmn3ew/payload.json",
           "--stop-phase",
           "before_temp_open",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-1w7frs_q/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-bpwmn3ew/phase.marker"
         ],
-        "command_sha256": "309377f14e456159b782b68152a248a69d0d20400981c47b210fd88d94c04838",
+        "command_sha256": "692881291e726454376c568b3c015b415896b9ae5d0cad896b7faa96a451dec9",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1001,9 +1001,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
-        "pid": 3473546,
+        "pid": 3482275,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473546,
+        "process_group_id": 3482275,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1017,7 +1017,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "1d6d2cf2794035654abbc809525c2cbaf3863f79ca24976d5289ec9c43237ad6",
+      "record_sha256": "01eeac11b3b8134a4d9a2df8cc1db619030578b516e9250203d5877a0732e558",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1049,17 +1049,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-vzzprass/store/cases",
+          "/dev/shm/.axeyum-lean-store-cell-slli0gfn/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-vzzprass/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-slli0gfn/payload.json",
           "--stop-phase",
           "after_temp_fsync",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-vzzprass/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-slli0gfn/phase.marker"
         ],
-        "command_sha256": "f155ae7d4fe6e6bb0cf6ede5b49983f3ffeb2b935056eba6da27dbefb4258f93",
+        "command_sha256": "78af4afe7370d98bcf37191d52d9388a20eab425dc58b71fdeedd4fd4c68689a",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1068,9 +1068,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
-        "pid": 3473547,
+        "pid": 3482276,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473547,
+        "process_group_id": 3482276,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1084,7 +1084,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "f3a99d53de68270e1c0b9f1c85565e3bbcbb36f097d2cb97fd11341f51067ed6",
+      "record_sha256": "96dd337cec74c400aa8255a82e36e352509a63c422a49322a73fcc415e06f712",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1116,17 +1116,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/store/cases",
+          "/dev/shm/.axeyum-lean-store-cell-jonpejas/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-jonpejas/payload.json",
           "--stop-phase",
           "after_final_link",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-4zruonl5/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-jonpejas/phase.marker"
         ],
-        "command_sha256": "da204008f94e94c3679fd6cc1b896ee14d98665ceac741f5139360e2e34e17d4",
+        "command_sha256": "800b76394b851664149b23a8a247128d394d079c022f8aac4ac26445b87fd2da",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1135,9 +1135,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
-        "pid": 3473548,
+        "pid": 3482277,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473548,
+        "process_group_id": 3482277,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1151,7 +1151,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "600b1141d21e1e0b2b9a0a655812a7d2cd39d40e11ad614093c87e78dc8030fd",
+      "record_sha256": "57be3dce7c09a903a74adbd36901495d15a9d0a3b12f1e2a539242e5363b7a13",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1178,17 +1178,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/store/cases",
+          "/dev/shm/.axeyum-lean-store-cell-uifst10c/store/cases",
           "--filename",
           "case-a.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-uifst10c/payload.json",
           "--stop-phase",
           "after_commit",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-rbfy3f_0/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-uifst10c/phase.marker"
         ],
-        "command_sha256": "6961fe0354ba0dc9522727256bbc4cb24dbf543a3003a7f18dfd004ad2a514e4",
+        "command_sha256": "a18edf5a6a4eb8a44d276b6a4a68de280c381a27e85ff2e39de0f841604f528a",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1197,9 +1197,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
-        "pid": 3473549,
+        "pid": 3482278,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473549,
+        "process_group_id": 3482278,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1213,7 +1213,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "9e4ff0fc5858224955965b5dd9f3e2a3768dbb40b1c031a52570ceb62aeaa9b6",
+      "record_sha256": "d505b28d94f0b390318a13cf76990538e63d0f97f25c703662bd5087ff3e6230",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1240,17 +1240,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/store/completion",
+          "/dev/shm/.axeyum-lean-store-cell-ja_blt5e/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-ja_blt5e/payload.json",
           "--stop-phase",
           "before_temp_open",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-9edtg9mq/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-ja_blt5e/phase.marker"
         ],
-        "command_sha256": "78f069480ef920121ac60cc42d6a33c565ea517b177d5475196534e6dc437e8a",
+        "command_sha256": "c445fb855f92e95cee3d5e0a1a81a85c5be6417b437f571751b17d4deab6d3bc",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1259,9 +1259,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "b27fc3742ac4ae3d5cccb532386166912ba5427ce2d3fb0f95c50d7a1e3c36b8",
-        "pid": 3473550,
+        "pid": 3482298,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473550,
+        "process_group_id": 3482298,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1275,7 +1275,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "d527cc69487b3c7c03c2c956cb56daea14b2495831985162229cf0c331bf0515",
+      "record_sha256": "8bc4689d231857cf60aa579fee210ff4ac7ecc35e0f8de236feb6a424d2c83cd",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1307,17 +1307,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/store/completion",
+          "/dev/shm/.axeyum-lean-store-cell-zrh5gzz2/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-zrh5gzz2/payload.json",
           "--stop-phase",
           "after_temp_fsync",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-jqpd5tmi/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-zrh5gzz2/phase.marker"
         ],
-        "command_sha256": "53812f90685ebc8569d044b8af290016bc121fe38325b8c439c878790268bb8d",
+        "command_sha256": "0c204445c38de810b9e09018e5c3ff76d996c66ba9397fd0fa25e21698b387f5",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1326,9 +1326,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "2bfa3d60b84d1df25145c41cdc1a69dfe0819a28a6c3f59b25f5e91c88190ddc",
-        "pid": 3473551,
+        "pid": 3482302,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473551,
+        "process_group_id": 3482302,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1342,7 +1342,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "042999282438ff6dd6758959abff38523d2dd3e4b465f3857e8e77577f4b32d2",
+      "record_sha256": "86d3bcda9f9dd0474422d0b8c947e82a71c18eec9df48bb0c0d7c29c7aa33994",
       "resume_outcome": "installed",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1374,17 +1374,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/store/completion",
+          "/dev/shm/.axeyum-lean-store-cell-6mof6cef/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-6mof6cef/payload.json",
           "--stop-phase",
           "after_final_link",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-60s3mrf_/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-6mof6cef/phase.marker"
         ],
-        "command_sha256": "ee14c06b3a96b7b5ed782e47ef77e5e40dec08096a41363b8900c5159870545b",
+        "command_sha256": "a22f2b1d1151ea4ada3f8ec60e0fe04325c64664294fc12ab75b3539fb4b1884",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1393,9 +1393,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "626b9f163cca2fffd38cb316391e6f486ffc624005eebff649b1d69cfaeb2a02",
-        "pid": 3473552,
+        "pid": 3482326,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473552,
+        "process_group_id": 3482326,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1409,7 +1409,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "32b677ad98fdf934e2780965d5535acd3d108150fd38caaa64732c4eb4189e7e",
+      "record_sha256": "2b1a9e33108e41addcb3f5103e53176de95556c967e33c037d0128520f61da91",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1436,17 +1436,17 @@
           "/usr/bin/python3.14",
           "/home/mjbommar/projects/personal/axeyum-lean-parity/scripts/smtcomp_repro/resume_fs_fixture_worker.py",
           "--directory",
-          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/store/completion",
+          "/dev/shm/.axeyum-lean-store-cell-ku69_4f4/store/completion",
           "--filename",
           "completion.json",
           "--payload",
-          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/payload.json",
+          "/dev/shm/.axeyum-lean-store-cell-ku69_4f4/payload.json",
           "--stop-phase",
           "after_commit",
           "--marker",
-          "/dev/shm/.axeyum-lean-store-cell-su65vs4v/phase.marker"
+          "/dev/shm/.axeyum-lean-store-cell-ku69_4f4/phase.marker"
         ],
-        "command_sha256": "8fb69bd7ff48163ec06ef4fc190147ef6820dc5dbf1e3fcebab5600f190a7ebc",
+        "command_sha256": "13016eefa699de1b7c57e55f51173f61ee543425f2bfddf681c80c81325d0ee0",
         "environment": {
           "LANG": "C.UTF-8",
           "PYTHONHASHSEED": "0",
@@ -1455,9 +1455,9 @@
         "environment_sha256": "e72bfd105b4d126c854928978899044be94113f01e2bdaf17eb3c92f7db55439",
         "executable_sha256": "b8d8288faefdd300201f43fcf00f6f539a27218eeed3a3dff5ab10b9c4c99700",
         "marker_sha256": "76ff8cdfa954f6ef5cc3c98181ff6137a4821fdb272cb024adc9bbf568aa72a2",
-        "pid": 3473553,
+        "pid": 3482327,
         "primitive_sha256": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
-        "process_group_id": 3473553,
+        "process_group_id": 3482327,
         "return_code": -9,
         "signal": 9,
         "stderr": {
@@ -1471,7 +1471,7 @@
         "worker_sha256": "a8ba281cc20e883f7b5e37d5010de50abf1dd60d7017d740188e53e2208e8810"
       },
       "real_outcomes": 0,
-      "record_sha256": "dfc94a45ab34b88522a6853789063b5067263a746eab103268b22dd52719c26a",
+      "record_sha256": "80fae3c7b131b108f938a3ea1891779da0d580e231341d1b6d90fe56d4b38cf5",
       "resume_outcome": "existing-valid",
       "schema": "axeyum-lean-execution-store-kill-cell-v1",
       "storage_class_id": "linux-tmpfs-hardlink-fsync-v1",
@@ -1549,5 +1549,5 @@
     "Do not generalize local process SIGKILL evidence to power loss, host loss, NFS, provider artifacts, or distributed durability.",
     "Keep TL0.6.3 blocked until TL0.7.4 accepts or revises the complete policy."
   ],
-  "authority_sha256": "4e0cfc607db651722f062404c86d594c006ac00562048395cb1acd8b4fb652eb"
+  "authority_sha256": "5ae7959553347fa7ee6ab2568cbe404d3c04ec0a081dd67ac198863f30d568e2"
 }
