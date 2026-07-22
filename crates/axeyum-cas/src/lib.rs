@@ -4727,9 +4727,18 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
     // `fold_trivial` is included so residual identity junk *inside function
     // arguments* — which `cancel`/`expand` treat as opaque atoms — is cleaned:
     // `sin(1·t) → sin(t)`, `cos(0+t) → cos(t)` (only ever chosen when smaller).
-    for candidate in [cancel(expr), expand(expr), Some(trigsimp(expr)), Some(fold_trivial(expr))]
-        .into_iter()
-        .flatten()
+    // `cancel(expand_trig(·))` expands multiple-angle heads (`sin 2x → 2 sin x cos x`)
+    // then re-combines, so terms that cancel only after expansion collapse (a
+    // variation-of-parameters residual `−½cos²x·sinx + ¼cosx·sin2x → 0`).
+    for candidate in [
+        cancel(expr),
+        expand(expr),
+        Some(trigsimp(expr)),
+        Some(fold_trivial(expr)),
+        cancel(&expand_trig(expr)),
+    ]
+    .into_iter()
+    .flatten()
     {
         let size = node_count(&candidate);
         if size < best_size {
@@ -14974,6 +14983,15 @@ mod tests {
             &simplify(&CasExpr::Mul(vec![CasExpr::int(-2), CasExpr::Neg(Box::new(CasExpr::int(3) * x()))])),
             &(CasExpr::int(6) * x()),
         );
+        // Multiple-angle cancellation via cancel(expand_trig(·)): a variation-of-
+        // parameters residual −½cos²x·sinx + ¼cosx·sin2x collapses to 0 (sin2x
+        // expands to 2 sinx cosx, then the two terms cancel).
+        let vop_residual = CasExpr::rat(-1, 2) * x().cos().pow(2) * x().sin()
+            + CasExpr::rat(1, 4) * x().cos() * (CasExpr::int(2) * x()).sin();
+        assert_eq!(simplify(&vop_residual), CasExpr::zero());
+        // Regression: sin(2x)/cos(2x) are NOT expanded (the expanded form is larger).
+        assert_eq!(simplify(&(CasExpr::int(2) * x()).sin()), (CasExpr::int(2) * x()).sin());
+        assert_eq!(simplify(&(CasExpr::int(2) * x()).cos()), (CasExpr::int(2) * x()).cos());
     }
 
     #[test]
