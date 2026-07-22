@@ -7763,6 +7763,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_radical_usub(expr, var),
         integrate_sqrt_power(expr, var),
         integrate_exp_quadratic_usub(expr, var),
+        integrate_odd_rational_usub(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
@@ -8858,6 +8859,39 @@ fn poly_proportion(a: &[Rational], b: &[Rational]) -> Option<Rational> {
         }
     }
     Some(k)
+}
+
+/// ∫ x·R(x²) dx = ½·[∫ R(u) du]_{u=x²} for a **rational** `R` — the `u = x²`
+/// substitution when the integrand is an odd numerator over an even denominator
+/// (only even powers of `x` under the `/x`). Covers `∫x/(x⁴+1) = ½·atan(x²)`,
+/// `∫x/(x⁶+1)`, which the ℚ-factoring rational path can't reach. Certified downstream.
+fn integrate_odd_rational_usub(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let rf = normalize_rational(expr)?;
+    let num = rf.num.to_univariate(var)?;
+    let den = rf.den.to_univariate(var)?;
+    // Numerator must have only odd powers, denominator only even powers of `var`.
+    if num.iter().step_by(2).any(|c| !c.is_zero()) {
+        return None; // an even-degree numerator term
+    }
+    if den.iter().skip(1).step_by(2).any(|c| !c.is_zero()) {
+        return None; // an odd-degree denominator term
+    }
+    // Collapse to polynomials in `u = x²`: numerator/x, and denominator.
+    let s_coeffs: Vec<Rational> = num.iter().skip(1).step_by(2).copied().collect();
+    let d_coeffs: Vec<Rational> = den.iter().step_by(2).copied().collect();
+    if s_coeffs.is_empty() || poly::rat_degree(&d_coeffs)? == 0 && s_coeffs.len() <= 1 {
+        // A constant-over-constant reduces to ∫x·c, better left to the poly path.
+        return None;
+    }
+    let u = if var == "u" { "w" } else { "u" };
+    let rational = MultiPoly::from_univariate(u, &s_coeffs).to_expr()
+        / MultiPoly::from_univariate(u, &d_coeffs).to_expr();
+    let inner = integrate(&rational, u)?;
+    if !inner.is_certified() {
+        return None;
+    }
+    let substituted = inner.antiderivative.substitute(u, &CasExpr::var(var).pow(2));
+    Some(scaled_term(Rational::new(1, 2), substituted))
 }
 
 /// If `poly` is a single monomial `c·xᵈ`, return `(d, c)`; `None` otherwise.
@@ -13678,6 +13712,26 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn odd_rational_usub_integrals() {
+        let x = || v("x");
+        // ∫x·R(x²) via u=x² — odd numerator over even denominator, ℚ-irreducible.
+        for integrand in [
+            x() / (x().pow(4) + CasExpr::int(1)),   // ∫x/(x⁴+1) = ½ atan(x²)
+            x() / (x().pow(6) + CasExpr::int(1)),
+            (x().pow(3) + x()) / (x().pow(4) + CasExpr::int(1)),
+        ] {
+            let r = integrate(&integrand, "x").expect("odd-rational u-sub");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // ∫x/(x⁴+1) closed form.
+        assert_equal(
+            &integrate(&(x() / (x().pow(4) + CasExpr::int(1))), "x").unwrap().antiderivative,
+            &(CasExpr::rat(1, 2) * x().pow(2).atan()),
+        );
     }
 
     #[test]
