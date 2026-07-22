@@ -15,7 +15,7 @@
 //! Like [`crate::series`], generation is a **compute** operation rather than a
 //! proof-carrying one: no certificate is attached to the returned polynomial.
 //! Correctness is pinned by a fixture-backed test suite that checks the low-degree
-//! members against their known closed forms via the crate's certified [`equal`]
+//! members against their known closed forms via the crate's certified [`crate::equal`]
 //! zero-test.
 //!
 //! # Exactness and overflow

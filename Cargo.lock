@@ -73,6 +73,9 @@ name = "axeyum-cas"
 version = "0.1.0"
 dependencies = [
  "axeyum-ir",
+ "num-bigint",
+ "num-rational",
+ "num-traits",
 ]
 
 [[package]]

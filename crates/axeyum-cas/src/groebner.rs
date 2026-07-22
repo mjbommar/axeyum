@@ -1,7 +1,7 @@
 //! Gröbner bases over ℚ via `Buchberger`'s algorithm.
 //!
 //! This module adds ideal-theoretic reasoning on top of the sparse multivariate
-//! polynomial [`MvPoly`](crate::mvpoly::MvPoly): given a finite set of generators
+//! polynomial [`MvPoly`]: given a finite set of generators
 //! it computes a **Gröbner basis** of the ideal they span, reduces a polynomial
 //! to its normal form modulo a basis, and decides **ideal membership**. It is the
 //! multivariate analogue of the univariate `gcd`/`divrem` machinery the crate
@@ -11,7 +11,7 @@
 //! # Monomial order
 //!
 //! Everything here uses the **pure lexicographic order** (`lex`) that
-//! [`MvPoly`](crate::mvpoly::MvPoly) itself uses: variables are ranked
+//! [`MvPoly`] itself uses: variables are ranked
 //! alphabetically ascending with the alphabetically-*first* variable the most
 //! significant, so monomial `a > b` iff at the first variable (scanning
 //! most-significant-first) where their exponents differ, `a` has the larger
@@ -31,10 +31,10 @@
 //! (§2.6 the division algorithm, §2.7 `Dickson`'s lemma, §2.9 `Buchberger`'s
 //! criterion and algorithm, §2.10 reduced bases).
 //!
-//! # Building on [`MvPoly`](crate::mvpoly::MvPoly)
+//! # Building on [`MvPoly`]
 //!
 //! All ring arithmetic (add/sub/mul, exact overflow reporting) is delegated to
-//! [`MvPoly`](crate::mvpoly::MvPoly). `MvPoly` does not publicly expose its
+//! [`MvPoly`]. `MvPoly` does not publicly expose its
 //! leading term under `lex`, an iterator over its terms, or a monomial-level
 //! `lcm`/division, so this module reconstructs a polynomial's terms through the
 //! public [`MvPoly::to_cas_expr`](crate::mvpoly::MvPoly::to_cas_expr) rendering
@@ -364,7 +364,7 @@ pub fn reduce(poly: &MvPoly, basis: &[MvPoly]) -> Option<MvPoly> {
 /// monomial divides any term of another).
 ///
 /// The main loop maintains a work queue of index pairs: for each pair it forms
-/// the S-polynomial (see [`s_polynomial`]), reduces it modulo the current basis
+/// the S-polynomial (see `s_polynomial`), reduces it modulo the current basis
 /// (see [`reduce`]), and — if the remainder is nonzero — adjoins it and enqueues
 /// its pairings with the existing elements. `Dickson`'s lemma guarantees the
 /// basis stops growing, so the queue drains (Cox–Little–O'Shea §2.7, §2.9).

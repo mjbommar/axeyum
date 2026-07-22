@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `504` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `522` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adh**). Keep both in sync when landing features.
+  latest is **Entry 37adv**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -39,8 +39,8 @@ The tmpfs `/tmp` hits **"Disk quota exceeded"** when the ~147 doctests link
 concurrently. **Always** point `TMPDIR` at a roomy disk:
 
 ```bash
-export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"
-mkdir -p "$AXEYUM_CAS_TMP"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+export AXEYUM_CAS_TMP
 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas          # etc.
 ```
 Without this, doctests fail with a spurious linker `LLVM ERROR: IO failure`.
@@ -94,7 +94,9 @@ Gotchas when probing:
 
 ## 4. What landed this session (chronological highlights)
 
-The marquee arc, roughly in order (all on `main`):
+The marquee arc, roughly in order. Vandermonde is on `main`; the adjacent,
+fixed-shift, and moment extensions are on the current CAS topic stack pending
+green integration by the `main` owner:
 
 **Foundations / gammasimp**
 - **`gammasimp`/`combsimp`**: the Γ functional equation `Γ(z+1)=z·Γ(z)` now lives
@@ -126,8 +128,11 @@ The marquee arc, roughly in order (all on `main`):
 
 **★ Zeilberger / Wilf–Zeilberger (the marquee)** — `prove_wz_sum(...)`
 Proves definite hypergeometric identities *soundly*. Currently proven:
-`∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`. A false
-identity (`∑C(n,k)=3ⁿ`) correctly declines.
+`∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
+Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
+`r=0..7`), a direct squared-binomial falling-factorial family (regressed for
+orders `0..=33`), and Stirling-composed raw moments (regressed for orders
+`0..=19`). False near-misses correctly decline.
 
 ---
 
@@ -140,24 +145,42 @@ Pipeline:
 1. `f = F/rhs`. The WZ pair: a rational certificate `R(n,k)` gives
    `f(n+1,k) − f(n,k) = G(n,k+1) − G(n,k)` with `G = R·f`; summing over `k`
    collapses the RHS to 0, so `S(n)=∑ₖ f` is constant, pinned to 1 by the base.
-2. **Discovery (heuristic):** run the factorial-capable `gosper_sum` on the WZ
-   term at several *small* concrete `n` (sample from `n=1,2,3,…` — larger `n`
-   overflow the rising factorials), extract `R(nᵢ,k)`, monic-normalize the
-   denominator, and interpolate each coefficient over `n` with
-   `rational_interpolate` (lowest-degree `P(n)/Q(n)`, validated — subsumes
-   Lagrange, needed because e.g. `k²·C(n,k)` certificates have `(n+1)/(n+2)`-type
-   coefficients).
+2. **Discovery (heuristic):** run the factorial-capable `gosper_sum`, or its
+   exact structured-ratio fallback, on the WZ term at up to sixteen concrete
+   `n`. The small rational ratios are derived while `n` is still symbolic and
+   then specialized, avoiding equivalent concrete gamma towers whose factorial
+   constants overflow. Extract `R(nᵢ,k)`, monic-normalize the denominator, and
+   interpolate each coefficient over `n` with
+   `rational_interpolate` (lowest-total-degree `P(n)/Q(n)` with a monic
+   denominator, balanced-degree tie-breaking, and validation against every
+   available sample — subsumes Lagrange and admits poles such as `1/(2n)`).
 3. **Soundness gate (symbolic):** verify `equal(G(n,k+1)−G(n,k),
    f(n+1,k)−f(n,k))` with `n,k` both symbolic. A wrong/under-fit interpolation
    fails here and the prover declines. This leans on gammasimp + the atom-ordering
    fix.
 
-Enabling Gosper fixes: `reduce_fraction` divides out the common
-integer **content** (binomial ratios carry a huge content that overflowed the
-dispersion machinery); `nonneg_integer_dispersion` now scans `j=0..64` by direct
-shifted polynomial GCD instead of materializing an overflow-prone symbolic
-resultant; and consecutive-ratio extraction cancels exact common monomial content
-before requiring a univariate ratio.
+Enabling Gosper fixes: `reduce_fraction` divides out common scalar content before
+the GCD and normalizes every Euclidean remainder to its primitive part (large
+gamma-lowered ratios otherwise overflow despite a small reduced quotient);
+`nonneg_integer_dispersion` scans `j=0..64` by direct shifted polynomial GCD
+instead of materializing an overflow-prone symbolic resultant; and
+consecutive-ratio extraction cancels exact common monomial content before
+requiring a univariate ratio. A structured-difference fallback uses
+`a=f(n,k+1)/f(n,k)` and `d=f(n+1,k)/f(n,k)` to represent the difference as
+`f(n,k)(d−1)` and its consecutive ratio as
+`a(d(n,k+1)−1)/(d(n,k)−1)`, avoiding an expanded additive gamma tower.
+Polynomial gamma arguments are canonicalized before integer-shift lowering, so
+equivalent zero-shift bases cancel. Fraction reduction peels shared small
+integer-linear factors, cancels a residual denominator cofactor only after exact
+division succeeds on both sides, and can prove a remaining pair coprime over a
+good finite field; inconclusive modular reductions still fall back to exact
+rational GCD. Small interpolation systems first use `i128`, then a dimension-16
+exact `BigRational` fallback; only solutions whose final coefficients fit the
+public `i128` rational type are accepted.
+The preferred Gosper certificate is the full
+telescoping identity; if expanding a concrete gamma tower overflows, the exact
+reduced polynomial Gosper equation certifies the same antidifference. The final
+symbolic WZ check remains mandatory and unchanged.
 
 Base-case gotcha: avoid `n` where a binomial hits the `Γ(0)` pole (e.g. `C(0,1)`)
 — use `base ≥ 1` with a clean `k` range.
@@ -175,16 +198,185 @@ shifted-GCD scanning, and separately specializing/folding the summand and RHS
 close those seams. The final WZ equality checker is unchanged; a false
 `C(2n,n)+1` near-miss still declines.
 
+### Adjacent convolution and squared moments are closed
+
+The same public `prove_wz_sum` route now certifies:
+
+- `∑ₖ C(n,k)C(n,k+1)=C(2n,n−1)`, with
+  `R=k(k+1)(2k−3n−2)/(2(2n+1)(k−n)(k−n−1))`;
+- `∑ₖ kC(n,k)²=(n/2)C(2n,n)`, with
+  `R=k(k−1)((2n+1)k−(3n+1)(n+1))/(2n(2n+1)(k−n−1)²)`;
+- `∑ₖ k²C(n,k)²=n³C(2n,n)/(2(2n−1))`, with
+  `R=(k−1)²(2k−3n−2)/(2(2n−1)(k−n−1)²)`.
+
+The first-moment coefficient `1/(2n)` exposed the old `Q(0)=1` interpolation
+restriction; monic-denominator interpolation closes it. Its `n=5` concrete
+Gosper sample also exposed coefficient growth in a degree-35 ratio with a
+degree-31 common factor; pre-GCD content reduction, primitive-part Euclid, and
+the exact reduced-equation certificate close that path. Every returned WZ
+certificate still passes the fully symbolic identity, while `rhs+1` controls for
+the new families decline.
+
+### Fixed shift two and the third squared moment are closed
+
+The next tier through the same public route is now:
+
+- `∑ₖ C(n,k)C(n,k+2)=C(2n,n−2)`, with
+  `R=k(k+2)(2k−3n−1)/(2(2n+1)(k−n−1)(k−n+1))`;
+- `∑ₖ k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`, with
+  `R=(k−1)²(k²(2n²+3n−2)−k(3n³+8n²+3n−2)+3n(n+1)²)/(2k(n−1)(n+2)(2n−1)(k−n−1)²)`.
+
+The third-moment `n=6` sample is the structured-difference regression: direct
+Gosper expansion overflows, while the exact quotient identity recovers the
+small consecutive ratio. Its degree-six coefficient fit also motivates the
+eight-sample soft target. Returned certificates still receive the unchanged
+fully symbolic WZ check, and both `rhs+1` controls decline.
+
+### Fixed shift three and the fourth squared moment are closed
+
+The next tier through the same public route is now:
+
+- `∑ₖ C(n,k)C(n,k+3)=C(2n,n−3)`, with
+  `R=k(k+3)(2k−3n)/(2(2n+1)(k−n−1)(k−n+2))`;
+- `∑ₖ k⁴C(n,k)²=n³(n³+n²−3n−1)C(2n,n)/(4(2n−3)(2n−1))`.
+
+The fourth moment is the regression for the strengthened exact-discovery path.
+Symbolic ratio specialization avoids concrete factorial overflow after the
+small samples; exact residual-cofactor cancellation reduces the `n=5` and
+`n=7` quotients; and the bounded bignum linear solve permits the needed 5/5
+rational coefficient fit without widening the public rational representation.
+The then-current soft sample target was twelve. The recovered certificate still
+passes the unchanged fully symbolic WZ equality, and both new `rhs+1` controls
+decline.
+
+### Fixed shift four and the fifth squared moment are closed
+
+The next tier through the same public route is now:
+
+- `∑ₖ C(n,k)C(n,k+4)=C(2n,n−4)`, with
+  `R=k(k+4)(2k−3n+1)/(2(2n+1)(k−n−1)(k−n+3))`;
+- `∑ₖ k⁵C(n,k)²=n⁴(n+1)(n²+2n−5)C(2n,n)/(8(2n−3)(2n−1))`.
+
+The fifth moment exposed a remaining asymmetry in symbolic WZ preprocessing:
+common canonical gamma atoms were cancelled from the RHS ratio, but not from
+the inner `k` ratio or the summand's outer `n` ratio. Those two ratios were
+therefore compact only through `n=12`; at `n=13`, concrete `Γ(n)` constants
+reappeared and exact normalization declined. All three ratios now use the same
+symbolic gamma-monomial cancellation before specialization. Sixteen samples are
+needed to reject lower-degree rational interpolants and recover the fifth-moment
+certificate, so the target and scan bounds are now 16 and 32. The existing
+dimension-16 bignum cap is unchanged. The exact returned certificates and fully
+symbolic WZ equality pass, while both `rhs+1` controls decline.
+
+### The fixed-shift convolution is a checked family route
+
+`prove_fixed_shift_binomial_convolution(shift)` now constructs
+
+`R=k(k+r)(2k−3n+r−3)/(2(2n+1)(k−n−1)(k−n+r−1))`
+
+for the requested concrete nonnegative `r`, then accepts it only after the same
+fully symbolic WZ equality checker used by `prove_wz_sum` and the exact base
+case at `n=r`. It does no interpolation and trusts no table. The shared checker
+was extracted so discovery and direct-family candidates cannot drift. Regressions
+cover `r=0..7` and reject a zero certificate; larger shifts may still decline on
+exact coefficient growth. The public API therefore preserves `Option` semantics
+rather than claiming an unbounded completeness result.
+
+### Squared-binomial moments compose a directly checked falling-factorial family
+
+`prove_squared_binomial_moment(moment)` generates the candidate identity
+
+`∑ₖ k^m C(n,k)² = C(2n,n) ∑ⱼ S(m,j) (n)ⱼ²/(2n)ⱼ`
+
+from the Stirling expansion `k^m=∑ⱼS(m,j)(k)ⱼ` and the falling-factorial
+Vandermonde moment. `prove_squared_binomial_falling_moment(order)` constructs
+the parameterized WZ candidate
+
+`R=k(j−k)(jk−2j(n+1)−2k(n+1)+3(n+1)²)/((j−2n−2)(j−2n−1)(k−n−1)²)`
+
+for `∑ₖ(k)ⱼC(n,k)²=(n)ⱼC(2n−j,n−j)` and accepts it only through the shared
+fully symbolic WZ and exact base-case checker. The raw-moment prover composes
+the nonzero certified falling-factorial members, checks
+`k^m=∑ⱼS(m,j)(k)ⱼ` exactly, and checks their closed forms against the compact
+factored result. `CertifiedSquaredBinomialMoment::is_certified()` independently
+replays all three obligations; it does not trust the Stirling expansion or
+component list.
+
+`certifies_wz_sum` first checks the direct symbolic telescoping equation. If that
+exact expansion returns `Unknown`, it now checks the algebraically equivalent
+quotient equation
+`R(n,k+1)f(n,k+1)/f(n,k)−R(n,k)=f(n+1,k)/f(n,k)−1`; consecutive gamma factors
+cancel before polynomial expansion. A certified-false direct equation never
+falls back. This exact product-aware route extends
+`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` to 33. The order-15 outer ratio
+initially remained too large because both sides simplified their exact
+falling-factorial products before division. Product factors are now
+polynomial-canonicalized and identical factors cancelled before gamma/rational
+normalization. Order 16 then exposed a separate concrete-base artifact:
+normalizing the whole `(16)₁₆(16!/16!)²` term overflowed before the quotient
+cancelled. Fully substituted terms and RHSs now use the existing exact rational
+evaluator first, retaining the older normalizer as a fail-closed fallback.
+Orders 16 through 18 pass. Order 19 then exposed equal Gamma atoms and
+polynomial factors buried inside nested divisions after Gamma lowering. The
+old preprocessor inspected only the top-level numerator and denominator, so the
+remaining exact products expanded into degree-36 polynomials. It now recursively
+collects factors across multiplication and division, reverses sides through a
+divisor, canonicalizes each polynomial factor and Gamma argument, and cancels
+only structurally equal pairs. The resulting quadratic quotient passes the
+unchanged symbolic equality gate through order 33. Order 34 passes that symbolic
+gate too, then declines at the exact base case because `34!` exceeds the `i128`
+rational domain.
+
+The raw compositor forms all Stirling terms over the known common denominator
+`(2n)ₘ` and cancels a linear denominator factor only when exact polynomial
+division succeeds. It now constructs the remaining denominator directly from
+those known uncancelled factors and checks that their product reconstructs the
+computed monic denominator. The numerator path peels only exactly dividing
+small integer roots; if general factorization exhausts checked arithmetic on
+the residual, the exact residual is retained rather than rejecting a valid
+closed form.
+
+The composite checker no longer expands one large sum of Gamma-valued component
+RHSs. It replays every component WZ proof, certifies the Stirling power identity,
+divides each stored component and the final closed form by the shared central
+binomial, cancels only the known `(2n)ⱼ` linear factors by exact division, and
+compares separately normalized monic numerator/denominator coefficient vectors.
+This structured exact route extends
+`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 19. Regressions cover raw orders
+`0..=19`, exact direct-sum samples, the explicit compact order-11 form, and
+tampered results, certificates, missing components, and the ceiling. Order 20
+is the first measured decline: all twenty falling-factorial WZ candidates
+construct, but normalization of common-numerator Stirling term 13 exceeds the
+checked `i128` polynomial domain. The separately bounded direct family remains
+at order 33, with order 34 blocked by `34! > i128::MAX` at its exact base case.
+The foundational DAG and research-question register require no new ADR here:
+this adds no IR operator or backend semantics and keeps evidence explicit and
+checker-backed.
+
+### Strict rustdoc is green again
+
+`RUSTDOCFLAGS="-D warnings" cargo doc -p axeyum-cas --no-deps` now passes on
+both stable and the local nightly. The failures were pre-existing documentation
+links outside the moment code: an unescaped `𝔽ₚ[x]`, public docs linking private
+helpers, one unqualified crate-level link, and redundant explicit link targets.
+The cleanup changes documentation markup only; no API or implementation
+semantics changed.
+
 ---
 
 ## 6. Known-open items / candidate next work
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond Vandermonde.** Probe the
-   adjacent-binomial convolution `∑C(n,k)C(n,k+1)=C(2n,n−1)` and weighted
-   squared-binomial moments; retain only identities whose concrete discovery and
-   fully symbolic WZ check both close.
+1. **Broaden certified creative telescoping beyond the current exact bounds.**
+   Raw order 20 now has an exact boundary: common-numerator term 13 overflows
+   checked `i128` polynomial normalization even though all component WZ proofs
+   construct. Explore product-level common-factor extraction before expansion,
+   or choose a deliberate bignum polynomial path; do not weaken the structured
+   checker. Falling order 34 is likewise an explicit exact-value boundary
+   (`34! > i128::MAX`) and needs a deliberate bignum base checker. For fixed
+   shifts, investigate the `r=8` exact-growth decline only if a concrete use
+   needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -238,10 +430,11 @@ Design invariants (hold the line):
 
 ```bash
 cd /nas4/data/workspace-infosec/claude-axeyum-cas-work
-export AXEYUM_CAS_TMP="$PWD/.tmp/cas-doctmp"; mkdir -p "$AXEYUM_CAS_TMP"
+AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXXX)"
+export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 504 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 522 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

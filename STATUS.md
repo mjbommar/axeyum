@@ -380,6 +380,215 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — structured composition carries raw squared-binomial moments
+  through order 19.** Raw order 11 was mathematically valid but hit two
+  representation limits: exhaustive rational-root search overflowed on its
+  remaining degree-11 residual, and recombining eleven Gamma-valued component
+  RHSs in one equality overflowed. The compositor now peels only exactly dividing
+  bounded integer roots and retains an unfactored residual, constructs the
+  remaining `(2n)ₘ` denominator from known uncancelled linear factors with an
+  exact reconstruction check, and verifies composition after cancelling the
+  shared central binomial. Each component and final quotient is compared as
+  exact monic numerator/denominator parts after checked cancellation of known
+  `(2n)ⱼ` factors. Orders 0 through 19 certify; order 20 is the first measured
+  decline because common-numerator term 13 overflows checked `i128` polynomial
+  normalization, while all twenty direct WZ component candidates still
+  construct. Regressions freeze the explicit order-11 form, bounded exact
+  direct sums, tamper/missing-evidence rejection, and the ceiling. Next: explore
+  product-level common-factor extraction for raw order 20 or a deliberate
+  bignum exact-polynomial path; falling order 34 independently needs a bignum
+  base checker.
+
+- **2026-07-22 — nested quotient cancellation carries direct moments through
+  order 33.** Order 19's symbolic quotient was mathematically small, but Gamma
+  lowering left equal atoms and polynomial factors inside nested divisions;
+  the top-level-only product cancellation missed them and expanded the RHS
+  ratio into degree-36 polynomials. The exact preprocessor now recursively
+  collects multiplicative numerator/denominator factors, reverses sides through
+  nested division, canonicalizes polynomial factors and Gamma arguments, and
+  removes only structurally equal pairs. The compact quadratic ratio passes the
+  unchanged symbolic equality gate through order 33. Order 34 also passes that
+  symbolic gate, then declines exactly because its base value `34!` exceeds the
+  `i128` rational domain. Raw moments remain independently certified through
+  order 10; a fresh order-11 probe still reaches and declines in bounded
+  numerator factorization. The CAS topic stack passes 522 unit tests, 147
+  doctests, warning-denied all-target Clippy, stable/nightly strict rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`. Next: attack raw order
+  11 or design an explicit bignum-only exact base checker before widening the
+  direct family again.
+
+- **2026-07-22 — structured exact base evaluation extends direct moments
+  through order 18.** Order 16 already passed the symbolic quotient identity;
+  its remaining `Unknown` was the exact base term
+  `(16)₁₆(16!/16!)²`, whose whole-expression rational normalization multiplied
+  through overflowing intermediates before cancelling the unit quotient.
+  `certifies_wz_sum` now asks the existing exact rational evaluator to reduce
+  each fully substituted summand and RHS first, retaining the prior normalizer
+  as a fail-closed fallback. This changes only concrete proof preprocessing;
+  the symbolic WZ gate and exact base equality remain unchanged. The direct
+  falling-factorial family now certifies through order 18; order 19 is the
+  first measured symbolic-quotient decline. Raw moments remain independently
+  certified through order 10. The CAS topic stack passes 521 unit tests, 147
+  doctests, warning-denied all-target Clippy, stable/nightly strict rustdoc,
+  `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate order
+  19's quotient growth and raw order 11's bounded numerator-factorization
+  limit.
+
+- **2026-07-22 — pre-expansion factor cancellation closes direct moment 15.**
+  The remaining order-15 WZ `Unknown` was isolated to the outer `n` quotient:
+  its exact falling-factorial products were expanded before division, exceeding
+  bounded rational normalization. `wz_symbolic_ratios` now canonicalizes each
+  polynomial factor and removes only structurally identical numerator and
+  denominator factors before gamma/rational normalization. Falling factorials
+  also retain this exact product representation inside their WZ proof objects.
+  The direct family now certifies through order 15; order 16 is the first
+  measured decline. Raw moments remain independently certified through order
+  10. The CAS topic stack passes 521 unit tests, 147 doctests, warning-denied
+  all-target Clippy, stable/nightly strict rustdoc, `wasm32-unknown-unknown`,
+  links, and `git diff --check`. Next: isolate order 16's residual quotient
+  growth and raw order 11's bounded numerator-factorization limit.
+
+- **2026-07-22 — product-aware WZ checking extends squared-binomial moments.**
+  When direct symbolic telescoping overflows, `certifies_wz_sum` now checks the
+  exact quotient identity; certified-false direct checks never fall back. This
+  preserves the symbolic soundness gate while cancelling consecutive gamma
+  products before polynomial expansion, extending the direct falling-factorial
+  family through order 14 (order 15 remains `Unknown`). The raw compositor now
+  uses the known `(2n)ₘ` common denominator and cancels only exactly divisible
+  linear factors, extending independently rechecked raw moments through order
+  10. Order eight recovers
+  `n³(n⁹+6n⁸−31n⁷−106n⁶+315n⁵+294n⁴−693n³+18n²+96n−20)C(2n,n)/(16(2n−7)(2n−5)(2n−3)(2n−1))`.
+  A measured raw order-11 probe reaches numerator factorization and declines.
+  The CAS topic stack passes 521 unit tests, 147 doctests, warning-denied
+  all-target Clippy, stable/nightly strict rustdoc, `wasm32-unknown-unknown`,
+  links, and `git diff --check`. Next: isolate order 15's quotient growth and
+  order 11's bounded factorization limit without weakening the proof objects.
+
+- **2026-07-22 — exact base preprocessing extends composed moments through
+  order seven.** The order-seven falling-factorial certificate already passed
+  the fully symbolic WZ identity; only the finite base check returned `Unknown`
+  after accumulating zero-supported terms with unsimplified gamma factors.
+  `certifies_wz_sum` now simplifies each concrete summand and RHS before exact
+  base equality, preserving the symbolic gate and soundness. Both public moment
+  ceilings are now 7; raw order seven recovers
+  `n⁴(n+1)(n⁵+5n⁴−15n³−35n²+70n−14)C(2n,n)/(16(2n−5)(2n−3)(2n−1))`.
+  Order eight remains a symbolic `Unknown`. The CAS topic stack passes 521 unit
+  tests, 147 doctests, warning-denied all-target Clippy, stable/nightly strict
+  rustdoc, `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate
+  order eight's symbolic normalization growth without weakening the checker.
+
+- **2026-07-22 — strict CAS rustdoc is green on stable and nightly.** Cleared
+  ten pre-existing `-D warnings` failures: escaped the `𝔽ₚ[x]` spelling, changed
+  links to private helpers into code spans, qualified the crate-level `equal`
+  link, and removed redundant explicit targets. This is documentation-only;
+  public APIs and runtime semantics are unchanged. Both
+  `RUSTDOCFLAGS="-D warnings" cargo +stable doc -p axeyum-cas --no-deps` and the
+  local-nightly equivalent pass. Next: retain strict rustdoc in every CAS branch
+  gate alongside tests, Clippy, WASM, and link validation.
+
+- **2026-07-22 — direct falling-factorial composition reaches the sixth raw
+  squared-binomial moment.** `prove_squared_binomial_falling_moment(order)` now
+  constructs one parameterized rational WZ certificate and replays it through
+  the shared symbolic/base checker for orders `0..=6`.
+  `prove_squared_binomial_moment(moment)` composes those proofs via the exact
+  Stirling expansion, and its proof object rechecks every component, the power
+  identity, and closed-form recombination. This closes order six without raw WZ
+  interpolation, cuts the family regression from roughly 55 to 15 seconds, and
+  rejects tampered/missing evidence. Both public ceilings are explicitly 6;
+  order seven currently declines under bounded exact symbolic checking. The CAS
+  topic stack passes 521 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate
+  the order-seven normalization boundary without weakening the checker.
+
+- **2026-07-22 — squared-binomial raw moments are now a generated checked
+  family.** `prove_squared_binomial_moment(moment)` derives the candidate from
+  the exact Stirling/falling-factorial expansion
+  `C(2n,n)∑S(m,j)(n)ⱼ²/(2n)ⱼ`, compacts the reduced rational through monic
+  numerator/denominator factorization, and accepts it only through the existing
+  fully symbolic WZ plus exact base-case checker. The returned
+  `CertifiedSquaredBinomialMoment` can recheck its own order, closed form, and
+  certificate. Regressions certify orders `0..=5`, direct-sum cross-check every
+  generated member, recover the known fifth-moment form, and reject tampered
+  closed forms and certificates. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT=5` makes
+  the current bounded-discovery ceiling explicit; larger requests decline
+  immediately. The CAS topic stack passes 520 unit tests, 147 doctests,
+  warning-denied all-target Clippy, `wasm32-unknown-unknown`, links, and
+  `git diff --check`. Next: investigate direct falling-factorial certificate
+  composition for higher moments without weakening the symbolic gate.
+
+- **2026-07-22 — fixed-shift Vandermonde is now a checked public family route.**
+  `prove_fixed_shift_binomial_convolution(shift)` constructs the closed
+  certificate `k(k+r)(2k−3n+r−3)/(2(2n+1)(k−n−1)(k−n+r−1))` for a concrete
+  nonnegative shift and returns it only after the same fully symbolic WZ check
+  and exact base-case check used by discovery. The checker is shared with
+  `prove_wz_sum`; no interpolation or answer table is trusted. Regressions prove
+  `r=0..7` and reject a zero certificate; larger exact-growth cases retain
+  fail-closed `None` semantics. The CAS topic stack passes 519 unit tests, 147
+  doctests, warning-denied all-target Clippy, `wasm32-unknown-unknown`, links,
+  and `git diff --check`. Next: derive a similarly explicit squared-binomial
+  moment-family boundary rather than adding isolated moments indefinitely.
+
+- **2026-07-22 — proof-carrying CAS closes fixed-shift four and the fifth
+  squared-binomial moment.** `prove_wz_sum` now certifies
+  `∑C(n,k)C(n,k+4)=C(2n,n−4)` and
+  `∑k⁵C(n,k)²=n⁴(n+1)(n²+2n−5)C(2n,n)/(8(2n−3)(2n−1))`, checks the exact
+  returned certificates, and declines `rhs+1` controls. Every symbolic WZ ratio
+  now cancels common canonical gamma atoms before concrete specialization; this
+  removes the `Γ(n)` factorial overflow that previously cut fifth-moment samples
+  off at `n=12`. The exact sample target is 16 (scan bound 32), enough to reject
+  under-fit rational coefficients and aligned with the existing dimension-16
+  bignum solve cap. The fully symbolic WZ equality gate remains mandatory. The
+  CAS topic stack passes 518 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, documentation-link validation, and
+  `git diff --check`. Next: turn the observed `r=0..4` certificate pattern into
+  a checked family route and derive the moment family before adding another
+  isolated tier.
+
+- **2026-07-22 — proof-carrying CAS closes fixed-shift three and the fourth
+  squared-binomial moment.** The public WZ route now certifies
+  `∑C(n,k)C(n,k+3)=C(2n,n−3)` and
+  `∑k⁴C(n,k)²=n³(n³+n²−3n−1)C(2n,n)/(4(2n−3)(2n−1))`, checks the exact
+  returned certificates, and declines `rhs+1` controls. Discovery now derives
+  the compact inner/outer WZ ratios before concrete specialization, canonicalizes
+  polynomial gamma arguments, cancels residual denominator cofactors only after
+  exact division, and uses a dimension-capped exact bignum fallback when an
+  `i128` interpolation solve overflows but its final coefficients fit. The fully
+  symbolic WZ equality gate remains mandatory. The CAS topic stack passes 516
+  unit tests, 147 doctests, warning-denied all-target Clippy,
+  `wasm32-unknown-unknown`, documentation-link validation, and
+  `git diff --check`. Next: probe `r=4`/general fixed shift and the fifth
+  squared-binomial moment without weakening the symbolic gate.
+
+- **2026-07-22 — proof-carrying CAS closes fixed-shift two and the third
+  squared-binomial moment.** The public WZ route now certifies
+  `∑C(n,k)C(n,k+2)=C(2n,n−2)` and
+  `∑k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`, checks the exact returned
+  certificates, and declines `rhs+1` controls. A structured Gosper fallback
+  derives the consecutive ratio of `f(n+1,k)−f(n,k)` from three smaller exact
+  quotients instead of expanding an additive gamma tower; shared integer-linear
+  factors and a one-way finite-field coprimality certificate keep exact fraction
+  reduction inside `i128`. The final fully symbolic WZ equality gate remains
+  mandatory. The CAS topic stack passes 512 unit tests, 147 doctests,
+  warning-denied all-target Clippy, `wasm32-unknown-unknown`, documentation-link
+  validation, and `git diff --check`. Next: probe the `r=3`/general fixed-shift
+  convolution and the fourth squared-binomial moment without weakening the
+  symbolic soundness gate.
+
+- **2026-07-22 — proof-carrying CAS closes adjacent convolution and the first
+  two squared-binomial moments.** `prove_wz_sum` now symbolically certifies
+  `∑C(n,k)C(n,k+1)=C(2n,n−1)`, `∑kC(n,k)²=(n/2)C(2n,n)`, and
+  `∑k²C(n,k)²=n³C(2n,n)/(2(2n−1))`, with exact returned-certificate checks and
+  `rhs+1` false controls. Discovery now admits monic rational interpolants whose
+  denominator vanishes at zero (`1/(2n)`), prefers balanced degree splits when
+  samples exactly determine several same-total-degree fits, strips scalar
+  content before polynomial GCD, and uses primitive-part Euclid to avoid
+  removable `i128` growth. Large concrete gamma towers may use the equivalent
+  exact reduced Gosper equation when expanding the full residual overflows; the
+  final fully symbolic WZ equality gate remains mandatory and unchanged. The
+  CAS topic stack passes 508 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, and documentation-link validation. Next:
+  probe fixed-shift (`r=2`) convolution and the third squared-binomial moment.
+
 - **2026-07-22 — proof-carrying CAS closes the Vandermonde WZ gap; broader
   creative telescoping is next.** `prove_wz_sum` now proves
   `∑ₖ C(n,k)² = C(2n,n)` and returns

@@ -37,11 +37,13 @@
 //! What the decidable zero-test can *certify* — not just what the algorithm can
 //! compute — bounds the honest scope here:
 //!
-//! - **Rational-function terms** (`t(k)` a rational function of `k`, e.g.
-//!   `∑ k`, `∑ 1/(k(k+1))`). The whole construction lives in the rational
-//!   fragment, so `S(k+1) − S(k) − t(k)` is decided *exactly* by
-//!   [`crate::equal`]. This is the gold-standard path: `S` is returned only when
-//!   `equal(&(S(k+1) − S(k)), t)` is [`ZeroTest::Certified`] with `equal == true`.
+//! - **Rational-function and Γ-lowered hypergeometric terms** (`t(k)` a rational
+//!   function of `k`, or a factorial/binomial expression whose consecutive Γ
+//!   ratio lowers to one). The preferred certificate is the full identity
+//!   `S(k+1) − S(k) = t(k)`. When expanding a large concrete Γ tower would
+//!   overflow, the equivalent small Gosper polynomial equation is checked
+//!   directly instead; together with the exact consecutive-ratio normalization,
+//!   it proves the same antidifference without expanding the original term.
 //!
 //! - **Geometric × polynomial terms** `p(k)·c^k`, with `c^k` represented as
 //!   `exp(k·ln c)` (see [`geometric_power`]). Here the *full-expression*
@@ -55,11 +57,9 @@
 //!   exact shift law `c^{k+1} = c·c^k` is applied. `S = X(k)·c^k` is returned
 //!   only when that polynomial identity certifies.
 //!
-//! Genuinely factorial/Pochhammer heads (`k!`, binomials) with a symbolic
-//! argument are *not representable* in this CAS fragment (powers carry a `u32`
-//! exponent, and a `k!` head would be an opaque atom the zero-test cannot relate
-//! across a shift), so they are declined (`None`) honestly rather than returned
-//! uncertified.
+//! Factorials and binomials are represented through Γ and supported when integer
+//! shift lowering exposes a rational consecutive ratio. Other opaque
+//! hypergeometric heads are declined (`None`) rather than returned uncertified.
 
 use std::collections::BTreeMap;
 
@@ -85,11 +85,12 @@ const MAX_DISPERSION_SHIFT: i128 = 64;
 /// antidifference with `S(var+1) − S(var) = term`, or `None` when the term is not
 /// Gosper-summable in this certifiable fragment.
 ///
-/// The `term` must be hypergeometric in `var`. Two shapes are supported:
+/// The `term` must be hypergeometric in `var`. Two routes are supported:
 ///
-/// - a **rational function** of `var` (the ratio `term(var+1)/term(var)` is a
-///   rational function that can be formed directly); the result is certified by
-///   the exact zero-test `equal(&(S(var+1) − S(var)), term)`;
+/// - a **rational consecutive ratio**, formed directly for rational functions or
+///   exposed by integer-offset Γ lowering for factorial/binomial terms; the result
+///   is certified by the full exact zero-test when possible, with the equivalent
+///   reduced Gosper polynomial identity as an overflow-conscious fallback;
 /// - a **geometric × polynomial** term `p(var)·c^var`, with `c^var` written as
 ///   `exp(var·ln c)` (see [`geometric_power`]); certified by the decidable
 ///   reduced Gosper identity `c·X(var+1) − X(var) ≡ p(var)` (see the module
@@ -116,7 +117,8 @@ pub fn gosper_sum(term: &CasExpr, var: &str) -> Option<CasExpr> {
         return Some(sum);
     }
     // Primary path for rational-function (and, via the `Γ` lowering, hypergeometric
-    // factorial) terms, certified by the exact zero-test.
+    // factorial) terms, certified by the full identity or its equivalent reduced
+    // Gosper polynomial equation.
     rational_gosper(term, var)
 }
 
@@ -140,7 +142,19 @@ pub fn geometric_power(base: Rational, var: &str) -> CasExpr {
 /// `var`, if the Gosper equation has no polynomial solution, or on overflow.
 fn rational_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
     let (ratio_num, ratio_den) = consecutive_ratio(term, var)?;
-    let (p_poly, q_poly, r_poly) = gosper_petkovsek(&ratio_num, &ratio_den)?;
+    rational_gosper_with_ratio(term, var, &ratio_num, &ratio_den)
+}
+
+/// Run the Gosper construction for `term` from an already-normalized exact
+/// consecutive ratio. Keeping this boundary separate lets structured callers
+/// derive a small ratio without first expanding a large additive Γ expression.
+fn rational_gosper_with_ratio(
+    term: &CasExpr,
+    var: &str,
+    ratio_num: &[Rational],
+    ratio_den: &[Rational],
+) -> Option<CasExpr> {
+    let (p_poly, q_poly, r_poly) = gosper_petkovsek(ratio_num, ratio_den)?;
     let r_shift = shift_poly(&r_poly, Rational::integer(-1))?; // r(k−1)
 
     // Try increasing degree bounds for the polynomial unknown x(k); accept the
@@ -153,6 +167,8 @@ fn rational_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
         let Some(x_coeffs) = solve_gosper_equation(&p_poly, &q_poly, &r_shift, bound) else {
             continue;
         };
+        let reduced_certifies =
+            certifies_gosper_equation(&p_poly, &q_poly, &r_shift, &x_coeffs);
         let x_expr = ratvec_to_expr(var, &x_coeffs)?;
         let r_shift_expr = ratvec_to_expr(var, &r_shift)?;
         let p_expr = ratvec_to_expr(var, &p_poly)?;
@@ -170,8 +186,166 @@ fn rational_gosper(term: &CasExpr, var: &str) -> Option<CasExpr> {
         if certifies_telescoping(&sum, term, var) {
             return Some(sum);
         }
+        // For large concrete Γ towers the full-expression zero-test can overflow
+        // even though the small reduced equation is exact. The Gosper derivation
+        // makes this polynomial identity equivalent to telescoping once the exact
+        // consecutive ratio above has been normalized.
+        if reduced_certifies {
+            return Some(simplified);
+        }
     }
     None
+}
+
+/// Recover the rational multiplier `M(k)` in a Gosper antidifference
+/// `S(k) = M(k)·term(k)` directly from an exact consecutive ratio. The reduced
+/// polynomial Gosper equation is the certificate, so this route never needs to
+/// expand `term` itself.
+fn rational_gosper_multiplier_with_ratio(
+    var: &str,
+    ratio_num: &[Rational],
+    ratio_den: &[Rational],
+) -> Option<CasExpr> {
+    let (p_poly, q_poly, r_poly) = gosper_petkovsek(ratio_num, ratio_den)?;
+    let r_shift = shift_poly(&r_poly, Rational::integer(-1))?;
+    let deg_p = poly::rat_degree(&p_poly).unwrap_or(0);
+    let deg_q = poly::rat_degree(&q_poly).unwrap_or(0);
+    let deg_rs = poly::rat_degree(&r_shift).unwrap_or(0);
+    let cap = (deg_p + deg_q.max(deg_rs) + 2).min(MAX_SOLVE_DEGREE);
+    for bound in 0..=cap {
+        let Some(x_coeffs) = solve_gosper_equation(&p_poly, &q_poly, &r_shift, bound) else {
+            continue;
+        };
+        if !certifies_gosper_equation(&p_poly, &q_poly, &r_shift, &x_coeffs) {
+            continue;
+        }
+        let numerator = CasExpr::Mul(vec![
+            ratvec_to_expr(var, &r_shift)?,
+            ratvec_to_expr(var, &x_coeffs)?,
+        ]);
+        let denominator = ratvec_to_expr(var, &p_poly)?;
+        return Some(crate::simplify(&CasExpr::Div(
+            Box::new(numerator),
+            Box::new(denominator),
+        )));
+    }
+    None
+}
+
+/// Return `G/current` directly for the structured WZ difference
+/// `next − current = Δ_k G`. This avoids constructing and then cancelling a
+/// large concrete gamma tower when WZ discovery only needs the rational
+/// certificate quotient. The reduced Gosper equation certifies the multiplier;
+/// [`crate::prove_wz_sum`] still applies its fully symbolic WZ soundness gate.
+pub(crate) fn gosper_sum_difference_quotient(
+    next: &CasExpr,
+    current: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    let direct_difference = crate::simplify(&(next.clone() - current.clone()));
+    if let Some(poly) = normalize(&direct_difference)
+        && poly.is_zero()
+    {
+        return Some(CasExpr::zero());
+    }
+
+    let (difference, ratio) = structured_difference_ratios(next, current, var)?;
+    let multiplier = rational_gosper_multiplier_with_ratio(var, &ratio.0, &ratio.1)?;
+    let difference_expr = rational_fraction_to_expr(&difference, var)?;
+    Some(crate::simplify(&(multiplier * difference_expr)))
+}
+
+/// Return the structured WZ quotient from already-derived exact rational
+/// expressions `a = current(k+1)/current(k)` and `d = next/current`.
+/// Callers may derive these while parameters are still symbolic and specialize
+/// afterward, avoiding coefficient growth in concrete gamma towers.
+pub(crate) fn gosper_sum_difference_quotient_from_ratios(
+    current_ratio: &CasExpr,
+    outer_ratio: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    let a = rational_expression(current_ratio, var)?;
+    let d = rational_expression(outer_ratio, var)?;
+    let (difference, ratio) = structured_difference_from_ratios(&a, &d)?;
+    let multiplier = rational_gosper_multiplier_with_ratio(var, &ratio.0, &ratio.1)?;
+    let difference_expr = rational_fraction_to_expr(&difference, var)?;
+    Some(crate::simplify(&(multiplier * difference_expr)))
+}
+
+/// Return the structured WZ quotient using a pre-derived current-term ratio
+/// while deriving only `next/current` from the concrete terms.
+pub(crate) fn gosper_sum_difference_quotient_with_current_ratio(
+    current_ratio: &CasExpr,
+    next: &CasExpr,
+    current: &CasExpr,
+    var: &str,
+) -> Option<CasExpr> {
+    let a = rational_expression(current_ratio, var)?;
+    let d = rational_quotient(next, current, var)?;
+    let (difference, ratio) = structured_difference_from_ratios(&a, &d)?;
+    let multiplier = rational_gosper_multiplier_with_ratio(var, &ratio.0, &ratio.1)?;
+    let difference_expr = rational_fraction_to_expr(&difference, var)?;
+    Some(crate::simplify(&(multiplier * difference_expr)))
+}
+
+/// The exact rational factors `(d−1, h(k+1)/h(k))` for
+/// `h = next − current`, derived without expanding that difference.
+fn structured_difference_ratios(
+    next: &CasExpr,
+    current: &CasExpr,
+    var: &str,
+) -> Option<((RatVec, RatVec), (RatVec, RatVec))> {
+    let a = consecutive_ratio(current, var)?;
+    let d = rational_quotient(next, current, var)?;
+    structured_difference_from_ratios(&a, &d)
+}
+
+/// Derive `(d−1, h(k+1)/h(k))` from `a=current(k+1)/current(k)` and
+/// `d=next/current`, using `h=current·(d−1)`.
+fn structured_difference_from_ratios(
+    a: &(RatVec, RatVec),
+    d: &(RatVec, RatVec),
+) -> Option<((RatVec, RatVec), (RatVec, RatVec))> {
+    let one = (
+        vec![Rational::integer(1)],
+        vec![Rational::integer(1)],
+    );
+    let difference = rational_fraction_sub(
+        d,
+        &one,
+    )?;
+    let d_shift = (
+        shift_poly(&d.0, Rational::integer(1))?,
+        shift_poly(&d.1, Rational::integer(1))?,
+    );
+    let shifted_difference = rational_fraction_sub(&d_shift, &one)?;
+    let numerator = rational_fraction_mul(a, &shifted_difference)?;
+    let ratio_num = poly::ratpoly_mul(&numerator.0, &difference.1)?;
+    let ratio_den = poly::ratpoly_mul(&numerator.1, &difference.0)?;
+    let ratio = reduce_fraction(&ratio_num, &ratio_den)?;
+    Some((difference, ratio))
+}
+
+/// Check the reduced Gosper identity
+/// `q(k)·x(k+1) − r(k−1)·x(k) = p(k)` directly over exact polynomial
+/// coefficients. This is an overflow-conscious certificate for a reconstructed
+/// antidifference when expanding the original Γ-valued term is impractical.
+fn certifies_gosper_equation(
+    p: &[Rational],
+    q: &[Rational],
+    r_shift: &[Rational],
+    x: &[Rational],
+) -> bool {
+    let Some(certified) = (|| {
+        let x_shift = shift_poly(x, Rational::integer(1))?;
+        let q_x_shift = poly::ratpoly_mul(q, &x_shift)?;
+        let r_x = poly::ratpoly_mul(r_shift, x)?;
+        let lhs = poly::ratpoly_add(&q_x_shift, &poly::ratpoly_neg(&r_x)?)?;
+        Some(poly::rat_trim(lhs) == poly::rat_trim(p.to_vec()))
+    })() else {
+        return false;
+    };
+    certified
 }
 
 /// Gosper's algorithm on a **geometric × polynomial** term `p(var)·c^var`.
@@ -205,25 +379,51 @@ fn certifies_telescoping(sum: &CasExpr, term: &CasExpr, var: &str) -> bool {
     matches!(equal(&delta, term), ZeroTest::Certified { equal: true, .. })
 }
 
-/// The reduced consecutive ratio `term(var+1)/term(var) = a(var)/b(var)` of a
-/// univariate rational-function term, as a pair of coprime polynomials with the
-/// denominator's leading coefficient made positive. `None` if `term` is not a
-/// univariate rational function of `var` (e.g. it carries an opaque atom such as
-/// `exp`), if it vanishes identically, or on overflow.
-fn consecutive_ratio(term: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
-    let shifted = term.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
-    let ratio = CasExpr::Div(Box::new(shifted), Box::new(term.clone()));
-    // Reduce integer-offset `Γ` ratios first, so a *hypergeometric* term carrying
-    // factorials/binomials (`t = k·k!`, ratio `(k+1)²/k`) yields an honest rational
-    // consecutive ratio. Elementary rational terms are unaffected.
-    let ratio = crate::simplify(&crate::combine_gamma_ratios(&ratio));
-    let rf = normalize_rational(&ratio)?;
-    // Gamma lowering can leave an exact common monomial content in every term of
-    // both polynomials. This occurs for additive hypergeometric terms such as the
-    // Vandermonde WZ difference: after canonicalizing the shifted gamma towers, the
-    // ratio has a shared `Γ(-k)^6·Γ(k)^6·k^m` factor. Cancel that content before
-    // requiring a univariate polynomial; the general multivariate GCD is needlessly
-    // expensive for this exact syntactic case and may conservatively decline.
+/// Multiply two reduced rational-polynomial fractions and reduce the result.
+fn rational_fraction_mul(
+    lhs: &(RatVec, RatVec),
+    rhs: &(RatVec, RatVec),
+) -> Option<(RatVec, RatVec)> {
+    let num = poly::ratpoly_mul(&lhs.0, &rhs.0)?;
+    let den = poly::ratpoly_mul(&lhs.1, &rhs.1)?;
+    reduce_fraction(&num, &den)
+}
+
+/// Subtract two reduced rational-polynomial fractions and reduce the result.
+fn rational_fraction_sub(
+    lhs: &(RatVec, RatVec),
+    rhs: &(RatVec, RatVec),
+) -> Option<(RatVec, RatVec)> {
+    let lhs_num = poly::ratpoly_mul(&lhs.0, &rhs.1)?;
+    let rhs_num = poly::ratpoly_mul(&rhs.0, &lhs.1)?;
+    let num = poly::ratpoly_add(&lhs_num, &poly::ratpoly_neg(&rhs_num)?)?;
+    let den = poly::ratpoly_mul(&lhs.1, &rhs.1)?;
+    reduce_fraction(&num, &den)
+}
+
+/// Convert a dense rational-polynomial fraction back to a CAS expression.
+fn rational_fraction_to_expr(fraction: &(RatVec, RatVec), var: &str) -> Option<CasExpr> {
+    Some(CasExpr::Div(
+        Box::new(ratvec_to_expr(var, &fraction.0)?),
+        Box::new(ratvec_to_expr(var, &fraction.1)?),
+    ))
+}
+
+/// Reduce an exact expression quotient to a univariate rational function after
+/// canonical integer-offset Γ lowering and common-content cancellation.
+fn rational_quotient(
+    numerator: &CasExpr,
+    denominator: &CasExpr,
+    var: &str,
+) -> Option<(RatVec, RatVec)> {
+    let quotient = CasExpr::Div(Box::new(numerator.clone()), Box::new(denominator.clone()));
+    rational_expression(&quotient, var)
+}
+
+/// Normalize an exact expression to a reduced univariate rational function.
+fn rational_expression(expression: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
+    let expression = crate::simplify(&crate::combine_gamma_ratios(expression));
+    let rf = normalize_rational(&expression)?;
     let (num, den) = cancel_common_monomial_to_univariate(&rf.num, &rf.den, var)?;
     if num.is_empty() || den.is_empty() {
         return None;
@@ -231,16 +431,29 @@ fn consecutive_ratio(term: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
     reduce_fraction(&num, &den)
 }
 
+/// The reduced consecutive ratio `term(var+1)/term(var) = a(var)/b(var)` of a
+/// univariate rational-function term, as a pair of coprime polynomials with the
+/// denominator's leading coefficient made positive. `None` if `term` is not a
+/// univariate rational function of `var` (e.g. it carries an opaque atom such as
+/// `exp`), if it vanishes identically, or on overflow.
+fn consecutive_ratio(term: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
+    let shifted = term.substitute(var, &(CasExpr::var(var) + CasExpr::int(1)));
+    // Reduce integer-offset `Γ` ratios first, so a *hypergeometric* term carrying
+    // factorials/binomials (`t = k·k!`, ratio `(k+1)²/k`) yields an honest rational
+    // consecutive ratio. Elementary rational terms are unaffected.
+    rational_quotient(&shifted, term, var)
+}
+
 /// Cancel the greatest monomial dividing every term of `num` and `den`, then
 /// project both cofactors to dense univariate polynomials in `var`. This is exact
 /// polynomial content cancellation: each variable's cancelled exponent is the
 /// minimum exponent across every numerator and denominator monomial. Any residual
 /// variable other than `var` makes the projection decline.
-fn cancel_common_monomial_to_univariate(
+pub(crate) fn cancel_common_monomial_to_univariate(
     num: &MultiPoly,
     den: &MultiPoly,
     var: &str,
-) -> Option<(RatVec, RatVec)> {
+) -> Option<(Vec<Rational>, Vec<Rational>)> {
     let mut monomials = num.terms.keys().chain(den.terms.keys());
     let first = monomials.next()?;
     let mut common: BTreeMap<String, u32> = first.powers.clone();
@@ -277,13 +490,74 @@ fn cancel_common_monomial_to_univariate(
     Some((project(num)?, project(den)?))
 }
 
+/// Cancel the greatest exact monomial shared by a rational expression's
+/// numerator and denominator, retaining every residual variable. This is the
+/// multivariate counterpart of [`cancel_common_monomial_to_univariate`] used to
+/// remove shared canonical gamma atoms before a symbolic WZ ratio is specialized.
+pub(crate) fn cancel_common_monomial_expression(expression: &CasExpr) -> Option<CasExpr> {
+    let rf = normalize_rational(expression)?;
+    let mut monomials = rf.num.terms.keys().chain(rf.den.terms.keys());
+    let first = monomials.next()?;
+    let mut common: BTreeMap<String, u32> = first.powers.clone();
+    for monomial in monomials {
+        common.retain(|name, exponent| {
+            let other = monomial.powers.get(name).copied().unwrap_or(0);
+            *exponent = (*exponent).min(other);
+            *exponent != 0
+        });
+    }
+
+    let divide = |poly: &MultiPoly| {
+        let mut terms = BTreeMap::new();
+        for (monomial, coefficient) in &poly.terms {
+            let mut reduced = monomial.clone();
+            for (name, exponent) in &common {
+                let residual = reduced.powers.get(name).copied().unwrap_or(0) - *exponent;
+                if residual == 0 {
+                    reduced.powers.remove(name);
+                } else {
+                    reduced.powers.insert(name.clone(), residual);
+                }
+            }
+            terms.insert(reduced, *coefficient);
+        }
+        MultiPoly { terms }
+    };
+    let quotient = CasExpr::Div(
+        Box::new(divide(&rf.num).to_expr()),
+        Box::new(divide(&rf.den).to_expr()),
+    );
+    Some(crate::deatomize_from(&quotient, expression))
+}
+
 /// Reduce `num/den` to lowest terms via the exact polynomial GCD, normalising the
 /// denominator's leading coefficient positive. `None` on overflow.
-fn reduce_fraction(num: &[Rational], den: &[Rational]) -> Option<(RatVec, RatVec)> {
+pub(crate) fn reduce_fraction(
+    num: &[Rational],
+    den: &[Rational],
+) -> Option<(Vec<Rational>, Vec<Rational>)> {
+    let divide_content = |values: &[Rational], content: Rational| -> Option<RatVec> {
+        values.iter().map(|c| c.checked_div(content)).collect()
+    };
+    // Strip a scalar common to *both* polynomials before the Euclidean algorithm.
+    // Gamma-lowered WZ terms can carry a very large integer multiplier in every
+    // coefficient; asking the GCD to manipulate it first needlessly overflows even
+    // though it cancels from the ratio exactly.
+    let pre_content = common_content(num.iter().chain(den.iter()).copied())
+        .unwrap_or_else(|| Rational::integer(1));
+    let num = divide_content(num, pre_content)?;
+    let den = divide_content(den, pre_content)?;
+    let (num, den) = cancel_common_integer_linear_factors(num, den);
+    let (num, den) = cancel_shared_denominator_cofactor(num, den);
+
     let bound = num.len() + den.len() + 4;
-    let g = poly::rat_gcd(num, den, bound)?;
-    let mut a = poly::rat_exact_div(num, &g)?;
-    let mut b = poly::rat_exact_div(den, &g)?;
+    let g = if certifies_coprime_modular(&num, &den) {
+        vec![Rational::integer(1)]
+    } else {
+        content_reduced_gcd(&num, &den, bound)?
+    };
+    let mut a = poly::rat_exact_div(&num, &g)?;
+    let mut b = poly::rat_exact_div(&den, &g)?;
     if b.last().is_some_and(|c| c.numerator() < 0) {
         a = poly::rat_negate(&a)?;
         b = poly::rat_negate(&b)?;
@@ -295,13 +569,117 @@ fn reduce_fraction(num: &[Rational], den: &[Rational]) -> Option<(RatVec, RatVec
     if let Some(content) = common_content(a.iter().chain(b.iter()).copied())
         && content != Rational::integer(1)
     {
-        let divide = |v: &[Rational]| -> Option<RatVec> {
-            v.iter().map(|c| c.checked_div(content)).collect()
-        };
-        a = divide(&a)?;
-        b = divide(&b)?;
+        a = divide_content(&a, content)?;
+        b = divide_content(&b, content)?;
     }
     Some((poly::rat_trim(a), poly::rat_trim(b)))
+}
+
+/// Cancel exact common `(k−r)` factors for small integer roots before the general
+/// polynomial GCD. Integer-offset Γ lowering produces long products of precisely
+/// these factors; removing them one at a time keeps Euclidean intermediates small.
+/// A factor is cancelled only when exact division succeeds in both polynomials.
+fn cancel_common_integer_linear_factors(mut a: RatVec, mut b: RatVec) -> (RatVec, RatVec) {
+    for root in -MAX_DISPERSION_SHIFT..=MAX_DISPERSION_SHIFT {
+        let divisor = [Rational::integer(-root), Rational::integer(1)];
+        while let Some(next_a) = poly::rat_exact_div(&a, &divisor) {
+            let Some(next_b) = poly::rat_exact_div(&b, &divisor) else {
+                break;
+            };
+            a = next_a;
+            b = next_b;
+        }
+    }
+    (a, b)
+}
+
+/// After common integer-linear factors are gone, peel every small integer-root
+/// factor from the denominator and test whether its residual cofactor divides
+/// both sides exactly. WZ extraction often leaves an irreducible quadratic
+/// multiplier beside the certificate's integer-root denominator. Cancelling it
+/// before Euclid avoids large intermediate coefficients; failed exact division
+/// leaves the original fraction unchanged.
+fn cancel_shared_denominator_cofactor(a: RatVec, b: RatVec) -> (RatVec, RatVec) {
+    let mut residual = b.clone();
+    for root in -MAX_DISPERSION_SHIFT..=MAX_DISPERSION_SHIFT {
+        let divisor = [Rational::integer(-root), Rational::integer(1)];
+        while let Some(quotient) = poly::rat_exact_div(&residual, &divisor) {
+            residual = quotient;
+        }
+    }
+    if poly::rat_degree(&residual).is_some_and(|degree| degree > 0)
+        && let Some(a_quotient) = poly::rat_exact_div(&a, &residual)
+        && let Some(b_quotient) = poly::rat_exact_div(&b, &residual)
+    {
+        return (a_quotient, b_quotient);
+    }
+    (a, b)
+}
+
+/// Prove that two rational polynomials are coprime by finding one good finite-field
+/// reduction whose GCD is constant. Denominators and leading coefficients must stay
+/// nonzero modulo the selected prime, so a nonconstant common factor over `Q` would
+/// retain positive degree after reduction. Failure to find such a prime is merely
+/// inconclusive and leaves the exact rational GCD path to decide the case.
+fn certifies_coprime_modular(a: &[Rational], b: &[Rational]) -> bool {
+    const PRIMES: [i128; 3] = [998_244_353, 1_000_000_007, 1_000_000_009];
+
+    for prime in PRIMES {
+        let reduce = |poly: &[Rational]| -> Option<Vec<i128>> {
+            poly.iter()
+                .map(|coefficient| {
+                    let denominator = coefficient.denominator().rem_euclid(prime);
+                    let inverse = crate::ntheory::mod_inverse(denominator, prime)?;
+                    coefficient
+                        .numerator()
+                        .rem_euclid(prime)
+                        .checked_mul(inverse)
+                        .map(|value| value.rem_euclid(prime))
+                })
+                .collect()
+        };
+        let Some(a_mod) = reduce(a) else {
+            continue;
+        };
+        let Some(b_mod) = reduce(b) else {
+            continue;
+        };
+        if a_mod.last().is_none_or(|lead| *lead == 0)
+            || b_mod.last().is_none_or(|lead| *lead == 0)
+        {
+            continue;
+        }
+        if crate::gfp::gcd(&a_mod, &b_mod, prime).len() == 1 {
+            return true;
+        }
+    }
+    false
+}
+
+/// Exact monic polynomial GCD over ℚ, removing rational scalar content from every
+/// Euclidean remainder. Scaling a polynomial by a nonzero field element leaves its
+/// monic GCD unchanged, while this primitive-part normalization prevents removable
+/// coefficient growth from overflowing on Γ-lowered WZ ratios.
+fn content_reduced_gcd(a: &[Rational], b: &[Rational], max_degree: usize) -> Option<RatVec> {
+    let primitive_part = |poly: &[Rational]| -> Option<RatVec> {
+        let trimmed = poly::rat_trim(poly.to_vec());
+        let Some(content) = common_content(trimmed.iter().copied()) else {
+            return Some(trimmed);
+        };
+        trimmed.iter().map(|c| c.checked_div(content)).collect()
+    };
+
+    let mut a = primitive_part(a)?;
+    let mut b = primitive_part(b)?;
+    for _ in 0..(max_degree + 4) {
+        if poly::rat_degree(&b).is_none() {
+            return poly::rat_make_monic(&a);
+        }
+        let remainder = poly::rat_rem(&a, &b)?;
+        a = b;
+        b = primitive_part(&remainder)?;
+    }
+    None
 }
 
 /// The common rational content of a coefficient sequence: `gcd(numerators) /
@@ -931,6 +1309,121 @@ mod tests {
             / (CasExpr::int(7) * (k - CasExpr::int(4)).pow(2));
         assert!(matches!(
             equal(&sum, &(r * f3)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+    }
+
+    #[test]
+    fn weighted_vandermonde_wz_term_uses_reduced_certificate() {
+        let k = CasExpr::var("k");
+        let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
+        let rhs = |n| {
+            CasExpr::int(n)
+                * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
+                / CasExpr::int(2)
+        };
+        let f5 = crate::simplify(&(k.clone() * binom(5).pow(2) / rhs(5)));
+        let f6 = crate::simplify(&(k.clone() * binom(6).pow(2) / rhs(6)));
+        let h = crate::simplify(&(f6 - f5.clone()));
+        let sum = gosper_sum(&h, "k").expect("weighted WZ term is Gosper-summable");
+
+        // At n=5, R = k(k−1)(11k−96)/(110(k−6)²). The expanded Γ-valued
+        // telescoping residual exhausts i128 intermediates, so `gosper_sum`
+        // certifies the equivalent reduced polynomial equation instead. WZ
+        // discovery recovers the exact rational certificate from G/f.
+        let expected_r = k.clone()
+            * (k.clone() - CasExpr::int(1))
+            * (CasExpr::int(11) * k.clone() - CasExpr::int(96))
+            / (CasExpr::int(110) * (k - CasExpr::int(6)).pow(2));
+        let recovered_r = crate::simplify(&(sum / f5));
+        assert!(matches!(
+            equal(&recovered_r, &expected_r),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+    }
+
+    #[test]
+    fn third_vandermonde_moment_uses_structured_difference_ratio() {
+        let k = CasExpr::var("k");
+        let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
+        let rhs = |n| {
+            CasExpr::int(n).pow(3)
+                * CasExpr::int(n + 1)
+                * crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n))
+                / (CasExpr::int(4) * CasExpr::int(2 * n - 1))
+        };
+        let f6 = crate::simplify(&(k.clone().pow(3) * binom(6).pow(2) / rhs(6)));
+        let f7 = crate::simplify(&(k.clone().pow(3) * binom(7).pow(2) / rhs(7)));
+        let recovered = gosper_sum_difference_quotient(&f7, &f6, "k")
+            .expect("third-moment term is Gosper-summable");
+        let expected = (k.clone() - CasExpr::int(1)).pow(2)
+            * (CasExpr::int(44) * k.clone().pow(2) - CasExpr::int(476) * k.clone()
+                + CasExpr::int(441))
+            / (CasExpr::int(440) * k.clone() * (k - CasExpr::int(7)).pow(2));
+        assert!(matches!(
+            equal(&recovered, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+    }
+
+    #[test]
+    fn modular_coprimality_certificate_is_one_way() {
+        let ints = |values: &[i128]| {
+            values
+                .iter()
+                .copied()
+                .map(Rational::integer)
+                .collect::<Vec<_>>()
+        };
+        let coprime_a = ints(&[-29_547, -8_169, 16_001, -4_805, 550, -22]);
+        let coprime_b = ints(&[0, 0, 0, -889, 308, -22]);
+        assert!(certifies_coprime_modular(&coprime_a, &coprime_b));
+
+        let common_a = ints(&[2, -3, 1]);
+        let common_b = ints(&[-6, 1, 1]);
+        assert!(!certifies_coprime_modular(&common_a, &common_b));
+    }
+
+    #[test]
+    fn fraction_reduction_cancels_residual_denominator_cofactor() {
+        let ints = |values: &[i128]| {
+            values
+                .iter()
+                .copied()
+                .map(Rational::integer)
+                .collect::<Vec<_>>()
+        };
+        let numerator = ints(&[
+            -444_007_620,
+            1_926_304_116,
+            -3_352_438_477,
+            2_963_930_890,
+            -1_389_546_760,
+            331_099_990,
+            -36_862_231,
+            1_520_092,
+        ]);
+        let denominator = ints(&[
+            0,
+            0,
+            11_823_288_624,
+            -8_537_854_416,
+            2_243_740_604,
+            -255_375_456,
+            10_640_644,
+        ]);
+        let reduced = reduce_fraction(&numerator, &denominator)
+            .expect("the shared irreducible quadratic cancels exactly");
+        let k = CasExpr::var("k");
+        let actual = rational_fraction_to_expr(&reduced, "k").unwrap();
+        let expected = (k.clone() - CasExpr::int(1)).pow(2)
+            * (CasExpr::int(932) * k.clone().pow(3)
+                - CasExpr::int(9_553) * k.clone().pow(2)
+                + CasExpr::int(17_196) * k.clone()
+                - CasExpr::int(8_820))
+            / (CasExpr::int(6_524) * k.clone().pow(2) * (k - CasExpr::int(6)).pow(2));
+        assert!(matches!(
+            equal(&actual, &expected),
             ZeroTest::Certified { equal: true, .. }
         ));
     }

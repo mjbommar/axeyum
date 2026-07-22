@@ -328,7 +328,7 @@ fn mul_mod_poly(a: &[i128], b: &[i128], modulus: &[i128], p: i128) -> Option<Vec
     Some(div_rem(&product, modulus, p)?.1)
 }
 
-/// Modular exponentiation `a^e mod modulus` in 𝔽ₚ[x] by repeated squaring.
+/// Modular exponentiation `a^e mod modulus` in `𝔽ₚ[x]` by repeated squaring.
 ///
 /// Used to apply the Frobenius map when testing irreducibility and factoring.
 /// Returns `None` when `modulus` is the zero polynomial.

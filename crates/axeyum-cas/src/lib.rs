@@ -5034,6 +5034,616 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
 /// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
 type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 
+/// Cancel syntactically equal factors across a product of nested quotients after
+/// canonicalizing polynomial factors. This keeps factored hypergeometric products
+/// compact before the general rational normalizer would expand them.
+fn cancel_common_product_factors(expr: &CasExpr) -> CasExpr {
+    fn collect_factors(
+        expr: &CasExpr,
+        inverted: bool,
+        numerator: &mut Vec<CasExpr>,
+        denominator: &mut Vec<CasExpr>,
+    ) {
+        match expr {
+            CasExpr::Mul(factors) => {
+                for factor in factors {
+                    collect_factors(factor, inverted, numerator, denominator);
+                }
+            }
+            CasExpr::Div(upper, lower) => {
+                collect_factors(upper, inverted, numerator, denominator);
+                collect_factors(lower, !inverted, numerator, denominator);
+            }
+            factor if inverted => denominator.push(factor.clone()),
+            factor => numerator.push(factor.clone()),
+        }
+    }
+    if !matches!(expr, CasExpr::Div(..)) {
+        return expr.clone();
+    }
+    let canonical_factor = |factor: CasExpr| {
+        let factor = match factor {
+            CasExpr::Unary(UnaryFunc::Gamma, argument) => {
+                let argument = *argument;
+                let argument =
+                    normalize(&argument).map_or(argument, |polynomial| polynomial.to_expr());
+                CasExpr::Unary(UnaryFunc::Gamma, Box::new(argument))
+            }
+            factor => factor,
+        };
+        normalize(&factor).map_or(factor, |polynomial| polynomial.to_expr())
+    };
+    let mut numerator_factors = Vec::new();
+    let mut denominator_factors = Vec::new();
+    collect_factors(
+        expr,
+        false,
+        &mut numerator_factors,
+        &mut denominator_factors,
+    );
+    let mut numerator_factors: Vec<CasExpr> =
+        numerator_factors.into_iter().map(canonical_factor).collect();
+    let mut denominator_factors: Vec<CasExpr> = denominator_factors
+        .into_iter()
+        .map(canonical_factor)
+        .collect();
+    numerator_factors.retain(|factor| {
+        let Some(position) = denominator_factors
+            .iter()
+            .position(|candidate| candidate == factor)
+        else {
+            return true;
+        };
+        denominator_factors.remove(position);
+        false
+    });
+    CasExpr::Div(
+        Box::new(build_product(numerator_factors)),
+        Box::new(build_product(denominator_factors)),
+    )
+}
+
+/// Compact one exact hypergeometric quotient before rational normalization:
+/// preserve products, lower integer-shifted Gamma heads, cancel exact structural
+/// factors, then remove any remaining common canonical atom monomial.
+fn compact_hypergeometric_ratio(ratio: &CasExpr) -> CasExpr {
+    let ratio = cancel_common_product_factors(ratio);
+    let combined = cancel_common_product_factors(&combine_gamma_ratios(&ratio));
+    gosper::cancel_common_monomial_expression(&combined)
+        .map_or_else(|| simplify(&combined), |ratio| simplify(&ratio))
+}
+
+/// Cancel every shared factor from the known `(2*var)_order` denominator family,
+/// then return separately normalized numerator and denominator coefficients with
+/// a monic denominator. Comparing these exact parts avoids an unnecessary large
+/// denominator cross-product.
+fn falling_denominator_rational_parts(
+    expr: &CasExpr,
+    var: &str,
+    order: u32,
+) -> Option<(Vec<Rational>, Vec<Rational>)> {
+    let rational = normalize_rational(expr)?;
+    let mut numerator = rational.num.to_univariate(var)?;
+    let mut denominator = rational.den.to_univariate(var)?;
+    for offset in 0..order {
+        let divisor = [
+            Rational::integer(-i128::from(offset)),
+            Rational::integer(2),
+        ];
+        let Some(reduced_denominator) = poly::rat_exact_div(&denominator, &divisor) else {
+            continue;
+        };
+        let Some(reduced_numerator) = poly::rat_exact_div(&numerator, &divisor) else {
+            continue;
+        };
+        numerator = reduced_numerator;
+        denominator = reduced_denominator;
+    }
+    let denominator_lead = *denominator.last()?;
+    let make_monic = |coefficients: Vec<Rational>| {
+        coefficients
+            .into_iter()
+            .map(|coefficient| coefficient.checked_div(denominator_lead))
+            .collect::<Option<Vec<_>>>()
+    };
+    Some((make_monic(numerator)?, make_monic(denominator)?))
+}
+
+/// Derive `F(n,k+1)/F(n,k)` and `f(n+1,k)/f(n,k)` while parameters remain
+/// symbolic, cancelling common canonical gamma atoms before concrete sampling.
+fn wz_symbolic_ratios(
+    summand: &CasExpr,
+    rhs: &CasExpr,
+    n: &str,
+    k: &str,
+) -> (CasExpr, CasExpr) {
+    let current_ratio = compact_hypergeometric_ratio(&CasExpr::Div(
+        Box::new(summand.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)))),
+        Box::new(summand.clone()),
+    ));
+    let summand_outer_ratio = compact_hypergeometric_ratio(&CasExpr::Div(
+        Box::new(summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
+        Box::new(summand.clone()),
+    ));
+    let rhs_inverse = compact_hypergeometric_ratio(&CasExpr::Div(
+        Box::new(rhs.clone()),
+        Box::new(rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
+    ));
+    (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
+}
+
+/// Check a proposed WZ certificate symbolically, then check the finite base case.
+#[allow(clippy::many_single_char_names, clippy::too_many_arguments)]
+fn certifies_wz_sum(
+    summand: &CasExpr,
+    rhs: &CasExpr,
+    certificate: &CasExpr,
+    n: &str,
+    k: &str,
+    base: i128,
+    k_lo: i128,
+    k_hi: i128,
+) -> bool {
+    let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
+    let g = certificate.clone() * f.clone();
+    let g_shift = g.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
+    let h = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f;
+    let symbolic = equal(&(g_shift - g), &h);
+    match symbolic {
+        ZeroTest::Certified { equal: true, .. } => {}
+        ZeroTest::Certified { equal: false, .. } => return false,
+        ZeroTest::Unknown => {
+            // Divide the same telescoping identity by `f(n,k)` and check the
+            // resulting hypergeometric quotients. As an identity of rational
+            // functions this is algebraically equivalent, but its consecutive
+            // gamma factors cancel before polynomial expansion. A certified
+            // false direct check never reaches this completeness fallback.
+            let (current_ratio, outer_ratio) = wz_symbolic_ratios(summand, rhs, n, k);
+            let certificate_shift =
+                certificate.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
+            let ratio_symbolic = equal(
+                &(certificate_shift * current_ratio - certificate.clone()),
+                &(outer_ratio - CasExpr::int(1)),
+            );
+            if !matches!(
+                ratio_symbolic,
+                ZeroTest::Certified { equal: true, .. }
+            ) {
+                return false;
+            }
+        }
+    }
+
+    let mut total = CasExpr::zero();
+    for kk in k_lo..=k_hi {
+        let concrete = simplify(
+            &summand
+                .substitute(n, &CasExpr::int(base))
+                .substitute(k, &CasExpr::int(kk)),
+        );
+        // Preserve expression order for fully concrete terms: the small exact
+        // evaluator can cancel a quotient such as `16!/16!` before multiplying
+        // it by another factorial, where flat rational normalization would
+        // overflow even though the final integer fits.
+        let concrete = match concrete.eval(&BTreeMap::new()) {
+            Some(value) => CasExpr::Const(value),
+            None => concrete,
+        };
+        total = total + concrete;
+    }
+    let rhs_base = simplify(&rhs.substitute(n, &CasExpr::int(base)));
+    let rhs_base = match rhs_base.eval(&BTreeMap::new()) {
+        Some(value) => CasExpr::Const(value),
+        None => rhs_base,
+    };
+    let base_check = equal(&total, &rhs_base);
+    matches!(base_check, ZeroTest::Certified { equal: true, .. })
+}
+
+/// Prove the fixed-shift Vandermonde family
+/// `∑_k C(n,k) C(n,k+shift) = C(2n,n−shift)` for one concrete nonnegative
+/// `shift`, returning its rational Wilf–Zeilberger certificate.
+///
+/// This is a checked family route, not a table of answers: it constructs the
+/// closed-form certificate for the requested shift and accepts it only after
+/// the internal checker verifies the fully symbolic telescoping identity in
+/// `n,k` and the exact base case at `n=shift`. Out-of-fragment coefficient
+/// growth therefore returns `None`, never an unchecked identity.
+#[must_use]
+pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
+    let n = CasExpr::var("n");
+    let k = CasExpr::var("k");
+    let r = CasExpr::int(i128::from(shift));
+    let summand = binomial_coefficient(&n, &k)
+        * binomial_coefficient(&n, &(k.clone() + r.clone()));
+    let rhs = binomial_coefficient(
+        &(CasExpr::int(2) * n.clone()),
+        &(n.clone() - r.clone()),
+    );
+    let certificate = k.clone()
+        * (k.clone() + r.clone())
+        * (CasExpr::int(2) * k.clone() - CasExpr::int(3) * n.clone() + r.clone()
+            - CasExpr::int(3))
+        / (CasExpr::int(2)
+            * (CasExpr::int(2) * n.clone() + CasExpr::int(1))
+            * (k.clone() - n.clone() - CasExpr::int(1))
+            * (k.clone() - n + r - CasExpr::int(1)));
+    certifies_wz_sum(
+        &summand,
+        &rhs,
+        &certificate,
+        "n",
+        "k",
+        i128::from(shift),
+        0,
+        0,
+    )
+    .then_some(certificate)
+}
+
+/// Largest falling-factorial squared-binomial moment currently accepted by
+/// [`prove_squared_binomial_falling_moment`].
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 33;
+
+/// A proved falling-factorial squared-binomial moment
+/// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertifiedSquaredBinomialFallingMoment {
+    /// The nonnegative falling-factorial order.
+    pub order: u32,
+    /// The exact closed form as an expression in `n`.
+    pub closed_form: CasExpr,
+    /// The rational Wilf–Zeilberger multiplier `R(n,k)`.
+    pub certificate: CasExpr,
+}
+
+impl CertifiedSquaredBinomialFallingMoment {
+    /// Recheck the symbolic WZ identity and exact finite base case from the
+    /// stored order, closed form, and certificate.
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        if self.order > MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
+            return false;
+        }
+        let n = CasExpr::var("n");
+        let k = CasExpr::var("k");
+        let summand =
+            falling_factorial_product(&k, self.order) * binomial_coefficient(&n, &k).pow(2);
+        certifies_wz_sum(
+            &summand,
+            &self.closed_form,
+            &self.certificate,
+            "n",
+            "k",
+            i128::from(self.order),
+            0,
+            i128::from(self.order),
+        )
+    }
+}
+
+fn squared_binomial_falling_moment_candidate(
+    order: u32,
+) -> Option<CertifiedSquaredBinomialFallingMoment> {
+    if order > MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
+        return None;
+    }
+    let n = CasExpr::var("n");
+    let k = CasExpr::var("k");
+    let order_expr = CasExpr::int(i128::from(order));
+    let closed_form = falling_factorial_product(&n, order)
+        * binomial_coefficient(
+            &(CasExpr::int(2) * n.clone() - order_expr.clone()),
+            &(n.clone() - order_expr.clone()),
+        );
+    let n_plus_one = n.clone() + CasExpr::int(1);
+    let certificate = k.clone()
+        * (order_expr.clone() - k.clone())
+        * (order_expr.clone() * k.clone()
+            - CasExpr::int(2) * order_expr.clone() * n_plus_one.clone()
+            - CasExpr::int(2) * k.clone() * n_plus_one.clone()
+            + CasExpr::int(3) * n_plus_one.pow(2))
+        / ((order_expr.clone() - CasExpr::int(2) * n.clone() - CasExpr::int(2))
+            * (order_expr - CasExpr::int(2) * n.clone() - CasExpr::int(1))
+            * (k - n - CasExpr::int(1)).pow(2));
+    Some(CertifiedSquaredBinomialFallingMoment {
+        order,
+        closed_form,
+        certificate,
+    })
+}
+
+/// Prove the concrete falling-factorial moment
+/// `∑_k (k)_order C(n,k)² = (n)_order C(2n-order,n-order)`.
+///
+/// The parameterized rational WZ certificate is constructed directly, then
+/// accepted only after the shared symbolic telescoping and exact base-case
+/// checker succeeds. Unsupported orders return `None` before proof work begins.
+#[must_use]
+pub fn prove_squared_binomial_falling_moment(
+    order: u32,
+) -> Option<CertifiedSquaredBinomialFallingMoment> {
+    let proof = squared_binomial_falling_moment_candidate(order)?;
+    proof.is_certified().then_some(proof)
+}
+
+/// Largest squared-binomial raw-moment order currently accepted by
+/// [`prove_squared_binomial_moment`]. This can be lower than
+/// [`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT`] because the raw family also
+/// constructs and checks a compact Stirling-composed closed form.
+pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 19;
+
+/// A proved squared-binomial raw moment
+/// `∑_k k^moment C(n,k)² = closed_form`, carrying the certified
+/// falling-factorial moments used in its Stirling expansion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertifiedSquaredBinomialMoment {
+    /// The nonnegative raw-moment order.
+    pub moment: u32,
+    /// The exact closed form as an expression in `n`.
+    pub closed_form: CasExpr,
+    /// The independently WZ-certified nonzero falling-factorial components, in
+    /// ascending order.
+    pub components: Vec<CertifiedSquaredBinomialFallingMoment>,
+}
+
+impl CertifiedSquaredBinomialMoment {
+    /// Recheck every component WZ proof, the exact Stirling power expansion,
+    /// each component's central-binomial quotient, and the independently
+    /// reconstructed normalized closed form.
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        if self.moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+            return false;
+        }
+        let k = CasExpr::var("k");
+        let mut expected_orders = Vec::new();
+        for order in 0..=self.moment {
+            let Some(stirling) = combinatorics::stirling_second(self.moment, order) else {
+                return false;
+            };
+            if stirling != 0 {
+                expected_orders.push(order);
+            }
+        }
+        if self.components.len() != expected_orders.len()
+            || self
+                .components
+                .iter()
+                .zip(&expected_orders)
+                .any(|(component, order)| component.order != *order || !component.is_certified())
+        {
+            return false;
+        }
+
+        let n = CasExpr::var("n");
+        let two_n = CasExpr::int(2) * n.clone();
+        let central_binomial = binomial_coefficient(&two_n, &n);
+        let mut expanded_power = CasExpr::zero();
+        for component in &self.components {
+            let Some(stirling) = combinatorics::stirling_second(self.moment, component.order) else {
+                return false;
+            };
+            expanded_power = expanded_power
+                + CasExpr::int(stirling) * falling_factorial(&k, component.order);
+            let stored_component_normalized = compact_hypergeometric_ratio(&CasExpr::Div(
+                Box::new(component.closed_form.clone()),
+                Box::new(central_binomial.clone()),
+            ));
+            let expected_component_normalized = if component.order == 0 {
+                CasExpr::one()
+            } else {
+                CasExpr::Const(Rational::new(1, 2))
+                    * n.clone()
+                    * falling_factorial_product(
+                        &(n.clone() - CasExpr::int(1)),
+                        component.order - 1,
+                    )
+                    .pow(2)
+                    / falling_factorial_product(
+                        &(two_n.clone() - CasExpr::int(1)),
+                        component.order - 1,
+                    )
+            };
+            let (
+                Some(stored_component_parts),
+                Some(expected_component_parts),
+            ) = (
+                falling_denominator_rational_parts(
+                    &stored_component_normalized,
+                    "n",
+                    component.order,
+                ),
+                falling_denominator_rational_parts(
+                    &expected_component_normalized,
+                    "n",
+                    component.order,
+                ),
+            ) else {
+                return false;
+            };
+            if stored_component_parts != expected_component_parts {
+                return false;
+            }
+        }
+        if !matches!(
+            equal(&k.pow(self.moment), &expanded_power),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return false;
+        }
+
+        let Some(expected_normalized) = squared_binomial_normalized_moment(self.moment) else {
+            return false;
+        };
+        let stored_normalized = compact_hypergeometric_ratio(&CasExpr::Div(
+            Box::new(self.closed_form.clone()),
+            Box::new(central_binomial),
+        ));
+        let (Some(stored_parts), Some(expected_parts)) = (
+            falling_denominator_rational_parts(&stored_normalized, "n", self.moment),
+            falling_denominator_rational_parts(&expected_normalized, "n", self.moment),
+        ) else {
+            return false;
+        };
+        stored_parts == expected_parts
+    }
+}
+
+/// Peel every exactly dividing `(var - root)` factor for integer roots in
+/// `[-bound, bound]`, then retain the residual when general factorization declines.
+/// This is a compact-form helper, not an irreducibility claim: exact division proves
+/// every extracted factor and the caller still rechecks the reconstructed identity.
+fn factor_small_integer_roots_or_retain(
+    coefficients: &[Rational],
+    var: &str,
+    bound: i128,
+) -> Option<CasExpr> {
+    let mut residual = poly::rat_trim(coefficients.to_vec());
+    let mut factors = Vec::new();
+    for root in -bound..=bound {
+        let divisor = [
+            Rational::integer(root.checked_neg()?),
+            Rational::integer(1),
+        ];
+        let mut multiplicity = 0u32;
+        while let Some(quotient) = poly::rat_exact_div(&residual, &divisor) {
+            residual = quotient;
+            multiplicity = multiplicity.checked_add(1)?;
+        }
+        if multiplicity != 0 {
+            let linear = CasExpr::var(var) - CasExpr::int(root);
+            factors.push(if multiplicity == 1 {
+                linear
+            } else {
+                linear.pow(multiplicity)
+            });
+        }
+    }
+    let residual_expr = MultiPoly::from_univariate(var, &residual).to_expr();
+    if residual != vec![Rational::integer(1)] {
+        factors.push(factor(&residual_expr, var).unwrap_or(residual_expr));
+    }
+    Some(build_product(factors))
+}
+
+/// Construct the exact rational multiplier of `C(2n,n)` in the raw moment.
+///
+/// All common-denominator arithmetic and linear-factor cancellation is checked
+/// exactly. Small integer roots are peeled only to keep the displayed result
+/// compact; an unfactored residual remains valid evidence for the same exact
+/// polynomial.
+fn squared_binomial_normalized_moment(moment: u32) -> Option<CasExpr> {
+    let n = CasExpr::var("n");
+    let two_n = CasExpr::int(2) * n.clone();
+    let mut common_numerator = MultiPoly::zero();
+    for order in 0..=moment {
+        let stirling = combinatorics::stirling_second(moment, order)?;
+        if stirling == 0 {
+            continue;
+        }
+        let numerator = falling_factorial(&n, order).pow(2);
+        let denominator_complement = falling_factorial(
+            &(two_n.clone() - CasExpr::int(i128::from(order))),
+            moment - order,
+        );
+        let term = normalize(
+            &(CasExpr::int(stirling) * numerator * denominator_complement),
+        )?;
+        common_numerator = common_numerator.add(&term)?;
+    }
+    let common_denominator = normalize(&falling_factorial(&two_n, moment))?;
+    let mut numerator_coefficients = common_numerator.to_univariate("n")?;
+    let mut denominator_coefficients = common_denominator.to_univariate("n")?;
+    let mut denominator_offsets = Vec::new();
+    for offset in 0..moment {
+        let divisor = vec![
+            Rational::integer(-i128::from(offset)),
+            Rational::integer(2),
+        ];
+        if let Some(reduced_numerator) =
+            poly::rat_exact_div(&numerator_coefficients, &divisor)
+        {
+            numerator_coefficients = reduced_numerator;
+            denominator_coefficients =
+                poly::rat_exact_div(&denominator_coefficients, &divisor)?;
+        } else {
+            denominator_offsets.push(offset);
+        }
+    }
+    let numerator_lead = *numerator_coefficients.last()?;
+    let denominator_lead = *denominator_coefficients.last()?;
+    let monic_numerator = numerator_coefficients
+        .iter()
+        .map(|coefficient| coefficient.checked_div(numerator_lead))
+        .collect::<Option<Vec<_>>>()?;
+    let monic_denominator = denominator_coefficients
+        .iter()
+        .map(|coefficient| coefficient.checked_div(denominator_lead))
+        .collect::<Option<Vec<_>>>()?;
+    let scalar = numerator_lead.checked_div(denominator_lead)?;
+    let factored_numerator = factor_small_integer_roots_or_retain(
+        &monic_numerator,
+        "n",
+        i128::from(moment),
+    )?;
+    let factored_denominator = build_product(
+        denominator_offsets
+            .into_iter()
+            .map(|offset| n.clone() - CasExpr::Const(Rational::new(i128::from(offset), 2)))
+            .collect(),
+    );
+    if normalize(&factored_denominator)?
+        != MultiPoly::from_univariate("n", &monic_denominator)
+    {
+        return None;
+    }
+    Some(simplify(
+        &(CasExpr::Const(scalar) * factored_numerator / factored_denominator),
+    ))
+}
+
+/// Prove the concrete raw-moment member
+/// `∑_k k^moment C(n,k)²` using its falling-factorial expansion.
+///
+/// The candidate closed form is generated from the exact identity
+/// `k^m = ∑_j S(m,j) k^(j)` and the Vandermonde consequence
+/// `∑_k k^(j) C(n,k)² = C(2n,n) (n^(j))²/(2n)^(j)`, where `x^(j)` is a
+/// falling factorial. Each nonzero falling-factorial component carries a
+/// directly constructed rational WZ candidate which must pass the fully
+/// symbolic WZ and exact base-case checks. The composite proof then checks the
+/// Stirling power identity, each component's central-binomial quotient, and an
+/// independently reconstructed normalized closed form. The normalized sum is
+/// formed over the known common denominator `(2n)^(moment)` and only exactly
+/// divisible linear factors are cancelled, avoiding unreduced
+/// denominator-product growth. Unsupported orders return `None`.
+#[must_use]
+pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBinomialMoment> {
+    if moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+        return None;
+    }
+    let mut components = Vec::new();
+    for order in 0..=moment {
+        let stirling = combinatorics::stirling_second(moment, order)?;
+        if stirling == 0 {
+            continue;
+        }
+        components.push(squared_binomial_falling_moment_candidate(order)?);
+    }
+    let n = CasExpr::var("n");
+    let normalized_moment = squared_binomial_normalized_moment(moment)?;
+    let closed_form = simplify(
+        &(binomial_coefficient(&(CasExpr::int(2) * n.clone()), &n)
+            * normalized_moment),
+    );
+    let proof = CertifiedSquaredBinomialMoment {
+        moment,
+        closed_form,
+        components,
+    };
+    proof.is_certified().then_some(proof)
+}
+
 /// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
 /// **Wilf–Zeilberger** method, returning the certificate `R(n,k)` when the proof
 /// succeeds. With `f = F/rhs`, a rational **certificate** `R(n,k)` gives the
@@ -5041,14 +5651,19 @@ type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 /// over all `k` collapses the right side to `0`, so `S(n) = ∑_k f(n,k)` is constant,
 /// and `S(base) = 1` pins it to `1` — i.e. `∑_k F(n,k) = rhs(n)`.
 ///
-/// `R` is **discovered** by running [`gosper_sum`] on the WZ term at several concrete
-/// `n` and interpolating the certificate's coefficients over `n`; the answer is then
-/// **verified symbolically** — `equal(G(n,k+1) − G(n,k), f(n+1,k) − f(n,k))` must
-/// certify with `n, k` both symbolic. That symbolic check (not the interpolation) is
-/// the soundness gate: a wrong or under-fitted `R` fails it and the prover declines.
-/// The base case `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite
-/// summation. `None` if any concrete Gosper run, the interpolation, the symbolic
-/// verification, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
+/// `R` is **discovered** by running [`gosper_sum`] or an exact structured-ratio fallback
+/// on the WZ term at several concrete `n` and interpolating the certificate's
+/// coefficients over `n`; the answer is then **verified symbolically** —
+/// `equal(G(n,k+1) − G(n,k), f(n+1,k) − f(n,k))` must certify with `n, k` both
+/// symbolic. If that exact expansion returns `Unknown`, the checker may instead
+/// certify the algebraically equivalent quotient identity
+/// `R(n,k+1)·f(n,k+1)/f(n,k) − R(n,k) = f(n+1,k)/f(n,k) − 1`; a certified-false
+/// direct check never falls back. These symbolic checks (not the interpolation)
+/// are the soundness gate: a wrong or under-fitted `R` fails them and the prover
+/// declines. The base case
+/// `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` is checked by exact finite summation.
+/// `None` if too few concrete samples succeed, interpolation or symbolic verification
+/// declines, or the base case fails. So `∑_k C(n,k) = 2ⁿ` is *proven*, not sampled.
 #[must_use]
 #[allow(clippy::many_single_char_names)] // n, k, f, g, h, r are the standard names here
 pub fn prove_wz_sum(
@@ -5062,12 +5677,17 @@ pub fn prove_wz_sum(
 ) -> Option<CasExpr> {
     // Collect this many successful concrete-`n` certificate samples (comfortably above
     // the n-degree of the certificate coefficients for the classic identities), trying
-    // up to `SCAN` values and *skipping* any `n` where the concrete Gosper run declines
-    // or overflows (larger `n` grow the rising factorials and can overflow) — the
-    // symbolic verification below is the real gate, so a few missing samples are fine.
-    const TARGET: usize = 6;
-    const SCAN: i128 = 24;
-    let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
+    // up to `SCAN` values and *skipping* any `n` where exact certificate discovery
+    // declines or overflows. Symbolic ratio specialization keeps many larger samples
+    // compact, but the symbolic verification below is the real gate, so missing samples
+    // remain a completeness loss rather than a soundness concern.
+    const TARGET: usize = 16;
+    const SCAN: i128 = 32;
+    // Derive the two small rational quotients while `n` is still symbolic, then
+    // specialize them per sample. This avoids rebuilding their equivalent gamma
+    // towers with rapidly growing concrete factorial constants.
+    let (current_ratio_symbolic, outer_ratio_symbolic) =
+        wz_symbolic_ratios(summand, rhs, n, k);
 
     let (mut num_rows, mut den_rows): (CoeffRows, CoeffRows) = (Vec::new(), Vec::new());
     // Sample from *small* `n` (independent of `base`) — Gosper overflows the rising
@@ -5093,19 +5713,43 @@ pub fn prove_wz_sum(
             let f_ni1 = specialize(ni + 1);
             // WZ term h(k) = f(n+1,k) − f(n,k); its k-antidifference is the certificate
             // G_ni(k) = R(ni,k)·f(ni,k).
-            let h = simplify(&(f_ni1 - f_ni.clone()));
-            let g = gosper_sum(&h, k)?;
-            let r = simplify(&CasExpr::Div(Box::new(g), Box::new(f_ni)));
+            let h = simplify(&(f_ni1.clone() - f_ni.clone()));
+            let quotient = if let Some(g) = gosper_sum(&h, k) {
+                CasExpr::Div(Box::new(g), Box::new(f_ni.clone()))
+            } else {
+                let current_ratio = simplify(
+                    &current_ratio_symbolic.substitute(n, &CasExpr::int(ni)),
+                );
+                let outer_ratio =
+                    simplify(&outer_ratio_symbolic.substitute(n, &CasExpr::int(ni)));
+                gosper::gosper_sum_difference_quotient_with_current_ratio(
+                    &current_ratio,
+                    &f_ni1,
+                    &f_ni,
+                    k,
+                )
+                .or_else(|| {
+                    gosper::gosper_sum_difference_quotient_from_ratios(
+                        &current_ratio,
+                        &outer_ratio,
+                        k,
+                    )
+                })
+                .or_else(|| gosper::gosper_sum_difference_quotient(&f_ni1, &f_ni, k))?
+            };
+            let r = simplify(&combine_gamma_ratios(&quotient));
             let rf = normalize_rational(&r)?;
-            let mut num = rf.num.to_univariate(k)?;
-            let mut den = rf.den.to_univariate(k)?;
+            let (num, den) =
+                gosper::cancel_common_monomial_to_univariate(&rf.num, &rf.den, k)?;
+            let (mut num, mut den) = gosper::reduce_fraction(&num, &den)?;
             // Monic denominator, so coefficient positions align across samples.
             let lead = *den.last()?;
             if lead.is_zero() {
                 return None;
             }
             for c in num.iter_mut().chain(den.iter_mut()) {
-                *c = c.checked_div(lead)?;
+                let normalized = c.checked_div(lead)?;
+                *c = normalized;
             }
             Some((poly::rat_trim(num), poly::rat_trim(den)))
         })();
@@ -5123,21 +5767,7 @@ pub fn prove_wz_sum(
     let r_den = interpolate_coeffs_over_n(&den_rows, n, k)?;
     let big_r = CasExpr::Div(Box::new(r_num), Box::new(r_den));
 
-    // Symbolic soundness gate: G(n,k+1) − G(n,k) = f(n+1,k) − f(n,k), with n,k symbolic.
-    let g_sym = CasExpr::Mul(vec![big_r.clone(), f.clone()]);
-    let g_shift = g_sym.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
-    let h_sym = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f.clone();
-    if !matches!(equal(&(g_shift - g_sym), &h_sym), ZeroTest::Certified { equal: true, .. }) {
-        return None;
-    }
-
-    // Base case: `∑_{k=k_lo}^{k_hi} F(base,k) = rhs(base)` by exact finite summation.
-    let mut total = CasExpr::zero();
-    for kk in k_lo..=k_hi {
-        total = total + summand.substitute(n, &CasExpr::int(base)).substitute(k, &CasExpr::int(kk));
-    }
-    let rhs_base = rhs.substitute(n, &CasExpr::int(base));
-    matches!(equal(&total, &rhs_base), ZeroTest::Certified { equal: true, .. }).then_some(big_r)
+    certifies_wz_sum(summand, rhs, &big_r, n, k, base, k_lo, k_hi).then_some(big_r)
 }
 
 /// Interpolate a `k`-polynomial whose coefficients are **rational functions of `n`**,
@@ -5168,15 +5798,20 @@ fn interpolate_coeffs_over_n(rows: &[(Rational, Vec<Rational>)], n: &str, k: &st
     })
 }
 
-/// The lowest-degree rational function `P(var)/Q(var)` (with `Q(0)=1`) passing through
-/// every `(xᵢ, yᵢ)`, or `None` if none does. Tries total degree `deg P + deg Q` from 0
-/// upward; for each split it solves a square system on the first `deg+1` points and
-/// **validates against all** points, so an over-fit is rejected. Subsumes polynomial
-/// interpolation (`deg Q = 0`).
+/// The lowest-degree rational function `P(var)/Q(var)` (with monic `Q`) passing
+/// through every `(xᵢ, yᵢ)`, or `None` if none does. Tries total degree
+/// `deg P + deg Q` from 0 upward, preferring the most balanced numerator/denominator
+/// split when several exactly determined fits have the same total degree. Each fit
+/// is solved on the first `deg+1` points and **validated against all** available
+/// points. Monic normalization admits denominators with `Q(0)=0` (for example
+/// `1/(2n)`), unlike a fixed-unit constant term. Subsumes polynomial interpolation
+/// (`deg Q = 0`).
 fn rational_interpolate(points: &[(Rational, Rational)], var: &str) -> Option<CasExpr> {
     let m = points.len();
     for total in 0..m {
-        for pdeg in 0..=total {
+        let mut numerator_degrees: Vec<usize> = (0..=total).collect();
+        numerator_degrees.sort_by_key(|&pdeg| (pdeg.max(total - pdeg), pdeg));
+        for pdeg in numerator_degrees {
             if let Some(expr) = try_rational_fit(points, pdeg, total - pdeg, var) {
                 return Some(expr);
             }
@@ -5185,12 +5820,12 @@ fn rational_interpolate(points: &[(Rational, Rational)], var: &str) -> Option<Ca
     None
 }
 
-/// Attempt a rational fit `P/Q` with `deg P = pdeg`, `deg Q = qdeg` (`Q(0)=1`): solve
-/// the exact square system `P(xᵢ) − yᵢ·Q(xᵢ) = 0` on the first `pdeg+1+qdeg` points,
-/// then require `P(xᵢ)/Q(xᵢ) = yᵢ` at **every** point. `None` if singular, if any
-/// `Q(xᵢ)=0`, or if validation fails.
+/// Attempt a rational fit `P/Q` with `deg P = pdeg`, `deg Q = qdeg` and monic
+/// denominator: solve the exact square system `P(xᵢ) − yᵢ·Q(xᵢ) = 0` on the first
+/// `pdeg+1+qdeg` points, then require `P(xᵢ)/Q(xᵢ) = yᵢ` at **every** point. `None`
+/// if singular, if any `Q(xᵢ)=0`, or if validation fails.
 fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, var: &str) -> Option<CasExpr> {
-    let unknowns = pdeg + 1 + qdeg; // p₀..p_pdeg, q₁..q_qdeg  (q₀ fixed to 1)
+    let unknowns = pdeg + 1 + qdeg; // p₀..p_pdeg, q₀..q_(qdeg−1); q_qdeg fixed to 1
     if points.len() < unknowns {
         return None;
     }
@@ -5207,14 +5842,17 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
     for j in 0..=pdeg {
         cols.push(rows.iter().map(|(x, _)| rat_pow(*x, j)).collect::<Option<_>>()?);
     }
-    for j in 1..=qdeg {
+    for j in 0..qdeg {
         cols.push(
             rows.iter()
                 .map(|(x, y)| y.checked_neg()?.checked_mul(rat_pow(*x, j)?))
                 .collect::<Option<_>>()?,
         );
     }
-    let rhs: Vec<Rational> = rows.iter().map(|(_, y)| *y).collect();
+    let rhs: Vec<Rational> = rows
+        .iter()
+        .map(|(x, y)| y.checked_mul(rat_pow(*x, qdeg)?))
+        .collect::<Option<_>>()?;
     let solution = ratint::solve_linear(&cols, &rhs)?;
     let (p_coeffs, q_tail) = solution.split_at(pdeg + 1);
     let eval = |coeffs: &[Rational], x: Rational| -> Option<Rational> {
@@ -5224,12 +5862,13 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
         }
         Some(acc)
     };
-    // Validate `P(x)/Q(x) = y` at every point (`Q(x) = 1 + Σ qⱼ xʲ`).
+    // Validate `P(x)/Q(x) = y` at every point
+    // (`Q(x) = Σ_{j<qdeg} qⱼxʲ + x^qdeg`).
     for (x, y) in points {
         let p_val = eval(p_coeffs, *x)?;
-        let mut q_val = Rational::integer(1);
+        let mut q_val = rat_pow(*x, qdeg)?;
         for (j, q) in q_tail.iter().enumerate() {
-            q_val = q_val.checked_add(q.checked_mul(rat_pow(*x, j + 1)?)?)?;
+            q_val = q_val.checked_add(q.checked_mul(rat_pow(*x, j)?)?)?;
         }
         if q_val.is_zero() || p_val != y.checked_mul(q_val)? {
             return None;
@@ -5240,8 +5879,8 @@ fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, v
     if qdeg == 0 {
         return Some(p_expr);
     }
-    let mut q_full = vec![Rational::integer(1)];
-    q_full.extend_from_slice(q_tail);
+    let mut q_full = q_tail.to_vec();
+    q_full.push(Rational::integer(1));
     let q_expr = MultiPoly::from_univariate(var, &q_full).to_expr();
     Some(CasExpr::Div(Box::new(p_expr), Box::new(q_expr)))
 }
@@ -5560,7 +6199,7 @@ pub fn simplify(expr: &CasExpr) -> CasExpr {
 ///
 /// The expression is normalized to a rational function over `sin`/`cos` atoms and
 /// reduced in both directions — eliminating `cos²` in favour of `sin²` and vice
-/// versa (see [`MultiPoly::fold_pythagorean`] and its mirror) — and the smallest
+/// versa (see `MultiPoly::fold_pythagorean` and its mirror) — and the smallest
 /// candidate that [`equal`] certifies value-equal to the input is chosen (the
 /// input itself in the worst case). So `sin²x + cos²x → 1`, `1 − cos²x → sin²x`,
 /// `2sin²x + 2cos²x → 2`, while an already-minimal form is returned unchanged.
@@ -6466,15 +7105,19 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
 /// finite-calculus power rule `Δ[x^{(n)}] = n·x^{(n−1)}`.
 #[must_use]
 pub fn falling_factorial(base: &CasExpr, n: u32) -> CasExpr {
+    let product = falling_factorial_product(base, n);
+    expand(&product).unwrap_or(product)
+}
+
+fn falling_factorial_product(base: &CasExpr, n: u32) -> CasExpr {
     let factors: Vec<CasExpr> = (0..n)
         .map(|i| base.clone() - CasExpr::int(i128::from(i)))
         .collect();
-    let product = match factors.len() {
-        0 => return CasExpr::one(),
+    match factors.len() {
+        0 => CasExpr::one(),
         1 => factors.into_iter().next().unwrap_or_else(CasExpr::one),
         _ => CasExpr::Mul(factors),
-    };
-    expand(&product).unwrap_or(product)
+    }
 }
 
 /// The **rising factorial** (Pochhammer symbol) `base^{(n)↑} =
@@ -7775,6 +8418,7 @@ pub(crate) fn combine_gamma_ratios(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(UnaryFunc::Gamma, arg) => {
             let arg = combine_gamma_ratios(arg);
+            let arg = normalize(&arg).map_or(arg, |poly| poly.to_expr());
             lower_gamma_to_base(&arg)
                 .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::Gamma, Box::new(arg)))
         }
@@ -17078,6 +17722,569 @@ mod tests {
     }
 
     #[test]
+    fn wilf_zeilberger_adjacent_binomial_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(1)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 0)
+            .expect("adjacent-binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(1))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(2))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n())
+                * (k() - n() - CasExpr::int(1)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 0).is_none());
+    }
+
+    #[test]
+    fn fixed_shift_binomial_convolution_family_is_checked() {
+        for shift in 0..=7 {
+            prove_fixed_shift_binomial_convolution(shift)
+                .unwrap_or_else(|| panic!("fixed-shift certificate {shift} must verify"));
+        }
+
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(4)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(4)));
+        assert!(!certifies_wz_sum(
+            &term,
+            &rhs,
+            &CasExpr::zero(),
+            "n",
+            "k",
+            4,
+            0,
+            0,
+        ));
+    }
+
+    fn squared_binomial_moment_eleven_expected() -> CasExpr {
+        let n = || v("n");
+        n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(11) + CasExpr::int(14) * n().pow(10)
+                - CasExpr::int(39) * n().pow(9)
+                - CasExpr::int(726) * n().pow(8)
+                + CasExpr::int(1_275) * n().pow(7)
+                + CasExpr::int(10_626) * n().pow(6)
+                - CasExpr::int(23_793) * n().pow(5)
+                - CasExpr::int(26_598) * n().pow(4)
+                + CasExpr::int(100_980) * n().pow(3)
+                - CasExpr::int(90_332) * n().pow(2)
+                + CasExpr::int(35_816) * n()
+                - CasExpr::int(5_544))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(64)
+                * (CasExpr::int(2) * n() - CasExpr::int(9))
+                * (CasExpr::int(2) * n() - CasExpr::int(7))
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)))
+    }
+
+    #[test]
+    fn squared_binomial_moment_family_is_checked() {
+        let n = || v("n");
+        let mut proofs = Vec::new();
+        for moment in 0..=MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+            let proof = prove_squared_binomial_moment(moment)
+                .unwrap_or_else(|| panic!("squared-binomial moment {moment} must verify"));
+            assert!(proof.is_certified());
+
+            let sample_n = i128::from(moment.clamp(2, 8));
+            let mut direct = CasExpr::zero();
+            for sample_k in 0..=sample_n {
+                direct = direct
+                    + CasExpr::int(sample_k).pow(moment)
+                        * binomial_coefficient(&CasExpr::int(sample_n), &CasExpr::int(sample_k))
+                            .pow(2);
+            }
+            assert_equal(
+                &direct,
+                &proof.closed_form.substitute("n", &CasExpr::int(sample_n)),
+            );
+            proofs.push(proof);
+        }
+
+        let fifth = proofs.get(5).expect("moment five proof exists");
+        let fifth_expected = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(2) + CasExpr::int(2) * n() - CasExpr::int(5))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&fifth.closed_form, &fifth_expected);
+
+        let sixth = proofs.get(6).expect("moment six proof exists");
+        let sixth_expected = n().pow(3)
+            * (n().pow(6) + CasExpr::int(3) * n().pow(5)
+                - CasExpr::int(13) * n().pow(4)
+                - CasExpr::int(15) * n().pow(3)
+                + CasExpr::int(30) * n().pow(2)
+                + CasExpr::int(8) * n()
+                - CasExpr::int(2))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&sixth.closed_form, &sixth_expected);
+
+        let seventh = proofs.get(7).expect("moment seven proof exists");
+        let seventh_expected = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(5) + CasExpr::int(5) * n().pow(4)
+                - CasExpr::int(15) * n().pow(3)
+                - CasExpr::int(35) * n().pow(2)
+                + CasExpr::int(70) * n()
+                - CasExpr::int(14))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(16)
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&seventh.closed_form, &seventh_expected);
+
+        let eighth = proofs.get(8).expect("moment eight proof exists");
+        let eighth_expected = n().pow(3)
+            * (n().pow(9) + CasExpr::int(6) * n().pow(8)
+                - CasExpr::int(31) * n().pow(7)
+                - CasExpr::int(106) * n().pow(6)
+                + CasExpr::int(315) * n().pow(5)
+                + CasExpr::int(294) * n().pow(4)
+                - CasExpr::int(693) * n().pow(3)
+                + CasExpr::int(18) * n().pow(2)
+                + CasExpr::int(96) * n()
+                - CasExpr::int(20))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(16)
+                * (CasExpr::int(2) * n() - CasExpr::int(7))
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&eighth.closed_form, &eighth_expected);
+
+        let eleventh = proofs.get(11).expect("moment eleven proof exists");
+        let eleventh_expected = squared_binomial_moment_eleven_expected();
+        assert_equal(&eleventh.closed_form, &eleventh_expected);
+
+        let highest = proofs.last().expect("moment nineteen proof exists");
+
+        let mut false_proof = highest.clone();
+        false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
+        assert!(!false_proof.is_certified());
+
+        let mut false_proof = highest.clone();
+        false_proof.components[0].certificate = CasExpr::zero();
+        assert!(!false_proof.is_certified());
+
+        let mut false_proof = highest.clone();
+        false_proof.components.pop();
+        assert!(!false_proof.is_certified());
+
+        assert!(prove_squared_binomial_moment(MAX_PROVED_SQUARED_BINOMIAL_MOMENT + 1).is_none());
+    }
+
+    #[test]
+    fn nested_product_quotients_compact_order_nineteen_wz_ratios() {
+        let n = || v("n");
+        let k = || v("k");
+        let order = 19u32;
+        let order_expr = CasExpr::int(i128::from(order));
+        let summand = falling_factorial_product(&k(), order)
+            * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = falling_factorial_product(&n(), order)
+            * binomial_coefficient(
+                &(CasExpr::int(2) * n() - order_expr.clone()),
+                &(n() - order_expr),
+            );
+        let (current_ratio, outer_ratio) = wz_symbolic_ratios(&summand, &rhs, "n", "k");
+        let expected_current = (n() - k()).pow(2)
+            / ((k() + CasExpr::int(1)) * (k() - CasExpr::int(18)));
+        let expected_outer = (n() + CasExpr::int(1)).pow(2)
+            / (n() - k() + CasExpr::int(1)).pow(2)
+            * (n() - CasExpr::int(18)).pow(2)
+            / ((CasExpr::int(2) * n() - CasExpr::int(17))
+                * (CasExpr::int(2) * n() - CasExpr::int(18)));
+        assert_equal(&current_ratio, &expected_current);
+        assert_equal(&outer_ratio, &expected_outer);
+        assert!(!format!("{outer_ratio}").contains("gamma"));
+    }
+
+    #[test]
+    fn squared_binomial_falling_moment_family_is_checked() {
+        let mut proofs = Vec::new();
+        for order in 0..=MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
+            let proof = prove_squared_binomial_falling_moment(order)
+                .unwrap_or_else(|| panic!("falling-factorial moment {order} must verify"));
+            assert!(proof.is_certified());
+
+            let sample_n = i128::from(order.max(2));
+            let mut direct = 0i128;
+            for sample_k in 0..=sample_n {
+                let falling = (0..order).try_fold(1i128, |value, index| {
+                    value.checked_mul(sample_k - i128::from(index))
+                });
+                let falling = falling.expect("sample falling factorial fits i128");
+                if falling == 0 {
+                    continue;
+                }
+                let binomial = ntheory::binomial(sample_n, sample_k)
+                    .expect("sample binomial coefficient fits i128");
+                let term = falling
+                    .checked_mul(
+                        binomial
+                            .checked_mul(binomial)
+                            .expect("sample binomial square fits i128"),
+                    )
+                    .expect("sample moment term fits i128");
+                direct = direct.checked_add(term).expect("sample moment sum fits i128");
+            }
+            let closed_at_sample = simplify(
+                &proof
+                    .closed_form
+                    .substitute("n", &CasExpr::int(sample_n)),
+            );
+            let closed_value = closed_at_sample
+                .eval(&BTreeMap::new())
+                .expect("sample closed form evaluates exactly");
+            assert_eq!(closed_value, Rational::integer(direct));
+            proofs.push(proof);
+        }
+
+        let mut false_proof = proofs
+            .last()
+            .expect("order thirty-three proof exists")
+            .clone();
+        false_proof.certificate = CasExpr::zero();
+        assert!(!false_proof.is_certified());
+        assert!(
+            prove_squared_binomial_falling_moment(
+                MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT + 1
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn wilf_zeilberger_fixed_shift_two_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(2)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(2)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 2, 0, 0)
+            .expect("fixed-shift-two binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(2))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(1))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(1)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 2, 0, 0).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_fixed_shift_three_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(3)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(3)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 3, 0, 0)
+            .expect("fixed-shift-three binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(3))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n())
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 3, 0, 0).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_fixed_shift_four_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(4)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(4)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 4, 0, 0)
+            .expect("fixed-shift-four binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(4))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() + CasExpr::int(1))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(3)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 4, 0, 0).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_squared_binomial_moments() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let squared = binomial_coefficient(&n(), &k()).pow(2);
+
+        // ∑ k·C(n,k)² = (n/2)·C(2n,n). Its certificate coefficients include a
+        // pole at n=0, and concrete discovery uses the reduced Gosper certificate.
+        let first_rhs = n() * central.clone() / CasExpr::int(2);
+        let first = prove_wz_sum(&(k() * squared.clone()), "n", "k", &first_rhs, 1, 0, 1)
+            .expect("first squared-binomial moment is WZ-provable");
+        let first_expected = k()
+            * (k() - CasExpr::int(1))
+            * ((CasExpr::int(2) * n() + CasExpr::int(1)) * k()
+                - (CasExpr::int(3) * n() + CasExpr::int(1)) * (n() + CasExpr::int(1)))
+            / (CasExpr::int(2)
+                * n()
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&first, &first_expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        // ∑ k²·C(n,k)² = n³/(2(2n−1))·C(2n,n).
+        let second_rhs = n().pow(3) * central
+            / (CasExpr::int(2) * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let second = prove_wz_sum(&(k().pow(2) * squared), "n", "k", &second_rhs, 1, 0, 1)
+            .expect("second squared-binomial moment is WZ-provable");
+        let second_expected = (k() - CasExpr::int(1)).pow(2)
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(2))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() - CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&second, &second_expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+
+        let false_first_rhs = n()
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / CasExpr::int(2)
+            + CasExpr::int(1);
+        assert!(
+            prove_wz_sum(
+                &(k() * binomial_coefficient(&n(), &k()).pow(2)),
+                "n",
+                "k",
+                &false_first_rhs,
+                1,
+                0,
+                1,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn wilf_zeilberger_third_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(3) * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = n().pow(3) * (n() + CasExpr::int(1)) * central
+            / (CasExpr::int(4) * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("third squared-binomial moment is WZ-provable");
+        let inner = k().pow(2)
+            * (CasExpr::int(2) * n().pow(2) + CasExpr::int(3) * n() - CasExpr::int(2))
+            - k()
+                * (CasExpr::int(3) * n().pow(3)
+                    + CasExpr::int(8) * n().pow(2)
+                    + CasExpr::int(3) * n()
+                    - CasExpr::int(2))
+            + CasExpr::int(3) * n() * (n() + CasExpr::int(1)).pow(2);
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k()
+                * (n() - CasExpr::int(1))
+                * (n() + CasExpr::int(2))
+                * (CasExpr::int(2) * n() - CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_fourth_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(4) * binomial_coefficient(&n(), &k()).pow(2);
+        let moment_polynomial = n().pow(3) + n().pow(2) - CasExpr::int(3) * n()
+            - CasExpr::int(1);
+        let rhs = n().pow(3) * moment_polynomial * central
+            / (CasExpr::int(4)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("fourth squared-binomial moment is WZ-provable");
+        let inner = CasExpr::int(2) * k().pow(3) * n().pow(4)
+            + CasExpr::int(6) * k().pow(3) * n().pow(3)
+            - CasExpr::int(4) * k().pow(3) * n().pow(2)
+            - CasExpr::int(8) * k().pow(3) * n()
+            + CasExpr::int(4) * k().pow(3)
+            - CasExpr::int(3) * k().pow(2) * n().pow(5)
+            - CasExpr::int(14) * k().pow(2) * n().pow(4)
+            - CasExpr::int(11) * k().pow(2) * n().pow(3)
+            + CasExpr::int(14) * k().pow(2) * n().pow(2)
+            + CasExpr::int(10) * k().pow(2) * n()
+            - CasExpr::int(6) * k().pow(2)
+            + CasExpr::int(6) * k() * n().pow(5)
+            + CasExpr::int(22) * k() * n().pow(4)
+            + CasExpr::int(16) * k() * n().pow(3)
+            - CasExpr::int(4) * k() * n().pow(2)
+            - CasExpr::int(2) * k() * n()
+            + CasExpr::int(2) * k()
+            - CasExpr::int(3) * n().pow(5)
+            - CasExpr::int(10) * n().pow(4)
+            - CasExpr::int(14) * n().pow(3)
+            - CasExpr::int(10) * n().pow(2)
+            - CasExpr::int(3) * n();
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k().pow(2)
+                * (n() - CasExpr::int(1))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (k() - n() - CasExpr::int(1)).pow(2)
+                * (n().pow(3) + CasExpr::int(4) * n().pow(2)
+                    + CasExpr::int(2) * n()
+                    - CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
+    }
+
+    #[test]
+    fn wilf_zeilberger_fifth_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(5) * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(2) + CasExpr::int(2) * n() - CasExpr::int(5))
+            * central
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("fifth squared-binomial moment is WZ-provable");
+        let inner = CasExpr::int(2) * k().pow(4) * n().pow(5)
+            + CasExpr::int(7) * k().pow(4) * n().pow(4)
+            - CasExpr::int(15) * k().pow(4) * n().pow(3)
+            - CasExpr::int(20) * k().pow(4) * n().pow(2)
+            + CasExpr::int(38) * k().pow(4) * n()
+            - CasExpr::int(12) * k().pow(4)
+            - CasExpr::int(3) * k().pow(3) * n().pow(6)
+            - CasExpr::int(17) * k().pow(3) * n().pow(5)
+            - CasExpr::int(4) * k().pow(3) * n().pow(4)
+            + CasExpr::int(60) * k().pow(3) * n().pow(3)
+            + CasExpr::int(8) * k().pow(3) * n().pow(2)
+            - CasExpr::int(68) * k().pow(3) * n()
+            + CasExpr::int(24) * k().pow(3)
+            + CasExpr::int(9) * k().pow(2) * n().pow(6)
+            + CasExpr::int(39) * k().pow(2) * n().pow(5)
+            - CasExpr::int(60) * k().pow(2) * n().pow(3)
+            + CasExpr::int(24) * k().pow(2) * n().pow(2)
+            + CasExpr::int(26) * k().pow(2) * n()
+            - CasExpr::int(12) * k().pow(2)
+            - CasExpr::int(9) * k() * n().pow(6)
+            - CasExpr::int(35) * k() * n().pow(5)
+            - CasExpr::int(31) * k() * n().pow(4)
+            - CasExpr::int(21) * k() * n().pow(3)
+            - CasExpr::int(12) * k() * n().pow(2)
+            + CasExpr::int(4) * k() * n()
+            + CasExpr::int(3) * n().pow(6)
+            + CasExpr::int(11) * n().pow(5)
+            + CasExpr::int(31) * n().pow(4)
+            + CasExpr::int(41) * n().pow(3)
+            + CasExpr::int(18) * n().pow(2);
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k().pow(3)
+                * (n() - CasExpr::int(2))
+                * (n() - CasExpr::int(1))
+                * (n() + CasExpr::int(2))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (k() - n() - CasExpr::int(1)).pow(2)
+                * (n().pow(2) + CasExpr::int(4) * n() - CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
+    }
+
+    #[test]
+    fn rational_interpolation_allows_a_pole_at_zero() {
+        let points: Vec<_> = (1..=5)
+            .map(|n| (Rational::integer(n), Rational::new(1, 2 * n)))
+            .collect();
+        let fit = rational_interpolate(&points, "n").expect("1/(2n) is rational-interpolable");
+        assert_equal(&fit, &(CasExpr::int(1) / (CasExpr::int(2) * v("n"))));
+    }
+
+    #[test]
+    fn rational_interpolation_uses_bignum_intermediates() {
+        let value = |n: i128| {
+            Rational::integer(-n * (n + 1).pow(2) * (3 * n.pow(2) + 4 * n + 3))
+                / Rational::integer(
+                    2 * (n - 1) * (2 * n - 3) * (n.pow(3) + 4 * n.pow(2) + 2 * n - 2),
+                )
+        };
+        let points: Vec<_> = (2..=13)
+            .map(|n| (Rational::integer(n), value(n)))
+            .collect();
+        let fit = rational_interpolate(&points, "n").expect("5/5 fit needs bignum intermediates");
+        let n = v("n");
+        let expected = -n.clone()
+            * (n.clone() + CasExpr::int(1)).pow(2)
+            * (CasExpr::int(3) * n.clone().pow(2) + CasExpr::int(4) * n.clone()
+                + CasExpr::int(3))
+            / (CasExpr::int(2)
+                * (n.clone() - CasExpr::int(1))
+                * (CasExpr::int(2) * n.clone() - CasExpr::int(3))
+                * (n.clone().pow(3) + CasExpr::int(4) * n.clone().pow(2)
+                    + CasExpr::int(2) * n
+                    - CasExpr::int(2)));
+        assert_equal(&fit, &expected);
+    }
+
+    #[test]
     fn bernoulli_polynomials_and_their_defining_identity() {
         let x = || v("x");
         // Known low-order values.
@@ -21715,6 +22922,11 @@ mod tests {
         // The combined form is genuinely a rational function of k now — no Γ heads left.
         let ratio = (k() + CasExpr::int(3)).gamma() / (k() + CasExpr::int(1)).gamma();
         assert!(!format!("{}", simplify(&ratio)).contains("gamma"));
+        // Equivalent zero-constant polynomial arguments canonicalize even when
+        // no functional-equation step is needed: Γ(2(k+1)−2)/Γ(2k) = 1.
+        let same_base = (CasExpr::int(2) * (k() + CasExpr::int(1)) - CasExpr::int(2)).gamma()
+            / (CasExpr::int(2) * k()).gamma();
+        assert!(certified(&same_base, &CasExpr::int(1)));
     }
 
     #[test]

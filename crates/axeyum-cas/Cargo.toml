@@ -17,6 +17,12 @@ publish = false
 # WASM-safe. No solver dependency: Phase C0 certifies entirely via exact
 # polynomial normal forms (the normal form *is* the witness).
 axeyum-ir.workspace = true
+# Exact fallback for small linear systems whose intermediate rational
+# coefficients overflow i128 even though the final solution fits. These are the
+# same pure-Rust bignum crates already used unconditionally by axeyum-ir.
+num-bigint = { version = "0.4" }
+num-rational = { version = "0.4", default-features = false, features = ["num-bigint"] }
+num-traits = { version = "0.2" }
 
 [lints]
 workspace = true

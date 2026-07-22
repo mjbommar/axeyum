@@ -20,6 +20,9 @@
 //! Horowitz–Ostrogradsky method).
 
 use axeyum_ir::{Rational, poly};
+use num_bigint::BigInt;
+use num_rational::BigRational;
+use num_traits::{ToPrimitive, Zero};
 
 /// A dense univariate polynomial, LSB-first (matching `axeyum_ir::poly`).
 pub(crate) type RatVec = Vec<Rational>;
@@ -43,6 +46,11 @@ pub(crate) fn divrem(a: &[Rational], b: &[Rational]) -> Option<(RatVec, RatVec)>
 /// Returns `None` if the system is singular or on overflow. Column `j` supplies
 /// the coefficients of unknown `xⱼ`; missing entries are read as zero.
 pub(crate) fn solve_linear(cols: &[RatVec], rhs: &[Rational]) -> Option<Vec<Rational>> {
+    solve_linear_i128(cols, rhs).or_else(|| solve_linear_big(cols, rhs))
+}
+
+/// Fast path for [`solve_linear`] over the crate's ordinary `i128` rationals.
+fn solve_linear_i128(cols: &[RatVec], rhs: &[Rational]) -> Option<Vec<Rational>> {
     let n = cols.len();
     let m = rhs.len();
     if n != m {
@@ -82,6 +90,66 @@ pub(crate) fn solve_linear(cols: &[RatVec], rhs: &[Rational]) -> Option<Vec<Rati
         }
     }
     Some((0..n).map(|j| mat[j][n]).collect())
+}
+
+/// Exact bignum fallback for a small square system. Only final coefficients that
+/// fit the public `i128` [`Rational`] representation are returned; otherwise the
+/// caller still declines. This keeps coefficient growth out of the soundness
+/// path without changing the CAS value model.
+fn solve_linear_big(cols: &[RatVec], rhs: &[Rational]) -> Option<Vec<Rational>> {
+    const MAX_BIG_LINEAR_DIMENSION: usize = 16;
+    let n = cols.len();
+    if n != rhs.len() || n > MAX_BIG_LINEAR_DIMENSION {
+        return None;
+    }
+    let lift = |value: Rational| {
+        BigRational::new(
+            BigInt::from(value.numerator()),
+            BigInt::from(value.denominator()),
+        )
+    };
+    let mut matrix: Vec<Vec<BigRational>> = (0..n)
+        .map(|row| {
+            let mut values: Vec<BigRational> = (0..n)
+                .map(|column| {
+                    lift(
+                        cols[column]
+                            .get(row)
+                            .copied()
+                            .unwrap_or_else(Rational::zero),
+                    )
+                })
+                .collect();
+            values.push(lift(rhs[row]));
+            values
+        })
+        .collect();
+
+    for column in 0..n {
+        let pivot_row = (column..n).find(|&row| !matrix[row][column].is_zero())?;
+        matrix.swap(column, pivot_row);
+        let pivot = matrix[column][column].clone();
+        for entry in &mut matrix[column][column..=n] {
+            *entry /= pivot.clone();
+        }
+        let pivot_values = matrix[column][column..=n].to_vec();
+        for (row_index, row) in matrix.iter_mut().enumerate() {
+            if row_index == column || row[column].is_zero() {
+                continue;
+            }
+            let factor = row[column].clone();
+            for (offset, pivot_value) in pivot_values.iter().enumerate() {
+                row[column + offset] -= factor.clone() * pivot_value;
+            }
+        }
+    }
+
+    (0..n)
+        .map(|index| {
+            let value = &matrix[index][n];
+            Rational::checked_new(value.numer().to_i128()?, value.denom().to_i128()?)
+        })
+        .collect()
 }
 
 /// `x^k` as a dense polynomial.

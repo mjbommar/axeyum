@@ -8,7 +8,7 @@
 //! radicals — is representable exactly and can be refined to arbitrary precision.
 //!
 //! The defining polynomial is an **irreducible factor over ℚ** (from
-//! [`factor_univariate_over_q`](crate::factor_univariate_over_q)), so it is the
+//! [`factor_univariate_over_q`]), so it is the
 //! genuine minimal polynomial and `degree()` is the algebraic degree.
 
 use axeyum_ir::{Rational, poly};
