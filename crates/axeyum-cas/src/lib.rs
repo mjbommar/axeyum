@@ -1852,10 +1852,129 @@ pub fn poly_div(a: &CasExpr, b: &CasExpr, var: &str) -> Option<(CasExpr, CasExpr
 /// `2x² − 6x + 4 → 2·(x−1)·(x−2)`. The result is **certified** equal to the input
 /// (re-multiplication zero-test). Returns `None` if `expr` is not a univariate
 /// polynomial or on overflow. (Irreducible factors of degree ≥ 2 are left intact;
+/// The exact square root of a univariate rational polynomial, if it is a perfect
+/// square `q(x)²`: returns `q`'s coefficients. Solves top-down
+/// (`q_d = √p_{2d}`, then each lower `q_k` from the degree-`(d+k)` equation) and
+/// verifies `q² = p`. `None` if `p` has odd degree, a non-square leading
+/// coefficient, or is not a perfect square.
+fn rational_poly_sqrt(p: &[Rational]) -> Option<Vec<Rational>> {
+    let trimmed = poly::rat_trim(p.to_vec());
+    if trimmed.is_empty() {
+        return Some(vec![Rational::zero()]); // √0 = 0
+    }
+    let deg = trimmed.len() - 1;
+    if !deg.is_multiple_of(2) {
+        return None;
+    }
+    let d = deg / 2;
+    let mut q = vec![Rational::zero(); d + 1];
+    q[d] = rational_sqrt(trimmed[deg])?;
+    let two_qd = q[d].checked_mul(Rational::integer(2))?;
+    for k in (0..d).rev() {
+        let m = d + k;
+        // p[m] = 2·q_d·q_k + Σ_{i=k+1}^{d-1} q_i·q_{m-i}.
+        let mut acc = *trimmed.get(m).unwrap_or(&Rational::zero());
+        for i in (k + 1)..d {
+            let product = q[i].checked_mul(q[m - i])?;
+            acc = acc.checked_sub(product)?;
+        }
+        q[k] = acc.checked_div(two_qd)?;
+    }
+    // Verify q² = p exactly (checks the low-degree coefficients too).
+    let mut square = vec![Rational::zero(); deg + 1];
+    for (i, qi) in q.iter().enumerate() {
+        for (j, qj) in q.iter().enumerate() {
+            square[i + j] = square[i + j].checked_add(qi.checked_mul(*qj)?)?;
+        }
+    }
+    (poly::rat_trim(square) == trimmed).then_some(q)
+}
+
+/// Factor a **bivariate (or multivariate) quadratic in `var`** — `a·x² + b·x + c`
+/// with `a` a rational constant and `b, c` polynomials in the other variables —
+/// when the discriminant `b² − 4ac` is a perfect square polynomial (univariate in
+/// one other variable, or constant): `a·(x − r₁)(x − r₂)`, `r = (−b ± √disc)/2a`.
+/// Certified by re-multiplication. Covers `x² − y² = (x−y)(x+y)`,
+/// `x² + 2xy + y² = (x+y)²`. `None` outside this shape.
+fn factor_bivariate_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Group the polynomial's coefficients by the power of `var` (each an expression
+    // in the other variables), like `collect` — `to_univariate` can't, since those
+    // coefficients aren't rational.
+    let poly = normalize(expr)?;
+    let mut by_degree: BTreeMap<u32, MultiPoly> = BTreeMap::new();
+    for (mono, coefficient) in &poly.terms {
+        let degree = mono.powers.get(var).copied().unwrap_or(0);
+        let mut rest = mono.clone();
+        rest.powers.remove(var);
+        let term = MultiPoly {
+            terms: [(rest, *coefficient)].into_iter().collect(),
+        };
+        let entry = by_degree.entry(degree).or_insert_with(MultiPoly::zero);
+        *entry = entry.add(&term)?;
+    }
+    if by_degree.keys().copied().max()? != 2 {
+        return None; // must be exactly quadratic in `var`
+    }
+    let coeff_expr = |d: u32| by_degree.get(&d).map_or_else(CasExpr::zero, MultiPoly::to_expr);
+    let a = coeff_expr(2);
+    let a_const = constant_term(&a)?; // leading coefficient in x must be a constant
+    if a_const.is_zero() {
+        return None;
+    }
+    let b = coeff_expr(1);
+    let c = coeff_expr(0);
+    let disc = expand(&(b.clone() * b.clone() - CasExpr::int(4) * a.clone() * c.clone()))?;
+    let sqrt_disc = poly_sqrt_expr(&disc)?;
+    // r₁ = (−b + s)/(2a), r₂ = (−b − s)/(2a).
+    let two_a = a_const.checked_mul(Rational::integer(2))?;
+    let inv_two_a = Rational::integer(1).checked_div(two_a)?;
+    let root1 = simplify(&scaled_term(inv_two_a, sqrt_disc.clone() - b.clone()));
+    let root2 = simplify(&scaled_term(inv_two_a, CasExpr::Neg(Box::new(sqrt_disc)) - b));
+    let x = CasExpr::var(var);
+    let linear1 = x.clone() - root1;
+    let linear2 = x - root2;
+    let factored = if a_const == Rational::integer(1) {
+        CasExpr::Mul(vec![linear1, linear2])
+    } else {
+        CasExpr::Mul(vec![CasExpr::Const(a_const), linear1, linear2])
+    };
+    match equal(&factored, expr) {
+        ZeroTest::Certified { equal: true, .. } => Some(factored),
+        _ => None,
+    }
+}
+
+/// The polynomial square root of `disc` as a [`CasExpr`], if `disc` is a perfect
+/// square that is constant or univariate in a single variable. `None` otherwise.
+fn poly_sqrt_expr(disc: &CasExpr) -> Option<CasExpr> {
+    let poly = normalize(disc)?;
+    // The variable set of the discriminant.
+    let mut vars: BTreeSet<String> = BTreeSet::new();
+    for mono in poly.terms.keys() {
+        for var in mono.powers.keys() {
+            vars.insert(var.clone());
+        }
+    }
+    match vars.len() {
+        0 => Some(CasExpr::Const(rational_sqrt(constant_term(disc)?)?)),
+        1 => {
+            let var = vars.iter().next()?;
+            let root = rational_poly_sqrt(&poly.to_univariate(var)?)?;
+            Some(MultiPoly::from_univariate(var, &root).to_expr())
+        }
+        _ => None,
+    }
+}
+
 /// full factorization over ℚ is a later slice.)
 #[must_use]
 pub fn factor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
-    let coeffs = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
+    let Some(univariate) = normalize(expr)?.to_univariate(var) else {
+        // Coefficients aren't rational (a multivariate polynomial) — try the
+        // bivariate-quadratic factorizer before giving up.
+        return factor_bivariate_quadratic(expr, var);
+    };
+    let coeffs = poly::rat_trim(univariate);
     if ratint::is_zero(&coeffs) {
         return Some(CasExpr::zero());
     }
@@ -11886,6 +12005,35 @@ mod tests {
         .unwrap();
         assert_equal(&q, &(x().pow(2) + x() + CasExpr::int(1)));
         assert_equal(&r, &CasExpr::zero());
+    }
+
+    #[test]
+    fn factor_bivariate_quadratics() {
+        let x = || v("x");
+        let y = || v("y");
+        // Multivariate quadratic factorization (certified by re-multiplication).
+        for (poly, factored) in [
+            (x().pow(2) - y().pow(2), (x() - y()) * (x() + y())),
+            (
+                x().pow(2) + CasExpr::int(2) * x() * y() + y().pow(2),
+                (x() + y()) * (x() + y()),
+            ),
+            (
+                x().pow(2) - CasExpr::int(4) * y().pow(2),
+                (x() - CasExpr::int(2) * y()) * (x() + CasExpr::int(2) * y()),
+            ),
+        ] {
+            let result = factor(&poly, "x").expect("factorable");
+            assert_equal(&result, &poly); // certified equal to the input
+            assert_equal(&result, &factored);
+        }
+        // 2x² − 2y² = 2(x−y)(x+y) — non-unit leading constant preserved.
+        assert_equal(
+            &factor(&(CasExpr::int(2) * x().pow(2) - CasExpr::int(2) * y().pow(2)), "x").unwrap(),
+            &(CasExpr::int(2) * x().pow(2) - CasExpr::int(2) * y().pow(2)),
+        );
+        // x² + y² is irreducible over ℚ — returns None (never a wrong factorization).
+        assert!(factor(&(x().pow(2) + y().pow(2)), "x").is_none());
     }
 
     #[test]
