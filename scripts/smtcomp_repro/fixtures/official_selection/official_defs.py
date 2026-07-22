@@ -14,6 +14,16 @@ class Logic:
     QF_LIA = "QF_LIA"
 
 
+class Config:
+    removed_benchmarks = [
+        {
+            "logic": int(Logic.QF_BV),
+            "family": "2024-old/nested",
+            "name": "removed.smt2",
+        }
+    ]
+
+
 tracks: dict[Track, dict[Division, set[Logic]]] = {
     Track.SingleQuery: {
         Division.QF_Bitvec: {Logic.QF_BV},

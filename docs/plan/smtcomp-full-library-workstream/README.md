@@ -45,7 +45,8 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   code plus matching SMT-LIB 2025.08.04 release; E1b's exact ordered per-file
   digest ledger does not substitute for it. S1a now parses the organizer's
   actual `defs.py`, benchmark/results JSON, and submission shapes without
-  importing organizer code; the selection-free full-input audit is next.
+  importing organizer code. The S1b streaming audit runner is fixture-green and
+  awaits its full selection-free input run; it cannot produce a selected set.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -295,9 +296,9 @@ NAS (shared, corpus read-only in practice):
    treating the stale run as evidence.
 4. Take the independent official selection-identity ledger next. Keep the v2
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
-   necessary correction. S0 and S1a are complete; execute ADR-0356 S1b next and
-   do not observe the official selection before the selection-free full-input
-   audit passes.
+   necessary correction. S0 and S1a are complete; run the committed ADR-0356
+   S1b audit next and do not observe the official selection before that
+   selection-free full-input audit passes.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 
