@@ -366,8 +366,6 @@ def validate_storage_descriptor(descriptor: Any) -> list[str]:
             failures.append("tmpfs storage class identity mismatch")
         if Path(str(descriptor.get("class_root"))).resolve() != Path("/dev/shm").resolve():
             failures.append("tmpfs storage class root drift")
-    if class_id == STORAGE_CLASS_IDS[0] and Path(str(descriptor.get("class_root"))).resolve() != ROOT:
-        failures.append("worktree storage class root drift")
     class_root = Path(str(descriptor.get("class_root")))
     mount_point = Path(str(mount.get("mount_point")))
     if not class_root.is_absolute() or not mount_point.is_absolute():

@@ -61,6 +61,12 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
         changed["mount"]["mount_options"] = 7
         changed["identity_sha256"] = STORE.object_digest(changed, "identity_sha256")
         self.assertTrue(STORE.validate_storage_descriptor(changed))
+        retained_elsewhere = copy.deepcopy(descriptor)
+        retained_elsewhere["class_root"] = "/different/checkout/axeyum"
+        retained_elsewhere["identity_sha256"] = STORE.object_digest(
+            retained_elsewhere, "identity_sha256"
+        )
+        self.assertEqual(STORE.validate_storage_descriptor(retained_elsewhere), [])
         with mock.patch.object(STORE, "mount_identity", return_value={**descriptor["mount"], "fs_type": "nfs4"}):
             with self.assertRaisesRegex(STORE.StoreEvidenceError, "network filesystem"):
                 STORE.capture_storage_class(STORE.STORAGE_CLASS_IDS[0], STORE.ROOT)
