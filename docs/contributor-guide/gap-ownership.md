@@ -66,12 +66,15 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`scripts/smtcomp_repro/resume_contract.py`](../../scripts/smtcomp_repro/resume_contract.py)
 - [`scripts/smtcomp_repro/resume_fs.py`](../../scripts/smtcomp_repro/resume_fs.py)
 - [`scripts/smtcomp_repro/resume_fs_fixture_worker.py`](../../scripts/smtcomp_repro/resume_fs_fixture_worker.py)
+- [`scripts/smtcomp_repro/resume_runner.py`](../../scripts/smtcomp_repro/resume_runner.py)
+- [`scripts/smtcomp_repro/runner.py`](../../scripts/smtcomp_repro/runner.py)
 - [`docs/plan/smtcomp-resumable-run-contract-v1.json`](../../docs/plan/smtcomp-resumable-run-contract-v1.json)
 - [`docs/plan/smtcomp-resumable-run-contract-v2.json`](../../docs/plan/smtcomp-resumable-run-contract-v2.json)
 - [`scripts/smtcomp_repro/select_library.py`](../../scripts/smtcomp_repro/select_library.py)
 - [`scripts/smtcomp_repro/compete.py`](../../scripts/smtcomp_repro/compete.py)
 - [`scripts/smtcomp_repro/provenance.py`](../../scripts/smtcomp_repro/provenance.py)
 - [`scripts/smtcomp_repro/scoring.py`](../../scripts/smtcomp_repro/scoring.py)
+- [`scripts/check-smtcomp-resume.sh`](../../scripts/check-smtcomp-resume.sh)
 - [`scripts/gen-scoreboard.py`](../../scripts/gen-scoreboard.py)
 
 **Evidence:**
@@ -82,6 +85,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/plan/smtcomp-resumable-run-design-2026-07-21.md`](../../docs/plan/smtcomp-resumable-run-design-2026-07-21.md)
 - [`docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md)
 - [`docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md)
+- [`docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md`](../../docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md)
 - [`docs/plan/generated/smtcomp-resumable-run-contract.json`](../../docs/plan/generated/smtcomp-resumable-run-contract.json)
 - [`bench-results/smtcomp-repro-20260721/inventory.json`](../../bench-results/smtcomp-repro-20260721/inventory.json)
 - [`bench-results/smtcomp-repro-20260721/provenance.json`](../../bench-results/smtcomp-repro-20260721/provenance.json)
@@ -92,6 +96,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - `python3 scripts/gen-measurement-provenance.py --check`
 - `python3 scripts/gen-smtcomp-resume-contract.py --check`
 - `python3 -m unittest scripts.tests.test_gen_smtcomp_resume_contract`
+- `./scripts/check-smtcomp-resume.sh`
 - `PYTHONWARNINGS=error python3 -m unittest scripts.tests.test_smtcomp_resume_fs`
 - `AXEYUM_FS_FIXTURE_PARENT=. PYTHONWARNINGS=error python3 -m unittest scripts.tests.test_smtcomp_resume_fs`
 - `for t in test_scoring test_pipeline test_selection test_provenance; do python3 scripts/smtcomp_repro/tests/$t.py || exit 1; done`
@@ -101,7 +106,7 @@ This is the contributor routing layer for the current G0-G10 gap program. It nam
 - [`docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md`](../../docs/research/09-decisions/adr-0343-preregister-cross-regime-measurement-provenance.md)
 - [`docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md`](../../docs/research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md)
 
-**Next safe action:** Review ADR-0343/0344, E1a, and the v2 E1b audit; then integrate one-solver manifests, typed process outcomes, observed/admitted verdicts, output sidecars, attempt lifecycle, completion-last export, duplicate rejection, and a single-owner lease. Do not rerun the 64,345-file candidate before E1b-E3 and the missing selection identities pass.
+**Next safe action:** Review ADR-0343/0344 and the accepted fixture-only E1b result; then implement E2 real one-host aggregate resource enforcement and E3 multi-host loss/recovery before rerunning the 64,345-file candidate. The independent official eligibility/status/difficulty selection ledger also remains required.
 
 <a id="g2"></a>
 

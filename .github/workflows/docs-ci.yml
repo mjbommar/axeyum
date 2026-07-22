@@ -20,4 +20,5 @@ jobs:
       - run: python3 scripts/check-lean-official-construct-matrix.py --check
       - run: python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
       - run: python3 scripts/freeze-lean-official-construct-matrix-product.py --check
+      - run: ./scripts/check-smtcomp-resume.sh
       - run: ./scripts/check-links.sh

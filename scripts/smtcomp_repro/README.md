@@ -23,21 +23,27 @@ Section references in the code point at that document.
 | D. Division scoring: parallel, PAR-2, sequential, 24s, sat, unsat; disagreement removal | §7.2 | `scoring.py` | **done** |
 | E. Competition-wide: Best Overall, Biggest Lead, Largest Contribution | §7.3 | `scoring.py` | **done** |
 | —. End-to-end driver + local shard execution | — | `compete.py`, `run_repro.sh` | **bounded slice** |
-| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, ADR-0344 | **E0 + local E1a; runner/remote production open** |
+| —. Resumable distributed execution | — | `resume_contract.py`, `resume_fs.py`, `resume_runner.py`, ADR-0344 | **E0/E1 fixture-complete; E2-E3 measurement execution open** |
 | —. Source-family + exact-content provenance | — | `provenance.py` | **done** |
 
-Scoring/selection tests (42): `tests/test_scoring.py` (30, one per rule),
-`tests/test_pipeline.py` (5, full aggregation/ranking),
+Scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
+`tests/test_pipeline.py` (6, full aggregation/ranking plus duplicate rejection),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
-outcomes, and attributes each record to an attempt; these tests do not establish
-production filesystem durability or change the active runner.
+outcomes, and attributes each record to an attempt.
 Four E1a filesystem tests add real child `SIGKILL` controls at four persistence
 boundaries. Run them once on default temporary storage and once with
 `AXEYUM_FS_FIXTURE_PARENT=.`; they remain local process-interruption evidence,
 not NFS or power-loss evidence.
+Six E1b integration tests add exact-byte preflight, deterministic
+interruption/resume equivalence, real kills before/during solver execution,
+lease contention/recovery, timeout-response admission, sidecar mutation, and
+complete-only raw export. Five runner tests freeze typed exit/signal/resource
+states and byte-exact output. `./scripts/check-smtcomp-resume.sh` runs the whole
+bounded gate. The E1b CLI rejects non-fixture resource envelopes; E2 must land
+before any measurement run uses it.
 
 ## Reproduce
 
@@ -63,6 +69,8 @@ The local kill-tested boundary and its remaining E1b-E3 work are in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
 The source-backed v2 process-schema correction and narrow integration seams are
 in the [`E1b audit`](../../docs/plan/smtcomp-runner-e1b-audit-2026-07-21.md).
+Their fixture-only implementation and remaining E2-E3 boundary are in the
+[`E1b result`](../../docs/plan/smtcomp-resumable-runner-e1b-2026-07-22.md).
 
 ## Tracks
 

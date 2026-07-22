@@ -80,13 +80,13 @@ Status: prototype; supersedes v1 before production integration; no full-library 
 
 - V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.
 - This prototype does not make the 2024 cap/family selection official or representative.
-- It does not yet integrate compete.py, verify stdout/stderr sidecars, execute solvers, launch remotely, enforce cgroups, prove NFS durability, or manage leases.
+- The E1b compete.py adapter is fixture-only and grants no measurement credit; it does not launch remotely, enforce real aggregate cgroups, prove NFS durability, or recover a host loss.
 - It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.
 - It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.
 - It does not replace BenchExec for an official competition rehearsal.
 
 ## Implementation boundary
 
-The v2 in-memory and E1a filesystem prototypes validate evidence shape, attribution, no-overwrite persistence, and canonical scoring projection. E1b still has to integrate one-solver run manifests, exact benchmark IDs/hashes, output sidecars, typed process outcomes, attempt lifecycle, completion-last export, duplicate rejection, and a fake solver into `compete.py` without changing central scoring semantics.
+The v2 in-memory/E1a filesystem prototypes and E1b fixture-only `compete.py` adapter now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, duplicate rejection, and canonical scoring projection. E1b deliberately rejects non-fixture resource envelopes; E2 must add real aggregate enforcement before any measurement run receives credit.
 
-The current runner drops a parsed response on wall timeout and labels any other signal as memory exhaustion. V2 deliberately cannot encode those guesses as valid SMT-COMP evidence: observed and admitted verdicts are separate, and memory-limit classification requires actual enforcement evidence.
+Legacy raw mode still suppresses a parsed response on wall timeout for artifact compatibility. The v2 adapter preserves and admits that response under its registered policy, uses checked typed termination, and names memory exhaustion only when an enforcement layer supplies explicit resource evidence.

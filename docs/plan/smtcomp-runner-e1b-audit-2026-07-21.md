@@ -1,6 +1,6 @@
 # SMT-COMP runner E1b integration audit
 
-Status: schema v2 prototype landed; active runner unchanged
+Status: source audit superseded by accepted fixture-only E1b integration
 Date: 2026-07-21
 
 ## Outcome
@@ -16,6 +16,11 @@ and 23 rejected mutations. Interrupted/resumed lifecycle evidence differs from
 an uninterrupted run, as it should, while the canonical scoring projection is
 byte-identical. No corpus or solver was run, and `compete.py`/`runner.py` remain
 unchanged.
+
+The findings below are the frozen pre-implementation baseline. The
+[E1b result](smtcomp-resumable-runner-e1b-2026-07-22.md) now closes every named
+fixture-integration seam and gate while deliberately refusing real measurement
+resource envelopes. E2-E3 remain open.
 
 ## Source audit: what the active runner loses
 

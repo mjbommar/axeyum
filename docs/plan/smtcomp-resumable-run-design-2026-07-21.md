@@ -1,6 +1,6 @@
 # Resumable distributed benchmark execution
 
-Status: E0/v2 contract and E1a local filesystem prototype landed; production integration not implemented
+Status: E0/v2, E1a filesystem, and fixture-only E1b runner integration landed; E2-E3 open
 Date: 2026-07-21
 
 ## Plain-English outcome
@@ -18,8 +18,11 @@ official SMT-COMP population.
 
 The follow-on [E1a result](smtcomp-resumable-filesystem-e1a-2026-07-21.md)
 implements and kill-tests the local immutable-record boundary on tmpfs and the
-repository's ext-family filesystem. E1b launcher/solver integration remains
-open.
+repository's ext-family filesystem. The subsequent
+[E1b result](smtcomp-resumable-runner-e1b-2026-07-22.md) integrates the active
+runner, typed outcomes, exact benchmark preflight, sidecars, attempts, leases,
+completion-last export, and duplicate rejection under a fixture-only resource
+envelope. E2 aggregate enforcement and E3 multi-host recovery remain open.
 
 ## Current implementation audit
 
@@ -192,6 +195,16 @@ correct inside opt-in mode: a parsed timeout response is discarded despite the
 SMT-COMP 2026 response rule, and any other negative POSIX return code is guessed
 to mean memory exhaustion. See the
 [runner audit](smtcomp-runner-e1b-audit-2026-07-21.md).
+
+**E1b result:** the fixture-only active adapter now closes those seams. Six
+integration cases cover exact-byte preflight, real kills before solver start and
+during solver execution, lease contention and explicit recovery, deterministic
+interrupted/resumed scoring equivalence, timeout-response admission, sidecar
+mutation, and complete-only raw export. Five typed-runner tests separate
+nonzero exits, signals, evidenced resource limits, and non-UTF-8 output. Legacy
+scoring mode remains compatible, and duplicate raw cells now fail closed. The
+adapter rejects non-fixture resource envelopes, so E1 is complete as a local
+reliability boundary but not as a measurement executor.
 
 ### E2 — One-host enforced execution
 

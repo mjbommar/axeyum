@@ -7,10 +7,13 @@ production remote launcher and not a claim about NFS or power-loss behavior.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import socket
 import uuid
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -23,6 +26,16 @@ PhaseHook = Callable[[str], None]
 
 class CheckpointConflict(ContractError):
     """The immutable destination exists with different bytes."""
+
+
+class LeaseConflict(ContractError):
+    """A shard already has a live or unrecovered owner lease."""
+
+
+@dataclass(frozen=True)
+class ShardLease:
+    path: Path
+    owner_id: str
 
 
 def _safe_leaf(name: str) -> str:
@@ -63,10 +76,10 @@ def _quarantine(
     return destination
 
 
-def atomic_install_json(
+def _atomic_install_bytes(
     directory: Path,
     filename: str,
-    value: Any,
+    data: bytes,
     *,
     phase_hook: PhaseHook | None = None,
     quarantine_root: Path | None = None,
@@ -82,8 +95,6 @@ def atomic_install_json(
     directory.mkdir(parents=True, exist_ok=True)
     final = directory / filename
     temp = directory / f".{filename}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
-    data = canonical_bytes(value)
-
     if phase_hook:
         phase_hook("before_temp_open")
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0)
@@ -118,6 +129,90 @@ def atomic_install_json(
     return "installed"
 
 
+def atomic_install_json(
+    directory: Path,
+    filename: str,
+    value: Any,
+    *,
+    phase_hook: PhaseHook | None = None,
+    quarantine_root: Path | None = None,
+) -> str:
+    """Install canonical JSON through the immutable no-overwrite boundary."""
+
+    return _atomic_install_bytes(
+        directory,
+        filename,
+        canonical_bytes(value),
+        phase_hook=phase_hook,
+        quarantine_root=quarantine_root,
+    )
+
+
+def atomic_install_bytes(
+    directory: Path,
+    filename: str,
+    data: bytes,
+    *,
+    phase_hook: PhaseHook | None = None,
+    quarantine_root: Path | None = None,
+) -> str:
+    """Install an exact-byte sidecar without replacing an existing object."""
+
+    return _atomic_install_bytes(
+        directory,
+        filename,
+        data,
+        phase_hook=phase_hook,
+        quarantine_root=quarantine_root,
+    )
+
+
+def acquire_shard_lease(root: Path, shard_id: str, owner: dict[str, Any]) -> ShardLease:
+    """Acquire a single-owner shard lease; an existing lease always fails closed."""
+
+    shard_id = _safe_leaf(shard_id)
+    owner_id = _safe_leaf(str(owner.get("owner_id", "")))
+    if owner.get("host_id") != socket.gethostname() or owner.get("pid") != os.getpid():
+        raise ContractError("lease owner does not describe the current process")
+    lease_dir = root / "leases"
+    path = lease_dir / f"{shard_id}.json"
+    if path.exists():
+        raise LeaseConflict(f"shard lease already exists: {path}")
+    outcome = atomic_install_json(
+        lease_dir,
+        path.name,
+        owner,
+        quarantine_root=root / "quarantine",
+    )
+    if outcome != "installed":
+        raise LeaseConflict(f"shard lease already exists: {path}")
+    return ShardLease(path=path, owner_id=owner_id)
+
+
+def release_shard_lease(lease: ShardLease) -> None:
+    """Release only the lease still owned by this process."""
+
+    owner = _read_canonical_json(lease.path)
+    if owner.get("owner_id") != lease.owner_id:
+        raise LeaseConflict(f"shard lease ownership changed: {lease.path}")
+    lease.path.unlink()
+    _fsync_directory(lease.path.parent)
+
+
+def recover_shard_lease(root: Path, shard_id: str, expected_owner_id: str) -> Path:
+    """Explicitly quarantine one exactly identified stale lease.
+
+    The caller must first establish staleness out of band.  There is
+    intentionally no age-based or automatic lease stealing.
+    """
+
+    path = root / "leases" / f"{_safe_leaf(shard_id)}.json"
+    owner = _read_canonical_json(path)
+    if owner.get("owner_id") != expected_owner_id:
+        raise LeaseConflict(f"stale-lease owner mismatch: {path}")
+    return _quarantine(path, "stale-leases", root / "quarantine")
+
+
 def recover_orphan_temporaries(
     directory: Path, *, quarantine_root: Path | None = None
 ) -> list[Path]:
@@ -143,11 +238,21 @@ def _read_canonical_json(path: Path) -> Any:
     return value
 
 
+def read_canonical_json(path: Path) -> Any:
+    """Public fail-closed canonical JSON reader used by the production adapter."""
+
+    return _read_canonical_json(path)
+
+
 def _json_files(directory: Path) -> list[Path]:
     if not directory.is_dir():
         raise ContractError(f"missing artifact directory: {directory}")
     entries = sorted(directory.iterdir(), key=lambda item: item.name)
-    invalid = [path for path in entries if not path.is_file() or path.suffix != ".json"]
+    invalid = [
+        path
+        for path in entries
+        if path.is_symlink() or not path.is_file() or path.suffix != ".json"
+    ]
     if invalid:
         raise ContractError(f"unexpected artifact in {directory}: {invalid[0].name}")
     return entries
@@ -210,6 +315,10 @@ def load_bundle(root: Path) -> Bundle:
         "attempts",
         "completions",
         "records",
+        "terminals",
+        "outputs",
+        "selection.json",
+        "leases",
         "quarantine",
     }
     if not root.is_dir():
@@ -246,11 +355,67 @@ def load_bundle(root: Path) -> Bundle:
             if path.name != f"{attempt.get('attempt_id')}.json":
                 raise ContractError(f"attempt filename/id mismatch: {path}")
 
+    terminals_root = root / "terminals"
+    if terminals_root.exists():
+        terminal_shards = {path.name for path in terminals_root.iterdir()}
+        if not terminal_shards <= set(attempts):
+            raise ContractError("terminal shard has no attempt assignment")
+        for shard_dir in sorted(terminals_root.iterdir(), key=lambda item: item.name):
+            if not shard_dir.is_dir():
+                raise ContractError(f"unexpected terminal artifact: {shard_dir.name}")
+            by_id = {attempt["attempt_id"]: attempt for attempt in attempts[shard_dir.name]}
+            for path in _json_files(shard_dir):
+                attempt_id = path.stem
+                attempt = by_id.get(attempt_id)
+                if attempt is None:
+                    raise ContractError(f"terminal has no launch manifest: {path}")
+                if attempt["terminal"] is not None:
+                    raise ContractError(f"duplicate embedded/separate terminal: {path}")
+                attempt["terminal"] = _read_canonical_json(path)
+
     completions = {}
     for path in _json_files(root / "completions"):
         completions[path.stem] = _read_canonical_json(path)
     return Bundle(run, assignments, records, attempts, completions)
 
 
-def validate_bundle_directory(root: Path) -> bytes:
-    return merge_complete(load_bundle(root))
+def verify_output_sidecars(root: Path, records: list[dict[str, Any]]) -> None:
+    """Verify exact stdout/stderr sidecars before any scoring export."""
+
+    for stream in ("stdout", "stderr"):
+        directory = root / "outputs" / stream
+        if not directory.is_dir():
+            raise ContractError(f"missing output sidecar directory: {directory}")
+        expected = {record[f"{stream}_sha256"] for record in records}
+        present = {
+            path.stem
+            for path in directory.iterdir()
+            if not path.is_symlink() and path.is_file() and path.suffix == ".bin"
+        }
+        invalid = [
+            path.name
+            for path in directory.iterdir()
+            if path.is_symlink() or not path.is_file() or path.suffix != ".bin"
+        ]
+        if invalid:
+            raise ContractError(f"unexpected output sidecar: {sorted(invalid)[0]}")
+        if not expected <= present:
+            raise ContractError(f"{stream} sidecar population mismatch")
+        for digest_hex in sorted(expected):
+            data = (directory / f"{digest_hex}.bin").read_bytes()
+            if hashlib.sha256(data).hexdigest() != digest_hex:
+                raise ContractError(f"{stream} sidecar hash mismatch")
+            sizes = {
+                record[f"{stream}_bytes"]
+                for record in records
+                if record[f"{stream}_sha256"] == digest_hex
+            }
+            if sizes != {len(data)}:
+                raise ContractError(f"{stream} sidecar byte-count mismatch")
+
+
+def validate_bundle_directory(root: Path, *, require_output_sidecars: bool = False) -> bytes:
+    bundle = load_bundle(root)
+    if require_output_sidecars:
+        verify_output_sidecars(root, bundle.records)
+    return merge_complete(bundle)

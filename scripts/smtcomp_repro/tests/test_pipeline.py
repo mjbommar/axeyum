@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from collections import defaultdict  # noqa: E402
 
-from compete import score_everything  # noqa: E402
+from compete import raw_from_json, raw_to_json, score_everything  # noqa: E402
 from scoring import RawResult, Status, Track  # noqa: E402
 
 
@@ -122,6 +122,16 @@ def test_disagreement_removal_on_unknown_status():
     assert "u1" in rep["removed_disagreements"]
     # The removed benchmark must not inflate the division count.
     assert rep["divisions"]["QF_BV"]["n_benchmarks"] == 3
+
+
+def test_raw_merge_rejects_identical_duplicate_instead_of_overwriting():
+    blob = raw_to_json(_build())
+    try:
+        raw_from_json([blob, blob])
+    except ValueError as exc:
+        assert "duplicate raw result" in str(exc)
+    else:
+        raise AssertionError("identical duplicate raw result was silently accepted")
 
 
 def _run_all():

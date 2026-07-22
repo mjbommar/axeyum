@@ -134,9 +134,12 @@ coverage, soundness, or OOM-cause claim.
 ## Consequences
 
 Large runs can become restartable without mixing configurations or hiding
-failed attempts. E1a proves the local record primitive; completeness,
-duplicate-overwrite removal in the active runner, and measured resource control
-still require E1b-E3 integration.
+failed attempts. E1a proves the local record primitive. The subsequent
+[E1b result](../../plan/smtcomp-resumable-runner-e1b-2026-07-22.md) integrates
+exact preflight, typed execution, sidecars, attempts, leases, completion-last
+export, and duplicate rejection into a fixture-only `compete.py` mode. E2-E3
+still own real aggregate resource control and multi-host recovery; the adapter
+rejects non-fixture envelopes until then.
 
 The cost is more artifact structure and a staged implementation before another
 large run. Result files must remain immutable, retries need fresh attempt IDs,

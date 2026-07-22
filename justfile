@@ -4,7 +4,7 @@ default:
     @just --list
 
 # Run every check CI runs (except cargo-deny, which needs the tool installed).
-check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code parity-docs links
+check: fmt clippy test doc qfbv-profile reflection-semantics-gate benchmark-repetition-tests glaurung-qfbv-regular foundational-resources rules-as-code smtcomp-resume parity-docs links
 
 fmt:
     cargo fmt --all --check
@@ -135,6 +135,11 @@ parity-docs:
     python3 scripts/gen-smtlib-api-conformance.py --check
     python3 scripts/gen-smtlib-session-contract.py --check
     python3 scripts/check-parity-docs.py
+
+# ADR-0344 E0/E1: contract generation, immutable filesystem recovery, active
+# runner lifecycle/sidecars/lease/export, and the legacy scoring pipeline.
+smtcomp-resume:
+    ./scripts/check-smtcomp-resume.sh
 
 # Current official construct-matrix product boundary: the direct-recursive
 # control precedes each remaining typed decline, and all five rows repeat.

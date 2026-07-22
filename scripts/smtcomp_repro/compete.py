@@ -25,6 +25,7 @@ import os
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -308,6 +309,10 @@ def raw_from_json(blobs: list[dict]) -> dict[str, dict[str, RawResult]]:
     for blob in blobs:
         for bench, by_solver in blob.items():
             for name, d in by_solver.items():
+                if name in per[bench]:
+                    raise ValueError(
+                        f"duplicate raw result for benchmark={bench!r}, solver={name!r}"
+                    )
                 per[bench][name] = RawResult(
                     solver=d["solver"],
                     benchmark=d["benchmark"],
@@ -392,6 +397,18 @@ def main() -> int:
                     help="write raw execution results to this JSON and skip scoring")
     ap.add_argument("--score-raw", nargs="+", default=None,
                     help="score these raw-result JSON files instead of executing")
+    ap.add_argument("--run-manifest", default=None,
+                    help="canonical v2 E1b run manifest (requires --run-dir)")
+    ap.add_argument("--run-dir", default=None,
+                    help="immutable resumable evidence directory (E1b fixtures only)")
+    ap.add_argument("--selection-manifest", default=None,
+                    help="selection identity artifact required by resumable mode")
+    ap.add_argument("--corpus-manifest", default=None,
+                    help="corpus identity artifact required by resumable mode")
+    ap.add_argument("--environment-manifest", default=None,
+                    help="registered environment-class artifact for resumable mode")
+    ap.add_argument("--benchmark-id-marker", default="non-incremental/",
+                    help="prefix removed from absolute paths for result identity")
     args = ap.parse_args()
 
     solvers = [parse_solver_arg(s) for s in args.solver] if args.solver else []
@@ -415,6 +432,70 @@ def main() -> int:
             with open(args.out, "w", encoding="utf-8") as fh:
                 json.dump(report, fh, indent=2)
         return 0
+
+    resumable = args.run_manifest is not None or args.run_dir is not None
+    if resumable:
+        from resume_contract import ContractError
+        from resume_runner import execute_resumable, export_legacy_raw
+
+        try:
+            if not args.run_manifest or not args.run_dir:
+                raise ContractError("--run-manifest and --run-dir are required together")
+            if len(solvers) != 1:
+                raise ContractError("resumable mode requires exactly one --solver")
+            if not args.file_list or args.corpus:
+                raise ContractError("resumable mode requires --file-list and forbids --corpus")
+            if args.limit is not None or args.out:
+                raise ContractError("resumable mode forbids --limit and --out")
+            if not args.shard:
+                raise ContractError("resumable mode requires --shard I/J")
+            if not all(
+                (args.selection_manifest, args.corpus_manifest, args.environment_manifest)
+            ):
+                raise ContractError(
+                    "resumable mode requires selection, corpus, and environment manifests"
+                )
+            if args.mem_gb is None:
+                raise ContractError("resumable mode requires an explicit --mem-gb")
+            if track != Track.SINGLE_QUERY:
+                raise ContractError("E1b resumable records currently support single_query only")
+            if "/" not in args.shard:
+                raise ContractError("resumable mode requires --shard I/J")
+            shard_index, shard_count = (int(value) for value in args.shard.split("/", 1))
+            spec = solvers[0]
+            command_template = list(spec.cmd_template)
+            if args.internal_timeout_ms is not None and spec.name == "axeyum":
+                command_template.extend(["--timeout-ms", str(args.internal_timeout_ms)])
+            root = Path(__file__).resolve().parents[2]
+            complete = execute_resumable(
+                run_manifest=Path(args.run_manifest),
+                run_dir=Path(args.run_dir),
+                repository_root=root,
+                source_root=Path(__file__).resolve().parent,
+                file_list=Path(args.file_list),
+                selection_manifest=Path(args.selection_manifest),
+                corpus_manifest=Path(args.corpus_manifest),
+                environment_manifest=Path(args.environment_manifest),
+                solver_id=spec.name,
+                command_template=command_template,
+                track=track.value,
+                wall_limit_ms=round(args.wall_limit * 1000),
+                memory_limit_bytes=round(args.mem_gb * 1024**3),
+                cores=args.cores,
+                shard_index=shard_index,
+                shard_count=shard_count,
+                benchmark_id_marker=args.benchmark_id_marker,
+                verbose=not args.quiet,
+            )
+            if complete and args.dump_raw:
+                export_legacy_raw(Path(args.run_dir), Path(args.dump_raw))
+                print(f"wrote raw results {args.dump_raw}", file=sys.stderr)
+            elif args.dump_raw:
+                print("run remains incomplete; raw export withheld", file=sys.stderr)
+            return 0
+        except (ContractError, ValueError, OSError) as exc:
+            print(f"resumable run rejected: {exc}", file=sys.stderr)
+            return 2
 
     if not solvers or not (args.corpus or args.file_list):
         print("--corpus or --file-list, and --solver, required (unless --score-raw)",

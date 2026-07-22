@@ -653,9 +653,14 @@ Out of scope:
     attempt ownership, and content-addressed outputs. The checked prototype
     exercises 18 invariants across 28 scenarios and makes deterministic
     interrupted/resumed scoring output byte-identical to an uninterrupted
-    control. E1a passes local kill tests; the question remains open until E1b
-    runner/solver/lease/output integration and E2-E3 resource/multi-host gates
-    pass. The 64,345-case candidate must not be rerun first.
+    control. E1a passes local persistence kill tests. The fixture-only E1b
+    integration now adds exact preflight identity, the active runner and fake
+    solver, typed termination, observed/admitted verdicts, byte-exact output
+    sidecars, attempt lifecycle, completion-last export, duplicate rejection,
+    and explicit single-owner lease recovery. The question remains open until
+    E2-E3 prove real aggregate resource enforcement and multi-host loss/retry;
+    official eligibility/status/difficulty selection identity is a separate
+    prerequisite. The 64,345-case candidate must not be rerun first.
 
 ### Horizon: General Reasoning And Proving
 

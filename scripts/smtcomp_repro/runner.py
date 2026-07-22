@@ -27,6 +27,7 @@ import re
 import resource
 import signal
 import subprocess
+import threading
 import time
 from dataclasses import dataclass
 from typing import Optional
@@ -36,18 +37,70 @@ from scoring import Status
 _VERDICT_RE = re.compile(r"\b(unsat|sat|unknown)\b")
 
 
+class _PeakRssSampler:
+    """Best-effort Linux VmHWM sampler for a single-process solver."""
+
+    def __init__(self, pid: int, interval_s: float = 0.01):
+        self._status = f"/proc/{pid}/status"
+        self._interval_s = interval_s
+        self._stop = threading.Event()
+        self._peak_bytes = 0
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> int:
+        self._sample()
+        self._stop.set()
+        self._thread.join(timeout=1.0)
+        return self._peak_bytes
+
+    def _sample(self) -> None:
+        try:
+            with open(self._status, encoding="ascii") as handle:
+                values = {
+                    key.rstrip(":"): value
+                    for key, value, *_unit in (
+                        line.split() for line in handle if line.startswith(("VmHWM:", "VmRSS:"))
+                    )
+                }
+        except (OSError, ValueError):
+            return
+        value = values.get("VmHWM") or values.get("VmRSS")
+        if value is not None:
+            self._peak_bytes = max(self._peak_bytes, int(value) * 1024)
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            self._sample()
+            self._stop.wait(self._interval_s)
+
+
 @dataclass(frozen=True)
 class RunResult:
     """Raw measured outcome of one execution."""
 
-    reported: Optional[Status]  # parsed verdict (None == no verdict emitted)
-    wall_time: float  # aw, seconds
+    # ``reported`` preserves the legacy runner policy, which suppresses a
+    # timeout-observed response.  Resumable v2 records use ``observed`` and
+    # apply their separately registered verdict-admission policy instead.
+    reported: Optional[Status]
+    observed: Optional[Status]
+    wall_time: float  # legacy elapsed wall time, seconds
+    scoring_wall_time: float  # aw, clamped to the registered wall limit
+    runner_elapsed: float  # includes watchdog kill/reap overhead
     cpu_time: float  # ac, seconds
     exit_code: Optional[int]
+    signal: Optional[int]
+    termination_class: str
+    resource_limit_kind: Optional[str]
     timed_out: bool
     mem_exceeded: bool
+    peak_rss_bytes: int
     stdout: str
     stderr: str
+    stdout_bytes: bytes
+    stderr_bytes: bytes
 
 
 def parse_verdict(stdout: str) -> Optional[Status]:
@@ -82,31 +135,38 @@ def run_solver(
     wall_limit_s: float,
     mem_limit_bytes: Optional[int] = None,
     grace_s: float = 2.0,
+    evidenced_resource_limit_kind: Optional[str] = None,
 ) -> RunResult:
     """Execute `cmd`, enforcing wall/mem limits, measuring wall+CPU (§5, §7.1)."""
+    if evidenced_resource_limit_kind not in {None, "cpu", "memory"}:
+        raise ValueError("resource-limit evidence must be 'cpu', 'memory', or None")
     start = time.monotonic()
     proc = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        text=True,
         preexec_fn=_preexec(mem_limit_bytes),
     )
+    rss_sampler = _PeakRssSampler(proc.pid)
+    rss_sampler.start()
     timed_out = False
     try:
-        stdout, stderr = proc.communicate(timeout=wall_limit_s)
-    except subprocess.TimeoutExpired:
-        timed_out = True
-        # Kill the whole process group, then reap.
         try:
-            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        try:
-            stdout, stderr = proc.communicate(timeout=grace_s)
+            stdout, stderr = proc.communicate(timeout=wall_limit_s)
         except subprocess.TimeoutExpired:
-            proc.kill()
-            stdout, stderr = proc.communicate()
+            timed_out = True
+            # Kill the whole process group, then reap.
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            try:
+                stdout, stderr = proc.communicate(timeout=grace_s)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                stdout, stderr = proc.communicate()
+    finally:
+        peak_rss_bytes = rss_sampler.stop()
     wall = time.monotonic() - start
 
     # CPU time of the child from rusage (utime+stime). Popen already reaped via
@@ -120,18 +180,60 @@ def run_solver(
     except (ValueError, OSError):
         cpu = 0.0
 
-    exit_code = proc.returncode
-    mem_exceeded = exit_code is not None and exit_code < 0 and not timed_out
-    reported = None if timed_out else parse_verdict(stdout or "")
+    captured_stdout = stdout or b""
+    captured_stderr = stderr or b""
+    decoded_stdout = captured_stdout.decode("utf-8", errors="replace")
+    decoded_stderr = captured_stderr.decode("utf-8", errors="replace")
+    observed = parse_verdict(decoded_stdout)
+
+    return_code = proc.returncode
+    if timed_out:
+        termination_class = "wall-timeout"
+        exit_code = None
+        terminating_signal = signal.SIGKILL
+        resource_limit_kind = "wall"
+    elif evidenced_resource_limit_kind is not None:
+        if return_code == 0:
+            raise ValueError("resource-limit evidence is incompatible with exit 0")
+        termination_class = "resource-limit"
+        exit_code = None
+        terminating_signal = -return_code if return_code is not None and return_code < 0 else None
+        resource_limit_kind = evidenced_resource_limit_kind
+    elif return_code == 0:
+        termination_class = "completed"
+        exit_code = 0
+        terminating_signal = None
+        resource_limit_kind = None
+    elif return_code is not None and return_code < 0:
+        termination_class = "signal"
+        exit_code = None
+        terminating_signal = -return_code
+        resource_limit_kind = None
+    else:
+        termination_class = "nonzero-exit"
+        exit_code = return_code
+        terminating_signal = None
+        resource_limit_kind = None
+
+    reported = None if timed_out else observed
     return RunResult(
         reported=reported,
+        observed=observed,
         wall_time=wall,
+        scoring_wall_time=min(wall, wall_limit_s),
+        runner_elapsed=wall,
         cpu_time=cpu,
         exit_code=exit_code,
+        signal=terminating_signal,
+        termination_class=termination_class,
+        resource_limit_kind=resource_limit_kind,
         timed_out=timed_out,
-        mem_exceeded=mem_exceeded,
-        stdout=stdout or "",
-        stderr=stderr or "",
+        mem_exceeded=resource_limit_kind == "memory",
+        peak_rss_bytes=peak_rss_bytes,
+        stdout=decoded_stdout,
+        stderr=decoded_stderr,
+        stdout_bytes=captured_stdout,
+        stderr_bytes=captured_stderr,
     )
 
 
@@ -153,6 +255,7 @@ def run_solver_metered(
     wall_limit_s: float,
     mem_limit_bytes: Optional[int] = None,
     grace_s: float = 2.0,
+    evidenced_resource_limit_kind: Optional[str] = None,
 ) -> RunResult:
     """Like run_solver but attributes CPU via a cumulative-rusage delta so it is
     correct when called repeatedly in one process."""
@@ -163,16 +266,26 @@ def run_solver_metered(
         wall_limit_s=wall_limit_s,
         mem_limit_bytes=mem_limit_bytes,
         grace_s=grace_s,
+        evidenced_resource_limit_kind=evidenced_resource_limit_kind,
     )
     after = meter.snapshot()
     cpu = max(0.0, after - before)
     return RunResult(
         reported=r.reported,
+        observed=r.observed,
         wall_time=r.wall_time,
+        scoring_wall_time=r.scoring_wall_time,
+        runner_elapsed=r.runner_elapsed,
         cpu_time=cpu,
         exit_code=r.exit_code,
+        signal=r.signal,
+        termination_class=r.termination_class,
+        resource_limit_kind=r.resource_limit_kind,
         timed_out=r.timed_out,
         mem_exceeded=r.mem_exceeded,
+        peak_rss_bytes=r.peak_rss_bytes,
         stdout=r.stdout,
         stderr=r.stderr,
+        stdout_bytes=r.stdout_bytes,
+        stderr_bytes=r.stderr_bytes,
     )

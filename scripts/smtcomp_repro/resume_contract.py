@@ -300,10 +300,9 @@ def _measurement_projection(record: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in record.items() if key not in operational}
 
 
-def merge_complete(bundle: Bundle) -> bytes:
-    """Validate a complete evidence bundle and return canonical scoring bytes."""
+def validate_run(run: dict[str, Any]) -> tuple[dict[str, Any], str]:
+    """Validate the immutable run manifest before any solver is launched."""
 
-    run = bundle.run
     if run.get("schema") != RUN_SCHEMA:
         raise ContractError("run schema mismatch")
     identity = run.get("identity")
@@ -331,8 +330,15 @@ def merge_complete(bundle: Bundle) -> bytes:
     )
     if identity["solver_config_sha256"] != expected_solver_config:
         raise ContractError("solver configuration digest mismatch")
-    run_hash = run["identity_sha256"]
     _validate_resources(run)
+    return identity, run["identity_sha256"]
+
+
+def merge_complete(bundle: Bundle) -> bytes:
+    """Validate a complete evidence bundle and return canonical scoring bytes."""
+
+    run = bundle.run
+    identity, run_hash = validate_run(run)
 
     assigned_owner: dict[str, str] = {}
     assignments_by_shard: dict[str, set[str]] = {}

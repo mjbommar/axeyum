@@ -4,7 +4,7 @@
   "declines": [
     "V2 is a single-solver run contract; a multi-solver invocation must split into one run identity per solver configuration before central comparison.",
     "This prototype does not make the 2024 cap/family selection official or representative.",
-    "It does not yet integrate compete.py, verify stdout/stderr sidecars, execute solvers, launch remotely, enforce cgroups, prove NFS durability, or manage leases.",
+    "The E1b compete.py adapter is fixture-only and grants no measurement credit; it does not launch remotely, enforce real aggregate cgroups, prove NFS durability, or recover a host loss.",
     "It does not claim real solver timing is byte-identical across retries; byte identity applies to a deterministic scoring-projection fixture.",
     "It does not admit partial shards, human progress logs, guessed resource causes, or reconstructed records into scoring.",
     "It does not replace BenchExec for an official competition rehearsal."
@@ -435,7 +435,7 @@
   ],
   "schema": "axeyum.smtcomp-resumable-run-contract-report.v2",
   "source_schema": "axeyum.smtcomp-resumable-run-contract.v2",
-  "status": "prototype",
+  "status": "e1b-fixture-integrated",
   "supersedes": "axeyum.smtcomp-resumable-run-contract.v1",
   "timeout_response_retained": true,
   "v1_corrections": [

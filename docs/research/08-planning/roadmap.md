@@ -170,13 +170,15 @@ Last updated: 2026-07-22
 > the prerequisite resume protocol. The generated v2 contract checks 18
 > invariants across 28 scenarios and proves deterministic interrupted/resumed
 > scoring-projection equivalence. V2 supersedes the thin v1 process schema
-> before integration. E1a subsequently passes 8/8 real `SIGKILL` record-recovery
-> cells on local tmpfs and ext-family storage, but the active runner, solver,
-> leases, shared storage, and resources are untouched. Production stages E1b-E3
-> must integrate completion-last output, strict duplicate rejection,
-> typed termination, observed/admitted verdict preservation, output-sidecar
-> validation, single-owner recovery, aggregate resource enforcement, and multi-host
-> loss/retry on a tiny corpus before the 64,345-file candidate may be rerun. This is measurement
+> before integration. E1a passes 8/8 real `SIGKILL` record-recovery cells on
+> local tmpfs and ext-family storage. Fixture-only E1b now integrates the active
+> runner and fake solver with completion-last output, strict duplicate rejection,
+> typed termination, observed/admitted verdict preservation, byte-exact output
+> sidecars, attempt lifecycle, and explicit single-owner lease recovery. It
+> rejects real resource envelopes and grants no measurement credit. E2-E3 must
+> still prove aggregate resource enforcement and multi-host loss/retry on a tiny
+> corpus before the 64,345-file candidate may be rerun; the official-style
+> selection identity remains independently open. This is measurement
 > infrastructure under G1, not a new solver or foundation phase.
 
 ## Purpose

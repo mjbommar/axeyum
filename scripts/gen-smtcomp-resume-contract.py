@@ -543,9 +543,9 @@ def render_markdown(report: dict[str, Any]) -> str:
             "",
             "## Implementation boundary",
             "",
-            "The v2 in-memory and E1a filesystem prototypes validate evidence shape, attribution, no-overwrite persistence, and canonical scoring projection. E1b still has to integrate one-solver run manifests, exact benchmark IDs/hashes, output sidecars, typed process outcomes, attempt lifecycle, completion-last export, duplicate rejection, and a fake solver into `compete.py` without changing central scoring semantics.",
+            "The v2 in-memory/E1a filesystem prototypes and E1b fixture-only `compete.py` adapter now validate evidence shape, exact benchmark identities, attribution, no-overwrite persistence, output sidecars, typed process outcomes, leases, completion-last export, duplicate rejection, and canonical scoring projection. E1b deliberately rejects non-fixture resource envelopes; E2 must add real aggregate enforcement before any measurement run receives credit.",
             "",
-            "The current runner drops a parsed response on wall timeout and labels any other signal as memory exhaustion. V2 deliberately cannot encode those guesses as valid SMT-COMP evidence: observed and admitted verdicts are separate, and memory-limit classification requires actual enforcement evidence.",
+            "Legacy raw mode still suppresses a parsed response on wall timeout for artifact compatibility. The v2 adapter preserves and admits that response under its registered policy, uses checked typed termination, and names memory exhaustion only when an enforcement layer supplies explicit resource evidence.",
             "",
         ]
     )
