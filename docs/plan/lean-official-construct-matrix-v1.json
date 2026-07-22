@@ -1957,5 +1957,112 @@
         }
       }
     }
+  },
+  "tl2_14_update": {
+    "measured_date": "2026-07-22",
+    "source_revision": "edfa7924adde416393db74325bf29ce280e3f8a7",
+    "product_test": "crates/axeyum-lean-import/tests/official_nested_inductive_groups.rs",
+    "runs_per_case": 2,
+    "resource_runner": "systemd-run --user --scope",
+    "memory_max": "4G",
+    "rust_jobs": 1,
+    "rust_test_threads": 1,
+    "lean_jobs": 1,
+    "lean_source_runs": 2,
+    "lean_olean_sha256": "d7d03cb863626f1ddc2a80b0dee3ae19fbc001dc2fb4ac60f6b9e27c7b7f53c2",
+    "lean_elapsed_ms": [
+      1500,
+      260
+    ],
+    "lean_max_rss_kib": [
+      457700,
+      462308
+    ],
+    "rust_gate_elapsed_ms": 1070,
+    "rust_gate_max_rss_kib": 170852,
+    "outcomes": {
+      "nested": {
+        "variant": "CompletedImport",
+        "runs": 2,
+        "report": {
+          "names": 70,
+          "levels": 6,
+          "expressions": 322,
+          "declaration_records": 10,
+          "admitted_declarations": 22,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 22
+        },
+        "line": null,
+        "code": null,
+        "message": null
+      }
+    },
+    "computations": {
+      "auxiliary-recursion-computation": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-nested-aux-computation.ndjson",
+        "sha256": "36fb9c6f85a99a7d6d1f6329a2cfe5265b148f0138e979d6d391d9e8879e07de",
+        "bytes": 36706,
+        "records": 642,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumNestedInductiveComputation.roseAuxiliaryRecursorComputes",
+        "normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))",
+        "report": {
+          "names": 122,
+          "levels": 8,
+          "expressions": 494,
+          "declaration_records": 17,
+          "admitted_declarations": 34,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 34
+        }
+      },
+      "indexed-container-computation": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-nested-indexed-computation.ndjson",
+        "sha256": "a14ca423410c4f0a86c2a2cea193e5a76bd91428e348402b3dd32e1603481429",
+        "bytes": 40119,
+        "records": 714,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumNestedInductiveComputation.indexedAuxiliaryRecursorComputes",
+        "normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))",
+        "report": {
+          "names": 134,
+          "levels": 8,
+          "expressions": 554,
+          "declaration_records": 17,
+          "admitted_declarations": 34,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 34
+        }
+      },
+      "repeated-container-reuse-computation": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-nested-repeated-container-computation.ndjson",
+        "sha256": "af369edb2d9e0346a5457ba4c9cde6f3030ca08002dc931c5fb26709e0f74344",
+        "bytes": 37771,
+        "records": 666,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumNestedInductiveComputation.repeatedContainerReusesAuxiliaryRecursor",
+        "normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))))",
+        "report": {
+          "names": 122,
+          "levels": 8,
+          "expressions": 518,
+          "declaration_records": 17,
+          "admitted_declarations": 34,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 34
+        }
+      }
+    }
   }
 }

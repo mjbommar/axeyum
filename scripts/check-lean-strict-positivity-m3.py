@@ -67,6 +67,7 @@ def historical_construct_matrix_sha256(path: Path) -> tuple[str, dict[str, Any]]
     registration = json.loads(path.read_text(encoding="utf-8"))
     historical = dict(registration)
     historical.pop("tl2_13_update", None)
+    historical.pop("tl2_14_update", None)
     encoded = (json.dumps(historical, indent=2) + "\n").encode()
     return hashlib.sha256(encoded).hexdigest(), registration
 
@@ -198,6 +199,8 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
                 failures.append("construct-matrix TL2.12 update missing")
             elif "tl2_13_update" not in current:
                 failures.append("construct-matrix TL2.13 update missing")
+            elif "tl2_14_update" not in current:
+                failures.append("construct-matrix TL2.14 update missing")
     return failures
 
 

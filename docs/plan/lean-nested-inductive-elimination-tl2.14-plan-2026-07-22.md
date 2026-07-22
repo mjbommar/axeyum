@@ -1,6 +1,6 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: M4 complete; M5 computation and assurance next
+Status: M5 complete; M6 final closure next
 
 Date: 2026-07-22
 
@@ -347,15 +347,23 @@ changed. M5 owns explicit registered normal forms and the assurance transition.
 
 ### M5 — computation and assurance
 
-Status: **design frozen by the pushed M5 plan checkpoint; implementation
-next**. See the
-[M5 computation and assurance plan](lean-nested-inductive-elimination-m5-plan-2026-07-22.md).
+Status: **complete**. See the
+[M5 result](lean-nested-inductive-elimination-m5-2026-07-22.md).
 
 - repeat pinned-Lean source compilation and Axeyum computations;
 - require registered cross-nested normal forms, not constructor witnesses;
 - append a TL2.14 assurance overlay without rewriting history;
 - remove the live nested decline only after all support gates pass;
 - commit, push, and verify remote equality.
+
+Pinned Lean reproduced the frozen OLEAN digest twice. The three completed
+imports explicitly infer their theorem proofs, check `Eq` sides, and normalize
+to the registered 3/3/5-successor forms twice. The append-only TL2.14 overlay
+preserves every older observation and advances the current seven-row matrix to
+six admitted, four computation-checked, and zero current declines. Only then
+was `inductive-nested` removed from the live compatibility registry. Complete
+kernel/importer, exact 640/720/768/840, historical, generated-document, and
+resource gates pass. ADR-0355 remains proposed for M6.
 
 ### M6 — final closure
 

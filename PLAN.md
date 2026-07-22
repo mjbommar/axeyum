@@ -342,7 +342,7 @@ state.
 > commit `6a2afdd5` is pushed with local/tracking/remote equality. Importer
 > policy and all M0 computation streams remain untouched. The authoritative
 > [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md)
-> now records M5's computation/assurance task, remaining M5--M6 work,
+> now records M6's final-closure task, the remaining M6 work,
 > ownership constraints, commands, and stop conditions.
 > The [M4 importer plan](docs/plan/lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
 > froze the requirements to derive the auxiliary population from checked
@@ -357,7 +357,21 @@ state.
 > suites and exact 640/720/768/840 plus well-founded 35/0 controls pass at
 > semantic commit `f03dfcdf`. M4 is the planned first product observation of
 > the immutable M0 streams; it records no selected normal form and does not
-> change assurance or the live decline. M5 is next.
+> change assurance or the live decline. The subsequent
+> [M5 plan](docs/plan/lean-nested-inductive-elimination-m5-plan-2026-07-22.md)
+> froze three exact theorem roots and their 3/3/5-successor normal forms before
+> implementation at checkpoint `dbaaedb4`. The
+> [M5 result](docs/plan/lean-nested-inductive-elimination-m5-2026-07-22.md)
+> then reproduces the unchanged pinned-Lean OLEAN digest twice and checks all
+> three Axeyum theorem proofs and normal forms twice at computation checkpoint
+> `edfa7924`. Its append-only TL2.14 overlay preserves every historical view,
+> advances the current seven-row construct matrix to six independently
+> admitted rows, four computation-checked rows, and zero current declines, and
+> removes only the obsolete live `inductive-nested` code. Five unrelated live
+> codes remain exact. Complete kernel/importer suites, exact 640/720/768/840
+> and well-founded 35/0 controls, strict tooling, 73 related Python contract
+> tests, generated documents, foundational resources, and links pass. M6 final
+> aggregate closure and ADR-0355 disposition are next.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

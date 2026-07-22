@@ -76,6 +76,7 @@ class LeanStrictPositivityM3Tests(unittest.TestCase):
         )
         self.assertEqual(digest, matrix["current_registration_sha256"])
         self.assertIn("tl2_13_update", current)
+        self.assertIn("tl2_14_update", current)
 
 
 if __name__ == "__main__":

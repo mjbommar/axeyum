@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -174,6 +175,8 @@ class LeanNestedInductiveEliminationM0Tests(unittest.TestCase):
         row = self.data["baseline"]["construct_matrix"]
         digest = CHECK.construct_matrix_baseline_sha256(CHECK.ROOT / row["path"])
         self.assertEqual(digest, row["sha256_without_tl2_14_overlay"])
+        current = json.loads((CHECK.ROOT / row["path"]).read_text(encoding="utf-8"))
+        self.assertIn("tl2_14_update", current)
 
     def test_premature_axeyum_observation_rejects(self) -> None:
         self.data["kernel_results"] = {

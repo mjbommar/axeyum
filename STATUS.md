@@ -390,8 +390,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   The detailed state and resume sequence are in
   [the FP audit handoff](docs/plan/fp-theory-soundness-audit-handoff-2026-07-22.md).
 
-- **2026-07-22 — TL2.13 mutual inductive groups are complete; TL2.14 nested-
-  inductive kernel elimination is preregistered and M0 is next.**
+- **2026-07-22 — TL2.14 nested-inductive kernel elimination has completed M5;
+  M6 final closure is next.**
   [Accepted ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
   and the
   [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
@@ -517,7 +517,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   mutations. Commit `f03dfcdf` is pushed with ref equality; complete suites and
   exact 640/720/768/840 plus well-founded 35/0 controls pass. M4 is the planned
   first product import of the immutable M0 streams but adds no explicit normal-
-  form or assurance credit. M5 computation/assurance is next.
+  form or assurance credit. The subsequent
+  [M5 plan](docs/plan/lean-nested-inductive-elimination-m5-plan-2026-07-22.md)
+  freezes three exact theorem roots and 3/3/5-successor normal forms before
+  implementation at `dbaaedb4`. The
+  [M5 result](docs/plan/lean-nested-inductive-elimination-m5-2026-07-22.md)
+  reproduces the unchanged pinned-Lean OLEAN digest twice and checks all three
+  theorem proofs and normal forms twice at `edfa7924`. Its append-only TL2.14
+  overlay preserves every historical view and advances the current seven-row
+  construct matrix to six independently admitted rows, four computation-
+  checked rows, and zero current declines. Only then was the obsolete live
+  `inductive-nested` code removed; five unrelated codes remain exact. Complete
+  suites, exact 640/720/768/840 and well-founded 35/0 controls, strict tooling,
+  73 related Python contract tests, generated documents, foundational
+  resources, and links pass. M6 owns the final aggregate, ADR-0355 disposition,
+  and complete project-state reconciliation.
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**
@@ -7026,7 +7040,7 @@ plan is built and committed on the current branch:
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups followed in TL2.13; a later audit separates TL2.14 kernel nested elimination from TL4.9/TL4.10 source elaboration. |
 | P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. |
-| P3.6 / TL2.14 | Nested-inductive kernel elimination | **WIP (P0/M0/M1/M2/M3/M4 complete; ADR-0355 proposed)** — M0 freezes three explicit computations and 114,596 bytes / 2,022 records without product observation. M1 establishes typed non-admission. M2 implements native fixed-point expansion/restoration and exact `.rec_N` publication. M3 repeats the exact 640-case grammar twice at digest `a20fe056c9443a37`, observes exact dependency/iota surfaces, and closes 16 transactional mutations plus the bounded integrity amendment. M4 derives auxiliary identity from checked motives, imports the construct plus all three frozen computation streams twice at 22/34/34/34 declarations and zero axioms, and closes 20 wire/publication classes plus order non-authority. Complete suites and exact 640/720/768/840 and well-founded 35/0 controls pass. Explicit normal-form/assurance credit and live-decline removal remain M5. |
+| P3.6 / TL2.14 | Nested-inductive kernel elimination | **WIP (P0/M0/M1/M2/M3/M4/M5 complete; ADR-0355 proposed)** — M0 freezes three explicit computations and 114,596 bytes / 2,022 records without product observation. M1 establishes typed non-admission. M2 implements native fixed-point expansion/restoration and exact `.rec_N` publication. M3 repeats the exact 640-case grammar twice at digest `a20fe056c9443a37`, observes exact dependency/iota surfaces, and closes 16 transactional mutations plus the bounded integrity amendment. M4 derives auxiliary identity from checked motives, imports the construct plus all three frozen computation streams twice at 22/34/34/34 declarations and zero axioms, and closes 20 wire/publication classes plus order non-authority. M5 checks the registered 3/3/5-successor normal forms twice, appends the history-preserving current assurance overlay (7 rows / 6 admitted / 4 computation-checked / 0 current declines), and removes only the obsolete live nested decline. Complete suites and exact 640/720/768/840 and well-founded 35/0 controls pass. M6 final aggregate closure, ADR disposition, and complete project-state reconciliation remain. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -7080,6 +7094,23 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.14 M5 computation and assurance.** Plan
+  checkpoint `dbaaedb4` froze three exact theorem roots and their
+  3/3/5-successor normal forms before implementation. Computation checkpoint
+  `edfa7924` imports and reduces every theorem twice, infers each proof, checks
+  its exact `Eq` type and definitionally equal sides, and confirms zero axiom
+  identities. Two fresh pinned-Lean runs reproduce the unchanged
+  `d7d03cb863626f1ddc2a80b0dee3ae19fbc001dc2fb4ac60f6b9e27c7b7f53c2`
+  OLEAN digest. The append-only TL2.14 overlay preserves every older
+  observation and advances the current matrix to 7 rows / 6 admitted / 4
+  computation-checked / 0 current declines. The obsolete live
+  `inductive-nested` code is removed; five unrelated codes remain exact. Two
+  independent audits found no blocker. Complete importer/kernel suites, exact
+  640/720/768/840 and well-founded 35/0 controls, strict tooling, 73 related
+  Python contract tests, generated documents, foundational resources, and
+  links pass. M6 final closure is next; ADR-0355 remains proposed and TL2.14
+  remains WIP.
 
 - **2026-07-22 — Completed TL2.14 M4 exact official nested import.** Commit
   `f03dfcdf` derives the auxiliary population from checked main-recursor motive

@@ -570,6 +570,8 @@ def _validate_construct_outcomes(path: Path, failures: list[str]) -> None:
     except (KeyError, TypeError, json.JSONDecodeError, OSError):
         failures.append("construct matrix outcome overlay missing or malformed")
         return
+    if "tl2_14_update" not in matrix:
+        failures.append("construct matrix TL2.14 update missing")
     nested = outcomes.get("nested")
     expected_nested = {
         "variant": "Malformed",

@@ -11,9 +11,9 @@ full Lean kernel, frontend, ecosystem, or mathlib compatibility.
 ## Summary
 
 - rows: 7; official accepted: 6; official rejected: 1;
-- independently admitted: 5; computation-checked: 3;
-- current transactional declines: 1, including one valid-wire format misclassification;
-- assurance classes: `dual-admitted-computation-checked`=3, `independently-admitted`=2, `official-export-inventory-only`=1, `official-source-rejected`=1.
+- independently admitted: 6; computation-checked: 4;
+- current transactional declines: 0;
+- assurance classes: `dual-admitted-computation-checked`=4, `independently-admitted`=2, `official-source-rejected`=1.
 
 ## Matrix
 
@@ -23,7 +23,7 @@ full Lean kernel, frontend, ecosystem, or mathlib compatibility.
 | `recursive-indexed` | recursive-indexed | accepted | `AxeyumConstructMatrix.recursiveIndexedWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-recursive-indexed.ndjson); N/L/E/D=34/4/132/4; inductive-recursive-indexed; computation [fixture](../fixtures/lean4export-v4.30-recursive-ih-vector-computation.ndjson) | CompletedImport: 12 declarations, 0 axioms | yes | checked | `dual-admitted-computation-checked` | companion official stream checks AxeyumRecursiveIHComputation.vectorHeightComputes -> MiniNat.succ MiniNat.zero |
 | `reflexive-higher-order` | reflexive-higher-order | accepted | `AxeyumConstructMatrix.reflexiveWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-reflexive-higher-order.ndjson); N/L/E/D=47/3/139/6; inductive-recursive-indexed, inductive-reflexive; computation [fixture](../fixtures/lean4export-v4.30-recursive-ih-acc-computation.ndjson) | CompletedImport: 11 declarations, 0 axioms | yes | checked | `dual-admitted-computation-checked` | companion official stream checks AxeyumRecursiveIHComputation.accPropertyComputes -> True |
 | `mutual` | mutual | accepted | `AxeyumConstructMatrix.mutualWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-mutual.ndjson); N/L/E/D=75/4/305/10; inductive-mutual; computation [fixture](../fixtures/lean4export-v4.30-mutual-cross-computation.ndjson), [fixture](../fixtures/lean4export-v4.30-mutual-indexed-computation.ndjson) | CompletedImport: 26 declarations, 0 axioms | yes | checked | `dual-admitted-computation-checked` | companion official streams check AxeyumMutualInductiveComputation.crossFamilyComputes -> MiniNat.succ (MiniNat.succ MiniNat.zero); AxeyumMutualInductiveComputation.indexedCrossFamilyComputes -> MiniNat.succ (MiniNat.succ MiniNat.zero) |
-| `nested` | nested | accepted | `AxeyumConstructMatrix.nestedWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-nested.ndjson); N/L/E/D=70/6/322/10; inductive-nested | Malformed line 248: single-family inductive must export one recursor | no | not reached | `official-export-inventory-only` | valid official nested group is misclassified as malformed |
+| `nested` | nested | accepted | `AxeyumConstructMatrix.nestedWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-nested.ndjson); N/L/E/D=70/6/322/10; inductive-nested; computation [fixture](../fixtures/lean4export-v4.30-nested-aux-computation.ndjson), [fixture](../fixtures/lean4export-v4.30-nested-indexed-computation.ndjson), [fixture](../fixtures/lean4export-v4.30-nested-repeated-container-computation.ndjson) | CompletedImport: 22 declarations, 0 axioms | yes | checked | `dual-admitted-computation-checked` | companion official streams check AxeyumNestedInductiveComputation.roseAuxiliaryRecursorComputes -> MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero)); AxeyumNestedInductiveComputation.indexedAuxiliaryRecursorComputes -> MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero)); AxeyumNestedInductiveComputation.repeatedContainerReusesAuxiliaryRecursor -> MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero)))) |
 | `well-founded` | well-founded | accepted | `AxeyumConstructMatrix.wellFoundedWitness` | [fixture](../fixtures/lean4export-v4.30-construct-matrix-well-founded.ndjson); N/L/E/D=160/5/731/23; inductive-recursive-indexed, inductive-reflexive | CompletedImport: 35 declarations, 0 axioms | yes | not selected | `independently-admitted` | pre-elaborated root admitted through Acc.rec; no frontend-lowering credit |
 | `non-positive-source-negative` | non-positive-inductive | rejected | — | not applicable | not run: official source rejected | no | not applicable | `official-source-rejected` | official kernel strict-positivity rejection; no NDJSON assigned |
 
@@ -39,8 +39,7 @@ full Lean kernel, frontend, ecosystem, or mathlib compatibility.
 - `parsed-declined` means importer policy recognized and transactionally declined the
   official construct before independent admission.
 - `official-export-inventory-only` grants official bytes and independent Python wire
-  inventory only. Here it preserves the nested row's current malformed/unsupported
-  classification defect rather than laundering it into parser or kernel credit.
+  inventory only, without laundering it into parser or kernel credit.
 - `official-source-rejected` has no export by construction.
 
 The well-founded row now admits the already-elaborated selected root through `Acc.rec`.
@@ -48,3 +47,5 @@ That is kernel/import evidence for this exact stream, not well-founded source el
 frontend lowering, or general ecosystem credit.
 The mutual row requires both the non-indexed and indexed companion computations; neither
 the construct witness nor only one companion stream is sufficient for computation credit.
+The nested row requires all three auxiliary-recursion companion computations; construct
+admission alone is likewise insufficient for computation credit.
