@@ -136,7 +136,14 @@ Last updated: 2026-07-22
 > identical official streams without product observation. M1 now corrects the
 > exact official nested row to typed `inductive-nested` non-admission before
 > the kernel gate while preserving malformed count variants and exact well-
-> founded/720/768/840 controls. M2 native expansion/restoration is next.
+> founded/720/768/840 controls. The
+> [M2 result](../../../docs/plan/lean-nested-inductive-elimination-m2-2026-07-22.md)
+> now lands native structural discovery, complete checked-container copying,
+> fixed-point expansion, unchanged atomic checking, recursive source-surface
+> restoration, exact string `.rec_N` publication, and transaction/cache
+> rollback. Twenty-three focused tests cover the named native matrix and
+> cross-boundary computation; M3's >=640-case grammar and mutation teeth are
+> next, while importer policy and M0 streams remain untouched.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

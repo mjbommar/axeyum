@@ -1,6 +1,6 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: paused cleanly after M1; M2 native expansion and restoration next
+Status: paused cleanly after M2; M3 generated grammar and restoration mutations next
 
 Date: 2026-07-22
 
@@ -278,12 +278,23 @@ stream was observed and the historical assurance record is untouched.
 
 ### M2 — native expansion and restoration
 
+Status: **complete**. See the
+[M2 result](lean-nested-inductive-elimination-m2-2026-07-22.md).
+
 - implement private discovery/copy/queue/restore structures;
 - reuse the one TL2.13 atomic group checker;
 - close the named native positive/negative matrix;
 - prove final-surface inference and whole-operation rollback;
 - do not pass M0 computation streams to the importer;
 - commit, push, and verify remote equality.
+
+The native kernel now derives complete specialized auxiliary groups, checks
+them once through the TL2.13 worker, restores only the source surface plus
+exact string `.rec_N` recursors, rejects private-name leakage, and rolls back
+temporary declarations, group metadata, and caches. Twenty-three focused tests
+cover the named native matrix, exact final inference, retry behavior, and the
+cross-boundary `main -> auxiliary -> main` computation. The importer remains at
+the M1 typed decline, and the frozen M0 computation streams remain unobserved.
 
 ### M3 — deterministic nested grammar
 

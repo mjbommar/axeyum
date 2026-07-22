@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: paused cleanly after M1; M2 native expansion and restoration is next
+Status: paused cleanly after M2; M3 deterministic nested grammar is next
 
 Date paused: 2026-07-22
 
@@ -21,10 +21,12 @@ and the decision gate remains
   `48fece10d1c93cf8cf8df7c2d4875ea18cdafa8e`.
 - M1's semantic implementation is
   `893afc1f0de3ca60972b3eaf4d84ff0b3d6c66e7`.
+- M2's native kernel implementation is
+  `96b6fbd4da7e20277b338f59983fbe7316b31d22`.
 - Reverify the current branch, local HEAD, tracking ref, and remote ref before
   editing. Do not switch, reset, restore, or force any other live worktree.
-- No partial M2 edits exist at this checkpoint. Inspect ownership again before
-  touching `crates/axeyum-lean-kernel/src/inductive.rs` or its tests.
+- No partial M3 edits exist at this checkpoint. Inspect ownership again before
+  adding the generated grammar or mutation seams.
 - The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
   unrelated dirty benchmark/corpus/review artifacts and remains untouched by
   this lane.
@@ -46,6 +48,10 @@ preflight are complete and pushed:
    main-plus-auxiliary recursor population now returns typed
    `Unsupported("inductive-nested")` before admission, while ordinary malformed
    singleton counts retain their exact error.
+5. M2 implemented native structural expansion, complete checked-container
+   copying, fixed-point queuing, ordinary atomic group checking, source-surface
+   restoration, deterministic `.rec_N` publication, and transaction-wide
+   rollback at `96b6fbd4`.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
@@ -53,6 +59,8 @@ and its fail-closed machine contract is
 [lean-nested-inductive-elimination-v1.json](lean-nested-inductive-elimination-v1.json).
 The complete M1 result is
 [lean-nested-inductive-elimination-m1-2026-07-22.md](lean-nested-inductive-elimination-m1-2026-07-22.md).
+The complete M2 result is
+[lean-nested-inductive-elimination-m2-2026-07-22.md](lean-nested-inductive-elimination-m2-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -125,20 +133,34 @@ importer suite, warning-denied Clippy/rustdoc, M0 contracts, and documentation
 gates pass. No M0 computation stream was observed by the importer and no
 generated assurance artifact changed.
 
-## Exact next milestone: M2 native expansion and restoration
+## M2 result
 
-M2 must implement private structural discovery, complete auxiliary-container
-group copying, fixed-point queuing, final-surface restoration, deterministic
-`.rec_N` publication, and transaction-wide rollback while reusing TL2.13's
-one atomic group checker. It owns the plan's named native positive/negative
-matrix and final-surface inference checks.
+M2 adds a private rollback-aware checked-group index, structurally discovers
+and deduplicates nested container applications, copies complete container
+mutual groups, processes copied constructors to a fixed point, and checks the
+expanded group once through TL2.13's ordinary atomic worker. It then rolls back
+the temporary group, clears both environment-sensitive caches, recursively
+restores family/constructor/recursor expressions, publishes exact string
+`rec_N` auxiliary names, infers every final type and closed rule after complete
+recursor staging, and registers only the source family group.
 
-Before implementation, bind a bounded M2 plan to the exact official Lean 4.30
-algorithm and inspect the current kernel transaction, checked group metadata,
-name-generation, substitution, dependency, inference, and reduction helpers.
-Do not pass any M0 computation stream to the importer; M4 owns first product
-observation. Stop and amend ADR-0355 if the existing atomic group path cannot
-check the expanded group without a second semantic implementation.
+Twenty-three focused native tests cover repeated/distinct parameterizations,
+outer and container groups, zero/one/two parameters and indices, universes,
+higher-order and depth-two shapes, `Prop`/`Type`, empty owners, exact public
+surface inference, typed negatives, bounds, name collisions, rollback/retry,
+and the computation chain `Rose.rec -> Rose.rec_1 -> Rose.rec`. The complete
+kernel and importer suites, retained 720/768/840 populations, strict Clippy,
+strict rustdoc, and M0 no-observation contract pass. The importer remains at
+the M1 nested decline and no M0 computation stream was observed.
+
+## Exact next milestone: M3 deterministic nested grammar
+
+M3 must preregister and run at least 640 unique public-path nested profiles
+twice, retain a byte-identical summary, and add independent expansion,
+deduplication, restoration, leakage, metadata, rule, and late-publication
+mutation teeth. It must retain exact 720/768/840 populations and direct
+identities without changing importer policy or passing any M0 computation
+stream to Axeyum.
 
 ## Remaining milestones after M2
 
@@ -175,9 +197,8 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then record a bounded M2 plan, inspect current ownership one more time, and
-advance the private expansion/restoration representation with small reviewable
-patches.
+Then record a bounded M3 population and mutation plan, inspect current ownership
+one more time, and add the generated grammar without changing importer policy.
 
 ## Tools and resource envelope
 
@@ -200,8 +221,10 @@ condition. Preserve the evidence and amend ADR-0355 before broadening scope.
 
 ## Claims that remain false
 
-Axeyum does not yet admit nested inductives. TL2.14 does not establish native
-Lean source parsing, inductive-command elaboration, pattern/equation
+Axeyum's native kernel now admits the structurally registered nested-inductive
+container shapes covered by M2. The official nested importer row still declines,
+and TL2.14 does not establish native Lean source parsing, inductive-command
+elaboration, pattern/equation
 compilation, structural or well-founded recursion elaboration, termination
 checking, broad `Init`/`Std`/mathlib admission, full Lean-kernel parity, or a
 replacement for official Lean.
