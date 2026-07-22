@@ -16,6 +16,7 @@ import platform
 import re
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -782,6 +783,7 @@ def validate_execution_bundle(bundle_root: Path) -> dict[str, Any]:
         if (
             not path.is_file()
             or path.is_symlink()
+            or stat.S_IMODE(path.stat().st_mode) != 0o444
             or path.stat().st_size != row["bytes"]
             or sha256_file(path) != row["sha256"]
         ):
@@ -794,6 +796,9 @@ def validate_execution_bundle(bundle_root: Path) -> dict[str, Any]:
     expected = expected_paths | {"source-identity.json", "bundle-completion.json"}
     if present != expected:
         raise ContractError("execution bundle namespace mismatch")
+    for name in ("source-identity.json", "bundle-completion.json"):
+        if stat.S_IMODE((bundle_root / name).stat().st_mode) != 0o444:
+            raise ContractError("execution bundle metadata is not immutable")
     return completion
 
 
