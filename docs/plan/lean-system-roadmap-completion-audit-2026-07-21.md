@@ -14,6 +14,16 @@ Active execution plan:
 Decision:
 [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
+Terminal definition added 2026-07-22:
+[`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md)
+
+The terminal contract does not reopen this audit's completed
+research/design/prototype objective. It makes the continuing implementation
+claim stricter: complete Lean 4.30 parity requires native A0-A11 exits over
+content-identified U0-U9 populations, exact official/native paired outcomes,
+and zero adapter or incomplete-run substitution. The current matrix remains
+K0 1/1, K1 4/5, and K2-K6 0 satisfied rows.
+
 ## 1. Scope of this audit
 
 The requested objective was to research the distance between Axeyum's
@@ -164,14 +174,19 @@ The four-root dependency evidence and next implementation order are in the
 
 The following remain deliberately open and must not be erased by this audit:
 
-- ADR-0345 review and L0 capability/axiom contracts;
+- L0 pin/resource/gate/scoreboard/status contracts; ADR-0345 is accepted, the
+  selected capability matrix and 65-row axiom inventory are landed, and the
+  first corrected remote Lean job still fails before its representative sweep
+  on working-directory-dependent elan executable resolution;
 - L1 property fuzzing and checkpointed large-stream durable publication;
   whole-environment in-memory publication is atomic, the deterministic 226-case
   mutation corpus is complete with the upstream no-footer prefix boundary
   explicit, and canonical declaration/direct-dependency identity has landed;
-- L2 String literals, quotient, positivity, and recursive-indexed/reflexive/
-  mutual admission; projection and arbitrary-precision Nat-literal slices are
-  now complete for their exact roots;
+- L2 accelerated Nat operations, String literals, quotient semantics, and
+  broader generated seam/construct matrices. Strict positivity, recursive-
+  indexed/reflexive induction hypotheses, atomic mutual groups, and nested-
+  inductive expansion/restoration are now complete for their registered
+  populations under ADR-0352 through ADR-0355;
 - L3 dependency-closed `Init`/`Std`/mathlib slices and semantic
   discharge/classification of the now runtime/type-digested 65 reconstruction
   assumptions (real 30, integer 34, string 1);
@@ -202,5 +217,7 @@ The original objective is satisfied without shrinking its scope:
   live under `docs/plan/`.
 
 The precise status is therefore: **roadmap objective complete; Lean-system
-implementation incomplete and continuing from projection-first L2 plus the L0
-contract gates.**
+implementation incomplete and continuing from L0 population/remote-gate work,
+remaining String/quotient K1 roots, L3 trust/library work, and the unstarted
+native K2-K6 stack.** The complete-parity contract supplies the terminal exit;
+it does not convert this roadmap audit into implementation completion.

@@ -72,6 +72,28 @@ Reimplementing Lean's parser, macros, elaborator, unifier, tactic ecosystem,
 compiler, package ecosystem, or language server is not a solver milestone and
 is not implied by either gate.
 
+## Definition of done — complete Lean 4 system parity
+
+Full native compatibility remains a project north star even though it is not a
+solver milestone. For the pinned v4.30.0 target, the unqualified word
+“complete” is governed by the
+[complete Lean 4.30 parity contract](lean4-complete-parity-contract-2026-07-22.md):
+
+1. native A0-A11 behavior is measured over complete, content-identified U0-U9
+   upstream populations;
+2. every official/native paired cell agrees on success or rejection, with zero
+   one-sided, semantic-mismatch, unadjudicated, not-run, or invalid-run cells;
+3. parser, elaborator, kernel, tactic, module/Lake, LSP, runtime/compiler,
+   mathlib, and platform/release gates each satisfy their own semantic
+   normalization and assurance contract;
+4. official adapters remain separately useful but cannot substitute for a
+   native terminal cell; and
+5. functional, assurance, and performance parity remain separate reports.
+
+This is the same discipline used for SMT-LIB comparison: exact populations and
+paired overlap precede aggregates, command/workflow compatibility stays
+separate from engine capability, and incomplete runs receive zero credit.
+
 ## Definition of done — the verified-systems trajectory (Track 5)
 
 The **application-level** destination, adopted as first-class by

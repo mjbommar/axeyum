@@ -1,0 +1,193 @@
+from __future__ import annotations
+
+import copy
+import importlib.util
+import sys
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[2]
+SPEC = importlib.util.spec_from_file_location(
+    "gen_lean_complete_parity",
+    ROOT / "scripts" / "gen-lean-complete-parity.py",
+)
+assert SPEC and SPEC.loader
+GEN = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = GEN
+SPEC.loader.exec_module(GEN)
+
+
+class LeanCompleteParityTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.data = GEN.load_manifest()
+
+    def population(self, population_id: str) -> dict:
+        return next(item for item in self.data["populations"] if item["id"] == population_id)
+
+    def axis(self, axis_id: str) -> dict:
+        return next(item for item in self.data["axes"] if item["id"] == axis_id)
+
+    def gate(self, gate_id: str) -> dict:
+        return next(item for item in self.data["terminal_gates"] if item["id"] == gate_id)
+
+    def failures(self) -> list[str]:
+        return GEN.validate_manifest(self.data)
+
+    def test_committed_registry_is_valid_and_rendering_is_deterministic(self) -> None:
+        self.assertEqual(self.failures(), [])
+        first = GEN.build_report(self.data)
+        second = GEN.build_report(copy.deepcopy(self.data))
+        self.assertEqual(first, second)
+        markdown = GEN.render_markdown(first)
+        self.assertIn("complete Lean 4.30 parity not established", markdown)
+        self.assertIn("Registered terminal cells: **0**", markdown)
+        self.assertFalse(first["terminal"]["ready"])
+        self.assertEqual(first["bounded_snapshot"]["axiom_ledger"]["rows"], 65)
+        self.assertEqual(
+            first["bounded_snapshot"]["construct_matrix"]["independently_admitted"],
+            6,
+        )
+        source_paths = {item["path"] for item in first["source_identities"]}
+        self.assertIn(".github/workflows/ci.yml", source_paths)
+        self.assertIn(
+            "docs/plan/lean4-complete-parity-contract-2026-07-22.md", source_paths
+        )
+        self.assertIn("scripts/gen-lean-complete-parity.py", source_paths)
+
+    def test_population_order_and_incomplete_denominators_are_fail_closed(self) -> None:
+        self.data["populations"][0], self.data["populations"][1] = (
+            self.data["populations"][1],
+            self.data["populations"][0],
+        )
+        self.assertTrue(any("population ids/order" in failure for failure in self.failures()))
+
+        self.data = GEN.load_manifest()
+        self.population("U1")["raw_denominator"] = 12
+        self.assertTrue(
+            any("cannot publish terminal denominators" in failure for failure in self.failures())
+        )
+
+    def test_complete_population_requires_both_denominators_and_digest(self) -> None:
+        population = self.population("U1")
+        population["state"] = "complete_authority"
+        self.assertTrue(
+            any("needs raw denominator" in failure for failure in self.failures())
+        )
+        self.assertTrue(
+            any("needs normalized denominator" in failure for failure in self.failures())
+        )
+        self.assertTrue(any("needs content digest" in failure for failure in self.failures()))
+
+    def test_axis_credit_requires_evidence_and_complete_dependencies(self) -> None:
+        self.axis("A3")["state"] = "partial"
+        self.assertTrue(
+            any(
+                "A3: retained evidence is required" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.axis("A1")["populations"] = ["U1"]
+        self.assertTrue(
+            any("population dependencies must match" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        self.axis("A1")["state"] = "complete"
+        self.assertTrue(
+            any(
+                "complete axis depends on incomplete populations" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_derived_gates_and_claim_switch_cannot_be_hand_promoted(self) -> None:
+        self.gate("G1")["state"] = "satisfied"
+        self.assertTrue(
+            any(
+                "G1: state disagrees with derived registry evidence" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.data["terminal_claim_enabled"] = True
+        self.assertTrue(
+            any(
+                "terminal_claim_enabled must exactly equal" in failure
+                for failure in self.failures()
+            )
+        )
+
+        self.data = GEN.load_manifest()
+        self.gate("G4")["state"] = "satisfied"
+        self.assertTrue(
+            any(
+                "G4: retained evidence is required" in failure
+                for failure in self.failures()
+            )
+        )
+
+    def test_paired_taxonomy_and_cells_require_exact_identity(self) -> None:
+        self.assertIn("command_sha256", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("environment_sha256", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("resource_envelope_sha256", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("attempt_id", GEN.PAIRED_CELL_FIELDS)
+        self.assertIn("completed", GEN.PAIRED_CELL_FIELDS)
+        self.data["outcome_classes"][-1] = "other"
+        self.assertTrue(any("outcome_classes/order" in failure for failure in self.failures()))
+
+        self.data = GEN.load_manifest()
+        self.data["paired_cells"] = [
+            {
+                "id": "bounded-probe",
+                "population": "U1",
+                "axis": "A1",
+                "outcome": "agree-success",
+                "source_sha256": "bad",
+                "dependency_sha256": "bad",
+                "source_family": "probe",
+                "normalization": "kernel expression normalization v1",
+                "official_evidence": [],
+                "axeyum_evidence": [],
+            }
+        ]
+        failures = self.failures()
+        self.assertTrue(any("source_sha256 must be" in failure for failure in failures))
+        self.assertTrue(any("dependency_sha256 must be" in failure for failure in failures))
+        self.assertTrue(
+            any(
+                "official_evidence: retained evidence" in failure
+                for failure in failures
+            )
+        )
+        self.assertTrue(any("G3: state disagrees" in failure for failure in failures))
+
+    def test_claim_detector_rejects_affirmative_claims_only(self) -> None:
+        self.assertEqual(
+            GEN.find_forbidden_claims("Axeyum has complete Lean 4.30 parity."),
+            [(1, "Axeyum has complete Lean 4.30 parity")],
+        )
+        self.assertTrue(GEN.find_forbidden_claims("We have reached 100% Lean 4 parity."))
+        self.assertTrue(
+            GEN.find_forbidden_claims("Axeyum has **full** Lean 4 compatibility.")
+        )
+        self.assertTrue(GEN.find_forbidden_claims("Lean 4 parity is complete."))
+        self.assertEqual(
+            GEN.find_forbidden_claims("Axeyum does not have complete Lean 4 parity."),
+            [],
+        )
+        self.assertEqual(
+            GEN.find_forbidden_claims("Complete Lean 4 parity is a long-term target."),
+            [],
+        )
+
+    def test_missing_evidence_path_is_rejected(self) -> None:
+        self.population("U1")["evidence"][0]["path"] = "docs/plan/does-not-exist.json"
+        self.assertTrue(any("missing evidence path" in failure for failure in self.failures()))
+
+
+if __name__ == "__main__":
+    unittest.main()

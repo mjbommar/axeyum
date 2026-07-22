@@ -92,8 +92,11 @@ Lean's default elaborator recursion depth. Narrow export corrections rerun at
 corrected run's Lean-worker phase took 6.8 s; a same-shape confirmation under
 different local load took 53.3 s, so neither is promoted as a performance
 claim. The standalone inductive test and missing-Lean negative control also
-pass. A remote green job and archived duration/RSS remain open before sizing
-the scheduled exhaustive tier. See the
+pass. The first corrected remote job is now retained as a failed gate: it
+stopped before the representative sweep because `AXEYUM_LEAN_BIN` named an
+elan shim without a default toolchain outside the repository working directory.
+A true remote 71/71 attestation and archived duration/RSS remain open before
+sizing the scheduled exhaustive tier. See the
 [target evidence audit](docs/plan/parity-target-evidence-audit-2026-07-21.md).
 
 - **Strings (P2.7): Phase A is essentially DONE** — A.1a/b landed (first-class
@@ -400,6 +403,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `wasm32-unknown-unknown`, links, and `git diff --check`. Next: decide whether
   a deliberate bignum exact base checker is justified for falling/raw order 34,
   or return to broader timeout-bounded CAS gap probing.
+
+- **2026-07-22 — complete Lean 4.30 parity now has an explicit terminal
+  contract and a fail-closed generated registry, without promoting the
+  completed TL2.14 slice.** The
+  [contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md) transfers
+  the SMT-LIB measurement rules—content-identified authoritative populations,
+  exact paired overlap, typed one-sided/mismatch/unadjudicated/not-run results,
+  layer-specific equivalence, and zero incomplete-run credit—to twelve native
+  Lean behavioral axes over ten upstream populations. The current generated
+  matrix remains one satisfied K0 row, four of five K1 rows, and zero satisfied
+  K2-K6 rows. TL0.6 is now partial: the
+  [registry](docs/plan/lean-complete-parity-v1.json) and generated
+  [Markdown](docs/plan/generated/lean-complete-parity.md)/
+  [JSON](docs/plan/generated/lean-complete-parity.json) status derive current
+  K-profile, construct, task, and axiom facts, but publish zero complete U0-U9
+  authorities, zero complete A0-A11 axes, zero terminal paired cells, and zero
+  satisfied G1-G10 gates. Eight contract/mutation tests reject incomplete
+  denominators, missing evidence, illegal axis/gate credit, malformed paired
+  identity, and a premature terminal claim; CI and local parity-document gates
+  check both generated outputs and scan the live public claim surfaces. The
+  Lean v4.30.0 tree audit records 6,931 test-tree blobs / 4,035
+  Lean test sources and the mathlib pin records 8,606 Lean files, but the
+  contract explicitly refuses to treat those inventories as executable test
+  denominators. The first corrected remote Lean CI job is reclassified from
+  pending/unattempted to failed-before-sweep on working-directory-dependent
+  elan resolution. Next: close TL0.3's executable identity, derive U2 from the
+  executable CTest/test-pile authority, and populate exact paired records.
 
 - **2026-07-22 — structured composition carries raw squared-binomial moments
   through order 19.** Raw order 11 was mathematically valid but hit two
@@ -863,11 +893,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   resources, and links pass. The
   [M6 final result](docs/plan/lean-nested-inductive-elimination-final-2026-07-22.md)
   maps every decision exit and freshly repeats both positive and negative
-  pinned-Lean controls plus the complete bounded aggregate. ADR-0355 acceptance
-  and TL2.14 DONE become effective when the containing commit is pushed with
-  local/tracking/remote equality. Native source parsing/elaboration, recursion
-  compilation and termination, broad libraries, and ecosystem/runtime support
-  remain separate work.
+  pinned-Lean controls plus the complete bounded aggregate. Containing commit
+  `1d848ad4` was pushed with local/tracking/remote equality before integration,
+  so ADR-0355 is accepted and TL2.14 is DONE. Native source parsing/elaboration,
+  recursion compilation and termination, broad libraries, and ecosystem/runtime
+  support remain separate work.
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**
@@ -7462,6 +7492,20 @@ plan is built and committed on the current branch:
   files and reconstructed every count. The compact result is
   [recorded here](docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md).
   `selection_observed=false`; S3 is next.
+- **2026-07-22 — Seeded TL0.6's fail-closed complete-Lean-parity registry.**
+  The exact U0-U9 populations, A0-A11 axes, eight paired outcomes, and G1-G10
+  terminal gates now have one validated machine-readable source and generated
+  Markdown/JSON reports. The generator content-identifies its source manifests
+  and derives K-profile, selected-construct, implementation-task, and axiom
+  summaries without converting them into terminal denominators. Eight
+  contract/mutation tests reject population/order drift, incomplete denominator
+  credit, complete axes over incomplete populations, hand-promoted derived
+  gates, malformed paired identities, missing evidence, and terminal-claim
+  laundering. Local
+  aggregate and both docs CI jobs check the generated reports; live public
+  status surfaces cannot affirm complete Lean parity while the terminal gate is
+  open. Current terminal credit remains honestly zero across complete
+  populations, complete axes, paired cells, and satisfied gates.
 
 - **2026-07-22 — Implemented ADR-0356 S2 verified corpus acquisition.** The
   new resumable runner binds the completed S1 audit, downloads all 90 release

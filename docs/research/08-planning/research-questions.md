@@ -936,7 +936,11 @@ Out of scope:
     gated later phases rather than permanent exclusions. See
     [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md),
     [compatibility roadmap](../../plan/lean-system-compatibility-roadmap-2026-07-21.md),
-    and [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md).
+    [implementation plan](../../plan/lean-system-implementation-plan-2026-07-21.md),
+    and the
+    [complete Lean 4.30 parity contract](../../plan/lean4-complete-parity-contract-2026-07-22.md),
+    which applies the SMT-LIB population/overlap/invalid-run discipline to the
+    terminal native-system claim without changing the adapter-first sequence.
 - [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
   - Answer: expose each live combined theory through the shared `TheorySolver`

@@ -18,14 +18,20 @@ Last updated: 2026-07-22
 > can be competitive; general Z3 solving-power distance is unmeasured;
 > production Z3 compatibility is demonstrably far; solver-proof export to Lean
 > now has a bounded local 71/71 official-Lean acceptance result after four
-> hidden export failures were exposed and fixed, while remote CI and exhaustive
-> acceptance remain open. Full Lean language/toolchain compatibility is a
+> hidden export failures were exposed and fixed. The first corrected remote job
+> failed before the representative sweep on working-directory-dependent elan
+> executable resolution, so remote and exhaustive acceptance remain open. Full
+> Lean language/toolchain compatibility is a
 > separate long-horizon implementation program, while selected declaration
 > import, certificate tactics, and optional workflow adapters remain the first
 > value-bearing stages in the
 > [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
 > under accepted ADR-0345. The complete native work breakdown is the
 > [Lean-system implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md).
+> Its terminal claim is defined separately by the
+> [complete Lean 4.30 parity contract](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md):
+> native A0-A11 behavior over complete content-identified U0-U9 populations,
+> exact paired outcomes, and no adapter substitution or incomplete-run credit.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib
@@ -766,6 +772,7 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   useful profiles. See the
   [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
   [implementation plan](../../../docs/plan/lean-system-implementation-plan-2026-07-21.md),
+  [complete-parity contract](../../../docs/plan/lean4-complete-parity-contract-2026-07-22.md),
   [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md),
   [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
   and [ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).

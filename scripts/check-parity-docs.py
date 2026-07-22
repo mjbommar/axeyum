@@ -416,7 +416,8 @@ def main() -> int:
         f"71/{lean_family_count}",
         "budget_skipped=0|failed=0",
         "MISSING_LEAN_FAIL_CLOSED",
-        "remote CI acceptance pending",
+        "first corrected remote attempt",
+        "no remote source-acceptance",
     ):
         if marker not in lean_gate_text:
             failures.append(

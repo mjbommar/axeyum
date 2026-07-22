@@ -96,14 +96,16 @@ lifetime-free interned terms and universes, WHNF, definitional equality, type
 checking, proof irrelevance, inductives, recursors, and iota reduction. Supported
 solver proofs already reconstruct to kernel-checked terms and self-contained
 Lean modules. A separate fail-closed `lean4export` 3.1 reader now independently
-admits exact flat and direct-recursive official fixtures; a four-root census
-makes projection the measured next kernel blocker. It is not a complete Lean
-kernel or ecosystem: projections, quotients, literal/bignum handling,
-recursive-indexed/mutual breadth, dependency-closed `Init`/`Std`/mathlib imports,
-and a fail-closed tactic bridge remain open. See
+admits exact flat, direct-recursive, recursive-indexed/reflexive, mutual, nested,
+projection, and Nat-literal profiles under explicit population and computation
+gates. It is not a complete Lean kernel or ecosystem: String literals,
+quotients, dependency-closed `Init`/`Std`/mathlib imports, native parsing/macros,
+elaboration, tactics, modules/Lake, LSP, and compiler/runtime behavior remain
+open. See
 [Project State](docs/PROJECT-STATE.md#how-close-is-it-to-lean) and the
 [Lean-system strategy](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
-plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md).
+plus its [implementation plan](docs/plan/lean-system-implementation-plan-2026-07-21.md)
+and [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md).
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 

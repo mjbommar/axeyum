@@ -13,9 +13,12 @@ and Lean.” It supports three different readings:
    gap is protocol, compatibility, robustness, and portfolio depth—not a
    measured universal decision-rate deficit.
 3. Axeyum has a substantial solver-to-Lean proof bridge, but only partial
-   Lean-core compatibility. Replacing the whole Lean language/toolchain is a
-   non-goal. A follow-up now records bounded local 71/71 official-Lean source
-   acceptance; remote and exhaustive acceptance remain open.
+   Lean-core compatibility. Replacing the whole Lean language/toolchain is not
+   a solver milestone; accepted ADR-0345 makes it a separately gated
+   long-horizon system target. A follow-up records bounded local 71/71
+   official-Lean source acceptance. The first corrected remote job has now
+   failed before that sweep on executable/toolchain resolution, and exhaustive
+   acceptance remains open.
 
 The operational mistake would be to turn either “8 versus 8” or “not Z3/Lean
 parity” into a project-wide percentage. The roadmap must name the target and its
@@ -96,9 +99,15 @@ But the validation boundary is narrower than “Lean accepts it all”:
   67/71 modules and rejected four quantified-BV exports; narrow real-inductive
   and elaborator-depth corrections then produced **71/71 accepted, zero skipped,
   zero failed** under official Lean 4.30;
-- the kernel audit lists projections, literal/bignum handling, quotient
-  computation, generalized recursive/indexed/mutual inductives, positivity,
-  and an export/import reader as residual work; and
+- the first corrected main-branch remote job then failed before the
+  representative sweep because its explicit Lean path resolved to an elan shim
+  with no default toolchain outside the repository directory; this is a failed
+  operational gate, not remote 71/71 credit;
+- the bounded kernel/import arc has since closed projection, arbitrary-
+  precision Nat literals, strict positivity, recursive-indexed/reflexive
+  induction hypotheses, atomic mutual groups, and nested-inductive expansion
+  for their registered populations; String literals, quotient computation,
+  broader libraries, and the native source stack remain open; and
 - the LRA/LIA reconstruction preludes assert 64 arithmetic/integer axioms, and
   the string prelude adds one opaque `append` assumption. Official Lean can
   check generated theorems relative to those 65 assumptions, but that does not
@@ -107,8 +116,9 @@ But the validation boundary is narrower than “Lean accepts it all”:
 Lean itself includes parsing, macro expansion, elaboration, compilation, module
 handling, and much more around the kernel, as documented in the official
 [elaboration and compilation pipeline](https://lean-lang.org/doc/reference/latest/Elaboration-and-Compilation/).
-That full-system comparison is both far and irrelevant to Axeyum's product.
-The meaningful targets are a checked certificate bridge, a versioned kernel
+That full-system comparison is far and is not a solver milestone. Under
+accepted ADR-0345 it is nevertheless a separate native-system north star. The
+near-term product targets are a checked certificate bridge, a versioned kernel
 profile, and a fail-closed Lean tactic/import path.
 
 ## Target-by-target distance
@@ -121,7 +131,7 @@ profile, and a fail-closed Lean tactic/import path.
 | Z3-compatible product surface | Far: command/session/API and portfolio gaps are directly inventoried | Prioritize the ordered session contract and conformance, not another isolated theory seed |
 | Solver-proof export to Lean | Substantial implementation; local representative official-Lean acceptance is 71/71, remote and exhaustive acceptance are open | Archive a green remote attestation, then measure the exhaustive sweep without inflating representative coverage |
 | Declared Lean-core profile | Partial, with explicit kernel and assumption gaps | Build a differential profile; classify and discharge or explicitly retain all 65 ledgered assumptions |
-| Full Lean system | Far and out of scope | Remove it from parity language and roadmap exit criteria |
+| Full Lean system | Far; not a solver milestone, but an accepted long-horizon native-system target | Keep it out of solver percentages; use the separate complete-parity contract and A0-A11/U0-U9 exits |
 
 ## Roadmap changes implied by the audit
 
@@ -140,7 +150,9 @@ profile, and a fail-closed Lean tactic/import path.
    assumptions.
 8. Make a versioned Lean-core compatibility profile the kernel target.
 9. Make the fail-closed tactic/import bridge the user-facing Lean target.
-10. Keep full Lean language/toolchain parity explicitly out of scope.
+10. Keep full Lean language/toolchain parity explicitly out of scope for solver
+    milestones while retaining it as the separate long-horizon target in the
+    [complete Lean 4.30 parity contract](lean4-complete-parity-contract-2026-07-22.md).
 
 The near-term trajectory therefore remains correctness, deployability,
 compatibility, and representative measurement. This audit narrows the work; it

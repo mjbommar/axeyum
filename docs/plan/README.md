@@ -29,7 +29,9 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`official-lean-ci-gate-audit-2026-07-21.md`](official-lean-ci-gate-audit-2026-07-21.md) —
   primary-source diagnosis of the Lake-action setup failure, checksum-pinned
   non-Lake installer, missing-binary fail-closed repair, initial 67/71 external
-  rejection result, narrow export corrections, and bounded local 71/71 rerun.
+  rejection result, narrow export corrections, bounded local 71/71 rerun, and
+  the first corrected remote attempt's working-directory-dependent elan-shim
+  failure before the representative sweep.
 - [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md) —
   evidence-backed separation of independent kernel checking from the missing
   Lean frontend/workflow/mathlib surfaces, a real format-3.1 `lean4export`
@@ -40,6 +42,20 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   profiles, common gates, ownership boundaries, dependency graph, TL task IDs,
   milestones, native parser/elaborator/tactics/Lake/LSP/compiler/`.olean` and
   full pinned-mathlib paths, plus the exact resume queue.
+- [`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md) —
+  terminal definition for an unqualified complete Lean 4.30 claim. It applies
+  the repository's SMT-LIB comparison discipline to twelve native behavioral
+  axes and ten content-identified upstream populations, defines paired
+  agreement/disagreement/not-run classes and layer-specific equivalence, and
+  keeps the current K0/K1 slices separate from the unsatisfied K2-K6 and full-
+  system gates.
+- [`lean-complete-parity-v1.json`](lean-complete-parity-v1.json), generated
+  [`Lean complete-parity status`](generated/lean-complete-parity.md), and
+  [machine-readable report](generated/lean-complete-parity.json) — TL0.6's
+  fail-closed registry seed for exact U0-U9 populations, A0-A11 axes, paired
+  outcome classes, G1-G10 terminal gates, and the public-claim guard. It
+  derives current bounded K-profile, construct, task, and axiom facts while
+  granting zero terminal denominator or paired-cell credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
