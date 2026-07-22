@@ -78,8 +78,9 @@ independent-admission credit; the Python inventory by itself still earns none.
 - Track 6 already specifies Goal/Hole/delayed assignment, certificate tactics,
   and the agent/spec surfaces. A new interoperability track should feed it, not
   duplicate it.
-- `axeyum-cas` is approximately 14,123 Rust lines with broad exact symbolic
-  algorithms and certificates; `axeyum-rewrite` has 56 default stable rules;
+- `axeyum-cas` is 13,929 Rust source lines in the current inventory, with broad
+  exact symbolic algorithms and certificates; `axeyum-rewrite` has 56 default
+  stable rules;
   the foundational corpus has 173 validated non-template math packs and 399
   checked rows. These are strong tactic/certificate inputs but not mathlib.
 

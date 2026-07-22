@@ -35,6 +35,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   Lean frontend/workflow/mathlib surfaces, a real format-3.1 `lean4export`
   prototype, two-profile architecture, and staged L0-L10 import, kernel,
   tactic, source, Lake, editor, compiler, and mathlib gates.
+- [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
+  requirement-by-requirement audit of the parser/macro, elaborator/unifier,
+  tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local
+  and pinned-upstream inventories; prototype evidence; and the explicit
+  distinction between a complete roadmap objective and the continuing Lean
+  implementation program.
 - [`lean4export-rust-import-prototype-2026-07-21.md`](lean4export-rust-import-prototype-2026-07-21.md) —
   first independent declaration-import results: separate Rust wire crate, exact
   format/topology/resource contract, 5-record to 8-declaration flat admission,

@@ -369,6 +369,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — the Lean-system roadmap objective passes its completion
+  audit; implementation remains open.** The
+  [requirement audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+  maps all eight originally named gaps plus the detailed-roadmap and
+  actual-assets requirements to current evidence, architecture, phase sizing,
+  and exits. Fresh local inventory records 13,929 CAS source lines, exactly 56
+  default canonical rules, a 19-covered/4-Lean-horizon curriculum, 137 concepts,
+  173 non-template packs, 1,131 result rows (399 checked / 596 replay-only / 136
+  Lean-horizon), 173 promoted solver-reuse packs, and 249 math learning files.
+  Shallow tagged-tree checks reproduce Lean v4.30.0's subsystem scale and
+  mathlib v4.30.0's 8,606 `.lean` files plus every listed directory count.
+  Focused kernel/import validation passes 177 kernel unit tests, four kernel
+  integration tests, one doctest, and eleven importer tests under 4 GiB. This
+  completes the requested research/design/prototype/documentation deliverable,
+  not Lean parity: ADR-0345 remains proposed and L0-L10 implementation resumes
+  with projection-first L2, axiom contracts, and the remaining fixture matrix.
+
 - **2026-07-21 — Lean-system distance is now decomposed and a real import seam
   is prototyped.** The new
   [compatibility roadmap](docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
@@ -377,8 +394,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   compatibility. It audits the actual assets rather than repeating the gap
   list: the pure-Rust kernel already has environments/reduction/definitional
   equality/type checking/selected inductives; Track 6 already owns goals,
-  holes, delayed assignment, and certificate tactics; the approximately
-  14,123-line CAS, 56-rule canonical manifest, and 173 validated math packs are
+  holes, delayed assignment, and certificate tactics; the
+  13,929-line CAS, 56-rule canonical manifest, and 173 validated math packs are
   candidate proof engines and theorem targets, not mathlib coverage. Proposed
   ADR-0345 chooses both bridge directions, sequenced: retain fail-closed
   official source validation, then consume pinned `lean4export` NDJSON and

@@ -75,6 +75,14 @@ state.
 > the 64 prelude axioms before native frontend, Lake, LSP, or compiler work. See
 > the
 > [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
+> A final [roadmap completion audit](docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+> maps every requested parser/macro, elaborator/unifier, tactic, compiler, Lake,
+> LSP, mathlib, and import surface to current evidence and an L0-L10 exit. It
+> revalidates the current 13,929-line CAS, 56-rule manifest, 23-node curriculum,
+> 137 concepts, 173 non-template packs, 1,131 result rows, 249 learning files,
+> and the pinned Lean/mathlib tree counts. The research/design/prototype/docs
+> objective is complete without claiming that the implementation program is:
+> resume implementation at the projection-first L2 slice and L0 contract gates.
 
 > **Measurement-provenance reset (2026-07-21).** G1's shared schema and
 > generated 53-row matrix now separate raw occurrence, normalized path, exact

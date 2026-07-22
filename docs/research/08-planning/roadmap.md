@@ -23,7 +23,10 @@ Last updated: 2026-07-21
 > scope, while selected declaration import, certificate tactics, and optional
 > workflow adapters are now staged in the
 > [Lean-system compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
-> under proposed ADR-0345.
+> under proposed ADR-0345. Its
+> [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
+> verifies every named environment gap and the current Axeyum/Lean/mathlib
+> inventories while keeping the L0-L10 implementation program explicitly open.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
@@ -602,7 +605,8 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
   parsing and full frontend/compiler/ecosystem cloning are non-goals absent a
   later measured ADR. See the
-  [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md)
+  [compatibility roadmap](../../../docs/plan/lean-system-compatibility-roadmap-2026-07-21.md),
+  [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md),
   [measured import result](../../../docs/plan/lean4export-rust-import-prototype-2026-07-21.md),
   and [proposed ADR-0345](../09-decisions/adr-0345-preregister-lean-system-interoperability.md).
 - **Categorical-engine depth, not green-field breadth:** the

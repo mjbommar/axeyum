@@ -109,8 +109,8 @@ not replace it.
 
 ### 2.3 CAS, rewrite rules, and curriculum versus mathlib
 
-`axeyum-cas` is approximately 14,123 lines of Rust today. It implements a wide
-set of explicit symbolic algorithms: exact polynomial and rational
+`axeyum-cas` is 13,929 lines of Rust in the current inventory. It implements a
+wide set of explicit symbolic algorithms: exact polynomial and rational
 normalization, differentiation and selected integration, equation solving,
 Sturm isolation, Groebner bases, factorization, matrix normal forms and spectral
 operations, number theory, Gosper summation, series, selected ODE/recurrence
