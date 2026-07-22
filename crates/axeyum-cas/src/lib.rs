@@ -5034,6 +5034,40 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
 /// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
 type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 
+/// Cancel syntactically equal factors across one quotient after canonicalizing
+/// polynomial factors. This keeps factored hypergeometric products compact
+/// before the general rational normalizer would expand them.
+fn cancel_common_product_factors(expr: &CasExpr) -> CasExpr {
+    let CasExpr::Div(numerator, denominator) = expr else {
+        return expr.clone();
+    };
+    let canonical_factor = |factor: CasExpr| {
+        normalize(&factor).map_or(factor, |polynomial| polynomial.to_expr())
+    };
+    let mut numerator_factors: Vec<CasExpr> = flatten_mul(numerator)
+        .into_iter()
+        .map(canonical_factor)
+        .collect();
+    let mut denominator_factors: Vec<CasExpr> = flatten_mul(denominator)
+        .into_iter()
+        .map(canonical_factor)
+        .collect();
+    numerator_factors.retain(|factor| {
+        let Some(position) = denominator_factors
+            .iter()
+            .position(|candidate| candidate == factor)
+        else {
+            return true;
+        };
+        denominator_factors.remove(position);
+        false
+    });
+    CasExpr::Div(
+        Box::new(build_product(numerator_factors)),
+        Box::new(build_product(denominator_factors)),
+    )
+}
+
 /// Derive `F(n,k+1)/F(n,k)` and `f(n+1,k)/f(n,k)` while parameters remain
 /// symbolic, cancelling common canonical gamma atoms before concrete sampling.
 fn wz_symbolic_ratios(
@@ -5043,7 +5077,8 @@ fn wz_symbolic_ratios(
     k: &str,
 ) -> (CasExpr, CasExpr) {
     let compact_ratio = |ratio: CasExpr| {
-        let combined = combine_gamma_ratios(&ratio);
+        let ratio = cancel_common_product_factors(&ratio);
+        let combined = cancel_common_product_factors(&combine_gamma_ratios(&ratio));
         gosper::cancel_common_monomial_expression(&combined)
             .map_or_else(|| simplify(&combined), |ratio| simplify(&ratio))
     };
@@ -5051,17 +5086,13 @@ fn wz_symbolic_ratios(
         Box::new(summand.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)))),
         Box::new(summand.clone()),
     ));
-    let summand_current = simplify(summand);
-    let summand_next = simplify(&summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
     let summand_outer_ratio = compact_ratio(CasExpr::Div(
-        Box::new(summand_next),
-        Box::new(summand_current),
+        Box::new(summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
+        Box::new(summand.clone()),
     ));
-    let rhs_current = simplify(rhs);
-    let rhs_next = simplify(&rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
     let rhs_inverse = compact_ratio(CasExpr::Div(
-        Box::new(rhs_current),
-        Box::new(rhs_next),
+        Box::new(rhs.clone()),
+        Box::new(rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
     ));
     (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
 }
@@ -5165,7 +5196,7 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
 
 /// Largest falling-factorial squared-binomial moment currently accepted by
 /// [`prove_squared_binomial_falling_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 14;
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 15;
 
 /// A proved falling-factorial squared-binomial moment
 /// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
@@ -5189,7 +5220,8 @@ impl CertifiedSquaredBinomialFallingMoment {
         }
         let n = CasExpr::var("n");
         let k = CasExpr::var("k");
-        let summand = falling_factorial(&k, self.order) * binomial_coefficient(&n, &k).pow(2);
+        let summand =
+            falling_factorial_product(&k, self.order) * binomial_coefficient(&n, &k).pow(2);
         certifies_wz_sum(
             &summand,
             &self.closed_form,
@@ -5212,7 +5244,7 @@ fn squared_binomial_falling_moment_candidate(
     let n = CasExpr::var("n");
     let k = CasExpr::var("k");
     let order_expr = CasExpr::int(i128::from(order));
-    let closed_form = falling_factorial(&n, order)
+    let closed_form = falling_factorial_product(&n, order)
         * binomial_coefficient(
             &(CasExpr::int(2) * n.clone() - order_expr.clone()),
             &(n.clone() - order_expr.clone()),
@@ -6862,15 +6894,19 @@ pub fn curl(field: &[CasExpr], vars: &[&str]) -> Option<[CasExpr; 3]> {
 /// finite-calculus power rule `Δ[x^{(n)}] = n·x^{(n−1)}`.
 #[must_use]
 pub fn falling_factorial(base: &CasExpr, n: u32) -> CasExpr {
+    let product = falling_factorial_product(base, n);
+    expand(&product).unwrap_or(product)
+}
+
+fn falling_factorial_product(base: &CasExpr, n: u32) -> CasExpr {
     let factors: Vec<CasExpr> = (0..n)
         .map(|i| base.clone() - CasExpr::int(i128::from(i)))
         .collect();
-    let product = match factors.len() {
-        0 => return CasExpr::one(),
+    match factors.len() {
+        0 => CasExpr::one(),
         1 => factors.into_iter().next().unwrap_or_else(CasExpr::one),
         _ => CasExpr::Mul(factors),
-    };
-    expand(&product).unwrap_or(product)
+    }
 }
 
 /// The **rising factorial** (Pochhammer symbol) `base^{(n)↑} =
@@ -17644,7 +17680,7 @@ mod tests {
             proofs.push(proof);
         }
 
-        let mut false_proof = proofs.last().expect("order fourteen proof exists").clone();
+        let mut false_proof = proofs.last().expect("order fifteen proof exists").clone();
         false_proof.certificate = CasExpr::zero();
         assert!(!false_proof.is_certified());
         assert!(

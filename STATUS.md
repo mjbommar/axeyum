@@ -374,6 +374,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — pre-expansion factor cancellation closes direct moment 15.**
+  The remaining order-15 WZ `Unknown` was isolated to the outer `n` quotient:
+  its exact falling-factorial products were expanded before division, exceeding
+  bounded rational normalization. `wz_symbolic_ratios` now canonicalizes each
+  polynomial factor and removes only structurally identical numerator and
+  denominator factors before gamma/rational normalization. Falling factorials
+  also retain this exact product representation inside their WZ proof objects.
+  The direct family now certifies through order 15; order 16 is the first
+  measured decline. Raw moments remain independently certified through order
+  10. The CAS topic stack passes 521 unit tests, 147 doctests, warning-denied
+  all-target Clippy, stable/nightly strict rustdoc, `wasm32-unknown-unknown`,
+  links, and `git diff --check`. Next: isolate order 16's residual quotient
+  growth and raw order 11's bounded numerator-factorization limit.
+
 - **2026-07-22 — product-aware WZ checking extends squared-binomial moments.**
   When direct symbolic telescoping overflows, `certifies_wz_sum` now checks the
   exact quotient identity; certified-false direct checks never fall back. This
