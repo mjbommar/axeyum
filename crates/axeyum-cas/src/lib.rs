@@ -6977,8 +6977,35 @@ fn gamma_of_rational(c: Rational) -> Option<CasExpr> {
     None
 }
 
+/// The digamma `ψ(n) = −γ + H_{n−1}` for a positive integer `n` (`γ` = the
+/// `EulerGamma` symbol), or the trigamma `ψ₁(n) = ζ(2) − H⁽²⁾_{n−1}`. `None` on
+/// overflow of the harmonic sum.
+fn polygamma_of_positive_integer(order: u32, n: i128) -> Option<CasExpr> {
+    let euler_gamma = CasExpr::var("EulerGamma");
+    match order {
+        0 => {
+            let mut harmonic = Rational::zero();
+            for k in 1..n {
+                harmonic = harmonic.checked_add(Rational::checked_new(1, k)?)?;
+            }
+            Some(CasExpr::Const(harmonic) - euler_gamma)
+        }
+        1 => {
+            // ψ₁(n) = π²/6 − Σ_{k=1}^{n−1} 1/k².
+            let mut harmonic2 = Rational::zero();
+            for k in 1..n {
+                harmonic2 = harmonic2.checked_add(Rational::checked_new(1, k.checked_mul(k)?)?)?;
+            }
+            let zeta2 = CasExpr::var("pi").pow(2) / CasExpr::int(6);
+            Some(zeta2 - CasExpr::Const(harmonic2))
+        }
+        _ => None,
+    }
+}
+
 /// Fold every `Γ(c)` on a rational `c` with a closed form throughout `expr`
-/// (`Γ(5)→24`, `Γ(½)→√π`), recursing structurally; all other nodes are unchanged.
+/// (`Γ(5)→24`, `Γ(½)→√π`), plus digamma/trigamma at a positive integer
+/// (`ψ(3)=3/2−γ`, `ψ₁(1)=π²/6`); recurse structurally, other nodes unchanged.
 fn fold_gamma(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(UnaryFunc::Gamma, arg) => {
@@ -6991,6 +7018,17 @@ fn fold_gamma(expr: &CasExpr) -> CasExpr {
                 return value;
             }
             CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner))
+        }
+        CasExpr::Unary(UnaryFunc::PolyGamma(order), arg) => {
+            let inner = fold_gamma(arg);
+            if let Some(constant) = normalize(&inner).and_then(|p| multipoly_as_constant(&p))
+                && constant.denominator() == 1
+                && constant.numerator() >= 1
+                && let Some(value) = polygamma_of_positive_integer(*order, constant.numerator())
+            {
+                return value;
+            }
+            CasExpr::Unary(UnaryFunc::PolyGamma(*order), Box::new(inner))
         }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_gamma(arg))),
         CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_gamma(inner))),
@@ -19550,6 +19588,13 @@ mod tests {
         assert!(certified(&beta_function(&CasExpr::int(2), &CasExpr::int(3)), &CasExpr::rat(1, 12)));
         assert!(certified(&beta_function(&CasExpr::rat(1, 2), &CasExpr::rat(1, 2)), &v("pi")));
         assert!(certified(&beta_function(&CasExpr::int(3), &CasExpr::int(5)), &beta_function(&CasExpr::int(5), &CasExpr::int(3))));
+        // Digamma/trigamma at positive integers (harmonic connection): ψ(3)=3/2−γ,
+        // ψ(4)=11/6−γ, ψ₁(1)=π²/6, ψ₁(2)=π²/6−1.
+        let gam = v("EulerGamma");
+        assert!(certified(&CasExpr::int(3).digamma(), &(CasExpr::rat(3, 2) - gam.clone())));
+        assert!(certified(&CasExpr::int(4).digamma(), &(CasExpr::rat(11, 6) - gam)));
+        assert!(certified(&CasExpr::int(1).polygamma(1), &(v("pi").pow(2) / CasExpr::int(6))));
+        assert!(certified(&CasExpr::int(2).polygamma(1), &(v("pi").pow(2) / CasExpr::int(6) - CasExpr::int(1))));
     }
 
     #[test]
