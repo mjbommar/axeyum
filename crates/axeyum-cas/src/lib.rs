@@ -6583,6 +6583,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
             return Some(simplify(&sum));
         }
     }
+    // A sum of logarithms whose individual terms diverge (`∞ − ∞`) but combine to a
+    // finite limit at ±∞ — e.g. `⅓ln(x+1) − ⅙ln(x²−x+1) → 0`, the boundary term of
+    // `∫₀^∞ 1/(1+x³)`.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_log_sum_at_infinity(expr, var, point)
+    {
+        return Some(value);
+    }
     // `lim exp(g) = exp(lim g)` when the inner limit is finite — resolves `1^∞`
     // forms written as `exp(g)`, e.g. `(1+1/x)^x = exp(x·ln(1+1/x)) → e`. Falls
     // through if the inner limit doesn't exist (leaving `exp`-dominance to decide).
@@ -6659,6 +6667,108 @@ fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     } else {
         None
     }
+}
+
+/// Collect the additive terms of `expr`, recursing into nested `Add` nodes so the
+/// result is a flat list of non-`Add` summands.
+fn flatten_add_terms(expr: &CasExpr, out: &mut Vec<CasExpr>) {
+    if let CasExpr::Add(terms) = expr {
+        for term in terms {
+            flatten_add_terms(term, out);
+        }
+    } else {
+        out.push(expr.clone());
+    }
+}
+
+/// Extract `(c, P)` from a term `c·ln(P(x))`: a rational constant coefficient `c`
+/// times a natural log of a polynomial `P` (returned as its coefficient vector).
+/// Handles the `Mul([const…, ln])`, bare `ln`, and `Neg` shapes that rational
+/// integration emits. `None` if the term is not of this form.
+fn as_rational_times_log(term: &CasExpr, var: &str) -> Option<(Rational, Vec<Rational>)> {
+    match term {
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            Some((Rational::integer(1), normalize(arg)?.to_univariate(var)?))
+        }
+        CasExpr::Neg(inner) => {
+            let (c, poly) = as_rational_times_log(inner, var)?;
+            Some((c.checked_neg()?, poly))
+        }
+        CasExpr::Mul(factors) => {
+            let mut coefficient = Rational::integer(1);
+            let mut log_poly: Option<Vec<Rational>> = None;
+            for factor in factors {
+                if let CasExpr::Unary(UnaryFunc::Ln, arg) = factor {
+                    if log_poly.is_some() {
+                        return None; // more than one log factor
+                    }
+                    log_poly = Some(normalize(arg)?.to_univariate(var)?);
+                } else {
+                    // A `var`-free constant coefficient (`Const`, `Div` of
+                    // constants, `Neg`, …) — extract it via the polynomial
+                    // normalizer.
+                    let k = multipoly_as_constant(&normalize(factor)?)?;
+                    coefficient = coefficient.checked_mul(k)?;
+                }
+            }
+            Some((coefficient, log_poly?))
+        }
+        _ => None,
+    }
+}
+
+/// Limit at `±∞` of a sum containing logarithms of polynomials, `Σ cᵢ·ln(Pᵢ) +
+/// (other finite terms)`. Each `ln(Pᵢ) = degᵢ·ln|x| + ln|leadᵢ| + o(1)` at `±∞`,
+/// so the sum converges **iff** `Σ cᵢ·degᵢ = 0` (the `ln x` coefficients cancel),
+/// with value `Σ cᵢ·ln|leadᵢ|` plus the ordinary limits of the non-log terms.
+/// Resolves `∞ − ∞` boundary forms like `⅓ln(x+1) − ⅙ln(x²−x+1) → 0`. Returns
+/// `None` when the log part genuinely diverges (`Σ cᵢ·degᵢ ≠ 0`) or a non-log
+/// term has no finite limit.
+fn limit_log_sum_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    if !matches!(expr, CasExpr::Add(_)) {
+        return None;
+    }
+    // Flatten nested sums so log terms buried in an inner `Add` (as rational
+    // integration nests them) are seen at the top level.
+    let mut terms = Vec::new();
+    flatten_add_terms(expr, &mut terms);
+    let mut log_degree_sum = Rational::integer(0); // Σ cᵢ·degᵢ
+    let mut finite_from_logs = CasExpr::zero(); // Σ cᵢ·ln|leadᵢ|
+    let mut other = CasExpr::zero();
+    let mut saw_log = false;
+    for term in &terms {
+        if let Some((coefficient, poly)) = as_rational_times_log(term, var) {
+            let degree = poly::rat_degree(&poly)?;
+            if degree == 0 {
+                // ln of a constant — a finite contribution, no `ln x` growth.
+                let value = poly.first().copied()?;
+                if value <= Rational::integer(0) {
+                    return None;
+                }
+                finite_from_logs = finite_from_logs
+                    + CasExpr::Const(coefficient) * CasExpr::Const(value).ln();
+                saw_log = true;
+                continue;
+            }
+            let leading = poly[degree];
+            let magnitude = if leading < Rational::integer(0) {
+                leading.checked_neg()?
+            } else {
+                leading
+            };
+            log_degree_sum = log_degree_sum
+                .checked_add(coefficient.checked_mul(Rational::integer(i128::try_from(degree).ok()?))?)?;
+            finite_from_logs =
+                finite_from_logs + CasExpr::Const(coefficient) * CasExpr::Const(magnitude).ln();
+            saw_log = true;
+        } else {
+            other = other + limit(term, var, point)?;
+        }
+    }
+    if !saw_log || !log_degree_sum.is_zero() {
+        return None; // no logs to combine, or the log part diverges
+    }
+    Some(simplify(&fold_elementary_constants(&(finite_from_logs + other))))
 }
 
 /// Net `(power of x, power of ln x)` of a product/quotient built only from
@@ -7984,9 +8094,10 @@ pub fn definite_integrate(
     let indefinite = integrate(expr, var)?;
     let at_upper = indefinite.antiderivative.substitute(var, upper);
     let at_lower = indefinite.antiderivative.substitute(var, lower);
-    // Fold exact elementary constants (sin 0 = 0, cos π = −1, ln 1 = 0, …) before
-    // the structural simplify, so numeric bounds collapse to closed values.
-    let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    // Fold exact elementary constants (sin 0 = 0, cos π = −1, ln 1 = 0, …) and
+    // special-angle inverse-trig values (`atan(1) = π/4`) before the structural
+    // simplify, so numeric bounds collapse to closed values.
+    let value = simplify(&evaluate_trig(&fold_elementary_constants(&(at_upper - at_lower))));
     Some(DefiniteIntegral {
         value,
         antiderivative: indefinite.antiderivative,
@@ -8373,7 +8484,10 @@ pub fn improper_integrate(
     };
     let at_upper = boundary(upper)?;
     let at_lower = boundary(lower)?;
-    let value = simplify(&fold_elementary_constants(&(at_upper - at_lower)));
+    // `evaluate_trig` folds special-angle inverse-trig boundary values
+    // (`atan(−1/√3) → −π/6`) so results like `∫₀^∞ 1/(1+x³) = 2π/(3√3)` land in
+    // closed form.
+    let value = simplify(&evaluate_trig(&fold_elementary_constants(&(at_upper - at_lower))));
     Some(DefiniteIntegral {
         value,
         antiderivative: indefinite.antiderivative,
@@ -12621,6 +12735,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn improper_integrals_converge_or_decline() {
         let x = || v("x");
         let zero = || LimitPoint::Finite(Rational::zero());
@@ -12699,6 +12814,23 @@ mod tests {
             &gauss((v("pi") * x().pow(2) / CasExpr::int(2)).sin(), zero(), LimitPoint::PosInfinity),
             &CasExpr::rat(1, 2),
         );
+        // Mixed log + atan antiderivative where the two log boundary terms each
+        // diverge but combine to a finite limit (∞−∞): ∫₀^∞ 1/(1+x³) = 2π/(3√3)
+        // (⅓ln(x+1)−⅙ln(x²−x+1) → 0), and the pure log sum ∫₀^∞ 1/((x+1)(x+2)) = ln 2.
+        assert!(matches!(
+            equal(
+                &gauss(CasExpr::int(1) / (CasExpr::int(1) + x().pow(3)), zero(), LimitPoint::PosInfinity),
+                &(CasExpr::int(2) * v("pi") / (CasExpr::int(3) * CasExpr::int(3).sqrt())),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(
+                &gauss(CasExpr::int(1) / ((x() + CasExpr::int(1)) * (x() + CasExpr::int(2))), zero(), LimitPoint::PosInfinity),
+                &CasExpr::int(2).ln(),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // Surd-atan asymptotes (irreducible quadratics with non-square discriminant):
         // ∫_{−∞}^∞ 1/(x²+x+1) = 2π/√3, ∫_{−∞}^∞ 1/(x²+2x+2) = π.
         assert!(matches!(
@@ -12756,6 +12888,15 @@ mod tests {
         let c = definite_integrate(&x().cos(), "x", &CasExpr::int(0), &(pi() / CasExpr::int(2)))
             .unwrap();
         assert_equal(&c.value, &CasExpr::int(1));
+        // Special-angle inverse-trig boundary: ∫₀^{√3} 1/(1+x²) = atan(√3) = π/3.
+        let atan_bound = definite_integrate(
+            &(CasExpr::int(1) / (CasExpr::int(1) + x().pow(2))),
+            "x",
+            &CasExpr::int(0),
+            &CasExpr::int(3).sqrt(),
+        )
+        .unwrap();
+        assert_equal(&atan_bound.value, &(pi() / CasExpr::int(3)));
     }
 
     #[test]
