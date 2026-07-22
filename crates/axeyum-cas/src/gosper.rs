@@ -61,9 +61,11 @@
 //! across a shift), so they are declined (`None`) honestly rather than returned
 //! uncertified.
 
+use std::collections::BTreeMap;
+
 use axeyum_ir::{Rational, poly};
 
-use crate::{CasExpr, UnaryFunc, ZeroTest, binomial_rat, equal, normalize, normalize_rational};
+use crate::{CasExpr, MultiPoly, UnaryFunc, ZeroTest, binomial_rat, equal, normalize, normalize_rational};
 
 /// A dense univariate rational polynomial, least-significant-coefficient first
 /// (index `i` is the coefficient of `var^i`), matching [`axeyum_ir::poly`].
@@ -216,12 +218,63 @@ fn consecutive_ratio(term: &CasExpr, var: &str) -> Option<(RatVec, RatVec)> {
     // consecutive ratio. Elementary rational terms are unaffected.
     let ratio = crate::simplify(&crate::combine_gamma_ratios(&ratio));
     let rf = normalize_rational(&ratio)?;
-    let num = poly::rat_trim(rf.num.to_univariate(var)?);
-    let den = poly::rat_trim(rf.den.to_univariate(var)?);
+    // Gamma lowering can leave an exact common monomial content in every term of
+    // both polynomials. This occurs for additive hypergeometric terms such as the
+    // Vandermonde WZ difference: after canonicalizing the shifted gamma towers, the
+    // ratio has a shared `Γ(-k)^6·Γ(k)^6·k^m` factor. Cancel that content before
+    // requiring a univariate polynomial; the general multivariate GCD is needlessly
+    // expensive for this exact syntactic case and may conservatively decline.
+    let (num, den) = cancel_common_monomial_to_univariate(&rf.num, &rf.den, var)?;
     if num.is_empty() || den.is_empty() {
         return None;
     }
     reduce_fraction(&num, &den)
+}
+
+/// Cancel the greatest monomial dividing every term of `num` and `den`, then
+/// project both cofactors to dense univariate polynomials in `var`. This is exact
+/// polynomial content cancellation: each variable's cancelled exponent is the
+/// minimum exponent across every numerator and denominator monomial. Any residual
+/// variable other than `var` makes the projection decline.
+fn cancel_common_monomial_to_univariate(
+    num: &MultiPoly,
+    den: &MultiPoly,
+    var: &str,
+) -> Option<(RatVec, RatVec)> {
+    let mut monomials = num.terms.keys().chain(den.terms.keys());
+    let first = monomials.next()?;
+    let mut common: BTreeMap<String, u32> = first.powers.clone();
+    for monomial in monomials {
+        common.retain(|name, exponent| {
+            let Some(other) = monomial.powers.get(name) else {
+                return false;
+            };
+            *exponent = (*exponent).min(*other);
+            *exponent != 0
+        });
+    }
+
+    let project = |poly: &MultiPoly| -> Option<RatVec> {
+        let mut coefficients = Vec::new();
+        for (monomial, coefficient) in &poly.terms {
+            let mut var_exponent = 0usize;
+            for (name, exponent) in &monomial.powers {
+                let residual = exponent.checked_sub(common.get(name).copied().unwrap_or(0))?;
+                if name == var {
+                    var_exponent = usize::try_from(residual).ok()?;
+                } else if residual != 0 {
+                    return None;
+                }
+            }
+            if var_exponent >= coefficients.len() {
+                coefficients.resize(var_exponent + 1, Rational::zero());
+            }
+            coefficients[var_exponent] = coefficients[var_exponent].checked_add(*coefficient)?;
+        }
+        Some(poly::rat_trim(coefficients))
+    };
+
+    Some((project(num)?, project(den)?))
 }
 
 /// Reduce `num/den` to lowest terms via the exact polynomial GCD, normalising the
@@ -307,10 +360,12 @@ fn gosper_petkovsek(a: &[Rational], b: &[Rational]) -> Option<(RatVec, RatVec, R
     ))
 }
 
-/// The sorted, distinct non-negative integer roots `j` of the dispersion
-/// resultant `Res_k(a(k), b(k+j))` — the candidate shifts at which `a` and `b`
-/// can share a factor. Empty when either input is constant in `k`. `None` on
-/// overflow or coefficients too large to factor.
+/// The sorted, distinct non-negative integer shifts `j` at which `a(k)` and
+/// `b(k+j)` share a non-constant factor. The bounded Gosper search needs only
+/// integer shifts through [`MAX_DISPERSION_SHIFT`], so test those GCDs directly.
+/// This avoids constructing a high-degree symbolic resultant whose intermediate
+/// coefficients can overflow even when every relevant shifted GCD is small.
+/// Empty when either input is constant in `k`; `None` on exact-arithmetic overflow.
 fn nonneg_integer_dispersion(a: &[Rational], b: &[Rational]) -> Option<Vec<i128>> {
     let (Some(da), Some(db)) = (poly::rat_degree(a), poly::rat_degree(b)) else {
         return Some(Vec::new());
@@ -318,46 +373,20 @@ fn nonneg_integer_dispersion(a: &[Rational], b: &[Rational]) -> Option<Vec<i128>
     if da == 0 || db == 0 {
         return Some(Vec::new());
     }
-    let resultant = dispersion_resultant(a, b)?;
-    // Only the **non-negative integer** roots `j` of the resultant matter for the
-    // Gosper–Petkovšek shifts. Scan them directly by evaluation rather than the full
-    // rational-root finder, which overflows on a high-degree resultant (a binomial WZ
-    // term's dispersion resultant has degree ~9 with large coefficients).
-    let mut roots: Vec<i128> = Vec::new();
+    let mut shifts = Vec::new();
     for j in 0..=MAX_DISPERSION_SHIFT {
-        if poly::eval_rat_poly(&resultant, Rational::integer(j)) == Some(Rational::zero()) {
-            roots.push(j);
+        let shifted = shift_poly(b, Rational::integer(j))?;
+        // One irrelevant large shift can overflow the bounded Euclidean helper.
+        // Skipping it is completeness-only: a missed candidate makes Gosper decline,
+        // while every returned antidifference still passes the telescoping checker.
+        let Some(gcd) = poly::rat_gcd(a, &shifted, a.len() + shifted.len() + 4) else {
+            continue;
+        };
+        if poly::rat_degree(&gcd).is_some_and(|degree| degree > 0) {
+            shifts.push(j);
         }
     }
-    Some(roots)
-}
-
-/// `Res_k(a(k), b(k+j))` as a polynomial in `j` (LSB-first), built from the
-/// bivariate Sylvester machinery in [`axeyum_ir::poly`] with `k` eliminated.
-/// `None` on overflow.
-fn dispersion_resultant(a: &[Rational], b: &[Rational]) -> Option<RatVec> {
-    let a = poly::rat_trim(a.to_vec());
-    let b = poly::rat_trim(b.to_vec());
-    let da = poly::rat_degree(&a)?;
-    let db = poly::rat_degree(&b)?;
-    // a(k): each k-coefficient is a constant polynomial in j.
-    let a_coeffs: Vec<RatVec> = a[..=da].iter().map(|&c| vec![c]).collect();
-    // b(k+j): the coefficient of k^i is Σ_{m≥i} b_m·C(m,i)·j^{m−i}.
-    let mut b_coeffs: Vec<RatVec> = Vec::with_capacity(db + 1);
-    for i in 0..=db {
-        let mut in_j = vec![Rational::zero(); db - i + 1];
-        for (m, slot) in in_j
-            .iter_mut()
-            .enumerate()
-            .map(|(offset, s)| (offset + i, s))
-        {
-            let term = b[m].checked_mul(binomial_rat(m, i)?)?;
-            *slot = term;
-        }
-        b_coeffs.push(poly::rat_trim(in_j));
-    }
-    let matrix = poly::sylvester_matrix(&a_coeffs, &b_coeffs)?;
-    poly::sylvester_determinant(&matrix)
+    Some(shifts)
 }
 
 /// Solve the Gosper equation `q(k)·x(k+1) − rshift(k)·x(k) = p(k)` for a
@@ -884,6 +913,26 @@ mod tests {
         // The antidifference equals `−k·g/(2(k−3))`.
         let expected = CasExpr::int(-1) * k() * wz.clone() / (CasExpr::int(2) * (k() - CasExpr::int(3)));
         assert!(is(&s_wz, &expected));
+    }
+
+    #[test]
+    fn vandermonde_wz_term_is_gosper_summable() {
+        let k = CasExpr::var("k");
+        let binom = |n| crate::binomial_coefficient(&CasExpr::int(n), &k);
+        let rhs = |n| crate::binomial_coefficient(&CasExpr::int(2 * n), &CasExpr::int(n));
+        let f3 = crate::simplify(&(binom(3).pow(2) / rhs(3)));
+        let f4 = crate::simplify(&(binom(4).pow(2) / rhs(4)));
+        let h = crate::simplify(&(f4 - f3.clone()));
+        let sum = certified_sum(&h, "k");
+
+        // At n=3 the Vandermonde certificate is
+        // R(3,k)=k²(2k−12)/(14(k−4)²)=k²(k−6)/(7(k−4)²), and G=R·f.
+        let r = k.clone().pow(2) * (k.clone() - CasExpr::int(6))
+            / (CasExpr::int(7) * (k - CasExpr::int(4)).pow(2));
+        assert!(matches!(
+            equal(&sum, &(r * f3)),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
