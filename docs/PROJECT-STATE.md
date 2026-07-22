@@ -127,16 +127,20 @@ Again, there are distinct targets:
   registers 71 proof-family builders and CI is configured to send one module
   per family to official Lean. A repaired checksum-pinned local run now records
   **71/71 accepted, zero skipped, zero failed** after exposing and correcting
-  four hidden quantified-BV export failures. Remote CI acceptance is still
-  pending. The exhaustive every-module sweep is not a required per-change gate.
+  four hidden quantified-BV export failures. The first corrected remote job is
+  retained but earns no acceptance credit: it failed before the representative
+  sweep because the explicit Lean path resolved to an elan shim without a
+  default toolchain outside the repository working directory. The exhaustive
+  every-module sweep is not a required per-change gate.
 - **Lean-core compatibility:** partial. The in-tree kernel implements dependent
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, iota reduction, dependent
   projections, constructor projection reduction, arbitrary-precision checked
-  Nat literals, and structure eta. Major residuals include String literals,
-  quotient computation and mutual/nested inductives. Recursive-indexed and
-  higher-order/reflexive fields are now supported for the bounded
-  single-family profile described below. A new
+  Nat literals, structure eta, recursive-indexed/higher-order fields, atomic
+  mutual groups, and nested-inductive expansion/restoration. Major kernel
+  residuals include String literals and quotient computation; native mutual,
+  nested, and well-founded **source elaboration** remains a separate frontend
+  gap rather than a kernel decline. A new
   format-3.1 Rust importer independently admits one official
   flat fixture as eight kernel declarations and one direct-recursive
   `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
@@ -253,8 +257,9 @@ Again, there are distinct targets:
   the obsolete live nested decline. M6 maps every ADR exit and repeats the
   bounded positive/negative pinned-Lean, complete kernel/importer, exact
   640/720/768/840, well-founded 35/0, strict tooling, contract, generated-
-  document, parity, foundational-resource, and link gates. ADR-0355 acceptance
-  and TL2.14 DONE become final upon containing-commit push/ref equality.
+  document, parity, foundational-resource, and link gates. ADR-0355 is accepted
+  and TL2.14 is DONE: containing commit `1d848ad4` was pushed with local,
+  tracking, and remote refs equal before integration.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
@@ -264,12 +269,19 @@ Again, there are distinct targets:
   versioned `lean4export` import path plus certificate tactics and optional
   official-Lean/Lake/editor adapters. Full native compatibility is a separately
   gated long-horizon program, not a claim about today's product and not a
-  prerequisite for the checker/import profiles.
+  prerequisite for the checker/import profiles. The current generated matrix
+  has one satisfied K0 row and four of five K1 rows, with **zero** satisfied K2
+  source, K3 tactic, K4 workflow, K5 runtime, or K6 ecosystem rows. The
+  [complete Lean 4.30 parity contract](plan/lean4-complete-parity-contract-2026-07-22.md)
+  reserves an unqualified “100%” claim for the native A0-A11 conjunction over
+  complete content-identified U0-U9 populations; adapters and bounded fixtures
+  cannot fill that terminal gate.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
-plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md)
-and [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md).
+plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-roadmap-2026-07-21.md),
+the [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md),
+and the [complete-parity contract](plan/lean4-complete-parity-contract-2026-07-22.md).
 The exact first import result and negative matrix are in the
 [`lean4export` Rust prototype report](plan/lean4export-rust-import-prototype-2026-07-21.md).
 

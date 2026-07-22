@@ -52,6 +52,14 @@ The implementation has three explicit profiles:
    editor integration, and official cross-checks. This is an oracle and workflow
    adapter, not independent checking credit.
 
+The 2026-07-22
+[complete Lean 4.30 parity contract](../../plan/lean4-complete-parity-contract-2026-07-22.md)
+clarifies the terminal native-system claim without changing this sequence. An
+unqualified complete-parity result requires native A0-A11 behavior over
+complete content-identified U0-U9 populations, exact paired outcomes, and zero
+adapter substitution, semantic mismatch, unadjudicated, not-run, or invalid-run
+cells. Scoped K0-K6 profiles remain independently shippable.
+
 The interchange rules are:
 
 - pin Lean, exporter, and format versions and record their hashes;

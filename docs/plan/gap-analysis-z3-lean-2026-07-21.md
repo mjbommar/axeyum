@@ -26,9 +26,12 @@ Axeyum is not one scalar distance from Z3 or Lean:
 - It has a **real proof-producing Lean lane**, including an in-tree kernel and
   external-Lean module generation. It is not a complete Lean kernel, elaborator,
   tactic environment, compiler, or ecosystem replacement.
-- “Full Lean-system parity” is not a useful solver milestone. The actionable
-  targets are certificate coverage, kernel compatibility, and a fail-closed
-  Lean tactic bridge.
+- “Full Lean-system parity” is not a useful **solver** milestone. It is an
+  accepted, separately gated long-horizon system target under ADR-0345. The
+  near-term solver targets remain certificate coverage, kernel compatibility,
+  and a fail-closed Lean tactic bridge; the terminal target is now defined by
+  the
+  [complete Lean 4.30 parity contract](lean4-complete-parity-contract-2026-07-22.md).
 
 The paper-level thesis should therefore remain: **correctness + deployability +
 a rigorously characterized performance regime**, not universal replacement or
@@ -139,7 +142,7 @@ search work, but it does not support a “Z3 sweeps; Axeyum cannot solve” fram
 | Certified-result parity | Every definitive result in the claimed fragment has independently rechecked evidence with an empty trust-hole set | Achieved on 23 complete measured rows; partial globally |
 | Lean-kernel compatibility | Accept/reject the same core proof terms and declarations as official Lean for a stated format/profile | Partial; useful solver-proof subset exists, full kernel compatibility does not |
 | Lean workflow integration | Fail-closed tactic/import path that discharges real Lean goals and reports axioms/trust | Not shipped; out-of-band modules exist |
-| Full Lean-system parity | Parser, macros, elaborator, unification, tactics, compiler, modules, language server, ecosystem | Out of scope as a solver milestone |
+| Full Lean-system parity | Parser, macros, elaborator, unification, tactics, compiler/runtime, modules/Lake, language server, mathlib, toolchain/platform/release behavior | Far; out of scope as a solver milestone, but in scope as a separate native-system program with an explicit terminal contract |
 
 ### Categorical-engine correction
 
@@ -372,7 +375,8 @@ ignored. Before this increment, CI hard-required official Lean only for the
 separate inductive cross-check, so the solver-proof sweep could take its optional
 local-development skip.
 
-**Local acceptance measured; remote acceptance open:** primary-source audit
+**Local acceptance measured; remote acceptance open after one failed
+attempt:** primary-source audit
 confirmed that `leanprover/lean-action` unconditionally required a Lake manifest
 and was unsuitable as an installer for this Rust repository. The repaired job
 uses checksum-pinned elan, and the solver harness now makes
@@ -383,6 +387,12 @@ elaborator-depth bound raises the same local cell to **71/71 accepted, zero
 skipped, zero failed**. The docs-consistency gate binds the family denominator,
 installer checksum, workflow command, and exact attestation. See the
 [official-Lean gate audit](official-lean-ci-gate-audit-2026-07-21.md).
+
+The first corrected main-branch remote job installed the pin and passed
+repository-root `lean --version`, then failed before the representative sweep:
+the explicit Lean path was an elan shim with no default toolchain when a kernel
+test changed working directory. It is retained as a failed remote gate and
+receives zero 71-family credit.
 
 **Remaining research:** record the first successful remote duration/RSS, Lean
 version, and 71/71 attestation. Only then add the

@@ -38,8 +38,11 @@ state.
 > quantified-BV export failures (67/71); real-inductive rendering for the exact
 > computing Bool/BV families plus one measured elaborator-depth option raises
 > the same bounded local run to **71/71 accepted, zero skipped, zero failed**.
-> Remote CI acceptance and prelude-axiom discharge remain open; do not convert
-> representative source acceptance into full proof-family or Lean parity.
+> The first corrected remote job failed before the representative sweep because
+> its explicit Lean path resolved to an unconfigured elan shim outside the
+> repository working directory. Remote acceptance, exhaustive acceptance, and
+> prelude-axiom discharge therefore remain open; do not convert representative
+> local source acceptance into full proof-family or Lean parity.
 
 > **Lean-system interoperability reset (2026-07-21).** The independent Rust
 > kernel and the 71/71 official-source gate are not a bundled Lean distribution,
@@ -372,12 +375,20 @@ state.
 > and well-founded 35/0 controls, strict tooling, 73 related Python contract
 > tests, generated documents, foundational resources, and links pass. The
 > [M6 final result](docs/plan/lean-nested-inductive-elimination-final-2026-07-22.md)
-> maps every ADR exit, freshly repeats the positive and negative pinned-Lean
-> controls plus the complete bounded aggregate, and makes ADR-0355 acceptance
-> and TL2.14 DONE effective when its containing commit is pushed with local/
-> tracking/remote equality. Native source parsing/elaboration, recursion compilation
+> maps every ADR exit and freshly repeats the positive and negative pinned-Lean
+> controls plus the complete bounded aggregate. Its containing commit was
+> pushed with local/tracking/remote equality before integration, so ADR-0355 is
+> accepted and TL2.14 is DONE. Native source parsing/elaboration, recursion compilation
 > and termination, broad libraries, and ecosystem/runtime compatibility remain
 > separate work.
+> The terminal
+> [complete Lean 4.30 parity contract](docs/plan/lean4-complete-parity-contract-2026-07-22.md)
+> now applies the SMT-LIB comparison discipline to that long-horizon system
+> target: twelve native behavioral axes, ten content-identified upstream
+> populations, exact paired outcomes, layer-specific equivalence, and zero
+> adapter or incomplete-run substitution. The current generated matrix has one
+> satisfied K0 row, four of five K1 rows, and zero satisfied K2-K6 rows; TL2.14
+> completion is not full Lean parity.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

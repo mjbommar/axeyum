@@ -4,10 +4,15 @@ Status: accepted strategy; implementation active
 
 Date: 2026-07-21
 
+Last updated: 2026-07-22
+
 Decision: [ADR-0345](../research/09-decisions/adr-0345-preregister-lean-system-interoperability.md)
 
 Active execution breakdown:
 [`lean-system-implementation-plan-2026-07-21.md`](lean-system-implementation-plan-2026-07-21.md)
+
+Terminal definition:
+[`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md)
 
 ## Executive conclusion
 
@@ -15,9 +20,12 @@ Axeyum already has an independent, pure-Rust implementation of a meaningful
 Lean 4 **kernel-compatible checking slice**. It does not bundle Lean, call into
 Lean to type-check terms, or expose Lean FFI objects. Official Lean is an
 external differential oracle. On the current representative generated lane,
-official Lean 4.30 accepts 71/71 emitted modules. That result is real and useful,
-but it is evidence about a selected reconstruction surface, not parity with the
-Lean language or ecosystem.
+official Lean 4.30 locally accepts 71/71 emitted modules. That result is real
+and useful, but it is evidence about a selected reconstruction surface, not
+parity with the Lean language or ecosystem. The first corrected remote job has
+since failed before reaching that sweep because the explicit executable path
+resolved to an unconfigured elan shim outside the repository working directory;
+it receives zero remote acceptance credit.
 
 The missing surface is not one bug called “Lean parity.” It is at least eight
 separate systems: import, kernel admission breadth, source parsing/macros,
@@ -45,7 +53,13 @@ runtime in the default TCB, sacrificing WASM, or making “we parsed a file” m
 parser, macro expander, elaborator, compiler, Lake, language server, and mathlib
 is a multi-person-year program. It is now an explicit long-horizon
 implementation program, not the next milestone and not a prerequisite for
-useful checker/import/tactic profiles.
+useful checker/import/tactic profiles. The
+[complete-parity contract](lean4-complete-parity-contract-2026-07-22.md) makes
+that terminal target precise as twelve behavioral axes over ten authoritative
+upstream populations. It also imports the SMT-LIB comparison discipline:
+content-identified populations, exact paired overlap, typed disagreement and
+not-run classes, separate assurance fields, and zero credit for incomplete
+runs.
 
 ## 1. Define the target before measuring it
 
@@ -59,10 +73,13 @@ must name which one it means.
 | Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | Rust format-3.1 reader admits the official flat fixture as 8 checked declarations and direct-recursive `MiniNat`/`MiniList` as 11 more | initial flat/direct-recursive profiles implemented; broad imports open |
 | Lean language compatibility | parse, expand macros, elaborate overloaded/implicit source, run tactics, produce information trees | no Lean frontend implementation | absent |
 | Lean workflow/ecosystem compatibility | Lake packages, `.olean` cache behavior, editor/LSP, mathlib project workflows, compiler/runtime | no compatible workflow today | absent; adapter-first roadmap below |
+| Complete native Lean 4.30 parity | Native A0-A11 behavior over complete content-identified U0-U9 populations, with independent admission and no adapter substitution | K0/K1 selected slices only; K2-K6 have zero satisfied rows | long-horizon target; not achieved |
 
 The first two rows answer the narrow question “is ours independent?” with yes.
-The last three answer “is it a Lean replacement?” with no. Neither answer
-invalidates the other.
+The language/workflow/terminal rows answer “is it a Lean replacement?” with no.
+Neither answer invalidates the other. An unqualified “100%” claim is reserved
+for the complete-parity contract's terminal conjunction; lower profiles remain
+useful and must retain their names and denominators.
 
 ## 2. What Axeyum actually has
 
@@ -836,3 +853,10 @@ That trajectory preserves the project's differentiator at every milestone:
 official Lean remains a convenient frontend and oracle until each native layer
 is ready, while Axeyum remains an independently implemented checker and grows
 into a complete compatible system without expanding the kernel TCB.
+
+“Complete” in that final sentence is now executable rather than rhetorical: it
+means the
+[A0-A11/U0-U9 terminal gate](lean4-complete-parity-contract-2026-07-22.md),
+including complete upstream population authority, exact paired outcomes,
+layer-specific semantic equivalence, independent admission, failure/recovery,
+platform/release evidence, and no adapter or not-run substitution.

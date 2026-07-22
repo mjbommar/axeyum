@@ -4,12 +4,17 @@ Status: active execution plan
 
 Date: 2026-07-21
 
+Last updated: 2026-07-22
+
 Pinned compatibility target: Lean `v4.30.0`
 (`d024af099ca4bf2c86f649261ebf59565dc8c622`) and `lean4export` format
 `3.1.0` (`a3e35a584f59b390667db7269cd37fca8575e4bf`)
 
 Parent design:
 [`lean-system-compatibility-roadmap-2026-07-21.md`](lean-system-compatibility-roadmap-2026-07-21.md)
+
+Terminal parity definition:
+[`lean4-complete-parity-contract-2026-07-22.md`](lean4-complete-parity-contract-2026-07-22.md)
 
 Current evidence:
 [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md),
@@ -37,6 +42,9 @@ measured capabilities:
 8. load, build, and check pinned mathlib releases;
 9. preserve the pure-Rust checker profile, deterministic behavior, explicit
    resource limits, and a countable axiom/trust boundary throughout.
+10. publish a complete content-identified official population and paired
+    A0-A11/U0-U9 outcome matrix before using the unqualified phrase “complete
+    Lean 4.30 parity.”
 
 The implementation is staged, but no named subsystem is left without an owner,
 task sequence, artifact, and exit condition.
@@ -72,6 +80,13 @@ The machine-readable capability row must separately record `parsed`,
 `translated`, `admitted`, `official_admitted`, `source_elaborated`,
 `proof_checked`, `workflow_reproduced`, and `runtime_reproduced`.
 
+K0-K6 are independently useful release profiles. The terminal full-system
+claim is stronger than their union as currently sampled: it additionally
+requires complete upstream population authority, exact paired outcomes,
+toolchain/bootstrap and supported-platform evidence, and zero unexplained or
+unexecuted cells under the
+[complete-parity contract](lean4-complete-parity-contract-2026-07-22.md).
+
 ## 4. Non-negotiable definition of done
 
 The following gate applies to every task unless its row explicitly strengthens
@@ -93,6 +108,15 @@ it:
    official Lean; disagreement is retained and triaged rather than normalized.
 10. **Documentation:** capability matrices, decline codes, commands, and the
     next residual blocker update in the same commit.
+11. **Population identity:** source/test/project/request/runtime selections are
+    complete for the claimed profile, content-addressed, dependency-bound, and
+    generated from the pinned upstream authority.
+12. **Paired outcomes:** official and Axeyum runs use the same registered input
+    and retain `agree-success`, `agree-reject`, one-sided, mismatch,
+    unadjudicated, not-run, and invalid-run denominators rather than only totals.
+13. **Completion evidence:** attempts, raw artifacts, resource termination,
+    and final completion are retained; an interrupted or preflight-invalid run
+    earns zero parity credit.
 
 Standard local work runs under 4 GiB. The official Lean exporter may use the
 measured 8 GiB lane. Large jobs checkpoint progress and never retain only an
@@ -152,10 +176,10 @@ the interoperability and Track 6 plans.
 |---|---|---|---|---|---|
 | TL0.1 | DONE | Accept or revise ADR-0345 and ADR-0167 together; record ownership of imports, mathlib, source, goals, and tactics. | — | S | Both ADRs use the ownership table in this plan; research question is closed. |
 | TL0.2 | DONE | Add `lean-compatibility-v1.json` schema with the eight assurance states and stable decline codes. | TL0.1 | M | Six mutation/contract tests reject illegal credit; the 12-row [generated matrix](generated/lean-compatibility.md) is byte-stable. |
-| TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, and host-independent options. | — | S | One manifest drives exporter, importer, and official-check tests. |
+| TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, host-independent options, and the executable path used from every test working directory. The first corrected remote job failed before its representative sweep because `AXEYUM_LEAN_BIN` resolved to an unconfigured elan shim outside the repository directory. | — | S | One manifest drives exporter, importer, and official-check tests; a retained remote run reaches the exact 71/71 attestation. |
 | TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
-| TL0.6 | TODO | Add generated construct, declaration-root, tactic, project, editor, and runtime scoreboards. | TL0.2 | M | Every profile has exact denominators and blocker categories. |
+| TL0.6 | TODO | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
 | TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
 | TL0.8 | TODO | Correct or archive older conflicting scope prose and wire link checks to this plan. | TL0.1 | S | No live document says both “import nothing” and “import mathlib.” |
 
@@ -435,6 +459,22 @@ receive the full exit label.
 | M6 — native runtime | L9 | Metaprograms, build scripts, tactics, and executables run natively. |
 | M7 — ecosystem | L10 | Pinned mathlib builds and checks through the native stack. |
 
+### Terminal complete-parity exit
+
+M7 is necessary but not sufficient for the unqualified full-system claim. A
+published **complete Lean 4.30 parity** result additionally requires the
+[terminal contract](lean4-complete-parity-contract-2026-07-22.md): complete
+content-addressed U0-U9 populations, native A0-A11 exits, exact official/native
+paired outcomes, zero one-sided/mismatch/unadjudicated/not-run/invalid cells,
+independent admission and axiom/trust closure, clean/incremental/offline and
+failure-recovery evidence, and the declared tiered platform
+install/build/runtime matrix.
+
+The optional official adapter may satisfy its own workflow profile but cannot
+substitute for a native terminal cell. Functional, assurance, and performance
+results are published separately; a performance aggregate cannot hide a
+semantic mismatch or an unexecuted case.
+
 ## 19. Immediate execution queue
 
 Execute in this order unless a task's explicit dependency says it may run in a
@@ -459,14 +499,19 @@ parallel lane:
 16. **DONE:** TL2.11--TL2.14 — land strict positivity first, then complete the
     recursive-IH, mutual-group, and nested expansion/restoration admission
     spine under accepted ADR-0352 through ADR-0355 and all retained gates.
-17. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
-18. TL3.4 — discharge the first five axioms.
-19. TL3.6 — export minimal `Init` roots and regenerate blocker priority.
-20. T6.1a — extract the reusable IR-to-CIC bridge in the parallel proof lane.
-21. T6.2.1-T6.2.5 — establish one goal/metavariable state with delayed assignment.
-22. TL6.1-TL6.4 — establish the source/syntax/parser substrate in the parallel
+17. TL0.3 — correct the remote Lean executable identity across changed working
+    directories and retain the first true remote 71/71 attestation.
+18. TL0.6 — freeze generated U0-U9 population authorities and A0-A11 paired
+    scoreboards before promoting another broad parity claim.
+19. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
+20. TL3.4 — discharge the first five axioms.
+21. TL3.6 — export minimal `Init` roots and regenerate blocker priority.
+22. T6.1a — extract the reusable IR-to-CIC bridge in the parallel proof lane.
+23. T6.2.1-T6.2.5 — establish one goal/metavariable state with delayed assignment.
+24. TL6.1-TL6.4 — establish the source/syntax/parser substrate in the parallel
     frontend lane.
-23. Recompute the critical path from the generated construct/root matrix.
+25. Recompute the critical path from the generated construct/root and
+    complete-parity matrices.
 
 ## 20. Session resume protocol
 

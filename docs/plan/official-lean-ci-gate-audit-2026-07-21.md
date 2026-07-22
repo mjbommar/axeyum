@@ -1,6 +1,7 @@
 # Official-Lean CI gate audit and repair — 2026-07-21
 
-Status: **local 71/71 acceptance measured; remote CI acceptance pending**
+Status: **local 71/71 acceptance measured; first corrected remote attempt
+failed before the representative sweep**
 
 ## Why this audit exists
 
@@ -95,6 +96,34 @@ cannot.
 MISSING_LEAN_FAIL_CLOSED|status=101
 ```
 
+## First corrected remote attempt: executable identity failure
+
+GitHub Actions run
+[`29951909263`](https://github.com/mjbommar/axeyum/actions/runs/29951909263)
+was the first retained main-branch execution after the local correction. The
+job installed the pinned toolchain and passed the repository-root
+`lean --version` step. It then reached the third kernel cross-check and failed
+before running the representative 71-family solver-proof command.
+
+The test used the explicit path
+`$RUNNER_TEMP/axeyum-lean/elan-home/bin/lean`. That path is the elan shim, not
+the versioned toolchain executable. The earlier command ran in the repository
+and resolved `lean-toolchain`; the test invoked Lean from a temporary working
+directory and received:
+
+```text
+error: no default toolchain configured. run `elan default stable` to install & configure the latest Lean 4 stable release.
+```
+
+The exact failing
+[job](https://github.com/mjbommar/axeyum/actions/runs/29951909263/job/89031426984)
+is retained as operational evidence. It grants no remote source-acceptance
+credit and does not invalidate the bounded local pinned-executable result. The
+repair must make `AXEYUM_LEAN_BIN` name the installed versioned executable (or
+otherwise bind the exact pinned toolchain independently of the working
+directory), add a changed-working-directory preflight, and then rerun the full
+remote contract.
+
 ## CI acceptance contract
 
 The CI job now has five independently visible gates:
@@ -117,8 +146,8 @@ an absent summary also fails.
 This closes local representative **source acceptance** for 71 registered
 solver-proof families and fixes the missing-binary skip. It does not prove:
 
-- that the workflow is remotely green; no run on this branch has yet supplied
-  that evidence;
+- that the workflow is remotely green; the first corrected remote attempt
+  failed on executable/toolchain resolution before the representative sweep;
 - exhaustive acceptance of every module produced by every family;
 - truth of the 65 reconstruction-prelude assumptions (64 arithmetic/integer
   plus the opaque string `append` assumption);
@@ -126,7 +155,8 @@ solver-proof families and fixes the missing-binary skip. It does not prove:
 - general Lean-core, mathlib, tactic, or ecosystem parity.
 
 The next gate is one successful remote job whose archived log contains the
-installer record, Lean version, inductive-test pass, and exact 71/71 attestation.
-After that, add a machine-checked expected-axiom inventory and only then size the
-scheduled exhaustive sweep. Do not turn 71 representative modules into
-“71 complete proof families” or “Lean parity.”
+installer record, versioned executable identity from a non-repository working
+directory, Lean version, all kernel differential passes, and exact 71/71
+attestation. After that, add a machine-checked expected-axiom inventory and only
+then size the scheduled exhaustive sweep. Do not turn 71 representative modules
+into “71 complete proof families” or “Lean parity.”
