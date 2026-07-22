@@ -1569,10 +1569,21 @@ impl RatFunc {
         let gcd = num_mv.gcd(&den_mv)?;
         let num_reduced = num_mv.exact_div(&gcd)?;
         let den_reduced = den_mv.exact_div(&gcd)?;
-        Some(RatFunc {
-            num: normalize(&num_reduced.to_cas_expr())?,
-            den: normalize(&den_reduced.to_cas_expr())?,
-        })
+        let num = normalize(&num_reduced.to_cas_expr())?;
+        let den = normalize(&den_reduced.to_cas_expr())?;
+        // Absorb a fully-constant denominator into the numerator, mirroring the
+        // univariate branch (`(3/8·π·√2)/2 → (3/16)·√2·π`).
+        if let Some(c) = multipoly_as_constant(&den)
+            && !c.is_zero()
+            && c != Rational::integer(1)
+        {
+            let inv = Rational::integer(1).checked_div(c)?;
+            return Some(RatFunc {
+                num: num.mul(&MultiPoly::constant(inv))?,
+                den: MultiPoly::constant(Rational::integer(1)),
+            });
+        }
+        Some(RatFunc { num, den })
     }
 }
 
@@ -15206,6 +15217,9 @@ mod tests {
         // ∫₀^{π/2} sin⁴x = 3π/16 renders reduced through `simplify`.
         let wallis = definite_integrate(&v("x").sin().pow(4), "x", &CasExpr::int(0), &(pi() / CasExpr::int(2))).unwrap();
         assert_equal(&simplify(&wallis.value), &(CasExpr::rat(3, 16) * pi()));
+        // Multivariate denominators fold likewise: (3/8·π·√2)/2 → (3/16)·√2·π.
+        let mv = cancel(&((CasExpr::rat(3, 8) * pi() * CasExpr::int(2).sqrt()) / CasExpr::int(2))).expect("reduces");
+        assert_equal(&mv, &(CasExpr::rat(3, 16) * CasExpr::int(2).sqrt() * pi()));
     }
 
     #[test]
