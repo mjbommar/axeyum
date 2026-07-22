@@ -8157,11 +8157,154 @@ pub fn root_mean_square(
     Some(simplify_radicals(&mean_square.value.sqrt()))
 }
 
+/// Separate a Gaussian factor `e^{q(x)}` from a polynomial prefactor: returns
+/// `(P, q)` for `expr = P(x)·e^{q(x)}`, or `None` if there is not exactly one
+/// `exp` factor.
+fn split_gaussian_factor(expr: &CasExpr) -> Option<(CasExpr, CasExpr)> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Exp, arg) => Some((CasExpr::one(), (**arg).clone())),
+        CasExpr::Neg(inner) => {
+            let (poly, arg) = split_gaussian_factor(inner)?;
+            Some((CasExpr::Neg(Box::new(poly)), arg))
+        }
+        CasExpr::Mul(factors) => {
+            let mut exp_arg: Option<CasExpr> = None;
+            let mut rest: Vec<CasExpr> = Vec::new();
+            for factor in factors {
+                if let CasExpr::Unary(UnaryFunc::Exp, arg) = factor {
+                    if exp_arg.is_some() {
+                        return None;
+                    }
+                    exp_arg = Some((**arg).clone());
+                } else {
+                    rest.push(factor.clone());
+                }
+            }
+            let arg = exp_arg?;
+            let poly = if rest.is_empty() {
+                CasExpr::one()
+            } else {
+                CasExpr::Mul(rest)
+            };
+            Some((poly, arg))
+        }
+        _ => None,
+    }
+}
+
+/// Closed-form Gaussian moments `∫ P(x)·e^{−a x²+c} dx` over `(−∞,∞)` or `[0,∞)`
+/// with `a > 0` rational and `P` a polynomial — the antiderivative is
+/// non-elementary (erf), but the definite value reduces to rational multiples of
+/// the base `I₀ = ∫_{−∞}^∞ e^{−a x²} = √(π/a)`:
+///
+/// - `∫_{−∞}^∞ x^{2m} e^{−a x²} = (2m−1)!!/(2a)^m · I₀`  (odd powers → 0),
+/// - `∫₀^∞ x^{2m} e^{−a x²} = ½·(2m−1)!!/(2a)^m · I₀`,
+/// - `∫₀^∞ x^{2m+1} e^{−a x²} = m!/(2 a^{m+1})`  (elementary).
+///
+/// `I₀` is obtained from [`improper_integrate`] itself (erf-asymptote certified),
+/// so the moments inherit a genuine base certificate; the moment step is exact
+/// rational algebra on top.
+fn improper_gaussian_moment(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let half = match (&lower, &upper) {
+        (LimitPoint::NegInfinity, LimitPoint::PosInfinity) => false,
+        (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero() => true,
+        _ => return None,
+    };
+    let (poly_part, exp_arg) = split_gaussian_factor(expr)?;
+    let arg_poly = normalize(&exp_arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 2 {
+        return None;
+    }
+    let c2 = arg_poly[2];
+    // Need a pure even quadratic `−a x² + c` with `a > 0`.
+    if !arg_poly[1].is_zero() || c2 >= Rational::integer(0) {
+        return None;
+    }
+    let a = c2.checked_neg()?;
+    let c0 = arg_poly.first().copied().unwrap_or(Rational::integer(0));
+    let coefficients = normalize(&poly_part)?.to_univariate(var)?;
+    // Require a genuine polynomial prefactor (degree ≥ 1); a bare `e^{−a x²}`
+    // (constant `P`) is handled by the erf-antiderivative path below — deferring
+    // it here also avoids re-entering this finder through the base call.
+    if poly::rat_degree(&coefficients)? < 1 {
+        return None;
+    }
+
+    // Base I₀ = ∫_{−∞}^∞ e^{−a x²}, genuinely certified via the erf asymptote.
+    let base_integrand = scaled_term(c2, CasExpr::var(var).pow(2)).exp();
+    let base = improper_integrate(&base_integrand, var, LimitPoint::NegInfinity, LimitPoint::PosInfinity)?;
+    if !base.is_certified() {
+        return None;
+    }
+
+    let pow_rat = |value: Rational, exp: usize| -> Option<Rational> {
+        let mut acc = Rational::integer(1);
+        for _ in 0..exp {
+            acc = acc.checked_mul(value)?;
+        }
+        Some(acc)
+    };
+    let two_a = Rational::integer(2).checked_mul(a)?;
+
+    let mut base_coeff = Rational::integer(0); // rational multiplier of I₀
+    let mut elementary = Rational::integer(0); // pure-rational part (half interval, odd powers)
+    for (k, &p_k) in coefficients.iter().enumerate() {
+        if p_k.is_zero() {
+            continue;
+        }
+        if k.is_multiple_of(2) {
+            let m = k / 2;
+            // (2m−1)!! = ∏_{j=1}^{m} (2j−1).
+            let mut double_factorial = Rational::integer(1);
+            for j in 1..=m {
+                double_factorial =
+                    double_factorial.checked_mul(Rational::integer(i128::try_from(2 * j - 1).ok()?))?;
+            }
+            let mut contribution =
+                p_k.checked_mul(double_factorial)?.checked_div(pow_rat(two_a, m)?)?;
+            if half {
+                contribution = contribution.checked_div(Rational::integer(2))?;
+            }
+            base_coeff = base_coeff.checked_add(contribution)?;
+        } else if half {
+            // ∫₀^∞ x^{2m+1} e^{−a x²} = m!/(2 a^{m+1}).
+            let m = (k - 1) / 2;
+            let mut factorial = Rational::integer(1);
+            for j in 1..=m {
+                factorial = factorial.checked_mul(Rational::integer(i128::try_from(j).ok()?))?;
+            }
+            let denominator = Rational::integer(2).checked_mul(pow_rat(a, m + 1)?)?;
+            elementary = elementary.checked_add(p_k.checked_mul(factorial)?.checked_div(denominator)?)?;
+        }
+    }
+
+    let combined =
+        base.value * CasExpr::Const(base_coeff) + CasExpr::Const(elementary);
+    // Fold the constant shift e^{c} back in (c ≠ 0 stays symbolic as e^c).
+    let value = if c0.is_zero() {
+        simplify(&combined)
+    } else {
+        simplify(&(CasExpr::Const(c0).exp() * combined))
+    };
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: base.certificate,
+    })
+}
+
 /// An **improper integral** with one or both bounds at `±∞` (or a finite bound),
 /// evaluated as `lim_{var→upper} F − lim_{var→lower} F` for a **certified**
 /// antiderivative `F` (see [`integrate`]). A finite bound is substituted; an
 /// infinite bound routes through [`limit`] (so exponential-decay integrands
-/// converge — `∫₀^∞ e^{−x} = 1`, `∫₀^∞ x·e^{−x} = 1`). Returns `None` when no
+/// converge — `∫₀^∞ e^{−x} = 1`, `∫₀^∞ x·e^{−x} = 1`). Non-elementary Gaussian
+/// moments `∫ P(x)·e^{−a x²}` (perfect-square `a`) reduce to `√π` multiples via a
+/// closed-form recurrence on the erf-certified base. Returns `None` when no
 /// antiderivative is found or a boundary limit **diverges** (the integral does not
 /// converge) — an honest decline, never a wrong value. The caller is responsible
 /// for continuity of the integrand on the (open) interval, as for [`definite_integrate`].
@@ -8181,6 +8324,9 @@ pub fn improper_integrate(
     lower: LimitPoint,
     upper: LimitPoint,
 ) -> Option<DefiniteIntegral> {
+    if let Some(moment) = improper_gaussian_moment(expr, var, lower, upper) {
+        return Some(moment);
+    }
     let indefinite = integrate(expr, var)?;
     let antiderivative = &indefinite.antiderivative;
     let boundary = |point: LimitPoint| -> Option<CasExpr> {
@@ -12481,6 +12627,30 @@ mod tests {
             equal(&gaussian.value, &v("pi").sqrt()),
             ZeroTest::Certified { equal: true, .. }
         ));
+        // Gaussian moments (non-elementary antiderivative; definite value reduces
+        // to √π multiples via the (2m−1)!!/(2a)^m recurrence on the erf-certified
+        // base). ∫_{−∞}^∞ x²e^{−x²} = √π/2, ∫_{−∞}^∞ x⁴e^{−x²} = 3√π/4.
+        let gauss = |integrand: CasExpr, lo: LimitPoint, hi: LimitPoint| {
+            let r = improper_integrate(&integrand, "x", lo, hi).unwrap();
+            assert!(r.is_certified());
+            r.value
+        };
+        assert!(matches!(
+            equal(&gauss(x().pow(2) * (CasExpr::int(-1) * x().pow(2)).exp(), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi").sqrt() / CasExpr::int(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(x().pow(4) * (CasExpr::int(-1) * x().pow(2)).exp(), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(CasExpr::int(3) * v("pi").sqrt() / CasExpr::int(4))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Half-interval: ∫₀^∞ x²e^{−x²} = √π/4, ∫₀^∞ x³e^{−x²} = 1/2 (elementary),
+        // ∫₀^∞ x·e^{−x²} = 1/2.
+        assert!(matches!(
+            equal(&gauss(x().pow(2) * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &(v("pi").sqrt() / CasExpr::int(4))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert_equal(&gauss(x().pow(3) * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
+        assert_equal(&gauss(x() * (CasExpr::int(-1) * x().pow(2)).exp(), zero(), LimitPoint::PosInfinity), &CasExpr::rat(1, 2));
         // Surd-atan asymptotes (irreducible quadratics with non-square discriminant):
         // ∫_{−∞}^∞ 1/(x²+x+1) = 2π/√3, ∫_{−∞}^∞ 1/(x²+2x+2) = π.
         assert!(matches!(
