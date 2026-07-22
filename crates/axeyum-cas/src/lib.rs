@@ -2494,6 +2494,75 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     if roots.is_empty() { None } else { Some(roots) }
 }
 
+/// Replace every occurrence of the subexpression `target` in `expr` with
+/// `replacement` (structural equality). Used to treat `sin(var)` as a single
+/// unknown when solving a polynomial-in-trig equation.
+fn replace_subexpr(expr: &CasExpr, target: &CasExpr, replacement: &CasExpr) -> CasExpr {
+    if expr == target {
+        return replacement.clone();
+    }
+    match expr {
+        CasExpr::Add(items) => {
+            CasExpr::Add(items.iter().map(|t| replace_subexpr(t, target, replacement)).collect())
+        }
+        CasExpr::Mul(items) => {
+            CasExpr::Mul(items.iter().map(|t| replace_subexpr(t, target, replacement)).collect())
+        }
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(replace_subexpr(a, target, replacement))),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(replace_subexpr(a, target, replacement)),
+            Box::new(replace_subexpr(b, target, replacement)),
+        ),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(replace_subexpr(a, target, replacement)), *e),
+        CasExpr::Unary(func, a) => {
+            CasExpr::Unary(*func, Box::new(replace_subexpr(a, target, replacement)))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Solve a **polynomial in a single trig head** `P(sin var) = 0` (or `cos`): treat
+/// `sin(var)` as an unknown `u`, solve `P(u) = 0`, then for each real root `u₀`
+/// solve `sin(var) = u₀` on `[0, 2π)`. Closes `sin²x = ¼ ⇒ {π/6, 5π/6, 7π/6,
+/// 11π/6}`, `2sin²x − 3sin x + 1 = 0 ⇒ {π/6, 5π/6, π/2}`. `None` unless `expr` is a
+/// degree-≥2 polynomial in exactly one of `sin(var)`/`cos(var)`.
+fn solve_polynomial_in_trig(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
+    for head in [UnaryFunc::Sin, UnaryFunc::Cos] {
+        let atom = CasExpr::Unary(head, Box::new(CasExpr::var(var)));
+        let unknown = "__trig_u";
+        let substituted = replace_subexpr(expr, &atom, &CasExpr::var(unknown));
+        // The substitution must remove *all* `var` dependence (no bare `var`, no
+        // other trig head of `var`) and leave a degree-≥2 polynomial in `u`.
+        if expr_contains_var(&substituted, var) {
+            continue;
+        }
+        let Some(poly) = normalize(&substituted).and_then(|p| p.to_univariate(unknown)) else {
+            continue;
+        };
+        if poly::rat_degree(&poly).unwrap_or(0) < 2 {
+            continue; // degree ≤ 1 is the linear case handled by `solve_trigonometric`
+        }
+        let Some(u_roots) = solve(&substituted, unknown) else {
+            continue;
+        };
+        let mut roots: Vec<CasExpr> = Vec::new();
+        for u_root in u_roots {
+            // Angles with `sin(var) = u₀` (out-of-range or complex `u₀` yield none).
+            if let Some(angles) = solve_trigonometric(&(atom.clone() - u_root), var) {
+                for angle in angles {
+                    if !roots.contains(&angle) {
+                        roots.push(angle);
+                    }
+                }
+            }
+        }
+        if !roots.is_empty() {
+            return Some(roots);
+        }
+    }
+    None
+}
+
 /// Solve `expr = 0` for `var`. Over a univariate polynomial: returns the distinct
 /// real roots (rational roots exact; a leftover real quadratic via the quadratic
 /// formula, rational or symbolic `sqrt`; complex roots and irreducible cubics+
@@ -2513,6 +2582,10 @@ pub fn solve(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     // Trigonometric equations `A·f(var)+C=0` (f ∈ {sin,cos,tan}) — principal
     // solutions in [0, 2π) from the special-angle table.
     if let Some(roots) = solve_trigonometric(expr, var) {
+        return Some(roots);
+    }
+    // Polynomials in a single trig head, `P(sin var) = 0` — solve for `u = sin var`.
+    if let Some(roots) = solve_polynomial_in_trig(expr, var) {
         return Some(roots);
     }
     let mut remaining = poly::rat_trim(normalize(expr)?.to_univariate(var)?);
@@ -15137,6 +15210,20 @@ mod tests {
         let surd_sin = solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(2).sqrt()), "x").unwrap();
         assert!(surd_sin.contains(&(CasExpr::rat(1, 4) * pi())));
         assert!(surd_sin.contains(&(CasExpr::rat(3, 4) * pi())));
+        // Polynomial in sin: sin²x = ¼ ⇒ sin x = ±½ ⇒ {π/6, 5π/6, 7π/6, 11π/6}.
+        let quad = solve(&(x().sin().pow(2) - CasExpr::rat(1, 4)), "x").unwrap();
+        assert_eq!(quad.len(), 4);
+        for r in [CasExpr::rat(1, 6), CasExpr::rat(5, 6), CasExpr::rat(7, 6), CasExpr::rat(11, 6)] {
+            assert!(quad.contains(&(r * pi())));
+        }
+        // 2sin²x − 3sin x + 1 = 0 ⇒ sin x ∈ {½, 1} ⇒ {π/6, 5π/6, π/2}.
+        let factored = solve(
+            &(CasExpr::int(2) * x().sin().pow(2) - CasExpr::int(3) * x().sin() + CasExpr::int(1)),
+            "x",
+        )
+        .unwrap();
+        assert_eq!(factored.len(), 3);
+        assert!(factored.contains(&(CasExpr::rat(1, 2) * pi())));
     }
 
     #[test]
