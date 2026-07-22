@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0 and S1a fixture adapter complete; S1b official-input audit next
+Status: S0/S1a complete; S1b live selection-free input audit pending
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -133,6 +133,17 @@ identity, unknown answer, and the executable's non-`Unknown` (rather than
 sat/unsat-only) historical predicate. No official selected set has been
 produced or observed.
 
+**S1b implementation:** ready for the registered live audit. The independent
+runner downloads and rechecks all 91 pinned organizer/rules/data/submission
+inputs (29 source/config files, 53 submissions, benchmark metadata, seven
+historical files, and the rules PDF), streams the multi-million-row gzip JSON
+without Polars or organizer imports, and publishes a selection-free
+`eligibility.jsonl`, per-logic caps/quotas, summary, and completion-last input
+audit. A bounded-memory historical accumulator is differential-tested against
+the batch fixture result. Fourteen offline tests pass. The official selected
+set remains unobserved until this implementation commit is pushed and the live
+audit passes.
+
 ### S2 — verified corpus acquisition
 
 - Download all 90 files from Zenodo record `16740866` into a fresh staging
@@ -194,7 +205,7 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Commit and push S1a, then verify the adapters against every pinned official
-source/data/submission input and publish the selection-free S1b eligibility
-summary. Do not download/extract the full Zenodo release or observe the official
-selected population until that audit passes.
+Commit and push the S1b runner, then execute it into a fresh directory below
+`/nas3/data/axeyum/harness/official-selection-2026-sq/` and publish the compact
+selection-free result. Do not download/extract the full Zenodo release or
+observe the official selected population until that audit passes.

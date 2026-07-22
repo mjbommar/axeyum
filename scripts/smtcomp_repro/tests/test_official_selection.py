@@ -13,6 +13,7 @@ from pathlib import Path
 
 from scripts.smtcomp_repro.official_selection import (
     SelectionAuditError,
+    HistoricalAccumulator,
     adapt_official_benchmarks,
     adapt_official_results,
     adapt_official_submissions,
@@ -21,6 +22,7 @@ from scripts.smtcomp_repro.official_selection import (
     canonical_json_bytes,
     division_cap,
     extract_single_query_divisions,
+    extract_removed_benchmark_ids,
     historical_facts,
     normalize_benchmark,
     validate_decisions,
@@ -32,6 +34,7 @@ FIXTURE_ROOT = ROOT / "scripts/smtcomp_repro/fixtures/official_selection"
 AUTHORITY_PATH = ROOT / "docs/plan/smtcomp-official-selection-authority-v1.json"
 CONTRACT_PATH = ROOT / "docs/plan/smtcomp-official-selection-contract-v1.json"
 GENERATOR_PATH = ROOT / "scripts/gen-smtcomp-selection-authority.py"
+INPUT_AUDIT_PATH = ROOT / "scripts/audit-smtcomp-selection-inputs.py"
 
 
 class OfficialSelectionTests(unittest.TestCase):
@@ -40,6 +43,7 @@ class OfficialSelectionTests(unittest.TestCase):
         cls.fixture = json.loads((FIXTURE_ROOT / "fixture.json").read_bytes())
         cls.authority = json.loads(AUTHORITY_PATH.read_bytes())
         cls.generator = runpy.run_path(str(GENERATOR_PATH))
+        cls.input_audit = runpy.run_path(str(INPUT_AUDIT_PATH))
 
     def audit_fixture(self, **replacements: object) -> dict[str, object]:
         values = {
@@ -105,7 +109,8 @@ class OfficialSelectionTests(unittest.TestCase):
         self.assertEqual(len(mutation_ids), len(set(mutation_ids)))
 
     def test_official_defs_ast_and_submission_adapter(self) -> None:
-        divisions = extract_single_query_divisions((FIXTURE_ROOT / "official_defs.py").read_bytes())
+        defs_source = (FIXTURE_ROOT / "official_defs.py").read_bytes()
+        divisions = extract_single_query_divisions(defs_source)
         self.assertEqual(
             divisions,
             {
@@ -138,6 +143,10 @@ class OfficialSelectionTests(unittest.TestCase):
         )
         self.assertFalse(normalized[1]["competitive"])
         self.assertIsNone(normalized[1]["seed"])
+        self.assertEqual(
+            extract_removed_benchmark_ids(defs_source),
+            {"non-incremental/QF_BV/2024-old/nested/removed.smt2"},
+        )
 
     def test_official_benchmark_and_result_adapters(self) -> None:
         file_identity = {
@@ -248,6 +257,27 @@ class OfficialSelectionTests(unittest.TestCase):
         with self.assertRaises(SelectionAuditError):
             adapt_official_results(gzip.compress(canonical_json_bytes(bad_result)), year=2024)
 
+    def test_streamed_gzip_object_array_handles_target_after_discarded_array(self) -> None:
+        document = {
+            "discarded": [{"value": index} for index in range(5)],
+            "target": [{"id": "a"}, {"id": "b"}],
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "stream.json.gz"
+            path.write_bytes(gzip.compress(canonical_json_bytes(document)))
+            rows = list(self.input_audit["iter_gzip_object_array"](path, "target"))
+        self.assertEqual(rows, [{"id": "a"}, {"id": "b"}])
+
+    def test_streamed_gzip_object_array_mutations_reject(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "stream.json.gz"
+            path.write_bytes(gzip.compress(b'{"other":[]}\n'))
+            with self.assertRaises(self.input_audit["InputAuditError"]):
+                list(self.input_audit["iter_gzip_object_array"](path, "target"))
+            path.write_bytes(gzip.compress(b'{"target":[{"id":1}') )
+            with self.assertRaises(self.input_audit["InputAuditError"]):
+                list(self.input_audit["iter_gzip_object_array"](path, "target"))
+
     def test_fixture_selection_reconstructs_all_terminal_reasons(self) -> None:
         result = self.audit_fixture()
         self.assertEqual(result["competitive_logics"], ["QF_BV", "QF_LIA"])
@@ -274,6 +304,20 @@ class OfficialSelectionTests(unittest.TestCase):
             decisions["non-incremental/QF_UF/2024-only-one-entry/noncompetitive.smt2"]["reason"],
             "excluded-noncompetitive-logic",
         )
+
+    def test_streaming_historical_accumulator_matches_batch_result(self) -> None:
+        known_ids = {
+            normalize_benchmark(row)["benchmark_id"] for row in self.fixture["benchmarks"]
+        }
+        accumulator = HistoricalAccumulator(known_ids)
+        for row in self.fixture["historical_results"]:
+            accumulator.add(row)
+        self.assertEqual(
+            accumulator.facts(),
+            historical_facts(self.fixture["historical_results"], known_ids),
+        )
+        self.assertEqual(accumulator.rows, len(self.fixture["historical_results"]))
+        self.assertEqual(accumulator.ignored_rows, 0)
 
     def test_fixture_corpus_is_an_exact_byte_bijection(self) -> None:
         expected_ids = {
