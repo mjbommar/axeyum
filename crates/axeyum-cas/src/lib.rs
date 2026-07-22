@@ -170,10 +170,10 @@ pub enum UnaryFunc {
     FresnelS,
     /// The **Fresnel cosine integral** `C(x) = ∫₀ˣ cos(π t²/2) dt` (`C′ = cos(π x²/2)`).
     FresnelC,
-    /// The **Bessel function** `J₀(x)` of the first kind, order 0 (`J₀′ = −J₁`).
-    BesselJ0,
-    /// The **Bessel function** `J₁(x)` of the first kind, order 1 (`J₁′ = J₀ − J₁/x`).
-    BesselJ1,
+    /// The **Bessel function of the first kind** `Jₙ(x)`, order `n` carried in the
+    /// variant so the recurrence derivative `Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2` (with `J₀′ = −J₁`)
+    /// stays inside the fragment for every order.
+    BesselJ(u32),
     /// **Arcsine** `asin(x)` (with `asin′(x) = 1/√(1−x²)`).
     Asin,
     /// **Arccosine** `acos(x)` (with `acos′(x) = −1/√(1−x²)`).
@@ -195,13 +195,17 @@ impl UnaryFunc {
     /// The function's display name.
     #[must_use]
     pub fn name(self) -> String {
-        // The polygamma order is encoded so distinct orders never collide as atoms.
+        // The polygamma/Bessel order is encoded so distinct orders never collide as
+        // atoms.
         if let UnaryFunc::PolyGamma(order) = self {
             return match order {
                 0 => "digamma".to_string(),
                 1 => "trigamma".to_string(),
                 n => format!("polygamma{n}"),
             };
+        }
+        if let UnaryFunc::BesselJ(order) = self {
+            return format!("BesselJ{order}");
         }
         let fixed = match self {
             UnaryFunc::Ln => "ln",
@@ -224,8 +228,7 @@ impl UnaryFunc {
             UnaryFunc::Chi => "Chi",
             UnaryFunc::FresnelS => "FresnelS",
             UnaryFunc::FresnelC => "FresnelC",
-            UnaryFunc::BesselJ0 => "BesselJ0",
-            UnaryFunc::BesselJ1 => "BesselJ1",
+            UnaryFunc::BesselJ(_) => unreachable!("Bessel order handled above"),
             UnaryFunc::Asin => "asin",
             UnaryFunc::Acos => "acos",
             UnaryFunc::Asinh => "asinh",
@@ -293,11 +296,12 @@ impl UnaryFunc {
             UnaryFunc::FresnelC => {
                 (CasExpr::var("pi") * u().pow(2) / CasExpr::int(2)).cos()
             }
-            // d/du J₀(u) = −J₁(u) ; d/du J₁(u) = J₀(u) − J₁(u)/u.
-            UnaryFunc::BesselJ0 => -CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(u())),
-            UnaryFunc::BesselJ1 => {
-                CasExpr::Unary(UnaryFunc::BesselJ0, Box::new(u()))
-                    - CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(u())) / u()
+            // d/du Jₙ(u): J₀′ = −J₁; for n ≥ 1, Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2.
+            UnaryFunc::BesselJ(0) => -CasExpr::Unary(UnaryFunc::BesselJ(1), Box::new(u())),
+            UnaryFunc::BesselJ(order) => {
+                (CasExpr::Unary(UnaryFunc::BesselJ(order - 1), Box::new(u()))
+                    - CasExpr::Unary(UnaryFunc::BesselJ(order + 1), Box::new(u())))
+                    / CasExpr::int(2)
             }
             // Inverse trig/hyperbolic derivatives.
             UnaryFunc::Asin => CasExpr::int(1) / (CasExpr::int(1) - u().pow(2)).sqrt(),
@@ -430,6 +434,12 @@ impl CasExpr {
     #[must_use]
     pub fn factorial(self) -> Self {
         (self + CasExpr::int(1)).gamma()
+    }
+
+    /// The **Bessel function of the first kind** `Jₙ(self)` of order `n`.
+    #[must_use]
+    pub fn bessel_j(self, n: u32) -> Self {
+        CasExpr::Unary(UnaryFunc::BesselJ(n), Box::new(self))
     }
 
     /// The **sine integral** `Si(self)` as a symbolic head.
@@ -7704,8 +7714,7 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 }
                 UnaryFunc::FresnelS => fresnel_f64(value, true),
                 UnaryFunc::FresnelC => fresnel_f64(value, false),
-                UnaryFunc::BesselJ0 => bessel_j_f64(value, 0),
-                UnaryFunc::BesselJ1 => bessel_j_f64(value, 1),
+                UnaryFunc::BesselJ(order) => bessel_j_f64(value, *order),
                 UnaryFunc::Asin => value.asin(),
                 UnaryFunc::Acos => value.acos(),
                 UnaryFunc::Asinh => value.asinh(),
@@ -19416,23 +19425,23 @@ mod tests {
     }
 
     #[test]
-    fn bessel_j0_j1() {
+    fn bessel_j_arbitrary_order() {
         let x = || v("x");
-        let j0 = |a: CasExpr| CasExpr::Unary(UnaryFunc::BesselJ0, Box::new(a));
-        let j1 = |a: CasExpr| CasExpr::Unary(UnaryFunc::BesselJ1, Box::new(a));
-        // Closed derivative pair: J₀′=−J₁, J₁′=J₀−J₁/x.
-        assert_equal(&j0(x()).differentiate("x"), &(-j1(x())));
-        assert_equal(
-            &j1(x()).differentiate("x"),
-            &(j0(x()) - j1(x()) / x()),
-        );
-        // Numeric values against known references.
+        let j = |n: u32, a: CasExpr| a.bessel_j(n);
+        // Recurrence derivative Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2 for n ≥ 1, and J₀′ = −J₁.
+        // (The old J₁′ = J₀ − J₁/x is the same value, but the zero-test only sees the
+        // form `differentiate` emits, since it has no Bessel recurrence between atoms.)
+        assert_equal(&j(0, x()).differentiate("x"), &(-j(1, x())));
+        assert_equal(&j(1, x()).differentiate("x"), &((j(0, x()) - j(2, x())) / CasExpr::int(2)));
+        assert_equal(&j(2, x()).differentiate("x"), &((j(1, x()) - j(3, x())) / CasExpr::int(2)));
+        // Numeric values against known references, including higher orders.
         let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
-        close(evalf(&j0(CasExpr::int(0)), &[]).unwrap(), 1.0);
-        close(evalf(&j0(CasExpr::int(1)), &[]).unwrap(), 0.765_198);
-        close(evalf(&j1(CasExpr::int(1)), &[]).unwrap(), 0.440_051);
-        close(evalf(&j0(CasExpr::int(2)), &[]).unwrap(), 0.223_891);
-        close(evalf(&j1(CasExpr::int(0)), &[]).unwrap(), 0.0);
+        close(evalf(&j(0, CasExpr::int(0)), &[]).unwrap(), 1.0);
+        close(evalf(&j(0, CasExpr::int(1)), &[]).unwrap(), 0.765_198);
+        close(evalf(&j(1, CasExpr::int(1)), &[]).unwrap(), 0.440_051);
+        close(evalf(&j(2, CasExpr::int(2)), &[]).unwrap(), 0.352_834);
+        close(evalf(&j(3, CasExpr::int(5)), &[]).unwrap(), 0.364_831);
+        close(evalf(&j(1, CasExpr::int(0)), &[]).unwrap(), 0.0);
     }
 
     #[test]
