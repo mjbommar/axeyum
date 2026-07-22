@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `508` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `512` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adi**). Keep both in sync when landing features.
+  latest is **Entry 37adj**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -94,9 +94,9 @@ Gotchas when probing:
 
 ## 4. What landed this session (chronological highlights)
 
-The marquee arc, roughly in order. Vandermonde is on `main`; the adjacent and
-moment extensions are on the current CAS topic branch pending green integration
-by the `main` owner:
+The marquee arc, roughly in order. Vandermonde is on `main`; the adjacent,
+fixed-shift, and moment extensions are on the current CAS topic stack pending
+green integration by the `main` owner:
 
 **Foundations / gammasimp**
 - **`gammasimp`/`combsimp`**: the Γ functional equation `Γ(z+1)=z·Γ(z)` now lives
@@ -129,8 +129,8 @@ by the `main` owner:
 **★ Zeilberger / Wilf–Zeilberger (the marquee)** — `prove_wz_sum(...)`
 Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
-Vandermonde, adjacent-binomial convolution, and the first two squared-binomial
-moments. False near-misses correctly decline.
+Vandermonde, fixed-shift binomial convolutions for `r=1,2`, and the first three
+squared-binomial moments. False near-misses correctly decline.
 
 ---
 
@@ -144,7 +144,7 @@ Pipeline:
    `f(n+1,k) − f(n,k) = G(n,k+1) − G(n,k)` with `G = R·f`; summing over `k`
    collapses the RHS to 0, so `S(n)=∑ₖ f` is constant, pinned to 1 by the base.
 2. **Discovery (heuristic):** run the factorial-capable `gosper_sum` on the WZ
-   term at several *small* concrete `n` (sample from `n=1,2,3,…` — larger `n`
+   term at up to eight *small* concrete `n` (sample from `n=1,2,3,…` — larger `n`
    overflow the rising factorials), extract `R(nᵢ,k)`, monic-normalize the
    denominator, and interpolate each coefficient over `n` with
    `rational_interpolate` (lowest-total-degree `P(n)/Q(n)` with a monic
@@ -161,7 +161,12 @@ gamma-lowered ratios otherwise overflow despite a small reduced quotient);
 `nonneg_integer_dispersion` scans `j=0..64` by direct shifted polynomial GCD
 instead of materializing an overflow-prone symbolic resultant; and
 consecutive-ratio extraction cancels exact common monomial content before
-requiring a univariate ratio. The preferred Gosper certificate is the full
+requiring a univariate ratio. A structured-difference fallback computes the
+ratio of `f(n+1,k)−f(n,k)` from three smaller exact rational quotients, avoiding
+an expanded additive gamma tower. Fraction reduction peels shared small
+integer-linear factors and can prove a remaining pair coprime over a good finite
+field; inconclusive modular reductions still fall back to exact rational GCD.
+The preferred Gosper certificate is the full
 telescoping identity; if expanding a concrete gamma tower overflows, the exact
 reduced polynomial Gosper equation certifies the same antidifference. The final
 symbolic WZ check remains mandatory and unchanged.
@@ -201,17 +206,31 @@ the exact reduced-equation certificate close that path. Every returned WZ
 certificate still passes the fully symbolic identity, while `rhs+1` controls for
 the new families decline.
 
+### Fixed shift two and the third squared moment are closed
+
+The next tier through the same public route is now:
+
+- `∑ₖ C(n,k)C(n,k+2)=C(2n,n−2)`, with
+  `R=k(k+2)(2k−3n−1)/(2(2n+1)(k−n−1)(k−n+1))`;
+- `∑ₖ k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`, with
+  `R=(k−1)²(k²(2n²+3n−2)−k(3n³+8n²+3n−2)+3n(n+1)²)/(2k(n−1)(n+2)(2n−1)(k−n−1)²)`.
+
+The third-moment `n=6` sample is the structured-difference regression: direct
+Gosper expansion overflows, while the exact quotient identity recovers the
+small consecutive ratio. Its degree-six coefficient fit also motivates the
+eight-sample soft target. Returned certificates still receive the unchanged
+fully symbolic WZ check, and both `rhs+1` controls decline.
+
 ---
 
 ## 6. Known-open items / candidate next work
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond the closed first tier.** Probe
-   fixed-shift convolutions `∑C(n,k)C(n,k+r)=C(2n,n−r)` (starting with concrete
-   `r=2`) and the third squared-binomial moment
-   `∑k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`; retain only identities whose concrete
-   discovery and fully symbolic WZ check both close.
+1. **Broaden certified creative telescoping beyond the closed first tiers.** Probe
+   fixed-shift convolutions `∑C(n,k)C(n,k+r)=C(2n,n−r)` at `r=3` and then look
+   for a general fixed-`r` route; probe the fourth squared-binomial moment. Retain
+   only identities whose concrete discovery and fully symbolic WZ check both close.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would

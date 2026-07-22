@@ -374,6 +374,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — proof-carrying CAS closes fixed-shift two and the third
+  squared-binomial moment.** The public WZ route now certifies
+  `∑C(n,k)C(n,k+2)=C(2n,n−2)` and
+  `∑k³C(n,k)²=n³(n+1)C(2n,n)/(4(2n−1))`, checks the exact returned
+  certificates, and declines `rhs+1` controls. A structured Gosper fallback
+  derives the consecutive ratio of `f(n+1,k)−f(n,k)` from three smaller exact
+  quotients instead of expanding an additive gamma tower; shared integer-linear
+  factors and a one-way finite-field coprimality certificate keep exact fraction
+  reduction inside `i128`. The final fully symbolic WZ equality gate remains
+  mandatory. The CAS topic stack passes 512 unit tests, 147 doctests,
+  warning-denied all-target Clippy, `wasm32-unknown-unknown`, documentation-link
+  validation, and `git diff --check`. Next: probe the `r=3`/general fixed-shift
+  convolution and the fourth squared-binomial moment without weakening the
+  symbolic soundness gate.
+
 - **2026-07-22 — proof-carrying CAS closes adjacent convolution and the first
   two squared-binomial moments.** `prove_wz_sum` now symbolically certifies
   `∑C(n,k)C(n,k+1)=C(2n,n−1)`, `∑kC(n,k)²=(n/2)C(2n,n)`, and

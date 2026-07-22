@@ -5065,7 +5065,7 @@ pub fn prove_wz_sum(
     // up to `SCAN` values and *skipping* any `n` where the concrete Gosper run declines
     // or overflows (larger `n` grow the rising factorials and can overflow) — the
     // symbolic verification below is the real gate, so a few missing samples are fine.
-    const TARGET: usize = 6;
+    const TARGET: usize = 8;
     const SCAN: i128 = 24;
     let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
 
@@ -5093,19 +5093,23 @@ pub fn prove_wz_sum(
             let f_ni1 = specialize(ni + 1);
             // WZ term h(k) = f(n+1,k) − f(n,k); its k-antidifference is the certificate
             // G_ni(k) = R(ni,k)·f(ni,k).
-            let h = simplify(&(f_ni1 - f_ni.clone()));
-            let g = gosper_sum(&h, k)?;
-            let r = simplify(&CasExpr::Div(Box::new(g), Box::new(f_ni)));
+            let h = simplify(&(f_ni1.clone() - f_ni.clone()));
+            let g = gosper_sum(&h, k)
+                .or_else(|| gosper::gosper_sum_difference(&f_ni1, &f_ni, k))?;
+            let quotient = CasExpr::Div(Box::new(g), Box::new(f_ni));
+            let r = simplify(&combine_gamma_ratios(&quotient));
             let rf = normalize_rational(&r)?;
-            let mut num = rf.num.to_univariate(k)?;
-            let mut den = rf.den.to_univariate(k)?;
+            let (num, den) =
+                gosper::cancel_common_monomial_to_univariate(&rf.num, &rf.den, k)?;
+            let (mut num, mut den) = gosper::reduce_fraction(&num, &den)?;
             // Monic denominator, so coefficient positions align across samples.
             let lead = *den.last()?;
             if lead.is_zero() {
                 return None;
             }
             for c in num.iter_mut().chain(den.iter_mut()) {
-                *c = c.checked_div(lead)?;
+                let normalized = c.checked_div(lead)?;
+                *c = normalized;
             }
             Some((poly::rat_trim(num), poly::rat_trim(den)))
         })();
@@ -5127,7 +5131,11 @@ pub fn prove_wz_sum(
     let g_sym = CasExpr::Mul(vec![big_r.clone(), f.clone()]);
     let g_shift = g_sym.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)));
     let h_sym = f.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))) - f.clone();
-    if !matches!(equal(&(g_shift - g_sym), &h_sym), ZeroTest::Certified { equal: true, .. }) {
+    let symbolic_certifies = matches!(
+        equal(&(g_shift - g_sym), &h_sym),
+        ZeroTest::Certified { equal: true, .. }
+    );
+    if !symbolic_certifies {
         return None;
     }
 
@@ -17110,6 +17118,29 @@ mod tests {
     }
 
     #[test]
+    fn wilf_zeilberger_fixed_shift_two_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(2)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(2)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 2, 0, 0)
+            .expect("fixed-shift-two binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(2))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n() - CasExpr::int(1))
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(1)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 2, 0, 0).is_none());
+    }
+
+    #[test]
     fn wilf_zeilberger_squared_binomial_moments() {
         let n = || v("n");
         let k = || v("k");
@@ -17165,6 +17196,38 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn wilf_zeilberger_third_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(3) * binomial_coefficient(&n(), &k()).pow(2);
+        let rhs = n().pow(3) * (n() + CasExpr::int(1)) * central
+            / (CasExpr::int(4) * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("third squared-binomial moment is WZ-provable");
+        let inner = k().pow(2)
+            * (CasExpr::int(2) * n().pow(2) + CasExpr::int(3) * n() - CasExpr::int(2))
+            - k()
+                * (CasExpr::int(3) * n().pow(3)
+                    + CasExpr::int(8) * n().pow(2)
+                    + CasExpr::int(3) * n()
+                    - CasExpr::int(2))
+            + CasExpr::int(3) * n() * (n() + CasExpr::int(1)).pow(2);
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k()
+                * (n() - CasExpr::int(1))
+                * (n() + CasExpr::int(2))
+                * (CasExpr::int(2) * n() - CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1)).pow(2));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
     }
 
     #[test]
