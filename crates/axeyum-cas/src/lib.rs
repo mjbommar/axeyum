@@ -3463,6 +3463,22 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
     }
 }
 
+/// The **convergent infinite sum** `∑_{k=lower}^{∞} f(k)` for a summand with a
+/// closed-form antidifference `S` (`S(k+1)−S(k)=f(k)`, via [`sum_polynomial`] or
+/// [`gosper_sum`]): the value is `lim_{k→∞} S(k) − S(lower)`. Converges (returns a
+/// value) exactly when that limit is finite — geometric/mixed terms with
+/// `|ratio| < 1` (`∑_{0}^{∞} 2^{−k} = 2`, `∑_{1}^{∞} k·3^{−k} = 3/4`); a polynomial
+/// or `|ratio| ≥ 1` summand diverges (the limit declines) and this returns `None`.
+/// Built on certified primitives (the antidifference and the limit).
+#[must_use]
+pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
+    let antidifference = sum_polynomial(f, var).or_else(|| gosper_sum(f, var))?;
+    let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
+    let at_lower = antidifference.substitute(var, lower);
+    let result = limit_at_infinity - at_lower;
+    Some(simplify(&result))
+}
+
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
 /// bounds — the multiplicative analogue of [`definite_sum`]. Each factor `f(k)` is
 /// obtained by substitution and the exact product is simplified. An empty range
@@ -6121,6 +6137,13 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // Geometric decay with a transcendental rate (`r^k = exp(k·ln r)`, `|r|<1`),
+    // whose sign is decided numerically.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_geometric_decay(expr, var, point)
+    {
+        return Some(value);
+    }
     // At `x → 0⁺`, a positive power of `x` beats any power of `ln x`
     // (`x·ln x → 0`, `x²·(ln x)³ → 0`), resolving the `0·∞` form the series
     // fallback can't (ln has no Taylor expansion at 0).
@@ -6203,6 +6226,71 @@ fn limit_exp_dominated(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
         Some(CasExpr::zero()) // decay beats the rational factor
     } else {
         None // growth → ±∞
+    }
+}
+
+/// Like [`limit_exp_dominated`] but for exp factors with a **transcendental** rate,
+/// e.g. `exp(k·ln r) = r^k` (`ln r` is not rational). The net rate's *sign* is
+/// decided numerically (`evalf`), which is all that matters: a strictly negative
+/// net rate in the limit direction decays to `0`, dominating any rational factor.
+/// Enables convergent geometric infinite sums (`∑ r^k`, `|r|<1`).
+fn limit_geometric_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
+    let mut rate = 0.0_f64;
+    if !numeric_exp_rate(expr, var, 1.0, &mut rate) {
+        return None;
+    }
+    if rate == 0.0 {
+        return None; // no net exponential — not this path
+    }
+    let effective = match point {
+        LimitPoint::NegInfinity => -rate,
+        _ => rate,
+    };
+    if effective < 0.0 {
+        Some(CasExpr::zero())
+    } else {
+        None // net growth → ±∞
+    }
+}
+
+/// Numeric analogue of [`accumulate_exp_rate`]: sums `sign·cᵢ` (as f64, via
+/// `evalf` of the linear coefficient) for each `exp(cᵢ·var)` factor — so a
+/// transcendental rate like `ln r` contributes its numeric value. Non-exponential
+/// factors must be rational functions of `var`. `false` if outside that shape.
+fn numeric_exp_rate(expr: &CasExpr, var: &str, sign: f64, rate: &mut f64) -> bool {
+    match expr {
+        CasExpr::Mul(_) => flatten_mul(expr)
+            .iter()
+            .all(|f| numeric_exp_rate(f, var, sign, rate)),
+        CasExpr::Div(a, b) => {
+            numeric_exp_rate(a, var, sign, rate) && numeric_exp_rate(b, var, -sign, rate)
+        }
+        CasExpr::Neg(inner) => numeric_exp_rate(inner, var, sign, rate),
+        CasExpr::Pow(base, exponent) => {
+            if let CasExpr::Unary(UnaryFunc::Exp, _) = base.as_ref() {
+                numeric_exp_rate(base, var, sign * f64::from(*exponent), rate)
+            } else {
+                is_rational_function(expr, var)
+            }
+        }
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            // The argument must be linear in `var`: its second derivative vanishes,
+            // and the first derivative is a constant we can evaluate numerically.
+            // Fold first so residual `var·0` terms don't leave a spurious free `var`.
+            let derivative = simplify(&arg.differentiate(var));
+            let second = simplify(&derivative.differentiate(var));
+            if evalf(&second, &[]).is_none_or(|value| value != 0.0) {
+                return false;
+            }
+            match evalf(&derivative, &[]) {
+                Some(coeff) => {
+                    *rate += sign * coeff;
+                    true
+                }
+                None => false,
+            }
+        }
+        _ => is_rational_function(expr, var),
     }
 }
 
@@ -9667,6 +9755,31 @@ mod tests {
             &definite_sum(&two_pow, "k", &CasExpr::int(0), &CasExpr::int(5)).unwrap(),
             &CasExpr::int(63),
         );
+    }
+
+    #[test]
+    fn convergent_infinite_sums() {
+        let k = || v("k");
+        let at = |lo: i128| CasExpr::int(lo);
+        // Geometric: Σ_{0}^{∞} (1/2)^k = 2, Σ_{1}^{∞} (1/2)^k = 1, Σ_{0}^{∞} (1/3)^k = 3/2.
+        assert_equal(
+            &infinite_sum(&geometric_power(Rational::new(1, 2), "k"), "k", &at(0)).unwrap(),
+            &CasExpr::int(2),
+        );
+        assert_equal(
+            &infinite_sum(&geometric_power(Rational::new(1, 2), "k"), "k", &at(1)).unwrap(),
+            &CasExpr::int(1),
+        );
+        assert_equal(
+            &infinite_sum(&geometric_power(Rational::new(1, 3), "k"), "k", &at(0)).unwrap(),
+            &CasExpr::rat(3, 2),
+        );
+        // Arithmetico-geometric: Σ_{1}^{∞} k·(1/3)^k = 3/4.
+        let k_third = CasExpr::Mul(vec![k(), geometric_power(Rational::new(1, 3), "k")]);
+        assert_equal(&infinite_sum(&k_third, "k", &at(1)).unwrap(), &CasExpr::rat(3, 4));
+        // Divergent series decline: Σ k, Σ 2^k.
+        assert!(infinite_sum(&k(), "k", &at(1)).is_none());
+        assert!(infinite_sum(&geometric_power(Rational::integer(2), "k"), "k", &at(0)).is_none());
     }
 
     #[test]
