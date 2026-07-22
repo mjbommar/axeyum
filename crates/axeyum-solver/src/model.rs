@@ -5,7 +5,7 @@ use axeyum_ir::{Assignment, FuncId, FuncValue, Rational, SymbolId, Value};
 #[cfg(feature = "full")]
 use crate::{
     QuantifiedBoolModelSatCertificate, QuantifiedBvModelSatCertificate,
-    QuantifiedGuardSatCertificate, QuantifiedSkolemSatCertificate,
+    QuantifiedGuardSatCertificate, QuantifiedSkolemSatCertificate, QuantifiedUfModelSatCertificate,
 };
 
 #[cfg(feature = "full")]
@@ -15,6 +15,7 @@ struct QuantifiedSatCertificates {
     bool_model: Vec<QuantifiedBoolModelSatCertificate>,
     guard: Vec<QuantifiedGuardSatCertificate>,
     bv_model: Vec<QuantifiedBvModelSatCertificate>,
+    uf_model: Vec<QuantifiedUfModelSatCertificate>,
 }
 
 /// A satisfying assignment produced by a backend, keyed by Axeyum
@@ -23,9 +24,10 @@ struct QuantifiedSatCertificates {
 /// Entries are kept sorted by symbol ID so iteration order is deterministic.
 /// Uninterpreted-function interpretations (ADR-0013), when present, are kept in
 /// a separate list sorted by [`FuncId`]. Restricted quantified results may
-/// additionally carry checked Skolem certificates (ADR-0096/0121) or checked
-/// free-Boolean universal models (ADR-0107); use the full-profile `check_model`
-/// entry point rather than evaluator-only replay when quantifiers are possible.
+/// additionally carry checked Skolem certificates (ADR-0096/0121), checked
+/// free-Boolean universal models (ADR-0107), or checked finite-profile UF models
+/// (ADR-0357); use the full-profile `check_model` entry point rather than
+/// evaluator-only replay when quantifiers are possible.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Model {
     entries: Vec<(SymbolId, Value)>,
@@ -282,6 +284,49 @@ impl Model {
             .as_deref()
             .into_iter()
             .flat_map(|certificates| &certificates.bv_model)
+    }
+
+    /// Inserts or replaces a checked finite-profile quantified-UF certificate.
+    #[cfg(feature = "full")]
+    pub fn set_quantified_uf_model_sat_certificate(
+        &mut self,
+        cert: QuantifiedUfModelSatCertificate,
+    ) {
+        let certificates = &mut self
+            .quantified
+            .get_or_insert_with(Default::default)
+            .uf_model;
+        match certificates.binary_search_by_key(&cert.assertion, |candidate| candidate.assertion) {
+            Ok(index) => certificates[index] = cert,
+            Err(index) => certificates.insert(index, cert),
+        }
+    }
+
+    /// Returns the checked finite-profile quantified-UF certificate for `assertion`.
+    #[cfg(feature = "full")]
+    pub fn quantified_uf_model_sat_certificate(
+        &self,
+        assertion: axeyum_ir::TermId,
+    ) -> Option<&QuantifiedUfModelSatCertificate> {
+        let certificates = self
+            .quantified
+            .as_deref()
+            .map_or(&[][..], |certificates| certificates.uf_model.as_slice());
+        certificates
+            .binary_search_by_key(&assertion, |candidate| candidate.assertion)
+            .ok()
+            .map(|index| &certificates[index])
+    }
+
+    /// Iterates over checked finite-profile quantified-UF certificates.
+    #[cfg(feature = "full")]
+    pub fn quantified_uf_model_sat_certificates(
+        &self,
+    ) -> impl Iterator<Item = &QuantifiedUfModelSatCertificate> {
+        self.quantified
+            .as_deref()
+            .into_iter()
+            .flat_map(|certificates| &certificates.uf_model)
     }
 
     /// Number of assigned symbols.

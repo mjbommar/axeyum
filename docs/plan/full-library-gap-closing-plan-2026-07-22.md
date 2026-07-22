@@ -242,7 +242,10 @@ cvc5/Z3 decide a real fraction. This is called out as *the* categorical hole in
 - Lives in **P2.6** ([`track-2-theories/P2.6-quantifiers.md`](track-2-theories/P2.6-quantifiers.md)).
   Finite expansion + E-matching + narrow MBQI **landed** (ADR-0016/0095–0141, ~35
   `quant_*.rs` modules); the hole is the **general sat-direction**:
-  - **T2.6.5** general model-based instantiation (`mbqi_model_finder.rs` is narrow),
+  - **T2.6.5** general model-based instantiation: ADR-0357 makes the existing
+    one-binder almost-uninterpreted `Int`/`Real` UF slice canonically
+    replay-checkable, while multi-binder profiles, model repair, and broader
+    interpreted occurrences remain open,
   - **T2.6.1** the MAM (bytecode E-matching abstract machine, generation-cost
     scheduling — explicitly open in the support-matrix),
   - **T2.6.2** general trigger inference / multi-triggers.

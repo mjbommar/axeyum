@@ -365,7 +365,12 @@ pub const SUPPORT_MATRIX: &[SupportRow] = &[
                original-IR UNSAT slices include \
                Euclidean residue and positive-slope affine growth; restricted infinite-domain SAT \
                carries arena-stable affine Skolem recipes checked by separate prenex affine/reflexive \
-               and guarded unit-gap original-assertion checkers. The BV subclass accepts only one exact \
+               and guarded unit-gap original-assertion checkers. One top-level almost-uninterpreted \
+               Int/Real universal may instead carry an ADR-0357 finite-profile UF-model certificate: \
+               the canonical checker re-derives exact binder argument positions, every relevant \
+               finite-table key representative, and one all-default representative from the untouched \
+               source and model under a 4,096-profile cap. Missing or malformed coverage declines. \
+               The BV subclass accepts only one exact \
                same-width universal identity recipe and reflexive signed/unsigned non-strict order \
                (ADR-0121). A separate outer-BV witness certificate proves one exact equality guard \
                false below a direct nonempty Bool/BV quantifier prefix, making the root implication \

@@ -734,8 +734,13 @@ fn user_declare_cannot_alias_fp_max_signzero_bit() {
     let neg0 = c(&mut a, NEG0);
     let mx = fp::max(&mut a, F32, pos0, neg0).unwrap();
 
-    // The reduction's predictable, operand-keyed helper name.
-    let name = format!("axeyum_fp.max.signzero.{}.{}", pos0.index(), neg0.index());
+    // The reduction's predictable format-and-direction-keyed helper name.
+    // `max(+0, -0)` selects the `pos_neg` choice; the complementary argument
+    // order deliberately has its own `neg_pos` choice.
+    let name = format!(
+        "axeyum_fp.max.signzero.{}.{}.pos_neg",
+        F32.exp_bits, F32.sig_bits
+    );
     let internal = a
         .find_internal_symbol(&name)
         .expect("fp.max(+0,-0) minted its fresh sign bit internally");

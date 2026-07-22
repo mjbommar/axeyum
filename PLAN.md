@@ -8960,11 +8960,13 @@ coverage never regresses):
    (`EncodingBudget`/`SearchBound`/`LargeCnf`/timeout), compare
    post-reduction CNF size vs Z3. Flag-flip + measurement before any new
    engine code; the outcome decides encoding-vs-search for the next dollar.
-2. **Open the quantified sat direction** (Gap 2): MBQI model-finding for the
+2. **Deepen the quantified sat direction** (Gap 2): MBQI model-finding for the
    almost-uninterpreted fragment
    ([P2.6 T2.6.5](docs/plan/track-2-theories/P2.6-quantifiers.md)) — the
-   refutation side exists; sat is structurally unreachable today (quantified
-   LIA/UF rows at 0%). MAM/trigger-inference (T2.6.1/2) follow as throughput.
+   refutation side exists, and ADR-0357 now makes the narrow one-binder
+   `Int`/`Real` UF model slice pass canonical original-query replay. Multi-binder
+   finite profiles and general model repair remain the next capability work;
+   MAM/trigger-inference (T2.6.1/2) follow as throughput.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the

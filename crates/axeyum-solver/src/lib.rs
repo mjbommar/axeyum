@@ -149,6 +149,7 @@ macro_rules! full_modules {
         mod quant_nested_xor_cert;
         mod quant_residue_cert;
         mod quant_sat_cert;
+        mod quant_uf_model_sat_cert;
         mod quant_unsat_universal;
         mod quant_vacuous_exists_counterexample_cert;
         mod quant_vacuous_exists_counterexample_search;
@@ -1159,6 +1160,11 @@ macro_rules! full_exports {
             AffineSkolemWitness, QuantifiedSkolemSatCertificate, check_quantified_skolem_sat,
         };
         pub use quant_sat_cert::{check_model, check_model_with_assignment};
+        #[doc(hidden)]
+        pub use quant_uf_model_sat_cert::{
+            QUANTIFIED_UF_PROFILE_CAP, QuantifiedUfModelSatCertificate,
+            check_quantified_uf_model_sat,
+        };
         #[doc(hidden)]
         pub use quant_vacuous_exists_counterexample_cert::{
             VACUOUS_EXISTS_COUNTEREXAMPLE_BINDER_CAP, VACUOUS_EXISTS_COUNTEREXAMPLE_NODE_CAP,
