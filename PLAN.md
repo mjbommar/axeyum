@@ -326,7 +326,12 @@ state.
 > final inference, retry, and `main -> rec_1 -> main` computation. The complete
 > kernel/importer suites and retained populations pass; importer policy and M0
 > streams remain untouched.
-> This stream is paused cleanly after M2. Resume from the single authoritative
+> M3's [pre-run grammar plan](docs/plan/lean-nested-inductive-elimination-m3-plan-2026-07-22.md)
+> now freezes schema `axeyum-lean-nested-inductive-grammar-v1`, seed
+> `0x4158_4e45_5354_4d33`, an exact 640-case construction spanning every
+> registered range endpoint, the independent public observer, private forced
+> mutation registry, resources, and stop conditions. No generated run or
+> importer observation occurred at this checkpoint. Resume from the single authoritative
 > [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md), which
 > records the exact pushed state, M3's generated-grammar task, remaining M3--M6 work,
 > ownership constraints, commands, and stop conditions.
