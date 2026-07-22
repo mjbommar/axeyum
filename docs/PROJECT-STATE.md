@@ -184,21 +184,24 @@ Again, there are distinct targets:
   frozen `MiniVector` and `MiniAcc` construct streams complete twice with exact
   generated/exported recursor comparison; separate computation streams reduce
   to the registered Vector and Acc normal forms in both official Lean and
-  Axeyum. Mutual-group positivity/recursors, nested/well-founded frontend
+  Axeyum. Official mutual import/comparison, nested/well-founded frontend
   lowering, and broad Lean admission remain open. Mutual groups are now the
-  active preregistered TL2.13 slice: the planned unit is one atomic ordered
+  active preregistered TL2.13 slice: the unit is one atomic ordered
   group with shared parameters, complete-group positivity, all motives/minors,
-  target-family recursive calls, and all-or-nothing publication; no mutual
-  admission credit exists yet. Its M0 source/wire freeze is complete: a
+  target-family recursive calls, and all-or-nothing publication. Its M0
+  source/wire freeze is complete: a
   twice-compiled explicit-recursor source and two byte-identical-per-root
   official streams are machine-bound without any new Axeyum observation. The
   wire inventories also show why later comparison cannot use array position:
   families are source-ordered `Even, Odd`, but recursors are dependency-ordered
   `Odd.rec, Even.rec`. M1 now adds the ordered group input, common parameter/
   result-universe preflight, scalable atomic rollback, and identity-preserving
-  singleton delegation. Valid multi-family groups still receive a typed policy
-  decline; no mutual admission credit exists. M2 native group semantics are
-  next.
+  singleton delegation. M2 now replaces the native policy decline with one
+  complete-group algorithm. Eighteen public rows cover cross, indexed, higher-
+  order, mixed, empty-constructor, and mutual-`Prop` shapes; two private
+  mutation tests exercise recursor contracts and late whole-group rollback.
+  Importer support and official mutual computation remain deliberately absent.
+  M3's independent >=640-case group grammar is next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

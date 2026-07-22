@@ -839,9 +839,13 @@ Out of scope:
     declarations/computation/errors exactly, and checks group-local names,
     definitionally equal shared parameters, per-family indices, and equivalent
     result universes inside a scalable insertion-log transaction. A valid
-    multi-family group still receives a typed policy decline. M2 must implement
-    the complete positivity/constructor/motive/minor/recursor/publication rule
-    before this research question can close.
+    multi-family group still receives a typed policy decline. The
+    [M2 result](../../plan/lean-mutual-inductive-groups-m2-2026-07-22.md) now
+    implements the native positivity/constructor/motive/minor/recursor/
+    publication rule through one group path. Eighteen public rows and focused
+    mutation/late-rollback tests cover the registered native matrix without
+    importer widening. The question remains open until M3's >=640-case grammar,
+    M4's official import/computation comparison, and M5's final gates close.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

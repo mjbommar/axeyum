@@ -2,7 +2,7 @@
 //! admission gate, recursor generation (with induction hypotheses, parameters,
 //! and **indices**), and ι-reduction in WHNF.
 //!
-//! ## Scope — parametric, indexed, and single-family recursive
+//! ## Scope — parametric, indexed, and mutual recursive groups
 //!
 //! This slice supports inductive types that are **parametric** (`m` leading
 //! parameter binders fixed across the family) and **indexed** (`k` further
@@ -32,17 +32,18 @@
 //!
 //! A field is recursive when WHNF opens a possibly empty `Pi` telescope whose
 //! tail is exactly `I p_1…p_m idx_1…idx_k`. Its induction hypothesis preserves
-//! that telescope and applies the motive to the recursive occurrence's own
-//! indices and fully applied field value. Empty telescopes/indices recover the
-//! historical direct case; nonempty indices and telescopes cover `Vector`- and
-//! `Acc`-shaped single-family recursion.
+//! that telescope and applies the terminal family's motive to the recursive
+//! occurrence's own indices and fully applied field value. Empty telescopes and
+//! indices recover the historical direct case; nonempty indices and telescopes
+//! cover `Vector`- and `Acc`-shaped recursion. TL2.13 M2 generalizes this one
+//! rule to an ordered mutual group: positivity ranges over every family, every
+//! recursor binds all motives and minors, and each recursive field selects the
+//! motive and recursor of its terminal family. Singleton admission is a wrapper
+//! over the same atomic implementation.
 //!
-//! TL2.13 M1 adds an explicit ordered mutual-group input, common parameter and
-//! result-universe preflight, and an atomic transaction. Multi-family semantic
-//! admission remains deliberately declined until M2. Also deferred (and
-//! rejected explicitly, never guessed): nested occurrences under a foreign
-//! type constructor, malformed family applications, and frontend lowering for
-//! well-founded/nested definitions.
+//! Still deferred (and rejected explicitly, never guessed): nested occurrences
+//! under a foreign type constructor, malformed family applications, and
+//! frontend lowering for well-founded/nested definitions.
 //!
 //! `Prop` elimination follows Lean's syntactic-subsingleton rule. An inductive
 //! whose result universe is provably nonzero may eliminate into an arbitrary
@@ -117,6 +118,24 @@ impl InductiveFamilySpec {
     }
 }
 
+/// Family facts checked before any constructor is admitted.
+struct CheckedFamily {
+    name: NameId,
+    ty: ExprId,
+    num_indices: usize,
+    ind_const: ExprId,
+    constructors: Vec<CheckedCtor>,
+}
+
+/// One checked group shares the first family's parameter locals and result
+/// universe. Constructor and recursor generation consume this representation;
+/// no parallel family/name/index vectors may drift apart.
+struct CheckedInductiveGroup {
+    params: Vec<LocalDecl>,
+    result_level: crate::LevelId,
+    families: Vec<CheckedFamily>,
+}
+
 impl Kernel {
     /// Type-check and admit an inductive type together with its constructors —
     /// the **trusted inductive gate** (ADR-0036, slice 7).
@@ -180,12 +199,12 @@ impl Kernel {
 
     /// Type-check and atomically admit an explicitly ordered inductive group.
     ///
-    /// TL2.13 M1 establishes the group representation, shared-parameter/result-
-    /// universe preflight, and one rollback boundary. A singleton delegates to
-    /// the established single-family implementation with byte-identical
-    /// declarations and errors. A structurally valid group with more than one
-    /// family still returns [`KernelError::MutualInductiveNotSupported`]; M2
-    /// owns group-wide positivity and recursor generation.
+    /// TL2.13 M2 checks and admits the complete group through one trusted path:
+    /// common parameters/universe, complete-group positivity, all family and
+    /// constructor declarations, globally ordered motives/minors, one recursor
+    /// per family, and all-or-nothing publication. A singleton follows this
+    /// same implementation while retaining its established declarations,
+    /// computations, identities, and error payloads.
     ///
     /// # Errors
     ///
@@ -195,9 +214,9 @@ impl Kernel {
     /// non-shared parameter telescope,
     /// [`KernelError::MutualInductiveResultUniverseMismatch`] for inequivalent
     /// family result universes, [`KernelError::DeclarationExists`] for an
-    /// environment collision, or [`KernelError::MutualInductiveNotSupported`]
-    /// after a valid multi-family M1 preflight. Singleton inputs retain every
-    /// error from [`Kernel::add_inductive`]'s historical trusted gate.
+    /// environment collision, or any constructor/positivity/recursor error
+    /// surfaced by the atomic trusted gate. Singleton inputs retain every error
+    /// from [`Kernel::add_inductive`]'s historical trusted gate.
     pub fn add_mutual_inductive(
         &mut self,
         uparams: &[NameId],
@@ -207,23 +226,8 @@ impl Kernel {
         if families.is_empty() {
             return Err(KernelError::EmptyInductiveGroup);
         }
-        if let [family] = families {
-            return self.with_inductive_transaction(|kernel| {
-                kernel.add_single_inductive(
-                    family.name,
-                    uparams,
-                    num_params,
-                    family.ty,
-                    &family.constructors,
-                )
-            });
-        }
-
         self.with_inductive_transaction(|kernel| {
-            kernel.check_mutual_inductive_preflight(num_params, families)?;
-            Err(KernelError::MutualInductiveNotSupported {
-                family_count: families.len(),
-            })
+            kernel.add_inductive_group(uparams, num_params, families)
         })
     }
 
@@ -248,30 +252,35 @@ impl Kernel {
         }
     }
 
-    /// Check only the group facts needed before M2 may widen semantic support.
+    /// Check the family facts that precede complete-group positivity and any
+    /// provisional declaration insertion.
     fn check_mutual_inductive_preflight(
         &mut self,
+        uparams: &[NameId],
         num_params: usize,
         families: &[InductiveFamilySpec],
-    ) -> Result<(), KernelError> {
+    ) -> Result<CheckedInductiveGroup, KernelError> {
         let mut names = BTreeSet::new();
+        let singleton = families.len() == 1;
         for family in families {
-            self.check_group_name(family.name, &mut names)?;
+            self.check_group_name(family.name, &mut names, singleton)?;
             for &(constructor, _) in &family.constructors {
-                self.check_group_name(constructor, &mut names)?;
+                self.check_group_name(constructor, &mut names, singleton)?;
             }
             let recursor = self.name_str(family.name, "rec");
-            self.check_group_name(recursor, &mut names)?;
+            self.check_group_name(recursor, &mut names, singleton)?;
         }
 
         let mut shared_parameters = Vec::with_capacity(num_params);
         let mut shared_result_level = None;
+        let mut checked_families = Vec::with_capacity(families.len());
         for (family_index, family) in families.iter().enumerate() {
-            let result_level = self.check_mutual_family_type(
+            let (num_indices, result_level) = self.check_mutual_family_type(
                 family,
                 family_index,
                 num_params,
                 &mut shared_parameters,
+                singleton,
             )?;
             if let Some(expected) = shared_result_level {
                 if !self.level_is_equiv(expected, result_level) {
@@ -282,19 +291,31 @@ impl Kernel {
             } else {
                 shared_result_level = Some(result_level);
             }
+            checked_families.push(CheckedFamily {
+                name: family.name,
+                ty: family.ty,
+                num_indices,
+                ind_const: self.mk_ind_const(family.name, uparams),
+                constructors: Vec::new(),
+            });
         }
-        Ok(())
+        Ok(CheckedInductiveGroup {
+            params: shared_parameters,
+            result_level: shared_result_level.expect("a nonempty group has a result universe"),
+            families: checked_families,
+        })
     }
 
     fn check_group_name(
         &self,
         name: NameId,
         group_names: &mut BTreeSet<NameId>,
+        singleton: bool,
     ) -> Result<(), KernelError> {
         if self.env.contains(name) {
             return Err(KernelError::DeclarationExists { name });
         }
-        if !group_names.insert(name) {
+        if !group_names.insert(name) && !singleton {
             return Err(KernelError::DuplicateInductiveGroupName { name });
         }
         Ok(())
@@ -308,7 +329,8 @@ impl Kernel {
         family_index: usize,
         num_params: usize,
         shared_parameters: &mut Vec<LocalDecl>,
-    ) -> Result<crate::LevelId, KernelError> {
+        singleton: bool,
+    ) -> Result<(usize, crate::LevelId), KernelError> {
         let mut ctx = LocalContext::new();
         if family_index != 0 {
             for parameter in shared_parameters.iter().copied() {
@@ -326,6 +348,9 @@ impl Kernel {
         let mut cursor = self.whnf(family.ty);
         for parameter_index in 0..num_params {
             let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() else {
+                if singleton {
+                    return Err(KernelError::InductiveTypeNotASort { got: cursor });
+                }
                 return Err(KernelError::MutualInductiveParameterMismatch {
                     family: family.name,
                     parameter_index,
@@ -356,6 +381,7 @@ impl Kernel {
             cursor = self.whnf(cursor);
         }
 
+        let mut num_indices = 0;
         while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
             let index = LocalDecl {
                 fvar: ctx.fresh_fvar(),
@@ -367,292 +393,247 @@ impl Kernel {
             let value = self.fvar(index.fvar);
             cursor = self.instantiate(body, &[value]);
             cursor = self.whnf(cursor);
+            num_indices += 1;
         }
         let ExprNode::Sort(result_level) = self.expr_node(cursor) else {
             return Err(KernelError::InductiveTypeNotASort { got: cursor });
         };
-        Ok(*result_level)
+        Ok((num_indices, *result_level))
     }
 
-    /// Historical single-family trusted implementation, reached only through
-    /// the ordered group transaction.
+    /// Admit one already ordered family group. All inserts in this method are
+    /// provisional until [`Kernel::with_inductive_transaction`] returns `Ok`.
     #[allow(clippy::too_many_lines)]
-    fn add_single_inductive(
+    fn add_inductive_group(
         &mut self,
-        name: NameId,
         uparams: &[NameId],
         num_params: usize,
-        ty: ExprId,
-        ctors: &[(NameId, ExprId)],
+        families: &[InductiveFamilySpec],
     ) -> Result<(), KernelError> {
-        // (1) Names must be fresh (the inductive, the constructors, and the
-        // to-be-generated recursor).
-        if self.env.contains(name) {
-            return Err(KernelError::DeclarationExists { name });
-        }
-        for (cn, _) in ctors {
-            if self.env.contains(*cn) {
-                return Err(KernelError::DeclarationExists { name: *cn });
-            }
-        }
-        let rec_str = "rec";
-        let rec_name = self.name_str(name, rec_str);
-        if self.env.contains(rec_name) {
-            return Err(KernelError::DeclarationExists { name: rec_name });
-        }
+        let mut group = self.check_mutual_inductive_preflight(uparams, num_params, families)?;
 
-        // (2) The inductive's type must itself type-check (its type infers to a
-        // Sort-of-a-Sort) and, after opening `num_params` parameter binders,
-        // WHNF to a `Sort`. Any remaining `Pi` binders are indices; any other
-        // head is ill-typed.
-        let mut ctx = LocalContext::new();
-        let ty_ty = self.infer_core(ty, &mut ctx)?;
-        let ty_ty = self.whnf(ty_ty);
-        if !matches!(self.expr_node(ty_ty), ExprNode::Sort(_)) {
-            return Err(KernelError::InductiveTypeNotASort { got: ty_ty });
-        }
-        // Open the parameter telescope into fresh fvars, instantiating each
-        // subsequent binder. These param locals are the canonical parameters of
-        // the family, threaded everywhere below.
-        let mut params: Vec<LocalDecl> = Vec::with_capacity(num_params);
-        let mut cursor = self.whnf(ty);
-        for _ in 0..num_params {
-            let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() else {
-                // Fewer leading Pis than declared parameters: the type cannot
-                // bind that many parameters.
-                return Err(KernelError::InductiveTypeNotASort { got: cursor });
-            };
-            let fvar = ctx.fresh_fvar();
-            let decl = LocalDecl {
-                fvar,
-                name: bname,
-                ty: dom,
-                info,
-            };
-            ctx.push(decl);
-            params.push(decl);
-            let fv = self.fvar(fvar);
-            cursor = self.instantiate(body, &[fv]);
-            cursor = self.whnf(cursor);
-        }
-        // The binders remaining after the parameters are the **indices**
-        // (ADR-0036, slice 7): open them as fresh index fvars (their telescope
-        // types may reference the parameters and earlier indices). After the
-        // indices the tail must be exactly a `Sort`.
-        let mut indices: Vec<LocalDecl> = Vec::new();
-        while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
-            let fvar = ctx.fresh_fvar();
-            let decl = LocalDecl {
-                fvar,
-                name: bname,
-                ty: dom,
-                info,
-            };
-            ctx.push(decl);
-            indices.push(decl);
-            let fv = self.fvar(fvar);
-            cursor = self.instantiate(body, &[fv]);
-            cursor = self.whnf(cursor);
-        }
-        let num_indices = indices.len();
-        // The remainder must be exactly a `Sort` after params + indices.
-        let ExprNode::Sort(result_level) = self.expr_node(cursor) else {
-            return Err(KernelError::InductiveTypeNotASort { got: cursor });
-        };
-        let result_level = *result_level;
-
-        // The inductive constant `Const(I, uparams-as-levels)`, used as the
-        // applied result head and for the major premise's type.
-        let ind_const = self.mk_ind_const(name, uparams);
-
-        // TL2.11 / ADR-0352: positivity is a distinct trusted preflight, not an
-        // accidental consequence of the later feature-decline paths. Run it
-        // before the temporary `Inductive` declaration is inserted below.
-        for &(ctor_name, ctor_ty) in ctors {
-            self.check_constructor_positivity(
-                name,
-                ind_const,
-                num_params,
-                num_indices,
-                &params,
-                ctor_name,
-                ctor_ty,
-            )?;
-        }
-
-        // (4) Check each constructor and collect its opened field locals.
-        //
-        // We register the Inductive declaration FIRST (so field types and the
-        // recursor type, which reference `Const(I, …)`, resolve), then validate
-        // every constructor; if a constructor fails we roll the inductive back.
-        let ctor_names: Vec<NameId> = ctors.iter().map(|(n, _)| *n).collect();
-        self.env.insert_unchecked(Declaration::Inductive {
-            name,
-            uparams: uparams.to_vec(),
-            ty,
-            num_params: u16::try_from(num_params).expect("parameter count fits u16"),
-            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
-            is_recursive: false,
-            ctor_names: ctor_names.clone(),
-        });
-
-        // The inductive's shared parameter locals, threaded into each
-        // constructor check so dependent parameter types and field/result
-        // references resolve to the same fvars as the inductive.
-        let shared_params = params.clone();
-
-        let mut checked: Vec<CheckedCtor> = Vec::with_capacity(ctors.len());
-        for (idx, (cn, cty)) in ctors.iter().copied().enumerate() {
-            match self.check_ctor(
-                name,
-                ind_const,
-                num_params,
-                num_indices,
-                &shared_params,
-                cn,
-                cty,
-            ) {
-                Ok((fields, recursive_fields, exposes_non_prop_fields)) => {
-                    checked.push(CheckedCtor {
-                        name: cn,
-                        ty: cty,
-                        idx: u16::try_from(idx).expect("ctor count fits u16"),
-                        fields,
-                        recursive_fields,
-                        exposes_non_prop_fields,
-                    });
-                }
-                Err(e) => {
-                    // Roll back the inductive so the environment is unchanged.
-                    self.env.remove_unchecked(name);
-                    return Err(e);
-                }
+        // Positivity sees every family before any header is visible. This is
+        // the decisive difference from repeated single-family admission.
+        for (owner_index, family) in families.iter().enumerate() {
+            for &(constructor, ty) in &family.constructors {
+                self.check_group_constructor_positivity(
+                    &group,
+                    owner_index,
+                    num_params,
+                    constructor,
+                    ty,
+                )?;
             }
         }
 
-        // Constructor checking is the trusted point at which recursive fields
-        // are classified. Persist the aggregate bit on the inductive so
-        // structure eta can implement Lean's exact `is_non_rec_structure`
-        // predicate without re-scanning raw constructor syntax later.
-        let is_recursive = checked
-            .iter()
-            .any(|constructor| !constructor.recursive_fields.is_empty());
-        self.env.insert_unchecked(Declaration::Inductive {
-            name,
-            uparams: uparams.to_vec(),
-            ty,
-            num_params: u16::try_from(num_params).expect("parameter count fits u16"),
-            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
-            is_recursive,
-            ctor_names,
-        });
-
-        // Register the constructors. `num_fields` excludes the parameters (the
-        // ι-rule and recursor strip the params before the fields).
-        for c in &checked {
-            self.env.insert_unchecked(Declaration::Constructor {
-                name: c.name,
+        // All family constants must resolve while constructor types are
+        // checked. The aggregate recursive bit is corrected after trusted
+        // field classification and is group-wide, matching Lean's `is_rec`.
+        for (family, spec) in group.families.iter().zip(families) {
+            self.env.insert_unchecked(Declaration::Inductive {
+                name: family.name,
                 uparams: uparams.to_vec(),
-                ty: c.ty,
-                inductive: name,
-                idx: c.idx,
-                num_fields: u16::try_from(c.fields.len()).expect("field count fits u16"),
+                ty: family.ty,
+                num_params: u16::try_from(num_params).expect("parameter count fits u16"),
+                num_indices: u16::try_from(family.num_indices).expect("index count fits u16"),
+                is_recursive: false,
+                ctor_names: spec.constructors.iter().map(|(name, _)| *name).collect(),
             });
         }
 
-        // Generate and register the recursor (and its rec rules). Its type is
-        // infer-checked here (the self-check); on failure, roll everything back.
-        let allows_large_elimination = self.level_is_nonzero(result_level)
-            || match checked.as_slice() {
-                [] => true,
-                [ctor] => ctor.exposes_non_prop_fields,
-                _ => false,
-            };
-        match self.mk_recursor(
-            rec_name,
-            name,
-            uparams,
-            num_params,
-            num_indices,
-            ty,
-            ind_const,
-            &checked,
-            allows_large_elimination,
-        ) {
-            Ok(rec_decl) => {
-                self.env.insert_unchecked(rec_decl);
-                Ok(())
+        for (owner_index, spec) in families.iter().enumerate() {
+            let mut checked = Vec::with_capacity(spec.constructors.len());
+            for (constructor_index, &(name, ty)) in spec.constructors.iter().enumerate() {
+                let (fields, recursive_fields, exposes_non_prop_fields) =
+                    self.check_group_ctor(&group, owner_index, num_params, name, ty)?;
+                checked.push(CheckedCtor {
+                    name,
+                    ty,
+                    idx: u16::try_from(constructor_index).expect("constructor count fits u16"),
+                    fields,
+                    recursive_fields,
+                    exposes_non_prop_fields,
+                });
             }
-            Err(e) => {
-                self.env.remove_unchecked(name);
-                for c in &checked {
-                    self.env.remove_unchecked(c.name);
-                }
-                Err(e)
+            group.families[owner_index].constructors = checked;
+        }
+
+        let is_recursive = group.families.iter().any(|family| {
+            family
+                .constructors
+                .iter()
+                .any(|constructor| !constructor.recursive_fields.is_empty())
+        });
+        for (family, spec) in group.families.iter().zip(families) {
+            self.env.insert_unchecked(Declaration::Inductive {
+                name: family.name,
+                uparams: uparams.to_vec(),
+                ty: family.ty,
+                num_params: u16::try_from(num_params).expect("parameter count fits u16"),
+                num_indices: u16::try_from(family.num_indices).expect("index count fits u16"),
+                is_recursive,
+                ctor_names: spec.constructors.iter().map(|(name, _)| *name).collect(),
+            });
+        }
+
+        for family in &group.families {
+            for constructor in &family.constructors {
+                self.env.insert_unchecked(Declaration::Constructor {
+                    name: constructor.name,
+                    uparams: uparams.to_vec(),
+                    ty: constructor.ty,
+                    inductive: family.name,
+                    idx: constructor.idx,
+                    num_fields: u16::try_from(constructor.fields.len())
+                        .expect("field count fits u16"),
+                });
             }
         }
+
+        let allows_large_elimination = self.level_is_nonzero(group.result_level)
+            || (group.families.len() == 1
+                && match group.families[0].constructors.as_slice() {
+                    [] => true,
+                    [constructor] => constructor.exposes_non_prop_fields,
+                    _ => false,
+                });
+        let recursors =
+            self.mk_group_recursors(uparams, num_params, &group, allows_large_elimination)?;
+        self.validate_group_recursor_contract(num_params, &group, &recursors)?;
+        for recursor in &recursors {
+            self.env.insert_unchecked(recursor.clone());
+        }
+        self.check_group_recursor_rules(&recursors)?;
+        Ok(())
     }
 
-    /// Build `Const(I, [Param(u) for u in uparams])`.
+    /// Recheck the non-expression metadata generated for each owner family.
+    /// Expression-level type/rule checking is separate so mutations of either
+    /// layer cannot hide behind the other.
+    fn validate_group_recursor_contract(
+        &mut self,
+        num_params: usize,
+        group: &CheckedInductiveGroup,
+        recursors: &[Declaration],
+    ) -> Result<(), KernelError> {
+        let total_minors: usize = group
+            .families
+            .iter()
+            .map(|family| family.constructors.len())
+            .sum();
+        if recursors.len() != group.families.len() {
+            return Err(KernelError::MutualRecursorContractMismatch {
+                family: group.families[0].name,
+            });
+        }
+        for (family, recursor) in group.families.iter().zip(recursors) {
+            let expected_name = self.name_str(family.name, "rec");
+            let Declaration::Recursor {
+                name,
+                rec_rules,
+                num_motives,
+                num_minors,
+                num_params: actual_params,
+                num_indices,
+                ..
+            } = recursor
+            else {
+                return Err(KernelError::MutualRecursorContractMismatch {
+                    family: family.name,
+                });
+            };
+            let metadata_matches = *name == expected_name
+                && usize::from(*num_motives) == group.families.len()
+                && usize::from(*num_minors) == total_minors
+                && usize::from(*actual_params) == num_params
+                && usize::from(*num_indices) == family.num_indices
+                && rec_rules.len() == family.constructors.len()
+                && rec_rules
+                    .iter()
+                    .zip(&family.constructors)
+                    .all(|(rule, constructor)| {
+                        rule.ctor_name == constructor.name
+                            && usize::from(rule.num_fields) == constructor.fields.len()
+                    });
+            if !metadata_matches {
+                return Err(KernelError::MutualRecursorContractMismatch {
+                    family: family.name,
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// Check every closed computation-rule value only after all group recursor
+    /// constants are provisionally visible. Cross-family calls therefore pass
+    /// through ordinary kernel inference instead of receiving a special trust
+    /// exemption. Any failure is rolled back by the enclosing transaction.
+    fn check_group_recursor_rules(&mut self, recursors: &[Declaration]) -> Result<(), KernelError> {
+        for recursor in recursors {
+            let Declaration::Recursor { rec_rules, .. } = recursor else {
+                unreachable!("group recursor generation returns only recursors");
+            };
+            for rule in rec_rules {
+                let mut ctx = LocalContext::new();
+                let _ = self.infer_core(rule.value, &mut ctx)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Build a group family constant with the declaration's universe parameters.
     fn mk_ind_const(&mut self, name: NameId, uparams: &[NameId]) -> ExprId {
         let levels = uparams.iter().map(|&u| self.level_param(u)).collect();
         self.const_(name, levels)
     }
 
-    /// Check Lean 4.30 strict positivity for every non-parameter field in one
-    /// constructor telescope, before the family is inserted into the
-    /// environment. Malformed parameter telescopes are left to the existing
-    /// typed constructor check so this preflight does not steal unrelated error
-    /// classifications.
-    #[allow(clippy::too_many_arguments)]
-    fn check_constructor_positivity(
+    /// Check every field in one constructor against the complete group
+    /// occurrence set before any family header is inserted.
+    fn check_group_constructor_positivity(
         &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
+        group: &CheckedInductiveGroup,
+        owner_index: usize,
         num_params: usize,
-        num_indices: usize,
-        params: &[LocalDecl],
         ctor_name: NameId,
         ctor_ty: ExprId,
     ) -> Result<(), KernelError> {
         let mut ctx = LocalContext::new();
         let mut param_values = Vec::with_capacity(num_params);
-        for param in params.iter().take(num_params) {
-            ctx.bump_fresh_above(param.fvar);
-            ctx.push(*param);
-            param_values.push(self.fvar(param.fvar));
+        for parameter in group.params.iter().take(num_params) {
+            ctx.bump_fresh_above(parameter.fvar);
+            ctx.push(*parameter);
+            param_values.push(self.fvar(parameter.fvar));
         }
 
         let mut cursor = self.whnf(ctor_ty);
-        for &param in &param_values {
+        for &parameter in &param_values {
             let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
+                // The constructor checker retains authority for malformed
+                // parameter telescopes and their historical error payloads.
                 return Ok(());
             };
-            cursor = self.instantiate(body, &[param]);
+            cursor = self.instantiate(body, &[parameter]);
             cursor = self.whnf(cursor);
         }
 
         let mut field_index = 0_u32;
-        while let ExprNode::Pi(bname, domain, body, info) = self.expr_node(cursor).clone() {
-            self.check_positive_occurrence(
-                ind_name,
-                ind_const,
-                num_indices,
+        while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
+            self.check_group_positive_occurrence(
+                group,
+                owner_index,
                 &param_values,
                 ctor_name,
                 field_index,
                 domain,
                 &mut ctx,
             )?;
-
             let fvar = ctx.fresh_fvar();
-            let local = LocalDecl {
+            ctx.push(LocalDecl {
                 fvar,
-                name: bname,
+                name,
                 ty: domain,
                 info,
-            };
-            ctx.push(local);
+            });
             let value = self.fvar(fvar);
             cursor = self.instantiate(body, &[value]);
             cursor = self.whnf(cursor);
@@ -663,14 +644,12 @@ impl Kernel {
         Ok(())
     }
 
-    /// Lean 4.30's `check_positivity` rule for the currently representable
-    /// single-family declaration profile.
+    /// Pinned Lean 4.30 positivity over one complete mutual family set.
     #[allow(clippy::too_many_arguments)]
-    fn check_positive_occurrence(
+    fn check_group_positive_occurrence(
         &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
+        group: &CheckedInductiveGroup,
+        owner_index: usize,
         param_values: &[ExprId],
         ctor_name: NameId,
         field_index: u32,
@@ -678,32 +657,30 @@ impl Kernel {
         ctx: &mut LocalContext,
     ) -> Result<(), KernelError> {
         let term = self.whnf(term);
-        if !self.mentions_const(term, ind_name) {
+        if !self.mentions_group_family(term, group) {
             return Ok(());
         }
 
-        if let ExprNode::Pi(bname, domain, body, info) = self.expr_node(term).clone() {
-            if self.mentions_const(domain, ind_name) {
+        if let ExprNode::Pi(name, domain, body, info) = self.expr_node(term).clone() {
+            if self.mentions_group_family(domain, group) {
                 return Err(KernelError::NonPositiveInductiveOccurrence {
-                    inductive: ind_name,
+                    inductive: group.families[owner_index].name,
                     ctor: ctor_name,
                     field_index,
                 });
             }
             let fvar = ctx.fresh_fvar();
-            let local = LocalDecl {
+            ctx.push(LocalDecl {
                 fvar,
-                name: bname,
+                name,
                 ty: domain,
                 info,
-            };
-            ctx.push(local);
+            });
             let value = self.fvar(fvar);
             let body = self.instantiate(body, &[value]);
-            let result = self.check_positive_occurrence(
-                ind_name,
-                ind_const,
-                num_indices,
+            let result = self.check_group_positive_occurrence(
+                group,
+                owner_index,
                 param_values,
                 ctor_name,
                 field_index,
@@ -714,225 +691,183 @@ impl Kernel {
             return result;
         }
 
-        if self.is_valid_positive_inductive_application(
-            term,
-            ind_name,
-            ind_const,
-            num_indices,
-            param_values,
-        ) {
+        if self
+            .valid_group_family_application(term, group, param_values)
+            .is_some()
+        {
             return Ok(());
         }
 
         Err(KernelError::InvalidInductiveOccurrence {
-            inductive: ind_name,
+            inductive: group.families[owner_index].name,
             ctor: ctor_name,
             field_index,
         })
     }
 
-    /// Whether `term` is exactly `I params indices`, with the declared universe
-    /// instantiation and no family occurrence inside an index.
-    fn is_valid_positive_inductive_application(
+    /// Return the target family for an exact `I_j params indices` application.
+    fn valid_group_family_application(
         &self,
         term: ExprId,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
+        group: &CheckedInductiveGroup,
         param_values: &[ExprId],
-    ) -> bool {
+    ) -> Option<usize> {
         let (head, args) = self.unfold_apps(term);
-        if head != ind_const || args.len() != param_values.len() + num_indices {
-            return false;
-        }
-        if args[..param_values.len()] != param_values[..] {
-            return false;
-        }
-        args[param_values.len()..]
-            .iter()
-            .all(|&index| !self.mentions_const(index, ind_name))
+        group.families.iter().position(|family| {
+            head == family.ind_const
+                && args.len() == param_values.len() + family.num_indices
+                && args[..param_values.len()] == param_values[..]
+                && args[param_values.len()..]
+                    .iter()
+                    .all(|&index| !self.mentions_group_family(index, group))
+        })
     }
 
-    /// Check one constructor of a parametric, possibly indexed inductive: open
-    /// its leading parameter telescope re-bound to the inductive's **shared**
-    /// parameter locals `params` (each binder's declared domain must be def-eq to
-    /// the shared parameter's type, so dependent parameters — e.g. `Eq`'s
-    /// `a : α` — resolve correctly), then its field telescope into fresh locals,
-    /// and require the result head to be `I p_1…p_m e_1…e_k` (the inductive
-    /// applied to the shared parameters then `num_indices` index argument
-    /// expressions). Returns the opened **field** locals (outer-to-inner; the
-    /// parameters are *not* included) together with stable recursive-field
-    /// descriptors (ascending by field position).
-    ///
-    /// A recursive field WHNFs to a possibly empty `Pi` telescope ending in the
-    /// exact family application with fixed parameters and complete indices.
-    /// Invalid parameters/indices, non-positive domains, and occurrences nested
-    /// under a foreign head retain typed fail-closed errors.
+    /// Whether any family constant in `group` occurs structurally in `term`.
+    fn mentions_group_family(&self, term: ExprId, group: &CheckedInductiveGroup) -> bool {
+        match self.expr_node(term).clone() {
+            ExprNode::Const(name, _) => group.families.iter().any(|family| family.name == name),
+            ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => false,
+            ExprNode::Proj(_, _, structure) => self.mentions_group_family(structure, group),
+            ExprNode::App(function, argument) => {
+                self.mentions_group_family(function, group)
+                    || self.mentions_group_family(argument, group)
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                self.mentions_group_family(ty, group) || self.mentions_group_family(body, group)
+            }
+            ExprNode::Let(_, ty, value, body) => {
+                self.mentions_group_family(ty, group)
+                    || self.mentions_group_family(value, group)
+                    || self.mentions_group_family(body, group)
+            }
+        }
+    }
+
+    /// Check one constructor against its owner family and classify recursive
+    /// fields against every family in the group.
     #[allow(clippy::too_many_arguments, clippy::too_many_lines)]
-    fn check_ctor(
+    fn check_group_ctor(
         &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
+        group: &CheckedInductiveGroup,
+        owner_index: usize,
         num_params: usize,
-        num_indices: usize,
-        params: &[LocalDecl],
         ctor_name: NameId,
         ctor_ty: ExprId,
     ) -> Result<(Vec<LocalDecl>, Vec<RecursiveField>, bool), KernelError> {
-        // Open the constructor's telescope in a context seeded with the
-        // inductive's **shared** parameter locals, so that dependent parameter
-        // types (e.g. `Eq`'s `a : α` referencing the earlier param `α`) and the
-        // field/result references all resolve to the same parameter fvars as the
-        // inductive itself.
+        let owner = &group.families[owner_index];
         let mut ctx = LocalContext::new();
-        for p in params.iter().take(num_params) {
-            ctx.push(*p);
-            ctx.bump_fresh_above(p.fvar);
+        for parameter in group.params.iter().take(num_params) {
+            ctx.push(*parameter);
+            ctx.bump_fresh_above(parameter.fvar);
         }
-        // The constructor's type must itself type-check (to a Sort).
-        let cty_ty = self.infer_core(ctor_ty, &mut ctx)?;
-        let cty_ty = self.whnf(cty_ty);
-        if !matches!(self.expr_node(cty_ty), ExprNode::Sort(_)) {
+
+        let inferred = self.infer_core(ctor_ty, &mut ctx)?;
+        let inferred = self.whnf(inferred);
+        if !matches!(self.expr_node(inferred), ExprNode::Sort(_)) {
             return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
         }
 
         let mut cursor = self.whnf(ctor_ty);
-
-        // Open the `num_params` leading parameter binders, instantiating each
-        // with the inductive's **shared** parameter fvar (so the constructor
-        // re-binds the SAME parameters). Each binder's declared domain must be
-        // def-eq to the inductive's corresponding parameter type.
-        let param_locals: Vec<LocalDecl> = params.iter().take(num_params).copied().collect();
-        for p in &param_locals {
-            let ExprNode::Pi(_bname, dom, body, _info) = self.expr_node(cursor).clone() else {
-                // Fewer leading binders than parameters ⇒ the constructor does
-                // not re-bind all parameters.
+        let parameters: Vec<_> = group.params.iter().take(num_params).copied().collect();
+        for parameter in &parameters {
+            let ExprNode::Pi(_, domain, body, _) = self.expr_node(cursor).clone() else {
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             };
-            if !self.def_eq(dom, p.ty) {
+            if !self.def_eq(domain, parameter.ty) {
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             }
-            let pv = self.fvar(p.fvar);
-            cursor = self.instantiate(body, &[pv]);
+            let value = self.fvar(parameter.fvar);
+            cursor = self.instantiate(body, &[value]);
             cursor = self.whnf(cursor);
         }
 
-        let mut fields: Vec<LocalDecl> = Vec::new();
-        let param_values: Vec<ExprId> = param_locals
+        let param_values: Vec<_> = parameters
             .iter()
-            .map(|param| self.fvar(param.fvar))
+            .map(|parameter| self.fvar(parameter.fvar))
             .collect();
-        let mut recursive_fields: Vec<RecursiveField> = Vec::new();
-        // Lean's large-elimination test records every non-parameter field whose
-        // type does not inhabit Prop, then requires each such field itself to
-        // occur as an exact argument of the constructor result. This is more
-        // precise than merely searching beneath an index expression: the field
-        // value must be recoverable directly from the result type.
-        let mut non_prop_field_values: Vec<ExprId> = Vec::new();
-        while let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() {
-            let dom_type = self.infer_core(dom, &mut ctx)?;
-            let dom_type = self.whnf(dom_type);
-            let ExprNode::Sort(dom_level) = self.expr_node(dom_type) else {
+        let mut fields = Vec::new();
+        let mut recursive_fields = Vec::new();
+        let mut non_prop_field_values = Vec::new();
+        while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
+            let domain_type = self.infer_core(domain, &mut ctx)?;
+            let domain_type = self.whnf(domain_type);
+            let ExprNode::Sort(domain_level) = self.expr_node(domain_type) else {
                 return Err(KernelError::MalformedConstructorType { ctor: ctor_name });
             };
-            let field_is_proof = self.level_is_zero(*dom_level);
+            let field_is_proof = self.level_is_zero(*domain_level);
 
-            // M1 / ADR-0353: every positive recursive shape is inspected by one
-            // WHNF telescope-tail path. This checkpoint records only the stable
-            // descriptor for the already-supported zero-telescope/zero-index
-            // direct case; indexed and higher-order shapes retain their feature
-            // declines until M2.
-            let recursive_shape = self.open_recursive_field_shape(
-                ind_name,
-                ind_const,
-                num_indices,
-                &param_values,
-                dom,
-                None,
-                &mut ctx,
-            );
-            if let Some(shape) = recursive_shape {
+            if let Some((target_family, opened)) =
+                self.open_group_recursive_field_shape(group, &param_values, domain, None, &mut ctx)
+            {
                 recursive_fields.push(RecursiveField {
                     field_index: fields.len(),
-                    telescope_depth: shape.telescope.len(),
+                    target_family,
+                    telescope_depth: opened.telescope.len(),
                 });
-            } else if self.mentions_const(dom, ind_name) {
-                return Err(self.classify_bad_recursive_field(ind_name, ind_const, ctor_name, dom));
+            } else if self.mentions_group_family(domain, group) {
+                return Err(self.classify_bad_group_recursive_field(
+                    group,
+                    owner_index,
+                    ctor_name,
+                    domain,
+                ));
             }
+
             let fvar = ctx.fresh_fvar();
-            let decl = LocalDecl {
+            let field = LocalDecl {
                 fvar,
-                name: bname,
-                ty: dom,
+                name,
+                ty: domain,
                 info,
             };
-            ctx.push(decl);
-            fields.push(decl);
-            let fv = self.fvar(fvar);
+            ctx.push(field);
+            fields.push(field);
+            let value = self.fvar(fvar);
             if !field_is_proof {
-                non_prop_field_values.push(fv);
+                non_prop_field_values.push(value);
             }
-            cursor = self.instantiate(body, &[fv]);
+            cursor = self.instantiate(body, &[value]);
             cursor = self.whnf(cursor);
         }
 
-        // The telescope must end exactly in `I p_1…p_m idx_1…idx_k`: the
-        // inductive applied to the constructor's parameters (fixed) then
-        // `num_indices` **index argument expressions** (which may depend on the
-        // params and fields). Split the result's spine into head + args, require
-        // the head to be `I`, the leading `num_params` args to be exactly the
-        // parameter fvars, and collect the remaining `num_indices` index exprs.
         let (head, args) = self.unfold_apps(cursor);
-        let head_ok = matches!(self.expr_node(head), ExprNode::Const(n, _) if *n == ind_name);
-        if !head_ok || args.len() != num_params + num_indices {
+        if head != owner.ind_const || args.len() != num_params + owner.num_indices {
             return Err(KernelError::ConstructorResultMismatch {
-                expected: ind_name,
+                expected: owner.name,
                 ctor: ctor_name,
             });
         }
-        for (i, p) in param_locals.iter().enumerate() {
-            let pv = self.fvar(p.fvar);
-            if args[i] != pv {
-                // The result applies `I` to a non-parameter in a parameter
-                // position (wrong params).
+        for (index, parameter) in parameters.iter().enumerate() {
+            if args[index] != self.fvar(parameter.fvar) {
                 return Err(KernelError::ConstructorResultMismatch {
-                    expected: ind_name,
+                    expected: owner.name,
                     ctor: ctor_name,
                 });
             }
         }
-        // The trailing `num_indices` args are the constructor's own index
-        // expressions; they are re-derived (freshly, in the recursor's own
-        // fvars) during `mk_recursor`, so they need not be returned here.
         let exposes_non_prop_fields = non_prop_field_values
             .iter()
             .all(|field| args.contains(field));
         Ok((fields, recursive_fields, exposes_non_prop_fields))
     }
 
-    /// Open one field through Lean's shared recursive-argument shape: WHNF at
-    /// every step, open a possibly empty `Pi` telescope, then require the exact
-    /// family application with fixed parameters and complete occurrence-free
-    /// indices. When `recursive_value` is present, apply it to the opened
-    /// telescope in lockstep. All temporary locals are popped before return;
-    /// callers receive expressions to abstract, never a mutated context.
-    #[allow(clippy::too_many_arguments)]
-    fn open_recursive_field_shape(
+    /// Open a possibly higher-order recursive field and select the family at
+    /// its terminal exact application.
+    fn open_group_recursive_field_shape(
         &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
+        group: &CheckedInductiveGroup,
         param_values: &[ExprId],
         field_ty: ExprId,
         recursive_value: Option<ExprId>,
         ctx: &mut LocalContext,
-    ) -> Option<OpenedRecursiveField> {
+    ) -> Option<(usize, OpenedRecursiveField)> {
         let mut cursor = self.whnf(field_ty);
         let mut telescope = Vec::new();
         let mut applied_value = recursive_value;
         let mut valid_domains = true;
         while let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() {
-            if self.mentions_const(domain, ind_name) {
+            if self.mentions_group_family(domain, group) {
                 valid_domains = false;
                 break;
             }
@@ -953,40 +888,36 @@ impl Kernel {
             cursor = self.whnf(cursor);
         }
 
-        let (head, args) = self.unfold_apps(cursor);
-        let valid_tail = valid_domains
-            && head == ind_const
-            && args.len() == param_values.len() + num_indices
-            && args[..param_values.len()] == param_values[..]
-            && args[param_values.len()..]
-                .iter()
-                .all(|&index| !self.mentions_const(index, ind_name));
+        let target = if valid_domains {
+            self.valid_group_family_application(cursor, group, param_values)
+        } else {
+            None
+        };
+        let indices = target.map(|_| {
+            let (_, args) = self.unfold_apps(cursor);
+            args[param_values.len()..].to_vec()
+        });
         for _ in 0..telescope.len() {
             ctx.pop();
         }
-        if valid_tail {
-            Some(OpenedRecursiveField {
+        let target = target?;
+        Some((
+            target,
+            OpenedRecursiveField {
                 telescope,
-                indices: args[param_values.len()..].to_vec(),
+                indices: indices.expect("a valid target has an index suffix"),
                 applied_value,
-            })
-        } else {
-            None
-        }
+            },
+        ))
     }
 
-    /// Reopen a checked recursive field in the recursor's current local
-    /// context. Constructor metadata stores only a stable field position and
-    /// telescope depth; the dependent telescope, tail indices, and applied
-    /// recursive value are rederived by the same helper used for
-    /// classification. Any disagreement is a typed internal failure.
+    /// Reopen a checked recursive descriptor in a recursor-local context.
     #[allow(clippy::too_many_arguments)]
-    fn reopen_recursive_field(
+    fn reopen_group_recursive_field(
         &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
+        group: &CheckedInductiveGroup,
         param_values: &[ExprId],
+        owner_index: usize,
         ctor_name: NameId,
         descriptor: RecursiveField,
         fields: &[LocalDecl],
@@ -995,30 +926,27 @@ impl Kernel {
         let field_index = u32::try_from(descriptor.field_index).unwrap_or(u32::MAX);
         let Some(field) = fields.get(descriptor.field_index).copied() else {
             return Err(KernelError::RecursiveFieldShapeMismatch {
-                inductive: ind_name,
+                inductive: group.families[owner_index].name,
                 ctor: ctor_name,
                 field_index,
             });
         };
-        let field_value = self.fvar(field.fvar);
-        let Some(opened) = self.open_recursive_field_shape(
-            ind_name,
-            ind_const,
-            num_indices,
-            param_values,
-            field.ty,
-            Some(field_value),
-            ctx,
-        ) else {
+        let value = self.fvar(field.fvar);
+        let Some((target, opened)) =
+            self.open_group_recursive_field_shape(group, param_values, field.ty, Some(value), ctx)
+        else {
             return Err(KernelError::RecursiveFieldShapeMismatch {
-                inductive: ind_name,
+                inductive: group.families[owner_index].name,
                 ctor: ctor_name,
                 field_index,
             });
         };
-        if opened.telescope.len() != descriptor.telescope_depth || opened.applied_value.is_none() {
+        if target != descriptor.target_family
+            || opened.telescope.len() != descriptor.telescope_depth
+            || opened.applied_value.is_none()
+        {
             return Err(KernelError::RecursiveFieldShapeMismatch {
-                inductive: ind_name,
+                inductive: group.families[owner_index].name,
                 ctor: ctor_name,
                 field_index,
             });
@@ -1026,65 +954,30 @@ impl Kernel {
         Ok(opened)
     }
 
-    /// Classify a field type `dom` that mentions `I` but did not match the
-    /// supported WHNF telescope-tail shape.
-    ///
-    /// - a `Pi` containing an invalid or nested occurrence ⇒
-    ///   [`KernelError::ReflexiveOrNestedNotSupported`];
-    /// - a self-reference applied to the **wrong** arguments (`I a…` where the
-    ///   args are not the parameters) ⇒
-    ///   [`KernelError::RecursiveInductiveNotSupported`];
-    /// - any other occurrence (nested under another head, etc.)
-    ///   ⇒ [`KernelError::ReflexiveOrNestedNotSupported`].
-    fn classify_bad_recursive_field(
-        &mut self,
-        ind_name: NameId,
-        ind_const: ExprId,
+    fn classify_bad_group_recursive_field(
+        &self,
+        group: &CheckedInductiveGroup,
+        owner_index: usize,
         ctor_name: NameId,
-        dom: ExprId,
+        domain: ExprId,
     ) -> KernelError {
-        // A remaining `Pi`-headed occurrence failed the valid recursive-tail
-        // classifier, so it is malformed or nested rather than admissible.
-        if matches!(self.expr_node(dom), ExprNode::Pi(..)) {
+        let owner = group.families[owner_index].name;
+        if matches!(self.expr_node(domain), ExprNode::Pi(..)) {
             return KernelError::ReflexiveOrNestedNotSupported {
-                inductive: ind_name,
+                inductive: owner,
                 ctor: ctor_name,
             };
         }
-        // `I` applied to arguments (`Const(I, _) a…`) whose head is the
-        // inductive constant but which is not the canonical `I p_1…p_m` is a
-        // mis-applied recursive self-reference (wrong params/indices).
-        let (head, args) = self.unfold_apps(dom);
-        if !args.is_empty() && head == ind_const {
+        let (head, args) = self.unfold_apps(domain);
+        if !args.is_empty() && group.families.iter().any(|family| family.ind_const == head) {
             return KernelError::RecursiveInductiveNotSupported {
-                inductive: ind_name,
+                inductive: owner,
                 ctor: ctor_name,
             };
         }
-        // Anything else mentioning `I` (nested under a different head, etc.).
         KernelError::ReflexiveOrNestedNotSupported {
-            inductive: ind_name,
+            inductive: owner,
             ctor: ctor_name,
-        }
-    }
-
-    /// Whether the constant named `target` occurs anywhere in `e` (used for the
-    /// non-recursive field restriction). A purely structural search; no
-    /// reduction.
-    fn mentions_const(&self, e: ExprId, target: NameId) -> bool {
-        match self.expr_node(e).clone() {
-            ExprNode::Const(n, _) => n == target,
-            ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Sort(_) | ExprNode::Lit(_) => false,
-            ExprNode::Proj(_, _, structure) => self.mentions_const(structure, target),
-            ExprNode::App(f, a) => self.mentions_const(f, target) || self.mentions_const(a, target),
-            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
-                self.mentions_const(ty, target) || self.mentions_const(body, target)
-            }
-            ExprNode::Let(_, ty, val, body) => {
-                self.mentions_const(ty, target)
-                    || self.mentions_const(val, target)
-                    || self.mentions_const(body, target)
-            }
         }
     }
 }
@@ -1117,6 +1010,7 @@ struct CheckedCtor {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct RecursiveField {
     field_index: usize,
+    target_family: usize,
     telescope_depth: usize,
 }
 
@@ -1163,328 +1057,360 @@ impl Kernel {
 // ---------------------------------------------------------------------------
 
 impl Kernel {
-    /// Generate the recursor declaration (type + rec rules) for a checked
-    /// parametric, possibly **indexed** inductive. The recursor's type is
-    /// `infer`-checked before it is returned (the soundness self-check).
-    ///
-    /// The recursor binds, outer-to-inner: the parameters `p_1…p_m`, the implicit
-    /// motive `{motive : Π (indices), (I p… indices) → Sort v}`, the minor
-    /// premises, the indices `(indices)`, and the major
-    /// `(major : I p… indices)`, yielding `motive indices major`. The parameters
-    /// are threaded into every constructor application and recursive `motive`
-    /// application; the motive in each minor is applied to the **constructor's
-    /// own index expressions** (the crux of the indexed eliminator).
-    #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
-    fn mk_recursor(
+    /// Generate all per-family recursors from one shared motive/minor context.
+    /// The returned declarations are not published until every type self-checks.
+    #[allow(clippy::too_many_lines)]
+    fn mk_group_recursors(
         &mut self,
-        rec_name: NameId,
-        ind_name: NameId,
         uparams: &[NameId],
         num_params: usize,
-        num_indices: usize,
-        ind_ty: ExprId,
-        ind_const: ExprId,
-        ctors: &[CheckedCtor],
+        group: &CheckedInductiveGroup,
         allows_large_elimination: bool,
-    ) -> Result<Declaration, KernelError> {
-        // Large-eliminating recursors receive a fresh universe parameter `v`,
-        // distinct from the inductive's uparams, and expose `[v] ++ uparams`.
-        // A non-subsingleton family that may inhabit Prop instead fixes the
-        // motive universe to zero and exposes only the inductive's uparams.
+    ) -> Result<Vec<Declaration>, KernelError> {
         let (elim_level, rec_uparams) = if allows_large_elimination {
             let elim_param = self.fresh_elim_param(uparams);
-            let elim_level = self.level_param(elim_param);
             let mut rec_uparams = Vec::with_capacity(uparams.len() + 1);
             rec_uparams.push(elim_param);
             rec_uparams.extend_from_slice(uparams);
-            (elim_level, rec_uparams)
+            (self.level_param(elim_param), rec_uparams)
         } else {
             (self.level_zero(), uparams.to_vec())
         };
         let elim_sort = self.sort(elim_level);
+        let rec_level_args: Vec<_> = rec_uparams
+            .iter()
+            .map(|&parameter| self.level_param(parameter))
+            .collect();
 
-        // We work in one shared local context: params, then motive, then the
-        // minors. The fields for each constructor live in nested contexts during
-        // minor and rec-rule construction.
         let mut ctx = LocalContext::new();
+        let params = self.open_group_params(&mut ctx, num_params, group.families[0].ty);
+        let param_values: Vec<_> = params
+            .iter()
+            .map(|parameter| self.fvar(parameter.fvar))
+            .collect();
 
-        // Open the parameter locals `p_1…p_m` and then the **index** locals
-        // `idx_1…idx_k` (the recursor's canonical shared indices) from the
-        // inductive's declared type telescope, with fresh fvars shared across the
-        // whole recursor.
-        let (params, rec_indices) =
-            self.open_rec_params_and_indices(&mut ctx, num_params, num_indices, ind_ty);
-
-        // `I p_1…p_m` (parameters threaded), the partial application used as the
-        // motive-domain / major head before the indices are applied.
-        let ind_applied_params = {
-            let mut app = ind_const;
-            for p in &params {
-                let fv = self.fvar(p.fvar);
-                app = self.app(app, fv);
-            }
-            app
-        };
-        // `I p_1…p_m idx_1…idx_k` (parameters AND the recursor's shared indices
-        // threaded), used for the major's type and the motive's last domain.
-        let ind_applied = {
-            let mut app = ind_applied_params;
-            for ix in &rec_indices {
-                let fv = self.fvar(ix.fvar);
-                app = self.app(app, fv);
-            }
-            app
-        };
-        let param_values: Vec<ExprId> = params.iter().map(|p| self.fvar(p.fvar)).collect();
-
-        // motive : Π (idx_1…idx_k), (I p… idx…) → Sort v   (implicit). For a
-        // non-indexed family this is the plain arrow `(I p…) → Sort v`.
-        let motive_ty = {
-            // Innermost: Π (_ : I p… idx…), Sort v.
+        // Motives are global and ordered by family.
+        let mut motives = Vec::with_capacity(group.families.len());
+        for (family_index, family) in group.families.iter().enumerate() {
+            let indices = self.open_group_indices(&mut ctx, num_params, &params, family);
+            let family_app = self.apply_family(family.ind_const, &params, &indices);
             let anon = self.anon();
-            let arrow = self.pi(anon, ind_applied, elim_sort, BinderInfo::Default);
-            // Wrap the index telescope around it (abstracting the index fvars).
-            self.abstr_pi_telescope(&rec_indices, arrow)
-        };
-        let motive_fvar = ctx.fresh_fvar();
-        let motive_name = self.name_str_anon("motive");
-        let motive_decl = LocalDecl {
-            fvar: motive_fvar,
-            name: motive_name,
-            ty: motive_ty,
-            info: BinderInfo::Implicit,
-        };
-        ctx.push(motive_decl);
-        let motive = self.fvar(motive_fvar);
+            let motive_result = self.pi(anon, family_app, elim_sort, BinderInfo::Default);
+            let motive_ty = self.abstr_pi_telescope(&indices, motive_result);
+            for _ in 0..indices.len() {
+                ctx.pop();
+            }
+            let base_name = self.name_str_anon("motive");
+            let name = if group.families.len() == 1 {
+                base_name
+            } else {
+                self.name_num(base_name, (family_index + 1) as u64)
+            };
+            let motive = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name,
+                ty: motive_ty,
+                info: BinderInfo::Implicit,
+            };
+            ctx.push(motive);
+            motives.push(motive);
+        }
 
-        // For each constructor, build the minor premise local and remember its
-        // opened fields (re-opened here with fresh fvars in this context).
-        let mut minors: Vec<LocalDecl> = Vec::with_capacity(ctors.len());
-        // Per-ctor: the field locals opened for the minor (used in rec rules).
-        let mut ctor_fields: Vec<Vec<LocalDecl>> = Vec::with_capacity(ctors.len());
-        for c in ctors {
-            let (fields, ctor_result) = self.open_ctor_fields(&mut ctx, num_params, &params, c);
-            // The constructor's own index argument expressions, freshly in terms
-            // of the just-opened field fvars (the crux of the indexed minor).
-            let ctor_index_args = self.ctor_index_args(ctor_result, num_indices);
-            // c_i p_1…p_m fields…  :  I p_1…p_m ctor_index_args…
-            let ctor_app = {
-                let head = self.mk_ind_const_for_ctor(c.name, uparams);
-                let mut app = head;
-                for p in &params {
-                    let fv = self.fvar(p.fvar);
-                    app = self.app(app, fv);
+        // Minors are global and ordered by family, then constructor.
+        let total_minors: usize = group
+            .families
+            .iter()
+            .map(|family| family.constructors.len())
+            .sum();
+        let mut minors = Vec::with_capacity(total_minors);
+        let mut ctor_fields: Vec<Vec<Vec<LocalDecl>>> = group
+            .families
+            .iter()
+            .map(|family| Vec::with_capacity(family.constructors.len()))
+            .collect();
+        for (owner_index, family) in group.families.iter().enumerate() {
+            for constructor in &family.constructors {
+                let (fields, result) =
+                    self.open_ctor_fields(&mut ctx, num_params, &params, constructor);
+                let result_indices = self.ctor_index_args(result, family.num_indices);
+                let constructor_app = {
+                    let mut app = self.mk_ind_const_for_ctor(constructor.name, uparams);
+                    for parameter in &params {
+                        let value = self.fvar(parameter.fvar);
+                        app = self.app(app, value);
+                    }
+                    for field in &fields {
+                        let value = self.fvar(field.fvar);
+                        app = self.app(app, value);
+                    }
+                    app
+                };
+                let mut motive_app = self.fvar(motives[owner_index].fvar);
+                for index in result_indices {
+                    motive_app = self.app(motive_app, index);
                 }
-                for f in &fields {
-                    let fv = self.fvar(f.fvar);
-                    app = self.app(app, fv);
+                motive_app = self.app(motive_app, constructor_app);
+
+                let ihs = self.open_group_ih_locals(
+                    &mut ctx,
+                    group,
+                    owner_index,
+                    &param_values,
+                    constructor,
+                    &motives,
+                    &fields,
+                )?;
+                let minor_body = self.abstr_pi_telescope(&ihs, motive_app);
+                let minor_ty = self.abstr_pi_telescope(&fields, minor_body);
+                for _ in 0..ihs.len() {
+                    ctx.pop();
                 }
-                app
-            };
-            // motive <ctor's index exprs> (c_i p_1…p_m fields…) — the motive is
-            // applied to the CONSTRUCTOR'S own index expressions, then the
-            // constructor application.
-            let motive_app = {
-                let mut app = motive;
-                for &ix in &ctor_index_args {
-                    app = self.app(app, ix);
+                for _ in 0..fields.len() {
+                    ctx.pop();
                 }
-                self.app(app, ctor_app)
-            };
-            // One induction-hypothesis binder `ih_j : motive f_j` per recursive
-            // field `f_j`, in field order, opened *after* the field binders so
-            // each IH's type references the already-bound field fvar.
-            let ih_locals = self.open_ih_locals(
-                &mut ctx,
-                ind_name,
-                ind_const,
-                num_indices,
-                &param_values,
-                c,
-                motive,
-                &fields,
-            )?;
-            // Π fields… (ih…), motive (c_i p… fields…)
-            let minor_body = self.abstr_pi_telescope(&ih_locals, motive_app);
-            let minor_ty = self.abstr_pi_telescope(&fields, minor_body);
-            // Pop the IH locals and the field locals (only needed for minor_ty).
-            for _ in 0..ih_locals.len() {
-                ctx.pop();
+                let minor = LocalDecl {
+                    fvar: ctx.fresh_fvar(),
+                    name: self.minor_name(constructor.name),
+                    ty: minor_ty,
+                    info: BinderInfo::Default,
+                };
+                ctx.push(minor);
+                minors.push(minor);
+                ctor_fields[owner_index].push(fields);
             }
-            for _ in 0..fields.len() {
-                ctx.pop();
-            }
-            let minor_fvar = ctx.fresh_fvar();
-            let minor_name = self.minor_name(c.name);
-            let minor_decl = LocalDecl {
-                fvar: minor_fvar,
-                name: minor_name,
-                ty: minor_ty,
+        }
+
+        let mut declarations = Vec::with_capacity(group.families.len());
+        let mut global_minor_index = 0;
+        for (owner_index, family) in group.families.iter().enumerate() {
+            let rec_name = self.name_str(family.name, "rec");
+            let rec_indices = self.open_group_indices(&mut ctx, num_params, &params, family);
+            let major_type = self.apply_family(family.ind_const, &params, &rec_indices);
+            let major = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name: self.name_str_anon("t"),
+                ty: major_type,
                 info: BinderInfo::Default,
             };
-            ctx.push(minor_decl);
-            minors.push(minor_decl);
-            ctor_fields.push(fields);
-        }
-
-        // major : I p_1…p_m idx_1…idx_k   (the recursor's shared indices).
-        let major_fvar = ctx.fresh_fvar();
-        let major_name = self.name_str_anon("t");
-        let major_decl = LocalDecl {
-            fvar: major_fvar,
-            name: major_name,
-            ty: ind_applied,
-            info: BinderInfo::Default,
-        };
-        let major = self.fvar(major_fvar);
-
-        // The result type `motive idx_1…idx_k major` (the motive applied to the
-        // recursor's shared indices then the major), abstracted over the major,
-        // the indices, the minors, the motive, and the params (params outermost —
-        // the Lean convention: params before motive, indices before the major).
-        let motive_major = {
-            let mut app = motive;
-            for ix in &rec_indices {
-                let fv = self.fvar(ix.fvar);
-                app = self.app(app, fv);
+            let mut result = self.fvar(motives[owner_index].fvar);
+            for index in &rec_indices {
+                let value = self.fvar(index.fvar);
+                result = self.app(result, value);
             }
-            self.app(app, major)
-        };
-        let rec_ty = self.abstr_pi_telescope(&[major_decl], motive_major);
-        let rec_ty = self.abstr_pi_telescope(&rec_indices, rec_ty);
-        let rec_ty = self.abstr_pi_telescope(&minors, rec_ty);
-        let rec_ty = self.abstr_pi_telescope(&[motive_decl], rec_ty);
-        let rec_ty = self.abstr_pi_telescope(&params, rec_ty);
+            let major_value = self.fvar(major.fvar);
+            result = self.app(result, major_value);
+            let rec_ty = self.abstr_pi_telescope(&[major], result);
+            let rec_ty = self.abstr_pi_telescope(&rec_indices, rec_ty);
+            let rec_ty = self.abstr_pi_telescope(&minors, rec_ty);
+            let rec_ty = self.abstr_pi_telescope(&motives, rec_ty);
+            let rec_ty = self.abstr_pi_telescope(&params, rec_ty);
 
-        // Build the rec rules:
-        //   value_i = λ params motive m_1..m_n fields_i…,
-        //             m_i fields_i… (I.rec params motive m… f_j)…
-        let mut rec_rules: Vec<RecRule> = Vec::with_capacity(ctors.len());
-        // The recursor's universe parameters, as `Param` levels, for the inner
-        // `I.rec …` calls in recursive ι-rules (instantiated to the const's
-        // actual levels by `reduce_rec`).
-        let rec_level_args: Vec<crate::level::LevelId> =
-            rec_uparams.iter().map(|&u| self.level_param(u)).collect();
-        for (i, c) in ctors.iter().enumerate() {
-            let minor = minors[i];
-            let fields = &ctor_fields[i];
-            // m_i fields_i…
-            let mut body = self.fvar(minor.fvar);
-            for f in fields {
-                let fv = self.fvar(f.fvar);
-                body = self.app(body, fv);
+            let mut rules = Vec::with_capacity(family.constructors.len());
+            for (constructor_index, constructor) in family.constructors.iter().enumerate() {
+                let fields = &ctor_fields[owner_index][constructor_index];
+                let mut body = self.fvar(minors[global_minor_index].fvar);
+                for field in fields {
+                    let value = self.fvar(field.fvar);
+                    body = self.app(body, value);
+                }
+                for &recursive_field in &constructor.recursive_fields {
+                    let opened = self.reopen_group_recursive_field(
+                        group,
+                        &param_values,
+                        owner_index,
+                        constructor.name,
+                        recursive_field,
+                        fields,
+                        &mut ctx,
+                    )?;
+                    let target = &group.families[recursive_field.target_family];
+                    let target_rec_name = self.name_str(target.name, "rec");
+                    let mut recursive_call = self.const_(target_rec_name, rec_level_args.clone());
+                    for parameter in &params {
+                        let value = self.fvar(parameter.fvar);
+                        recursive_call = self.app(recursive_call, value);
+                    }
+                    for motive in &motives {
+                        let value = self.fvar(motive.fvar);
+                        recursive_call = self.app(recursive_call, value);
+                    }
+                    for minor in &minors {
+                        let value = self.fvar(minor.fvar);
+                        recursive_call = self.app(recursive_call, value);
+                    }
+                    for index in opened.indices {
+                        recursive_call = self.app(recursive_call, index);
+                    }
+                    let Some(value) = opened.applied_value else {
+                        return Err(KernelError::RecursiveFieldShapeMismatch {
+                            inductive: family.name,
+                            ctor: constructor.name,
+                            field_index: u32::try_from(recursive_field.field_index)
+                                .unwrap_or(u32::MAX),
+                        });
+                    };
+                    recursive_call = self.app(recursive_call, value);
+                    recursive_call = self.abstr_lambda_telescope(&opened.telescope, recursive_call);
+                    body = self.app(body, recursive_call);
+                }
+
+                let value = self.abstr_lambda_telescope(fields, body);
+                let value = self.abstr_lambda_telescope(&minors, value);
+                let value = self.abstr_lambda_telescope(&motives, value);
+                let value = self.abstr_lambda_telescope(&params, value);
+                rules.push(RecRule {
+                    ctor_name: constructor.name,
+                    num_fields: u16::try_from(fields.len()).expect("field count fits u16"),
+                    value,
+                });
+                global_minor_index += 1;
             }
-            // … then one recursive call `I.rec params motive minors… f_j` per
-            // recursive field `f_j`, in field order (the IH arguments).
-            for &recursive_field in &c.recursive_fields {
-                let opened = self.reopen_recursive_field(
-                    ind_name,
-                    ind_const,
-                    num_indices,
-                    &param_values,
-                    c.name,
-                    recursive_field,
-                    fields,
-                    &mut ctx,
-                )?;
-                let mut rec_call = self.const_(rec_name, rec_level_args.clone());
-                for p in &params {
-                    let pv = self.fvar(p.fvar);
-                    rec_call = self.app(rec_call, pv);
-                }
-                rec_call = self.app(rec_call, motive);
-                for m in &minors {
-                    let mv = self.fvar(m.fvar);
-                    rec_call = self.app(rec_call, mv);
-                }
-                for &index in &opened.indices {
-                    rec_call = self.app(rec_call, index);
-                }
-                let Some(applied_value) = opened.applied_value else {
-                    return Err(KernelError::RecursiveFieldShapeMismatch {
-                        inductive: ind_name,
-                        ctor: c.name,
-                        field_index: u32::try_from(recursive_field.field_index).unwrap_or(u32::MAX),
-                    });
-                };
-                rec_call = self.app(rec_call, applied_value);
-                rec_call = self.abstr_lambda_telescope(&opened.telescope, rec_call);
-                body = self.app(body, rec_call);
+
+            let mut check_ctx = LocalContext::new();
+            let rec_ty_type = self.infer_core(rec_ty, &mut check_ctx)?;
+            let rec_ty_type = self.whnf(rec_ty_type);
+            if !matches!(self.expr_node(rec_ty_type), ExprNode::Sort(_)) {
+                return Err(KernelError::DeclarationTypeNotASort { got: rec_ty_type });
             }
-            // λ fields_i…, (m_i fields_i… ih…)
-            let val = self.abstr_lambda_telescope(fields, body);
-            // λ motive m_1..m_n, (…)
-            let val = self.abstr_lambda_telescope(&minors, val);
-            let val = self.abstr_lambda_telescope(&[motive_decl], val);
-            // λ params, (…)   — params outermost (consumed first by ι).
-            let val = self.abstr_lambda_telescope(&params, val);
-            rec_rules.push(RecRule {
-                ctor_name: c.name,
-                num_fields: u16::try_from(fields.len()).expect("field count fits u16"),
-                value: val,
+            declarations.push(Declaration::Recursor {
+                name: rec_name,
+                uparams: rec_uparams.clone(),
+                ty: rec_ty,
+                rec_rules: rules,
+                num_motives: u16::try_from(motives.len()).expect("motive count fits u16"),
+                num_minors: u16::try_from(minors.len()).expect("minor count fits u16"),
+                num_params: u16::try_from(num_params).expect("parameter count fits u16"),
+                num_indices: u16::try_from(family.num_indices).expect("index count fits u16"),
             });
+            for _ in 0..rec_indices.len() {
+                ctx.pop();
+            }
         }
-
-        // Soundness self-check: the generated recursor type must infer to a
-        // `Sort` under the recursor's universe parameters (as `Param`s, which
-        // they already are). A failure means the de Bruijn bookkeeping is wrong.
-        let mut check_ctx = LocalContext::new();
-        let rec_ty_ty = self.infer_core(rec_ty, &mut check_ctx)?;
-        let rec_ty_ty = self.whnf(rec_ty_ty);
-        if !matches!(self.expr_node(rec_ty_ty), ExprNode::Sort(_)) {
-            return Err(KernelError::DeclarationTypeNotASort { got: rec_ty_ty });
-        }
-
-        Ok(Declaration::Recursor {
-            name: rec_name,
-            uparams: rec_uparams,
-            ty: rec_ty,
-            rec_rules,
-            num_motives: 1,
-            num_minors: u16::try_from(ctors.len()).expect("ctor count fits u16"),
-            num_params: u16::try_from(num_params).expect("param count fits u16"),
-            num_indices: u16::try_from(num_indices).expect("index count fits u16"),
-        })
+        Ok(declarations)
     }
 
-    /// Open the recursor's `num_params` parameter locals followed by its
-    /// `num_indices` index locals into `ctx` (pushing each), with their types
-    /// read from the inductive's declared type telescope `ind_ty`. Returns
-    /// `(params, indices)`, each outer-to-inner. Every telescope type is
-    /// instantiated with the preceding fvars so later types (including index
-    /// types) see the earlier params/indices.
-    fn open_rec_params_and_indices(
+    fn open_group_params(
         &mut self,
         ctx: &mut LocalContext,
         num_params: usize,
-        num_indices: usize,
-        ind_ty: ExprId,
-    ) -> (Vec<LocalDecl>, Vec<LocalDecl>) {
+        family_ty: ExprId,
+    ) -> Vec<LocalDecl> {
         let mut params = Vec::with_capacity(num_params);
-        let mut indices = Vec::with_capacity(num_indices);
-        let mut cursor = self.whnf(ind_ty);
-        for i in 0..(num_params + num_indices) {
-            let ExprNode::Pi(bname, dom, body, info) = self.expr_node(cursor).clone() else {
+        let mut cursor = self.whnf(family_ty);
+        for _ in 0..num_params {
+            let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() else {
                 break;
             };
-            let fvar = ctx.fresh_fvar();
-            let decl = LocalDecl {
-                fvar,
-                name: bname,
-                ty: dom,
+            let parameter = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name,
+                ty: domain,
                 info,
             };
-            ctx.push(decl);
-            if i < num_params {
-                params.push(decl);
-            } else {
-                indices.push(decl);
-            }
-            let fv = self.fvar(fvar);
-            cursor = self.instantiate(body, &[fv]);
+            ctx.push(parameter);
+            params.push(parameter);
+            let value = self.fvar(parameter.fvar);
+            cursor = self.instantiate(body, &[value]);
             cursor = self.whnf(cursor);
         }
-        (params, indices)
+        params
+    }
+
+    fn open_group_indices(
+        &mut self,
+        ctx: &mut LocalContext,
+        num_params: usize,
+        params: &[LocalDecl],
+        family: &CheckedFamily,
+    ) -> Vec<LocalDecl> {
+        let mut cursor = self.whnf(family.ty);
+        for parameter in params.iter().take(num_params) {
+            let ExprNode::Pi(_, _, body, _) = self.expr_node(cursor).clone() else {
+                break;
+            };
+            let value = self.fvar(parameter.fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+        let mut indices = Vec::with_capacity(family.num_indices);
+        for _ in 0..family.num_indices {
+            let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() else {
+                break;
+            };
+            let index = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name,
+                ty: domain,
+                info,
+            };
+            ctx.push(index);
+            indices.push(index);
+            let value = self.fvar(index.fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+        indices
+    }
+
+    fn apply_family(
+        &mut self,
+        family: ExprId,
+        params: &[LocalDecl],
+        indices: &[LocalDecl],
+    ) -> ExprId {
+        let mut app = family;
+        for local in params.iter().chain(indices) {
+            let value = self.fvar(local.fvar);
+            app = self.app(app, value);
+        }
+        app
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn open_group_ih_locals(
+        &mut self,
+        ctx: &mut LocalContext,
+        group: &CheckedInductiveGroup,
+        owner_index: usize,
+        param_values: &[ExprId],
+        constructor: &CheckedCtor,
+        motives: &[LocalDecl],
+        fields: &[LocalDecl],
+    ) -> Result<Vec<LocalDecl>, KernelError> {
+        let mut ihs = Vec::with_capacity(constructor.recursive_fields.len());
+        for &recursive_field in &constructor.recursive_fields {
+            let opened = self.reopen_group_recursive_field(
+                group,
+                param_values,
+                owner_index,
+                constructor.name,
+                recursive_field,
+                fields,
+                ctx,
+            )?;
+            let mut ih_body = self.fvar(motives[recursive_field.target_family].fvar);
+            for index in opened.indices {
+                ih_body = self.app(ih_body, index);
+            }
+            let Some(value) = opened.applied_value else {
+                return Err(KernelError::RecursiveFieldShapeMismatch {
+                    inductive: group.families[owner_index].name,
+                    ctor: constructor.name,
+                    field_index: u32::try_from(recursive_field.field_index).unwrap_or(u32::MAX),
+                });
+            };
+            ih_body = self.app(ih_body, value);
+            let ih_ty = self.abstr_pi_telescope(&opened.telescope, ih_body);
+            let ih = LocalDecl {
+                fvar: ctx.fresh_fvar(),
+                name: self.name_str_anon("ih"),
+                ty: ih_ty,
+                info: BinderInfo::Default,
+            };
+            ctx.push(ih);
+            ihs.push(ih);
+        }
+        Ok(ihs)
     }
 
     /// `Const(c, [Param(u)…])` for a constructor sharing the inductive's
@@ -1552,61 +1478,6 @@ impl Kernel {
         // indices (the check in `check_ctor` guarantees the arity).
         let start = args.len().saturating_sub(num_indices);
         args[start..].to_vec()
-    }
-
-    /// Open one induction-hypothesis local per checked recursive field, in field
-    /// order. Each IH type is rederived from the field's WHNF telescope tail by
-    /// the same helper used during constructor classification. Returns the IH
-    /// locals outer-to-inner.
-    #[allow(clippy::too_many_arguments)]
-    fn open_ih_locals(
-        &mut self,
-        ctx: &mut LocalContext,
-        ind_name: NameId,
-        ind_const: ExprId,
-        num_indices: usize,
-        param_values: &[ExprId],
-        ctor: &CheckedCtor,
-        motive: ExprId,
-        fields: &[LocalDecl],
-    ) -> Result<Vec<LocalDecl>, KernelError> {
-        let mut ihs = Vec::with_capacity(ctor.recursive_fields.len());
-        for &recursive_field in &ctor.recursive_fields {
-            let opened = self.reopen_recursive_field(
-                ind_name,
-                ind_const,
-                num_indices,
-                param_values,
-                ctor.name,
-                recursive_field,
-                fields,
-                ctx,
-            )?;
-            let mut ih_body = motive;
-            for &index in &opened.indices {
-                ih_body = self.app(ih_body, index);
-            }
-            let Some(applied_value) = opened.applied_value else {
-                return Err(KernelError::RecursiveFieldShapeMismatch {
-                    inductive: ind_name,
-                    ctor: ctor.name,
-                    field_index: u32::try_from(recursive_field.field_index).unwrap_or(u32::MAX),
-                });
-            };
-            ih_body = self.app(ih_body, applied_value);
-            let ih_ty = self.abstr_pi_telescope(&opened.telescope, ih_body);
-            let fvar = ctx.fresh_fvar();
-            let name = self.name_str_anon("ih");
-            let decl = LocalDecl {
-                fvar,
-                name,
-                ty: ih_ty,
-                info: BinderInfo::Default,
-            };
-            ctx.push(decl);
-            ihs.push(decl);
-        }
-        Ok(ihs)
     }
 
     /// A fresh universe parameter name for the recursor's motive level, not

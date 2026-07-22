@@ -256,9 +256,19 @@ state.
 > with the attempted group rather than the whole environment. `add_inductive`
 > delegates through a singleton group with exact declaration/rule/iota/error
 > behavior; the 768/840 summaries and direct-recursive identities are unchanged.
-> Valid multi-family input still returns a typed policy decline. M2 next owns
-> group-wide positivity, constructors, motives/minors, recursors, and atomic
-> publication without importer widening. One Lean/Rust
+> The subsequent
+> [M2 result](docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md) replaces
+> that policy decline with one native group algorithm. Complete-group
+> positivity precedes staging; every family and constructor then becomes
+> provisionally visible; motives follow family order, minors follow family then
+> constructor order, and each recursive field selects its terminal family's
+> motive and recursor. Eighteen public integration rows plus two kernel-private
+> mutation/late-rollback tests cover cross, indexed, higher-order, mixed,
+> empty-constructor, and mutual-`Prop` groups while retaining exact singleton
+> declarations, direct identities, and the 768/840 controls. Every generated
+> recursor type and closed rule value is inferred before the transaction can
+> commit. The importer decline and both M0 official streams remain untouched.
+> M3 next owns the independent >=640-case group grammar. One Lean/Rust
 > worker, 4 GiB caps, the 640-case future group grammar, and the retained
 > 768-case recursive plus 840-case positivity controls are mandatory.
 > The runtime-derived

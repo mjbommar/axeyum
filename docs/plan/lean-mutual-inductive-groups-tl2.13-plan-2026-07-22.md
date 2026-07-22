@@ -1,6 +1,7 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: M1 group representation complete; M2 native mutual semantics is next
+Status: M2 native mutual semantics complete; M3 deterministic group grammar is
+next
 
 Date: 2026-07-22
 
@@ -313,6 +314,13 @@ multi-family positivity/recursors/admission remain M2-only.
 - commit, push, and verify remote equality.
 
 ### M2 — native group positivity, recursors, and atomic publication
+
+Status: **complete**. See the
+[M2 result](lean-mutual-inductive-groups-m2-2026-07-22.md). One native group
+algorithm now covers singleton, cross-family, indexed, higher-order, mixed,
+empty-constructor, and mutual-`Prop` shapes with complete-group positivity,
+global motives/minors, target-family recursion, recursor/rule inference, and
+whole-group rollback. The importer and M0 official streams remain untouched.
 
 - generalize positivity to the complete group occurrence set;
 - derive all motives/minors and target-family IH/recursive calls once;

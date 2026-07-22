@@ -764,8 +764,13 @@ Non-claims until their gates are met:
    ordered family/group path, definitionally checked common parameters,
    per-family index opening, equivalent result-universe preflight, scalable
    insertion-log rollback, exact singleton delegation, and a typed
-   multi-family policy decline. M2 native group semantics are next; TL2.14
-   frontend lowering stays separate.
+   multi-family policy decline. The
+   [M2 result](lean-mutual-inductive-groups-m2-2026-07-22.md) replaces that
+   decline with native complete-group positivity, globally ordered motives and
+   minors, target-family IHs/recursor calls, per-family recursors, mutual-
+   `Prop` restriction, and atomic rollback. All 18 public rows plus focused
+   mutation/late-failure tests pass. M3's >=640-case group grammar is next;
+   importer widening stays M4 and TL2.14 frontend lowering stays separate.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

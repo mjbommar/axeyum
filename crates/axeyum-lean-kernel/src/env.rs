@@ -419,19 +419,6 @@ impl Environment {
         }
     }
 
-    /// Remove a declaration by name (used to roll back a partially-admitted
-    /// inductive when a later constructor or the recursor fails to check).
-    pub(crate) fn remove_unchecked(&mut self, name: NameId) {
-        if self.declars.remove(&name).is_some()
-            && let Some(position) = self
-                .insertion_log
-                .iter()
-                .rposition(|candidate| *candidate == name)
-        {
-            self.insertion_log.remove(position);
-        }
-    }
-
     /// Return an opaque checkpoint for a later all-or-nothing admission.
     pub(crate) fn checkpoint(&self) -> usize {
         self.insertion_log.len()

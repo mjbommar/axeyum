@@ -15,6 +15,9 @@
     clippy::doc_markdown
 )]
 
+use std::collections::BTreeSet;
+
+use super::{CheckedCtor, CheckedFamily, CheckedInductiveGroup, InductiveFamilySpec};
 use crate::env::Declaration;
 use crate::expr::ExprNode;
 use crate::tc::KernelError;
@@ -2229,4 +2232,187 @@ fn determinism_parametric_inductive() {
         k.environment().get(rec_name).unwrap().ty().index()
     }
     assert_eq!(build(), build());
+}
+
+/// A failure injected after every family, constructor, and recursor has been
+/// provisionally generated must roll the complete group back. This exercises
+/// the late side of the same transaction used by the public group gate.
+#[test]
+fn late_mutual_recursor_rule_failure_rolls_back_the_complete_group() {
+    let mut k = Kernel::new();
+    let root = k.anon();
+    let left = k.name_str(root, "LateMutualLeft");
+    let right = k.name_str(root, "LateMutualRight");
+    let base = k.name_str(left, "base");
+    let left_rec = k.name_str(left, "rec");
+    let unknown = k.name_str(root, "lateUnknown");
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let ty = k.sort(one);
+    let left_const = k.const_(left, vec![]);
+    let families = [
+        InductiveFamilySpec::new(left, ty, vec![(base, left_const)]),
+        InductiveFamilySpec::new(right, ty, Vec::new()),
+    ];
+
+    let result = k.with_inductive_transaction(|kernel| {
+        kernel.add_inductive_group(&[], 0, &families)?;
+        let mut recursor = kernel.environment().get(left_rec).unwrap().clone();
+        let Declaration::Recursor { rec_rules, .. } = &mut recursor else {
+            unreachable!();
+        };
+        rec_rules[0].value = kernel.const_(unknown, vec![]);
+        kernel.check_group_recursor_rules(&[recursor])
+    });
+    assert_eq!(result, Err(KernelError::UnknownConst { name: unknown }));
+    assert!(k.environment().is_empty());
+    let right_rec = k.name_str(right, "rec");
+    for name in [left, right, base, left_rec, right_rec] {
+        assert!(!k.environment().contains(name));
+    }
+}
+
+#[test]
+#[allow(clippy::too_many_lines)]
+fn mutual_recursor_contract_mutations_are_rejected_or_detectably_distinct() {
+    let mut k = Kernel::new();
+    let root = k.anon();
+    let left = k.name_str(root, "MutContractLeft");
+    let right = k.name_str(root, "MutContractRight");
+    let left_base = k.name_str(left, "base");
+    let right_base = k.name_str(right, "base");
+    let left_rec = k.name_str(left, "rec");
+    let right_rec = k.name_str(right, "rec");
+    let wrong = k.name_str(root, "wrong");
+    let zero = k.level_zero();
+    let one = k.level_succ(zero);
+    let ty = k.sort(one);
+    let left_const = k.const_(left, vec![]);
+    let right_const = k.const_(right, vec![]);
+    let families = [
+        InductiveFamilySpec::new(left, ty, vec![(left_base, left_const)]),
+        InductiveFamilySpec::new(right, ty, vec![(right_base, right_const)]),
+    ];
+    k.add_mutual_inductive(&[], 0, &families).unwrap();
+    let recursors = [
+        k.environment().get(left_rec).unwrap().clone(),
+        k.environment().get(right_rec).unwrap().clone(),
+    ];
+    let checked = CheckedInductiveGroup {
+        params: Vec::new(),
+        result_level: one,
+        families: vec![
+            CheckedFamily {
+                name: left,
+                ty,
+                num_indices: 0,
+                ind_const: left_const,
+                constructors: vec![CheckedCtor {
+                    name: left_base,
+                    ty: left_const,
+                    idx: 0,
+                    fields: Vec::new(),
+                    recursive_fields: Vec::new(),
+                    exposes_non_prop_fields: true,
+                }],
+            },
+            CheckedFamily {
+                name: right,
+                ty,
+                num_indices: 0,
+                ind_const: right_const,
+                constructors: vec![CheckedCtor {
+                    name: right_base,
+                    ty: right_const,
+                    idx: 0,
+                    fields: Vec::new(),
+                    recursive_fields: Vec::new(),
+                    exposes_non_prop_fields: true,
+                }],
+            },
+        ],
+    };
+
+    let mut candidates = Vec::new();
+    let mut missing_recursor = recursors.to_vec();
+    missing_recursor.pop();
+    candidates.push(missing_recursor);
+    for mutate in [
+        "name",
+        "motives",
+        "minors",
+        "params",
+        "indices",
+        "owner-rule",
+        "nfields",
+    ] {
+        let mut candidate = recursors.to_vec();
+        let Declaration::Recursor {
+            name,
+            rec_rules,
+            num_motives,
+            num_minors,
+            num_params,
+            num_indices,
+            ..
+        } = &mut candidate[0]
+        else {
+            unreachable!();
+        };
+        match mutate {
+            "name" => *name = wrong,
+            "motives" => *num_motives -= 1,
+            "minors" => *num_minors -= 1,
+            "params" => *num_params += 1,
+            "indices" => *num_indices += 1,
+            "owner-rule" => rec_rules[0].ctor_name = right_base,
+            "nfields" => rec_rules[0].num_fields += 1,
+            _ => unreachable!(),
+        }
+        candidates.push(candidate);
+    }
+    for candidate in candidates {
+        assert_eq!(
+            k.validate_group_recursor_contract(0, &checked, &candidate),
+            Err(KernelError::MutualRecursorContractMismatch { family: left })
+        );
+    }
+
+    let mut wrong_rule = recursors[0].clone();
+    let Declaration::Recursor { rec_rules, .. } = &mut wrong_rule else {
+        unreachable!();
+    };
+    rec_rules[0].value = k.const_(wrong, vec![]);
+    assert_eq!(
+        k.check_group_recursor_rules(&[wrong_rule]),
+        Err(KernelError::UnknownConst { name: wrong })
+    );
+    let invalid_type = k.const_(wrong, vec![]);
+    assert_eq!(
+        k.infer(invalid_type),
+        Err(KernelError::UnknownConst { name: wrong })
+    );
+
+    // Every preregistered load-bearing family has a concrete structural,
+    // metadata, type, or rule-inference tooth above or in the public native
+    // integration matrix. This registry prevents silent test-plan shrinkage.
+    let registered = BTreeSet::from([
+        "constructor-owner-cidx-field-count-rule-constructor",
+        "cross-family-occurrence-positivity",
+        "family-list-order-membership",
+        "global-minor-omit-duplicate-reorder",
+        "global-versus-local-minor-index",
+        "ih-after-fields-and-field-order",
+        "mutual-prop-elimination-and-k",
+        "parameter-count-type-universe-list",
+        "per-family-index-count",
+        "recursor-counts-type-rule-rhs-nfields",
+        "result-universe",
+        "target-indices-telescope-field-application",
+        "target-motive-not-owner-motive",
+        "target-recursor-not-owner-recursor",
+        "wire-metadata-does-not-authorize",
+        "late-complete-group-rollback",
+    ]);
+    assert_eq!(registered.len(), 16);
 }

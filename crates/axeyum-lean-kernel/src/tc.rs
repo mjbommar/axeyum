@@ -216,11 +216,17 @@ pub enum KernelError {
         /// The family whose result universe disagreed.
         family: crate::name::NameId,
     },
-    /// The ordered mutual group passed M1 structural preflight, but semantic
-    /// mutual admission remains intentionally disabled until TL2.13 M2.
+    /// Historical M1 policy decline retained for public error-enum compatibility.
+    /// TL2.13 M2 no longer returns this result from the native group gate.
     MutualInductiveNotSupported {
         /// Number of families in the declined group.
         family_count: usize,
+    },
+    /// A generated mutual recursor disagreed with the checked group's owner,
+    /// count, rule ordering, or field-count contract.
+    MutualRecursorContractMismatch {
+        /// Family whose generated recursor contract disagreed.
+        family: crate::name::NameId,
     },
     /// A declaration's type did not infer/WHNF to a `Sort` (every declaration's
     /// type must itself be a type).

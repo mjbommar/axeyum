@@ -131,11 +131,26 @@ its own indices, result universes are compared for equivalence, and all names
 are checked group-wide. `add_inductive` delegates through a singleton group
 with its established declarations, rules, computation, identities, and error
 payloads unchanged. A private environment insertion log provides a constant-
-time checkpoint and rollback proportional to the attempted group. Every valid
-multi-family input still ends in `MutualInductiveNotSupported`; M2 retains sole
-ownership of positivity, constructor admission, motives/minors, recursive
-calls, recursors, and atomic publication. See the
+time checkpoint and rollback proportional to the attempted group. At that
+checkpoint, every valid multi-family input still ended in
+`MutualInductiveNotSupported`; M2 retained sole ownership of positivity,
+constructor admission, motives/minors, recursive calls, recursors, and atomic
+publication. See the
 [M1 result](../../plan/lean-mutual-inductive-groups-m1-2026-07-22.md).
+
+M2 establishes the native semantic algorithm without consuming importer or
+official-stream credit. Positivity ranges over the complete family table before
+staging; all family headers and constructors are then staged in one insertion-
+log transaction; motives follow family order, minors follow family then
+constructor order; recursive hypotheses and calls select the terminal family;
+and all recursor types plus closed rule values infer before commit. Eighteen
+public integration rows cover the registered singleton, cross, indexed,
+higher-order, mixed, empty-constructor, mutual-`Prop`, and negative shapes. Two
+kernel-private tests reject recursor-contract/rule mutations and inject a final-
+rule failure after complete staging to prove whole-group rollback. The importer
+still declines mutual groups and neither M0 computation stream has been passed
+to it. See the
+[M2 result](../../plan/lean-mutual-inductive-groups-m2-2026-07-22.md).
 
 ADR-0350's declaration-identity v1 remains unchanged in this slice. Group
 membership is checked input to atomic generation and is structurally reflected

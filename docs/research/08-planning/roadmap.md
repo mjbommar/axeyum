@@ -111,8 +111,13 @@ Last updated: 2026-07-22
 > [M1 result](../../../docs/plan/lean-mutual-inductive-groups-m1-2026-07-22.md)
 > adds the public ordered group path, common-parameter/result-universe and name
 > preflight, per-family index opening, insertion-log rollback, exact singleton
-> delegation, and a typed multi-family policy decline. M2 native mutual
-> semantics are next; TL2.14 frontend lowering remains separate.
+> delegation, and a typed multi-family policy decline. The
+> [M2 result](../../../docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md)
+> now admits native groups through complete-group positivity, globally ordered
+> motives/minors, target-family recursion, per-family recursors, and atomic
+> rollback. Eighteen public rows and two mutation/late-failure tests pass while
+> importer policy remains closed. M3's >=640-case group grammar is next;
+> TL2.14 frontend lowering remains separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

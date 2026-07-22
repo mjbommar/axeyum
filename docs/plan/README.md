@@ -179,6 +179,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   universe and name preflight, per-family index opening, insertion-log
   transaction, exact singleton identity/error/computation preservation, typed
   multi-family policy decline, bounded gates, non-claims, and M2 handoff.
+- [`lean-mutual-inductive-groups-m2-2026-07-22.md`](lean-mutual-inductive-groups-m2-2026-07-22.md)
+  — M2's complete-group positivity and native atomic admission, globally
+  ordered motives/minors, target-family induction hypotheses and recursor
+  calls, mutual-`Prop` restriction, 18-row public matrix, mutation/late-rollback
+  teeth, retained singleton/768/840 controls, and M3 grammar handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

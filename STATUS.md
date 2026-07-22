@@ -369,24 +369,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.13 M1 ordered-group representation is complete; M2
-  native mutual semantics are next.**
+- **2026-07-22 — TL2.13 M2 native mutual semantics are complete; M3's
+  deterministic group grammar is next.**
   [Proposed ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
   and the
   [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
-  bind the next semantic widening to pinned Lean 4.30's actual atomic group
-  algorithm. All families share checked parameters and equivalent result
-  universes; positivity ranges over the complete group; motives follow family
-  order; minors follow family then constructor order; and a recursive field
-  `Pi xs, I_j params indices` receives the target-family hypothesis
-  `Pi xs, motive_j indices (field xs)` and calls `I_j.rec` with every motive
-  and minor. Every per-family recursor must infer-check before the whole group
-  publishes, and `add_inductive` must become a behavior/identity-preserving
-  singleton wrapper. The plan explicitly includes per-family indices,
-  higher-order cross recursion, mutual-`Prop` elimination restrictions,
-  group-wide negative occurrences, late rollback, and metadata nonauthority;
-  it does not collapse TL2.14 frontend lowering into this kernel slice. M0
-  freezes a 1,676-byte / 66-line source compiled twice to one OLEAN digest and
+  bind pinned Lean 4.30's actual atomic group algorithm. M0 freezes a
+  1,676-byte / 66-line source compiled twice to one OLEAN digest and
   two byte-identical-per-root official streams totaling 40,282 bytes. The
   independent inventory finds two motives and four minors per recursor and
   records that the wire `recs` arrays are dependency-ordered `Odd.rec,
@@ -399,11 +388,23 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   indices, and equivalent result universes, and places singleton admission
   inside an insertion-log transaction. Nine focused public-path tests preserve
   complete singleton declarations, iota computation, direct-recursive
-  identities, exact error payloads, rollback, and retry behavior. Valid
-  multi-family input still receives `MutualInductiveNotSupported`; importer
-  support and official M0 product observation remain closed. M2 admission is
-  gated on >=640 deterministic group cases plus the retained 768 recursive and
-  840 positivity populations.
+  identities, exact error payloads, rollback, and retry behavior. The
+  subsequent
+  [M2 result](docs/plan/lean-mutual-inductive-groups-m2-2026-07-22.md) replaces
+  the policy decline with one native group algorithm. Positivity sees every
+  family before staging; all family/constructor headers then become
+  provisionally visible; motives follow family order, minors follow family then
+  constructor order; terminal-family motives/recursors drive recursive fields;
+  and every recursor type plus closed rule value is inferred before commit.
+  Eighteen public integration tests cover singleton, two/three-family cross,
+  mixed self/cross, zero/one/two indices, indexed and higher-order recursion,
+  empty-constructor families, mutual predicates, and the typed negative matrix.
+  Two private tests freeze 16 mutation classes and inject a final-rule failure
+  after complete staging to prove whole-group rollback. Exact singleton
+  declarations, `MiniNat.rec`/`MiniList.rec` identities, and the 768/840
+  controls remain unchanged. Importer policy and both M0 official streams are
+  untouched. M3 now owns the independent >=640-case public group grammar;
+  M4 owns first official product observation, and TL2.14 remains separate.
 
 - **2026-07-22 — TL2.12 recursive induction hypotheses are complete; TL2.13
   mutual groups are next.**
@@ -6909,7 +6910,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14. |
-| P3.6 / TL2.13 | Mutual inductive groups | **WIP (M1 representation complete; M2 next; ADR-0354 proposed)** — M0 freezes the exact source, two byte-identical official streams, ordered semantic contract, dependency-ordered wire recursor arrays, 18 native cases, 16 mutation classes, >=640 grammar, 768/840 controls, and no-product-credit boundary. M1 adds the public ordered family/group path, common-parameter/result-universe and name preflight, per-family index opening, scalable insertion-log rollback, exact singleton delegation, and a typed multi-family policy decline without widening admission. M2 owns group positivity, constructors, motives/minors, target recursion, recursors, and atomic publication. TL2.14 frontend lowering remains separate. |
+| P3.6 / TL2.13 | Mutual inductive groups | **WIP (M2 native semantics complete; M3 next; ADR-0354 proposed)** — M0 freezes the exact source, two byte-identical official streams, ordered semantic contract, dependency-ordered wire recursor arrays, 18 native cases, 16 mutation classes, >=640 grammar, 768/840 controls, and no-product-credit boundary. M1 adds the ordered group path, common-parameter/result-universe preflight, per-family indices, scalable rollback, and exact singleton delegation. M2 replaces the policy decline with native complete-group positivity, global motives/minors, target-family IHs/calls, per-family recursors, mutual-`Prop` restriction, selected cross-family computation, and atomic publication/rollback across all 18 public rows plus two private mutation tests. M3 owns the independent >=640-case grammar; importer/official observation remains M4 and TL2.14 frontend lowering remains separate. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6963,6 +6964,22 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.13 M2 native mutual-group semantics.** One
+  trusted group algorithm now handles singleton and multi-family positivity,
+  constructor classification, globally ordered motives/minors, target-family
+  induction hypotheses and recursor calls, per-owner indices/majors, mutual-
+  `Prop` elimination restriction, recursor/rule inference, and atomic
+  publication. The 18-test public matrix covers all registered native rows,
+  including non-indexed/indexed/higher-order cross computation; two private
+  tests freeze the 16 mutation classes and prove complete rollback after a
+  final staged-rule failure. The complete bounded kernel/importer suites,
+  warning-denied clippy/rustdoc, exact direct-recursive identities, byte-
+  identical 768/840 controls, parity/foundational/link gates, owned-file
+  formatting, and diff checks pass under one job and 4 GiB. Workspace-wide
+  formatting remains blocked only by unrelated existing CAS/bench drift, which
+  this milestone does not rewrite. The importer decline and M0 streams remain
+  untouched. M3's >=640-case deterministic group grammar is next.
 
 - **2026-07-22 — Completed TL2.13 M1 ordered-group representation and
   singleton delegation.** `InductiveFamilySpec` and
