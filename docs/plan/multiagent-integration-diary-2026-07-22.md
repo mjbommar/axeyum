@@ -35,8 +35,31 @@ The three lanes are the three legs of that goal:
 | Front | axeyum today | Upstream ref | Gap being worked |
 |---|---|---|---|
 | Lean kernel import | nested-inductive **declines cleanly** (M1 done) | Lean 4 kernel | admit nested inductives (TL2.14) |
-| SMT `QF_*` | (baseline TBD this session) | z3 / cvc5 SMT-COMP | full-library resume run |
-| CAS summation | Gosper + WZ (`∑C(n,k)`, `∑k·C(n,k)`, `∑k²·C(n,k)`) | SymPy `Sum`, Mathematica | Vandermonde squared-Γ ratio |
+| SMT `QF_*` | full-library run ~30% at pause, WRONG=2 (FP, stale bin) | see landscape ↓ | full-library resume + FP-fix revalidation |
+| CAS summation | Gosper + WZ (`∑C(n,k)`, `∑k·C(n,k)`, `∑k²·C(n,k)`, **`∑C(n,k)²=C(2n,n)`** ✓) | SymPy `Sum`/`hyperexpand`, Mathematica | Dixon/Saalschütz `₃F₂`; alternating `(−1)ᵏ` |
+
+### SMT-COMP competitive landscape (per-division winners, for "distance to close")
+
+**2025 single-query winners** (who owns each hard division today):
+
+| Division | 2025 winner | 2024 % solved (ref) |
+|---|---|---|
+| QF_Bitvec (QF_BV) | **Bitwuzla-MachBV** | ~98% |
+| QF_FPArith (QF_FP) | **Bitwuzla** | ~92% |
+| QF_NonLinearIntArith (QF_NIA) | **Z3-alpha** | — |
+| QF_NonLinearRealArith (QF_NRA) | **Z3-alpha** | — |
+| QF_LinearIntArith (QF_LIA) | **OpenSMT** | ~94% |
+| QF_LinearRealArith (QF_LRA) | Yices2 | — |
+| QF_Datatypes | cvc5 | — |
+| QF_Equality (UF) | Yices2 | — |
+| QF_Equality_Bitvec (QF_ABV) | Bitwuzla | ~99.7% |
+| QF_Strings (QF_SLIA) | Z3-Noodler-Mocha | — |
+
+Frontier to chase: **Bitwuzla** owns BV+FP, **Z3-alpha** owns nonlinear,
+**OpenSMT** owns QF_LIA, **cvc5** datatypes, **Yices2** equality/LRA. The
+proof-carrying angle (certified `unsat`) is where axeyum differentiates rather
+than trying to out-raw-solve Bitwuzla — track *decide-with-certificate* rate,
+not just decide rate. (Sources in cycle-2 research note below.)
 
 ---
 
