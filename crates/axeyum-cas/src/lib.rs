@@ -10622,6 +10622,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_times_sinusoid(expr, var),
         integrate_trig_monomial(expr, var),
         integrate_trig_square(expr, var),
+        integrate_tan_power(expr, var),
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
@@ -12544,6 +12545,58 @@ pub fn improper_integrate(
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
+/// `∫ c·tanⁿ(a·x+b) dx` for an integer `n ≥ 2`, via the reduction
+/// `∫tanⁿu = tanⁿ⁻¹u/(a(n−1)) − ∫tanⁿ⁻²u` (from `tan²u = sec²u − 1`), bottoming at
+/// `∫tan⁰ dx = x` and `∫tan¹u dx = −ln(cos u)/a`. So `∫tan²x = tan x − x`,
+/// `∫tan³x = tan²x/2 + ln(cos x)`, `∫tan⁴x = tan³x/3 − tan x + x`. `n = 1` is left to
+/// the log-substitution finder. Certified downstream by differentiate-and-check
+/// (the `sec² = 1 + tan²` step decides via the Pythagorean/Euler zero-test).
+fn integrate_tan_power(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (coeff, power) = match expr {
+        CasExpr::Pow(_, _) => (Rational::integer(1), expr),
+        CasExpr::Neg(a) => (Rational::integer(-1), a.as_ref()),
+        CasExpr::Mul(factors) if factors.len() == 2 => match (&factors[0], &factors[1]) {
+            (CasExpr::Const(k), p @ CasExpr::Pow(_, _))
+            | (p @ CasExpr::Pow(_, _), CasExpr::Const(k)) => (*k, p),
+            _ => return None,
+        },
+        _ => return None,
+    };
+    let CasExpr::Pow(base, n) = power else {
+        return None;
+    };
+    if *n < 2 {
+        return None;
+    }
+    let CasExpr::Unary(UnaryFunc::Tan, arg) = base.as_ref() else {
+        return None;
+    };
+    let [intercept, slope] = univariate_affine(arg, var)?;
+    let u = MultiPoly::from_univariate(var, &[intercept, slope]).to_expr();
+    let anti = tan_power_antiderivative(var, &u, slope, *n)?;
+    Some(scaled_term(coeff, anti))
+}
+
+/// The antiderivative (in `var`) of `tanⁿ(u)` for `u = a·var+b`, by the reduction
+/// `∫tanⁿu = tanⁿ⁻¹u/(a(n−1)) − ∫tanⁿ⁻²u`. `None` on exact-arithmetic overflow.
+fn tan_power_antiderivative(var: &str, u: &CasExpr, slope: Rational, n: u32) -> Option<CasExpr> {
+    match n {
+        0 => Some(CasExpr::var(var)),
+        1 => {
+            // ∫tan u dx = −ln(cos u)/a.
+            let inv = Rational::integer(-1).checked_div(slope)?;
+            Some(scaled_term(inv, u.clone().cos().ln()))
+        }
+        _ => {
+            let inv = Rational::integer(1)
+                .checked_div(slope.checked_mul(Rational::integer(i128::from(n - 1)))?)?;
+            let head = scaled_term(inv, CasExpr::Pow(Box::new(u.clone().tan()), n - 1));
+            let rest = tan_power_antiderivative(var, u, slope, n - 2)?;
+            Some(head - rest)
+        }
+    }
+}
+
 fn integrate_trig_square(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let (coeff, inner) = match expr {
         CasExpr::Pow(_, _) => (Rational::integer(1), expr),
@@ -20632,6 +20685,29 @@ mod tests {
             assert!(result.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&result.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn integrate_tangent_powers() {
+        let x = || v("x");
+        // ∫tanⁿx via the reduction ∫tanⁿu = tanⁿ⁻¹u/(a(n−1)) − ∫tanⁿ⁻²u — every
+        // antiderivative certified by differentiate-and-check (the sec²=1+tan² step
+        // decides through the Pythagorean/Euler zero-test).
+        for integrand in [
+            x().tan().pow(2),                       // tan x − x
+            x().tan().pow(3),                       // tan²x/2 + ln(cos x)
+            x().tan().pow(4),                       // tan³x/3 − tan x + x
+            x().tan().pow(5),
+            (CasExpr::int(2) * x()).tan().pow(2),   // affine argument
+            CasExpr::int(3) * x().tan().pow(2),     // scaled
+        ] {
+            let result = integrate(&integrand, "x").expect("tan-power integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+        // Explicit value: ∫tan²x = tan x − x.
+        let anti = integrate(&x().tan().pow(2), "x").unwrap().antiderivative;
+        assert_equal(&simplify(&anti), &(x().tan() - x()));
     }
 
     #[test]

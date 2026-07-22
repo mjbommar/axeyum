@@ -3,7 +3,7 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-22
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 490 unit + 147 doctests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 491 unit + 147 doctests, clippy-clean)
 
 > **Data-model frontier now built** (special functions & fractional powers, none needing a `Pow`
 > representation change): the **gamma family** `Γ`, arbitrary-order **polygamma** `ψ⁽ⁿ⁾` (via
