@@ -7640,7 +7640,58 @@ pub fn cancel(expr: &CasExpr) -> Option<CasExpr> {
 /// a proof (over the polynomial fragment) that the claimed derivative is correct.
 #[must_use]
 pub fn prove_derivative(expr: &CasExpr, var: &str, claimed: &CasExpr) -> ZeroTest {
-    equal(&expr.differentiate(var), claimed)
+    let derivative = expr.differentiate(var);
+    let direct = equal(&derivative, claimed);
+    if matches!(direct, ZeroTest::Certified { equal: true, .. }) {
+        return direct;
+    }
+    // Half-angle fallback: when the antiderivative is expressed in `x/2` trig (as
+    // from the Weierstrass substitution `t = tan(x/2)`) and the integrand in full-`x`
+    // trig, rewrite the full-angle trig down to the half angle on both sides so the
+    // zero-test compares them at a common `x/2` level. A sound, denotation-preserving
+    // rewrite (double-angle identities); only consulted when the direct test fails.
+    let derivative_half = rewrite_double_angle(&derivative, var);
+    let claimed_half = rewrite_double_angle(claimed, var);
+    if derivative_half != derivative || claimed_half != *claimed {
+        let half_result = equal(&derivative_half, &claimed_half);
+        if matches!(half_result, ZeroTest::Certified { equal: true, .. }) {
+            return half_result;
+        }
+    }
+    direct
+}
+
+/// Rewrite `sin`/`cos`/`tan` of **exactly `var`** to the double-angle form in
+/// `var/2` — `sin x → 2 sin(x/2)cos(x/2)`, `cos x → 2 cos²(x/2) − 1`,
+/// `tan x → 2 tan(x/2)/(1 − tan²(x/2))` — leaving trig of other arguments (e.g. an
+/// already-half-angle `x/2`) untouched. Used to bring full-angle and half-angle
+/// expressions to a common level in [`prove_derivative`].
+fn rewrite_double_angle(expr: &CasExpr, var: &str) -> CasExpr {
+    if let CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) = expr
+        && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+    {
+        let half = CasExpr::var(var) / CasExpr::int(2);
+        return match func {
+            UnaryFunc::Sin => CasExpr::int(2) * half.clone().sin() * half.cos(),
+            UnaryFunc::Cos => CasExpr::int(2) * half.clone().cos().pow(2) - CasExpr::int(1),
+            _ => {
+                CasExpr::int(2) * half.clone().tan()
+                    / (CasExpr::int(1) - half.tan().pow(2))
+            }
+        };
+    }
+    match expr {
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(rewrite_double_angle(a, var))),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(rewrite_double_angle(a, var))),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(rewrite_double_angle(a, var)), *e),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(rewrite_double_angle(a, var)),
+            Box::new(rewrite_double_angle(b, var)),
+        ),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(|t| rewrite_double_angle(t, var)).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(|t| rewrite_double_angle(t, var)).collect()),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
 }
 
 /// A computed antiderivative bundled with its **correctness certificate** — the
@@ -7684,6 +7735,7 @@ impl CertifiedIntegral {
 /// assert!(result.is_certified());
 /// ```
 #[must_use]
+#[allow(clippy::too_many_lines)] // a flat dispatch over the integration finders
 pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
     // Polynomial fast path — always certifiable.
     if let Some(p) = normalize(expr) {
@@ -7773,6 +7825,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_exp_substitution(expr, var),
         integrate_trig_inner_substitution(expr, var),
         integrate_tan_substitution(expr, var),
+        integrate_weierstrass(expr, var),
         integrate_poly_over_sqrt_linear(expr, var),
         integrate_poly_times_general_exp(expr, var),
         integrate_power_of_inner(expr, var),
@@ -8981,6 +9034,69 @@ fn replace_head_with_var(expr: &CasExpr, head: UnaryFunc, var: &str, replacement
         ),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// Replace `sin`/`cos`/`tan` of **exactly `var`** with the given expressions
+/// (used for the Weierstrass substitution), recursing structurally.
+fn replace_trig_heads(
+    expr: &CasExpr,
+    var: &str,
+    sin_repl: &CasExpr,
+    cos_repl: &CasExpr,
+    tan_repl: &CasExpr,
+) -> CasExpr {
+    if let CasExpr::Unary(func @ (UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan), arg) = expr
+        && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+    {
+        return match func {
+            UnaryFunc::Sin => sin_repl.clone(),
+            UnaryFunc::Cos => cos_repl.clone(),
+            _ => tan_repl.clone(),
+        };
+    }
+    let recur = |e: &CasExpr| replace_trig_heads(e, var, sin_repl, cos_repl, tan_repl);
+    match expr {
+        CasExpr::Unary(func, a) => CasExpr::Unary(*func, Box::new(recur(a))),
+        CasExpr::Neg(a) => CasExpr::Neg(Box::new(recur(a))),
+        CasExpr::Pow(a, e) => CasExpr::Pow(Box::new(recur(a)), *e),
+        CasExpr::Div(a, b) => CasExpr::Div(Box::new(recur(a)), Box::new(recur(b))),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(recur).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(recur).collect()),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// ∫ R(sin x, cos x, tan x) dx by the **Weierstrass substitution** `t = tan(x/2)`:
+/// `sin x = 2t/(1+t²)`, `cos x = (1−t²)/(1+t²)`, `dx = 2/(1+t²) dt`, turning any
+/// rational-trig integrand into a rational function of `t` (integrated by the
+/// complete rational integrator) and mapping back with `t = tan(x/2)`. Covers
+/// `∫1/(1+cos x) = tan(x/2)`, `∫1/(2+cos x)`, `∫1/(a+b·cos x)`. Certified by
+/// [`prove_derivative`] (whose half-angle fallback bridges the `x/2` ↔ `x` levels).
+/// `None` if the integrand is not a function of trig of `x` alone.
+fn integrate_weierstrass(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Require at least one sin/cos of `var` (else this is not a trig integrand).
+    if !contains_sin_or_cos(expr) {
+        return None;
+    }
+    let t = if var == "t" { "s" } else { "t" };
+    let tv = CasExpr::var(t);
+    let one_plus = CasExpr::int(1) + tv.clone().pow(2);
+    let sin_t = CasExpr::int(2) * tv.clone() / one_plus.clone();
+    let cos_t = (CasExpr::int(1) - tv.clone().pow(2)) / one_plus.clone();
+    let tan_t = CasExpr::int(2) * tv.clone() / (CasExpr::int(1) - tv.clone().pow(2));
+    let in_t = replace_trig_heads(expr, var, &sin_t, &cos_t, &tan_t);
+    // After substitution nothing in `x` (no bare x, no un-substituted trig) may remain.
+    if expr_contains_var(&in_t, var) || contains_sin_or_cos(&in_t) {
+        return None;
+    }
+    let integrand_t = in_t * (CasExpr::int(2) / one_plus);
+    let rational_t = cancel(&integrand_t)?;
+    let inner = integrate(&rational_t, t)?;
+    if !inner.is_certified() {
+        return None;
+    }
+    let half = (CasExpr::var(var) / CasExpr::int(2)).tan();
+    Some(inner.antiderivative.substitute(t, &half))
 }
 
 /// ∫ R(tan x)/cos²x dx = [∫R(u)du]_{u=tan x}, the `u = tan x` substitution
@@ -14170,6 +14286,31 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn weierstrass_rational_trig_integrals() {
+        let x = || v("x");
+        // ∫R(sin x, cos x) via t=tan(x/2); certified by prove_derivative's half-angle
+        // fallback (which bridges the x/2 ↔ x levels).
+        for integrand in [
+            CasExpr::int(1) / (CasExpr::int(1) + x().cos()),      // tan(x/2)
+            CasExpr::int(1) / (CasExpr::int(2) + x().cos()),
+            CasExpr::int(1) / (CasExpr::int(1) - x().cos()),      // −cot(x/2)
+            CasExpr::int(1) / (CasExpr::int(2) + x().sin()),
+            CasExpr::int(1) / (CasExpr::int(5) + CasExpr::int(4) * x().cos()),
+        ] {
+            let r = integrate(&integrand, "x").expect("Weierstrass integral");
+            assert!(
+                matches!(prove_derivative(&r.antiderivative, "x", &integrand), ZeroTest::Certified { equal: true, .. }),
+                "not certified: ∫{integrand}"
+            );
+        }
+        // ∫1/(1+cos x) = tan(x/2) exactly.
+        assert_equal(
+            &integrate(&(CasExpr::int(1) / (CasExpr::int(1) + x().cos())), "x").unwrap().antiderivative,
+            &(x() / CasExpr::int(2)).tan(),
+        );
     }
 
     #[test]
