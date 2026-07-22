@@ -6168,6 +6168,30 @@ pub fn simplify_under_assumptions(expr: &CasExpr, assumptions: &Assumptions) -> 
             }
             simplify_radicals(&inner.sqrt())
         }
+        CasExpr::Unary(UnaryFunc::Exp, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // exp(ln u) = u when u > 0 (the inverse only holds on the positive reals).
+            if let CasExpr::Unary(UnaryFunc::Ln, u) = &inner
+                && assumptions.is_positive(u)
+            {
+                return (**u).clone();
+            }
+            inner.exp()
+        }
+        CasExpr::Unary(UnaryFunc::Ln, arg) => {
+            let inner = simplify_under_assumptions(arg, assumptions);
+            // ln(exp u) = u — always valid on the reals.
+            if let CasExpr::Unary(UnaryFunc::Exp, u) = &inner {
+                return (**u).clone();
+            }
+            // ln(uᵏ) = k·ln u when u > 0 (the log power rule, real branch).
+            if let CasExpr::Pow(base, exponent) = &inner
+                && assumptions.is_positive(base)
+            {
+                return CasExpr::int(i128::from(*exponent)) * base.as_ref().clone().ln();
+            }
+            inner.ln()
+        }
         CasExpr::Unary(func, arg) => CasExpr::Unary(
             *func,
             Box::new(simplify_under_assumptions(arg, assumptions)),
@@ -16100,6 +16124,14 @@ mod tests {
             &simplify_under_assumptions(&(x() * v("y")).abs(), &both),
             &(x() * v("y")),
         );
+        // Log/exp positivity identities (SymPy `refine`): exp(ln x) = x and
+        // ln(xᵏ) = k·ln x only under x > 0; ln(exp x) = x always.
+        assert_equal(&simplify_under_assumptions(&x().ln().exp(), &pos), &x());
+        assert_equal(&simplify_under_assumptions(&x().pow(3).ln(), &pos), &(CasExpr::int(3) * x().ln()));
+        assert_equal(&simplify_under_assumptions(&x().exp().ln(), &none), &x());
+        // Without positivity, exp(ln x) and ln(x²) are left intact (unsound to fold).
+        assert_eq!(simplify_under_assumptions(&x().ln().exp(), &none), x().ln().exp());
+        assert_eq!(simplify_under_assumptions(&x().pow(2).ln(), &none), x().pow(2).ln());
     }
 
     #[test]
