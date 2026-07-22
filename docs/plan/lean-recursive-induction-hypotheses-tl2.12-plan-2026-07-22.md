@@ -1,6 +1,6 @@
 # Lean recursive induction hypotheses: TL2.12 execution plan
 
-Status: M3 importer policy and exact official streams complete; M4 computation differential and assurance update are next
+Status: M4 computation differential and assurance update complete; M5 final bounded gates and disposition are next
 
 Date: 2026-07-22
 
@@ -8,7 +8,7 @@ Decision gate:
 [proposed ADR-0353](../research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
 
 Current checkpoint:
-[M3 importer result](lean-recursive-induction-hypotheses-m3-2026-07-22.md)
+[M4 computation/assurance result](lean-recursive-induction-hypotheses-m4-2026-07-22.md)
 
 Parents:
 
@@ -313,12 +313,15 @@ that first product observation. See the
 
 ### M4 — pinned computation differential and assurance update
 
-- reproduce both M0 computation streams twice and confirm their frozen
-  identities;
-- run pinned Lean and Axeyum computation observations twice;
-- update the construct matrix from tested facts rather than hand-edited claims;
-- record timing/RSS and exact admission/computation assurance separately;
-- commit and push.
+**Complete.** Pinned Lean compiles the explicit-recursor source twice to one
+OLEAN digest. Both M0 streams retain their hashes, complete twice in Axeyum,
+and recursively normalize the registered theorem side to
+`MiniNat.succ MiniNat.zero` or `True`. A machine-validated TL2.12 overlay
+preserves the historical ADR-0351 observation while regenerating the current
+construct matrix: four independently admitted rows, two separately
+computation-checked rows, and two typed declines. Lean/Rust timing and RSS are
+recorded as validation measurements, not a speed comparison. See the
+[M4 result](lean-recursive-induction-hypotheses-m4-2026-07-22.md).
 
 ### M5 — closure and TL2.13 handoff
 

@@ -218,7 +218,14 @@ state.
 > stream through `Acc.rec`, while mutual and nested retain typed declines.
 > Synthetic metadata and late recursor mutations prove kernel authority and
 > completion-only publication. No M0 computation stream has entered the Rust
-> product; M4 owns that observation and the assurance-matrix update. The new >=512-case
+> product; M4 owns that observation and the assurance-matrix update. The
+> [M4 computation/assurance result](docs/plan/lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+> now confirms the pinned source twice to one OLEAN digest, imports both frozen
+> computation streams twice, and normalizes their registered theorem sides to
+> `MiniNat.succ MiniNat.zero` and `True`. The machine-derived matrix now records
+> four admitted rows, two separate computation-checked rows, and two typed
+> declines while preserving the historical product observation. M5 final gates
+> and ADR/TL2.12 disposition are next. The new >=512-case
 > recursive grammar, the existing 840-case positivity grammar, completion-only
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups remain TL2.13; nested/well-founded frontend lowering remains

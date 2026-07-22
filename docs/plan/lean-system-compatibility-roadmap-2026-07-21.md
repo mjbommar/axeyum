@@ -732,7 +732,12 @@ Non-claims until their gates are met:
    completes both construct targets twice with exact recursor comparison and
    closes metadata/publication mutations. The pre-elaborated well-founded
    stream also completes through `Acc.rec`; mutual/nested retain typed
-   boundaries. M4 owns computation and assurance evidence. The
+   boundaries. The
+   [M4 result](lean-recursive-induction-hypotheses-m4-2026-07-22.md) now
+   confirms pinned Lean and Axeyum computations twice at the exact Vector/Acc
+   normal forms and regenerates a machine-validated matrix with four admitted,
+   two computation-checked, and two declined rows. M5 final disposition remains.
+   The
    [execution plan](lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
    requires both frozen official streams, exact generated-recursor comparison,
    selected computation, a >=512-case grammar, and the existing 840-case
@@ -741,7 +746,7 @@ Non-claims until their gates are met:
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
-   primary semantic path is TL2.12 M4, with every TL2.11 guard retained.
+   primary semantic path is TL2.12 M5, with every TL2.11 guard retained.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

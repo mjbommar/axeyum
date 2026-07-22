@@ -94,22 +94,34 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
             {case_id: row["assurance_class"] for case_id, row in rows.items()},
             {
                 "direct-recursive-control": "independently-admitted",
-                "recursive-indexed": "translated-kernel-declined",
-                "reflexive-higher-order": "parsed-declined",
+                "recursive-indexed": "dual-admitted-computation-checked",
+                "reflexive-higher-order": "dual-admitted-computation-checked",
                 "mutual": "parsed-declined",
                 "nested": "official-export-inventory-only",
-                "well-founded": "parsed-declined",
+                "well-founded": "independently-admitted",
                 "non-positive-source-negative": "official-source-rejected",
             },
         )
         self.assertIn("misclassified as malformed", first)
-        self.assertIn("declines on Acc dependency before selected root", first)
+        self.assertIn("pre-elaborated root admitted through Acc.rec", first)
+
+    def test_tl212_computation_and_outcome_drift_reject(self) -> None:
+        self.data["tl2_12_update"]["outcomes"]["recursive-indexed"]["report"][
+            "admitted_declarations"
+        ] = 13
+        self.data["tl2_12_update"]["computations"]["reflexive-higher-order"][
+            "sha256"
+        ] = "0" * 64
+        failures = self.failures()
+        self.assertTrue(any("typed outcome/report drift" in failure for failure in failures))
+        self.assertTrue(any("computation contract drift" in failure for failure in failures))
+        self.assertTrue(any("computation hash drift" in failure for failure in failures))
 
     def test_impossible_assurance_promotions_reject(self) -> None:
         rows = {row["id"]: row for row in CHECK.derive_matrix_rows(self.data)}
 
         recursive = copy.deepcopy(rows["recursive-indexed"])
-        recursive["assurance_class"] = "independently-admitted"
+        recursive["assurance_class"] = "parsed-declined"
         self.assertTrue(
             any("independent-admission/class" in failure for failure in CHECK.validate_matrix_row(recursive))
         )

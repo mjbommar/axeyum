@@ -1735,5 +1735,135 @@
         "completed_import_published": false
       }
     }
+  },
+  "tl2_12_update": {
+    "measured_date": "2026-07-22",
+    "source_revision": "cca3ee6d33d22be696b75c6af95883dcf9d3b72a",
+    "construct_test": "crates/axeyum-lean-import/tests/official_construct_matrix.rs",
+    "computation_test": "crates/axeyum-lean-import/tests/official_recursive_computation.rs",
+    "runs_per_case": 2,
+    "resource_runner": "systemd-run --user --scope",
+    "memory_max": "4G",
+    "rust_jobs": 1,
+    "lean_jobs": 1,
+    "lean_source_runs": 2,
+    "lean_olean_sha256": "8b5136f7e66b18c9ad00b7f67b732ebb0fd9ff437128a80bdce831f011c7f573",
+    "lean_elapsed_ms": [220, 210],
+    "lean_max_rss_kib": [462632, 462832],
+    "rust_gate_elapsed_ms": 430,
+    "rust_gate_max_rss_kib": 144304,
+    "outcomes": {
+      "recursive-indexed": {
+        "variant": "CompletedImport",
+        "runs": 2,
+        "report": {
+          "names": 34,
+          "levels": 4,
+          "expressions": 132,
+          "declaration_records": 4,
+          "admitted_declarations": 12,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 12
+        },
+        "line": null,
+        "code": null,
+        "message": null
+      },
+      "reflexive-higher-order": {
+        "variant": "CompletedImport",
+        "runs": 2,
+        "report": {
+          "names": 47,
+          "levels": 3,
+          "expressions": 139,
+          "declaration_records": 6,
+          "admitted_declarations": 11,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 11
+        },
+        "line": null,
+        "code": null,
+        "message": null
+      },
+      "mutual": {
+        "variant": "Unsupported",
+        "runs": 2,
+        "report": null,
+        "line": 233,
+        "code": "inductive-mutual",
+        "message": null
+      },
+      "nested": {
+        "variant": "Malformed",
+        "runs": 2,
+        "report": null,
+        "line": 248,
+        "code": null,
+        "message": "single-family inductive must export one recursor"
+      },
+      "well-founded": {
+        "variant": "CompletedImport",
+        "runs": 2,
+        "report": {
+          "names": 160,
+          "levels": 5,
+          "expressions": 731,
+          "declaration_records": 23,
+          "admitted_declarations": 35,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 35
+        },
+        "line": null,
+        "code": null,
+        "message": null
+      }
+    },
+    "computations": {
+      "recursive-indexed": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-recursive-ih-vector-computation.ndjson",
+        "sha256": "1ab5a38b50d4d2c7ba01ef2831bb5af5d3c56ce1b9879c1942070519a9f6df19",
+        "bytes": 15944,
+        "records": 284,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumRecursiveIHComputation.vectorHeightComputes",
+        "normal_form": "MiniNat.succ MiniNat.zero",
+        "report": {
+          "names": 60,
+          "levels": 4,
+          "expressions": 211,
+          "declaration_records": 8,
+          "admitted_declarations": 18,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 18
+        }
+      },
+      "reflexive-higher-order": {
+        "path": "docs/plan/fixtures/lean4export-v4.30-recursive-ih-acc-computation.ndjson",
+        "sha256": "3cb06283f1e757d79d28335dfe77ccd00231a8d323c2310dddced6473933c003",
+        "bytes": 17722,
+        "records": 314,
+        "runs": 2,
+        "completed": true,
+        "reduction_checked": true,
+        "theorem": "AxeyumRecursiveIHComputation.accPropertyComputes",
+        "normal_form": "True",
+        "report": {
+          "names": 67,
+          "levels": 3,
+          "expressions": 232,
+          "declaration_records": 11,
+          "admitted_declarations": 20,
+          "axioms": 0,
+          "axiom_identities": 0,
+          "declaration_identities": 20
+        }
+      }
+    }
   }
 }

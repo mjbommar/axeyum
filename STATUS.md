@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.12 M3 exact official construct imports are complete; M4
-  computation differential and assurance update are next.**
+- **2026-07-22 — TL2.12 M4 official computations and assurance update are
+  complete; M5 final gates and disposition are next.**
   [Proposed ADR-0353](docs/research/09-decisions/adr-0353-preregister-lean-recursive-induction-hypotheses.md)
   and the
   [M0--M5 execution plan](docs/plan/lean-recursive-induction-hypotheses-tl2.12-plan-2026-07-22.md)
@@ -407,9 +407,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   targets twice with exact official/generated recursor comparison. The
   pre-elaborated well-founded stream also completes through `Acc.rec`; this is
   bounded kernel import, not source elaboration. Mutual/nested retain their
-  typed outcomes, and metadata plus late-publication mutations pass. No M0
-  computation stream has entered the Rust product. M4 owns the selected
-  computations, pinned differential, and assurance update. Every milestone is
+  typed outcomes, and metadata plus late-publication mutations pass. The
+  [M4 result](docs/plan/lean-recursive-induction-hypotheses-m4-2026-07-22.md)
+  confirms pinned Lean twice to one OLEAN digest, imports both computation
+  streams twice, and recursively normalizes the selected results to
+  `MiniNat.succ MiniNat.zero` and `True`. The generated matrix now reports four
+  admitted rows, two separately computation-checked rows, and two typed
+  declines from a machine-validated TL2.12 overlay. M5 owns final gates and
+  disposition. Every milestone is
   bounded to one Lean/two Rust workers and 4 GiB, then added, committed, pushed,
   and remote-verified. Mutual is TL2.13; nested/well-founded lowering is TL2.14.
 
@@ -6863,7 +6868,7 @@ plan is built and committed on the current branch:
 | Phase | Title | Status |
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
-| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M3 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M2 freeze the streams, install the shared representation, close fourteen native rows, ten native mutations, 768 recursive profiles, and the 840-case positivity control. M3 completes both official construct targets twice with exact recursor comparison; the pre-elaborated well-founded stream also completes through `Acc.rec`, while mutual/nested retain typed outcomes. M4 owns official computation and assurance evidence. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14 |
+| P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **WIP (M4 complete; ADR-0353 proposed)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice, reaching `MiniNat.succ MiniNat.zero` and `True`; the generated matrix now has four admitted, two computation-checked, and two declined rows. M5 final disposition remains. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14 |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6917,6 +6922,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.12 M4 official computation and assurance
+  update.** Pinned Lean compiles the unchanged explicit-recursor source twice
+  to one OLEAN digest. Both frozen computation streams retain their hashes,
+  complete twice through Axeyum, preserve exact recursor metadata, and
+  recursively normalize the selected theorem sides to
+  `MiniNat.succ MiniNat.zero` and `True`. A machine-validated TL2.12 overlay
+  preserves the historical ADR-0351 observation and regenerates the current
+  matrix at four admitted rows, two separately computation-checked rows, and
+  two typed declines. Timed validation remains below 463 MiB for Lean and 141
+  MiB for the Rust gate. M5 final gates and disposition are next.
 
 - **2026-07-22 — Completed TL2.12 M3 exact official construct imports.** The
   importer now parses `isReflexive` as descriptive metadata and leaves
