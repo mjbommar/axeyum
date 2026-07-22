@@ -110,10 +110,19 @@ state.
 > kernel, one format decline, three positive, and 64 explicitly
 > `published-unsealed` complete-record prefixes. The upstream format has no
 > footer, so those prefixes receive no exact-artifact credit; all 65
-> record-body truncations reject. The importer passes 23 cases across two
-> binaries. Resume with TL1.7's declaration content/dependency digests, plus the
-> remaining
-> recursive-indexed/mutual/nested/reflexive fixture matrix. The runtime-derived
+> record-body truncations reject. TL1.7 now publishes ledger-compatible axiom
+> name/type identities plus complete domain-separated structural declaration
+> content and direct-dependency digests under the explicit
+> `axeyum-lean-declaration-identity-v1` schema. Five focused tests freeze all
+> eight flat-fixture identities: repeated imports and independent declaration-
+> record reordering are identical; a valid axiom type mutation changes its own
+> ledger/content identity and the dependent theorem's dependency identity
+> without changing that theorem's content; valid body and binder-info mutations
+> have the intended sensitivity. The importer passes 28 cases across three
+> binaries. See the
+> [TL1.7 result](docs/plan/lean-declaration-identity-tl1.7-2026-07-22.md).
+> Resume with the remaining recursive-indexed/mutual/nested/reflexive/well-
+> founded fixture matrix. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
 > LSP, or compiler work. The TL6.1-TL6.4 source/syntax
@@ -148,8 +157,10 @@ state.
 > families exist. TL2.2 representation, TL2.3 dependent inference, TL2.4
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
 > arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, TL1.3
-> owned transactional publication, and TL1.4 generated mutation coverage are
-> complete; execute TL1.7 declaration content/dependency digests next. Native
+> owned transactional publication, TL1.4 generated mutation coverage, and TL1.7
+> canonical declaration/dependency identity are complete. Generate the
+> recursive-indexed/reflexive/mutual/nested/well-founded official fixture matrix
+> next, while TL1.5 property fuzzing is now dependency-ready. Native
 > parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are

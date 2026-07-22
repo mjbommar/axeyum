@@ -25,7 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         report.axioms.join(",")
     };
     println!(
-        "LEAN4EXPORT_IMPORT|format={}|lean={}|names={}|levels={}|exprs={}|decl_records={}|admitted={}|axioms={}",
+        "LEAN4EXPORT_IMPORT|format={}|lean={}|names={}|levels={}|exprs={}|decl_records={}|admitted={}|axioms={}|identity={}|axiom_ids={}|declaration_ids={}",
         report.format_version,
         report.lean_version,
         report.names,
@@ -34,6 +34,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         report.declaration_records,
         report.admitted_declarations,
         axioms,
+        report.identity_version,
+        report.axiom_identities.len(),
+        report.declaration_identities.len(),
     );
     Ok(())
 }

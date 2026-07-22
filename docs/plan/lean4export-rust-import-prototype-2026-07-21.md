@@ -17,7 +17,7 @@ through the independent kernel's real admission gates. The official Lean 4.30
 fixture used by the earlier Python inventory admits as:
 
 ```text
-LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
+LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P|identity=axeyum-lean-declaration-identity-v1|axiom_ids=1|declaration_ids=8
 ```
 
 Five export declaration records become eight kernel declarations because the
@@ -44,7 +44,7 @@ silently counted as a proved theorem.
 The second official fixture closes the direct-recursive positive control:
 
 ```text
-LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=30|levels=4|exprs=130|decl_records=5|admitted=11|axioms=none
+LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=30|levels=4|exprs=130|decl_records=5|admitted=11|axioms=none|identity=axeyum-lean-declaration-identity-v1|axiom_ids=0|declaration_ids=11
 ```
 
 It independently admits `MiniNat`, `MiniList`, their constructors and generated
@@ -217,8 +217,11 @@ object and compare results.
 
 ## Negative matrix
 
-The 23 Rust integration tests across two binaries in
-[`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
+The 28 Rust integration tests across three binaries in
+[`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs),
+[`wire_mutation_corpus.rs`](../../crates/axeyum-lean-import/tests/wire_mutation_corpus.rs),
+and
+[`declaration_identity.rs`](../../crates/axeyum-lean-import/tests/declaration_identity.rs)
 cover:
 
 | Test | Expected result | Boundary proved |
@@ -241,6 +244,7 @@ cover:
 | completed publication | borrowed and consumed kernel length equals the matching report | success publishes one owned checked pair |
 | late failure matrix | appended JSON, final kernel rejection, quotient, late record limit, and post-stream I/O error return no completed environment | whole-environment transactionality |
 | generated TL1.4 corpus | 226 cases: every record body/prefix/top-level field plus ID/reference/depth/Unicode/integer/cycle/version families | deterministic stable-class mutation coverage; 64 valid prefixes are explicitly unsealed |
+| canonical TL1.7 identities | exact repeated/reordered flat-fixture manifest plus valid axiom-type, definition-body, and binder-info mutations | content identity ignores wire/arena/order while dependency identity binds referenced declaration content |
 
 Several tests contain multiple mutation cells: the blocker fixture, projection
 mutations, resource limits, arbitrary-precision values, and late-publication
@@ -265,7 +269,7 @@ cargo run -q -p axeyum-lean-import --example lean4export_import -- \
 
 Measured local result under the repository's 4 GiB process cap:
 
-- eleven integration tests pass;
+- 28 integration tests across three binaries pass;
 - warning-denied all-target Clippy passes;
 - the example prints the exact result at the top of this page;
 - the existing 181 kernel unit/integration tests and kernel doctest remain
@@ -283,11 +287,11 @@ The initial parts of L1 and L2 are now implemented together:
 - flat, parametric-recursive, and direct-recursive non-indexed inductive
   admission with recursor comparison: **landed on the two fixtures**.
 
-L1 is not complete because there is no property fuzz target, declaration
-dependency digest, completed wire-model separation for every unsupported
+L1 is not complete because there is no property fuzz target, completed
+wire-model separation for every unsupported
 variant, or large-stream checkpoint/durable publication protocol. The
 deterministic truncation/ID/reference/field/depth/Unicode/integer/cycle/version
-matrix is complete. L2 is not
+matrix and canonical declaration/dependency identity are complete. L2 is not
 complete because String literals, quotients, recursive-indexed, mutual, nested,
 and reflexive groups remain explicit declines.
 
@@ -307,13 +311,14 @@ and reflexive groups remain explicit declines.
    [runtime-derived identity](lean-axiom-ledger-v1.json).
 5. Export the smallest dependency-closed `Init` root and rank the actual decline
    population.
-6. **Projection/eta/Nat/TL1.3 slices DONE:** representation, dependent
+6. **Projection/eta/Nat/TL1.3/TL1.7 slices DONE:** representation, dependent
    inference, constructor reduction, wire translation, exact projection-root
    admission/computation, separately gated structure eta, arbitrary-precision
    Nat storage, checked literal semantics, and exact Nat-root admission/
    computation are complete; private staging now publishes only an owned
-   completed environment. Execute TL1.7 declaration content/dependency digests
-   next; TL1.5 later adds property fuzzing over the frozen paths.
+   completed environment. Canonical declaration content/direct-dependency
+   digests now publish with each report; TL1.5 next adds property fuzzing over
+   the frozen paths.
 
 The four-root
 [`official blocker census`](lean4export-official-blocker-census-2026-07-21.md)

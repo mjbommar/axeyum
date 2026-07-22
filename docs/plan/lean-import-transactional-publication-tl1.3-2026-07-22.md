@@ -109,12 +109,12 @@ documentation links pass under build concurrency capped at two.
   owns completion-last durable publication;
 - no arbitrary existing kernel can be extended or merged;
 - no new wire construct or Lean semantic fragment is admitted;
-- TL1.4's exhaustive record-by-record mutation corpus has since landed;
-  TL1.7's declaration dependency digests remain open;
+- TL1.4's exhaustive record-by-record mutation corpus and TL1.7's canonical
+  declaration/dependency identities have since landed;
 - transactionality does not broaden the exact K0/K1 compatibility claims.
 
 ## Next action
 
 TL1.4 subsequently generated and froze the 226-case mutation corpus against
-this boundary. Resume the immediate queue at TL1.7 declaration content and
-dependency digests.
+this boundary, and TL1.7 added canonical declaration/dependency identity.
+Resume the numbered queue with the remaining official inductive fixture matrix.

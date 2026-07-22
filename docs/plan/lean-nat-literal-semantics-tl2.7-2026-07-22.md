@@ -123,7 +123,7 @@ so its `parity-docs` constituents were run directly and all passed.
 
 ## Next action
 
-Resume the immediate queue at TL1.3: publish completed imported environments
-transactionally so a failed import cannot expose partial state. TL1.4 mutation
-corpora and TL1.7 dependency digests follow. TL2.8 separately owns accelerated
-Nat operations, and TL2.9 owns String literal semantics.
+At this checkpoint TL1.3 was next. It has since published completed imported
+environments transactionally; TL1.4 mutation coverage and TL1.7 dependency
+identity have also landed. TL2.8 separately owns accelerated Nat operations,
+and TL2.9 owns String literal semantics.

@@ -16,6 +16,12 @@
 //! references. [`import_ndjson`] owns a private staging kernel and publishes it
 //! only after the complete stream succeeds, so an error cannot expose a partial
 //! environment.
+//!
+//! Each completed [`ImportReport`] also carries ADR-0350's versioned canonical
+//! identity manifest: TL0.4-compatible axiom name/type hashes plus complete
+//! structural content and direct-dependency digests for every independently
+//! admitted declaration. These identities ignore wire and arena allocation
+//! order; they do not authenticate the producer-intended stream length.
 
 #![forbid(unsafe_code)]
 
@@ -28,8 +34,20 @@ use axeyum_lean_kernel::{
 };
 use serde_json::{Map, Value};
 
+mod identity;
+
+pub use identity::{
+    AxiomIdentity, DeclarationDependencyIdentity, DeclarationIdentity, DeclarationKind,
+};
+
+use identity::build_identity_manifest;
+
 /// The only `lean4export` wire-format version admitted by this profile.
 pub const FORMAT_VERSION: &str = "3.1.0";
+
+/// Canonical identity schema used by [`ImportReport::axiom_identities`] and
+/// [`ImportReport::declaration_identities`].
+pub const IDENTITY_VERSION: &str = "axeyum-lean-declaration-identity-v1";
 
 /// Resource limits applied before a stream can grow the kernel arenas without
 /// bound.
@@ -75,6 +93,13 @@ pub struct ImportReport {
     /// Imported axiom names. Their types were checked, but their propositions
     /// remain assumptions until discharged separately.
     pub axioms: Vec<String>,
+    /// Identity schema for the axiom and declaration manifests below.
+    pub identity_version: &'static str,
+    /// Imported axiom names and TL0.4-compatible name/type SHA-256 identities.
+    pub axiom_identities: Vec<AxiomIdentity>,
+    /// Canonically ordered structural content and direct-dependency identities
+    /// for every declaration admitted into the completed kernel.
+    pub declaration_identities: Vec<DeclarationIdentity>,
 }
 
 /// One completely translated and independently admitted import.
@@ -101,6 +126,9 @@ pub struct ImportReport {
 ///     declaration_records: 0,
 ///     admitted_declarations: 0,
 ///     axioms: vec![],
+///     identity_version: axeyum_lean_import::IDENTITY_VERSION,
+///     axiom_identities: vec![],
+///     declaration_identities: vec![],
 /// };
 /// let forged = CompletedImport { kernel: Kernel::new(), report };
 /// ```
@@ -1184,6 +1212,13 @@ fn import_into_staging_kernel<R: BufRead>(
         }
     }
     let metadata = metadata.ok_or_else(|| malformed(1, "empty stream; metadata is required"))?;
+    let (axiom_identities, declaration_identities) = build_identity_manifest(state.kernel)
+        .map_err(|message| {
+            malformed(
+                record_count,
+                format!("completed declaration identity manifest: {message}"),
+            )
+        })?;
     Ok(ImportReport {
         format_version: metadata.format_version,
         lean_version: metadata.lean_version,
@@ -1195,6 +1230,9 @@ fn import_into_staging_kernel<R: BufRead>(
         declaration_records: state.declaration_records,
         admitted_declarations: state.kernel.environment().len(),
         axioms: state.axioms,
+        identity_version: IDENTITY_VERSION,
+        axiom_identities,
+        declaration_identities,
     })
 }
 

@@ -84,8 +84,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   format/topology/resource contract, 5-record to 8-declaration flat admission,
   5-record to 11-declaration direct-recursive admission, binder-correct
   generated-recursor comparison, exact 9-declaration projection-root
-  admission/computation, fourteen-test mutation matrix, and explicit
+  admission/computation, 28 importer cases across three binaries, and explicit
   literal/quotient/harder-inductive declines.
+- [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
+  [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
+  and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —
+  owned completion-only publication, the deterministic 226-case format
+  mutation corpus with explicit no-footer boundary, and versioned canonical
+  axiom/declaration/direct-dependency identities.
 - [`lean4export-official-blocker-census-2026-07-21.md`](lean4export-official-blocker-census-2026-07-21.md) —
   exact official projection/Nat/String/quotient dependency closures, committed
   small streams and hashes, assurance-separated admission matrix, and the

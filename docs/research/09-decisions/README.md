@@ -404,3 +404,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0347](adr-0347-checked-lean-nat-literal-semantics.md) | Type Lean Nat literals only against a checked canonical bootstrap and reproduce offset/recursor conversion separately from accelerated operations | accepted |
 | [0348](adr-0348-owned-lean-import-publication.md) | Publish Lean imports only as owned completed environments after the full stream succeeds | accepted |
 | [0349](adr-0349-generated-lean-import-mutation-corpus.md) | Generate and stably classify every TL1.4 Lean import mutation family while exposing the upstream no-footer boundary | accepted |
+| [0350](adr-0350-canonical-lean-declaration-identity.md) | Publish ledger-compatible axiom identities plus canonical structural declaration and direct-dependency digests | accepted |

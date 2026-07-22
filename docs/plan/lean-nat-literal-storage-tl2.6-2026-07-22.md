@@ -40,7 +40,7 @@ does not change the no-C/C++ default or workspace `unsafe_code` policy.
 The implementation plan's former dependency on TL1.7 declaration/axiom digests
 was corrected to TL1.2. Digests authenticate completed environments; they do
 not define expression-payload representation, and TL2.6 neither publishes an
-environment nor admits a literal. TL1.7 remains queued before broader import
+environment nor admits a literal. TL1.7 has since landed before broader import
 publication work.
 
 ## Boundary evidence

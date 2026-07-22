@@ -734,6 +734,14 @@ Out of scope:
     accepted prefixes as `published-unsealed` with no exact-artifact credit,
     and assign authenticated completion to TL0.3/TL1.6/TL1.9. See
     [ADR-0349](../09-decisions/adr-0349-generated-lean-import-mutation-corpus.md).
+- [x] Which identity should bind imported Lean axioms, declaration content, and
+      direct dependencies without depending on wire or arena order?
+  - Answer (2026-07-22): retain TL0.4's rendered-type SHA-256 for axiom-ledger
+    comparison, but use a complete domain-separated structural Merkle encoding
+    for declaration content. Bind each sorted direct dependency name to its
+    admitted content digest so dependency mutations propagate without changing
+    the dependent declaration's own content identity. See
+    [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

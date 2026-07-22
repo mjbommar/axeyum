@@ -162,7 +162,11 @@ Again, there are distinct targets:
   A deterministic 226-case mutation corpus covers every official record plus
   ID/reference/field/depth/Unicode/integer/cycle/version families. It records 64
   complete-record prefixes as `published-unsealed`, not full artifacts, because
-  upstream format 3.1 has no footer or expected count.
+  upstream format 3.1 has no footer or expected count. Successful imports now
+  also publish TL0.4-compatible axiom identities plus versioned structural
+  content and direct-dependency digests for every admitted declaration. Five
+  focused tests freeze the exact flat-fixture identities and prove record-order
+  invariance plus type/body/dependency mutation sensitivity.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

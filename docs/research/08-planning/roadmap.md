@@ -62,8 +62,12 @@ Last updated: 2026-07-22
 > version cases. All 65 record bodies reject truncation; 64 complete-record
 > prefixes are explicitly `published-unsealed` because upstream format 3.1 has
 > no footer, and receive no artifact credit. Generated projection/reduction/eta
-> and quotient semantic seams remain uncredited; TL1.7 declaration content and
-> dependency digests are next.
+> and quotient semantic seams remain uncredited. TL1.7 now adds ledger-compatible
+> axiom identities and complete v1 structural content/direct-dependency digests;
+> five focused identity tests bring the importer to 28 cases across three
+> binaries. Generate the remaining recursive-indexed/reflexive/mutual/nested/
+> well-founded official fixture matrix next; TL1.5 property fuzzing is now
+> dependency-ready.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

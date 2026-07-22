@@ -174,7 +174,7 @@ broadening kernel semantics.
 | TL1.4 | DONE | Generate truncation-at-every-record, duplicate-ID, forward-reference, unknown-field, deep-JSON, Unicode, integer, cycle, and version mutations. | TL0.2 | L | The [226-case deterministic corpus](lean-import-mutation-corpus-tl1.4-2026-07-22.md) runs twice byte-identically without panic and freezes exact JSON/malformed/kernel/unsupported/published/unsealed classes; all 65 record bodies reject truncation while 64 complete-record prefixes are explicitly unsealed under the upstream no-footer contract. |
 | TL1.5 | TODO | Add property fuzzing for wire topology and semantic erasure of metadata. | TL1.4 | M | Fuzzer covers every record discriminant and metadata path. |
 | TL1.6 | TODO | Add streaming large-input checkpoints, aggregate byte/depth limits, and completion-last publication. | TL0.7 | M | Forced termination resumes without duplicate admission or lost provenance. |
-| TL1.7 | TODO | Record axiom name/type digests and declaration content/dependency digests during import. | TL0.4 | M | Reordering preserves content identity; type mutation changes the digest. |
+| TL1.7 | DONE | Record axiom name/type digests and declaration content/dependency digests during import. | TL0.4 | M | [Canonical v1 identities](lean-declaration-identity-tl1.7-2026-07-22.md) retain TL0.4-compatible axiom type hashes and structurally bind all declaration variants plus sorted direct dependencies; repeated/reordered imports agree, while valid type/body/binder mutations change exactly their intended content/dependency cone. |
 | TL1.8 | PARTIAL | Differentially inventory every supported/declined construct with an independent Python reader. | TL0.6 | M | Python/Rust counts agree over the complete fixture set. |
 | TL1.9 | TODO | Publish the 570,807-byte String stream and future large closures in a content-addressed artifact store. | TL1.6 | S | Source, command, exact bytes, hash, and retrieval path are durable. |
 | TL1.10 | TODO | Stabilize the public reader API, error codes, fresh-kernel contract, and examples for files/stdin/streams. | TL1.3 | M | Rustdoc examples and downstream misuse tests pass. |
@@ -453,8 +453,8 @@ parallel lane:
 11. **DONE:** TL2.7 — type Nat literals, implement checked constructor/literal conversion, and close the exact official Nat closure.
 12. **DONE:** TL1.3 — publish only owned completed environments after full-stream success.
 13. **DONE:** TL1.4 — generate and freeze the 226-case record/structural mutation corpus.
-14. **NEXT:** TL1.7 — add axiom and declaration dependency digests.
-15. Generate recursive-indexed, reflexive, mutual, nested, and well-founded
+14. **DONE:** TL1.7 — add axiom and declaration dependency digests.
+15. **NEXT:** Generate recursive-indexed, reflexive, mutual, nested, and well-founded
     official fixtures while the importer lane is independent.
 16. TL2.11 — implement positivity before widening inductive admission.
 17. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.

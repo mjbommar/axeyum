@@ -100,8 +100,8 @@ Primary format source:
 
 ## Validation
 
-The importer now passes 23 integration cases across two binaries plus its
-example target. The mutation binary's three tests cover corpus generation/
+At the TL1.4 checkpoint, the importer passed 23 integration cases across two
+binaries plus its example target. The mutation binary's three tests cover corpus generation/
 execution, Unicode equivalence, and explicit unsealed-prefix accounting.
 Warning-denied Clippy/rustdoc, compile-fail doctest, compatibility/prototype,
 parity-prose, foundational-resource, focused formatting, JSON, and link gates
@@ -115,12 +115,12 @@ pass under build concurrency capped at two.
 - persistent checkpoint/resume or content-addressed storage is implemented;
 - property-guided fuzzing replaces the deterministic corpus—TL1.5 still owns
   that additional layer;
-- declaration content/dependency digests are present—TL1.7 remains open;
+- declaration content/dependency digests were not part of TL1.4; TL1.7 has
+  since landed them;
 - any new Lean wire construct or kernel semantic fragment is admitted.
 
 ## Next action
 
-Resume the immediate queue at TL1.7: record axiom name/type digests and
-declaration content/dependency digests during import, with reordering-invariant
-content identity and mutation-sensitive type/dependency identity. TL1.5 remains
-the later property-fuzz layer over the now-frozen discriminant/path corpus.
+TL1.7 subsequently landed axiom/declaration/dependency identity. Resume the
+numbered queue with the remaining official inductive fixture matrix; TL1.5
+remains the property-fuzz layer over this frozen discriminant/path corpus.
