@@ -9669,6 +9669,83 @@ fn contains_ln_head(expr: &CasExpr) -> bool {
     }
 }
 
+/// Log-trigonometric integrals `∫₀^u c·K(x) dx` over the canonical intervals whose
+/// values are classical constants:
+///
+/// | kernel `K`    | interval  | `∫`          |
+/// |---------------|-----------|--------------|
+/// | `ln(sin x)`   | `[0,π/2]` | `−(π/2)ln2`  |
+/// | `ln(cos x)`   | `[0,π/2]` | `−(π/2)ln2`  |
+/// | `ln(sin x)`   | `[0,π]`   | `−π·ln2`     |
+/// | `ln(tan x)`   | `[0,π/2]` | `0`          |
+///
+/// None has an elementary antiderivative. Same soundness discipline as
+/// [`definite_dilog_integral`]: the proportionality constant `c` is recovered
+/// numerically (at interior points avoiding kernel zeros) then **proven** by the
+/// zero-test `equal(expr, c·K)`; a numeric quadrature guards the hard-coded values.
+fn definite_log_trig_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+        || !contains_ln_head(expr)
+    {
+        return None;
+    }
+    let vx = CasExpr::var(var);
+    let pi = CasExpr::var("pi");
+    let ln2 = CasExpr::int(2).ln();
+    let half_pi = pi.clone() / CasExpr::int(2);
+    let neg_half_pi_ln2 = CasExpr::rat(-1, 2) * pi.clone() * ln2.clone();
+    let references = [
+        (vx.clone().sin().ln(), half_pi.clone(), neg_half_pi_ln2.clone()),
+        (vx.clone().cos().ln(), half_pi.clone(), neg_half_pi_ln2),
+        (vx.clone().sin().ln(), pi.clone(), CasExpr::int(-1) * pi * ln2),
+        (vx.tan().ln(), half_pi, CasExpr::zero()),
+    ];
+    let simple_expr = simplify(expr);
+    for (kernel, kernel_upper, value) in references {
+        if !matches!(equal(upper, &kernel_upper), ZeroTest::Certified { equal: true, .. }) {
+            continue;
+        }
+        let hi = evalf(&kernel_upper, &[])?;
+        // Interior sample fractions chosen to avoid the kernel's interior zero
+        // (`ln(tan)` vanishes at the midpoint `π/4`).
+        let ratio = |frac: f64| -> Option<f64> {
+            let point = frac * hi;
+            let den = evalf(&kernel, &[(var, point)])?;
+            if den.abs() < 1e-9 {
+                return None;
+            }
+            Some(evalf(expr, &[(var, point)])? / den)
+        };
+        let (Some(r1), Some(r2), Some(r3)) = (ratio(0.2), ratio(0.35), ratio(0.7)) else {
+            continue;
+        };
+        if (r1 - r2).abs() > 1e-6 || (r1 - r3).abs() > 1e-6 {
+            continue;
+        }
+        let Some(coeff) = rationalize(r1, 10_000) else {
+            continue;
+        };
+        let scaled = simplify(&(CasExpr::Const(coeff) * kernel));
+        if !matches!(equal(&simple_expr, &scaled), ZeroTest::Certified { equal: true, .. }) {
+            continue;
+        }
+        let result = simplify(&(CasExpr::Const(coeff) * value));
+        // Numeric guard over `[δ, u−δ]` (log singularities at the trig zeros are
+        // integrable; the omitted slivers are negligible).
+        let approx = numeric_integrate(expr, var, 1e-7, hi - 1e-7, 20_000)?;
+        let exact = evalf(&result, &[])?;
+        if (approx - exact).abs() < 1e-2 * (1.0 + exact.abs()) {
+            return Some(result);
+        }
+    }
+    None
+}
+
 /// The definite integral of `expr` in `var` from `lower` to `upper`, via the
 /// fundamental theorem of calculus: find a certified antiderivative `F` with
 /// [`integrate`], then return `F(upper) − F(lower)`.
@@ -9714,6 +9791,14 @@ pub fn definite_integrate(
     // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
     // `c·Li₂(±1)` via `ζ(2)`; no elementary antiderivative, so before the FTC path.
     if let Some(value) = definite_dilog_integral(expr, var, lower, upper) {
+        return Some(DefiniteIntegral {
+            value,
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+        });
+    }
+    // Log-trig integrals `∫₀^{π/2} ln(sin x) = −(π/2)ln2`, `∫₀^{π/2} ln(tan x) = 0`, …
+    if let Some(value) = definite_log_trig_integral(expr, var, lower, upper) {
         return Some(DefiniteIntegral {
             value,
             antiderivative: CasExpr::zero(),
@@ -17386,6 +17471,34 @@ mod tests {
         // reach it), i.e. no false certificate for the wrong closed form.
         let non_kernel = (one() + x().pow(2)).ln() / x();
         assert!(super::definite_dilog_integral(&non_kernel, "x", &zero(), &one()).is_none());
+    }
+
+    #[test]
+    fn log_trig_definite_integrals() {
+        let x = || v("x");
+        let pi = || v("pi");
+        let ln2 = || CasExpr::int(2).ln();
+        let zero = || CasExpr::int(0);
+        let check = |integrand: CasExpr, upper: CasExpr, want: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &zero(), &upper).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert!(
+                matches!(equal(&got.value, &want), ZeroTest::Certified { equal: true, .. }),
+                "{integrand} → {} (want {want})",
+                got.value
+            );
+        };
+        // ∫₀^{π/2} ln(sin x) = ∫₀^{π/2} ln(cos x) = −(π/2)ln2.
+        check(x().sin().ln(), pi() / CasExpr::int(2), CasExpr::rat(-1, 2) * pi() * ln2());
+        check(x().cos().ln(), pi() / CasExpr::int(2), CasExpr::rat(-1, 2) * pi() * ln2());
+        // ∫₀^π ln(sin x) = −π·ln2.
+        check(x().sin().ln(), pi(), CasExpr::int(-1) * pi() * ln2());
+        // ∫₀^{π/2} ln(tan x) = 0, and a constant multiple ∫₀^{π/2} 3·ln(sin x).
+        check(x().tan().ln(), pi() / CasExpr::int(2), CasExpr::zero());
+        check(CasExpr::int(3) * x().sin().ln(), pi() / CasExpr::int(2), CasExpr::rat(-3, 2) * pi() * ln2());
+        // Soundness: a log-trig integral NOT in the table must not be mis-mapped —
+        // the zero-test proportionality gate rejects `ln(1+sin x)`.
+        assert!(super::definite_log_trig_integral(&(CasExpr::int(1) + x().sin()).ln(), "x", &zero(), &(pi() / CasExpr::int(2))).is_none());
     }
 
     #[test]
