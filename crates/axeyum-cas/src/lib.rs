@@ -7666,6 +7666,39 @@ pub fn definite_integrate(
     })
 }
 
+/// **Numeric** definite integral `∫_a^b f dx` by composite Simpson's rule over
+/// `intervals` sub-intervals (rounded up to even), evaluating `f` at each node via
+/// [`evalf`]. Works for integrands with **no elementary antiderivative** (`∫₀¹
+/// e^{−x²} ≈ 0.7468`, `∫₀¹ sin(x²)`), complementing the exact [`definite_integrate`].
+/// `None` if `f` fails to evaluate at some node or `intervals == 0`.
+#[must_use]
+pub fn numeric_integrate(
+    integrand: &CasExpr,
+    var: &str,
+    lower: f64,
+    upper: f64,
+    intervals: usize,
+) -> Option<f64> {
+    if intervals == 0 {
+        return None;
+    }
+    let count = if intervals.is_multiple_of(2) {
+        intervals
+    } else {
+        intervals + 1
+    };
+    let count_f = f64::from(u32::try_from(count).ok()?);
+    let step = (upper - lower) / count_f;
+    let node = |point: f64| evalf(integrand, &[(var, point)]);
+    let mut sum = node(lower)? + node(upper)?;
+    for i in 1..count {
+        let weight = if i.is_multiple_of(2) { 2.0 } else { 4.0 };
+        let point = lower + f64::from(u32::try_from(i).ok()?) * step;
+        sum += weight * node(point)?;
+    }
+    Some(sum * step / 3.0)
+}
+
 /// The **Fourier series** partial sum of `f` on `[−L, L]` up to `n_terms`
 /// harmonics: `a₀/2 + Σ_{k=1}^{n} [aₖ·cos(kπx/L) + bₖ·sin(kπx/L)]`, with the Euler
 /// coefficients `aₖ = (1/L)∫_{−L}^{L} f·cos(kπx/L) dx`, `bₖ = (1/L)∫_{−L}^{L}
@@ -13111,6 +13144,22 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
         }
+    }
+
+    #[test]
+    fn numeric_integration_simpson() {
+        let x = || v("x");
+        // Non-elementary integrands: ∫₀¹ e^{−x²} ≈ 0.746824, ∫₀¹ sin(x²) ≈ 0.310268.
+        let gauss = numeric_integrate(&(CasExpr::int(-1) * x().pow(2)).exp(), "x", 0.0, 1.0, 1000)
+            .unwrap();
+        assert!((gauss - 0.746_824).abs() < 1e-5);
+        let fresnel = numeric_integrate(&x().pow(2).sin(), "x", 0.0, 1.0, 1000).unwrap();
+        assert!((fresnel - 0.310_268).abs() < 1e-5);
+        // Agreement with exact results: ∫₀¹ x² = 1/3, ∫₀^π sin x = 2.
+        assert!((numeric_integrate(&x().pow(2), "x", 0.0, 1.0, 100).unwrap() - 1.0 / 3.0).abs() < 1e-6);
+        assert!((numeric_integrate(&x().sin(), "x", 0.0, std::f64::consts::PI, 100).unwrap() - 2.0).abs() < 1e-6);
+        // Zero intervals declines.
+        assert!(numeric_integrate(&x(), "x", 0.0, 1.0, 0).is_none());
     }
 
     #[test]
