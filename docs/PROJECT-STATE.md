@@ -141,9 +141,13 @@ Again, there are distinct targets:
   constructs remain open. A four-root official export census now makes
   projection the measured first kernel blocker for structure, Nat-literal, and
   String-literal closures; this orders work but is not broad `Init` coverage.
-  The arithmetic reconstruction preludes also have an explicitly
-  audited axiom surface whose types are checked but whose statements have not
-  yet been discharged against mathlib.
+  The reconstruction preludes have a runtime-derived 65-row axiom ledger whose
+  names and canonical type digests are checked, but whose statements have not
+  yet been semantically classified or discharged. A deterministic 768-case
+  seam-fuzz seed now covers the four representable kernel interactions and
+  rejects `False` admission in every case; this is adversarial regression
+  evidence, not a consistency proof, and projection/eta plus quotient seams are
+  still absent.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
   rather than dismissed. Axeyum does not currently reproduce Lean's parser,
   macros, elaborator, unifier, tactic language, compiler, package ecosystem,

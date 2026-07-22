@@ -7,6 +7,9 @@
 > 65 admitted prelude assumptions (real 30, integer 34, string `append` 1).
 > Call-site/line counts discussed below were not a complete environment census;
 > the [runtime ledger](../../../plan/generated/lean-axiom-ledger.md) is authoritative.
+> T6.0.3 has also since landed a deterministic 768-case gate over the four
+> currently representable seams. The zero-fuzz statements below describe this
+> review's input state; projection/eta and quotient extensions remain open.
 
 **Charge:** v4 reversed v3's considered position immediately after a grader told
 the author the position was unacceptable. Round 2's central finding was that this

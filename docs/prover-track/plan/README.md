@@ -47,15 +47,16 @@ competing theorem library or an Axeyum-only proof language.
 | **9** | **[P6.5](P6.5-spec-surface.md)** — specs | L | **Test the reduction to P5.2 first.** May correctly cancel. |
 | **—** | **[P6.6-probe](../process/quantified-uf-probe.md)** — quantified-UF measurement | S | Independent; run when convenient. Fix `!fn_app_0`, Skolemize, re-run, **report depth**. |
 
-## Start here — the first commit
+## First kernel-fuzz increment — landed
 
-**P6.0, T6.0.3: fuzz the kernel, seam-first.**
+**P6.0, T6.0.3: fuzz the kernel, seam-first — DONE for the current four seams.**
 
-The kernel has **181 hand-written tests and zero fuzz**. Note 01's measured finding:
-every historical Lean/Rocq kernel bug lived at a **feature seam**, and
-example-based testing appears **nowhere** in the record of how they were found —
-ours included. The `False` bug was found by reading the code against the
-metatheory, not by a test.
+The starting point was **181 hand-written tests and zero fuzz**. The landed
+[768-case seed](../../plan/lean-kernel-seam-fuzz-seed-2026-07-21.md) now covers
+the four representable seams below, reruns its summary deterministically, and
+rejects a `False` admission in every case. This does not erase the measured
+finding: every historical Lean/Rocq kernel bug lived at a **feature seam**, and
+the original `False` bug was found by reading the code against the metatheory.
 
 Seams, in priority order:
 
@@ -68,8 +69,10 @@ Seams, in priority order:
    rejects literals first. **Bignum lands before `Lit` typing** (T6.0.4), or ingest
    raises `LitTooWide`.
 
-The negative class to build: **"the kernel accepts `False`."** Per the standing
-hard rule, a generator that avoids the corner is not a gate.
+The negative class is now live: **"the kernel accepts `False`."** Projection/eta
+and quotient cases remain explicit TL2.15 follow-ups because those constructs
+are not representable yet. Next implementation work is TL2.2 projection
+representation, with each new seam required to join the same negative class.
 
 ## The five things not to get wrong
 

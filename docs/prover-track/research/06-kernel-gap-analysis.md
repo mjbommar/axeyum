@@ -422,10 +422,15 @@ Prop-1-ctor subsingleton), which is exactly the boundary the P0 crossed.
 **Differential testing against real Lean: exactly one test** (§3), covering one
 family shape (nullary-ctor `Prop` enum). That is a keyhole, not a corpus.
 
-### Untested classes
+### Untested classes at the audit point
 
-- **No fuzzing / property testing of any kind** in this crate — no differential
-  term generator, no random well-typed-term round-trip.
+- **At the audit point there was no fuzzing/property testing of any kind** in
+  this crate — no differential term generator and no random well-typed-term
+  round-trip. **Correction, 2026-07-21:** T6.0.3 now supplies a deterministic
+  768-case generated seed over the four representable seams, with exact corner
+  coverage, repeated summaries, and rejected `False` admission in every case.
+  It is not an official-Lean differential term generator; projection/eta and
+  quotient seams remain open under TL2.15.
 - **No differential coverage** of: `def_eq` (eta × proof-irrelevance ×
   lazy-delta interaction), universe `leq` (ported but only nanoda's tests),
   parametric/indexed recursor generation vs Lean's, ι-reduction vs Lean's.

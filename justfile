@@ -22,6 +22,12 @@ test:
 test-guarded:
     MEM_LIMIT_GB=64 ./scripts/mem-run.sh cargo test --workspace --all-features
 
+# T6.0.3/TL2.15 seed: deterministic generated coverage of the four currently
+# representable Lean-kernel seams. The workspace `test` recipe also discovers
+# this integration test; this target is the bounded fast reproduction path.
+lean-kernel-seams:
+    MEM_LIMIT_GB=4 ./scripts/mem-run.sh cargo test -p axeyum-lean-kernel --test kernel_seam_fuzz
+
 # Corpus-scale ADR-0134/0135 Lean reconstruction.  This is deliberately a
 # release-only scheduled stress gate: on the current reference host it takes
 # about 105 seconds and peaks below 3 GiB; the 4 GiB envelope also accommodates

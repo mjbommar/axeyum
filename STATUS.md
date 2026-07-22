@@ -369,6 +369,33 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-21 — T6.0.3 closes the current four-seam fuzz seed; TL2.15 remains
+  partial by construction.** The new fixed-seed
+  [`kernel_seam_fuzz`](crates/axeyum-lean-kernel/tests/kernel_seam_fuzz.rs)
+  integration test registers `Prop`/elimination, universes/inductives,
+  proof-irrelevance/iota, and literals/reduction as four explicit active bits.
+  It runs 768 unique cases: 192 multi-constructor Prop cases; 320 universe cases
+  whose first 288 exhaust the `8×4×3×3` universe/constructor/proof-field/data-
+  field product; and 256 literal cases spanning Nat 0/1/`u128::MAX`/random plus
+  empty/ASCII/Unicode/NUL strings under beta/zeta depths 0–4. Every case reaches
+  theorem admission with `False` as the claimed type, rejects, and leaves no
+  declaration behind. The complete population runs twice and produces equal
+  structured summaries. The focused gate and the complete kernel `--lib
+  --tests` package gate pass under 4 GiB: 177 unit tests plus five integration
+  tests, including the historical exploit and the locally optional
+  official-Lean cross-check wrapper. Forcing that wrapper with
+  `AXEYUM_REQUIRE_LEAN=1` fails closed because this host has no Lean binary; no
+  fresh official-Lean differential credit is taken for this slice.
+  Warning-denied all-target Clippy, all parity-document generators/checkers, the
+  link checker, and `git diff --check` are green. Workspace-wide `cargo fmt
+  --all --check` remains red only on the pre-existing unrelated
+  `axeyum-bench`/`axeyum-cas` drift; the touched Rust file passes standalone
+  rustfmt. The [result note](docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
+  records seeds and non-credit: no projection/eta, quotient, typed-literal,
+  shrinker, or official-Lean differential claim. Next: TL2.2 first-class `Proj`
+  representation, then TL2.3 inference, TL2.4 reduction, and TL2.5 eta; each
+  admitted seam extends this negative class before receiving TL2.15 credit.
+
 - **2026-07-21 — TL0.4 binds the actual 65-assumption prelude boundary.** A
   runtime inventory constructs the real, integer, and string reconstruction
   preludes in independent kernels and enumerates admitted `Declaration::Axiom`
@@ -391,8 +418,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence. Workspace-wide `cargo fmt --all --check` still fails on the same
   pre-existing unrelated `axeyum-bench`/`axeyum-cas` drift. All 65 rows remain
   explicitly `unclassified`/`unreviewed`; TL0.4 freezes the trust boundary but
-  does not prove it. Next: seed T6.0.3/TL2.15 seam fuzz, then execute projection
-  TL2.2-TL2.5; TL3.2 owns semantic classification and discharge targets.
+  does not prove it. The seam-fuzz seed follows immediately above; next is
+  projection TL2.2-TL2.5. TL3.2 owns semantic classification and discharge
+  targets.
 
 - **2026-07-21 — TL0.1/TL0.2 close the Lean ownership and assurance
   boundary.** ADR-0167 and ADR-0345 are accepted together: Track 6 owns the one
@@ -415,8 +443,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   are green. `cargo fmt --all --check` remains red on pre-existing committed
   formatting drift in unrelated `axeyum-bench`/`axeyum-cas` Rust files; this
   slice does not rewrite them. TL0.4 follows immediately above; next is the
-  T6.0.3/TL2.15 seam-fuzz harness before projection TL2.2-TL2.5 changes kernel
-  semantics.
+  now-landed T6.0.3/TL2.15 seam-fuzz harness before projection TL2.2-TL2.5
+  changes kernel semantics.
 
 - **2026-07-21 — the complete Lean-system implementation program is now an
   executable plan, not a list of missing subsystems.** The active
@@ -430,7 +458,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   Lake and version-specific `.olean` compatibility outside the TCB, LSP,
   compiler/runtime/metaprograms, and a full pinned mathlib build. The first
   execution slice is TL0.1/TL0.2 contract reconciliation and capability schema,
-  in parallel with the T6.0.3/TL2.15 fuzz harness; kernel semantics then advance
+  through the now-landed T6.0.3/TL2.15 fuzz seed; kernel semantics now advance
   one measured slice at a time through projection TL2.2-TL2.5. The plan removes
   the rewrite-provenance/`simp` dependency cycle and makes selected mathlib
   imports and native source/workflow compatibility explicit owners rather than

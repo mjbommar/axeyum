@@ -1348,3 +1348,20 @@ most directly useful research in the track:
   kernel-checkable `Eq.trans`/congruence spine**, not getting the chain. And
   Micromega (`lia` = untrusted search + reflective checker + certificate) is our
   identity sentence, written by someone else.
+
+## 2026-07-21 — the zero-fuzz baseline is closed, not the kernel program
+
+T6.0.3 now has a fixed-seed, dependency-free generated gate over the four seams
+the Rust kernel can currently represent: `Prop`/elimination,
+universes/inductives, proof-irrelevance/iota, and literals/reduction. Its 768
+unique cases run twice for equal structured summaries; every case attempts a
+theorem whose claimed type is `False`, rejects, and leaves the environment
+unchanged. The historical complete large-elimination exploit remains a separate
+regression.
+
+This closes the literal “zero fuzz” statement in the earlier diary entries. It
+does **not** close TL2.15: projection/eta and quotient do not exist yet, literals
+remain fail-closed rather than typed, and the harness is neither an official-Lean
+differential corpus nor a consistency proof. The next kernel work is therefore
+TL2.2 first-class `Proj`, followed by dependent inference, constructor reduction,
+and structure eta; each admitted seam must extend the same negative class.

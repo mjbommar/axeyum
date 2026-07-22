@@ -204,7 +204,7 @@ official comparison.
 | TL2.12 | TODO | Generalize induction hypotheses for recursive-indexed and reflexive/higher-order fields. | TL2.11 | L | `Vector`- and `Acc`-shaped official fixtures admit and compute. |
 | TL2.13 | TODO | Admit mutual inductive groups with multiple motives and shared minors. | TL2.12 | L | Two-family mutual fixture and recursors agree with official Lean. |
 | TL2.14 | TODO | Implement frontend lowering for nested and well-founded definitions to mutual/reflexive core forms. | TL2.13, TL4.12 | XL | Exported and native-source forms elaborate to definitionally equal core declarations. |
-| TL2.15 | TODO | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. | TL2.2-TL2.13 as applicable | L | `kernel accepts False` negative class covers every admitted seam. |
+| TL2.15 | PARTIAL | Run seam-first kernel fuzzing across Prop/elimination, universes/inductives, proof irrelevance/iota, literals/reduction, projections/eta, and quotients. The [T6.0.3 seed](lean-kernel-seam-fuzz-seed-2026-07-21.md) covers all four currently representable seams with 768 unique generated cases and deterministic summary replay. | TL2.2-TL2.13 as applicable | L | Current four-seam `kernel accepts False` class is live; projection/eta and quotient cases remain mandatory as those constructs land. |
 | TL2.16 | TODO | Generate the parsed/translated/admitted/dual-admitted construct and root matrix. | TL0.6 | M | Matrix is generated from tests and exact fixtures, never hand-maintained. |
 
 L2 exits when the pinned construct matrix has no accidental parser-to-checker
@@ -443,8 +443,8 @@ parallel lane:
 1. **DONE:** TL0.1 — reconcile and accept ADR-0345 and ADR-0167.
 2. **DONE:** TL0.2 — land the machine-readable capability schema and generated matrix.
 3. **DONE:** TL0.4 — land the axiom ledger schema and current 65-row inventory.
-4. **NEXT:** T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
-5. TL2.2 — add `Proj` representation and exhaustive traversal tests.
+4. **DONE:** T6.0.3/TL2.15 seed — establish the seam-fuzz harness before new kernel cases.
+5. **NEXT:** TL2.2 — add `Proj` representation and exhaustive traversal tests.
 6. TL2.3 — add structure metadata and dependent projection inference.
 7. TL2.4 — add constructor projection reduction.
 8. Translate official projection records and close the committed projection root.

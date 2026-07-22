@@ -98,8 +98,13 @@ state.
 > credit. TL0.4 is now closed by the 65-row runtime-derived
 > [axiom ledger](docs/plan/generated/lean-axiom-ledger.md): seven tests and the
 > normal gate reject population/name/type drift, while all rows remain honestly
-> unclassified for TL3.2. Continue with the T6.0.3/TL2.15 seam-fuzz seed, then
-> execute projection TL2.2-TL2.5. Native parser/macros,
+> unclassified for TL3.2. The T6.0.3/TL2.15
+> [seam-fuzz seed](docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md) now runs
+> 768 unique generated cases across the four currently representable kernel
+> seams, repeats the complete summary deterministically, and rejects every
+> attempted `False` admission with rollback. T6.0.3 is closed; TL2.15 remains
+> partial until projection/eta and quotient exist. Execute projection
+> TL2.2-TL2.5 next. Native parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are
 > all planned; adapter-first ordering controls risk but does not erase the

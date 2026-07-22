@@ -36,6 +36,12 @@ Last updated: 2026-07-21
 > population drift checks. The former 64-row helper-call census omitted the
 > directly inserted string `append` axiom. Classification and discharge remain
 > open under TL3.2; inventory is not truth.
+> The next T6.0.3/TL2.15 seed is also live: a
+> [fixed-seed 768-case harness](../../../docs/plan/lean-kernel-seam-fuzz-seed-2026-07-21.md)
+> covers `Prop`/elimination, universes/inductives, proof-irrelevance/iota, and
+> fail-closed literals/reduction, with deterministic replay and 768 rejected
+> `False` admissions. Projection/eta and quotient seams remain uncredited until
+> their TL2 slices exist; projection TL2.2 is next.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

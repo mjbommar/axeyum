@@ -51,6 +51,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   admitted name bound to its canonical kernel-rendered type digest, source,
   owner, classification, and discharge state. The gate rejects added, removed,
   renamed, or type-mutated assumptions; semantic classification remains TL3.2.
+- [`lean-kernel-seam-fuzz-seed-2026-07-21.md`](lean-kernel-seam-fuzz-seed-2026-07-21.md) —
+  T6.0.3/TL2.15's deterministic 768-case seed across the four currently
+  representable kernel seams, including exact corner denominators, `False`
+  admission/rollback invariants, reproduction seeds, and explicit non-credit
+  for projection/eta, quotients, typed literals, and official-Lean differential
+  fuzzing.
 - [`lean-system-roadmap-completion-audit-2026-07-21.md`](lean-system-roadmap-completion-audit-2026-07-21.md) —
   requirement-by-requirement audit of the parser/macro, elaborator/unifier,
   tactic, compiler, Lake, LSP, mathlib, and import objective; revalidated local
