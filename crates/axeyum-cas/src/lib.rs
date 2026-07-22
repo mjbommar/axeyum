@@ -10710,6 +10710,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_tan_substitution(expr, var),
         integrate_weierstrass(expr, var),
         integrate_poly_over_sqrt_linear(expr, var),
+        integrate_poly_times_sqrt_linear(expr, var),
         integrate_poly_times_general_exp(expr, var),
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
@@ -13841,6 +13842,65 @@ fn integrate_poly_over_sqrt_linear(expr: &CasExpr, var: &str) -> Option<CasExpr>
         _ => CasExpr::Add(terms),
     };
     Some(antiderivative_u.substitute(u, arg))
+}
+
+/// `∫ p(x)·√(a·x+b) dx` for a polynomial `p` and linear radicand, via `u = a·x+b`:
+/// `x = (u−b)/a`, so `∫ p((u−b)/a)·u^{1/2}·(1/a) du = (1/a)·Σ cₖ·(2/(2k+3))·uᵏ⁺¹·√u`.
+/// Covers `∫ x·√(x+1) = (2/5)(x+1)^{5/2} − (2/3)(x+1)^{3/2}`, `∫ (2x+1)√(x−1)`, etc.
+/// (the `/√` companion is [`integrate_poly_over_sqrt_linear`]). The bare `√(a·x+b)`
+/// with a constant `p` is left to [`integrate_sqrt_power`]. Certified downstream.
+fn integrate_poly_times_sqrt_linear(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Mul(_) = expr else {
+        return None;
+    };
+    let factors = flatten_mul(expr);
+    // Exactly one √(linear) factor; the remaining factors multiply to a polynomial.
+    let mut radicand: Option<CasExpr> = None;
+    let mut cofactors: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        if let CasExpr::Unary(UnaryFunc::Sqrt, arg) = &factor {
+            if radicand.is_some() {
+                return None; // more than one radical — out of this fragment
+            }
+            radicand = Some((**arg).clone());
+        } else {
+            cofactors.push(factor);
+        }
+    }
+    let radicand = radicand?;
+    let arg_poly = normalize(&radicand)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 1 {
+        return None;
+    }
+    let (a, b) = (arg_poly[1], arg_poly.first().copied().unwrap_or_else(Rational::zero));
+    let poly_cofactor = build_product(cofactors);
+    // x = (u − b)/a, built as a scaled term so the normalizer accepts it.
+    let u = if var == "u" { "w" } else { "u" };
+    let inv_a = Rational::integer(1).checked_div(a)?;
+    let x_of_u = scaled_term(inv_a, CasExpr::var(u) - CasExpr::Const(b));
+    let p_coeffs = normalize(&poly_cofactor.substitute(var, &x_of_u))?.to_univariate(u)?;
+    // ∫ (1/a)·Σ cₖ uᵏ · u^{1/2} du = (1/a)·Σ cₖ·(2/(2k+3))·uᵏ⁺¹·√u.
+    let sqrt_u = CasExpr::var(u).sqrt();
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (k, coeff) in p_coeffs.iter().enumerate() {
+        if coeff.is_zero() {
+            continue;
+        }
+        let scale = inv_a
+            .checked_mul(*coeff)?
+            .checked_mul(Rational::checked_new(2, i128::try_from(2 * k + 3).ok()?)?)?;
+        let power = CasExpr::Mul(vec![
+            CasExpr::var(u).pow(u32::try_from(k + 1).ok()?),
+            sqrt_u.clone(),
+        ]);
+        terms.push(scaled_term(scale, power));
+    }
+    let antiderivative_u = match terms.len() {
+        0 => return None,
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    };
+    Some(antiderivative_u.substitute(u, &radicand))
 }
 
 /// ∫ x·R(x²) dx = ½·[∫ R(u) du]_{u=x²} for a **rational** `R` — the `u = x²`
@@ -20357,6 +20417,24 @@ mod tests {
         }
         // The identity radicand √x is not routed here (handled by the sqrt-power path).
         assert!(integrate(&x().sqrt(), "x").unwrap().is_certified());
+    }
+
+    #[test]
+    fn poly_times_sqrt_linear_integrals() {
+        let x = || v("x");
+        // ∫P(x)·√(ax+b) via u=ax+b: ∫x√(x+1)=(2/5)(x+1)^{5/2}−(2/3)(x+1)^{3/2}, etc.
+        for integrand in [
+            x() * (x() + CasExpr::int(1)).sqrt(),
+            (CasExpr::int(2) * x() + CasExpr::int(1)) * (x() - CasExpr::int(1)).sqrt(),
+            x().pow(2) * (CasExpr::int(2) * x() + CasExpr::int(3)).sqrt(),
+            (x().pow(2) - x()) * (x() + CasExpr::int(2)).sqrt(),
+        ] {
+            let r = integrate(&integrand, "x").expect("poly·√(linear)");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // The bare radical √(x+1) (constant cofactor) still routes to the sqrt-power path.
+        assert!(integrate(&(x() + CasExpr::int(1)).sqrt(), "x").unwrap().is_certified());
     }
 
     #[test]
