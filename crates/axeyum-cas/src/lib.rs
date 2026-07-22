@@ -6609,6 +6609,13 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // Algebraic (polynomial + √polynomial) limits at `+∞`, including conjugate
+    // cancellations like `√(x²+x) − x → ½`.
+    if matches!(point, LimitPoint::PosInfinity)
+        && let Some(value) = limit_algebraic_at_infinity(expr, var)
+    {
+        return Some(value);
+    }
     // `lim exp(g) = exp(lim g)` when the inner limit is finite — resolves `1^∞`
     // forms written as `exp(g)`, e.g. `(1+1/x)^x = exp(x·ln(1+1/x)) → e`. Falls
     // through if the inner limit doesn't exist (leaving `exp`-dominance to decide).
@@ -6684,6 +6691,172 @@ fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         Some(CasExpr::zero())
     } else {
         None
+    }
+}
+
+/// The `(order, coefficient)` of `expr` as `x → +∞`, where `expr` is built from
+/// polynomials in `var` and square roots of polynomials: `expr ~ coefficient ·
+/// x^order`. A bare `√(poly)` contributes `order = deg/2`, `coefficient =
+/// √(leading)`. `None` outside this algebraic fragment, or if the leading terms of
+/// a sum **cancel** (the sub-leading order is not tracked — the caller rationalizes
+/// instead).
+fn algebraic_leading_at_infinity(expr: &CasExpr, var: &str) -> Option<(Rational, CasExpr)> {
+    match expr {
+        CasExpr::Const(c) => (!c.is_zero()).then(|| (Rational::zero(), CasExpr::Const(*c))),
+        CasExpr::Var(name) if name == var => Some((Rational::integer(1), CasExpr::one())),
+        CasExpr::Pow(base, exp) => {
+            let (order, coeff) = algebraic_leading_at_infinity(base, var)?;
+            Some((order.checked_mul(Rational::integer(i128::from(*exp)))?, coeff.pow(*exp)))
+        }
+        CasExpr::Unary(UnaryFunc::Sqrt, inner) => {
+            let (order, coeff) = algebraic_leading_at_infinity(inner, var)?;
+            Some((order.checked_div(Rational::integer(2))?, coeff.sqrt()))
+        }
+        CasExpr::Neg(a) => {
+            let (order, coeff) = algebraic_leading_at_infinity(a, var)?;
+            Some((order, CasExpr::Neg(Box::new(coeff))))
+        }
+        CasExpr::Mul(factors) => {
+            let mut order = Rational::zero();
+            let mut coeff = CasExpr::one();
+            for factor in factors {
+                let (o, c) = algebraic_leading_at_infinity(factor, var)?;
+                order = order.checked_add(o)?;
+                coeff = coeff * c;
+            }
+            Some((order, coeff))
+        }
+        CasExpr::Div(a, b) => {
+            let (oa, ca) = algebraic_leading_at_infinity(a, var)?;
+            let (ob, cb) = algebraic_leading_at_infinity(b, var)?;
+            Some((oa.checked_sub(ob)?, ca / cb))
+        }
+        CasExpr::Add(terms) => {
+            let leads = terms
+                .iter()
+                .map(|t| algebraic_leading_at_infinity(t, var))
+                .collect::<Option<Vec<_>>>()?;
+            let max_order = leads.iter().map(|(o, _)| *o).max()?;
+            let mut coeff = CasExpr::zero();
+            for (order, c) in &leads {
+                if *order == max_order {
+                    coeff = coeff + c.clone();
+                }
+            }
+            // `simplify_radicals` first so constant surds fold (`√1→1`, `√4→2`)
+            // and a genuine leading-order cancellation is detected.
+            let coeff = simplify(&simplify_radicals(&coeff));
+            if matches!(equal(&coeff, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
+                return None;
+            }
+            Some((max_order, coeff))
+        }
+        _ => None,
+    }
+}
+
+/// Extract `(m, A)` from an algebraic term that is a `var`-free constant multiple
+/// `m` of `√A` for a polynomial radicand `A` in `var` (degree ≥ 1) — `A` is the
+/// radicand itself, not `√A`. `None` otherwise.
+fn split_sqrt_term(term: &CasExpr, var: &str) -> Option<(CasExpr, CasExpr)> {
+    match term {
+        CasExpr::Unary(UnaryFunc::Sqrt, arg) => {
+            let poly = normalize(arg)?.to_univariate(var)?;
+            (poly::rat_degree(&poly)? >= 1).then(|| (CasExpr::one(), (**arg).clone()))
+        }
+        CasExpr::Neg(inner) => {
+            let (m, radicand) = split_sqrt_term(inner, var)?;
+            Some((CasExpr::Neg(Box::new(m)), radicand))
+        }
+        CasExpr::Mul(factors) => {
+            let mut radicand: Option<CasExpr> = None;
+            let mut coeff_factors: Vec<CasExpr> = Vec::new();
+            for factor in factors {
+                if let CasExpr::Unary(UnaryFunc::Sqrt, arg) = factor {
+                    if radicand.is_some() {
+                        return None;
+                    }
+                    let poly = normalize(arg)?.to_univariate(var)?;
+                    if poly::rat_degree(&poly)? < 1 {
+                        return None;
+                    }
+                    radicand = Some((**arg).clone());
+                } else if expr_contains_var(factor, var) {
+                    return None;
+                } else {
+                    coeff_factors.push(factor.clone());
+                }
+            }
+            let coeff = match coeff_factors.len() {
+                0 => CasExpr::one(),
+                1 => coeff_factors.into_iter().next()?,
+                _ => CasExpr::Mul(coeff_factors),
+            };
+            Some((coeff, radicand?))
+        }
+        _ => None,
+    }
+}
+
+/// Limit at `x → +∞` of an **algebraic** expression (polynomials and square roots
+/// of polynomials). Tries the leading-term analysis directly; when the leading
+/// terms of a `√A + R` cancel (`√(x²+x) − x`), rationalizes by the conjugate —
+/// `m√A + R = (m²A − R²)/(m√A − R)` — whose numerator is a plain polynomial and
+/// whose denominator has no cancellation, then re-runs the leading-term ratio.
+/// Closes `√(x²+x) − x = ½`. `None` outside the algebraic fragment or when the
+/// value diverges.
+fn limit_algebraic_at_infinity(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    if let Some((order, coeff)) = algebraic_leading_at_infinity(expr, var) {
+        return match order.cmp(&Rational::zero()) {
+            std::cmp::Ordering::Less => Some(CasExpr::zero()),
+            std::cmp::Ordering::Equal => Some(simplify(&simplify_radicals(&coeff))),
+            std::cmp::Ordering::Greater => None, // diverges to ±∞
+        };
+    }
+    // Cancellation in a √-sum: rationalize by the conjugate. Collect the √ terms
+    // (each `mᵢ·√Aᵢ`) and the polynomial remainder.
+    let mut terms = Vec::new();
+    flatten_add_terms(expr, var, &mut terms);
+    let mut sqrt_terms: Vec<(CasExpr, CasExpr)> = Vec::new();
+    let mut remainder: Vec<CasExpr> = Vec::new();
+    for term in &terms {
+        if let Some(parsed) = split_sqrt_term(term, var) {
+            sqrt_terms.push(parsed);
+        } else if normalize(term).and_then(|p| p.to_univariate(var)).is_some() {
+            remainder.push(term.clone());
+        } else {
+            return None; // a non-polynomial, non-√ term
+        }
+    }
+    let poly_remainder = match remainder.len() {
+        0 => CasExpr::zero(),
+        1 => remainder.into_iter().next()?,
+        _ => CasExpr::Add(remainder),
+    };
+    // Split off the first √ term `S = m·√A`; the rest `R` must be either a pure
+    // polynomial or a single other √ term, so that `S² − R²` is a polynomial (a
+    // polynomial + √ mix would leave a cross term).
+    let (s_m, s_radicand) = sqrt_terms.first().cloned()?;
+    let (r_expr, r_squared) = match (sqrt_terms.len(), &poly_remainder) {
+        // `m√A + R(x)` — R polynomial.
+        (1, _) => (poly_remainder.clone(), poly_remainder.pow(2)),
+        // `m₁√A₁ + m₂√A₂` — no polynomial part; `R² = m₂²·A₂`.
+        (2, CasExpr::Const(c)) if c.is_zero() => {
+            let (m2, a2) = sqrt_terms[1].clone();
+            (m2.clone() * a2.clone().sqrt(), m2.pow(2) * a2)
+        }
+        _ => return None,
+    };
+    // (S + R) = (S² − R²)/(S − R). Build the numerator polynomial `m²·A − R²`
+    // directly (squaring `√A` does not auto-fold).
+    let numerator = simplify(&(s_m.clone().pow(2) * s_radicand.clone() - r_squared));
+    let denominator = s_m * s_radicand.sqrt() - r_expr;
+    let (order_num, coeff_num) = algebraic_leading_at_infinity(&numerator, var)?;
+    let (order_den, coeff_den) = algebraic_leading_at_infinity(&denominator, var)?;
+    match order_num.cmp(&order_den) {
+        std::cmp::Ordering::Less => Some(CasExpr::zero()),
+        std::cmp::Ordering::Equal => Some(simplify(&simplify_radicals(&(coeff_num / coeff_den)))),
+        std::cmp::Ordering::Greater => None,
     }
 }
 
@@ -12374,6 +12547,37 @@ mod tests {
         // Divergent forms decline: x / ln x → ∞, x · ln x → ∞.
         assert!(limit(&(x() / x().ln()), "x", inf()).is_none());
         assert!(limit(&(x() * x().ln()), "x", inf()).is_none());
+    }
+
+    #[test]
+    fn conjugate_limits_at_infinity() {
+        let x = || v("x");
+        let inf = || LimitPoint::PosInfinity;
+        // Algebraic (√-of-polynomial) limits where the leading terms cancel — the
+        // sub-leading term survives, recovered by conjugate rationalization.
+        let cases = [
+            // √(x²+x) − x = ½  (single √ minus a polynomial).
+            ((x().pow(2) + x()).sqrt() - x(), CasExpr::rat(1, 2)),
+            // √(x²+3x) − x = 3/2.
+            ((x().pow(2) + CasExpr::int(3) * x()).sqrt() - x(), CasExpr::rat(3, 2)),
+            // √(4x²+x) − 2x = ¼  (non-unit leading √-coefficient).
+            ((CasExpr::int(4) * x().pow(2) + x()).sqrt() - CasExpr::int(2) * x(), CasExpr::rat(1, 4)),
+            // √(x²+1) − x = 0  (numerator order below denominator).
+            ((x().pow(2) + CasExpr::int(1)).sqrt() - x(), CasExpr::zero()),
+            // √(x²+x) − √(x²−x) = 1  (two √ terms).
+            ((x().pow(2) + x()).sqrt() - (x().pow(2) - x()).sqrt(), CasExpr::int(1)),
+            // √(x+1) − √x = 0.
+            ((x() + CasExpr::int(1)).sqrt() - x().sqrt(), CasExpr::zero()),
+            // Direct (no cancellation): √(x²+1)/x = 1.
+            ((x().pow(2) + CasExpr::int(1)).sqrt() / x(), CasExpr::int(1)),
+        ];
+        for (expr, value) in cases {
+            let got = limit(&expr, "x", inf()).unwrap_or_else(|| panic!("no limit for {expr}"));
+            assert!(
+                matches!(equal(&got, &value), ZeroTest::Certified { equal: true, .. }),
+                "lim {expr} = {got}, expected {value}"
+            );
+        }
     }
 
     #[test]
