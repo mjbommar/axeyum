@@ -1,8 +1,11 @@
 //! Truncated power series (`Maclaurin`/`Taylor` polynomials about the origin).
 //!
-//! This module computes the `Taylor` expansion of an expression about `var = 0`,
-//! truncated at a chosen degree, and returns it as an ordinary [`CasExpr`]
-//! polynomial. The single public entry point is [`series`].
+//! This module computes the `Taylor` expansion of an expression about `var = 0`
+//! ([`series`]) or an arbitrary center ([`series_at`]), truncated at a chosen
+//! degree, and returns it as an ordinary [`CasExpr`] polynomial. Expansion about a
+//! nonzero center whose coefficients leave the rational fragment (e.g. `exp(x)`
+//! about `x = 1`, coefficients `e/n!`) falls back to the derivative definition
+//! `cₙ = f⁽ⁿ⁾(center)/n!`, which admits arbitrary closed-form constants.
 //!
 //! Unlike the differentiation/integration kernels in the crate root, series
 //! expansion is a **compute** operation, not a proof-carrying one: certifying a
@@ -221,9 +224,71 @@ pub fn series(expr: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 pub fn series_at(expr: &CasExpr, var: &str, center: &CasExpr, order: usize) -> Option<CasExpr> {
     // g(var) = f(var + center); expand about the origin.
     let shifted = expr.substitute(var, &(CasExpr::var(var) + center.clone()));
-    let maclaurin = series(&shifted, var, order)?;
-    // Re-express in powers of (var − center).
-    Some(maclaurin.substitute(var, &(CasExpr::var(var) - center.clone())))
+    if let Some(maclaurin) = series(&shifted, var, order) {
+        // Re-express in powers of (var − center).
+        return Some(maclaurin.substitute(var, &(CasExpr::var(var) - center.clone())));
+    }
+    // The rational-coefficient series ring declined — commonly because a head's
+    // shifted argument needs a transcendental value at the center (e.g. `exp(x)`
+    // about `x = 1` has coefficients `e/n!`). Fall back to the Taylor definition
+    // `cₙ = f⁽ⁿ⁾(center)/n!`, whose coefficients are arbitrary closed-form
+    // constants rather than rationals.
+    taylor_by_derivatives(expr, var, center, order)
+}
+
+/// `Taylor` polynomial by the derivative definition: `Σ_{n=0}^{order}
+/// f⁽ⁿ⁾(center)/n! · (var − center)ⁿ`. Unlike the series-ring recurrence this
+/// admits transcendental coefficients (`e`, `sin(1)`, …), so it covers centers
+/// where a head leaves the rational fragment.
+///
+/// Declines (`None`) when a coefficient fails to reduce to a finite constant —
+/// either it still mentions `var` (a head we cannot differentiate to closed form)
+/// or it is non-finite (a pole at the center, e.g. a rational function whose
+/// denominator vanishes there).
+fn taylor_by_derivatives(
+    expr: &CasExpr,
+    var: &str,
+    center: &CasExpr,
+    order: usize,
+) -> Option<CasExpr> {
+    let shift = CasExpr::var(var) - center.clone();
+    let mut terms: Vec<CasExpr> = Vec::with_capacity(order + 1);
+    let mut factorial = Rational::integer(1);
+    for n in 0..=order {
+        if n >= 1 {
+            factorial = factorial * Rational::integer(i128::try_from(n).ok()?);
+        }
+        let derivative = expr.differentiate_n(var, n);
+        let coefficient = crate::fold_elementary_constants(&crate::simplify(
+            &derivative.substitute(var, center),
+        ));
+        // A genuine constant coefficient: no residual `var`, and finite (no pole).
+        if crate::expr_contains_var(&coefficient, var) {
+            return None;
+        }
+        if !crate::evalf(&coefficient, &[]).is_some_and(f64::is_finite) {
+            return None;
+        }
+        if matches!(&coefficient, CasExpr::Const(c) if c.is_zero()) {
+            continue;
+        }
+        let scaled = crate::simplify(
+            &(coefficient * CasExpr::Const(Rational::integer(1).checked_div(factorial)?)),
+        );
+        let term = match n {
+            0 => scaled,
+            1 => scaled * shift.clone(),
+            _ => scaled * shift.clone().pow(u32::try_from(n).ok()?),
+        };
+        terms.push(term);
+    }
+    if terms.is_empty() {
+        return Some(CasExpr::zero());
+    }
+    // Return in powers of `(var − center)` (matching the rational-series path);
+    // a full `simplify` here would distribute those powers back into powers of
+    // `var`.
+    Some(CasExpr::Add(terms))
 }
 
 /// Compute the internal [`Series`] for `expr`. Tries the exact polynomial normal
@@ -631,6 +696,32 @@ mod tests {
                 Rational::integer(9),
             ]
         );
+    }
+
+    #[test]
+    fn taylor_about_center_with_transcendental_coefficients() {
+        use crate::series_at;
+        // exp(x) about x=1: e·[1 + (x−1) + (x−1)²/2 + (x−1)³/6]. The rational
+        // series ring cannot hold the coefficient `e`; the derivative fallback can.
+        let e = CasExpr::int(1).exp();
+        let s = || var() - CasExpr::int(1);
+        let got = series_at(&var().exp(), "x", &CasExpr::int(1), 3).expect("taylor fallback");
+        let expected = e.clone()
+            + e.clone() * s()
+            + e.clone() * CasExpr::rat(1, 2) * s().pow(2)
+            + e * CasExpr::rat(1, 6) * s().pow(3);
+        assert!(matches!(equal(&got, &expected), ZeroTest::Certified { equal: true, .. }));
+
+        // sin(x) about x=π/6, order 1: 1/2 + (√3/2)(x − π/6).
+        let center = crate::CasExpr::var("pi") / CasExpr::int(6);
+        let got = series_at(&var().sin(), "x", &center, 1).expect("taylor fallback");
+        let expected = CasExpr::rat(1, 2)
+            + CasExpr::rat(1, 2) * CasExpr::int(3).sqrt() * (var() - center);
+        assert!(matches!(equal(&got, &expected), ZeroTest::Certified { equal: true, .. }));
+
+        // A pole at the center (1/x about 0) declines rather than emitting a
+        // non-finite coefficient.
+        assert!(series_at(&(CasExpr::int(1) / var()), "x", &CasExpr::int(0), 2).is_none());
     }
 
     #[test]

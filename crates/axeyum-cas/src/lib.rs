@@ -12555,8 +12555,17 @@ mod tests {
         let poly = series_at(&x().pow(2), "x", &CasExpr::int(2), 2).unwrap();
         assert_equal(&poly, &x().pow(2));
 
-        // exp(x) about a nonzero center leaves the rational fragment → None.
-        assert!(series_at(&x().exp(), "x", &CasExpr::int(1), 3).is_none());
+        // exp(x) about a nonzero center leaves the rational fragment, so the
+        // series ring declines — but the derivative fallback supplies the
+        // transcendental coefficients e/n!: e·[1 + (x−1) + (x−1)²/2 + (x−1)³/6].
+        let e = CasExpr::int(1).exp();
+        let s = x() - CasExpr::int(1);
+        let exp_series = series_at(&x().exp(), "x", &CasExpr::int(1), 3).unwrap();
+        let expected = e.clone()
+            + e.clone() * s.clone()
+            + e.clone() * CasExpr::rat(1, 2) * s.clone().pow(2)
+            + e * CasExpr::rat(1, 6) * s.pow(3);
+        assert_equal(&exp_series, &expected);
     }
 
     #[test]
