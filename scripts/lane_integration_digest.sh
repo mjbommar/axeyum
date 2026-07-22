@@ -67,7 +67,7 @@ printf 'disk: %s /tmp, %s /nas4\n' \
 # exclude pgrep, this digest, the monitors, and any `git` subprocess (a transient
 # `git -C <worktree> …` carries the path in its args and false-matched before).
 runaways=$(pgrep -af 'compete\.py|axeyum-smtcomp' 2>/dev/null \
-             | grep -vcE 'pgrep|lane_integration_digest|rev-parse HEAD|HEADMOVE|declare -A WT|worktree list|branch --show|[[:space:]]git[[:space:]]')
+             | grep -vcE 'shell-snapshots|snapshot-bash|pgrep|lane_integration_digest|[[:space:]]git[[:space:]]')
 printf 'solver runaways: %s%s\n' "$runaways" \
   "$([ "$runaways" -gt 0 ] && echo '  ⚠ stop via scripts/smtcomp_repro/stop_run.sh' || echo '')"
 if command -v sensors >/dev/null 2>&1; then
