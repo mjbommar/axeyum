@@ -12678,19 +12678,6 @@ pub fn improper_integrate(
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
-/// Whether `expr` contains any `exp(·)` head anywhere.
-fn contains_exp_head(expr: &CasExpr) -> bool {
-    match expr {
-        CasExpr::Unary(UnaryFunc::Exp, _) => true,
-        CasExpr::Unary(_, arg) => contains_exp_head(arg),
-        CasExpr::Neg(inner) => contains_exp_head(inner),
-        CasExpr::Pow(base, _) => contains_exp_head(base),
-        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_exp_head),
-        CasExpr::Div(a, b) => contains_exp_head(a) || contains_exp_head(b),
-        CasExpr::Const(_) | CasExpr::Var(_) => false,
-    }
-}
-
 /// Whether `expr` contains a `ln(g)` head whose argument `g` involves `var`.
 fn contains_ln_of_var(expr: &CasExpr, var: &str) -> bool {
     match expr {
@@ -12719,23 +12706,23 @@ fn integrate_ln_argument_substitution(expr: &CasExpr, var: &str) -> Option<CasEx
         return None;
     }
     let u = if var == "u" { "w" } else { "u" };
-    // F(e^u): substitute x → e^u and collapse `ln(e^u) → u`.
+    // The transformed integrand `F(e^u)·e^u` (the `e^u` is the `dx = e^u du` factor).
+    // Substitute `x → e^u`, collapse `ln(e^u) → u`, and simplify — the `e^u` may cancel
+    // an `e^u` in the denominator (`1/(x(1+ln x)) → 1/(1+u)`).
     let substituted = rewrite_log_exp(&expr.substitute(var, &CasExpr::var(u).exp()));
-    let as_u = simplify(&substituted);
-    // Must be a genuine function of `ln x`: depends on `u`, no residual `x`, and — the
-    // key termination guard — no residual `exp(u)` (which would mean the `x`-dependence
-    // did not collapse to `u` alone, e.g. `ln(x²+1) → ln(e^{2u}+1)`; integrating
-    // `·eᵘ` would re-enter this finder and recurse without bound).
-    if expr_contains_var(&as_u, var)
-        || !expr_contains_var(&as_u, u)
-        || contains_exp_head(&as_u)
+    let integrand_u = simplify(&(substituted * CasExpr::var(u).exp()));
+    // Guards: depends on `u`, no residual `x`, and — the termination condition — no
+    // residual `ln(·u·)` head (`ln(x²+1) → ln(e^{2u}+1)·e^u` would re-enter this finder
+    // unboundedly; a clean `cos(u)·e^u` or `1/(1+u)` carries no `ln` of `u`).
+    if expr_contains_var(&integrand_u, var)
+        || !expr_contains_var(&integrand_u, u)
+        || contains_ln_of_var(&integrand_u, u)
     {
         return None;
     }
-    // ∫ F(u)·eᵘ du, then back-substitute. Replace the whole `eᵘ` factor with `x`
-    // *before* `u → ln x` (so the result carries `x`, not the positivity-dependent
+    // ∫ (integrand in u) du, then back-substitute. Replace the whole `eᵘ` factor with
+    // `x` *before* `u → ln x` (so the result carries `x`, not the positivity-dependent
     // `e^{ln x}` the zero-test cannot fold), then map any residual `u → ln x`.
-    let integrand_u = as_u * CasExpr::var(u).exp();
     let anti_u = integrate(&integrand_u, u).filter(CertifiedIntegral::is_certified)?.antiderivative;
     let with_x = replace_subexpr(&anti_u, &CasExpr::var(u).exp(), &CasExpr::var(var));
     Some(with_x.substitute(u, &CasExpr::var(var).ln()))
@@ -21231,6 +21218,14 @@ mod tests {
         let s = integrate(&x().ln().sin(), "x").expect("∫sin(ln x)");
         assert!(s.is_certified());
         assert_equal(&s.antiderivative.differentiate("x"), &x().ln().sin());
+        // The `eᵘ` from `dx` may cancel an `eᵘ` in the denominator: `∫1/(x(1+ln x)) =
+        // ln(1+ln x)`, `∫1/(x ln x) = ln(ln x)` (`→ ∫1/(1+u) du`, `∫1/u du`).
+        let r1 = integrate(&(CasExpr::int(1) / (x() * (CasExpr::int(1) + x().ln()))), "x").expect("∫1/(x(1+ln x))");
+        assert!(r1.is_certified());
+        assert_equal(&simplify(&r1.antiderivative), &(CasExpr::int(1) + x().ln()).ln());
+        let r2 = integrate(&(CasExpr::int(1) / (x() * x().ln())), "x").expect("∫1/(x ln x)");
+        assert!(r2.is_certified());
+        assert_equal(&simplify(&r2.antiderivative), &x().ln().ln());
         // Termination guard: `∫ln(x²+1)` (not a pure function of ln x) must not send
         // the u=ln x finder into unbounded recursion — it routes elsewhere, certified.
         assert!(integrate(&(x().pow(2) + CasExpr::int(1)).ln(), "x").unwrap().is_certified());
