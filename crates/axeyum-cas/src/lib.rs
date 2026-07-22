@@ -13188,7 +13188,36 @@ fn power_reduce_even_trig(expr: &CasExpr) -> CasExpr {
 /// form term-by-term. Closes `∫eˣsin²x`, `∫eˣcos²x`, `∫eˣsin⁴x`, `∫x·cos²x`.
 /// Declines (returns `None`) when there is no even trig power to reduce, so it never
 /// recurses on its own output. Certified downstream by differentiate-and-check.
+/// Whether `expr` contains a `sin`/`cos` head of an argument involving `var` at an
+/// **odd** power — a bare head (power 1) or `Pow(sin|cos(…), n)` with `n` odd.
+fn has_odd_trig_power(expr: &CasExpr, var: &str) -> bool {
+    match expr {
+        // `sin|cos(…)^n` of `var`: odd iff `n` is odd — do *not* recurse into the bare
+        // head (which would falsely flag an even power via its power-1 base).
+        CasExpr::Pow(base, n)
+            if matches!(base.as_ref(), CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, a) if expr_contains_var(a, var)) =>
+        {
+            n % 2 == 1
+        }
+        CasExpr::Pow(base, _) => has_odd_trig_power(base, var),
+        CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, a) if expr_contains_var(a, var) => true,
+        CasExpr::Unary(_, a) => has_odd_trig_power(a, var),
+        CasExpr::Neg(inner) => has_odd_trig_power(inner, var),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(|e| has_odd_trig_power(e, var)),
+        CasExpr::Div(a, b) => has_odd_trig_power(a, var) || has_odd_trig_power(b, var),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
 fn integrate_power_reduced_trig(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    // Only for **all-even** trig powers (`∫eˣsin²x`, `∫x·cos²x`). An *odd* sin/cos
+    // power (`sin³·cos²x`) is the domain of the `u=cos`/`u=sin` monomial finder and
+    // the expansion fallback; power-reducing the even part while an odd part remains
+    // recurses without converging (reduction re-enters through the recursive
+    // `integrate` on a still-odd form).
+    if has_odd_trig_power(expr, var) {
+        return None;
+    }
     let reduced = power_reduce_even_trig(expr);
     if reduced == *expr {
         return None; // nothing to reduce — avoid re-entering this finder in a loop
@@ -21675,6 +21704,18 @@ mod tests {
             // `prove_derivative`, which reconciles the multiple-angle forms a plain
             // `equal` on the derivative would not).
             let result = integrate(&integrand, "x").expect("power-reduced trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+        }
+        // Regression: an ODD trig power alongside an even one must NOT enter the
+        // power-reduction finder (it would recurse without converging — an infinite
+        // hang). These route to the odd-power u=cos/u=sin monomial finder instead and
+        // return promptly, certified.
+        for integrand in [
+            x().sin().pow(3) * x().cos().pow(2),
+            x().sin().pow(3) * x().cos().pow(4),
+            x().sin().pow(5) * x().cos().pow(4),
+        ] {
+            let result = integrate(&integrand, "x").expect("odd·even trig integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
         }
     }

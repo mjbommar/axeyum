@@ -1,0 +1,41 @@
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `axeyum-cas` (example "probe_gaps") generated 1 warning (run `cargo fix --example "probe_gaps" -p axeyum-cas` to apply 1 suggestion)
+   Compiling wasm-bindgen-macro-support v0.2.123
+    Checking axeyum-verify-macros v0.1.0 (/nas4/data/workspace-infosec/claude-axeyum-cas-work/crates/axeyum-verify-macros)
+    Checking ppv-lite86 v0.2.21
+    Checking axeyum-property-macros v0.1.0 (/nas4/data/workspace-infosec/claude-axeyum-cas-work/crates/axeyum-property-macros)
+    Checking rand_chacha v0.9.0
+   Compiling thiserror-impl v2.0.18
+    Checking proptest v1.11.0
+   Compiling wasm-bindgen-macro v0.2.123
+    Checking rustsat v0.7.5
+    Checking rustsat-batsat v0.7.5
+    Checking axeyum-cnf v0.1.0 (/nas4/data/workspace-infosec/claude-axeyum-cas-work/crates/axeyum-cnf)
+    Checking axeyum-solver v0.1.0 (/nas4/data/workspace-infosec/claude-axeyum-cas-work/crates/axeyum-solver)
+error[E0004]: non-exhaustive patterns: `ExprNode::Proj(_, _, _)` not covered
+   --> crates/axeyum-solver/src/reconstruct/quantifier.rs:537:15
+    |
+537 |         match self.kernel.expr_node(e).clone() {
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ pattern `ExprNode::Proj(_, _, _)` not covered
+    |
+note: `ExprNode` defined here
+   --> crates/axeyum-lean-kernel/src/expr.rs:146:1
+    |
+146 | pub enum ExprNode {
+    | ^^^^^^^^^^^^^^^^^
+...
+162 |     Proj(NameId, u32, ExprId),
+    |     ---- not covered
+    = note: the matched value is of type `ExprNode`
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+    |
+567 ~             },
+568 +             ExprNode::Proj(_, _, _) => todo!()
+    |
+
+For more information about this error, try `rustc --explain E0004`.
+error: could not compile `axeyum-solver` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `axeyum-solver` (lib test) due to 1 previous error
+EXIT_0
