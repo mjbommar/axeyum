@@ -3,7 +3,16 @@
 Status: **implemented core + active expansion** (kickoff 2026-07-20)
 Last updated: 2026-07-22
 
-## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 470 unit + 149 doctests, clippy-clean)
+## Implemented (`crates/axeyum-cas` — pure Rust, WASM-safe, 483 unit + 147 doctests, clippy-clean)
+
+> **Data-model frontier now built** (special functions & fractional powers, none needing a `Pow`
+> representation change): the **gamma family** `Γ`, arbitrary-order **polygamma** `ψ⁽ⁿ⁾` (via
+> `UnaryFunc::PolyGamma(u32)` — the index carried in the variant, so the derivative tower
+> `ψ⁽ⁿ⁾′=ψ⁽ⁿ⁺¹⁾` stays closed), symbolic **factorial** `Γ(n+1)`, **Beta** `B(a,b)`, **binomial**
+> `C(n,k)`; arbitrary-order **Bessel** `Jₙ`; **Airy** `Ai/Bi` (closing tower `Ai″=x·Ai`); **Lambert W**
+> (+ `solve` for `x·eˣ=c`); the **nth-root** head `x^{1/q}` with `∫x^{p/q}` and the `root_q(u)^q=u`
+> zero-test fold; **Puiseux series** `sin√x=√x−(√x)³/6+…`; and **Euler–Cauchy ODEs** `a₂x²y″+a₁xy′+a₀y=0`
+> (`xʳ=exp(r·ln x)`). Techniques: parameterize the `UnaryFunc` variant, `x^r=exp(r·ln x)`, closing towers.
 
 A working proof-carrying CAS. Results are exact; those marked below as *certified*
 carry a machine-checked proof (a decidable zero-test / differentiate-and-check),
