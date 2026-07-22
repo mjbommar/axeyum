@@ -38,6 +38,8 @@ step lean-recursive-ih-m0-tests python3 -m unittest scripts.tests.test_lean_recu
 step lean-recursive-ih-m0 python3 scripts/check-lean-recursive-induction-hypotheses.py --check
 step lean-mutual-groups-m0-tests python3 -m unittest scripts.tests.test_lean_mutual_inductive_groups
 step lean-mutual-groups-m0 python3 scripts/check-lean-mutual-inductive-groups.py --check
+step lean-nested-inductive-m0-tests python3 -m unittest scripts.tests.test_lean_nested_inductive_elimination
+step lean-nested-inductive-m0 python3 scripts/check-lean-nested-inductive-elimination.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh

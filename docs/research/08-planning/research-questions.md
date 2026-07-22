@@ -880,9 +880,11 @@ Out of scope:
     [proposed ADR-0355](../09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md),
     and the
     [TL2.14 plan](../../plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md).
-    P0 is complete; M0 source/wire/no-product freeze is next. Close this question
-    only when ADR-0355's native, generated, import, computation, mutation,
-    retention, and final gates pass.
+    P0 and M0 are complete: three explicit main/auxiliary recursor computations,
+    one exact negative diagnostic, and 114,596 bytes / 2,022 records reproduce
+    twice without Axeyum observation. M1 diagnostic preflight is next. Close
+    this question only when ADR-0355's native, generated, import, computation,
+    mutation, retention, and final gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

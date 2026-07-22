@@ -789,9 +789,13 @@ Non-claims until their gates are met:
    kernel admission, while well-founded source recursion remains TL4.10
    elaborator work. [Proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
    and the [TL2.14 plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
-   preregister the exact expansion/restoration path. M0 source/wire freeze is
-   next; the already-completing 35-declaration well-founded core stream remains
-   a control, not new frontend credit.
+   preregister the exact expansion/restoration path. The
+   [M0 result](lean-nested-inductive-elimination-m0-2026-07-22.md) now freezes
+   three explicit main/auxiliary recursor computations and one exact negative
+   diagnostic, with 114,596 bytes / 2,022 records reproduced byte-identically
+   twice and no Axeyum observation. The already-completing 35-declaration
+   well-founded core stream remains a control, not new frontend credit. M1
+   corrects only the nested diagnostic preflight next.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

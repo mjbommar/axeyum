@@ -1,0 +1,445 @@
+{
+  "schema": "axeyum-lean-nested-inductive-elimination-v1",
+  "stage": "source-wire-frozen",
+  "date": "2026-07-22",
+  "decision": "docs/research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md",
+  "plan": "docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md",
+  "baseline": {
+    "preregistration_revision": "def1000feed25f40d170a7fe95f9bbe0afa6dd21",
+    "semantic_revision": "340cf7215c9371778fb08a1a2ff81ca68d10400b",
+    "construct_matrix": {
+      "path": "docs/plan/lean-official-construct-matrix-v1.json",
+      "sha256_without_tl2_14_overlay": "53ddf887ee068e4cf727bd22159f6195e7de743f3f2b4632694ed1797bfdec8f"
+    },
+    "nested_stream": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-nested.ndjson",
+      "sha256": "faabcde4553b0d597a768aedf35117d7fb4310d3dae052e2545e5b239277456e",
+      "bytes": 23418,
+      "records": 409,
+      "registered_outcome": "ImportError::Malformed(line=248,message=single-family inductive must export one recursor)",
+      "completed_import_published": false
+    },
+    "well_founded_stream": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-well-founded.ndjson",
+      "sha256": "c1fc14097f9be381625846f13277edfd8294afd93c8e9cadd72c54d71e48e3c6",
+      "bytes": 49140,
+      "records": 920,
+      "registered_outcome": "CompletedImport(names=160,levels=5,expressions=731,records=23,declarations=35,axioms=0)"
+    },
+    "declaration_identity_version": "axeyum-lean-declaration-identity-v1"
+  },
+  "pins": {
+    "lean": {
+      "toolchain": "leanprover/lean4:v4.30.0",
+      "version": "4.30.0",
+      "git_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+    },
+    "lean4export": {
+      "version": "v4.30.0",
+      "git_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+      "format": "3.1.0"
+    }
+  },
+  "resource_policy": {
+    "runner": "systemd-run --user --scope",
+    "memory_high": "3G",
+    "memory_max": "4G",
+    "memory_swap_max": "512M",
+    "lean_jobs": 1,
+    "rust_jobs": 1,
+    "rust_test_threads": 1,
+    "per_stream_max_bytes": 1048576,
+    "aggregate_stream_max_bytes": 2097152
+  },
+  "commands": {
+    "working_directory": "repository root with target/tl214-m0-run<1|2>",
+    "resource_runner_argv": [
+      "systemd-run",
+      "--user",
+      "--scope",
+      "--quiet",
+      "-p",
+      "MemoryHigh=3G",
+      "-p",
+      "MemoryMax=4G",
+      "-p",
+      "MemorySwapMax=512M"
+    ],
+    "positive_compile_argv": [
+      "/usr/bin/time",
+      "-v",
+      "<pinned-lean>",
+      "-j1",
+      "-o",
+      "target/tl214-m0-run<1|2>/AxeyumNestedInductiveComputation.olean",
+      "docs/plan/fixtures/lean-v4.30-nested-inductive-computation.lean"
+    ],
+    "negative_compile_argv": [
+      "/usr/bin/time",
+      "-v",
+      "<pinned-lean>",
+      "-j1",
+      "docs/plan/fixtures/lean-v4.30-nested-inductive-negative.lean"
+    ],
+    "lean4export_argv_template": [
+      "/usr/bin/time",
+      "-v",
+      "env",
+      "PATH=<pinned-lean-bin>:$PATH",
+      "LEAN_PATH=<run-directory>",
+      "<pinned-lean4export>",
+      "AxeyumNestedInductiveComputation",
+      "--",
+      "<selected-root>"
+    ]
+  },
+  "semantic_contract": {
+    "discovery_head": "an already admitted inductive constant applied to at least its full parameter prefix",
+    "discovery_occurrence": "at least one container parameter structurally contains an original or queued auxiliary family",
+    "local_variable_rule": "every nested container parameter has zero loose bound variables",
+    "deduplication": "structural equality after replacing reopened outer parameters",
+    "container_copy": "copy every family and constructor in the existing container mutual group",
+    "fixed_point": "queue copied constructors and repeat discovery until no nested applications remain",
+    "expanded_check": "one existing TL2.11-TL2.13 atomic mutual-group admission",
+    "restoration": "replace temporary auxiliary families, constructors, and recursor references in every published type and rule",
+    "publication": "original families and constructors, main recursors, and deterministic first-family .rec_N auxiliary recursors only",
+    "wire_authority": "derive numNested and all recursor contracts structurally before exact exporter comparison",
+    "well_founded_boundary": "pre-elaborated WellFounded.fix and Acc.rec terms are a passing core control; source recursion remains TL4.10"
+  },
+  "positive_source": {
+    "path": "docs/plan/fixtures/lean-v4.30-nested-inductive-computation.lean",
+    "sha256": "c5cadeaf11302d5ca9b5a60b2a3b72998ad994e7eb176ddc5de40ebfc05c475d",
+    "bytes": 2917,
+    "lines": 98,
+    "module": "AxeyumNestedInductiveComputation",
+    "compile_runs": 2,
+    "compile_exit_statuses": [0, 0],
+    "compile_elapsed_ms": [290, 240],
+    "compile_max_rss_kib": [462832, 462920],
+    "olean_sha256": "d7d03cb863626f1ddc2a80b0dee3ae19fbc001dc2fb4ac60f6b9e27c7b7f53c2",
+    "roots": [
+      {
+        "id": "auxiliary-recursion-computation",
+        "selected_root": "AxeyumNestedInductiveComputation.roseAuxiliaryRecursorComputes",
+        "consumer": "AxeyumNestedInductiveComputation.roseSize",
+        "transition": "Rose.rec -> Rose.rec_1 -> Rose.rec -> Rose.rec_1",
+        "expected_normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))"
+      },
+      {
+        "id": "indexed-container-computation",
+        "selected_root": "AxeyumNestedInductiveComputation.indexedAuxiliaryRecursorComputes",
+        "consumer": "AxeyumNestedInductiveComputation.indexedRoseSize",
+        "transition": "IndexedRose.rec -> IndexedRose.rec_1 -> IndexedRose.rec -> IndexedRose.rec_1",
+        "expected_normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))"
+      },
+      {
+        "id": "repeated-container-reuse-computation",
+        "selected_root": "AxeyumNestedInductiveComputation.repeatedContainerReusesAuxiliaryRecursor",
+        "consumer": "AxeyumNestedInductiveComputation.repeatRoseSize",
+        "transition": "RepeatRose.rec -> one reused RepeatRose.rec_1 -> RepeatRose.rec on both heads",
+        "expected_normal_form": "MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ (MiniNat.succ MiniNat.zero))))"
+      }
+    ]
+  },
+  "negative_source": {
+    "path": "docs/plan/fixtures/lean-v4.30-nested-inductive-negative.lean",
+    "sha256": "aedb42cf5d4b8eccb24252ffeaab33ce10cdd5a21bf1ad36290e1ab87387e398",
+    "bytes": 260,
+    "lines": 11,
+    "compile_runs": 2,
+    "compile_exit_statuses": [1, 1],
+    "compile_elapsed_ms": [150, 150],
+    "compile_max_rss_kib": [445964, 445780],
+    "diagnostic_line": 8,
+    "diagnostic": "(kernel) invalid nested inductive datatype 'AxeyumNestedInductiveNegative.Box', nested inductive datatypes parameters cannot contain local variables."
+  },
+  "streams": {
+    "auxiliary-recursion-computation": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-nested-aux-computation.ndjson",
+      "selected_root": "AxeyumNestedInductiveComputation.roseAuxiliaryRecursorComputes",
+      "sha256": "36fb9c6f85a99a7d6d1f6329a2cfe5265b148f0138e979d6d391d9e8879e07de",
+      "bytes": 36706,
+      "records": 642,
+      "export_runs": 2,
+      "byte_identical": true,
+      "elapsed_ms": [1110, 320],
+      "max_rss_kib": [668176, 672492],
+      "inventory": {
+        "format": "3.1.0",
+        "lean": "4.30.0",
+        "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "names": 122,
+        "levels": 8,
+        "expressions": 494,
+        "declaration_records": 17,
+        "blockers": ["expr-projection", "inductive-nested"],
+        "family_order": ["AxeyumNestedInductiveComputation.Rose"],
+        "families": [
+          {
+            "name": "AxeyumNestedInductiveComputation.Rose",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_nested": 1,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": ["AxeyumNestedInductiveComputation.Rose.node"]
+          }
+        ],
+        "wire_recursor_order": [
+          "AxeyumNestedInductiveComputation.Rose.rec_1",
+          "AxeyumNestedInductiveComputation.Rose.rec"
+        ],
+        "recursors": [
+          {
+            "name": "AxeyumNestedInductiveComputation.Rose.rec_1",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": [
+              "AxeyumNestedInductiveComputation.NestList.nil",
+              "AxeyumNestedInductiveComputation.NestList.cons"
+            ],
+            "rule_nfields": [0, 2]
+          },
+          {
+            "name": "AxeyumNestedInductiveComputation.Rose.rec",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": ["AxeyumNestedInductiveComputation.Rose.node"],
+            "rule_nfields": [2]
+          }
+        ]
+      }
+    },
+    "indexed-container-computation": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-nested-indexed-computation.ndjson",
+      "selected_root": "AxeyumNestedInductiveComputation.indexedAuxiliaryRecursorComputes",
+      "sha256": "a14ca423410c4f0a86c2a2cea193e5a76bd91428e348402b3dd32e1603481429",
+      "bytes": 40119,
+      "records": 714,
+      "export_runs": 2,
+      "byte_identical": true,
+      "elapsed_ms": [330, 310],
+      "max_rss_kib": [672208, 674308],
+      "inventory": {
+        "format": "3.1.0",
+        "lean": "4.30.0",
+        "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "names": 134,
+        "levels": 8,
+        "expressions": 554,
+        "declaration_records": 17,
+        "blockers": ["expr-projection", "inductive-nested", "inductive-recursive-indexed"],
+        "family_order": ["AxeyumNestedInductiveComputation.IndexedRose"],
+        "families": [
+          {
+            "name": "AxeyumNestedInductiveComputation.IndexedRose",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_nested": 1,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": ["AxeyumNestedInductiveComputation.IndexedRose.node"]
+          }
+        ],
+        "wire_recursor_order": [
+          "AxeyumNestedInductiveComputation.IndexedRose.rec_1",
+          "AxeyumNestedInductiveComputation.IndexedRose.rec"
+        ],
+        "recursors": [
+          {
+            "name": "AxeyumNestedInductiveComputation.IndexedRose.rec_1",
+            "num_params": 1,
+            "num_indices": 1,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": [
+              "AxeyumNestedInductiveComputation.NestVec.nil",
+              "AxeyumNestedInductiveComputation.NestVec.cons"
+            ],
+            "rule_nfields": [0, 3]
+          },
+          {
+            "name": "AxeyumNestedInductiveComputation.IndexedRose.rec",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": ["AxeyumNestedInductiveComputation.IndexedRose.node"],
+            "rule_nfields": [3]
+          }
+        ]
+      }
+    },
+    "repeated-container-reuse-computation": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-nested-repeated-container-computation.ndjson",
+      "selected_root": "AxeyumNestedInductiveComputation.repeatedContainerReusesAuxiliaryRecursor",
+      "sha256": "af369edb2d9e0346a5457ba4c9cde6f3030ca08002dc931c5fb26709e0f74344",
+      "bytes": 37771,
+      "records": 666,
+      "export_runs": 2,
+      "byte_identical": true,
+      "elapsed_ms": [290, 330],
+      "max_rss_kib": [674520, 673784],
+      "inventory": {
+        "format": "3.1.0",
+        "lean": "4.30.0",
+        "lean_githash": "d024af099ca4bf2c86f649261ebf59565dc8c622",
+        "names": 122,
+        "levels": 8,
+        "expressions": 518,
+        "declaration_records": 17,
+        "blockers": ["expr-projection", "inductive-nested"],
+        "family_order": ["AxeyumNestedInductiveComputation.RepeatRose"],
+        "families": [
+          {
+            "name": "AxeyumNestedInductiveComputation.RepeatRose",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_nested": 1,
+            "is_rec": true,
+            "is_reflexive": false,
+            "constructors": ["AxeyumNestedInductiveComputation.RepeatRose.node"]
+          }
+        ],
+        "wire_recursor_order": [
+          "AxeyumNestedInductiveComputation.RepeatRose.rec",
+          "AxeyumNestedInductiveComputation.RepeatRose.rec_1"
+        ],
+        "recursors": [
+          {
+            "name": "AxeyumNestedInductiveComputation.RepeatRose.rec",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": ["AxeyumNestedInductiveComputation.RepeatRose.node"],
+            "rule_nfields": [3]
+          },
+          {
+            "name": "AxeyumNestedInductiveComputation.RepeatRose.rec_1",
+            "num_params": 1,
+            "num_indices": 0,
+            "num_motives": 2,
+            "num_minors": 3,
+            "rule_constructors": [
+              "AxeyumNestedInductiveComputation.NestList.nil",
+              "AxeyumNestedInductiveComputation.NestList.cons"
+            ],
+            "rule_nfields": [0, 2]
+          }
+        ]
+      }
+    }
+  },
+  "case_ids": [
+    "one-family-list-container",
+    "repeated-identical-container",
+    "distinct-container-parameters",
+    "container-mutual-group",
+    "outer-mutual-self-cross-nested",
+    "zero-one-two-outer-parameters",
+    "zero-one-two-container-indices",
+    "higher-order-nested-result",
+    "one-level-expansion",
+    "two-level-expansion",
+    "type-result",
+    "prop-result-restricted",
+    "empty-container-family",
+    "mixed-recursive-owner",
+    "incomplete-parameter-prefix",
+    "loose-container-parameter",
+    "negative-container-parameter-occurrence",
+    "fresh-name-collision",
+    "late-restoration-failure"
+  ],
+  "mutation_ids": [
+    "container-family-order",
+    "specialized-parameter",
+    "auxiliary-reuse-duplicate",
+    "fresh-name-index",
+    "copied-constructor-owner",
+    "copied-constructor-index",
+    "copied-constructor-type",
+    "motive-order",
+    "minor-order",
+    "recursive-target",
+    "restored-recursor-reference",
+    "restored-rule-constructor",
+    "rule-nfields",
+    "num-nested",
+    "recursor-count",
+    "recursor-order",
+    "recursor-name",
+    "index-count",
+    "universe-parameters",
+    "unsafe-k-flags",
+    "late-publication"
+  ],
+  "generated_grammar": {
+    "seed_policy": "fixed and committed at M3 before the first generated run",
+    "minimum_unique_cases": 640,
+    "outer_group_sizes": "1..3",
+    "container_group_sizes": "1..3",
+    "outer_parameters": "0..2 including dependent pairs",
+    "container_parameters": "1..3",
+    "container_indices": "0..2",
+    "constructors_per_family": "0..3",
+    "fields_per_constructor": "0..5",
+    "nested_applications": "1..3 repeated or structurally distinct",
+    "nested_depth": "1..2",
+    "recursive_targets": ["self", "outer-sibling", "container-auxiliary"],
+    "result_sorts": ["Type", "Prop-restricted"],
+    "classifications": ["accepted", "typed-reject"],
+    "required_repetitions": 2,
+    "summary_identity": "byte-identical"
+  },
+  "mandatory_controls": {
+    "mutual_manifest": "docs/plan/lean-mutual-inductive-groups-v1.json",
+    "mutual_generated_cases": 720,
+    "recursive_manifest": "docs/plan/lean-recursive-induction-hypotheses-v1.json",
+    "recursive_generated_cases": 768,
+    "strict_positivity_manifest": "docs/plan/lean-strict-positivity-v1.json",
+    "strict_positivity_generated_cases": 840,
+    "official_construct_matrix": "docs/plan/lean-official-construct-matrix-v1.json",
+    "well_founded_admitted_declarations": 35,
+    "well_founded_axioms": 0,
+    "transactional_import": "CompletedImport only after full-stream success",
+    "declaration_identity_version": "axeyum-lean-declaration-identity-v1"
+  },
+  "stop_condition_ids": [
+    "lean-kernel-boundary-disagreement",
+    "nested-discovery-rule-disagreement",
+    "container-group-copy-incomplete",
+    "expanded-group-needs-second-checker",
+    "restoration-trusts-exporter-metadata",
+    "temporary-auxiliary-leaks",
+    "restored-surface-does-not-infer",
+    "identity-v1-must-change",
+    "official-stream-not-reproducible",
+    "auxiliary-recursor-not-computed",
+    "failure-publishes-environment-or-import",
+    "generated-summary-invalid",
+    "retained-control-drift",
+    "resource-cap-exceeded-or-killed",
+    "unrelated-dirty-overlap"
+  ],
+  "claim_limits": {
+    "positive_official_source": "accepted-twice",
+    "negative_official_source": "diagnostic-matched-twice",
+    "olean_reproducibility": "byte-identical-twice",
+    "official_export": "byte-identical-twice-per-root",
+    "official_wire_inventory": "frozen",
+    "axeyum_import_new_streams": "not-run",
+    "axeyum_admission_new_streams": "not-run",
+    "axeyum_computation_new_streams": "not-run",
+    "nested_kernel_support": "not-yet-implemented",
+    "well_founded_source_elaboration": "not-implemented",
+    "full_lean_kernel_parity": "not-claimed",
+    "lean_ecosystem_parity": "not-claimed"
+  },
+  "next": "M1: correct nested recursor-count diagnostic preflight without admission or product credit"
+}

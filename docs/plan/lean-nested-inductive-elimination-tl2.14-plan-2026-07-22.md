@@ -1,8 +1,11 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: preregistered; P0 complete; M0 source/wire freeze next
+Status: paused cleanly after M0; M1 diagnostic preflight next
 
 Date: 2026-07-22
+
+Resume this stream from the single authoritative
+[TL2.14 handoff](lean-nested-inductive-elimination-resume.md).
 
 Decision gate:
 [proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
@@ -242,6 +245,10 @@ Status: **complete** in this preregistration commit.
 - commit, push, and verify remote equality before M0 retains new evidence.
 
 ### M0 — source/wire and no-product freeze
+
+Status: **complete**. See the
+[M0 result](lean-nested-inductive-elimination-m0-2026-07-22.md) and
+[machine registration](lean-nested-inductive-elimination-v1.json).
 
 - add the exact explicit computation/negative sources;
 - compile/export every retained root twice with pinned tools;

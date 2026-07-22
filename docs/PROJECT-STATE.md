@@ -220,6 +220,10 @@ Again, there are distinct targets:
   recursion remains native-elaborator task TL4.10. The already elaborated
   well-founded root imports as 35 declarations with zero axioms, while the
   nested root still has a typed non-admission boundary and no semantic credit.
+  TL2.14 M0 now freezes three explicit main/auxiliary recursor computations,
+  one exact negative kernel diagnostic, and 114,596 bytes of twice-identical
+  official streams without product observation; M1 corrects only the current
+  nested diagnostic preflight next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged
