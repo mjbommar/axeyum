@@ -19,6 +19,57 @@ use crate::expr::ExprNode;
 use crate::tc::KernelError;
 use crate::{BinderInfo, Kernel, Lit};
 
+#[test]
+fn private_inductive_group_index_preserves_order_and_rolls_back_suffixes() {
+    let mut kernel = Kernel::new();
+    let root = kernel.anon();
+    let first = kernel.name_str(root, "GroupIndexFirst");
+    let second = kernel.name_str(root, "GroupIndexSecond");
+    let temporary = kernel.name_str(root, "GroupIndexTemporary");
+    let ty = kernel.sort_zero();
+    let mut environment = crate::env::Environment::new();
+    for name in [first, second] {
+        environment.insert_unchecked(Declaration::Axiom {
+            name,
+            uparams: vec![],
+            ty,
+        });
+    }
+    environment.register_inductive_group(&[second, first]);
+    assert_eq!(
+        environment.inductive_group(first),
+        Some(&[second, first][..])
+    );
+    assert_eq!(
+        environment.inductive_group(second),
+        Some(&[second, first][..])
+    );
+
+    let checkpoint = environment.checkpoint();
+    environment.insert_unchecked(Declaration::Axiom {
+        name: temporary,
+        uparams: vec![],
+        ty,
+    });
+    environment.register_inductive_group(&[temporary]);
+    assert_eq!(
+        environment.inductive_group(temporary),
+        Some(&[temporary][..])
+    );
+    environment.rollback_unchecked(checkpoint);
+
+    assert!(!environment.contains(temporary));
+    assert_eq!(environment.inductive_group(temporary), None);
+    assert_eq!(
+        environment.inductive_group(first),
+        Some(&[second, first][..])
+    );
+    assert_eq!(
+        environment.inductive_group(second),
+        Some(&[second, first][..])
+    );
+}
+
 /// Build the polymorphic identity declaration
 /// `id : Π(α:Sort u), α → α := λ(α:Sort u)(x:α), x`, returning its name and
 /// uparam `u`.

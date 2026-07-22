@@ -98,14 +98,14 @@ pub struct RecRule {
 ///
 /// The inductive layer (ADR-0036 and ADR-0353) adds
 /// [`Declaration::Inductive`], [`Declaration::Constructor`], and
-/// [`Declaration::Recursor`], supporting parametric/indexed single-family
-/// inductives and recursive fields whose WHNF is a possibly empty `Pi`
-/// telescope ending in the exact family application. This includes enums,
-/// structures, `Nat`/`List`/`Prod`/`Sum`, `Eq`, and `Vector`/`Acc`-shaped
-/// recursion. TL2.13 M1 represents and preflights ordered mutual groups, but
-/// multi-family declarations are not yet admitted into these declaration
-/// variants. Occurrences nested under foreign heads remain explicitly rejected
-/// rather than guessed.
+/// [`Declaration::Recursor`], supporting parametric/indexed ordered mutual
+/// groups and recursive fields whose WHNF is a possibly empty `Pi` telescope
+/// ending in an exact group-family application. This includes enums,
+/// structures, `Nat`/`List`/`Prod`/`Sum`, `Eq`, `Vector`/`Acc`-shaped recursion,
+/// and TL2.14's restored surface for structurally recognized nested inductive
+/// containers. Foreign/reflexive occurrences outside that rule remain
+/// explicitly rejected rather than guessed. Private group reconstruction
+/// metadata lives on [`Environment`], not in declaration identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Declaration {
     /// `axiom name : ty` — an asserted constant with no definitional value.
@@ -216,9 +216,11 @@ pub enum Declaration {
         ty: ExprId,
         /// The ι-reduction rules, one per constructor.
         rec_rules: Vec<RecRule>,
-        /// The number of motives (always `1` in this non-mutual slice).
+        /// The number of motives (one per family in the checked expanded
+        /// group, including private nested auxiliaries before restoration).
         num_motives: u16,
-        /// The number of minor premises (one per constructor).
+        /// The number of minor premises (one per constructor across the checked
+        /// expanded group).
         num_minors: u16,
         /// The number of parameters (fixed across the family).
         num_params: u16,
@@ -359,6 +361,7 @@ impl Declaration {
 pub struct Environment {
     declars: BTreeMap<NameId, Declaration>,
     insertion_log: Vec<NameId>,
+    inductive_groups: BTreeMap<NameId, Vec<NameId>>,
 }
 
 impl Environment {
@@ -419,6 +422,25 @@ impl Environment {
         }
     }
 
+    /// Record the checked ordered group containing each `families` member.
+    ///
+    /// This private index is reconstruction metadata for kernel transformations
+    /// such as nested-inductive elimination. It is not iterated, serialized, or
+    /// included in declaration identity; the public declaration surface remains
+    /// unchanged. Every family must already have been inserted transactionally.
+    pub(crate) fn register_inductive_group(&mut self, families: &[NameId]) {
+        let ordered = families.to_vec();
+        for &family in families {
+            debug_assert!(self.declars.contains_key(&family));
+            self.inductive_groups.insert(family, ordered.clone());
+        }
+    }
+
+    /// The checked ordered inductive group containing `family`.
+    pub(crate) fn inductive_group(&self, family: NameId) -> Option<&[NameId]> {
+        self.inductive_groups.get(&family).map(Vec::as_slice)
+    }
+
     /// Return an opaque checkpoint for a later all-or-nothing admission.
     pub(crate) fn checkpoint(&self) -> usize {
         self.insertion_log.len()
@@ -428,6 +450,7 @@ impl Environment {
     pub(crate) fn rollback_unchecked(&mut self, checkpoint: usize) {
         let inserted: Vec<_> = self.insertion_log.drain(checkpoint..).collect();
         for name in inserted.into_iter().rev() {
+            self.inductive_groups.remove(&name);
             self.declars.remove(&name);
         }
     }

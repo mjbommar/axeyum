@@ -331,7 +331,8 @@ fn positivity_preflight_precedes_provisional_insertion_and_type_checking() {
 }
 
 /// A family nested below a foreign type constructor is not a valid raw kernel
-/// recursive application. Native nested-inductive lowering remains separate.
+/// recursive application. TL2.14 nested-inductive elimination is exercised by
+/// its dedicated integration matrix rather than this direct-recursion control.
 #[test]
 fn reject_family_nested_under_foreign_head() {
     let mut k = Kernel::new();

@@ -41,9 +41,14 @@
 //! motive and recursor of its terminal family. Singleton admission is a wrapper
 //! over the same atomic implementation.
 //!
-//! Still deferred (and rejected explicitly, never guessed): nested occurrences
-//! under a foreign type constructor, malformed family applications, and
-//! frontend lowering for well-founded/nested definitions.
+//! TL2.14 adds pinned-Lean nested-inductive elimination: a constructor
+//! occurrence under the parameter prefix of an already checked inductive
+//! container expands to a private complete mutual group, passes this same
+//! checker, and restores only the source families/constructors plus deterministic
+//! `.rec_N` auxiliary recursors. Incomplete/loose/malformed container
+//! applications reject transactionally. Still deferred (and rejected
+//! explicitly, never guessed): reflexive occurrences outside that structural
+//! rule and frontend elaboration of nested or well-founded source definitions.
 //!
 //! `Prop` elimination follows Lean's syntactic-subsingleton rule. An inductive
 //! whose result universe is provably nonzero may eliminate into an arbitrary
@@ -81,13 +86,18 @@
 //! parameter) would wrongly accept proofs, so it is verified rather than
 //! trusted.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::env::{Declaration, RecRule};
 use crate::expr::{ExprId, ExprNode};
 use crate::name::NameId;
 use crate::tc::{KernelError, LocalContext, LocalDecl};
 use crate::{BinderInfo, Kernel};
+
+/// Hard deterministic bound for one nested-expansion transaction. The
+/// generated M3 population remains far below this ceiling; exceeding it is a
+/// typed rejection, never permission for unbounded queue growth.
+const MAX_NESTED_AUXILIARY_FAMILIES: usize = 256;
 
 /// One family in an explicitly ordered mutual-inductive group.
 ///
@@ -136,6 +146,41 @@ struct CheckedInductiveGroup {
     families: Vec<CheckedFamily>,
 }
 
+/// One temporary auxiliary family and its exact original container surface.
+///
+/// `nested_application` is the structurally keyed specialized family
+/// application `F Ds`, expressed in the canonical outer-parameter locals.
+/// Constructor pairs preserve the checked source order for restoration.
+#[derive(Clone)]
+struct NestedAuxiliaryFamily {
+    nested_application: ExprId,
+    original_family: NameId,
+    auxiliary_family: NameId,
+    constructors: Vec<(NameId, NameId)>,
+}
+
+/// Deterministic result of the private nested-inductive expansion prepass.
+struct NestedExpansion {
+    original_family_count: usize,
+    outer_params: Vec<LocalDecl>,
+    families: Vec<InductiveFamilySpec>,
+    auxiliaries: Vec<NestedAuxiliaryFamily>,
+    next_aux_index: u64,
+}
+
+struct NestedCandidate {
+    container: NameId,
+    levels: Vec<crate::LevelId>,
+    args: Vec<ExprId>,
+    num_params: usize,
+}
+
+impl NestedExpansion {
+    fn has_nested(&self) -> bool {
+        !self.auxiliaries.is_empty()
+    }
+}
+
 impl Kernel {
     /// Type-check and admit an inductive type together with its constructors —
     /// the **trusted inductive gate** (ADR-0036, slice 7).
@@ -170,12 +215,17 @@ impl Kernel {
     ///
     /// Returns [`KernelError::DeclarationExists`] for a duplicate name,
     /// [`KernelError::InductiveTypeNotASort`] if `ty`'s param+index-stripped tail
-    /// is not a `Sort`, [`KernelError::NonPositiveInductiveOccurrence`] for a family occurrence
-    /// in a function domain, [`KernelError::InvalidInductiveOccurrence`] for a
-    /// containing term that is not a valid family application,
-    /// [`KernelError::ReflexiveOrNestedNotSupported`] for an unsupported nested
-    /// occurrence, [`KernelError::RecursiveInductiveNotSupported`] for an
-    /// ill-shaped recursive self-reference, [`KernelError::ConstructorResultMismatch`] /
+    /// is not a `Sort`, [`KernelError::NonPositiveInductiveOccurrence`] for a
+    /// family occurrence in a function domain,
+    /// [`KernelError::InvalidInductiveOccurrence`] for a containing term that
+    /// is not a valid family application,
+    /// [`KernelError::ReflexiveOrNestedNotSupported`] for a reflexive occurrence
+    /// outside the supported nested-container rule,
+    /// [`KernelError::NestedInductiveIncompleteApplication`],
+    /// [`KernelError::NestedInductiveLooseParameter`], or
+    /// [`KernelError::NestedInductiveMalformedContainer`] for a rejected nested
+    /// prepass, [`KernelError::RecursiveInductiveNotSupported`] for an ill-shaped
+    /// recursive self-reference, [`KernelError::ConstructorResultMismatch`] /
     /// [`KernelError::MalformedConstructorType`] for a wrong/ill-formed
     /// constructor result or parameter prefix, or any [`KernelError`] surfaced
     /// while inferring a field type or the generated recursor type.
@@ -227,7 +277,7 @@ impl Kernel {
             return Err(KernelError::EmptyInductiveGroup);
         }
         self.with_inductive_transaction(|kernel| {
-            kernel.add_inductive_group(uparams, num_params, families)
+            kernel.add_nested_inductive_group(uparams, num_params, families)
         })
     }
 
@@ -250,6 +300,968 @@ impl Kernel {
                 Err(error)
             }
         }
+    }
+
+    /// Expand nested container applications, check the temporary complete
+    /// group through the ordinary atomic worker, then restore and publish only
+    /// the source surface. The no-nested path delegates unchanged.
+    fn add_nested_inductive_group(
+        &mut self,
+        uparams: &[NameId],
+        num_params: usize,
+        families: &[InductiveFamilySpec],
+    ) -> Result<(), KernelError> {
+        let expansion = self.expand_nested_inductive_group(uparams, num_params, families)?;
+        if !expansion.has_nested() {
+            return self.add_inductive_group(uparams, num_params, families);
+        }
+
+        let temporary_checkpoint = self.env.checkpoint();
+        self.add_inductive_group(uparams, num_params, &expansion.families)?;
+        self.restore_nested_inductive_group(families, &expansion, temporary_checkpoint)
+    }
+
+    /// Replace the checked temporary expanded group with Lean's restored
+    /// public surface. All information needed from the temporary environment
+    /// is cloned before its insertion checkpoint is rolled back. Publication
+    /// then proceeds in dependency order and remains covered by the outer
+    /// inductive transaction.
+    #[allow(clippy::too_many_lines)]
+    fn restore_nested_inductive_group(
+        &mut self,
+        source_families: &[InductiveFamilySpec],
+        expansion: &NestedExpansion,
+        temporary_checkpoint: usize,
+    ) -> Result<(), KernelError> {
+        let first_source = source_families[0].name;
+        let main_rec_name = self.name_str(first_source, "rec");
+        let mut recursor_name_map = Vec::with_capacity(expansion.auxiliaries.len());
+        let mut public_recursors = BTreeSet::new();
+        for (index, auxiliary) in expansion.auxiliaries.iter().enumerate() {
+            let temporary_rec = self.name_str(auxiliary.auxiliary_family, "rec");
+            let public_rec = self.name_append_after(
+                main_rec_name,
+                u64::try_from(index + 1).expect("bounded auxiliary index fits u64"),
+            );
+            if self.env.contains(public_rec) || !public_recursors.insert(public_rec) {
+                return Err(KernelError::DeclarationExists { name: public_rec });
+            }
+            recursor_name_map.push((temporary_rec, public_rec));
+        }
+
+        let mut source_inductives = Vec::with_capacity(expansion.original_family_count);
+        let mut source_constructors = Vec::new();
+        let mut temporary_recursors =
+            Vec::with_capacity(expansion.original_family_count + expansion.auxiliaries.len());
+        for source in source_families {
+            let Some(inductive) = self.env.get(source.name).cloned() else {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: source.name,
+                });
+            };
+            let Declaration::Inductive { ctor_names, .. } = &inductive else {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: source.name,
+                });
+            };
+            for &constructor in ctor_names {
+                let Some(declaration @ Declaration::Constructor { .. }) =
+                    self.env.get(constructor).cloned()
+                else {
+                    return Err(KernelError::NestedInductiveMalformedContainer {
+                        container: source.name,
+                    });
+                };
+                source_constructors.push(declaration);
+            }
+            let recursor = self.name_str(source.name, "rec");
+            let Some(declaration @ Declaration::Recursor { .. }) = self.env.get(recursor).cloned()
+            else {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: source.name,
+                });
+            };
+            source_inductives.push(inductive);
+            temporary_recursors.push(declaration);
+        }
+        for &(temporary_rec, _) in &recursor_name_map {
+            let Some(declaration @ Declaration::Recursor { .. }) =
+                self.env.get(temporary_rec).cloned()
+            else {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: temporary_rec,
+                });
+            };
+            temporary_recursors.push(declaration);
+        }
+
+        self.env.rollback_unchecked(temporary_checkpoint);
+        self.infer_closed_cache.clear();
+        self.whnf_cache.clear();
+
+        let temporary_names = self.nested_temporary_names(expansion);
+        let source_constructor_types = source_families
+            .iter()
+            .flat_map(|family| family.constructors.iter().copied())
+            .collect::<BTreeMap<_, _>>();
+
+        for inductive in source_inductives {
+            let Declaration::Inductive { name, ty, .. } = &inductive else {
+                unreachable!("temporary source inductive was checked above");
+            };
+            self.ensure_nested_published_type(*name, *ty, &temporary_names)?;
+            self.env.insert_unchecked(inductive);
+        }
+
+        for constructor in source_constructors {
+            let Declaration::Constructor {
+                name,
+                uparams,
+                ty,
+                inductive,
+                idx,
+                num_fields,
+            } = constructor
+            else {
+                unreachable!("temporary source constructor was checked above");
+            };
+            let restored_ty = self.restore_nested_expression(ty, expansion, &recursor_name_map)?;
+            self.ensure_nested_published_type(name, restored_ty, &temporary_names)?;
+            let Some(&source_ty) = source_constructor_types.get(&name) else {
+                return Err(KernelError::NestedInductiveRestorationMismatch { name });
+            };
+            if !self.def_eq(restored_ty, source_ty) {
+                return Err(KernelError::NestedInductiveRestorationMismatch { name });
+            }
+            self.env.insert_unchecked(Declaration::Constructor {
+                name,
+                uparams,
+                ty: restored_ty,
+                inductive,
+                idx,
+                num_fields,
+            });
+        }
+
+        let mut restored_recursors = Vec::with_capacity(temporary_recursors.len());
+        for recursor in temporary_recursors {
+            let Declaration::Recursor {
+                name,
+                uparams,
+                ty,
+                rec_rules,
+                num_motives,
+                num_minors,
+                num_params,
+                num_indices,
+            } = recursor
+            else {
+                unreachable!("temporary recursor was checked above");
+            };
+            let public_name = recursor_name_map
+                .iter()
+                .find_map(|&(temporary, public)| (temporary == name).then_some(public))
+                .unwrap_or(name);
+            let restored_ty = self.restore_nested_expression(ty, expansion, &recursor_name_map)?;
+            self.ensure_nested_published_type(public_name, restored_ty, &temporary_names)?;
+            let mut restored_rules = Vec::with_capacity(rec_rules.len());
+            for rule in rec_rules {
+                let ctor_name = if public_name == name {
+                    rule.ctor_name
+                } else {
+                    Self::restore_nested_constructor_name(rule.ctor_name, expansion)?
+                };
+                let value =
+                    self.restore_nested_expression(rule.value, expansion, &recursor_name_map)?;
+                self.reject_nested_temporary_names(value, &temporary_names)?;
+                restored_rules.push(RecRule {
+                    ctor_name,
+                    num_fields: rule.num_fields,
+                    value,
+                });
+            }
+            restored_recursors.push(Declaration::Recursor {
+                name: public_name,
+                uparams,
+                ty: restored_ty,
+                rec_rules: restored_rules,
+                num_motives,
+                num_minors,
+                num_params,
+                num_indices,
+            });
+        }
+
+        // Recursor types contain only the restored family/constructor surface,
+        // so each can be checked before any recursor constant is visible.
+        for recursor in &restored_recursors {
+            self.ensure_nested_published_type(recursor.name(), recursor.ty(), &temporary_names)?;
+        }
+        // Rule bodies may call any main or auxiliary recursor. Stage the full
+        // checked name set before inferring the closed right-hand sides.
+        for recursor in &restored_recursors {
+            self.env.insert_unchecked(recursor.clone());
+        }
+        self.check_group_recursor_rules(&restored_recursors)?;
+
+        let family_names = source_families
+            .iter()
+            .map(|family| family.name)
+            .collect::<Vec<_>>();
+        self.env.register_inductive_group(&family_names);
+        Ok(())
+    }
+
+    fn name_append_after(&mut self, name: NameId, index: u64) -> NameId {
+        match self.name_node(name).clone() {
+            crate::name::NameNode::Str(parent, component) => {
+                self.name_str(parent, format!("{component}_{index}"))
+            }
+            _ => self.name_num(name, index),
+        }
+    }
+
+    /// Restore one temporary constructor/recursor expression. Leading outer
+    /// parameters are opened with the canonical expansion locals so the stored
+    /// specialized container applications can be reused structurally, then
+    /// the exact binder kind and metadata are rebuilt.
+    fn restore_nested_expression(
+        &mut self,
+        expression: ExprId,
+        expansion: &NestedExpansion,
+        recursor_name_map: &[(NameId, NameId)],
+    ) -> Result<ExprId, KernelError> {
+        let mut cursor = expression;
+        let binder_is_pi = matches!(self.expr_node(cursor), ExprNode::Pi(..));
+        let mut binders = Vec::with_capacity(expansion.outer_params.len());
+        for canonical in &expansion.outer_params {
+            let (name, ty, body, info) = match self.expr_node(cursor).clone() {
+                ExprNode::Pi(name, ty, body, info) if binder_is_pi => (name, ty, body, info),
+                ExprNode::Lam(name, ty, body, info) if !binder_is_pi => (name, ty, body, info),
+                _ => {
+                    return Err(KernelError::NestedInductiveRestorationMismatch {
+                        name: expansion.families[0].name,
+                    });
+                }
+            };
+            let binder = LocalDecl {
+                fvar: canonical.fvar,
+                name,
+                ty,
+                info,
+            };
+            binders.push(binder);
+            let value = self.fvar(canonical.fvar);
+            cursor = self.instantiate(body, &[value]);
+        }
+        let restored = self.restore_nested_expression_body(cursor, expansion, recursor_name_map)?;
+        if binders.is_empty() {
+            Ok(restored)
+        } else if binder_is_pi {
+            Ok(self.abstr_pi_telescope(&binders, restored))
+        } else {
+            Ok(self.abstr_lambda_telescope(&binders, restored))
+        }
+    }
+
+    #[allow(clippy::too_many_lines)]
+    fn restore_nested_expression_body(
+        &mut self,
+        expression: ExprId,
+        expansion: &NestedExpansion,
+        recursor_name_map: &[(NameId, NameId)],
+    ) -> Result<ExprId, KernelError> {
+        if let ExprNode::Const(name, levels) = self.expr_node(expression).clone()
+            && let Some(public) = recursor_name_map
+                .iter()
+                .find_map(|&(temporary, public)| (temporary == name).then_some(public))
+        {
+            return Ok(self.const_(public, levels));
+        }
+
+        let (head, arguments) = self.unfold_apps(expression);
+        if let ExprNode::Const(name, _) = self.expr_node(head).clone() {
+            if let Some(auxiliary) = expansion
+                .auxiliaries
+                .iter()
+                .find(|auxiliary| auxiliary.auxiliary_family == name)
+                .cloned()
+            {
+                if arguments.len() < expansion.outer_params.len() {
+                    return Err(KernelError::NestedInductiveRestorationMismatch { name });
+                }
+                let mut restored = self.restore_nested_expression_body(
+                    auxiliary.nested_application,
+                    expansion,
+                    recursor_name_map,
+                )?;
+                for &argument in &arguments[expansion.outer_params.len()..] {
+                    let argument = self.restore_nested_expression_body(
+                        argument,
+                        expansion,
+                        recursor_name_map,
+                    )?;
+                    restored = self.app(restored, argument);
+                }
+                return Ok(restored);
+            }
+            if let Some((auxiliary, original_constructor)) =
+                expansion.auxiliaries.iter().find_map(|auxiliary| {
+                    auxiliary
+                        .constructors
+                        .iter()
+                        .find_map(|&(temporary, original)| {
+                            (temporary == name).then_some((auxiliary.clone(), original))
+                        })
+                })
+            {
+                if arguments.len() < expansion.outer_params.len() {
+                    return Err(KernelError::NestedInductiveRestorationMismatch { name });
+                }
+                let nested = self.restore_nested_expression_body(
+                    auxiliary.nested_application,
+                    expansion,
+                    recursor_name_map,
+                )?;
+                let (original_family, container_parameters) = self.unfold_apps(nested);
+                let ExprNode::Const(original_name, levels) =
+                    self.expr_node(original_family).clone()
+                else {
+                    return Err(KernelError::NestedInductiveRestorationMismatch { name });
+                };
+                if original_name != auxiliary.original_family {
+                    return Err(KernelError::NestedInductiveRestorationMismatch { name });
+                }
+                let mut restored = self.const_(original_constructor, levels);
+                restored = self.foldl_apps(restored, container_parameters);
+                for &argument in &arguments[expansion.outer_params.len()..] {
+                    let argument = self.restore_nested_expression_body(
+                        argument,
+                        expansion,
+                        recursor_name_map,
+                    )?;
+                    restored = self.app(restored, argument);
+                }
+                return Ok(restored);
+            }
+        }
+
+        Ok(match self.expr_node(expression).clone() {
+            ExprNode::Sort(_)
+            | ExprNode::Const(..)
+            | ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Lit(_) => expression,
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure =
+                    self.restore_nested_expression_body(structure, expansion, recursor_name_map)?;
+                self.proj(type_name, field_index, structure)
+            }
+            ExprNode::App(function, argument) => {
+                let function =
+                    self.restore_nested_expression_body(function, expansion, recursor_name_map)?;
+                let argument =
+                    self.restore_nested_expression_body(argument, expansion, recursor_name_map)?;
+                self.app(function, argument)
+            }
+            ExprNode::Lam(name, ty, body, info) => {
+                let ty = self.restore_nested_expression_body(ty, expansion, recursor_name_map)?;
+                let body =
+                    self.restore_nested_expression_body(body, expansion, recursor_name_map)?;
+                self.lam(name, ty, body, info)
+            }
+            ExprNode::Pi(name, ty, body, info) => {
+                let ty = self.restore_nested_expression_body(ty, expansion, recursor_name_map)?;
+                let body =
+                    self.restore_nested_expression_body(body, expansion, recursor_name_map)?;
+                self.pi(name, ty, body, info)
+            }
+            ExprNode::Let(name, ty, value, body) => {
+                let ty = self.restore_nested_expression_body(ty, expansion, recursor_name_map)?;
+                let value =
+                    self.restore_nested_expression_body(value, expansion, recursor_name_map)?;
+                let body =
+                    self.restore_nested_expression_body(body, expansion, recursor_name_map)?;
+                self.let_(name, ty, value, body)
+            }
+        })
+    }
+
+    fn restore_nested_constructor_name(
+        temporary_constructor: NameId,
+        expansion: &NestedExpansion,
+    ) -> Result<NameId, KernelError> {
+        expansion
+            .auxiliaries
+            .iter()
+            .flat_map(|auxiliary| auxiliary.constructors.iter())
+            .find_map(|&(temporary, original)| {
+                (temporary == temporary_constructor).then_some(original)
+            })
+            .ok_or(KernelError::NestedInductiveRestorationMismatch {
+                name: temporary_constructor,
+            })
+    }
+
+    fn nested_temporary_names(&mut self, expansion: &NestedExpansion) -> BTreeSet<NameId> {
+        let mut names = BTreeSet::new();
+        for auxiliary in &expansion.auxiliaries {
+            names.insert(auxiliary.auxiliary_family);
+            for &(constructor, _) in &auxiliary.constructors {
+                names.insert(constructor);
+            }
+            names.insert(self.name_str(auxiliary.auxiliary_family, "rec"));
+        }
+        names
+    }
+
+    fn ensure_nested_published_type(
+        &mut self,
+        name: NameId,
+        ty: ExprId,
+        temporary_names: &BTreeSet<NameId>,
+    ) -> Result<(), KernelError> {
+        self.reject_nested_temporary_names(ty, temporary_names)?;
+        let mut ctx = LocalContext::new();
+        let inferred = self.infer_core(ty, &mut ctx)?;
+        let inferred = self.whnf(inferred);
+        if !matches!(self.expr_node(inferred), ExprNode::Sort(_)) {
+            return Err(KernelError::DeclarationTypeNotASort { got: inferred });
+        }
+        if self.env.contains(name) {
+            return Err(KernelError::DeclarationExists { name });
+        }
+        Ok(())
+    }
+
+    fn reject_nested_temporary_names(
+        &self,
+        expression: ExprId,
+        temporary_names: &BTreeSet<NameId>,
+    ) -> Result<(), KernelError> {
+        if let Some(name) = self.find_nested_temporary_name(expression, temporary_names) {
+            return Err(KernelError::NestedInductiveRestorationLeak { name });
+        }
+        Ok(())
+    }
+
+    fn find_nested_temporary_name(
+        &self,
+        expression: ExprId,
+        temporary_names: &BTreeSet<NameId>,
+    ) -> Option<NameId> {
+        match self.expr_node(expression).clone() {
+            ExprNode::Const(name, _) => temporary_names.contains(&name).then_some(name),
+            ExprNode::Proj(type_name, _, structure) => temporary_names
+                .contains(&type_name)
+                .then_some(type_name)
+                .or_else(|| self.find_nested_temporary_name(structure, temporary_names)),
+            ExprNode::App(function, argument) => self
+                .find_nested_temporary_name(function, temporary_names)
+                .or_else(|| self.find_nested_temporary_name(argument, temporary_names)),
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => self
+                .find_nested_temporary_name(ty, temporary_names)
+                .or_else(|| self.find_nested_temporary_name(body, temporary_names)),
+            ExprNode::Let(_, ty, value, body) => self
+                .find_nested_temporary_name(ty, temporary_names)
+                .or_else(|| self.find_nested_temporary_name(value, temporary_names))
+                .or_else(|| self.find_nested_temporary_name(body, temporary_names)),
+            ExprNode::Sort(_) | ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => None,
+        }
+    }
+
+    /// Discover and expand every structurally nested container application to
+    /// a fixed point. No declaration is inserted by this prepass.
+    fn expand_nested_inductive_group(
+        &mut self,
+        uparams: &[NameId],
+        num_params: usize,
+        families: &[InductiveFamilySpec],
+    ) -> Result<NestedExpansion, KernelError> {
+        let checked = self.check_mutual_inductive_preflight(uparams, num_params, families)?;
+        let mut expansion = NestedExpansion {
+            original_family_count: families.len(),
+            outer_params: checked.params,
+            families: families.to_vec(),
+            auxiliaries: Vec::new(),
+            next_aux_index: 1,
+        };
+
+        let mut queue_head = 0;
+        while queue_head < expansion.families.len() {
+            let family = expansion.families[queue_head].clone();
+            let mut constructors = Vec::with_capacity(family.constructors.len());
+            for (constructor, ty) in family.constructors {
+                let ty = self.expand_nested_constructor_type(
+                    uparams,
+                    num_params,
+                    constructor,
+                    ty,
+                    &mut expansion,
+                )?;
+                constructors.push((constructor, ty));
+            }
+            expansion.families[queue_head].constructors = constructors;
+            queue_head += 1;
+        }
+        Ok(expansion)
+    }
+
+    /// Open the source parameter prefix with canonical outer fvars, transform
+    /// the remaining constructor type, and restore the exact binder metadata.
+    fn expand_nested_constructor_type(
+        &mut self,
+        uparams: &[NameId],
+        num_params: usize,
+        constructor: NameId,
+        ty: ExprId,
+        expansion: &mut NestedExpansion,
+    ) -> Result<ExprId, KernelError> {
+        let mut cursor = self.whnf(ty);
+        let mut binders = Vec::with_capacity(num_params);
+        for parameter_index in 0..num_params {
+            let ExprNode::Pi(name, domain, body, info) = self.expr_node(cursor).clone() else {
+                return Err(KernelError::MalformedConstructorType { ctor: constructor });
+            };
+            let Some(canonical) = expansion.outer_params.get(parameter_index).copied() else {
+                return Err(KernelError::MalformedConstructorType { ctor: constructor });
+            };
+            let binder = LocalDecl {
+                fvar: canonical.fvar,
+                name,
+                ty: domain,
+                info,
+            };
+            binders.push(binder);
+            let value = self.fvar(canonical.fvar);
+            cursor = self.instantiate(body, &[value]);
+            cursor = self.whnf(cursor);
+        }
+        let transformed = self.replace_all_nested(uparams, &binders, cursor, expansion)?;
+        Ok(self.abstr_pi_telescope(&binders, transformed))
+    }
+
+    /// Top-down deterministic replacement. Returning a replacement for a full
+    /// application prevents an inner partial application from being observed.
+    fn replace_all_nested(
+        &mut self,
+        uparams: &[NameId],
+        outer_binders: &[LocalDecl],
+        expression: ExprId,
+        expansion: &mut NestedExpansion,
+    ) -> Result<ExprId, KernelError> {
+        if let Some(replacement) =
+            self.replace_if_nested(uparams, outer_binders, expression, expansion)?
+        {
+            return Ok(replacement);
+        }
+        Ok(match self.expr_node(expression).clone() {
+            ExprNode::Sort(_)
+            | ExprNode::Const(..)
+            | ExprNode::BVar(_)
+            | ExprNode::FVar(_)
+            | ExprNode::Lit(_) => expression,
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure =
+                    self.replace_all_nested(uparams, outer_binders, structure, expansion)?;
+                self.proj(type_name, field_index, structure)
+            }
+            ExprNode::App(function, argument) => {
+                let function =
+                    self.replace_all_nested(uparams, outer_binders, function, expansion)?;
+                let argument =
+                    self.replace_all_nested(uparams, outer_binders, argument, expansion)?;
+                self.app(function, argument)
+            }
+            ExprNode::Lam(name, ty, body, info) => {
+                let ty = self.replace_all_nested(uparams, outer_binders, ty, expansion)?;
+                let body = self.replace_all_nested(uparams, outer_binders, body, expansion)?;
+                self.lam(name, ty, body, info)
+            }
+            ExprNode::Pi(name, ty, body, info) => {
+                let ty = self.replace_all_nested(uparams, outer_binders, ty, expansion)?;
+                let body = self.replace_all_nested(uparams, outer_binders, body, expansion)?;
+                self.pi(name, ty, body, info)
+            }
+            ExprNode::Let(name, ty, value, body) => {
+                let ty = self.replace_all_nested(uparams, outer_binders, ty, expansion)?;
+                let value = self.replace_all_nested(uparams, outer_binders, value, expansion)?;
+                let body = self.replace_all_nested(uparams, outer_binders, body, expansion)?;
+                self.let_(name, ty, value, body)
+            }
+        })
+    }
+
+    fn replace_if_nested(
+        &mut self,
+        uparams: &[NameId],
+        outer_binders: &[LocalDecl],
+        expression: ExprId,
+        expansion: &mut NestedExpansion,
+    ) -> Result<Option<ExprId>, KernelError> {
+        let active_names = expansion
+            .families
+            .iter()
+            .map(|family| family.name)
+            .collect::<Vec<_>>();
+        let Some(candidate) = self.nested_candidate(expression, &active_names)? else {
+            return Ok(None);
+        };
+        let parameter_args = &candidate.args[..candidate.num_params];
+        let container = self.const_(candidate.container, candidate.levels.clone());
+        let nested_application = self.foldl_apps(container, parameter_args.iter().copied());
+
+        let selected_auxiliary = if let Some(auxiliary) = expansion
+            .auxiliaries
+            .iter()
+            .find(|auxiliary| auxiliary.nested_application == nested_application)
+        {
+            auxiliary.auxiliary_family
+        } else {
+            self.copy_nested_container_group(outer_binders, &candidate, expansion)?
+        };
+
+        let levels = uparams.iter().map(|&name| self.level_param(name)).collect();
+        let mut replacement = self.const_(selected_auxiliary, levels);
+        for binder in outer_binders {
+            let value = self.fvar(binder.fvar);
+            replacement = self.app(replacement, value);
+        }
+        for &index in &candidate.args[candidate.num_params..] {
+            replacement = self.app(replacement, index);
+        }
+        Ok(Some(replacement))
+    }
+
+    /// Recognize pinned Lean's existing-inductive/full-parameter/occurrence/no-
+    /// loose-variable nested application rule.
+    fn nested_candidate(
+        &self,
+        expression: ExprId,
+        active_names: &[NameId],
+    ) -> Result<Option<NestedCandidate>, KernelError> {
+        if !matches!(self.expr_node(expression), ExprNode::App(..)) {
+            return Ok(None);
+        }
+        let (head, args) = self.unfold_apps(expression);
+        let ExprNode::Const(container, levels) = self.expr_node(head).clone() else {
+            return Ok(None);
+        };
+        let Some(Declaration::Inductive {
+            uparams,
+            num_params,
+            ..
+        }) = self.env.get(container)
+        else {
+            return Ok(None);
+        };
+        if levels.len() != uparams.len() {
+            return Err(KernelError::NestedInductiveMalformedContainer { container });
+        }
+        let num_params = usize::from(*num_params);
+        if args.len() < num_params {
+            if args
+                .iter()
+                .any(|&argument| self.mentions_names(argument, active_names))
+            {
+                return Err(KernelError::NestedInductiveIncompleteApplication { container });
+            }
+            return Ok(None);
+        }
+        let parameters = &args[..num_params];
+        if !parameters
+            .iter()
+            .any(|&parameter| self.mentions_names(parameter, active_names))
+        {
+            return Ok(None);
+        }
+        if parameters
+            .iter()
+            .any(|&parameter| self.has_loose_bvars(parameter))
+        {
+            return Err(KernelError::NestedInductiveLooseParameter { container });
+        }
+        Ok(Some(NestedCandidate {
+            container,
+            levels,
+            args,
+            num_params,
+        }))
+    }
+
+    fn mentions_names(&self, expression: ExprId, names: &[NameId]) -> bool {
+        match self.expr_node(expression).clone() {
+            ExprNode::Const(name, _) => names.contains(&name),
+            ExprNode::Sort(_) | ExprNode::BVar(_) | ExprNode::FVar(_) | ExprNode::Lit(_) => false,
+            ExprNode::Proj(_, _, structure) => self.mentions_names(structure, names),
+            ExprNode::App(function, argument) => {
+                self.mentions_names(function, names) || self.mentions_names(argument, names)
+            }
+            ExprNode::Lam(_, ty, body, _) | ExprNode::Pi(_, ty, body, _) => {
+                self.mentions_names(ty, names) || self.mentions_names(body, names)
+            }
+            ExprNode::Let(_, ty, value, body) => {
+                self.mentions_names(ty, names)
+                    || self.mentions_names(value, names)
+                    || self.mentions_names(body, names)
+            }
+        }
+    }
+
+    /// Copy the complete checked mutual group containing `candidate.container`
+    /// under deterministic temporary names and return the selected auxiliary
+    /// family corresponding to the candidate head.
+    #[allow(clippy::too_many_lines)]
+    fn copy_nested_container_group(
+        &mut self,
+        outer_binders: &[LocalDecl],
+        candidate: &NestedCandidate,
+        expansion: &mut NestedExpansion,
+    ) -> Result<NameId, KernelError> {
+        let Some(container_group) = self
+            .env
+            .inductive_group(candidate.container)
+            .map(<[NameId]>::to_vec)
+        else {
+            return Err(KernelError::NestedInductiveMalformedContainer {
+                container: candidate.container,
+            });
+        };
+        let new_total = expansion
+            .auxiliaries
+            .len()
+            .checked_add(container_group.len())
+            .ok_or(KernelError::NestedInductiveExpansionLimit {
+                limit: MAX_NESTED_AUXILIARY_FAMILIES,
+            })?;
+        if new_total > MAX_NESTED_AUXILIARY_FAMILIES {
+            return Err(KernelError::NestedInductiveExpansionLimit {
+                limit: MAX_NESTED_AUXILIARY_FAMILIES,
+            });
+        }
+
+        let parameter_args = candidate.args[..candidate.num_params].to_vec();
+        let first_source = expansion.families[0].name;
+        let mut pending = Vec::with_capacity(container_group.len());
+        let mut reserved_names = self.nested_expansion_surface_names(expansion);
+        for original_family in container_group {
+            let Some(Declaration::Inductive {
+                uparams,
+                ty,
+                num_params,
+                ctor_names,
+                ..
+            }) = self.env.get(original_family).cloned()
+            else {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: original_family,
+                });
+            };
+            if usize::from(num_params) != candidate.num_params
+                || uparams.len() != candidate.levels.len()
+            {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: original_family,
+                });
+            }
+
+            let auxiliary_family = self.fresh_nested_auxiliary_name(
+                first_source,
+                original_family,
+                &ctor_names,
+                expansion,
+                &mut reserved_names,
+            )?;
+            let original_head = self.const_(original_family, candidate.levels.clone());
+            let nested_application = self.foldl_apps(original_head, parameter_args.iter().copied());
+            if expansion
+                .auxiliaries
+                .iter()
+                .any(|auxiliary| auxiliary.nested_application == nested_application)
+            {
+                return Err(KernelError::NestedInductiveMalformedContainer {
+                    container: original_family,
+                });
+            }
+
+            let level_substitution = uparams
+                .iter()
+                .copied()
+                .zip(candidate.levels.iter().copied())
+                .collect::<Vec<_>>();
+            let specialized_family_ty = self.substitute_expr_levels(ty, &level_substitution);
+            let specialized_family_ty = self.instantiate_nested_parameter_prefix(
+                specialized_family_ty,
+                &parameter_args,
+                original_family,
+            )?;
+            let auxiliary_ty = self.abstr_pi_telescope(outer_binders, specialized_family_ty);
+
+            let mut constructors = Vec::with_capacity(ctor_names.len());
+            let mut constructor_names = Vec::with_capacity(ctor_names.len());
+            for original_constructor in ctor_names {
+                let Some(Declaration::Constructor {
+                    uparams: constructor_uparams,
+                    ty: constructor_ty,
+                    inductive,
+                    ..
+                }) = self.env.get(original_constructor).cloned()
+                else {
+                    return Err(KernelError::NestedInductiveMalformedContainer {
+                        container: original_family,
+                    });
+                };
+                if inductive != original_family || constructor_uparams != uparams {
+                    return Err(KernelError::NestedInductiveMalformedContainer {
+                        container: original_family,
+                    });
+                }
+                let Some(auxiliary_constructor) = self.replace_name_prefix(
+                    original_constructor,
+                    original_family,
+                    auxiliary_family,
+                ) else {
+                    return Err(KernelError::NestedInductiveMalformedContainer {
+                        container: original_family,
+                    });
+                };
+                let constructor_ty =
+                    self.substitute_expr_levels(constructor_ty, &level_substitution);
+                let constructor_ty = self.instantiate_nested_parameter_prefix(
+                    constructor_ty,
+                    &parameter_args,
+                    original_family,
+                )?;
+                let constructor_ty = self.abstr_pi_telescope(outer_binders, constructor_ty);
+                constructors.push((auxiliary_constructor, constructor_ty));
+                constructor_names.push((auxiliary_constructor, original_constructor));
+            }
+            pending.push((
+                NestedAuxiliaryFamily {
+                    nested_application,
+                    original_family,
+                    auxiliary_family,
+                    constructors: constructor_names,
+                },
+                InductiveFamilySpec::new(auxiliary_family, auxiliary_ty, constructors),
+            ));
+        }
+
+        let mut selected = None;
+        for (auxiliary, family) in pending {
+            if auxiliary.original_family == candidate.container {
+                selected = Some(auxiliary.auxiliary_family);
+            }
+            expansion.auxiliaries.push(auxiliary);
+            expansion.families.push(family);
+        }
+        selected.ok_or(KernelError::NestedInductiveMalformedContainer {
+            container: candidate.container,
+        })
+    }
+
+    fn instantiate_nested_parameter_prefix(
+        &mut self,
+        mut expression: ExprId,
+        parameters: &[ExprId],
+        container: NameId,
+    ) -> Result<ExprId, KernelError> {
+        for &parameter in parameters {
+            let ExprNode::Pi(_, _, body, _) = self.expr_node(expression).clone() else {
+                return Err(KernelError::NestedInductiveMalformedContainer { container });
+            };
+            expression = self.instantiate(body, &[parameter]);
+        }
+        Ok(expression)
+    }
+
+    fn nested_expansion_surface_names(&mut self, expansion: &NestedExpansion) -> BTreeSet<NameId> {
+        let mut names = BTreeSet::new();
+        for family in &expansion.families {
+            names.insert(family.name);
+            names.insert(self.name_str(family.name, "rec"));
+            names.extend(family.constructors.iter().map(|(name, _)| *name));
+        }
+        names
+    }
+
+    fn fresh_nested_auxiliary_name(
+        &mut self,
+        first_source: NameId,
+        original_family: NameId,
+        original_constructors: &[NameId],
+        expansion: &mut NestedExpansion,
+        reserved_names: &mut BTreeSet<NameId>,
+    ) -> Result<NameId, KernelError> {
+        let base = self.name_str(first_source, "_nested");
+        loop {
+            let candidate = self.name_num(base, expansion.next_aux_index);
+            expansion.next_aux_index = expansion.next_aux_index.checked_add(1).ok_or(
+                KernelError::NestedInductiveExpansionLimit {
+                    limit: MAX_NESTED_AUXILIARY_FAMILIES,
+                },
+            )?;
+            let mut candidate_surface =
+                BTreeSet::from([candidate, self.name_str(candidate, "rec")]);
+            let mut malformed = false;
+            for &constructor in original_constructors {
+                let Some(auxiliary_constructor) =
+                    self.replace_name_prefix(constructor, original_family, candidate)
+                else {
+                    return Err(KernelError::NestedInductiveMalformedContainer {
+                        container: original_family,
+                    });
+                };
+                if !candidate_surface.insert(auxiliary_constructor) {
+                    malformed = true;
+                }
+            }
+            if !malformed
+                && candidate_surface
+                    .iter()
+                    .all(|name| !self.env.contains(*name) && !reserved_names.contains(name))
+            {
+                reserved_names.extend(candidate_surface);
+                return Ok(candidate);
+            }
+        }
+    }
+
+    /// Replace a structural hierarchical-name prefix while preserving every
+    /// string/numeric suffix component in order.
+    fn replace_name_prefix(
+        &mut self,
+        name: NameId,
+        old_prefix: NameId,
+        new_prefix: NameId,
+    ) -> Option<NameId> {
+        if name == old_prefix {
+            return Some(new_prefix);
+        }
+        let mut suffix = Vec::new();
+        let mut cursor = name;
+        while cursor != old_prefix {
+            match self.name_node(cursor).clone() {
+                crate::name::NameNode::Str(parent, component) => {
+                    suffix.push((Some(component), 0));
+                    cursor = parent;
+                }
+                crate::name::NameNode::Num(parent, component) => {
+                    suffix.push((None, component));
+                    cursor = parent;
+                }
+                crate::name::NameNode::Anonymous => return None,
+            }
+        }
+        let mut result = new_prefix;
+        for (string, number) in suffix.into_iter().rev() {
+            result = if let Some(string) = string {
+                self.name_str(result, string)
+            } else {
+                self.name_num(result, number)
+            };
+        }
+        Some(result)
     }
 
     /// Check the family facts that precede complete-group positivity and any
@@ -504,6 +1516,12 @@ impl Kernel {
             self.env.insert_unchecked(recursor.clone());
         }
         self.check_group_recursor_rules(&recursors)?;
+        let family_names = group
+            .families
+            .iter()
+            .map(|family| family.name)
+            .collect::<Vec<_>>();
+        self.env.register_inductive_group(&family_names);
         Ok(())
     }
 
