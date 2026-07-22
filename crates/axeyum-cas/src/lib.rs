@@ -1741,7 +1741,24 @@ fn normalize_exp(arg: &CasExpr) -> Option<RatFunc> {
 /// (`normalize` rejects any transcendental head, so this never recurses through
 /// atom creation.) The `\0` prefix cannot occur in a user variable name.
 fn atom_name(head: &str, arg: &CasExpr) -> String {
-    let canonical = normalize(arg).map_or_else(|| arg.clone(), |poly| poly.to_expr());
+    // Canonicalize the argument so two spellings key identically. Plain `normalize`
+    // handles a polynomial argument; when it declines (the argument carries a
+    // transcendental atom, e.g. `ln(x)+1`), fall back to `normalize_rational`, which
+    // atomizes that sub-head — otherwise `ln(ln(x)+1)` and `ln(1+ln(x))` would take
+    // different (source-order) keys and the zero-test would miss the equality.
+    let canonical = normalize(arg)
+        .map(|poly| poly.to_expr())
+        .or_else(|| {
+            normalize_rational(arg).map(|rf| {
+                let num = rf.num.to_expr();
+                if rf.den == MultiPoly::constant(Rational::integer(1)) {
+                    num
+                } else {
+                    CasExpr::Div(Box::new(num), Box::new(rf.den.to_expr()))
+                }
+            })
+        })
+        .unwrap_or_else(|| arg.clone());
     format!("\0{head}:{}", canonical.render(0))
 }
 
@@ -15595,6 +15612,26 @@ mod tests {
                 assert_equal(&transformed, &case);
             }
         }
+    }
+
+    #[test]
+    fn atom_argument_ordering_is_canonical() {
+        // A transcendental head keys on the *canonical* rendering of its argument, so
+        // a commutative reordering inside the argument does not change the atom — even
+        // when the argument itself carries another transcendental atom (`ln(x)`), which
+        // makes the plain polynomial `normalize` decline and requires the
+        // `normalize_rational` fallback in `atom_name`.
+        let x = || v("x");
+        let is = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        // Simple polynomial argument (already worked): ln(x+1) = ln(1+x).
+        assert!(is(&(x() + CasExpr::int(1)).ln(), &(CasExpr::int(1) + x()).ln()));
+        // Nested transcendental argument (the regression): ln(ln x + 1) = ln(1 + ln x),
+        // and likewise for other heads over the same reordered argument.
+        assert!(is(&(x().ln() + CasExpr::int(1)).ln(), &(CasExpr::int(1) + x().ln()).ln()));
+        assert!(is(&(x().ln() + CasExpr::int(1)).sin(), &(CasExpr::int(1) + x().ln()).sin()));
+        assert!(is(&(x().exp() + x()).ln(), &(x() + x().exp()).ln()));
+        // Soundness preserved: genuinely different arguments stay unequal.
+        assert!(!is(&(x().ln() + CasExpr::int(1)).ln(), &(x().ln() + CasExpr::int(2)).ln()));
     }
 
     #[test]
