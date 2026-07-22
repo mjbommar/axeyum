@@ -15946,6 +15946,21 @@ mod tests {
     }
 
     #[test]
+    fn simplify_contracts_double_angles() {
+        let x = || v("x");
+        // 2 sin x cos x → sin 2x, cos²x − sin²x → cos 2x (reverse of expand_trig).
+        assert_equal(&simplify(&(CasExpr::int(2) * x().sin() * x().cos())), &(CasExpr::int(2) * x()).sin());
+        assert_equal(&simplify(&(x().cos().pow(2) - x().sin().pow(2))), &(CasExpr::int(2) * x()).cos());
+        // With an affine argument: 2 sin(3x) cos(3x) → sin 6x.
+        let three_x = CasExpr::int(3) * x();
+        assert_equal(&simplify(&(CasExpr::int(2) * three_x.clone().sin() * three_x.cos())), &(CasExpr::int(6) * x()).sin());
+        // Value-preserving and non-destructive: the folded form differentiates back
+        // correctly, and the Pythagorean identity / unrelated sums are untouched.
+        assert_equal(&simplify(&(x().sin().pow(2) + x().cos().pow(2))), &CasExpr::int(1));
+        assert_equal(&simplify(&(x().sin() + x().cos())), &(x().sin() + x().cos()));
+    }
+
+    #[test]
     fn cancel_multivariate_via_mvpoly() {
         // (x²−y²)/(x−y) = x+y — needs the multivariate GCD.
         let f = (v("x").pow(2) - v("y").pow(2)) / (v("x") - v("y"));
