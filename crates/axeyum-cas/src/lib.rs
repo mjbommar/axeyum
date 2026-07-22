@@ -6601,6 +6601,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // At `x → +∞`, a positive power of `x` beats any power of `ln x`
+    // (`ln x / x → 0`), the dual of the `x → 0⁺` rule — also feeds
+    // `x^{1/x} = exp((ln x)/x) → 1` through the `exp` path above.
+    if matches!(point, LimitPoint::PosInfinity)
+        && let Some(value) = limit_log_at_infinity(expr, var)
+    {
+        return Some(value);
+    }
     // `lim exp(g) = exp(lim g)` when the inner limit is finite — resolves `1^∞`
     // forms written as `exp(g)`, e.g. `(1+1/x)^x = exp(x·ln(1+1/x)) → e`. Falls
     // through if the inner limit doesn't exist (leaving `exp`-dominance to decide).
@@ -6673,6 +6681,21 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
 fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let (x_pow, log_pow) = log_zero_orders(expr, var)?;
     if x_pow >= 1 || (x_pow == 0 && log_pow < 0) {
+        Some(CasExpr::zero())
+    } else {
+        None
+    }
+}
+
+/// Limit at `x → +∞` of a product/quotient of `x`-powers and `ln x`-powers: a
+/// positive power of `x` dominates any power of `ln x`, so the value is `0` when
+/// the net `x`-power is negative (or `0` with a negative `ln`-power, `1/ln x → 0`).
+/// The `+∞` dual of [`limit_log_at_zero`] — closes `ln x / x → 0` and hence
+/// `x^{1/x} = exp((ln x)/x) → 1`. `None` (undecided/divergent) otherwise or if any
+/// factor is outside `{const≠0, x, ln x}`.
+fn limit_log_at_infinity(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (x_pow, log_pow) = log_zero_orders(expr, var)?;
+    if x_pow < 0 || (x_pow == 0 && log_pow < 0) {
         Some(CasExpr::zero())
     } else {
         None
@@ -12332,6 +12355,25 @@ mod tests {
         // Genuinely divergent forms decline (never a spurious value).
         assert!(limit(&x().ln(), "x", at0()).is_none());          // ln x → −∞
         assert!(limit(&(x().ln() / x()), "x", at0()).is_none());  // ln x / x → −∞
+
+        // Dual rule at +∞: a positive power of x beats any power of ln x.
+        let inf = || LimitPoint::PosInfinity;
+        for e in [
+            x().ln() / x(),               // ln x / x → 0
+            x().ln().pow(2) / x(),        // (ln x)² / x → 0
+            x().ln() / x().pow(2),        // ln x / x² → 0
+            CasExpr::int(1) / x().ln(),   // 1 / ln x → 0
+        ] {
+            assert_equal(&limit(&e, "x", inf()).unwrap(), &CasExpr::zero());
+        }
+        // x^{1/x} = exp((ln x)/x) → 1 (via the exp-of-limit path over the above).
+        assert_equal(
+            &limit(&((CasExpr::int(1) / x()) * x().ln()).exp(), "x", inf()).unwrap(),
+            &CasExpr::int(1),
+        );
+        // Divergent forms decline: x / ln x → ∞, x · ln x → ∞.
+        assert!(limit(&(x() / x().ln()), "x", inf()).is_none());
+        assert!(limit(&(x() * x().ln()), "x", inf()).is_none());
     }
 
     #[test]
