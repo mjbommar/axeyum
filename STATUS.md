@@ -369,8 +369,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL2.13 mutual-inductive groups are preregistered; M0 official
-  source/wire freeze is next.**
+- **2026-07-22 — TL2.13 M0 source/wire freeze is complete; M1 group
+  representation and singleton delegation are next.**
   [Proposed ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
   and the
   [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
@@ -385,10 +385,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   singleton wrapper. The plan explicitly includes per-family indices,
   higher-order cross recursion, mutual-`Prop` elimination restrictions,
   group-wide negative occurrences, late rollback, and metadata nonauthority;
-  it does not collapse TL2.14 frontend lowering into this kernel slice. M0 will
-  compile and export explicit non-indexed and indexed cross-family computation
-  roots twice under the 3/4 GiB policy, bind them in a fail-closed machine
-  contract, and grant no Axeyum product credit. Future native admission is
+  it does not collapse TL2.14 frontend lowering into this kernel slice. M0 now
+  freezes a 1,676-byte / 66-line source compiled twice to one OLEAN digest and
+  two byte-identical-per-root official streams totaling 40,282 bytes. The
+  independent inventory finds two motives and four minors per recursor and
+  records that the wire `recs` arrays are dependency-ordered `Odd.rec,
+  Even.rec`, not family-ordered; M4 must match names and owned rules rather than
+  array position. Eleven fail-closed tests enforce the exact no-product-credit
+  boundary. Future native admission is
   gated on >=640 deterministic group cases plus the retained 768 recursive and
   840 positivity populations.
 
@@ -6896,7 +6900,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups and frontend nested/well-founded lowering remain TL2.13/TL2.14. |
-| P3.6 / TL2.13 | Mutual inductive groups | **WIP (P0 preregistered; ADR-0354 proposed)** — one atomic ordered group gate will check shared parameters/universes, group-wide positivity, per-family indices, all motives/minors, target-family IH/recursor calls, mutual-`Prop` restrictions, singleton compatibility, and complete rollback. M0 next freezes explicit non-indexed/indexed official computations without product observation. TL2.14 frontend lowering remains separate. |
+| P3.6 / TL2.13 | Mutual inductive groups | **WIP (M0 source/wire freeze complete; ADR-0354 proposed)** — the exact source, two byte-identical official streams, ordered semantic contract, dependency-ordered wire recursor arrays, 18 native cases, 16 mutation classes, >=640 grammar, 768/840 controls, and no-product-credit boundary are machine-frozen. M1 next adds the ordered group representation and singleton delegation without widening mutual admission. TL2.14 frontend lowering remains separate. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
 | P4.1c | Retained warm array-valued UF parents | **DONE, scalar-keyed slice (ADR-0088)** — finite-scalar applications retain private array owners and conditional read congruence; concrete-equal tuples merge observations into full-value function results before owner filtering and replay. Exact 64/65 admission, ten focused tests, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no array-result UF case, so no timing claim |
 | P4.1b | Candidate-triggered retained warm ROW | **DONE, bounded transitive-summary slice (ADR-0087)** — one exact scalar summary per observed structural read stays dormant until candidate violation, then becomes a permanent root in the same CNF/SAT instance under one shared deadline. Zero-activation replay, scope/core/reuse, exact caps, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass. Depth 32 improves 30.933→11.257 ms; ITE-fold remains faster at 0.405 ms, so broader warm models and the performance exit remain open |
@@ -6950,6 +6954,19 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed TL2.13 M0 mutual-group source/wire freeze.** The
+  pinned 66-line source compiles twice to one OLEAN digest and forces both
+  non-indexed and indexed cross-family recursor computations to
+  `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Two twice-exported official
+  format-3.1 streams are byte-identical per root and total 40,282 bytes; each
+  recursor has two motives and four minors. Independent inventory exposes and
+  freezes dependency-ordered wire recursor arrays (`Odd.rec, Even.rec`) while
+  semantic motives/minors retain family order. The machine contract binds 18
+  native cases, 16 mutation classes, the future >=640 group grammar, retained
+  768/840 controls, 15 stop conditions, exact resource/tool pins, and no Axeyum
+  product observation. Eleven fail-closed tests plus parity-doc/shell gate
+  integration pass. M1 ordered representation/singleton delegation is next.
 
 - **2026-07-22 — Preregistered TL2.13 atomic mutual-inductive groups.** Proposed
   ADR-0354 and a P0--M5 plan derive the exact shared-parameter, equivalent-

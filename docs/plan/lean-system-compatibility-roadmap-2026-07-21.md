@@ -756,7 +756,12 @@ Non-claims until their gates are met:
    [P0--M5 plan](lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
    requires exact official non-indexed/indexed computation, a >=640-case group
    grammar, singleton identity preservation, and the retained 768/840 controls.
-   M0 source/wire freeze is next; TL2.14 frontend lowering stays separate.
+   The [M0 source/wire freeze](lean-mutual-inductive-groups-m0-2026-07-22.md)
+   is complete: two explicit cross-family computations compile/export twice,
+   the machine contract grants no product credit, and it distinguishes source
+   family order from dependency-ordered wire recursor arrays. M1 ordered group
+   representation and singleton delegation are next; TL2.14 frontend lowering
+   stays separate.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

@@ -115,6 +115,14 @@ against the exact ordered family list; `numMotives`, `numMinors`, per-family
 `numIndices`, constructor ownership/index, recursor rules, and `nfields` remain
 kernel-checked rather than trusted metadata.
 
+M0 establishes that official format-3.1 `recs` arrays may use dependency order
+rather than family order: both frozen two-family streams list the odd-family
+recursor before the even-family recursor. This wire order is descriptive.
+Import comparison matches recursors by checked name and owned constructor rules;
+it may not infer family identity from array position. Motive and minor order in
+the recursor types remains the semantic family/family-then-constructor order
+above.
+
 ADR-0350's declaration-identity v1 remains unchanged in this slice. Group
 membership is checked input to atomic generation and is structurally reflected
 in generated recursor types/rules and direct dependencies. If persistent public

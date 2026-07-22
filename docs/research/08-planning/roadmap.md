@@ -103,9 +103,13 @@ Last updated: 2026-07-22
 > [P0--M5 plan](../../../docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md):
 > one atomic ordered group path checks shared parameters/universes and complete-
 > group positivity, derives all motives/minors, selects the recursive target
-> family's motive/recursor, and publishes all families or none. M0 next freezes
-> explicit non-indexed/indexed mutual recursor computations without product
-> observation; TL2.14 frontend lowering remains separate.
+> family's motive/recursor, and publishes all families or none. The completed
+> [M0 freeze](../../../docs/plan/lean-mutual-inductive-groups-m0-2026-07-22.md)
+> binds explicit non-indexed/indexed mutual recursor computations and complete
+> wire inventories without product observation. It freezes dependency-ordered
+> wire recursor arrays separately from semantic family/motive/minor order. M1
+> group representation and singleton delegation are next; TL2.14 frontend
+> lowering remains separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

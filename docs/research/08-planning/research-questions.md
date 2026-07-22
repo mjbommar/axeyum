@@ -827,6 +827,12 @@ Out of scope:
     [proposed ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
     and the
     [TL2.13 execution plan](../../plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
+    M0 now freezes both explicit official computations and their complete wire
+    inventories without Axeyum product credit. In both streams, family order is
+    `Even, Odd` while wire recursor order is dependency-ordered `Odd.rec,
+    Even.rec`; importer comparison must therefore use checked recursor identity
+    and owned rules rather than array position. See the
+    [M0 result](../../plan/lean-mutual-inductive-groups-m0-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

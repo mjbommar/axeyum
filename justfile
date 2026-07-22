@@ -118,6 +118,8 @@ parity-docs:
     python3 scripts/check-lean-strict-positivity-m3.py --check
     python3 -m unittest scripts.tests.test_lean_recursive_induction_hypotheses
     python3 scripts/check-lean-recursive-induction-hypotheses.py --check
+    python3 -m unittest scripts.tests.test_lean_mutual_inductive_groups
+    python3 scripts/check-lean-mutual-inductive-groups.py --check
     python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
     python3 scripts/freeze-lean-official-construct-matrix-product.py --check
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 -m unittest scripts.tests.test_lean_axiom_ledger

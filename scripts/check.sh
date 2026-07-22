@@ -36,6 +36,8 @@ step lean-strict-positivity-m3-tests python3 -m unittest scripts.tests.test_lean
 step lean-strict-positivity-m3 python3 scripts/check-lean-strict-positivity-m3.py --check
 step lean-recursive-ih-m0-tests python3 -m unittest scripts.tests.test_lean_recursive_induction_hypotheses
 step lean-recursive-ih-m0 python3 scripts/check-lean-recursive-induction-hypotheses.py --check
+step lean-mutual-groups-m0-tests python3 -m unittest scripts.tests.test_lean_mutual_inductive_groups
+step lean-mutual-groups-m0 python3 scripts/check-lean-mutual-inductive-groups.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh

@@ -189,7 +189,13 @@ Again, there are distinct targets:
   active preregistered TL2.13 slice: the planned unit is one atomic ordered
   group with shared parameters, complete-group positivity, all motives/minors,
   target-family recursive calls, and all-or-nothing publication; no mutual
-  admission credit exists yet.
+  admission credit exists yet. Its M0 source/wire freeze is complete: a
+  twice-compiled explicit-recursor source and two byte-identical-per-root
+  official streams are machine-bound without any new Axeyum observation. The
+  wire inventories also show why later comparison cannot use array position:
+  families are source-ordered `Even, Odd`, but recursors are dependency-ordered
+  `Odd.rec, Even.rec`. M1 group representation and singleton delegation are
+  next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

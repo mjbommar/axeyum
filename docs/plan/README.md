@@ -168,6 +168,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   group-wide positivity checks, complete motive/minor and target-recursion
   construction, native/mutation/generated/official gates, resource bounds,
   stop conditions, and P0--M5 commit/push sequence for TL2.13.
+- [`lean-mutual-inductive-groups-m0-2026-07-22.md`](lean-mutual-inductive-groups-m0-2026-07-22.md)
+  and [`lean-mutual-inductive-groups-v1.json`](lean-mutual-inductive-groups-v1.json)
+  — M0's twice-compiled explicit-recursor source, two byte-identical official
+  streams, complete group/recursor inventories, source-family versus wire-
+  dependency order distinction, fail-closed eleven-test contract, exact
+  non-claims, and M1 representation/singleton handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

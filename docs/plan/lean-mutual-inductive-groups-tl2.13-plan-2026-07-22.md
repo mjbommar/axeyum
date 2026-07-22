@@ -1,6 +1,6 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: preregistered; M0 source/wire freeze is next
+Status: M0 source/wire freeze complete; M1 group representation is next
 
 Date: 2026-07-22
 
@@ -96,6 +96,14 @@ M0 adds one compact official source with two independent groups:
 Freeze one selected theorem stream per group twice. Constructor or pattern-
 match witnesses remain admission-only; computation credit requires an explicit
 recursor application whose WHNF crosses a family boundary.
+
+The completed [M0 result](lean-mutual-inductive-groups-m0-2026-07-22.md)
+freezes both groups and exposes a wire-order constraint that later comparison
+must respect: group families remain in source order, but both official `recs`
+arrays are dependency-ordered with the odd-family recursor first. Semantic
+motive/minor ordering remains source-family order. The importer must therefore
+match exported recursors by checked name and owned rules, never by array
+position.
 
 ## 4. Executable group rule
 
@@ -273,6 +281,10 @@ TL2.12 and 840-case TL2.11 populations remain mandatory.
 - run link/diff checks, commit, push, and verify remote equality.
 
 ### M0 — machine registration and official source/wire freeze
+
+Status: **complete**. See the
+[M0 result](lean-mutual-inductive-groups-m0-2026-07-22.md) and machine-checked
+[`lean-mutual-inductive-groups-v1.json`](lean-mutual-inductive-groups-v1.json).
 
 - add a v1 machine registration binding the baseline, pins, exact group rule,
   ordered cases/mutations, grammar, controls, resources, commands, claims, and

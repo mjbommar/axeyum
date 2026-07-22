@@ -241,9 +241,15 @@ state.
 > parameters are shared, positivity ranges over every group family, every
 > recursor binds all motives and all minors, and a recursive field selects the
 > motive and recursor of its terminal family. `add_inductive` must become a
-> behavior- and identity-preserving singleton wrapper. M0 next freezes explicit
-> non-indexed and indexed cross-family recursor computations in pinned Lean and
-> official format-3.1 streams without Axeyum product observation. One Lean/Rust
+> behavior- and identity-preserving singleton wrapper. The completed
+> [M0 source/wire freeze](docs/plan/lean-mutual-inductive-groups-m0-2026-07-22.md)
+> now binds a twice-compiled 66-line source and two twice-exported official
+> computation streams totaling 40,282 bytes, with no Axeyum product
+> observation. It also freezes the non-obvious wire rule: family order is
+> `Even, Odd`, while the exported recursor arrays are dependency-ordered
+> `Odd.rec, Even.rec`; later comparison must match checked names and owned rules,
+> not array position. M1 next adds the ordered group representation and routes
+> singleton admission through it without widening mutual support. One Lean/Rust
 > worker, 4 GiB caps, the 640-case future group grammar, and the retained
 > 768-case recursive plus 840-case positivity controls are mandatory.
 > The runtime-derived
