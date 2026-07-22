@@ -133,9 +133,11 @@ Again, there are distinct targets:
   core terms, universes, declarations, WHNF, definitional equality, proof
   irrelevance, useful inductives, recursors, and iota reduction. Major residuals
   include projections/structure eta, arbitrary-precision literal support,
-  quotient computation, and the full recursive-inductive spine. A new
-  format-3.1 Rust importer independently admits one official flat fixture as
-  eight kernel declarations, but `Init`/`Std`/mathlib and the declined kernel
+  quotient computation, recursive indexed families, and mutual/nested/reflexive
+  inductives. A new format-3.1 Rust importer independently admits one official
+  flat fixture as eight kernel declarations and one direct-recursive
+  `MiniNat`/`MiniList` fixture as 11 declarations with zero axioms. This proves
+  those exact profiles, but `Init`/`Std`/mathlib and the declined kernel
   constructs remain open. The arithmetic reconstruction preludes also have an explicitly
   audited axiom surface whose types are checked but whose statements have not
   yet been discharged against mathlib.

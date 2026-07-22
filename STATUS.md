@@ -385,18 +385,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   independently admit supported declarations. A fresh official Lean 4.30 /
   export-format 3.1 fixture contains 14 names, two nonzero universe levels, 43
   expressions, and five declaration records; the Python reader reports no
-  inventory blockers on that flat slice and passes five fixture/mutation tests.
+  inventory blockers on that flat slice and passes six fixture/mutation tests,
+  including the direct-recursive inventory.
   The new separate `axeyum-lean-import` Rust crate now independently admits the
-  same stream as eight kernel declarations through checked public gates. It
-  regenerates `Two.rec` and compares its universe parameters, type, counts, and
-  iota-rule RHSs with the export; theorem-body and recursor-rule tampering reject
-  among nine Rust tests. Its stable output reports `axioms=P`, so the assumption
-  is not converted into a theorem. This is exact flat-slice import credit, not
-  `Init`/`Std`/mathlib or general kernel credit. Direct `.olean` reading remains
-  rejected; official Lean is an optional sandboxed frontend/workflow adapter
-  while the default checker remains pure Rust. **Next:** review ADR-0345 and the
-  crate/TCB boundary, generate projection/literal/quotient/direct-recursive/
-  harder-inductive fixtures plus the assurance matrix, then type-digest the 64
+  same stream as eight kernel declarations through checked public gates. A
+  second official, byte-reproducible fixture admits direct-recursive `MiniNat`
+  and parametric-recursive `MiniList`: 30 names, four nonzero levels, 130
+  expressions, and five records become 11 checked declarations with no axioms.
+  Its first import exposed alpha-equivalent fresh recursor universe names
+  (`u_1` from official Lean versus `u.1` from Axeyum); the importer now
+  alpha-renames exported universe binders before definitionally comparing the
+  recursor type and iota-rule RHSs. Theorem-body and recursor-rule tampering
+  reject among ten Rust tests. The flat result still reports `axioms=P`, so the
+  assumption is not converted into a theorem. This is exact flat and
+  direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
+  credit. Direct `.olean` reading remains rejected; official Lean is an optional
+  sandboxed frontend/workflow adapter while the default checker remains pure
+  Rust. **Next:** review ADR-0345 and the crate/TCB boundary, generate
+  projection/literal/quotient/recursive-indexed/mutual/nested/reflexive fixtures
+  plus the assurance matrix, then type-digest the 64
   prelude axioms before any native parser, Lake, LSP, or compiler work. See the
   [measured import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 

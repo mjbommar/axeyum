@@ -11,12 +11,14 @@ obligations to Lean, import checked rewrite rules from Lean, or do both. Axeyum
 already implements the first direction for selected proof families: it emits
 Lean source and the fail-closed official Lean 4.30 gate currently accepts 71/71
 representative generated modules. It also has an independent pure-Rust kernel,
-but no declaration import path.
+and now an initial declaration import path, but no broad dependency-closed
+library import result.
 
 The phrase “Lean parity” had obscured separate targets. Axeyum does not
 implement Lean's source parser and macro system, elaborator/unifier, tactic
 language, compiler, Lake ecosystem, language server, mathlib, or an `.olean` or
-`lean4export` reader. Building those all independently before measuring useful
+general `lean4export` reader. Its new reader admits only a measured format-3.1
+profile. Building the other systems all independently before measuring useful
 interchange would be a multi-person-year program and would duplicate official
 workflow code before proving demand.
 
@@ -61,8 +63,8 @@ The interchange rules are:
 The Rust reader/admission prototype and its first negative matrix are now
 landed in a separate workspace crate. The decision remains proposed until that
 crate boundary and the broader projection/literal/quotient/inductive fixture
-matrix are reviewed. The exact flat fixture earns independent-admission credit;
-the Python inventory by itself still earns none.
+matrix are reviewed. The exact flat and direct-recursive fixtures earn
+independent-admission credit; the Python inventory by itself still earns none.
 
 ## Evidence
 
@@ -101,10 +103,16 @@ export records become eight checked environment declarations (`Two`, its two
 constructors and generated recursor, `Two.recOn`, `chooseLeft`, axiom `P`, and
 theorem `identity`). The importer independently generates `Two.rec` and checks
 its universe parameters, type, counts, constructors, field counts, and iota-rule
-RHSs against the export. Nine tests reject theorem-body and recursor-rule
-mutations, forward references, unknown records, projections, version drift,
-partial definitions, and resource-limit violations; repeated import is
-deterministic. See the
+RHSs against the export. A second official fixture adds direct-recursive
+`MiniNat` and parametric-recursive `MiniList`: its 30 names, four nonzero
+levels, 130 expressions, and five declaration records become 11 independently
+checked declarations with no axioms. The official and generated recursors use
+different fresh universe binder names (`u_1` and `u.1`); explicit alpha-renaming
+before type/rule comparison admits the semantic match without weakening the
+arity or definitional-equality checks. Ten tests reject theorem-body and
+recursor-rule mutations, forward references, unknown records, projections,
+version drift, partial definitions, and resource-limit violations; repeated
+import is deterministic. See the
 [measured prototype](../../plan/lean4export-rust-import-prototype-2026-07-21.md).
 
 JSON and format handling live in `axeyum-lean-import`, which depends on the

@@ -37,9 +37,20 @@ identity
 
 This closes the **flat initial import slice**, not the general import gap. The
 reader rejects projections, literals, quotient declarations, unsafe/partial
-declarations, and mutual/nested/reflexive inductive groups. It has not imported
-`Init`, `Std`, or mathlib. `P` is reported as an axiom, not silently counted as
-a proved theorem.
+declarations, and recursive-indexed/mutual/nested/reflexive inductive groups. It
+has not imported `Init`, `Std`, or mathlib. `P` is reported as an axiom, not
+silently counted as a proved theorem.
+
+The second official fixture closes the direct-recursive positive control:
+
+```text
+LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=30|levels=4|exprs=130|decl_records=5|admitted=11|axioms=none
+```
+
+It independently admits `MiniNat`, `MiniList`, their constructors and generated
+recursors/`recOn` definitions, plus `miniOne`. This is exact direct-recursive and
+parametric-recursive fixture credit; recursive indexed, mutual, nested, and
+reflexive families remain outside the profile.
 
 ## Why a separate crate
 
@@ -69,7 +80,7 @@ to produce or cross-check a fixture, not to import an already exported stream.
 
 ## Exact input provenance
 
-The committed fixture is
+The committed flat fixture is
 [`lean4export-v4.30-axeyum-probe.ndjson`](fixtures/lean4export-v4.30-axeyum-probe.ndjson).
 Its metadata binds:
 
@@ -79,9 +90,38 @@ Its metadata binds:
 - source shape: one axiom, one identity theorem, one flat two-constructor
   inductive, its generated recursor/`recOn`, and one ordinary definition.
 
-The exporter tag used to produce it was v4.30.0 at
+Its committed source is
+[`lean4export-v4.30-axeyum-probe.lean`](fixtures/lean4export-v4.30-axeyum-probe.lean),
+and its NDJSON SHA-256 is
+`c582b5d5ab19cba61183d592d70c17eb7d101b8a1ad61e8c4c6022dfe95a8280`.
+
+The direct-recursive source and export are
+[`lean4export-v4.30-recursive-shapes.lean`](fixtures/lean4export-v4.30-recursive-shapes.lean)
+and
+[`lean4export-v4.30-recursive-shapes.ndjson`](fixtures/lean4export-v4.30-recursive-shapes.ndjson).
+They contain `MiniNat`, `miniOne`, and parametric `MiniList`; the NDJSON
+SHA-256 is
+`91df1e44219483b213000b94b06016f9569dc648d0680d9ae91ff3198817db08`.
+
+The exporter tag used to produce them was v4.30.0 at
 `a3e35a584f59b390667db7269cd37fca8575e4bf`. The format is specified by the
 [official 3.1.0 document](https://github.com/leanprover/lean4export/blob/v4.30.0/format_ndjson.md).
+
+Both fixtures reproduce byte-for-byte with the pinned checkout and toolchain.
+The repository filenames are copied to valid Lean module names before compiling:
+
+```sh
+cp docs/plan/fixtures/lean4export-v4.30-axeyum-probe.lean AxeyumProbe.lean
+lean -j1 -o AxeyumProbe.olean AxeyumProbe.lean
+LEAN_PATH=. .lake/build/bin/lean4export AxeyumProbe | sha256sum
+
+cp docs/plan/fixtures/lean4export-v4.30-recursive-shapes.lean AxeyumImportShapes.lean
+lean -j1 -o AxeyumImportShapes.olean AxeyumImportShapes.lean
+LEAN_PATH=. .lake/build/bin/lean4export AxeyumImportShapes | sha256sum
+```
+
+The expected hashes are the two SHA-256 values above. The `.olean` files are
+transient official-toolchain inputs and are not committed or parsed by Axeyum.
 
 ## Wire contract
 
@@ -140,7 +180,7 @@ returns successfully.
 | safe `opaque` | kernel admitted | value checks but does not unfold |
 | `thm` | kernel admitted | proof term must check against theorem type |
 | `quot` | typed decline `quotient-package` | quotient package/check/reduction absent |
-| one supported inductive family | kernel admitted and generated recursor cross-checked | flat fixture accepted; harder shapes need fixtures |
+| one supported inductive family | kernel admitted and generated recursor cross-checked | flat, parametric-recursive, and direct-recursive fixtures accepted; harder shapes need fixtures |
 | mutual inductive group | typed decline `inductive-mutual` | kernel gate is single-family |
 | nested/reflexive group | typed declines | kernel deliberately rejects these shapes |
 | unsafe/partial declarations | typed decline | never admitted by default |
@@ -163,19 +203,28 @@ For the admitted profile, the importer:
    against the official export;
 4. admits later declarations such as `Two.recOn` only after that comparison.
 
+Universe parameter names are binders. The direct-recursive fixture made
+official Lean choose `u_1` where Axeyum generated `u.1`; exact name equality
+would therefore reject an alpha-equivalent recursor. The importer now requires
+equal universe-parameter arity, substitutes every exported binder into the
+generated namespace, and then applies the same definitional-equality checks to
+the recursor type and every iota-rule RHS. This fixes naming without treating
+different arity or computation as equivalent.
+
 This is stronger evidence than translating the exported recursor directly and
 inserting it. Axeyum and official Lean independently derive the computational
 object and compare results.
 
 ## Negative matrix
 
-The nine Rust integration tests in
+The ten Rust integration tests in
 [`lean4export_v31.rs`](../../crates/axeyum-lean-import/tests/lean4export_v31.rs)
 cover:
 
 | Test | Expected result | Boundary proved |
 |---|---|---|
 | official flat fixture | 5 records / 8 declarations admitted | first end-to-end import slice |
+| official direct-recursive fixture | 5 records / 11 declarations, zero axioms | direct and parametric recursion cross the official seam |
 | repeated import | identical report and declaration debug projection | deterministic construction |
 | unknown record | malformed rejection at line 2 | no open-world guessing |
 | forward expression reference | malformed rejection at line 2 | topological stream contract |
@@ -186,12 +235,12 @@ cover:
 | partial definition | stable unsupported decline | unsafe/partial code cannot enter default profile |
 | line/record limits (two cells in one test) | resource rejection | bounded input contract |
 
-The Rust test count is nine because the final resource test contains both line
+The Rust test count is ten because the final resource test contains both line
 and record cells.
 
 The earlier Python probe remains useful as an implementation-independent
-inventory oracle. Its five tests and the Rust tests consume the same official
-fixture but exercise separate code paths.
+inventory oracle. Its six tests and the Rust tests consume the same official
+fixtures but exercise separate code paths.
 
 ## Commands and result
 
@@ -200,11 +249,13 @@ cargo test -p axeyum-lean-import
 cargo clippy -p axeyum-lean-import --all-targets -- -D warnings
 cargo run -q -p axeyum-lean-import --example lean4export_import -- \
   docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson
+cargo run -q -p axeyum-lean-import --example lean4export_import -- \
+  docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson
 ```
 
 Measured local result under the repository's 4 GiB process cap:
 
-- nine integration tests pass;
+- ten integration tests pass;
 - warning-denied all-target Clippy passes;
 - the example prints the exact result at the top of this page;
 - the existing 181 kernel unit/integration tests and kernel doctest remain
@@ -219,8 +270,8 @@ The initial parts of L1 and L2 are now implemented together:
 - Rust format/version/topology/resource reader: **initial profile landed**;
 - translation of the kernel's existing expression surface: **landed**;
 - safe axiom/definition/opaque/theorem admission: **landed on the fixture**;
-- flat non-recursive inductive admission with recursor comparison: **landed on
-  the fixture**.
+- flat, parametric-recursive, and direct-recursive non-indexed inductive
+  admission with recursor comparison: **landed on the two fixtures**.
 
 L1 is not complete because there is no fuzz target, axiom type digest, completed
 wire-model separation for every unsupported variant, truncation/duplicate-ID/
@@ -231,7 +282,7 @@ mutual, nested, and reflexive groups remain explicit declines.
 ## Next evidence-bearing increments
 
 1. Generate official positive and negative fixtures for projection, Nat/string
-   literals, quotient, direct-recursive Nat/List, recursive-indexed Vector,
+   literals, quotient, recursive-indexed Vector,
    mutual, nested, and reflexive families.
 2. Add a generated parsed/translated/admitted/dual-admitted matrix from those
    fixtures.

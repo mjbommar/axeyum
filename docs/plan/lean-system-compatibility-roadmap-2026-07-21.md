@@ -50,7 +50,7 @@ must name which one it means.
 |---|---|---|---|
 | Lean-source output | Axeyum renders `.lean` modules that official Lean accepts | fail-closed 71/71 representative-family gate | implemented on a selected reconstruction slice |
 | Independent Lean-core checking | Rust code implements names, universes, expressions, environments, reduction, definitional equality, type checking, and selected inductives | `axeyum-lean-kernel`, no runtime dependencies or `unsafe` | substantial selected slice, not complete Lean kernel admission |
-| Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | Rust format-3.1 reader admits the official flat fixture as 8 independently checked declarations from 5 export records | initial profile implemented; broad imports open |
+| Lean declaration import | consume definitions/theorems from an official versioned interchange and check them independently | Rust format-3.1 reader admits the official flat fixture as 8 checked declarations and direct-recursive `MiniNat`/`MiniList` as 11 more | initial flat/direct-recursive profiles implemented; broad imports open |
 | Lean language compatibility | parse, expand macros, elaborate overloaded/implicit source, run tactics, produce information trees | no Lean frontend implementation | absent |
 | Lean workflow/ecosystem compatibility | Lake packages, `.olean` cache behavior, editor/LSP, mathlib project workflows, compiler/runtime | no compatible workflow today | absent; adapter-first roadmap below |
 
@@ -237,7 +237,7 @@ kinds, and selected safety/shape constraints. Its current result is:
 LEAN4EXPORT_PROBE|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decls=5|blockers=none
 ```
 
-Five tests cover the real fixture, unknown-record rejection, forward-reference
+Six tests cover both real fixtures, unknown-record rejection, forward-reference
 rejection, unsafe/partial-declaration rejection, and blocker classification for
 projections, literals, and quotient declarations. The Python probe remains an
 inventory oracle; it is not product code.
@@ -253,13 +253,18 @@ export. The measured result is:
 LEAN4EXPORT_IMPORT|format=3.1.0|lean=4.30.0|names=14|levels=2|exprs=43|decl_records=5|admitted=8|axioms=P
 ```
 
-Nine Rust integration tests include theorem-body and recursor-rule tampering,
-determinism, format drift, topology, safety, projection, and resource controls.
+Ten Rust integration tests include flat and direct-recursive positive fixtures,
+theorem-body and recursor-rule tampering, determinism, format drift, topology,
+safety, projection, and resource controls.
 See the full
 [`Rust import result`](lean4export-rust-import-prototype-2026-07-21.md).
-This grants independent admission credit only to the exact flat fixture. It
-does not grant `Init`, `Std`, mathlib, literal, projection, quotient, or harder
-inductive credit.
+The second official fixture independently admits direct-recursive `MiniNat` and
+parametric-recursive `MiniList` as 11 declarations with no axioms. It exposed
+alpha-equivalent recursor universe binders (`u_1` versus `u.1`), now compared
+after explicit level substitution. These results grant independent admission
+credit only to the exact flat and direct-recursive fixtures. They do not grant
+`Init`, `Std`, mathlib, literal, projection, quotient, recursive-indexed,
+mutual, nested, or reflexive-inductive credit.
 
 ## 5. Architecture
 
@@ -329,8 +334,9 @@ parsing distinct from the declarations that subsequently pass kernel admission.
 
 Current result: the separate Rust importer, exact version/field/topology checks,
 explicit line/record limits, supported expression translation, and safe flat
-declaration admission are landed. The Python and Rust readers agree on the
-fixture's 14/2/43/5 inventory. L1 remains WIP until the mutation/fuzz, axiom
+and direct-recursive declaration admission are landed. The Python and Rust
+readers agree on the flat fixture's 14/2/43/5 and recursive fixture's
+30/4/130/5 inventories. L1 remains WIP until the mutation/fuzz, axiom
 digest, large-stream publication, and broader wire-profile gates below land.
 
 Tasks:
@@ -356,14 +362,17 @@ rejects without panic; zero declaration receives `checked=true` from parsing.
 Goal: translate wire records into the existing environment and admit them with
 the independent type checker.
 
-Current result: slice 1 is landed on the official flat fixture. Five export
-records become eight checked environment declarations; the generated recursor
-type and rules match the export, and a tampered theorem or recursor rule rejects.
-This is one selected slice, not general kernel admission.
+Current result: slice 1 is landed on the official flat and direct-recursive
+fixtures. The former's five export records become eight checked environment
+declarations; the latter's five records become 11 checked declarations for
+`MiniNat`/`MiniList` with no axioms. Generated recursor types and rules match the
+exports after alpha-renaming universe binders, and a tampered theorem or recursor
+rule rejects. These are two selected fixtures, not general kernel admission.
 
 Ordered slices:
 
-1. current expressions/declarations and flat non-recursive inductives;
+1. current expressions/declarations plus flat, parametric-recursive, and direct-
+   recursive non-indexed inductives;
 2. `Expr.proj` checking and reduction;
 3. arbitrary-precision natural literals **before** literal typing, then string
    literals and their reduction rules;
@@ -619,11 +628,12 @@ Non-claims until their gates are met:
 ## 9. Immediate next ten actions
 
 1. Review ADR-0345 and the landed separate-crate/TCB boundary.
-2. Keep the five Python and nine Rust fixture/mutation tests in normal checks.
+2. Keep the six Python and ten Rust fixture/mutation tests in normal checks.
 3. Generate one official fixture each for projection, wide Nat/string literals,
    quotient, recursive indexed, mutual, nested, and reflexive inductives.
-4. Add direct-recursive Nat/List positive fixtures before the recursive-indexed
-   negative so existing kernel support receives import credit.
+4. Preserve byte-identical regeneration of both committed official fixtures and
+   carry the direct-recursive positive control beside every recursive-indexed
+   negative so the boundary is attributed to indices, not recursion alone.
 5. Produce the parsed/translated/admitted/dual-admitted feature matrix.
 6. Add truncation-at-every-record, duplicate-ID, deep-JSON, unknown-field, and
    completed-environment publication mutations.

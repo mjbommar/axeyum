@@ -7,6 +7,8 @@ use axeyum_lean_kernel::Kernel;
 
 const FIXTURE: &str =
     include_str!("../../../docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson");
+const RECURSIVE_FIXTURE: &str =
+    include_str!("../../../docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson");
 
 fn import(text: &str) -> Result<(Kernel, axeyum_lean_import::ImportReport), ImportError> {
     let mut kernel = Kernel::new();
@@ -58,6 +60,43 @@ fn official_flat_fixture_is_independently_admitted() {
             "chooseLeft",
             "P",
             "identity",
+        ]
+    );
+}
+
+#[test]
+fn official_direct_recursive_families_are_independently_admitted() {
+    let (kernel, report) = import(RECURSIVE_FIXTURE).expect("direct-recursive fixture admits");
+    assert_eq!(
+        (
+            report.names,
+            report.levels,
+            report.expressions,
+            report.declaration_records,
+            report.admitted_declarations,
+        ),
+        (30, 4, 130, 5, 11)
+    );
+    assert!(report.axioms.is_empty());
+    let admitted: Vec<_> = kernel
+        .environment()
+        .iter()
+        .map(|(_, declaration)| kernel.display_name(declaration.name()).to_string())
+        .collect();
+    assert_eq!(
+        admitted,
+        [
+            "MiniList",
+            "MiniList.nil",
+            "MiniList.cons",
+            "MiniList.rec",
+            "MiniList.recOn",
+            "MiniNat",
+            "MiniNat.zero",
+            "MiniNat.succ",
+            "MiniNat.rec",
+            "miniOne",
+            "MiniNat.recOn",
         ]
     );
 }

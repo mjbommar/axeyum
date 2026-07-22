@@ -897,13 +897,12 @@ impl<'kernel> ImportState<'kernel> {
         else {
             return Err(malformed(line, "generated name is not a recursor"));
         };
-        if uparams != exported_uparams {
-            return Err(malformed(
-                line,
-                "generated/exported recursor universe parameters differ",
-            ));
-        }
-        if !self.kernel.def_eq(ty, exported_type) {
+        let universe_substitution =
+            self.recursor_universe_substitution(&exported_uparams, &uparams, line)?;
+        let renamed_exported_type = self
+            .kernel
+            .substitute_expr_levels(exported_type, &universe_substitution);
+        if !self.kernel.def_eq(ty, renamed_exported_type) {
             return Err(malformed(
                 line,
                 "generated/exported recursor types are not definitionally equal",
@@ -930,13 +929,43 @@ impl<'kernel> ImportState<'kernel> {
                 "generated family index count differs from export",
             ));
         }
-        self.validate_rec_rules(required(rec, "rules", line)?, &rec_rules, line)
+        self.validate_rec_rules(
+            required(rec, "rules", line)?,
+            &rec_rules,
+            &universe_substitution,
+            line,
+        )
+    }
+
+    fn recursor_universe_substitution(
+        &mut self,
+        exported: &[NameId],
+        generated: &[NameId],
+        line: usize,
+    ) -> Result<Vec<(NameId, LevelId)>, ImportError> {
+        if generated.len() != exported.len() {
+            return Err(malformed(
+                line,
+                "generated/exported recursor universe-parameter arity differs",
+            ));
+        }
+        // Universe parameter names are binders, so the official exporter and
+        // Axeyum may choose different fresh names (for example `u_1` versus
+        // `u.1`) without a semantic difference. Alpha-rename the exported
+        // recursor into the generated parameter namespace before comparison.
+        Ok(exported
+            .iter()
+            .copied()
+            .zip(generated.iter().copied())
+            .map(|(exported, generated)| (exported, self.kernel.level_param(generated)))
+            .collect())
     }
 
     fn validate_rec_rules(
         &mut self,
         raw: &Value,
         generated: &[RecRule],
+        universe_substitution: &[(NameId, LevelId)],
         line: usize,
     ) -> Result<(), ImportError> {
         let exported = array(raw, line, "inductive.rec.rules")?;
@@ -968,9 +997,12 @@ impl<'kernel> ImportState<'kernel> {
                 .map_err(|_| malformed(line, "recursor field count exceeds kernel width"))?;
             let rhs =
                 self.expression(required(rule, "rhs", line)?, line, "inductive.rec.rule.rhs")?;
+            let renamed_rhs = self
+                .kernel
+                .substitute_expr_levels(rhs, universe_substitution);
             if generated_rule.ctor_name != ctor
                 || generated_rule.num_fields != fields
-                || !self.kernel.def_eq(generated_rule.value, rhs)
+                || !self.kernel.def_eq(generated_rule.value, renamed_rhs)
             {
                 return Err(malformed(line, "generated/exported recursor rule differs"));
             }

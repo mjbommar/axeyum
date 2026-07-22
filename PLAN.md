@@ -50,15 +50,21 @@ state.
 > compiler, Lake, LSP, mathlib, and import surfaces. Proposed ADR-0345 sequences
 > both bridge directions: preserve fail-closed source export, then ingest pinned
 > official `lean4export` 3.1 NDJSON and independently admit supported
-> declarations. The separate `axeyum-lean-import` crate now crosses that seam:
-> the real Lean 4.30 fixture's 14 names, two nonzero levels, 43 expressions, and
+> declarations. The separate `axeyum-lean-import` crate now crosses that seam.
+> The flat Lean 4.30 fixture's 14 names, two nonzero levels, 43 expressions, and
 > five declaration records become eight independently checked kernel
-> declarations. It regenerates and compares the recursor; theorem-body and
-> recursor-rule mutations reject among nine Rust tests. This is exact flat-slice
-> import credit, not `Init`/`Std`/mathlib or general kernel credit. Direct
+> declarations. A second official fixture adds direct-recursive `MiniNat` and
+> parametric-recursive `MiniList`: 30 names, four nonzero levels, 130
+> expressions, and five records become 11 checked declarations with zero
+> axioms. The importer independently regenerates and compares each recursor;
+> the recursive fixture exposed alpha-renamed universe binders (`u_1` versus
+> `u.1`), now compared after explicit level substitution. Theorem-body and
+> recursor-rule mutations reject among ten Rust tests. This is exact flat and
+> direct-recursive fixture credit, not `Init`/`Std`/mathlib or general kernel
+> credit. Direct
 > `.olean` parsing and full ecosystem cloning remain non-goals. Resume by
-> generating the projection/literal/quotient/direct-recursive/harder-inductive
-> fixture matrix and type-digesting the 64 prelude axioms before native
+> generating the projection/literal/quotient/recursive-indexed/mutual/nested/
+> reflexive fixture matrix and type-digesting the 64 prelude axioms before native
 > frontend, Lake, LSP, or compiler work. See the
 > [Rust import result](docs/plan/lean4export-rust-import-prototype-2026-07-21.md).
 

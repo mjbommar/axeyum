@@ -592,8 +592,10 @@ are tracked concretely in the [parity plan](../../../PLAN.md) (tracks/phases) an
   family or a larger memory allowance.
 - Lean-system interoperability: the independent Rust checker remains the
   default TCB; the separate pinned format-3.1 `lean4export` reader now admits the
-  official flat fixture as eight checked declarations and compares the
-  generated recursor under nine mutation/negative tests. Broader
+  official flat fixture as eight checked declarations and the direct-recursive
+  `MiniNat`/`MiniList` fixture as 11 declarations with no axioms. It compares
+  independently generated recursors after binder-correct universe alpha-renaming
+  under ten mutation/negative tests. Broader
   dependency-closed kernel admission precedes selected Init/Std/mathlib slices,
   Track 6 goals/tactics, and official Lean/Lake/editor adapters. Direct `.olean`
   parsing and full frontend/compiler/ecosystem cloning are non-goals absent a
