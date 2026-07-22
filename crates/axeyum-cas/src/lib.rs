@@ -3472,11 +3472,52 @@ pub fn definite_sum(f: &CasExpr, var: &str, lower: &CasExpr, upper: &CasExpr) ->
 /// Built on certified primitives (the antidifference and the limit).
 #[must_use]
 pub fn infinite_sum(f: &CasExpr, var: &str, lower: &CasExpr) -> Option<CasExpr> {
+    // p-series `∑_{k=1}^{∞} c/kˢ = c·ζ(s)` (`s ≥ 2`) — not Gosper-summable, but a
+    // closed form for even `s` (`ζ(2)=π²/6`, …) via the ζ table.
+    if integer_constant(lower) == Some(1)
+        && let Some((coeff, exponent)) = match_p_series(f, var)
+        && let Some(zeta_value) = special::zeta(exponent)
+    {
+        return Some(simplify(&(CasExpr::Const(coeff) * zeta_value)));
+    }
     let antidifference = sum_polynomial(f, var).or_else(|| gosper_sum(f, var))?;
     let limit_at_infinity = limit(&antidifference, var, LimitPoint::PosInfinity)?;
     let at_lower = antidifference.substitute(var, lower);
     let result = limit_at_infinity - at_lower;
     Some(simplify(&result))
+}
+
+/// Match a p-series summand `c/varˢ` (a constant over a pure power of `var`),
+/// returning `(c, s)` with `s ≥ 2` (the convergence threshold). `None` otherwise.
+fn match_p_series(f: &CasExpr, var: &str) -> Option<(Rational, i64)> {
+    let rf = normalize_rational(f)?;
+    // Numerator must be a nonzero constant (no dependence on `var` or other vars).
+    if rf.num.terms.keys().any(|m| !m.powers.is_empty()) {
+        return None;
+    }
+    let numerator = rf
+        .num
+        .terms
+        .iter()
+        .find(|(m, _)| m.powers.is_empty())
+        .map(|(_, c)| *c)?;
+    if numerator.is_zero() {
+        return None;
+    }
+    // Denominator must be a single monomial `d·varˢ` (only `var`, no other factors).
+    if rf.den.terms.len() != 1 {
+        return None;
+    }
+    let (mono, den_coeff) = rf.den.terms.iter().next()?;
+    if mono.powers.len() != 1 {
+        return None;
+    }
+    let (den_var, &exp) = mono.powers.iter().next()?;
+    if den_var != var || exp < 2 {
+        return None;
+    }
+    let coeff = numerator.checked_div(*den_coeff)?;
+    Some((coeff, i64::from(exp)))
 }
 
 /// The **finite product** `∏_{var=lower}^{upper} f(var)` over **concrete integer**
@@ -9780,6 +9821,23 @@ mod tests {
         // Divergent series decline: Σ k, Σ 2^k.
         assert!(infinite_sum(&k(), "k", &at(1)).is_none());
         assert!(infinite_sum(&geometric_power(Rational::integer(2), "k"), "k", &at(0)).is_none());
+        // p-series Σ_{1}^{∞} c/kˢ = c·ζ(s): ζ(2)=π²/6, 3·ζ(2)=π²/2, ζ(4)=π⁴/90.
+        assert_equal(
+            &infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(1)).unwrap(),
+            &(CasExpr::rat(1, 6) * v("pi").pow(2)),
+        );
+        assert_equal(
+            &infinite_sum(&(CasExpr::int(3) / k().pow(2)), "k", &at(1)).unwrap(),
+            &(CasExpr::rat(1, 2) * v("pi").pow(2)),
+        );
+        assert_equal(
+            &infinite_sum(&(CasExpr::int(1) / k().pow(4)), "k", &at(1)).unwrap(),
+            &(CasExpr::rat(1, 90) * v("pi").pow(4)),
+        );
+        // Odd ζ (no elementary form), harmonic (s=1 diverges), and a non-1 start all decline.
+        assert!(infinite_sum(&(CasExpr::int(1) / k().pow(3)), "k", &at(1)).is_none());
+        assert!(infinite_sum(&(CasExpr::int(1) / k()), "k", &at(1)).is_none());
+        assert!(infinite_sum(&(CasExpr::int(1) / k().pow(2)), "k", &at(2)).is_none());
     }
 
     #[test]
