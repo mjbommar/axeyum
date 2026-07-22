@@ -1307,7 +1307,13 @@ by substitution.
   `sin(var)=u₀` for each real root (out-of-range/complex roots yield no angles). Closes `sin²x=¼`,
   `2sin²x−3sin x+1=0`, `2cos²x−1=0`.
 
-**Session tally (Entries 37–37h): 20 substantial certified features** across integration (rational-trig
+Also this entry: **surd tan** (`tan x=√3`) — the special-angle scan skipped any `Unary`-headed value to
+dodge tan poles, but `√3` is `Unary(Sqrt)`, so surd targets landing on a bare `√` were wrongly skipped;
+narrowed the skip to unevaluated *trig* heads. And **multiple-angle** `f(m·var)` (`sin 2x=0`,
+`sin 3x=0`): extract the integer frequency `m`, scan `θ∈[0,2π)` for `f(θ)=target`, emit
+`var=((θ_coeff+2j)/m)·π` for `j=0..m` as clean `r·π`.
+
+**Session tally (Entries 37–37h): 22 substantial certified features** across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
