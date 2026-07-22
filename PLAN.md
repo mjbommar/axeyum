@@ -149,6 +149,12 @@ state.
 > and link gates; accepts ADR-0351; and records the unrelated workspace-format
 > boundary. TL2.16 is PARTIAL for this selected population, not complete.
 > TL2.11 strict positivity remains the first semantic widening prerequisite.
+> Proposed ADR-0352 and the
+> [TL2.11 execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
+> now preregister the exact pinned-Lean WHNF/`Pi`/valid-family-application rule,
+> two typed occurrence failures, pre-insertion environment ordering, a generated
+> polarity grammar, and official differential gates. M0 freezes added negative
+> sources before any kernel semantic change; TL2.12 remains blocked.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

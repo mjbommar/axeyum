@@ -200,7 +200,7 @@ official comparison.
 | TL2.8 | TODO | Implement accelerated Nat operations behind independently checked reductions or guarded trusted primitives. | TL2.7, TL0.4 | L | Per-operation mutation tests and large-value differential corpus pass. |
 | TL2.9 | TODO | Type and reduce String literals through `String.mk`/character/list constructors. | TL2.7 | L | String root advances past literals with exact next blocker reported. |
 | TL2.10 | TODO | Add the fixed quotient package and `Quot.lift`/`Quot.ind` reductions. | TL1.7 | M | Official quotient closure admits; relation/proof mutations reject. |
-| TL2.11 | TODO | Implement and fuzz strict positivity before widening recursive admission. | T6.0.3 | L | Known non-positive families reject before environment mutation. |
+| TL2.11 | WIP | Implement and fuzz strict positivity before widening recursive admission. [ADR-0352](../research/09-decisions/adr-0352-preregister-lean-strict-positivity.md) and the [execution plan](lean-strict-positivity-tl2.11-plan-2026-07-22.md) freeze the Lean 4.30 rule, pre-insertion ordering, typed failures, generated grammar, official differential, and M0--M4 gates before implementation. | T6.0.3 | L | Known non-positive families reject before environment mutation. |
 | TL2.12 | TODO | Generalize induction hypotheses for recursive-indexed and reflexive/higher-order fields. | TL2.11 | L | `Vector`- and `Acc`-shaped official fixtures admit and compute. |
 | TL2.13 | TODO | Admit mutual inductive groups with multiple motives and shared minors. | TL2.12 | L | Two-family mutual fixture and recursors agree with official Lean. |
 | TL2.14 | TODO | Implement frontend lowering for nested and well-founded definitions to mutual/reflexive core forms. | TL2.13, TL4.12 | XL | Exported and native-source forms elaborate to definitionally equal core declarations. |
@@ -456,8 +456,8 @@ parallel lane:
 14. **DONE:** TL1.7 — add axiom and declaration dependency digests.
 15. **DONE:** Generate and assurance-classify the selected recursive-indexed,
     reflexive, mutual, nested, and well-founded official fixtures.
-16. **NEXT:** TL2.11 — preregister, implement, and fuzz strict positivity before
-    widening inductive admission.
+16. **WIP/NEXT:** TL2.11 — execute the preregistered source freeze, then
+    implement and fuzz strict positivity before widening inductive admission.
 17. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
 18. TL3.4 — discharge the first five axioms.
 19. TL3.6 — export minimal `Init` roots and regenerate blocker priority.

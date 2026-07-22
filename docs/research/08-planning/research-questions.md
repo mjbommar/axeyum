@@ -770,6 +770,19 @@ Out of scope:
     [M4 assurance report](../../plan/lean-official-construct-matrix-m4-2026-07-22.md).
     The exact gate and handoff record is in the
     [final result](../../plan/lean-official-construct-matrix-final-2026-07-22.md).
+- [ ] Which exact strict-positivity rule must guard the next Lean inductive
+      admission widening, and when must it run?
+  - Proposed answer (2026-07-22): reproduce pinned Lean 4.30's WHNF-based
+    single-family rule exactly for the currently representable profile. Accept
+    no occurrence; recurse through a `Pi` codomain only when its domain contains
+    no family occurrence; otherwise require the exact family application with
+    fixed parameters, complete index arity, and occurrence-free indices. Run
+    this as a fail-closed preflight before provisional inductive environment
+    insertion. Positive recursive-indexed/reflexive shapes retain their feature
+    declines until TL2.12. See
+    [proposed ADR-0352](../09-decisions/adr-0352-preregister-lean-strict-positivity.md)
+    and the
+    [TL2.11 execution plan](../../plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

@@ -369,6 +369,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL2.11/T6.0.2 strict positivity is preregistered; M0 source
+  freeze is next.** Proposed
+  [ADR-0352](docs/research/09-decisions/adr-0352-preregister-lean-strict-positivity.md)
+  and the [execution plan](docs/plan/lean-strict-positivity-tl2.11-plan-2026-07-22.md)
+  bind the implementation to Lean 4.30 commit `d024af09`: WHNF each field,
+  reject family occurrences in `Pi` domains, recurse through codomains, and
+  otherwise accept only the exact family application with fixed parameters,
+  full index arity, and occurrence-free indices. The guard must run before
+  provisional inductive environment insertion and return separate typed non-
+  positive/invalid-occurrence errors. Direct recursion must remain admitted;
+  positive `MiniVector`/`MiniAcc` shapes must pass positivity but retain their
+  current feature declines. A >=256-case deterministic polarity grammar and a
+  mandatory pinned-Lean differential gate precede acceptance. No kernel or
+  importer semantics have changed at this checkpoint.
+
 - **2026-07-22 — the official Lean construct-matrix selected-family milestone
   is complete; TL2.11 strict positivity is next.** The milestone remains explicitly
   a measurement artifact, not kernel implementation. The
@@ -6825,6 +6840,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL2.11/T6.0.2 strict positivity before kernel
+  implementation.** Proposed ADR-0352 and a bounded M0--M4 execution plan from
+  the exact Lean 4.30 kernel rule. Froze the intended WHNF/`Pi`/valid-family-
+  application semantics, separate typed polarity/invalid-occurrence errors,
+  pre-insertion environment ordering, twelve-row public case matrix, generated
+  adversarial grammar, official differential, stop conditions, and TL2.12
+  deferral. No kernel or importer semantics changed; M0 negative-source freeze
+  is next.
 
 - **2026-07-22 — Completed M5 and accepted the official Lean construct-matrix
   decision.** All milestone-owned Rust, Python, parity, foundational-resource,

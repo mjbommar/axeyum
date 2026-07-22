@@ -707,8 +707,9 @@ Non-claims until their gates are met:
    tests and exact fixtures, and the [final result](lean-official-construct-matrix-final-2026-07-22.md)
    closes bounded gates, ADR-0351, and handoff. The selected-family seed advances
    TL2.16 to PARTIAL but does not complete its full population.
-7. **NEXT — TL2.11:** preregister, implement, and fuzz strict positivity before
-   recursive admission widens. The nested diagnostic classification is a
+7. **WIP/NEXT — TL2.11:** execute [ADR-0352 and its bounded plan](lean-strict-positivity-tl2.11-plan-2026-07-22.md),
+   freezing negative sources before implementing and fuzzing the Lean 4.30
+   strict-positivity preflight. The nested diagnostic classification is a
    separate bounded TL1.8 hygiene follow-up, not semantic nested support.
 8. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical

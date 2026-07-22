@@ -406,3 +406,4 @@ What becomes easier, what becomes harder, what gets revisited and when.
 | [0349](adr-0349-generated-lean-import-mutation-corpus.md) | Generate and stably classify every TL1.4 Lean import mutation family while exposing the upstream no-footer boundary | accepted |
 | [0350](adr-0350-canonical-lean-declaration-identity.md) | Publish ledger-compatible axiom identities plus canonical structural declaration and direct-dependency digests | accepted |
 | [0351](adr-0351-preregister-official-lean-construct-matrix.md) | Preregister source-first and wire-second official Lean construct measurement before widening recursive admission | accepted |
+| [0352](adr-0352-preregister-lean-strict-positivity.md) | Preregister Lean 4.30 strict positivity before recursive-indexed or reflexive admission widens | proposed |

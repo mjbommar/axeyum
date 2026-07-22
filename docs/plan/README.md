@@ -116,6 +116,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
 - [`lean-official-construct-matrix-final-2026-07-22.md`](lean-official-construct-matrix-final-2026-07-22.md) —
   M5's exact final gates, accepted ADR-0351, environmental rustdoc diagnosis,
   selected-family completion boundary, and TL2.11-first handoff.
+- [`lean-strict-positivity-tl2.11-plan-2026-07-22.md`](lean-strict-positivity-tl2.11-plan-2026-07-22.md) —
+  preregistered Lean 4.30 WHNF/`Pi`/valid-family-application rule, typed error
+  boundary, pre-insertion ordering, adversarial grammar, official differential,
+  and M0--M4 gates for TL2.11/T6.0.2.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —
