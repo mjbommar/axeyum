@@ -1,6 +1,6 @@
 # ADR-0356: Preregister official SMT-COMP selection identity
 
-Status: proposed
+Status: accepted
 Date: 2026-07-22
 
 ## Context
@@ -198,6 +198,12 @@ result is credited by this decision alone.
   selections with SHA-256
   `49744be7b373b2baef41289bfd5d2a7e59619db2859233e892b0592cd34a8b5b`;
   a fresh standard-library process rehashed both complete runs.
+- The completed S4 audit is recorded in
+  [`smtcomp-official-selection-final-s4-2026-07-22.md`](../../plan/smtcomp-official-selection-final-s4-2026-07-22.md).
+  It reconstructs all 450,472 decisions, physically hashes all 45,905 selected
+  files twice, passes all 18 invariants and rejects all 18 registered
+  mutations. Fresh verification accepts completion SHA-256
+  `322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`.
 
 ## Alternatives
 
