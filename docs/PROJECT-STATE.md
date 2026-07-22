@@ -300,6 +300,11 @@ Again, there are distinct targets:
   uninterrupted projection equality. It still records zero real/U2/parity
   credit and explicitly does not qualify power/host loss or network/object
   durability. TL0.7.4 remains the prerequisite to official U2 execution.
+  Its source-first
+  [acceptance plan](plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
+  freezes one pinned-Lean compile preflight and one exact official-export
+  control, both empty-selection and structurally unable to receive U2/parity
+  credit, before either process runs.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),

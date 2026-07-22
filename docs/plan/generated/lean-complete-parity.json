@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "559617a37868028526b39512129491846a8684d1aed1df637529768e59a3453a"
+      "sha256": "1dfb5daddfb77163d6a39d1bf5ed10fd089238a784a6879170cb3267487d7179"
     },
     {
       "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "63870a91db8170fc811be661a69733edd0a9929a4d299da9c0246e808bd0139f"
+      "sha256": "5edf51892ed6908227e021f7304529a63ca78069c6e33fd54762dd6ef367cd1f"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -433,8 +433,8 @@
       "rows": 140,
       "status_counts": {
         "DONE": 25,
-        "PARTIAL": 6,
-        "TODO": 109,
+        "PARTIAL": 7,
+        "TODO": 108,
         "BLOCKED": 0
       }
     }
