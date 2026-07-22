@@ -3,19 +3,21 @@
 //!
 //! This crate is deliberately separate from `axeyum-lean-kernel`: JSON parsing,
 //! format-version dispatch, resource limits, and malformed-input diagnostics are
-//! untrusted boundary code. Only [`Kernel::add_declaration`] and
-//! [`Kernel::add_inductive`] decide whether translated declarations enter the
-//! independently checked environment.
+//! untrusted boundary code. Only [`Kernel::add_declaration`],
+//! [`Kernel::add_inductive`], and [`Kernel::add_mutual_inductive`] decide
+//! whether translated declarations enter the independently checked
+//! environment.
 //!
 //! The initial profile is official `lean4export` format 3.1.0. It translates
 //! names, universe levels, the expression forms already represented by the
-//! kernel, safe non-inductive declarations, and one-family inductive groups.
-//! It translates projections and natural literals and rejects unsupported
-//! string literals, quotient packages, unsafe or partial declarations,
-//! mutual/nested/reflexive groups, unknown records, and malformed/forward
-//! references. [`import_ndjson`] owns a private staging kernel and publishes it
-//! only after the complete stream succeeds, so an error cannot expose a partial
-//! environment.
+//! kernel, safe non-inductive declarations, and ordered one- or multi-family
+//! inductive groups. It translates projections and natural literals and
+//! rejects unsupported string literals, quotient packages, unsafe or partial
+//! declarations, nested groups, unknown records, and malformed/forward
+//! references. Reflexive metadata is descriptive; the independent kernel
+//! decides support from the translated terms. [`import_ndjson`] owns a private
+//! staging kernel and publishes it only after the complete stream succeeds, so
+//! an error cannot expose a partial environment.
 //!
 //! Each completed [`ImportReport`] also carries ADR-0350's versioned canonical
 //! identity manifest: TL0.4-compatible axiom name/type hashes plus complete
@@ -25,12 +27,13 @@
 
 #![forbid(unsafe_code)]
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::{self, BufRead, Read};
 
 use axeyum_lean_kernel::{
-    BinderInfo, Declaration, ExprId, Kernel, KernelError, LevelId, Lit, NameId, NatLit, RecRule,
-    ReducibilityHint,
+    BinderInfo, Declaration, ExprId, InductiveFamilySpec, Kernel, KernelError, LevelId, Lit,
+    NameId, NatLit, RecRule, ReducibilityHint,
 };
 use serde_json::{Map, Value};
 
@@ -252,6 +255,24 @@ struct ImportState<'kernel> {
     expressions: Vec<ExprId>,
     declaration_records: usize,
     axioms: Vec<String>,
+}
+
+#[derive(Debug)]
+struct ExportedInductiveFamily {
+    name: NameId,
+    uparams: Vec<NameId>,
+    ty: ExprId,
+    num_params: usize,
+    num_indices: usize,
+    constructor_names: Vec<NameId>,
+    is_recursive: bool,
+}
+
+#[derive(Debug, Clone)]
+struct ExportedConstructor {
+    name: NameId,
+    ty: ExprId,
+    num_fields: u16,
 }
 
 impl<'kernel> ImportState<'kernel> {
@@ -699,93 +720,135 @@ impl<'kernel> ImportState<'kernel> {
         let types = array(required(group, "types", line)?, line, "inductive.types")?;
         let constructors = array(required(group, "ctors", line)?, line, "inductive.ctors")?;
         let recursors = array(required(group, "recs", line)?, line, "inductive.recs")?;
-        if types.len() != 1 {
-            return Err(unsupported(line, "inductive-mutual"));
+        if types.is_empty() {
+            return Err(malformed(line, "inductive group has no family types"));
         }
-        if recursors.len() != 1 {
+        if types.len() == 1 && recursors.len() != 1 {
             return Err(malformed(
                 line,
                 "single-family inductive must export one recursor",
             ));
         }
-        let ty = object(&types[0], line, "inductive.type")?;
-        exact_keys(
-            ty,
-            &[
-                "name",
-                "levelParams",
-                "type",
-                "numParams",
-                "numIndices",
-                "all",
-                "ctors",
-                "numNested",
-                "isRec",
-                "isUnsafe",
-                "isReflexive",
-            ],
-            line,
-            "inductive.type",
-        )?;
-        if boolean(
-            required(ty, "isUnsafe", line)?,
-            line,
-            "inductive.type.isUnsafe",
-        )? {
-            return Err(unsupported(line, "declaration-unsafe"));
-        }
-        // Lean's `isReflexive` flag describes how the frontend classified the
-        // group; it is not permission to bypass or deny the independent
-        // kernel's structural positivity/recursive-field checks. TL2.12 parses
-        // the bit strictly, then lets `Kernel::add_inductive` decide from the
-        // translated type and constructor terms.
-        boolean(
-            required(ty, "isReflexive", line)?,
-            line,
-            "inductive.type.isReflexive",
-        )?;
-        if u64_value(
-            required(ty, "numNested", line)?,
-            line,
-            "inductive.type.numNested",
-        )? != 0
-        {
-            return Err(unsupported(line, "inductive-nested"));
-        }
-        boolean(required(ty, "isRec", line)?, line, "inductive.type.isRec")?;
-        self.validate_all_names(required(ty, "all", line)?, line, "inductive.type.all")?;
-
-        let name = self.name(required(ty, "name", line)?, line, "inductive.type.name")?;
-        let name_text = self.kernel.display_name(name).to_string();
-        let uparams = self.name_array(
-            required(ty, "levelParams", line)?,
-            line,
-            "inductive.type.levelParams",
-        )?;
-        let type_expression =
-            self.expression(required(ty, "type", line)?, line, "inductive.type.type")?;
-        let num_params = usize_value(
-            required(ty, "numParams", line)?,
-            line,
-            "inductive.type.numParams",
-        )?;
-        let exported_num_indices = usize_value(
-            required(ty, "numIndices", line)?,
-            line,
-            "inductive.type.numIndices",
-        )?;
-        let exported_ctor_names =
-            self.name_array(required(ty, "ctors", line)?, line, "inductive.type.ctors")?;
-        if exported_ctor_names.len() != constructors.len() {
+        if recursors.len() != types.len() {
             return Err(malformed(
                 line,
-                "constructor-name list length does not match ctor records",
+                "inductive group must export one recursor per family",
             ));
         }
 
-        let mut ctor_declarations = Vec::with_capacity(constructors.len());
-        let mut exported_constructor_fields = Vec::with_capacity(constructors.len());
-        for (expected_index, raw_ctor) in constructors.iter().enumerate() {
+        let group_names = types
+            .iter()
+            .map(|raw_type| {
+                let ty = object(raw_type, line, "inductive.type")?;
+                self.name(required(ty, "name", line)?, line, "inductive.type.name")
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if group_names.iter().copied().collect::<BTreeSet<_>>().len() != group_names.len() {
+            return Err(malformed(line, "inductive group repeats a family name"));
+        }
+
+        let mut exported_families = Vec::with_capacity(types.len());
+        for raw_type in types {
+            let ty = object(raw_type, line, "inductive.type")?;
+            exact_keys(
+                ty,
+                &[
+                    "name",
+                    "levelParams",
+                    "type",
+                    "numParams",
+                    "numIndices",
+                    "all",
+                    "ctors",
+                    "numNested",
+                    "isRec",
+                    "isUnsafe",
+                    "isReflexive",
+                ],
+                line,
+                "inductive.type",
+            )?;
+            if boolean(
+                required(ty, "isUnsafe", line)?,
+                line,
+                "inductive.type.isUnsafe",
+            )? {
+                return Err(unsupported(line, "declaration-unsafe"));
+            }
+            // Descriptive frontend metadata never authorizes or denies the
+            // independent structural gate.
+            boolean(
+                required(ty, "isReflexive", line)?,
+                line,
+                "inductive.type.isReflexive",
+            )?;
+            if u64_value(
+                required(ty, "numNested", line)?,
+                line,
+                "inductive.type.numNested",
+            )? != 0
+            {
+                return Err(unsupported(line, "inductive-nested"));
+            }
+            let all = self.name_array(required(ty, "all", line)?, line, "inductive.type.all")?;
+            if all != group_names {
+                return Err(malformed(
+                    line,
+                    "inductive type all list differs from ordered group",
+                ));
+            }
+            exported_families.push(ExportedInductiveFamily {
+                name: self.name(required(ty, "name", line)?, line, "inductive.type.name")?,
+                uparams: self.name_array(
+                    required(ty, "levelParams", line)?,
+                    line,
+                    "inductive.type.levelParams",
+                )?,
+                ty: self.expression(required(ty, "type", line)?, line, "inductive.type.type")?,
+                num_params: usize_value(
+                    required(ty, "numParams", line)?,
+                    line,
+                    "inductive.type.numParams",
+                )?,
+                num_indices: usize_value(
+                    required(ty, "numIndices", line)?,
+                    line,
+                    "inductive.type.numIndices",
+                )?,
+                constructor_names: self.name_array(
+                    required(ty, "ctors", line)?,
+                    line,
+                    "inductive.type.ctors",
+                )?,
+                is_recursive: boolean(required(ty, "isRec", line)?, line, "inductive.type.isRec")?,
+            });
+        }
+
+        let common_uparams = exported_families[0].uparams.clone();
+        let common_num_params = exported_families[0].num_params;
+        for family in &exported_families {
+            if family.uparams != common_uparams {
+                return Err(malformed(line, "mutual family universe parameters differ"));
+            }
+            if family.num_params != common_num_params {
+                return Err(malformed(line, "mutual family numParams differs"));
+            }
+        }
+
+        let ordered_constructor_names = exported_families
+            .iter()
+            .flat_map(|family| family.constructor_names.iter().copied())
+            .collect::<Vec<_>>();
+        if ordered_constructor_names.len() != constructors.len() {
+            return Err(malformed(
+                line,
+                "constructor-name lists do not match ctor record count",
+            ));
+        }
+
+        let mut parsed_constructors = BTreeMap::new();
+        let mut wire_constructor_names = Vec::with_capacity(constructors.len());
+        for raw_ctor in constructors {
             let ctor = object(raw_ctor, line, "inductive.ctor")?;
             exact_keys(
                 ctor,
@@ -816,17 +879,17 @@ impl<'kernel> ImportState<'kernel> {
                 line,
                 "inductive.ctor.induct",
             )?;
-            if parent != name || exported_ctor_names[expected_index] != ctor_name {
+            let Some(owner_index) = group_names.iter().position(|&name| name == parent) else {
                 return Err(malformed(
                     line,
-                    "constructor parent/order does not match type record",
+                    "constructor parent is not in the ordered group",
                 ));
-            }
+            };
             let cidx = usize_value(required(ctor, "cidx", line)?, line, "inductive.ctor.cidx")?;
-            if cidx != expected_index {
+            if exported_families[owner_index].constructor_names.get(cidx) != Some(&ctor_name) {
                 return Err(malformed(
                     line,
-                    "constructor indices are not dense and ordered",
+                    "constructor parent/index/name differs from family list",
                 ));
             }
             let constructor_parameter_count = usize_value(
@@ -834,7 +897,7 @@ impl<'kernel> ImportState<'kernel> {
                 line,
                 "inductive.ctor.numParams",
             )?;
-            if constructor_parameter_count != num_params {
+            if constructor_parameter_count != common_num_params {
                 return Err(malformed(line, "constructor numParams differs from family"));
             }
             let ctor_uparams = self.name_array(
@@ -842,7 +905,7 @@ impl<'kernel> ImportState<'kernel> {
                 line,
                 "inductive.ctor.levelParams",
             )?;
-            if ctor_uparams != uparams {
+            if ctor_uparams != common_uparams {
                 return Err(malformed(
                     line,
                     "constructor universe parameters differ from family",
@@ -857,31 +920,156 @@ impl<'kernel> ImportState<'kernel> {
                 .map_err(|_| malformed(line, "constructor field count exceeds kernel width"))?;
             let ctor_type =
                 self.expression(required(ctor, "type", line)?, line, "inductive.ctor.type")?;
-            ctor_declarations.push((ctor_name, ctor_type));
-            exported_constructor_fields.push(field_count);
+            wire_constructor_names.push(ctor_name);
+            if parsed_constructors
+                .insert(
+                    ctor_name,
+                    ExportedConstructor {
+                        name: ctor_name,
+                        ty: ctor_type,
+                        num_fields: field_count,
+                    },
+                )
+                .is_some()
+            {
+                return Err(malformed(
+                    line,
+                    "inductive group repeats a constructor record",
+                ));
+            }
+        }
+        if wire_constructor_names != ordered_constructor_names {
+            return Err(malformed(
+                line,
+                "constructor records differ from family/constructor order",
+            ));
         }
 
+        let family_specs = exported_families
+            .iter()
+            .map(|family| {
+                let constructors = family
+                    .constructor_names
+                    .iter()
+                    .map(|name| {
+                        parsed_constructors
+                            .get(name)
+                            .map(|constructor| (constructor.name, constructor.ty))
+                            .ok_or_else(|| malformed(line, "family constructor record is missing"))
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(InductiveFamilySpec::new(
+                    family.name,
+                    family.ty,
+                    constructors,
+                ))
+            })
+            .collect::<Result<Vec<_>, ImportError>>()?;
+
+        let group_label = self
+            .kernel
+            .display_name(exported_families[0].name)
+            .to_string();
         self.kernel
-            .add_inductive(
-                name,
-                &uparams,
-                num_params,
-                type_expression,
-                &ctor_declarations,
-            )
+            .add_mutual_inductive(&common_uparams, common_num_params, &family_specs)
             .map_err(|source| ImportError::Kernel {
                 line,
-                declaration: name_text,
+                declaration: group_label,
                 source,
             })?;
-        self.validate_generated_constructors(
-            name,
-            &uparams,
-            &ctor_declarations,
-            &exported_constructor_fields,
-            line,
-        )?;
-        self.validate_generated_recursor(&recursors[0], name, exported_num_indices, line)
+
+        self.validate_generated_families(&exported_families, line)?;
+        for (family, spec) in exported_families.iter().zip(&family_specs) {
+            let fields = family
+                .constructor_names
+                .iter()
+                .map(|name| parsed_constructors[name].num_fields)
+                .collect::<Vec<_>>();
+            self.validate_generated_constructors(
+                family.name,
+                &common_uparams,
+                &spec.constructors,
+                &fields,
+                line,
+            )?;
+        }
+
+        let expected_recursors = exported_families
+            .iter()
+            .enumerate()
+            .map(|(index, family)| (self.kernel.name_str(family.name, "rec"), index))
+            .collect::<BTreeMap<_, _>>();
+        let mut recursor_records = BTreeMap::new();
+        for raw_recursor in recursors {
+            let rec = object(raw_recursor, line, "inductive.rec")?;
+            let name = self.name(required(rec, "name", line)?, line, "inductive.rec.name")?;
+            if !expected_recursors.contains_key(&name) {
+                return Err(malformed(
+                    line,
+                    "exported recursor name does not belong to the group",
+                ));
+            }
+            if recursor_records.insert(name, raw_recursor).is_some() {
+                return Err(malformed(line, "inductive group repeats a recursor record"));
+            }
+        }
+        for (recursor_name, family_index) in expected_recursors {
+            let raw_recursor = recursor_records
+                .get(&recursor_name)
+                .ok_or_else(|| malformed(line, "group family recursor record is missing"))?;
+            let family = &exported_families[family_index];
+            self.validate_generated_recursor(
+                raw_recursor,
+                family.name,
+                family.num_indices,
+                &group_names,
+                line,
+            )?;
+        }
+        Ok(())
+    }
+
+    fn validate_generated_families(
+        &mut self,
+        exported: &[ExportedInductiveFamily],
+        line: usize,
+    ) -> Result<(), ImportError> {
+        for family in exported {
+            let generated = self
+                .kernel
+                .environment()
+                .get(family.name)
+                .cloned()
+                .ok_or_else(|| malformed(line, "kernel did not generate exported family"))?;
+            let Declaration::Inductive {
+                uparams,
+                ty,
+                num_params,
+                num_indices,
+                is_recursive,
+                ctor_names,
+                ..
+            } = generated
+            else {
+                return Err(malformed(
+                    line,
+                    "generated family name has wrong declaration kind",
+                ));
+            };
+            if uparams != family.uparams
+                || !self.kernel.def_eq(ty, family.ty)
+                || usize::from(num_params) != family.num_params
+                || usize::from(num_indices) != family.num_indices
+                || is_recursive != family.is_recursive
+                || ctor_names != family.constructor_names
+            {
+                return Err(malformed(
+                    line,
+                    "generated/exported family metadata or type differs",
+                ));
+            }
+        }
+        Ok(())
     }
 
     fn validate_generated_constructors(
@@ -938,6 +1126,7 @@ impl<'kernel> ImportState<'kernel> {
         raw: &Value,
         inductive: NameId,
         exported_num_indices: usize,
+        expected_all: &[NameId],
         line: usize,
     ) -> Result<(), ImportError> {
         let rec = object(raw, line, "inductive.rec")?;
@@ -959,15 +1148,7 @@ impl<'kernel> ImportState<'kernel> {
             line,
             "inductive.rec",
         )?;
-        if boolean(
-            required(rec, "isUnsafe", line)?,
-            line,
-            "inductive.rec.isUnsafe",
-        )? {
-            return Err(unsupported(line, "declaration-unsafe"));
-        }
-        boolean(required(rec, "k", line)?, line, "inductive.rec.k")?;
-        self.validate_all_names(required(rec, "all", line)?, line, "inductive.rec.all")?;
+        self.validate_recursor_group_metadata(rec, expected_all, line)?;
         let name = self.name(required(rec, "name", line)?, line, "inductive.rec.name")?;
         let expected_name = self.kernel.name_str(inductive, "rec");
         if name != expected_name {
@@ -1040,6 +1221,33 @@ impl<'kernel> ImportState<'kernel> {
             &universe_substitution,
             line,
         )
+    }
+
+    fn validate_recursor_group_metadata(
+        &self,
+        rec: &Map<String, Value>,
+        expected_all: &[NameId],
+        line: usize,
+    ) -> Result<(), ImportError> {
+        if boolean(
+            required(rec, "isUnsafe", line)?,
+            line,
+            "inductive.rec.isUnsafe",
+        )? {
+            return Err(unsupported(line, "declaration-unsafe"));
+        }
+        let is_k_target = boolean(required(rec, "k", line)?, line, "inductive.rec.k")?;
+        if expected_all.len() > 1 && is_k_target {
+            return Err(malformed(line, "mutual recursor may not be a K target"));
+        }
+        let all = self.name_array(required(rec, "all", line)?, line, "inductive.rec.all")?;
+        if all != expected_all {
+            return Err(malformed(
+                line,
+                "inductive recursor all list differs from ordered group",
+            ));
+        }
+        Ok(())
     }
 
     fn recursor_universe_substitution(

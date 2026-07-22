@@ -276,10 +276,20 @@ state.
 > counts target recursor constants in rules, and rejects 288 group-order plus
 > 240 target-family expectation mutations while retaining the exact 768/840
 > control descriptors. No production code or importer policy changed, and the
-> M0 streams remain unobserved. M4 next owns importer widening, exact official
-> declaration comparison, and the registered cross-family computations. One Lean/Rust
-> worker, 4 GiB caps, the 720-case group grammar, and the retained
-> 768-case recursive plus 840-case positivity controls are mandatory.
+> M0 streams remain unobserved. The subsequent
+> [M4 result](docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md) now removes
+> only the blanket multi-family importer decline. It parses and validates one
+> ordered group, calls the atomic kernel gate once, matches dependency-ordered
+> wire recursors by checked name rather than array position, and compares every
+> family/constructor/recursor type, count, rule, and field contract. The frozen
+> construct, non-indexed computation, and indexed computation streams each
+> import twice to identical declaration manifests; both selected theorem sides
+> normalize to `MiniNat.succ (MiniNat.succ MiniNat.zero)`. Twenty-two rejecting
+> metadata/type/count/rule/field/publication mutations plus two positive
+> non-authority controls pass, as do the retained 720/768/840 populations. M5
+> next owns the assurance overlay, final bounded gates, ADR-0354 decision, and
+> complete roadmap synchronization. One Lean/Rust worker and 4 GiB caps remain
+> mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

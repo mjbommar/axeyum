@@ -134,10 +134,15 @@ parity-docs:
     python3 scripts/gen-smtlib-session-contract.py --check
     python3 scripts/check-parity-docs.py
 
-# M3 official construct-matrix product boundary: the direct-recursive control
-# precedes each typed decline, and the complete five-row sequence repeats.
+# Current official construct-matrix product boundary: the direct-recursive
+# control precedes each remaining typed decline, and all five rows repeat.
 lean-construct-matrix-product:
-    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=2 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_construct_matrix
+    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=1 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_construct_matrix
+
+# TL2.13 M4: exact ordered-group import, named recursor comparison, selected
+# non-indexed/indexed cross-family computation, and publication mutations.
+lean-mutual-inductive-groups-product:
+    MEM_LIMIT_GB=4 CARGO_BUILD_JOBS=1 ./scripts/mem-run.sh cargo test -p axeyum-lean-import --test official_mutual_inductive_groups
 
 deny:
     cargo deny check

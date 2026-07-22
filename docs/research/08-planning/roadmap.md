@@ -120,8 +120,12 @@ Last updated: 2026-07-22
 > [M3 result](../../../docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md)
 > adds 720 unique public cases repeated byte-identically, with 432 positive
 > inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
-> target-rule oracles, and retained 768/840 controls. M4 importer/official
-> comparison is next; TL2.14 frontend lowering remains separate.
+> target-rule oracles, and retained 768/840 controls. The
+> [M4 result](../../../docs/plan/lean-mutual-inductive-groups-m4-2026-07-22.md)
+> imports all three official streams twice, compares named recursors exactly,
+> confirms both registered cross-family normal forms, and closes 22 rejecting
+> importer/publication mutation classes. M5 final closure remains; TL2.14
+> frontend lowering stays separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

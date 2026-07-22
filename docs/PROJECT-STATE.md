@@ -200,12 +200,16 @@ Again, there are distinct targets:
   complete-group algorithm. Eighteen public rows cover cross, indexed, higher-
   order, mixed, empty-constructor, and mutual-`Prop` shapes; two private
   mutation tests exercise recursor contracts and late whole-group rollback.
-  Importer support and official mutual computation remain deliberately absent.
   M3 now repeats 720 unique public-path cases byte-identically with 432
   positive admission/inference/iota contracts, 288 exact typed rollbacks,
   motive/minor order read from recursor telescopes, and target-family rule
   signatures. Generated group-order/target-family mutations reject and the
-  768/840 controls remain exact. M4 importer/official comparison is next.
+  768/840 controls remain exact. M4 now parses one exact ordered official group,
+  calls the atomic gate once, compares dependency-ordered wire recursors by
+  checked name, and imports the construct plus both computation streams twice.
+  Both selected cross-family recursor applications normalize to the registered
+  two-successor result, and 22 rejecting importer/publication mutation classes
+  pass. M5 assurance/final closure remains open.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

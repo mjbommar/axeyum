@@ -189,6 +189,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   direct recursor-telescope order oracle, target-family rule signatures, 432
   positive iota contracts, 288 typed rollbacks, generated mutation teeth,
   retained 768/840 controls, and M4 importer handoff.
+- [`lean-mutual-inductive-groups-m4-2026-07-22.md`](lean-mutual-inductive-groups-m4-2026-07-22.md)
+  — M4's atomic ordered-group import, name-based official recursor comparison,
+  twice-repeated exact construct/non-indexed/indexed streams, two registered
+  cross-family normal forms, 22 rejecting wire/publication mutations, retained
+  720/768/840 controls, and M5 assurance/closure handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

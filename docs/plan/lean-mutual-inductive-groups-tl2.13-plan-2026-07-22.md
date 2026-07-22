@@ -1,7 +1,7 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: M3 deterministic group grammar complete; M4 importer and exact official
-groups are next
+Status: M4 importer and exact official groups complete; M5 assurance update and
+closure are next
 
 Date: 2026-07-22
 
@@ -344,6 +344,15 @@ rollbacks, and generated group-order/target-family mutation teeth. The retained
 - commit, push, and verify remote equality.
 
 ### M4 — importer and exact official groups
+
+Status: **complete**. See the
+[M4 result](lean-mutual-inductive-groups-m4-2026-07-22.md). The importer now
+parses one exact ordered group, calls the atomic kernel gate once, matches
+dependency-ordered wire recursors by checked name, compares every generated
+family/constructor/recursor contract, imports all three official streams twice,
+and normalizes both selected cross-family computations to the registered
+two-successor normal form. Twenty-two rejecting mutation classes plus recursor-
+order and descriptive-metadata controls prove completion-only publication.
 
 - remove only the blanket multi-type policy decline after native support;
 - validate ordered `all` arrays and every type/constructor/recursor record;

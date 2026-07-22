@@ -27,10 +27,6 @@ enum ExpectedOutcome {
         counts: (usize, usize, usize, usize, usize),
         required_names: &'static [&'static str],
     },
-    Unsupported {
-        line: usize,
-        code: &'static str,
-    },
     Malformed {
         line: usize,
         message: &'static str,
@@ -93,13 +89,6 @@ fn assert_outcome(case_id: &str, fixture: &str, expected: ExpectedOutcome) {
                 );
             }
         }
-        (
-            Err(ImportError::Unsupported {
-                line: actual_line,
-                code: actual_code,
-            }),
-            ExpectedOutcome::Unsupported { line, code },
-        ) => assert_eq!((actual_line, actual_code), (line, code), "{case_id}"),
         (
             Err(ImportError::Malformed {
                 line: actual_line,
@@ -190,9 +179,15 @@ fn frozen_matrix_outcomes_repeat_with_a_control_before_every_decline() {
         (
             "mutual",
             MUTUAL,
-            ExpectedOutcome::Unsupported {
-                line: 233,
-                code: "inductive-mutual",
+            ExpectedOutcome::Complete {
+                counts: (75, 4, 305, 10, 26),
+                required_names: &[
+                    "AxeyumConstructMatrix.EvenTree",
+                    "AxeyumConstructMatrix.OddTree",
+                    "AxeyumConstructMatrix.EvenTree.rec",
+                    "AxeyumConstructMatrix.OddTree.rec",
+                    "AxeyumConstructMatrix.mutualWitness",
+                ],
             },
         ),
         (
@@ -254,11 +249,20 @@ fn reflexive_metadata_is_descriptive_while_boundaries_remain_fail_closed() {
     });
     assert_unsupported(&unsafe_group, 148, "declaration-unsafe");
 
-    let mutual = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
-        let duplicate = group["types"][0].clone();
-        group["types"].as_array_mut().unwrap().push(duplicate);
+    let duplicate_group = mutate_inductive_record(RECURSIVE_INDEXED, 148, |group| {
+        let duplicate_type = group["types"][0].clone();
+        let duplicate_recursor = group["recs"][0].clone();
+        group["types"].as_array_mut().unwrap().push(duplicate_type);
+        group["recs"]
+            .as_array_mut()
+            .unwrap()
+            .push(duplicate_recursor);
     });
-    assert_unsupported(&mutual, 148, "inductive-mutual");
+    assert_malformed(
+        &duplicate_group,
+        148,
+        "inductive group repeats a family name",
+    );
 }
 
 #[test]

@@ -848,8 +848,12 @@ Out of scope:
     [M3 result](../../plan/lean-mutual-inductive-groups-m3-2026-07-22.md) now
     repeats 720 unique public-path cases byte-identically with 432 positive
     inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
-    target-rule oracles, and retained 768/840 controls. The question remains
-    open until M4's official import/computation comparison and M5's final gates
+    target-rule oracles, and retained 768/840 controls. The
+    [M4 result](../../plan/lean-mutual-inductive-groups-m4-2026-07-22.md) now
+    imports all three frozen official streams twice, compares dependency-
+    ordered recursors by checked name, confirms both registered cross-family
+    normal forms, and closes 22 rejecting importer/publication mutation
+    classes. The question remains open until M5's assurance and final gates
     close.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a

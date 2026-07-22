@@ -774,8 +774,12 @@ Non-claims until their gates are met:
    unique public-path cases byte-identically: 432 positive contracts, 288 typed
    rollbacks, direct motive/minor-order and target-rule oracles, and generated
    group-order/target-family mutation teeth. The 768/840 controls remain exact.
-   Importer widening and official computation stay M4; TL2.14 frontend lowering
-   stays separate.
+   The [M4 result](lean-mutual-inductive-groups-m4-2026-07-22.md) now imports the
+   construct and both computation streams twice, compares dependency-ordered
+   recursors by checked name, normalizes both selected cross-family applications
+   to the registered result, and closes 22 rejecting importer/publication
+   mutation classes. M5 assurance/final closure remains; TL2.14 frontend
+   lowering stays separate.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.
