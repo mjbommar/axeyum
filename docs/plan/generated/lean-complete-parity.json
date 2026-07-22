@@ -4,7 +4,11 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "b9d15687c5d0c6c2cb809ac26b6ff206f7352923211b56475963f43f1a6cf791"
+      "sha256": "421eac9c56f6b2e51c76fff4495b8d5d81c0936bc2800cda5c96732e7766cb61"
+    },
+    {
+      "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
+      "sha256": "9b159c245dc81807ef8c209bf60218876179ffa8531c5af5a80123d151c47436"
     },
     {
       "path": "docs/plan/generated/lean-u2-test-authority.md",
@@ -20,7 +24,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "2e742d4a33776cd67f17cffc6592c7c2a5a5e8e72cd54e90b8775a0f524ef906"
+      "sha256": "f2fc71509b4f557265a853ebb7666071b7b67d8553c0951ae1f91b736059ab78"
     },
     {
       "path": "docs/plan/lean-official-construct-matrix-v1.json",
@@ -28,7 +32,15 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "fe790bd2612f425e8fbaf1b8b9fdf05a5a21cabce5baf4de6d437043e8878100"
+      "sha256": "b776c6e70ae107b9a3700dabdafba4d6a9c98c3fbdb8731b644244fd21bec90d"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
+      "sha256": "97a27b13fc33e5c81bdddc4c8703de7d5a98e78d8ec8c2268e00614f6fd6ad29"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-ci-profiles-v1.json",
+      "sha256": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548"
     },
     {
       "path": "docs/plan/lean-u2-test-authority-v1.json",
@@ -36,11 +48,15 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "c753a908f702994ce35cddbe5c34351ff5e0a7f29cd72bf4d30ba2b3e862b091"
+      "sha256": "482347f2bca5e652d784cd01c5c5aa96af0803d9cc77e14e0756763c460dd113"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "e93ea4d89084fdb28bb166134edc674fdf7204b3591fff33bf5f711e1bd60c36"
+      "sha256": "f5356d9f57c4d44035aac86f5af390bb51835afc2e59b0ca6be8674ba2d3813e"
+    },
+    {
+      "path": "scripts/gen-lean-u2-official-ci-profiles.py",
+      "sha256": "4b4b2d0fca8acaee1f90e8a7f143067db6596e6aa7d558e9a877639db878e246"
     },
     {
       "path": "scripts/gen-lean-u2-test-authority.py",
@@ -52,7 +68,11 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "01c5aeaa4af823443761fbef9480068955417dcf89b76d54607f783fac608d34"
+      "sha256": "f2973c2a7f840e006559503778ff6f913072cd98d4c348d1450bd803c0080636"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_official_ci_profiles.py",
+      "sha256": "8705885cb8fa9637b0caa3cc1839b8c03442ba0fb8bf8e33a9b35599201f1d41"
     },
     {
       "path": "scripts/tests/test_lean_u2_test_authority.py",
@@ -186,11 +206,125 @@
         "state": "not-run"
       }
     },
+    "u2_ci_profile_authority": {
+      "scope": "official-ci-profile-derivation-not-execution-or-parity",
+      "derivation": {
+        "method": "isolated pinned JavaScript matrix evaluation plus exact CTest-name filtering",
+        "matrix_fragment_sha256": "dc0b880645e114ef825a6ac964d6d588ef462f83de2a9903d3b7725f4ff184c9",
+        "official_repository_large": true,
+        "stdlib_flags_equal": true,
+        "target_stage": "stage1",
+        "contexts": 17,
+        "active_job_literals": 9,
+        "candidate_cells": 153,
+        "cell_state_counts": {
+          "ctest": 85,
+          "disabled": 53,
+          "packaging-only": 15
+        },
+        "ctest_attempts": 111,
+        "attempt_phase_counts": {
+          "primary": 85,
+          "rebootstrap": 26
+        },
+        "selection_sets": 8,
+        "outcomes_observed": 0
+      },
+      "selection_sets": [
+        {
+          "id": "default-all",
+          "profile": "default",
+          "include_regex": null,
+          "exclude_regex": null,
+          "registered_count": 3678,
+          "selected_count": 3678,
+          "excluded_count": 0,
+          "selected_ids_sha256": "6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488"
+        },
+        {
+          "id": "default-filtered-aec7358564e4",
+          "profile": "default",
+          "include_regex": null,
+          "exclude_regex": "foreign",
+          "registered_count": 3678,
+          "selected_count": 3678,
+          "excluded_count": 0,
+          "selected_ids_sha256": "6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488"
+        },
+        {
+          "id": "default-filtered-bfb0a7b69c6e",
+          "profile": "default",
+          "include_regex": null,
+          "exclude_regex": "elab_bench/big_do",
+          "registered_count": 3678,
+          "selected_count": 3677,
+          "excluded_count": 1,
+          "selected_ids_sha256": "cd78d60a181a643ff844c6bd29a09d71be50741c7347aaa40490a8a73150f56a"
+        },
+        {
+          "id": "default-filtered-d1bb9722e72c",
+          "profile": "default",
+          "include_regex": null,
+          "exclude_regex": "StackOverflow|reverse-ffi|interactive|async_select_channel|9366|run/bv_|grind_guide|grind_bitvec2|grind_constProp|grind_indexmap|grind_list|grind_lint|grind_array_attach|grind_ite_trace|pkg/|lake/",
+          "registered_count": 3678,
+          "selected_count": 3477,
+          "excluded_count": 201,
+          "selected_ids_sha256": "9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e"
+        },
+        {
+          "id": "full-lake-all",
+          "profile": "full-lake",
+          "include_regex": null,
+          "exclude_regex": null,
+          "registered_count": 3723,
+          "selected_count": 3723,
+          "excluded_count": 0,
+          "selected_ids_sha256": "7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd"
+        },
+        {
+          "id": "full-lake-filtered-6325d6cffd5d",
+          "profile": "full-lake",
+          "include_regex": null,
+          "exclude_regex": "foreign",
+          "registered_count": 3723,
+          "selected_count": 3723,
+          "excluded_count": 0,
+          "selected_ids_sha256": "7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd"
+        },
+        {
+          "id": "full-lake-filtered-cbb2894dd43f",
+          "profile": "full-lake",
+          "include_regex": null,
+          "exclude_regex": "elab_bench/big_do",
+          "registered_count": 3723,
+          "selected_count": 3722,
+          "excluded_count": 1,
+          "selected_ids_sha256": "bc35ab1c1ee29ede3bd33cc90c09ab8f573747720f457b6cefb364db0c6ac419"
+        },
+        {
+          "id": "full-lake-filtered-d803b176baa6",
+          "profile": "full-lake",
+          "include_regex": null,
+          "exclude_regex": "StackOverflow|reverse-ffi|interactive|async_select_channel|9366|run/bv_|grind_guide|grind_bitvec2|grind_constProp|grind_indexmap|grind_list|grind_lint|grind_array_attach|grind_ite_trace|pkg/|lake/",
+          "registered_count": 3723,
+          "selected_count": 3477,
+          "excluded_count": 246,
+          "selected_ids_sha256": "9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e"
+        }
+      ],
+      "outcomes": {
+        "official_executed_attempts": 0,
+        "official_completed_cases": 0,
+        "axeyum_executed_attempts": 0,
+        "paired_registered": 0,
+        "state": "not-run"
+      }
+    },
     "implementation_tasks": {
       "rows": 136,
       "status_counts": {
-        "DONE": 21,
-        "PARTIAL": 6,
+        "DONE": 22,
+        "PARTIAL": 5,
         "TODO": 109,
         "BLOCKED": 0
       }
@@ -264,11 +398,23 @@
           "detail": "Generated bounded profile summary and explicit non-terminal residual."
         },
         {
+          "path": "docs/plan/lean-u2-official-ci-profiles-v1.json",
+          "detail": "Pinned dynamic-workflow derivation for 17 official event contexts, 153 job cells, 111 not-run CTest attempts, and eight exact factored selection sets."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
+          "detail": "Generated context, attempt, filter, stage, and selection-set summary with zero execution or paired-result credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
+          "detail": "TL0.6.2 result, reproduction commands, exact corrections, assurance boundary, and TL0.6.3 handoff."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Derive official CI platform/preset/filter/resource/attempt identities, retain official and native Axeyum executions, and register exact matched outcomes; registration alone is not complete U2 authority."
+      "residual": "Execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence, then implement and run matched native Axeyum cases; profile derivation alone is not complete U2 authority."
     },
     {
       "id": "U3",

@@ -231,6 +231,8 @@ jobs:
       - run: ./scripts/check-foundational-resources.sh
       - run: python3 -m unittest scripts.tests.test_lean_u2_test_authority
       - run: python3 scripts/gen-lean-u2-test-authority.py --check
+      - run: python3 -m unittest scripts.tests.test_lean_u2_official_ci_profiles
+      - run: python3 scripts/gen-lean-u2-official-ci-profiles.py --check
       - run: python3 -m unittest scripts.tests.test_lean_complete_parity
       - run: python3 scripts/gen-lean-complete-parity.py --check
       - run: python3 -m unittest scripts.tests.test_lean_official_construct_matrix

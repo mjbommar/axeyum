@@ -218,7 +218,7 @@ are:
 | U8 — adversarial/security | malformed source/export/cache/protocol inputs, resource exhaustion, crash/panic, stale publication, and checker-disagreement campaigns |
 | U9 — platforms/releases | every official platform at its pinned-release support tier, published release-asset shapes, packaging/install/offline cells, and current/current-minus-one migration profiles |
 
-### 5.1 U2 registration checkpoint
+### 5.1 U2 registration and workflow-profile checkpoints
 
 The first U2 derivation is now retained in the
 [official-test registration authority](lean-u2-test-authority-2026-07-22.md),
@@ -233,14 +233,24 @@ over-approximating support subtrees. The 3,660 pile glob candidates close as
 and eleven benchmark-only cases with no test runner.
 
 This advances U2 from raw inventory to a bounded registration profile only.
-The authority deliberately records zero official executions, zero Axeyum
-executions, and zero paired cells. The pinned workflow's platform, event/check
-level, preset, filter, target-stage, rebootstrap, resource, and completion
-predicates still need executable derivation. In particular, release check
-level 3 does not imply `LAKE_CI=ON`; that switch is controlled separately by
-the `lake-ci` pull-request label. U2 cannot become `complete_authority` until
-the resulting official profile matrix and matched native Axeyum outcomes are
-retained case by case.
+The follow-up [TL0.6.2 result](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md),
+[machine-readable profile authority](lean-u2-official-ci-profiles-v1.json), and
+generated [summary](generated/lean-u2-official-ci-profiles.md) now derive the
+pinned dynamic workflow into 17 official-repository contexts, nine active job
+literals, 153 candidate cells, 111 not-run CTest attempts, and eight exact
+factored selection sets. Disabled/commented/packaging jobs, primary versus
+unfiltered stage-1 rebootstrap commands, presets, filters, stage-3/benchmark
+flags, and configuration identities remain distinct. In particular, release
+check level 3 does not imply `LAKE_CI=ON`; that switch is controlled separately
+by the `lake-ci` pull-request label.
+
+Both authorities deliberately record zero official executions, zero completed
+official cases, zero Axeyum executions, and zero paired cells. Executable,
+environment, resource, attempt, completion, log, JUnit, and artifact evidence
+belongs to TL0.6.3 after TL0.7; native surface classification and matched
+Axeyum execution belong to TL0.6.4/TL0.6.5. U2 cannot become
+`complete_authority` until the complete declared profile matrix and matched
+native outcomes are retained case by case and reviewed under TL0.6.6.
 
 The initial unqualified full profile requires the official Tier-1 test matrix
 for the pinned release and build/package cells for every official Tier-2

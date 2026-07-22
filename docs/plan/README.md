@@ -71,6 +71,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   freezes 17 official-repository contexts, 153 candidate matrix cells,
   factored case-selection sets, mutation teeth, and the no-outcomes boundary
   before observing derived per-profile counts.
+- [`lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md`](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md),
+  [`lean-u2-official-ci-profiles-v1.json`](lean-u2-official-ci-profiles-v1.json),
+  and generated [Markdown](generated/lean-u2-official-ci-profiles.md)/
+  [JSON](generated/lean-u2-official-ci-profiles.json) — TL0.6.2's exact
+  workflow-profile result: 17 contexts, 153 cells, 111 declared but not-run
+  CTest attempts, and eight factored selection sets. The result records zero
+  official/Axeyum executions and zero paired cells; TL0.6.3 execution remains
+  open.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

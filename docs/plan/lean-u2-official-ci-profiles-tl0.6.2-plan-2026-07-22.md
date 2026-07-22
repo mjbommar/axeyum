@@ -1,7 +1,7 @@
 # TL0.6.2 plan — official Lean CI execution-profile derivation
 
-Status: **preregistered; implementation and derived selection counts not yet
-observed**
+Status: **completed; see the
+[TL0.6.2 result](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md)**
 
 Date: 2026-07-22
 
@@ -178,3 +178,7 @@ Stop and retain TL0.6.2 as partial if any of these occurs:
 If the derivation closes, TL0.6.2 becomes done but U2 remains
 `bounded_profile`. The next authorized observation is TL0.6.3's retained
 official execution, not an Axeyum parity claim.
+
+The derivation closed under these rules. The result retains 17 contexts, 153
+candidate cells, 111 not-run CTest attempts, and eight exact selection sets,
+with all execution and parity counters still zero.
