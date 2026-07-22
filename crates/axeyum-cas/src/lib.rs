@@ -9409,10 +9409,12 @@ fn split_sqrt_term(term: &CasExpr, var: &str) -> Option<(CasExpr, CasExpr)> {
                         return None;
                     }
                     radicand = Some((**arg).clone());
-                } else if expr_contains_var(factor, var) {
-                    return None;
-                } else {
+                } else if normalize(factor).and_then(|p| p.to_univariate(var)).is_some() {
+                    // A **polynomial** coefficient is allowed (`x·√(x²+1)`); its leading
+                    // order is handled by `algebraic_leading_at_infinity`.
                     coeff_factors.push(factor.clone());
+                } else {
+                    return None; // a non-polynomial, non-√ factor
                 }
             }
             let coeff = match coeff_factors.len() {
@@ -9442,9 +9444,12 @@ fn limit_algebraic_at_infinity(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         };
     }
     // Cancellation in a √-sum: rationalize by the conjugate. Collect the √ terms
-    // (each `mᵢ·√Aᵢ`) and the polynomial remainder.
+    // (each `mᵢ·√Aᵢ`, coefficient possibly polynomial) and the polynomial remainder.
+    // `expand` first so a *product* like `x·(√(x²+1) − x)` distributes to the sum
+    // `x·√(x²+1) − x²` the conjugate machinery expects.
+    let expanded = expand(expr).unwrap_or_else(|| expr.clone());
     let mut terms = Vec::new();
-    flatten_add_terms(expr, var, &mut terms);
+    flatten_add_terms(&expanded, var, &mut terms);
     let mut sqrt_terms: Vec<(CasExpr, CasExpr)> = Vec::new();
     let mut remainder: Vec<CasExpr> = Vec::new();
     for term in &terms {
@@ -17560,6 +17565,9 @@ mod tests {
             ((x() + CasExpr::int(1)).sqrt() - x().sqrt(), CasExpr::zero()),
             // Direct (no cancellation): √(x²+1)/x = 1.
             ((x().pow(2) + CasExpr::int(1)).sqrt() / x(), CasExpr::int(1)),
+            // Product form (a *polynomial* √-coefficient after expanding):
+            // x·(√(x²+1) − x) = x√(x²+1) − x² → ½.
+            (x() * ((x().pow(2) + CasExpr::int(1)).sqrt() - x()), CasExpr::rat(1, 2)),
         ];
         for (expr, value) in cases {
             let got = limit(&expr, "x", inf()).unwrap_or_else(|| panic!("no limit for {expr}"));
@@ -17568,6 +17576,8 @@ mod tests {
                 "lim {expr} = {got}, expected {value}"
             );
         }
+        // Divergent product still declines: x·(√(x²+2x) − x) → x·1·… actually ∞.
+        assert!(limit(&(x() * ((x().pow(2) + CasExpr::int(2) * x()).sqrt() - x())), "x", inf()).is_none());
     }
 
     #[test]
