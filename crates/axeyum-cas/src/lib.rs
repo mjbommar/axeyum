@@ -182,13 +182,28 @@ pub enum UnaryFunc {
     Asinh,
     /// **Inverse hyperbolic cosine** `acosh(x)` (with `acosh′(x) = 1/√(x²−1)`).
     Acosh,
+    /// The **gamma function** `Γ(x)` (with `Γ′(x) = Γ(x)·ψ(x)`, `ψ` the digamma).
+    Gamma,
+    /// The **polygamma function** `ψ⁽ⁿ⁾(x)`, the `n`-th derivative of the digamma
+    /// `ψ = ψ⁽⁰⁾ = (ln Γ)′`. The order `n` is carried in the variant, so the whole
+    /// derivative tower `ψ⁽ⁿ⁾′ = ψ⁽ⁿ⁺¹⁾` stays inside the fragment (no infinite set
+    /// of heads). `PolyGamma(0)` is the digamma, `PolyGamma(1)` the trigamma.
+    PolyGamma(u32),
 }
 
 impl UnaryFunc {
     /// The function's display name.
     #[must_use]
-    pub fn name(self) -> &'static str {
-        match self {
+    pub fn name(self) -> String {
+        // The polygamma order is encoded so distinct orders never collide as atoms.
+        if let UnaryFunc::PolyGamma(order) = self {
+            return match order {
+                0 => "digamma".to_string(),
+                1 => "trigamma".to_string(),
+                n => format!("polygamma{n}"),
+            };
+        }
+        let fixed = match self {
             UnaryFunc::Ln => "ln",
             UnaryFunc::Exp => "exp",
             UnaryFunc::Sin => "sin",
@@ -215,7 +230,10 @@ impl UnaryFunc {
             UnaryFunc::Acos => "acos",
             UnaryFunc::Asinh => "asinh",
             UnaryFunc::Acosh => "acosh",
-        }
+            UnaryFunc::Gamma => "gamma",
+            UnaryFunc::PolyGamma(_) => unreachable!("handled above"),
+        };
+        fixed.to_string()
     }
 
     /// The chain-rule derivative `d/dx f(u) = f'(u) · du_dx`, given the argument
@@ -286,6 +304,15 @@ impl UnaryFunc {
             UnaryFunc::Acos => -(CasExpr::int(1) / (CasExpr::int(1) - u().pow(2)).sqrt()),
             UnaryFunc::Asinh => CasExpr::int(1) / (u().pow(2) + CasExpr::int(1)).sqrt(),
             UnaryFunc::Acosh => CasExpr::int(1) / (u().pow(2) - CasExpr::int(1)).sqrt(),
+            // d/du Γ(u) = Γ(u)·ψ(u) (ψ = digamma = PolyGamma(0)).
+            UnaryFunc::Gamma => {
+                CasExpr::Unary(UnaryFunc::Gamma, Box::new(u()))
+                    * CasExpr::Unary(UnaryFunc::PolyGamma(0), Box::new(u()))
+            }
+            // d/du ψ⁽ⁿ⁾(u) = ψ⁽ⁿ⁺¹⁾(u) — the order increments, staying in the fragment.
+            UnaryFunc::PolyGamma(order) => {
+                CasExpr::Unary(UnaryFunc::PolyGamma(order.saturating_add(1)), Box::new(u()))
+            }
         };
         CasExpr::Mul(vec![outer, arg_deriv])
     }
@@ -378,6 +405,24 @@ impl CasExpr {
     #[must_use]
     pub fn erf(self) -> Self {
         CasExpr::Unary(UnaryFunc::Erf, Box::new(self))
+    }
+
+    /// The **gamma function** `Γ(self)` as a symbolic head.
+    #[must_use]
+    pub fn gamma(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Gamma, Box::new(self))
+    }
+
+    /// The **digamma** `ψ(self) = (ln Γ)′(self)` as a symbolic head.
+    #[must_use]
+    pub fn digamma(self) -> Self {
+        CasExpr::Unary(UnaryFunc::PolyGamma(0), Box::new(self))
+    }
+
+    /// The **polygamma** `ψ⁽ⁿ⁾(self)` of order `n` as a symbolic head.
+    #[must_use]
+    pub fn polygamma(self, n: u32) -> Self {
+        CasExpr::Unary(UnaryFunc::PolyGamma(n), Box::new(self))
     }
 
     /// The **sine integral** `Si(self)` as a symbolic head.
@@ -1407,7 +1452,7 @@ fn normalize_rational(expr: &CasExpr) -> Option<RatFunc> {
         // certify — the spurious `c'·ln v` term drops when `c` is constant.
         CasExpr::Unary(UnaryFunc::Exp, arg) => normalize_exp(arg),
         CasExpr::Unary(func, arg) => Some(RatFunc::from_poly(MultiPoly::single_var(&atom_name(
-            func.name(),
+            &func.name(),
             arg,
         )))),
     }
@@ -1558,7 +1603,7 @@ fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr
         }
         CasExpr::Unary(func, arg) => {
             dict.insert(
-                atom_name(func.name(), arg),
+                atom_name(&func.name(), arg),
                 CasExpr::Unary(*func, arg.clone()),
             );
             // A Pythagorean reduction (see `trigsimp`) rewrites `cos²u` in terms
@@ -1570,7 +1615,7 @@ fn collect_atom_dictionary(source: &CasExpr, dict: &mut BTreeMap<String, CasExpr
                 _ => None,
             } {
                 dict.insert(
-                    atom_name(conjugate.name(), arg),
+                    atom_name(&conjugate.name(), arg),
                     CasExpr::Unary(conjugate, arg.clone()),
                 );
             }
@@ -1732,8 +1777,8 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     // Otherwise re-check on the Euler canonical form (also collapsing `ln(exp u)=u`
     // and expanding `ln(rational)` over a prime basis so log-arithmetic identities
     // like `2·ln2 − ln3 = ln(4/3)` decide) before we would assert `≠`.
-    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(a)));
-    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(b)));
+    let ca = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(a))));
+    let cb = expand_log_over_primes(&rewrite_log_exp(&rewrite_exp(&fold_gamma(b))));
     match equal_core(&ca, &cb) {
         certified @ ZeroTest::Certified { .. } => certified,
         // The Euler form could not decide. Never surface a relation-blind
@@ -4767,6 +4812,10 @@ fn node_count(expr: &CasExpr) -> usize {
 /// (the input itself in the worst case).
 #[must_use]
 pub fn simplify(expr: &CasExpr) -> CasExpr {
+    // Fold `Γ` at a rational with a closed form first (`Γ(5)→24`, `Γ(½)→√π`), so the
+    // candidate search below runs on the reduced form even when the closed value has
+    // more nodes than the head (it would otherwise never be chosen).
+    let expr = &fold_gamma(expr);
     let mut best = expr.clone();
     let mut best_size = node_count(&best);
     // `trigsimp` is included so the common entry point also collapses
@@ -6869,6 +6918,52 @@ pub fn euler_polynomial(n: u32, var: &str) -> Option<CasExpr> {
 /// `sqrt(1)=1`, `atan(0)=0`. Applied to a definite integral's `F(b) − F(a)` so
 /// results like `∫₀^π sin x = cos 0 − cos π` collapse to `2` and `ln 1` vanishes.
 /// Non-special arguments are left untouched; recurses structurally.
+/// The exact closed form of `Γ(c)` for a rational `c` where one exists: `Γ(n) =
+/// (n−1)!` for a positive integer `n`, and `Γ(k+½) = (2k)!/(4ᵏ·k!)·√π` for `k ≥ 0`
+/// (`Γ(½)=√π`, `Γ(3/2)=√π/2`, `Γ(5/2)=3√π/4`). `None` at the non-positive-integer
+/// poles or any other rational.
+fn gamma_of_rational(c: Rational) -> Option<CasExpr> {
+    if c.denominator() == 1 {
+        let n = c.numerator();
+        return (n >= 1).then(|| ntheory::factorial(n - 1).map(CasExpr::int))?;
+    }
+    if c.denominator() == 2 {
+        let two_c = c.numerator(); // = 2k+1
+        if two_c >= 1 {
+            let k = (two_c - 1) / 2; // k ≥ 0
+            let numerator = ntheory::factorial(2 * k)?;
+            let four_k = 4i128.checked_pow(u32::try_from(k).ok()?)?;
+            let denominator = four_k.checked_mul(ntheory::factorial(k)?)?;
+            let coeff = Rational::checked_new(numerator, denominator)?;
+            return Some(CasExpr::Const(coeff) * CasExpr::var("pi").sqrt());
+        }
+    }
+    None
+}
+
+/// Fold every `Γ(c)` on a rational `c` with a closed form throughout `expr`
+/// (`Γ(5)→24`, `Γ(½)→√π`), recursing structurally; all other nodes are unchanged.
+fn fold_gamma(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Gamma, arg) => {
+            let inner = fold_gamma(arg);
+            match &inner {
+                CasExpr::Const(c) => {
+                    gamma_of_rational(*c).unwrap_or(CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner)))
+                }
+                _ => CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner)),
+            }
+        }
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(fold_gamma(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(fold_gamma(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(fold_gamma(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(fold_gamma).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(fold_gamma).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(Box::new(fold_gamma(a)), Box::new(fold_gamma(b))),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(func, arg) => {
@@ -6902,6 +6997,9 @@ fn fold_elementary_constants(expr: &CasExpr) -> CasExpr {
                 (UnaryFunc::Sqrt, CasExpr::Const(c)) if *c == Rational::integer(1) => {
                     CasExpr::one()
                 }
+                // Γ at a rational with a closed form: Γ(n)=(n−1)!, Γ(k+½)=…·√π.
+                (UnaryFunc::Gamma, CasExpr::Const(c)) => gamma_of_rational(*c)
+                    .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::Gamma, Box::new(inner.clone()))),
                 // `abs`/`sign`/`floor`/`ceiling` of a rational constant reduce via
                 // the builder folds (also collapses these after a substitution).
                 (UnaryFunc::Abs, CasExpr::Const(_)) => inner.clone().abs(),
@@ -7584,9 +7682,84 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Acos => value.acos(),
                 UnaryFunc::Asinh => value.asinh(),
                 UnaryFunc::Acosh => value.acosh(),
+                UnaryFunc::Gamma => gamma_f64(value),
+                UnaryFunc::PolyGamma(order) => polygamma_f64(*order, value),
             })
         }
     }
+}
+
+/// Numeric **gamma function** `Γ(x)` for [`evalf`], via the Lanczos approximation
+/// (`g = 7`) with the reflection formula for `x < ½`.
+fn gamma_f64(x: f64) -> f64 {
+    const G: f64 = 7.0;
+    const COEFFS: [f64; 9] = [
+        0.999_999_999_999_809_9,
+        676.520_368_121_885_1,
+        -1_259.139_216_722_402_8,
+        771.323_428_777_653_1,
+        -176.615_029_162_140_63,
+        12.507_343_278_686_905,
+        -0.138_571_095_265_720_12,
+        9.984_369_578_019_572e-6,
+        1.505_632_735_149_311_6e-7,
+    ];
+    if x < 0.5 {
+        // Reflection Γ(x)Γ(1−x) = π/sin(πx).
+        std::f64::consts::PI / ((std::f64::consts::PI * x).sin() * gamma_f64(1.0 - x))
+    } else {
+        let x = x - 1.0;
+        let mut a = COEFFS[0];
+        let t = x + G + 0.5;
+        for (i, &c) in COEFFS.iter().enumerate().skip(1) {
+            #[allow(clippy::cast_precision_loss)]
+            let denom = x + i as f64;
+            a += c / denom;
+        }
+        (2.0 * std::f64::consts::PI).sqrt() * t.powf(x + 0.5) * (-t).exp() * a
+    }
+}
+
+/// Numeric **digamma** `ψ(x)` for [`evalf`]: the recurrence `ψ(x)=ψ(x+1)−1/x` pushes
+/// the argument past `6`, then an asymptotic Bernoulli series.
+fn digamma_f64(mut x: f64) -> f64 {
+    let mut result = 0.0;
+    while x < 6.0 {
+        result -= 1.0 / x;
+        x += 1.0;
+    }
+    let inv = 1.0 / x;
+    let inv2 = inv * inv;
+    result + x.ln() - 0.5 * inv - inv2 * (1.0 / 12.0 - inv2 * (1.0 / 120.0 - inv2 / 252.0))
+}
+
+/// Numeric **polygamma** `ψ⁽ⁿ⁾(x)` for [`evalf`]. `n = 0` is the digamma; for `n ≥ 1`
+/// the recurrence pushes `x` large, then the asymptotic expansion (leading term plus
+/// two Bernoulli corrections) evaluates it. Moderate accuracy — for numeric checks.
+fn polygamma_f64(n: u32, mut x: f64) -> f64 {
+    if n == 0 {
+        return digamma_f64(x);
+    }
+    let factorial = |m: u32| -> f64 {
+        #[allow(clippy::cast_precision_loss)]
+        (1..=m).map(f64::from).product()
+    };
+    let ni = i32::try_from(n).unwrap_or(i32::MAX);
+    let n_fact = factorial(n);
+    // Recurrence `ψ⁽ⁿ⁾(x) = ψ⁽ⁿ⁾(x+1) + (−1)^{n+1} n!/x^{n+1}` to push `x ≥ 10`.
+    let recurrence_sign = if (n + 1).is_multiple_of(2) { 1.0 } else { -1.0 };
+    let mut accumulated = 0.0;
+    while x < 10.0 {
+        accumulated += recurrence_sign * n_fact / x.powi(ni + 1);
+        x += 1.0;
+    }
+    // Asymptotic `(−1)^{n−1}[(n−1)!/xⁿ + n!/(2x^{n+1}) + Σ Bₖ…]`.
+    let prefactor_sign = if (n - 1).is_multiple_of(2) { 1.0 } else { -1.0 };
+    let asymptotic = factorial(n - 1) / x.powi(ni)
+        + n_fact / (2.0 * x.powi(ni + 1))
+        + (1.0 / 6.0) * factorial(n + 1) / 2.0 / x.powi(ni + 2)
+        + (-1.0 / 30.0) * factorial(n + 3) / 24.0 / x.powi(ni + 4);
+    accumulated + prefactor_sign * asymptotic
 }
 
 /// A numeric **error function** `erf(x)` for [`evalf`], via the Abramowitz–Stegun
@@ -19297,6 +19470,34 @@ mod tests {
         close(evalf(&CasExpr::int(1).si(), &[]).unwrap(), 0.946_083);
         close(evalf(&CasExpr::int(1).ci(), &[]).unwrap(), 0.337_404);
         close(evalf(&CasExpr::int(1).ei(), &[]).unwrap(), 1.895_118);
+    }
+
+    #[test]
+    fn gamma_and_polygamma_head() {
+        let x = || v("x");
+        let certified = |a: &CasExpr, b: &CasExpr| matches!(equal(a, b), ZeroTest::Certified { equal: true, .. });
+        // Functional values: Γ(n)=(n−1)!, Γ(½)=√π, Γ(3/2)=√π/2, Γ(5/2)=3√π/4.
+        assert!(certified(&CasExpr::int(5).gamma(), &CasExpr::int(24)));
+        assert!(certified(&CasExpr::int(6).gamma(), &CasExpr::int(120)));
+        assert!(certified(&CasExpr::rat(1, 2).gamma(), &v("pi").sqrt()));
+        assert!(certified(&CasExpr::rat(3, 2).gamma(), &(v("pi").sqrt() / CasExpr::int(2))));
+        assert!(certified(&CasExpr::rat(5, 2).gamma(), &(CasExpr::rat(3, 4) * v("pi").sqrt())));
+        // Functional equation Γ(x+1)=x·Γ(x) at x=4: Γ(5)=4·Γ(4).
+        assert!(certified(&CasExpr::int(5).gamma(), &(CasExpr::int(4) * CasExpr::int(4).gamma())));
+        // Soundness: Γ(5) ≠ 25.
+        assert!(!certified(&CasExpr::int(5).gamma(), &CasExpr::int(25)));
+        // The derivative tower is closed and correct: Γ′=ψ·Γ, ψ′=ψ₁ (trigamma),
+        // and the second derivative Γ″ = Γ·(ψ² + ψ₁) via chain/product rule.
+        assert_eq!(simplify(&x().gamma().differentiate("x")), simplify(&(x().digamma() * x().gamma())));
+        assert_eq!(simplify(&x().digamma().differentiate("x")), simplify(&x().polygamma(1)));
+        assert!(certified(
+            &x().gamma().differentiate("x").differentiate("x"),
+            &(x().gamma() * (x().digamma().pow(2) + x().polygamma(1))),
+        ));
+        // evalf: Γ(2.5)≈1.32934, ψ(1)=−γ≈−0.57722, ψ₁(1)=π²/6≈1.64493.
+        assert!((evalf(&CasExpr::rat(5, 2).gamma(), &[]).unwrap() - 1.329_340).abs() < 1e-4);
+        assert!((evalf(&CasExpr::int(1).digamma(), &[]).unwrap() + 0.577_216).abs() < 1e-4);
+        assert!((evalf(&CasExpr::int(1).polygamma(1), &[]).unwrap() - std::f64::consts::PI.powi(2) / 6.0).abs() < 1e-4);
     }
 
     #[test]

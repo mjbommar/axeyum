@@ -486,7 +486,9 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         // acos = π/2 − asin has an irrational (π/2) constant term; acosh is
         // undefined at 0 (|x|<1) — neither has a rational Maclaurin series.
         | UnaryFunc::Acos
-        | UnaryFunc::Acosh => None,
+        | UnaryFunc::Acosh
+        | UnaryFunc::Gamma
+        | UnaryFunc::PolyGamma(_) => None,
     }
 }
 
