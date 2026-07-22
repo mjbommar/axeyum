@@ -5902,12 +5902,62 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // At `x → 0⁺`, a positive power of `x` beats any power of `ln x`
+    // (`x·ln x → 0`, `x²·(ln x)³ → 0`), resolving the `0·∞` form the series
+    // fallback can't (ln has no Taylor expansion at 0).
+    if matches!(point, LimitPoint::Finite(ref a) if a.is_zero())
+        && let Some(value) = limit_log_at_zero(expr, var)
+    {
+        return Some(value);
+    }
     // Series fallback for transcendental `0/0` forms at a finite point
     // (`sin x/x → 1`, `(1−cos x)/x² → 1/2`, `(eˣ−1)/x → 1`).
     if let LimitPoint::Finite(a) = point {
         return limit_via_series(expr, var, a);
     }
     None
+}
+
+/// Limit at `x → 0⁺` of a product/quotient of `x`-powers and `ln x`-powers: the
+/// net power of `x` decides, since a positive power of `x` dominates any power of
+/// `ln x`. Returns `0` when the net `x`-power is `≥ 1` (or `0` with a negative
+/// `ln`-power, `1/ln x → 0`); `None` (undecided/divergent) otherwise or if any
+/// factor is outside `{const≠0, x, ln x}`.
+fn limit_log_at_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (x_pow, log_pow) = log_zero_orders(expr, var)?;
+    if x_pow >= 1 || (x_pow == 0 && log_pow < 0) {
+        Some(CasExpr::zero())
+    } else {
+        None
+    }
+}
+
+/// Net `(power of x, power of ln x)` of a product/quotient built only from
+/// nonzero constants, `x`, and `ln x`. `None` if any other factor appears.
+fn log_zero_orders(expr: &CasExpr, var: &str) -> Option<(i64, i64)> {
+    match expr {
+        CasExpr::Const(c) => (!c.is_zero()).then_some((0, 0)),
+        CasExpr::Var(v) if v == var => Some((1, 0)),
+        CasExpr::Unary(UnaryFunc::Ln, arg) if matches!(arg.as_ref(), CasExpr::Var(v) if v == var) => {
+            Some((0, 1))
+        }
+        CasExpr::Neg(inner) => log_zero_orders(inner, var),
+        CasExpr::Pow(base, e) => {
+            let (bx, bl) = log_zero_orders(base, var)?;
+            let e = i64::from(*e);
+            Some((bx.checked_mul(e)?, bl.checked_mul(e)?))
+        }
+        CasExpr::Mul(factors) => factors.iter().try_fold((0_i64, 0_i64), |(ax, al), f| {
+            let (fx, fl) = log_zero_orders(f, var)?;
+            Some((ax.checked_add(fx)?, al.checked_add(fl)?))
+        }),
+        CasExpr::Div(a, b) => {
+            let (ax, al) = log_zero_orders(a, var)?;
+            let (bx, bl) = log_zero_orders(b, var)?;
+            Some((ax.checked_sub(bx)?, al.checked_sub(bl)?))
+        }
+        _ => None,
+    }
 }
 
 /// Limit at `±∞` of a product/quotient `R(x)·∏ exp(cᵢ·x)^{±}` where `R` is a
@@ -9648,6 +9698,24 @@ mod tests {
         );
         // Growth diverges (no finite limit): eˣ/x → +∞.
         assert!(limit(&(x().exp() / x()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn limits_of_log_times_power_at_zero() {
+        let x = || v("x");
+        let at0 = || LimitPoint::Finite(Rational::zero());
+        // A positive power of x beats any power of ln x: the 0·∞ form → 0.
+        for e in [
+            x() * x().ln(),               // x·ln x → 0
+            x().pow(2) * x().ln(),        // x²·ln x → 0
+            x() * x().ln().pow(3),        // x·(ln x)³ → 0
+            CasExpr::int(1) / x().ln(),   // 1/ln x → 0
+        ] {
+            assert_equal(&limit(&e, "x", at0()).unwrap(), &CasExpr::zero());
+        }
+        // Genuinely divergent forms decline (never a spurious value).
+        assert!(limit(&x().ln(), "x", at0()).is_none());          // ln x → −∞
+        assert!(limit(&(x().ln() / x()), "x", at0()).is_none());  // ln x / x → −∞
     }
 
     #[test]
