@@ -1,0 +1,477 @@
+{
+  "schema": "axeyum-lean-u2-official-ci-profiles-report-v1",
+  "generated_from": "docs/plan/lean-u2-official-ci-profiles-v1.json",
+  "generated_from_sha256": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
+  "target": {
+    "repository": "https://github.com/leanprover/lean4.git",
+    "official_repository": "leanprover/lean4",
+    "version": "4.30.0",
+    "tag": "v4.30.0",
+    "commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+  },
+  "scope": "official-ci-profile-derivation-not-execution-or-parity",
+  "derivation": {
+    "method": "isolated pinned JavaScript matrix evaluation plus exact CTest-name filtering",
+    "matrix_fragment_sha256": "dc0b880645e114ef825a6ac964d6d588ef462f83de2a9903d3b7725f4ff184c9",
+    "official_repository_large": true,
+    "stdlib_flags_equal": true,
+    "target_stage": "stage1",
+    "contexts": 17,
+    "active_job_literals": 9,
+    "candidate_cells": 153,
+    "cell_state_counts": {
+      "ctest": 85,
+      "disabled": 53,
+      "packaging-only": 15
+    },
+    "ctest_attempts": 111,
+    "attempt_phase_counts": {
+      "primary": 85,
+      "rebootstrap": 26
+    },
+    "selection_sets": 8,
+    "outcomes_observed": 0
+  },
+  "contexts": [
+    {
+      "id": "pr-l0",
+      "event": "pull_request",
+      "level": 0,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 4,
+      "primary_jobs": 1,
+      "secondary_jobs": 3,
+      "packaging_only_jobs": 2,
+      "ctest_attempts": 2,
+      "selected_case_occurrences": 7356,
+      "selection_set_ids": [
+        "default-all"
+      ]
+    },
+    {
+      "id": "pr-l0-fast",
+      "event": "pull_request",
+      "level": 0,
+      "lake_ci": false,
+      "fast": true,
+      "enabled_jobs": 4,
+      "primary_jobs": 1,
+      "secondary_jobs": 3,
+      "packaging_only_jobs": 2,
+      "ctest_attempts": 2,
+      "selected_case_occurrences": 7356,
+      "selection_set_ids": [
+        "default-all"
+      ]
+    },
+    {
+      "id": "pr-l0-lake",
+      "event": "pull_request",
+      "level": 0,
+      "lake_ci": true,
+      "fast": false,
+      "enabled_jobs": 4,
+      "primary_jobs": 1,
+      "secondary_jobs": 3,
+      "packaging_only_jobs": 2,
+      "ctest_attempts": 2,
+      "selected_case_occurrences": 7446,
+      "selection_set_ids": [
+        "full-lake-all"
+      ]
+    },
+    {
+      "id": "pr-l0-lake-fast",
+      "event": "pull_request",
+      "level": 0,
+      "lake_ci": true,
+      "fast": true,
+      "enabled_jobs": 4,
+      "primary_jobs": 1,
+      "secondary_jobs": 3,
+      "packaging_only_jobs": 2,
+      "ctest_attempts": 2,
+      "selected_case_occurrences": 7446,
+      "selection_set_ids": [
+        "full-lake-all"
+      ]
+    },
+    {
+      "id": "pr-l1",
+      "event": "pull_request",
+      "level": 1,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 4,
+      "primary_jobs": 3,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 6,
+      "selected_case_occurrences": 22068,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4"
+      ]
+    },
+    {
+      "id": "pr-l1-fast",
+      "event": "pull_request",
+      "level": 1,
+      "lake_ci": false,
+      "fast": true,
+      "enabled_jobs": 4,
+      "primary_jobs": 3,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 6,
+      "selected_case_occurrences": 22068,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4"
+      ]
+    },
+    {
+      "id": "pr-l1-lake",
+      "event": "pull_request",
+      "level": 1,
+      "lake_ci": true,
+      "fast": false,
+      "enabled_jobs": 4,
+      "primary_jobs": 3,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 6,
+      "selected_case_occurrences": 22338,
+      "selection_set_ids": [
+        "full-lake-all",
+        "full-lake-filtered-6325d6cffd5d"
+      ]
+    },
+    {
+      "id": "pr-l1-lake-fast",
+      "event": "pull_request",
+      "level": 1,
+      "lake_ci": true,
+      "fast": true,
+      "enabled_jobs": 4,
+      "primary_jobs": 3,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 6,
+      "selected_case_occurrences": 22338,
+      "selection_set_ids": [
+        "full-lake-all",
+        "full-lake-filtered-6325d6cffd5d"
+      ]
+    },
+    {
+      "id": "pr-l3",
+      "event": "pull_request",
+      "level": 3,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 9,
+      "primary_jobs": 8,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36578,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4",
+        "default-filtered-bfb0a7b69c6e",
+        "default-filtered-d1bb9722e72c"
+      ]
+    },
+    {
+      "id": "pr-l3-fast",
+      "event": "pull_request",
+      "level": 3,
+      "lake_ci": false,
+      "fast": true,
+      "enabled_jobs": 9,
+      "primary_jobs": 8,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36578,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4",
+        "default-filtered-bfb0a7b69c6e",
+        "default-filtered-d1bb9722e72c"
+      ]
+    },
+    {
+      "id": "pr-l3-lake",
+      "event": "pull_request",
+      "level": 3,
+      "lake_ci": true,
+      "fast": false,
+      "enabled_jobs": 9,
+      "primary_jobs": 8,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36983,
+      "selection_set_ids": [
+        "full-lake-all",
+        "full-lake-filtered-6325d6cffd5d",
+        "full-lake-filtered-cbb2894dd43f",
+        "full-lake-filtered-d803b176baa6"
+      ]
+    },
+    {
+      "id": "pr-l3-lake-fast",
+      "event": "pull_request",
+      "level": 3,
+      "lake_ci": true,
+      "fast": true,
+      "enabled_jobs": 9,
+      "primary_jobs": 8,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36983,
+      "selection_set_ids": [
+        "full-lake-all",
+        "full-lake-filtered-6325d6cffd5d",
+        "full-lake-filtered-cbb2894dd43f",
+        "full-lake-filtered-d803b176baa6"
+      ]
+    },
+    {
+      "id": "merge-group-l1",
+      "event": "merge_group",
+      "level": 1,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 2,
+      "primary_jobs": 1,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 4,
+      "selected_case_occurrences": 14712,
+      "selection_set_ids": [
+        "default-all"
+      ]
+    },
+    {
+      "id": "push-master-l1",
+      "event": "push",
+      "level": 1,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 3,
+      "primary_jobs": 2,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 0,
+      "ctest_attempts": 5,
+      "selected_case_occurrences": 18390,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4"
+      ]
+    },
+    {
+      "id": "nightly-l2",
+      "event": "schedule",
+      "level": 2,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 9,
+      "primary_jobs": 7,
+      "secondary_jobs": 2,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36578,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4",
+        "default-filtered-bfb0a7b69c6e",
+        "default-filtered-d1bb9722e72c"
+      ]
+    },
+    {
+      "id": "manual-nightly-l2",
+      "event": "workflow_dispatch",
+      "level": 2,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 9,
+      "primary_jobs": 7,
+      "secondary_jobs": 2,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36578,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4",
+        "default-filtered-bfb0a7b69c6e",
+        "default-filtered-d1bb9722e72c"
+      ]
+    },
+    {
+      "id": "release-tag-l3",
+      "event": "push-tag-v4.30.0",
+      "level": 3,
+      "lake_ci": false,
+      "fast": false,
+      "enabled_jobs": 9,
+      "primary_jobs": 8,
+      "secondary_jobs": 1,
+      "packaging_only_jobs": 1,
+      "ctest_attempts": 10,
+      "selected_case_occurrences": 36578,
+      "selection_set_ids": [
+        "default-all",
+        "default-filtered-aec7358564e4",
+        "default-filtered-bfb0a7b69c6e",
+        "default-filtered-d1bb9722e72c"
+      ]
+    }
+  ],
+  "jobs": [
+    {
+      "id": "linux-release",
+      "name": "Linux release",
+      "order": 0
+    },
+    {
+      "id": "linux-lake",
+      "name": "Linux Lake",
+      "order": 1
+    },
+    {
+      "id": "linux-lake-cached",
+      "name": "Linux Lake (Cached)",
+      "order": 2
+    },
+    {
+      "id": "linux-reldebug",
+      "name": "Linux Reldebug",
+      "order": 3
+    },
+    {
+      "id": "linux-fsanitize",
+      "name": "Linux fsanitize",
+      "order": 4
+    },
+    {
+      "id": "macos-x86-64",
+      "name": "macOS",
+      "order": 5
+    },
+    {
+      "id": "macos-aarch64",
+      "name": "macOS aarch64",
+      "order": 6
+    },
+    {
+      "id": "windows-x86-64",
+      "name": "Windows",
+      "order": 7
+    },
+    {
+      "id": "linux-aarch64",
+      "name": "Linux aarch64",
+      "order": 8
+    }
+  ],
+  "selection_sets": [
+    {
+      "id": "default-all",
+      "profile": "default",
+      "include_regex": null,
+      "exclude_regex": null,
+      "registered_count": 3678,
+      "selected_count": 3678,
+      "excluded_count": 0,
+      "selected_ids_sha256": "6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488"
+    },
+    {
+      "id": "default-filtered-aec7358564e4",
+      "profile": "default",
+      "include_regex": null,
+      "exclude_regex": "foreign",
+      "registered_count": 3678,
+      "selected_count": 3678,
+      "excluded_count": 0,
+      "selected_ids_sha256": "6f5d4dadd9bc51b42521fd6bb07e6fd270f4b638a08156c28cfa6cf7a998a488"
+    },
+    {
+      "id": "default-filtered-bfb0a7b69c6e",
+      "profile": "default",
+      "include_regex": null,
+      "exclude_regex": "elab_bench/big_do",
+      "registered_count": 3678,
+      "selected_count": 3677,
+      "excluded_count": 1,
+      "selected_ids_sha256": "cd78d60a181a643ff844c6bd29a09d71be50741c7347aaa40490a8a73150f56a"
+    },
+    {
+      "id": "default-filtered-d1bb9722e72c",
+      "profile": "default",
+      "include_regex": null,
+      "exclude_regex": "StackOverflow|reverse-ffi|interactive|async_select_channel|9366|run/bv_|grind_guide|grind_bitvec2|grind_constProp|grind_indexmap|grind_list|grind_lint|grind_array_attach|grind_ite_trace|pkg/|lake/",
+      "registered_count": 3678,
+      "selected_count": 3477,
+      "excluded_count": 201,
+      "selected_ids_sha256": "9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e"
+    },
+    {
+      "id": "full-lake-all",
+      "profile": "full-lake",
+      "include_regex": null,
+      "exclude_regex": null,
+      "registered_count": 3723,
+      "selected_count": 3723,
+      "excluded_count": 0,
+      "selected_ids_sha256": "7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd"
+    },
+    {
+      "id": "full-lake-filtered-6325d6cffd5d",
+      "profile": "full-lake",
+      "include_regex": null,
+      "exclude_regex": "foreign",
+      "registered_count": 3723,
+      "selected_count": 3723,
+      "excluded_count": 0,
+      "selected_ids_sha256": "7c49a81ac4e3a5e791515b62a798745f082a9325e40e7f49390b6d66c493e6cd"
+    },
+    {
+      "id": "full-lake-filtered-cbb2894dd43f",
+      "profile": "full-lake",
+      "include_regex": null,
+      "exclude_regex": "elab_bench/big_do",
+      "registered_count": 3723,
+      "selected_count": 3722,
+      "excluded_count": 1,
+      "selected_ids_sha256": "bc35ab1c1ee29ede3bd33cc90c09ab8f573747720f457b6cefb364db0c6ac419"
+    },
+    {
+      "id": "full-lake-filtered-d803b176baa6",
+      "profile": "full-lake",
+      "include_regex": null,
+      "exclude_regex": "StackOverflow|reverse-ffi|interactive|async_select_channel|9366|run/bv_|grind_guide|grind_bitvec2|grind_constProp|grind_indexmap|grind_list|grind_lint|grind_array_attach|grind_ite_trace|pkg/|lake/",
+      "registered_count": 3723,
+      "selected_count": 3477,
+      "excluded_count": 246,
+      "selected_ids_sha256": "9edadfadaf699fbbc624dbea40c9c66953b6928d347f343bb197019582bd356e"
+    }
+  ],
+  "outcomes": {
+    "official_executed_attempts": 0,
+    "official_completed_cases": 0,
+    "axeyum_executed_attempts": 0,
+    "paired_registered": 0,
+    "state": "not-run"
+  },
+  "residual": [
+    "Retain official executable, configuration, environment, resource, attempt, completion, JUnit, log, and artifact identities for every declared execution profile.",
+    "Classify and implement the native Axeyum surface required by every selected case.",
+    "Execute matched native cases and register terminal paired cells only from completed both-system evidence."
+  ],
+  "verdict": "official CI profiles derived; no execution or parity outcome established"
+}

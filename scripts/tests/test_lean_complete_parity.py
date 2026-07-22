@@ -54,6 +54,12 @@ class LeanCompleteParityTests(unittest.TestCase):
             [("default", 3678), ("full-lake", 3723)],
         )
         self.assertEqual(u2["outcomes"]["paired_registered"], 0)
+        u2_ci = first["bounded_snapshot"]["u2_ci_profile_authority"]
+        self.assertEqual(u2_ci["derivation"]["contexts"], 17)
+        self.assertEqual(u2_ci["derivation"]["candidate_cells"], 153)
+        self.assertEqual(u2_ci["derivation"]["ctest_attempts"], 111)
+        self.assertEqual(u2_ci["derivation"]["selection_sets"], 8)
+        self.assertEqual(u2_ci["outcomes"]["official_executed_attempts"], 0)
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
@@ -61,6 +67,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         )
         self.assertIn("scripts/gen-lean-complete-parity.py", source_paths)
         self.assertIn("docs/plan/lean-u2-test-authority-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
@@ -68,7 +75,7 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIsNone(population["raw_denominator"])
         self.assertIsNone(population["normalized_denominator"])
         self.assertIsNone(population["content_digest"])
-        self.assertIn("registration alone is not complete", population["residual"])
+        self.assertIn("profile derivation alone is not complete", population["residual"])
 
     def test_population_order_and_incomplete_denominators_are_fail_closed(self) -> None:
         self.data["populations"][0], self.data["populations"][1] = (

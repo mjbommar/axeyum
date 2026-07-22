@@ -383,18 +383,36 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.6.2 official CI profile derivation is preregistered
-  before selected counts are observed.** The
+- **2026-07-22 — TL0.7 Lean execution evidence is preregistered before any
+  process observation.** The
+  [plan](docs/plan/lean-execution-evidence-tl0.7-plan-2026-07-22.md) freezes
+  exact upstream/registry/decision/wrapper identities; explicit 4 GiB standard
+  and 8 GiB official-export lane templates; concrete run, resource, attempt,
+  case, artifact, and completion records; twelve typed termination classes;
+  immutable completion-last checkpoint/resume rules; nineteen fail-closed
+  mutations; and zero-outcome credit predicates. It records two corrections:
+  Lean CI resolves `NPROC` from the live runner and supplies no job-wide memory
+  cap, while generic `mem-run.sh` defaults to 64 GiB unless 4/8 GiB is explicit.
+  Runner labels, CTest/JUnit, provider conclusions, and expiring artifacts are
+  therefore not completion evidence by themselves. Next: publish this
+  source-first boundary, then implement TL0.7.1's machine authority and
+  synthetic validator without running Lean.
+
+- **2026-07-22 — TL0.6.2 closes official CI profile derivation without
+  claiming execution or parity.** The source-first
   [plan](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md)
-  binds the pinned workflow/build/preset/registration/bootstrap inputs, the 17
-  semantically distinct official-repository event contexts, 153 candidate job
-  cells, primary versus unfiltered stage-1 rebootstrap attempts, factored exact
-  case-selection sets, fourteen fail-closed mutation classes, and explicit
-  stop conditions. Equal `src`/stage0 stdlib-flag hashes preregister stage 1 at
-  this pin. No new selection count, official outcome, Axeyum outcome, paired
-  cell, or terminal credit has been observed. Next: commit and publish this
-  boundary, then implement the isolated workflow evaluator and independent
-  CTest membership cross-check.
+  was pushed before profile counts were observed. The
+  [result](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md),
+  [authority](docs/plan/lean-u2-official-ci-profiles-v1.json), and generated
+  [summary](docs/plan/generated/lean-u2-official-ci-profiles.md) now retain 17
+  contexts, nine active job literals, 153 cells, 111 declared CTest attempts,
+  and eight exact selection sets. CTest independently reproduces every ordered
+  filter membership; 13 contract tests cover the preregistered mutations.
+  Linux release's `-E foreign` excludes zero registered names, while the
+  sanitizer filter selects the same 3,477 ordered names from both registration
+  profiles. All attempts remain `not-run`; official executions, Axeyum
+  executions, paired cells, axes, and terminal gates remain zero. Next: TL0.7
+  resource/checkpoint authority, then retained TL0.6.3 official executions.
 
 - **2026-07-22 — bounded bignum base checking carries direct moments through
   order 255 and raw moments through 35.** `certifies_wz_sum` retains its
@@ -449,9 +467,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   capture in an isolated archive. U2 advances from inventory-only to
   `bounded_profile`, but the authority records zero official executions, zero
   Axeyum executions, and zero paired cells. All complete populations, axes,
-  and terminal gates remain at zero. Next: TL0.6.2 must derive the official
-  event/check-level/platform/preset/filter/stage/rebootstrap profiles; TL0.3's
-  true remote 71/71 executable-identity gate remains independently open.
+  and terminal gates remain at zero. TL0.6.2 has since closed the official
+  event/check-level/platform/preset/filter/stage/rebootstrap profile
+  derivation without executing tests; TL0.7/TL0.6.3 and TL0.3's true remote
+  71/71 executable-identity gate remain independently open.
 
 - **2026-07-22 — product-level cancellation carries raw squared-binomial
   moments through order 33.** Every even factor shared with the known
@@ -498,9 +517,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   contract explicitly refuses to treat those inventories as executable test
   denominators. The first corrected remote Lean CI job is reclassified from
   pending/unattempted to failed-before-sweep on working-directory-dependent
-  elan resolution. TL0.6.1 has since derived the bounded U2 registration
-  authority; next are TL0.3's executable identity and TL0.6.2's official CI
-  execution-profile derivation before exact paired records can be populated.
+  elan resolution. TL0.6.1 and TL0.6.2 have since derived the bounded U2
+  registration and official CI configuration authorities, but have executed
+  no tests. Next are TL0.3's executable identity and TL0.7/TL0.6.3's retained
+  official runs before exact paired records can be populated.
 
 - **2026-07-22 — structured composition carries raw squared-binomial moments
   through order 19.** Raw order 11 was mathematically valid but hit two
@@ -7540,6 +7560,21 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL0.7 execution-resource and completion
+  evidence.** The plan separates lane policy, immutable run identity, attempts,
+  per-case artifacts, and completion-last closure; freezes 4/8 GiB local lane
+  templates and twelve typed termination classes; and forbids guessed OOM,
+  runner-label hardware inference, JUnit-only completion, or synthetic parity
+  credit before implementation.
+
+- **2026-07-22 — Completed TL0.6.2's bounded official CI profile authority.**
+  The isolated pinned workflow evaluator closes 17 contexts, nine active jobs,
+  153 candidate cells, 85 primary plus 26 rebootstrap attempts, and eight exact
+  CTest selection sets. Fresh pinned-source capture and independent synthetic
+  CTest filtering agree with the committed authority. Every attempt remains
+  `not-run`, so U2 stays bounded with zero official/Axeyum execution or paired
+  credit; TL0.7 and TL0.6.3 are next.
 
 - **2026-07-22 — Preregistered TL0.6.2 official CI profile derivation.** The
   source identities, context closure, candidate-cell schema, CTest and

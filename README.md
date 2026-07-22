@@ -110,6 +110,10 @@ The first bounded U2 checkpoint derives
 [3,678 default / 3,723 full-Lake CTest registrations](docs/plan/lean-u2-test-authority-2026-07-22.md)
 from pinned upstream semantics while explicitly recording zero official,
 Axeyum, or paired executions.
+The next bounded checkpoint derives the pinned workflow into
+[17 contexts, 153 cells, 111 declared CTest attempts, and eight exact selection
+sets](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md), while all
+attempts remain not-run and all parity counters remain zero.
 
 ### 3. Computer algebra (the Mathematica / SymPy angle)
 

@@ -281,7 +281,10 @@ Again, there are distinct targets:
   sources, sidecars, output policies, and support trees. It records zero
   official executions, zero Axeyum executions, and zero paired cells, so U2 is
   a bounded registration profile rather than evidence of language or ecosystem
-  compatibility.
+  compatibility. The next [workflow-profile result](plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md)
+  derives 17 event contexts, 153 matrix cells, 111 declared CTest attempts, and
+  eight exact selection sets. Every attempt remains `not-run`; this closes
+  configuration identity, not Lean execution or Axeyum parity.
 
 See the source-backed [kernel gap audit](prover-track/research/06-kernel-gap-analysis.md)
 and [proof reconstruction plan](plan/track-3-proof-lean/P3.7-lean-reconstruction.md),
@@ -289,7 +292,9 @@ plus the [Lean-system compatibility roadmap](plan/lean-system-compatibility-road
 the [implementation plan](plan/lean-system-implementation-plan-2026-07-21.md),
 and the [complete-parity contract](plan/lean4-complete-parity-contract-2026-07-22.md).
 The exact official-test selection checkpoint is the
-[U2 registration authority](plan/lean-u2-test-authority-2026-07-22.md).
+[U2 registration authority](plan/lean-u2-test-authority-2026-07-22.md), and its
+official execution-profile derivation is the
+[TL0.6.2 result](plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md).
 The exact first import result and negative matrix are in the
 [`lean4export` Rust prototype report](plan/lean4export-rust-import-prototype-2026-07-21.md).
 

@@ -80,11 +80,23 @@
           "detail": "Generated bounded profile summary and explicit non-terminal residual."
         },
         {
+          "path": "docs/plan/lean-u2-official-ci-profiles-v1.json",
+          "detail": "Pinned dynamic-workflow derivation for 17 official event contexts, 153 job cells, 111 not-run CTest attempts, and eight exact factored selection sets."
+        },
+        {
+          "path": "docs/plan/generated/lean-u2-official-ci-profiles.md",
+          "detail": "Generated context, attempt, filter, stage, and selection-set summary with zero execution or paired-result credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md",
+          "detail": "TL0.6.2 result, reproduction commands, exact corrections, assurance boundary, and TL0.6.3 handoff."
+        },
+        {
           "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Derive official CI platform/preset/filter/resource/attempt identities, retain official and native Axeyum executions, and register exact matched outcomes; registration alone is not complete U2 authority."
+      "residual": "Execute and retain the derived official profiles with exact executable/environment/resource/attempt/completion evidence, then implement and run matched native Axeyum cases; profile derivation alone is not complete U2 authority."
     },
     {
       "id": "U3",

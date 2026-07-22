@@ -179,8 +179,8 @@ the interoperability and Track 6 plans.
 | TL0.3 | PARTIAL | Pin Lean, exporter, source hashes, fixture hashes, commands, limits, host-independent options, and the executable path used from every test working directory. The first corrected remote job failed before its representative sweep because `AXEYUM_LEAN_BIN` resolved to an unconfigured elan shim outside the repository directory. | — | S | One manifest drives exporter, importer, and official-check tests; a retained remote run reaches the exact 71/71 attestation. |
 | TL0.4 | DONE | Add a machine-checked axiom ledger: name, type digest, source, owner, classification, discharge status. | TL0.2 | M | The [65-row manifest](lean-axiom-ledger-v1.json), generated [ledger](generated/lean-axiom-ledger.md), runtime inventory, and seven mutation/contract tests make added, removed, renamed, or type-mutated assumptions fail the normal gate. All rows remain explicitly `unclassified`/`unreviewed` for TL3.2. |
 | TL0.5 | TODO | Add `just lean-kernel`, `lean-import`, `lean-source`, `lean-workflow`, and `lean-system` tiers. | TL0.2 | M | Small per-commit, nightly corpus, and release-full gates are distinct. |
-| TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. U2 now has a [bounded executable registration authority](lean-u2-test-authority-2026-07-22.md) for 3,678 default / 3,723 full-Lake CTest cases, while official executions, Axeyum executions, all terminal U0-U9 authorities, and terminal paired cells remain incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
-| TL0.7 | TODO | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
+| TL0.6 | PARTIAL | Add generated A0-A11 construct, declaration-root, source, tactic, project, editor, runtime, ecosystem, and platform scoreboards over content-identified U0-U9 populations. The [v1 registry](lean-complete-parity-v1.json) and generated [Markdown](generated/lean-complete-parity.md)/[JSON](generated/lean-complete-parity.json) status seed exact ordered populations, axes, outcomes, and terminal gates; derive bounded K-profile/construct/task/axiom facts; reject incomplete denominators, illegal axis/gate credit, and premature public terminal claims. U2 now has a [bounded executable registration authority](lean-u2-test-authority-2026-07-22.md) for 3,678 default / 3,723 full-Lake CTest cases plus an exact [official CI profile derivation](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md) for 17 contexts, 153 cells, 111 not-run attempts, and eight selection sets. Official executions, Axeyum executions, all terminal U0-U9 authorities, and terminal paired cells remain incomplete. | TL0.2 | M | Every profile has exact raw/normalized denominators, paired overlap, blocker categories, assurance, attempts, resources, and completion. |
+| TL0.7 | PARTIAL | Freeze resource envelopes and checkpoint policy, including 4 GiB default and 8 GiB official-export lanes. The [source-first execution plan](lean-execution-evidence-tl0.7-plan-2026-07-22.md) now freezes lane/run/attempt/case/completion identities, twelve typed termination classes, immutable completion-last checkpoints, exact credit predicates, nineteen mutation classes, and the explicit no-execution boundary before implementation or process observation. | TL0.3 | S | OOM/signal/timeout/limit outcomes are typed and retained. |
 | TL0.8 | TODO | Correct or archive older conflicting scope prose and wire link checks to this plan. | TL0.1 | S | No live document says both “import nothing” and “import mathlib.” |
 
 ### TL0.6 U2 official-test execution slices
@@ -191,13 +191,25 @@ result. U2 therefore advances through these separately reviewable slices:
 | ID | Status | Task | Depends | Size | Exit artifact/gate |
 |---|---|---|---|---|---|
 | TL0.6.1 | DONE | Freeze the pinned default and full-Lake selections from CMake/CTest semantics, including commands, properties, primary/support/sidecar content, output policy, exclusions, and ordered digests. | TL0.3, TL0.6 | M | The [U2 authority](lean-u2-test-authority-v1.json), generated [summary](generated/lean-u2-test-authority.md), eight mutation/contract tests, and optional pinned-upstream reproduction agree on 3,678/3,723 cases while recording zero outcomes. |
-| TL0.6.2 | PARTIAL | Evaluate the pinned workflow into exact event, check-level, platform, preset, `CTEST_OPTIONS`, `LAKE_CI`, target-stage, rebootstrap, stage-3, benchmark, primary/secondary, and skip profiles. The [preregistered plan](lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md) freezes source identities, 17 official-repository contexts, 153 candidate cells, primary/rebootstrap separation, factored exact selection sets, mutations, and stop conditions before derived selection counts are observed. | TL0.6.1 | M | A generated official profile manifest proves which normalized case IDs each active workflow cell selects; disabled/commented jobs receive no execution credit. |
+| TL0.6.2 | DONE | Evaluate the pinned workflow into exact event, check-level, platform, preset, `CTEST_OPTIONS`, `LAKE_CI`, target-stage, rebootstrap, stage-3, benchmark, primary/secondary, and skip profiles. The [preregistered plan](lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md) was published before selection counts; the [result](lean-u2-official-ci-profiles-tl0.6.2-2026-07-22.md), [authority](lean-u2-official-ci-profiles-v1.json), generated [summary](generated/lean-u2-official-ci-profiles.md), and 13 contract tests now retain 17 contexts, 153 cells, 111 not-run attempts, eight exact selection sets, and zero outcomes. | TL0.6.1 | M | The generated official profile manifest proves which normalized case IDs each active workflow cell selects; disabled/commented jobs receive no execution credit. |
 | TL0.6.3 | TODO | Execute and retain the official profiles with executable/configuration/environment/resource/attempt/completion identities, JUnit, logs, artifacts, and typed invalid/incomplete outcomes. | TL0.6.2, TL0.7 | XL | Every selected official case has retained per-attempt evidence; aggregate totals reconstruct only from completed case records. |
 | TL0.6.4 | TODO | Classify every U2 case by required native Axeyum surface and dependency closure: kernel/import, parser/macro, elaborator, tactic/meta, modules/Lake, editor/RPC, compiler/runtime, FFI, or adversarial. | TL0.6.1, TL1-TL9 | L | No case is silently delegated to official Lean or credited to a lower K/A profile; unsupported surfaces have stable owners and decline codes. |
 | TL0.6.5 | TODO | Run matched native Axeyum cases incrementally and publish exact overlap, official-only, Axeyum-only, mismatch, unadjudicated, not-run, invalid-run, assurance, and resource fields. | TL0.6.3, TL0.6.4 | XL | Every paired row satisfies the terminal cell schema and independently checked accepted declarations/proofs retain trust evidence. |
 | TL0.6.6 | TODO | Review and promote U2 only after the complete declared platform/profile matrix and all both-system outcomes close without unexplained mismatch or missing completion evidence. | TL0.6.5 | M | U2 becomes `complete_authority`; otherwise it remains bounded with an exact residual and no terminal denominator promotion. |
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
+
+### TL0.7 Lean execution evidence slices
+
+Resource policy is a prerequisite to execution, not evidence that a process
+ran. TL0.7 therefore advances separately from TL0.6.3:
+
+| ID | Status | Task | Depends | Size | Exit artifact/gate |
+|---|---|---|---|---|---|
+| TL0.7.1 | PARTIAL | Freeze the machine execution-evidence contract: 4 GiB standard and 8 GiB official-export lane templates, concrete run/resource identity, typed attempt/case/completion records, immutable completion-last checkpoints, credit predicates, and synthetic validation only. The [preregistered plan](lean-execution-evidence-tl0.7-plan-2026-07-22.md) fixes the schema and mutations before implementation. | TL0.3, TL0.6.2 | M | Generated authority and mutation tests represent clean, failed, interrupted/resumed, invalid, and incomplete synthetic bundles while committed real-outcome counters remain zero. |
+| TL0.7.2 | TODO | Implement the bounded process adapter with explicit limits, exact command/environment/working-directory identity, process-group cleanup, raw output hashing, and evidence-backed exit/signal/timeout/limit classification. | TL0.7.1 | M | Forced exit, signal, timeout, cooperative memory-limit, and launch/preflight failures retain exact attempts without guessed OOM or completion. |
+| TL0.7.3 | TODO | Implement the immutable checkpoint store and completion-last validator on registered storage classes. | TL0.7.2 | M | Kill at every persistence boundary, resume without overwrite/duplication, quarantine conflicts, and reproduce the uninterrupted canonical result. |
+| TL0.7.4 | TODO | Run one no-credit pinned-Lean preflight and one official-export control through the complete path, then accept or revise the policy. | TL0.7.3 | S | Exact runner/platform/resource/artifact evidence validates; TL0.6.3 may begin without promoting either control into U2 outcomes. |
 
 ## 8. Phase L1 — production `lean4export` reader
 
@@ -515,18 +527,22 @@ parallel lane:
     spine under accepted ADR-0352 through ADR-0355 and all retained gates.
 17. TL0.3 — correct the remote Lean executable identity across changed working
     directories and retain the first true remote 71/71 attestation.
-18. TL0.6.2 — derive the pinned official CI event/check-level/platform/preset/
-    filter/stage/rebootstrap execution profiles over the landed 3,678/3,723
-    U2 registration selections; then continue U0-U9 authorities and A0-A11
-    paired scoreboards without promoting another broad parity claim.
-19. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
-20. TL3.4 — discharge the first five axioms.
-21. TL3.6 — export minimal `Init` roots and regenerate blocker priority.
-22. T6.1a — extract the reusable IR-to-CIC bridge in the parallel proof lane.
-23. T6.2.1-T6.2.5 — establish one goal/metavariable state with delayed assignment.
-24. TL6.1-TL6.4 — establish the source/syntax/parser substrate in the parallel
+18. **DONE:** TL0.6.2 — derive the pinned official CI
+    event/check-level/platform/preset/filter/stage/rebootstrap profiles over
+    the landed 3,678/3,723 U2 registrations.
+19. TL0.7.1--TL0.7.4 then TL0.6.3 — implement the preregistered execution
+    evidence contract, bounded process adapter, durable checkpoint store, and
+    no-credit controls before retaining the first official profile executions;
+    do not promote configuration or synthetic evidence into a pass or parity
+    claim. Continue U0-U9 authorities and A0-A11 paired scoreboards.
+20. TL3.1-TL3.3 — inventory/digest/classify and namespace all preludes.
+21. TL3.4 — discharge the first five axioms.
+22. TL3.6 — export minimal `Init` roots and regenerate blocker priority.
+23. T6.1a — extract the reusable IR-to-CIC bridge in the parallel proof lane.
+24. T6.2.1-T6.2.5 — establish one goal/metavariable state with delayed assignment.
+25. TL6.1-TL6.4 — establish the source/syntax/parser substrate in the parallel
     frontend lane.
-25. Recompute the critical path from the generated construct/root and
+26. Recompute the critical path from the generated construct/root and
     complete-parity matrices.
 
 ## 20. Session resume protocol
