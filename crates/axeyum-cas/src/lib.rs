@@ -12113,6 +12113,11 @@ fn extract_gamma_form(expr: &CasExpr, var: &str) -> Option<(Rational, Rational, 
         CasExpr::Unary(UnaryFunc::Sqrt, arg) if matches!(arg.as_ref(), CasExpr::Var(n) if n == var) => {
             Some((Rational::integer(1), Rational::new(1, 2), false))
         }
+        CasExpr::Unary(UnaryFunc::NthRoot(q), arg)
+            if matches!(arg.as_ref(), CasExpr::Var(n) if n == var) =>
+        {
+            Some((Rational::integer(1), Rational::checked_new(1, i128::from(*q))?, false))
+        }
         CasExpr::Unary(UnaryFunc::Exp, arg) => {
             // Require exactly `e^{−x}`.
             let poly = normalize(arg)?.to_univariate(var)?;
@@ -12181,7 +12186,15 @@ fn improper_gamma_integral(
     if !has_exp {
         return None;
     }
-    let gamma = special::gamma(power.checked_add(Rational::integer(1))?)?;
+    // `∫₀^∞ x^p·e^{−x} = Γ(p+1)`, convergent iff `p > −1`. Prefer the closed form
+    // (folds `Γ(n)=(n−1)!`, `Γ(k+½)=…√π`); otherwise the symbolic Γ **head**
+    // (`Γ(5/3)` for `∫₀^∞ x^{2/3}e^{−x}`), which has no elementary value.
+    let gamma_arg = power.checked_add(Rational::integer(1))?;
+    if gamma_arg <= Rational::zero() {
+        return None; // divergent at the origin
+    }
+    let gamma = special::gamma(gamma_arg)
+        .unwrap_or_else(|| CasExpr::Const(gamma_arg).gamma());
     Some(DefiniteIntegral {
         value: simplify(&(CasExpr::Const(coefficient) * gamma)),
         antiderivative: CasExpr::zero(),
@@ -20052,6 +20065,24 @@ mod tests {
         close(evalf(&CasExpr::int(2).airy_ai(), &[]).unwrap(), 0.034_924);
         close(evalf(&CasExpr::int(0).airy_bi(), &[]).unwrap(), 0.614_927);
         close(evalf(&CasExpr::int(1).airy_bi(), &[]).unwrap(), 1.207_424);
+    }
+
+    #[test]
+    fn gamma_integral_fractional_powers() {
+        let x = || v("x");
+        let e_neg = || (CasExpr::int(-1) * x()).exp();
+        let lo = || LimitPoint::Finite(Rational::zero());
+        let gamma = |integrand: CasExpr| improper_integrate(&integrand, "x", lo(), LimitPoint::PosInfinity).unwrap().value;
+        // Half-integer powers fold to √π multiples: ∫₀^∞ √x e^{-x}=Γ(3/2)=√π/2,
+        // ∫₀^∞ e^{-x}/√x=Γ(1/2)=√π.
+        assert!(matches!(equal(&gamma(x().sqrt() * e_neg()), &(v("pi").sqrt() / CasExpr::int(2))), ZeroTest::Certified { equal: true, .. }));
+        assert!(matches!(equal(&gamma(e_neg() / x().sqrt()), &v("pi").sqrt()), ZeroTest::Certified { equal: true, .. }));
+        // Cube-root powers return the symbolic Γ head (no elementary value):
+        // ∫₀^∞ ∛x e^{-x}=Γ(4/3), ∫₀^∞ x^{2/3} e^{-x}=Γ(5/3), evalf-consistent.
+        assert!(matches!(equal(&gamma(x().cbrt() * e_neg()), &CasExpr::rat(4, 3).gamma()), ZeroTest::Certified { equal: true, .. }));
+        assert!((evalf(&gamma(x().cbrt() * e_neg()), &[]).unwrap() - 0.892_980).abs() < 1e-4);
+        // Integer power stays exact: ∫₀^∞ x² e^{-x}=Γ(3)=2.
+        assert_equal(&gamma(x().pow(2) * e_neg()), &CasExpr::int(2));
     }
 
     #[test]
