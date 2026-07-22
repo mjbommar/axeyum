@@ -369,6 +369,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — the official Lean construct-matrix execution plan is written
+  and synchronized; ADR review and M0 are next.** The next milestone is
+  explicitly a measurement artifact, not kernel implementation. The
+  [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+  and [proposed ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+  define six positive/control families (existing direct recursion,
+  recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
+  well-founded) plus one official non-positive source rejection. Source intent
+  freezes before export; exact wire features freeze from two byte-identical
+  official exports and the independent Python inventory before the Rust
+  importer is run. Every Rust decline must be typed, repeatable,
+  completion-only, and paired with the immutable 11-declaration direct-
+  recursive pass. Source family, wire construct, parsing, translation,
+  independent admission, computation, and assurance credit remain separate
+  generated fields. New streams have fixed 1 MiB each / 2 MiB aggregate
+  retention bounds, and all Lean/Rust work remains under 4 GiB with one/two
+  workers. **Next:** review proposed ADR-0351, execute M0 baseline reproduction,
+  then commit the M1 Stage A source fixture and roots before any new product
+  measurement. After the matrix, TL2.11 strict positivity is the primary
+  trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
+  lane.
+
 - **2026-07-22 — TL1.7 canonical Lean declaration/dependency identity is
   complete; the remaining official inductive fixture matrix is next.** Every
   successful import now publishes `axeyum-lean-declaration-identity-v1` in its
@@ -6766,6 +6788,15 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Proposed the official Lean construct-matrix execution
+  plan.** Proposed ADR-0351 and the linked execution plan separate source
+  families from official core wire forms, freeze source then independently
+  inventoried export evidence before product measurement, pair every current
+  decline with the direct-recursive positive control, define generated
+  assurance classes and exact retention/resource/stop gates, and keep
+  TL1.8/TL2.16 honestly incomplete. M0 baseline reproduction and the Stage A
+  source freeze are next; no importer or kernel semantics changed.
 
 - **2026-07-22 — Completed TL1.7 canonical Lean declaration identity.**
   Accepted ADR-0350; published ledger-compatible axiom identities plus complete

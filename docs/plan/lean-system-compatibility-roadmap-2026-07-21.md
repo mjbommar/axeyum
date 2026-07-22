@@ -690,16 +690,23 @@ Non-claims until their gates are met:
    publishes canonical declaration/dependency identities; do not generalize
    exact K1 roots or K0 rules to broader native or ecosystem compatibility.
 4. Preserve the landed projection/Nat/quotient streams and the source/command/
-   hash-bound String closure; generate the remaining recursive-indexed, mutual,
-   nested, and reflexive fixtures.
-5. Preserve byte-identical regeneration of both committed official fixtures and
-   carry the direct-recursive positive control beside every recursive-indexed
-   negative so the boundary is attributed to indices, not recursion alone.
-6. Generate the parsed/translated/admitted/dual-admitted feature matrix from the
-   current hand-checked six-profile seed.
-7. **TL1.3-TL1.4 and TL1.7 DONE; NEXT TL1.5:** preserve owned completion-only
-   publication, the 226-case mutation corpus, and canonical axiom/declaration/
-   dependency identity while adding property fuzzing over the frozen paths.
+   hash-bound String closure; execute the
+   [official construct-matrix plan](lean-official-construct-matrix-plan-2026-07-22.md)
+   for recursive-indexed, reflexive/higher-order, mutual, nested, and well-
+   founded source families.
+5. Freeze source cases before export, then freeze two-run byte-identical
+   official wire observations with the independent Python reader before the
+   Rust importer sees them. Carry the exact direct-recursive positive control
+   beside every negative so the boundary is attributed to the measured feature,
+   not recursion alone.
+6. Generate the assurance-separated parsed/translated/admitted/dual-admitted
+   matrix from tests and exact fixtures; the selected-family seed advances but
+   does not complete TL2.16.
+7. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
+   completion-only publication, the 226-case mutation corpus, and canonical
+   axiom/declaration/dependency identity when property fuzzing begins. The
+   primary semantic path after the matrix is TL2.11 positivity, not admission
+   widening without it.
 8. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

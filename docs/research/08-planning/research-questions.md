@@ -1,7 +1,7 @@
 # Research Questions
 
 Status: draft
-Last updated: 2026-07-11
+Last updated: 2026-07-22
 
 ## Purpose
 
@@ -742,6 +742,18 @@ Out of scope:
     admitted content digest so dependency mutations propagate without changing
     the dependent declaration's own content identity. See
     [ADR-0350](../09-decisions/adr-0350-canonical-lean-declaration-identity.md).
+- [ ] How should the remaining recursive-indexed, reflexive, mutual, nested,
+      and well-founded official Lean cases be measured before independent
+      admission widens?
+  - Proposed answer (2026-07-22): freeze minimal source cases first; export
+    every selected root twice; freeze exact official wire features with the
+    independent Python reader before running Axeyum; then pair every typed Rust
+    decline with the existing direct-recursive positive control and generate an
+    assurance-separated matrix. Source family and elaborated core form remain
+    separate facts. See
+    [proposed ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
+    and the
+    [execution plan](../../plan/lean-official-construct-matrix-plan-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

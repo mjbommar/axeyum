@@ -121,8 +121,16 @@ state.
 > have the intended sensitivity. The importer passes 28 cases across three
 > binaries. See the
 > [TL1.7 result](docs/plan/lean-declaration-identity-tl1.7-2026-07-22.md).
-> Resume with the remaining recursive-indexed/mutual/nested/reflexive/well-
-> founded fixture matrix. The runtime-derived
+> The remaining recursive-indexed/mutual/nested/reflexive/well-founded fixture
+> matrix is now governed by a
+> [source-first, wire-second execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+> under proposed ADR-0351. It freezes official source cases before export,
+> freezes independently inventoried official wire forms before Rust product
+> measurement, pairs every decline with the exact direct-recursive positive
+> control, and forbids admission work inside the measurement milestone. Review
+> proposed ADR-0351, reproduce the historical M0 baseline, then freeze Stage A
+> sources; TL2.11 strict positivity remains the first semantic widening
+> prerequisite. The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
 > LSP, or compiler work. The TL6.1-TL6.4 source/syntax
@@ -158,9 +166,12 @@ state.
 > constructor reduction/import, TL2.5 structure eta, and TL2.6
 > arbitrary-precision Nat storage, TL2.7 checked Nat literal semantics, TL1.3
 > owned transactional publication, TL1.4 generated mutation coverage, and TL1.7
-> canonical declaration/dependency identity are complete. Generate the
-> recursive-indexed/reflexive/mutual/nested/well-founded official fixture matrix
-> next, while TL1.5 property fuzzing is now dependency-ready. Native
+> canonical declaration/dependency identity are complete. Execute the
+> [proposed official construct matrix](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+> next: source freeze, official byte-identical export/inventory freeze, then
+> current-product measurement and a generated assurance matrix. TL1.5 property
+> fuzzing is dependency-ready, but TL2.11 positivity remains mandatory before
+> recursive admission widens. Native
 > parser/macros,
 > elaboration, tactics,
 > modules/Lake/`.olean`, LSP, compiler/runtime, and full pinned-mathlib build are

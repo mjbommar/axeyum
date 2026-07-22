@@ -65,9 +65,14 @@ Last updated: 2026-07-22
 > and quotient semantic seams remain uncredited. TL1.7 now adds ledger-compatible
 > axiom identities and complete v1 structural content/direct-dependency digests;
 > five focused identity tests bring the importer to 28 cases across three
-> binaries. Generate the remaining recursive-indexed/reflexive/mutual/nested/
-> well-founded official fixture matrix next; TL1.5 property fuzzing is now
-> dependency-ready.
+> binaries. The remaining recursive-indexed/reflexive/mutual/nested/well-
+> founded official cases now have a
+> [proposed construct-matrix plan](../../../docs/plan/lean-official-construct-matrix-plan-2026-07-22.md):
+> freeze source intent, freeze byte-identical official wire observations with
+> the independent reader, and only then measure the current Rust boundary.
+> Review proposed ADR-0351, reproduce M0, then freeze Stage A sources. TL1.5
+> property fuzzing is dependency-ready; TL2.11
+> positivity remains mandatory before recursive admission widens.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

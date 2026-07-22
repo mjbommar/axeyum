@@ -86,6 +86,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   generated-recursor comparison, exact 9-declaration projection-root
   admission/computation, 28 importer cases across three binaries, and explicit
   literal/quotient/harder-inductive declines.
+- [`lean-official-construct-matrix-plan-2026-07-22.md`](lean-official-construct-matrix-plan-2026-07-22.md) —
+  proposed source-first/wire-second execution plan for the remaining
+  recursive-indexed, reflexive/higher-order, mutual, nested, and well-founded
+  official cases, with direct-recursive controls, generated assurance classes,
+  retention/resource bounds, stop conditions, and the post-matrix TL2.11--TL2.14
+  trajectory.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —
