@@ -1155,3 +1155,42 @@ Getting there required two prerequisites:
 complete. Frontier remaining (large subsystems): residue-based contour integration, Gamma/digamma
 heads, general multivariate factorization, Puiseux, Zeilberger, general Risch, arbitrary-precision
 N[expr,d], symbolic-coefficient series, and the whole Lean/Mathlib theorem-proving axis.
+
+---
+
+## 2026-07-21 — Entry 37: integration & series breadth wave (454 tests)
+
+Five self-contained, certified additions across the calculus surface — each closing a class SymPy
+covers that we declined on:
+
+1. **Half-period rational-trig definite integrals** `∫₀^π R(sin,cos)`. `t=tan(x/2)` maps `[0,π]→[0,∞)`
+   (vs. `[0,2π]→(−∞,∞)` for the full period), so the same Weierstrass→improper path handles both;
+   `definite_full_period_rational_trig` now picks the `t`-bounds by which endpoint it sees. Closes
+   `∫₀^π 1/(2+cos x)=π/√3`.
+2. **Taylor about an arbitrary center with transcendental coefficients.** `series_at` about a nonzero
+   center used to decline whenever a head's shifted argument left the rational-coefficient series ring
+   (`exp(x)` about 1 needs coefficients `e/n!`). Added a `taylor_by_derivatives` fallback computing the
+   Taylor definition `cₙ=f⁽ⁿ⁾(center)/n!` — coefficients are arbitrary closed-form constants (`e`,
+   `sin(1)`, `√3/2`). Declines on a pole (non-finite coefficient). `exp` about 1 → `e·[1+(x−1)+…]`.
+3. **Gaussian moments** `∫P(x)·e^{−ax²}` over `(−∞,∞)`/`[0,∞)` (non-elementary antiderivative). Reduce
+   to `√π` multiples of the erf-certified base `I₀=∫e^{−ax²}` via `∫x^{2m}e^{−ax²}=(2m−1)!!/(2a)^m·I₀`
+   (and the half-interval odd formula `m!/(2a^{m+1})`, elementary). `∫_{−∞}^∞ x²e^{−x²}=√π/2`,
+   `x⁴e^{−x²}=3√π/4`. Perfect-square `a` only (the base needs rational `√a`); else declines honestly.
+4. **Dirichlet/Fresnel improper integrals.** Added the horizontal asymptotes `Si(±∞)=±π/2`, `Ci(+∞)=0`,
+   `FresnelS/C(±∞)=±½` to `substitute_asymptotic_heads` → `∫₀^∞ sin x/x=π/2`, `∫₀^∞ sin(πx²/2)=½`.
+   Folded the odd integral-functions (Si/Shi/FresnelS/C/asin/asinh) to 0 at the origin (Ci/Ei/Chi
+   excluded — they diverge there), and made that fold `simplify` its argument first so `Si(2·0)→Si(0)→0`
+   (needed for `sin(2x)/x` to both fold *and* certify).
+5. **Combining-log improper boundaries.** Rational-function antiderivatives routinely have log terms that
+   individually diverge at ±∞ but combine to a finite limit (`∞−∞`). `limit_log_sum_at_infinity`
+   flattens the sum and uses `ln Pᵢ ~ degᵢ·ln|x|+ln|leadᵢ|`, so the limit is finite iff `Σcᵢ·degᵢ=0`,
+   value `Σcᵢ·ln|leadᵢ|` + the non-log terms' limits. Plus: run the definite/improper boundary value
+   through `evaluate_trig` so special-angle inverse-trig endpoints fold (`atan(−1/√3)→−π/6`). Closes
+   `∫₀^∞ 1/(1+x³)=2π/(3√3)`, `∫₀^∞ 1/((x+1)(x+2))=ln 2`, `∫₀^{√3} 1/(1+x²)=π/3`.
+
+**454 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Known next gaps: general-`a` Gaussian
+(non-square `a` needs the erf antiderivative with a surd `√a`), and surd-coefficient combining-logs
+(`∫_{−∞}^∞ 1/(x⁴+1)`, whose real factorization has `√2` coefficients — needs an atom-aware polynomial
+in the log-sum handler). Non-integration frontier unchanged: multivariate factorization, Puiseux,
+Zeilberger, ℚ(i) as a first-class type, Gamma/digamma heads (polygamma tower), the Abs/sign
+assumptions layer, and the Lean/Mathlib theorem-proving axis.
