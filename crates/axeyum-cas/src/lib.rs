@@ -9851,6 +9851,26 @@ fn distribute_trig_args(expr: &CasExpr) -> CasExpr {
     }
 }
 
+/// Simplify the argument of every unary head throughout `expr` (e.g. the residual
+/// `sin(1·x) → sin(x)` left by `expand_trig`), so downstream pattern matchers see a
+/// normalized argument. A denotation-preserving cleanup.
+fn simplify_head_arguments(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Unary(func, arg) => {
+            CasExpr::Unary(*func, Box::new(simplify(&simplify_head_arguments(arg))))
+        }
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(simplify_head_arguments(inner))),
+        CasExpr::Pow(base, exp) => CasExpr::Pow(Box::new(simplify_head_arguments(base)), *exp),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(simplify_head_arguments).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(simplify_head_arguments).collect()),
+        CasExpr::Div(a, b) => CasExpr::Div(
+            Box::new(simplify_head_arguments(a)),
+            Box::new(simplify_head_arguments(b)),
+        ),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
 /// **Reflection / King's-rule** definite integrals: `∫_a^b f dx = ∫_a^b f(a+b−x) dx`
 /// (the substitution `u = a+b−x`), so when `f(x) + f(a+b−x)` reduces to a **constant**
 /// `C`, the integral equals `C·(b−a)/2`. This is a genuine proof, not a lookup: the
@@ -9873,13 +9893,14 @@ fn definite_reflection_symmetry(
     let sum = expr.clone() + reflected;
     // Reduce trig by sound identities; two passes settle nested angle-addition.
     let reduce = |e: &CasExpr| {
-        simplify(&evaluate_trig(&expand_trig(&distribute_trig_args(&rewrite_tan_as_sin_cos(e)))))
+        let r = simplify(&evaluate_trig(&expand_trig(&distribute_trig_args(&rewrite_tan_as_sin_cos(e)))));
+        simplify(&simplify_head_arguments(&r))
     };
     let reduced = reduce(&reduce(&sum));
     if expr_contains_var(&reduced, var) {
-        return None; // not provably constant → decline
+        return None; // only fire when the reflected sum is provably constant
     }
-    // `∫ f = C·(b−a)/2`.
+    // `∫_a^b f = ½·∫_a^b (f(x)+f(a+b−x)) = C·(b−a)/2` for the constant `C`.
     let value = simplify(&(reduced * (upper.clone() - lower.clone()) / CasExpr::int(2)));
     // Guard: confirm against quadrature over the interior (rejects a formal symmetry
     // whose integrand is actually non-integrable on `[a,b]`).
