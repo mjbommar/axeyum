@@ -374,6 +374,24 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact rational-trig Fourier coefficients on the symmetric
+  period.** A second timeout-bounded gap probe found repeated irreducible-
+  quadratic inverse-Laplace poles as the next transform gap, but also exposed a
+  higher-priority boundary seam: `fourier_series(1/(2+cos x),[-π,π])` used the
+  generic FTC route and substituted `±π` into a discontinuous
+  `tan(x/2)` antiderivative. The resulting coefficients contained
+  `tan(±π/2)`, evaluated numerically only through floating-point pole behavior,
+  and could not certify against their exact values. The full-period rational-
+  trig helper now recognizes both canonical spellings `[0,2π]` and `[-π,π]`;
+  on the symmetric interval the Weierstrass variable maps monotonically from
+  `−∞` to `∞`, so the existing certified improper-integral route applies.
+  A focused regression proves `∫₋π^π dx/(2+cos x)=2π/√3`, its first cosine
+  coefficient, and the two-harmonic closed form
+  `(1/√3)[1+2Σₖ(√3−2)^k cos(kx)]`. Existing full/half-period, polynomial, and
+  exponential Fourier controls remain green. The full 528-unit/147-doctest CAS
+  suite, warning-denied workspace all-target/all-feature Clippy, strict
+  stable/nightly rustdoc, WASM build, links, and whitespace checks pass.
+
 - **2026-07-22 — bounded polynomial-geometric Z transforms and repeated-pole
   inverses.** A timeout-bounded cross-area probe found the standard transform
   declines at `Z{n·2ⁿ}`, `Z{n²·2ⁿ}`, and repeated inverse-Z poles while Fourier,
@@ -7329,6 +7347,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Closed the symmetric-period rational-trig Fourier boundary
+  seam.** `definite_full_period_rational_trig` now handles `[-π,π]` through the
+  same certified whole-real-line Weierstrass integral as `[0,2π]`, preventing
+  generic FTC from emitting `tan(±π/2)` boundary terms. Exact integral,
+  coefficient, and Fourier closed-form regressions bring the CAS surface to
+  528 unit tests and 147 doctests.
 
 - **2026-07-22 — Extended the exact Z-transform pair to bounded
   polynomial-geometric families.** Forward transforms use

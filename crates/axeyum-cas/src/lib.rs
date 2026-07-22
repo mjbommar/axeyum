@@ -13292,13 +13292,13 @@ pub fn numeric_integrate(
     Some(sum * step / 3.0)
 }
 
-/// `∫₀^{2π} R(sin x, cos x) dx` for any **rational-trig** integrand, via the
-/// Weierstrass substitution `t = tan(x/2)`: as `x` runs `0 → 2π`, `t` sweeps all of
-/// ℝ, so the integral equals `∫_{−∞}^{∞}` of the (rational) `t`-integrand — computed
-/// by the improper integrator. Correct where FTC on the discontinuous `tan(x/2)`
-/// antiderivative is not (`∫₀^{2π}1/(2+cos x)=2π/√3`, `∫₀^{2π}1/(a+b cos x)ⁿ`, …).
-/// `None` unless the interval is `[0, 2π]`, the integrand is a function of trig of
-/// `x` alone, and the resulting `∫_{−∞}^{∞}` converges (certified).
+/// `∫ R(sin x, cos x) dx` over a canonical full period (`[0,2π]` or `[-π,π]`) or
+/// the half period `[0,π]`, via the Weierstrass substitution `t = tan(x/2)`.
+/// On either full-period spelling, `t` sweeps all of ℝ, so the integral equals
+/// `∫_{−∞}^{∞}` of the rational `t`-integrand; on `[0,π]` it is `∫₀^∞`. Correct
+/// where FTC on the discontinuous `tan(x/2)` antiderivative is not, including
+/// Fourier coefficients on `[-π,π]`. `None` for other intervals, non-rational-
+/// trig forms, or when the corresponding improper integral does not certify.
 fn definite_full_period_rational_trig(
     expr: &CasExpr,
     var: &str,
@@ -13308,19 +13308,25 @@ fn definite_full_period_rational_trig(
     if !contains_sin_or_cos(expr) {
         return None;
     }
-    // `t = tan(x/2)` maps the lower bound 0 to `t = 0`; the upper bound picks the
-    // `t`-range: `x=2π → t∈(−∞,∞)` (full period), `x=π → t∈(0,∞)` (half period).
-    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }) {
-        return None;
-    }
-    let is_full = matches!(
-        equal(upper, &(CasExpr::int(2) * CasExpr::var("pi"))),
+    // `t = tan(x/2)` maps `[−π,π]` monotonically to the whole real line. On
+    // `[0,2π]`, its two branches concatenate to that same `(-∞,∞)` integral.
+    // The half-period `[0,π]` maps to `[0,∞)`.
+    let pi = CasExpr::var("pi");
+    let starts_at_zero = matches!(
+        equal(lower, &CasExpr::zero()),
         ZeroTest::Certified { equal: true, .. }
     );
-    let is_half = matches!(
-        equal(upper, &CasExpr::var("pi")),
-        ZeroTest::Certified { equal: true, .. }
-    );
+    let is_full = (starts_at_zero
+        && matches!(
+            equal(upper, &(CasExpr::int(2) * pi.clone())),
+            ZeroTest::Certified { equal: true, .. }
+        ))
+        || (matches!(
+            equal(lower, &CasExpr::Neg(Box::new(pi.clone()))),
+            ZeroTest::Certified { equal: true, .. }
+        ) && matches!(equal(upper, &pi), ZeroTest::Certified { equal: true, .. }));
+    let is_half =
+        starts_at_zero && matches!(equal(upper, &pi), ZeroTest::Certified { equal: true, .. });
     if !is_full && !is_half {
         return None;
     }
@@ -23362,6 +23368,49 @@ mod tests {
                 .unwrap()
                 .value,
             &(CasExpr::rat(1, 4) * v("pi")),
+        );
+    }
+
+    #[test]
+    fn symmetric_full_period_rational_trig_fourier_is_exact() {
+        let x = || v("x");
+        let pi = || v("pi");
+        let integrand = CasExpr::int(1) / (CasExpr::int(2) + x().cos());
+
+        // The canonical Fourier interval [−π,π] is the same full-period
+        // Weierstrass contour as [0,2π]. It must not substitute the endpoints
+        // into a discontinuous tan(x/2) antiderivative.
+        let symmetric = definite_integrate(&integrand, "x", &(-pi()), &pi())
+            .expect("symmetric rational-trig period");
+        assert!(symmetric.is_certified());
+        assert_equal(
+            &symmetric.value,
+            &(CasExpr::int(2) * pi() / CasExpr::int(3).sqrt()),
+        );
+
+        // The first cosine coefficient integral is also exact; before this
+        // route it retained undefined tan(±π/2) boundary terms.
+        let first_cosine = definite_integrate(
+            &(x().cos() / (CasExpr::int(2) + x().cos())),
+            "x",
+            &(-pi()),
+            &pi(),
+        )
+        .expect("first symmetric cosine coefficient");
+        assert_equal(
+            &first_cosine.value,
+            &(CasExpr::int(2) * pi() - CasExpr::int(4) * pi() / CasExpr::int(3).sqrt()),
+        );
+
+        // 1/(2+cos x) = 1/√3 [1 + 2Σ_{k≥1}(√3−2)^k cos(kx)].
+        let ratio = CasExpr::int(3).sqrt() - CasExpr::int(2);
+        let expected = CasExpr::int(1) / CasExpr::int(3).sqrt()
+            + CasExpr::int(2) * ratio.clone() / CasExpr::int(3).sqrt() * x().cos()
+            + CasExpr::int(2) * ratio.pow(2) / CasExpr::int(3).sqrt()
+                * (CasExpr::int(2) * x()).cos();
+        assert_equal(
+            &fourier_series(&integrand, "x", &pi(), 2).expect("rational-trig Fourier series"),
+            &expected,
         );
     }
 
