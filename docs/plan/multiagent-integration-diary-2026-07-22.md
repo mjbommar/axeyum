@@ -518,6 +518,27 @@ binary. A fully clean board requires re-running the affected shards — the lane
 branch → green-gated merge to `main` → rebuilt binary → **measured 55 wrong
 answers → 0** on the real SMT-LIB selection. Exactly the compass: never wrong.
 
+### Cycle 22 — 2026-07-22 (~16:55 EDT) — CAS order-33 (pre-cancel) + gate-cost note
+
+**Micro.** CAS `e5547fe2 pre-cancel raw moment products` (→ main `147c473f`).
+Exact even-factor pre-cancellation + bignum-only polynomial intermediates remove
+the raw order-20 representation overflow, extending Stirling-composed
+squared-binomial moments **through order 33** (order-34 ceiling), public
+coefficients still checked `i128`. STATUS.md union-resolved (main's S2/re-stage
+block + the CAS order-33 entry; no WIP swept). The worktree-HEAD monitor fired
+correctly (`HEADMOVE lane=cas`), confirming the cycle-20 fix. **Gate: GREEN —
+524 CAS lib tests** (up from 522).
+
+**Operational note.** The CAS suite now takes **~13 min** (794 s) — the high-order
+moment proofs are genuinely expensive. **Going forward CAS gates run in the
+background by default** (foreground hits the 7-min bash cap); merge stays staged
+(`--no-commit`) until the background gate returns green, then commit.
+
+**Macro.** CAS is now certifying binomial-moment identities to **order 33** with
+checked WZ certificates — territory most CAS systems don't reach at all, let alone
+with a proof. The order-34 "first decline" is the honest ceiling: it proves what
+it can certify and declines beyond, never guesses.
+
 ---
 
 ## Cycle log
