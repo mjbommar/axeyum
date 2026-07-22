@@ -8810,21 +8810,42 @@ fn integrate_inverse_radical(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let CasExpr::Unary(UnaryFunc::Sqrt, radicand) = denominator.as_ref() else {
         return None;
     };
+    // Complete the square on the quadratic radicand `c₂·x² + c₁·x + c₀`:
+    //   c₂ = +1: (x + c₁/2)² + k → asinh(x+c₁/2) if k=1, acosh(x+c₁/2) if k=−1;
+    //   c₂ = −1: k − (x − c₁/2)² → asin(x − c₁/2) if k=1.
+    // (`k` must be ±1 — the un-scaled cases; a general k needs a surd.)
+    let poly = normalize(radicand)?.to_univariate(var)?;
+    let [c0, c1, c2] = <[Rational; 3]>::try_from(poly).ok()?;
     let x = CasExpr::var(var);
-    let candidates = [
-        (CasExpr::int(1) - x.clone().pow(2), UnaryFunc::Asin),
-        (x.clone().pow(2) + CasExpr::int(1), UnaryFunc::Asinh),
-        (x.clone().pow(2) - CasExpr::int(1), UnaryFunc::Acosh),
-    ];
-    for (expected, head) in candidates {
-        if matches!(
-            equal(radicand, &expected),
-            ZeroTest::Certified { equal: true, .. }
-        ) {
-            return Some(CasExpr::Unary(head, Box::new(x)));
+    let quarter = Rational::new(1, 4);
+    let (shift, head) = if c2 == Rational::integer(1) {
+        // (x + c₁/2)² + (c₀ − c₁²/4)
+        let k = c0.checked_sub(c1.checked_mul(c1)?.checked_mul(quarter)?)?;
+        let head = if k == Rational::integer(1) {
+            UnaryFunc::Asinh
+        } else if k == Rational::integer(-1) {
+            UnaryFunc::Acosh
+        } else {
+            return None;
+        };
+        (c1.checked_div(Rational::integer(2))?, head)
+    } else if c2 == Rational::integer(-1) {
+        // (c₀ + c₁²/4) − (x − c₁/2)²
+        let k = c0.checked_add(c1.checked_mul(c1)?.checked_mul(quarter)?)?;
+        if k != Rational::integer(1) {
+            return None;
         }
-    }
-    None
+        (c1.checked_div(Rational::integer(-2))?, UnaryFunc::Asin)
+    } else {
+        return None;
+    };
+    // Argument x + shift.
+    let argument = if shift.is_zero() {
+        x
+    } else {
+        x + CasExpr::Const(shift)
+    };
+    Some(CasExpr::Unary(head, Box::new(argument)))
 }
 
 /// ∫ k·f′(x)/√(f(x)) dx = 2k·√(f(x)) — recognize a numerator proportional to the
@@ -13612,6 +13633,29 @@ mod tests {
             assert_equal(&r.antiderivative, &CasExpr::Unary(head, Box::new(x())));
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+        // Completed-square (shifted) forms: ∫1/√(x²+2x+2)=asinh(x+1),
+        // ∫1/√(x²+2x)=acosh(x+1), ∫1/√(−x²+2x)=asin(x−1).
+        for (integrand, anti) in [
+            (
+                CasExpr::int(1) / (x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(2)).sqrt(),
+                CasExpr::Unary(UnaryFunc::Asinh, Box::new(x() + CasExpr::int(1))),
+            ),
+            (
+                CasExpr::int(1) / (x().pow(2) + CasExpr::int(2) * x()).sqrt(),
+                CasExpr::Unary(UnaryFunc::Acosh, Box::new(x() + CasExpr::int(1))),
+            ),
+            (
+                CasExpr::int(1) / (CasExpr::int(-1) * x().pow(2) + CasExpr::int(2) * x()).sqrt(),
+                CasExpr::Unary(UnaryFunc::Asin, Box::new(x() - CasExpr::int(1))),
+            ),
+        ] {
+            let r = integrate(&integrand, "x").expect("completed-square inverse radical");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative, &anti);
+        }
+        // A non-±1 completed constant (√(2−x²), needing asin(x/√2)) declines.
+        assert!(integrate(&(CasExpr::int(1) / (CasExpr::int(2) - x().pow(2)).sqrt()), "x")
+            .is_none_or(|c| !c.is_certified()));
         // The atom-canonicalization that makes reordering work: √(1+x²) ≡ √(x²+1).
         assert!(matches!(
             equal(
