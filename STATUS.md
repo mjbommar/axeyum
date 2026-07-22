@@ -7507,6 +7507,21 @@ plan is built and committed on the current branch:
   open. Current terminal credit remains honestly zero across complete
   populations, complete axes, paired cells, and satisfied gates.
 
+- **2026-07-22 — Seeded TL0.6's fail-closed complete-Lean-parity registry.**
+  The exact U0-U9 populations, A0-A11 axes, eight paired outcomes, and G1-G10
+  terminal gates now have one validated machine-readable source and generated
+  Markdown/JSON reports. The generator content-identifies its source manifests
+  and derives K-profile, selected-construct, implementation-task, and axiom
+  summaries without converting them into terminal denominators. Eight
+  contract/mutation tests reject population/order drift, incomplete denominator
+  credit, complete axes over incomplete populations, hand-promoted derived
+  gates, malformed paired identities, missing evidence, and terminal-claim
+  laundering. Local aggregate and both docs CI jobs check the generated
+  reports; live public
+  status surfaces cannot affirm complete Lean parity while the terminal gate is
+  open. Current terminal credit remains honestly zero across complete
+  populations, complete axes, paired cells, and satisfied gates.
+
 - **2026-07-22 — Implemented ADR-0356 S2 verified corpus acquisition.** The
   new resumable runner binds the completed S1 audit, downloads all 90 release
   files with published size/MD5 and local SHA-256, records redirects, rejects
