@@ -1718,7 +1718,8 @@ pub fn equal(a: &CasExpr, b: &CasExpr) -> ZeroTest {
 fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(UnaryFunc::Ln, arg) => {
-            let inner = expand_log_over_primes(arg);
+            let inner = simplify_radicals(&expand_log_over_primes(arg));
+            // A positive rational: `ln(p/q) = Σeᵢln(pᵢ) − Σfⱼln(qⱼ)` (prime basis).
             if let CasExpr::Const(c) = &inner
                 && c.numerator() > 0
             {
@@ -1737,6 +1738,27 @@ fn expand_log_over_primes(expr: &CasExpr) -> CasExpr {
                     1 => terms.into_iter().next().unwrap_or_else(CasExpr::zero),
                     _ => CasExpr::Add(terms),
                 };
+            }
+            // Distribute `ln` over products/quotients/powers/roots of **positive**
+            // constants (sound only for positives): `ln(½·√2) = ln½ + ½·ln2`.
+            // `evalf` with no bindings succeeds only for a closed constant, so this
+            // also rejects any free variable.
+            let positive = |e: &CasExpr| evalf(e, &[]).is_some_and(|v| v > 0.0);
+            let relog = |e: CasExpr| expand_log_over_primes(&e.ln());
+            match &inner {
+                CasExpr::Unary(UnaryFunc::Sqrt, radicand) if positive(radicand) => {
+                    return scaled_term(Rational::new(1, 2), relog((**radicand).clone()));
+                }
+                CasExpr::Pow(base, exponent) if positive(base) => {
+                    return scaled_term(Rational::integer(i128::from(*exponent)), relog((**base).clone()));
+                }
+                CasExpr::Mul(factors) if factors.iter().all(positive) => {
+                    return CasExpr::Add(factors.iter().cloned().map(relog).collect());
+                }
+                CasExpr::Div(a, b) if positive(a) && positive(b) => {
+                    return relog((**a).clone()) - relog((**b).clone());
+                }
+                _ => {}
             }
             CasExpr::Unary(UnaryFunc::Ln, Box::new(inner))
         }
@@ -15034,9 +15056,28 @@ mod tests {
                 "{a} should equal {b}"
             );
         }
+        // `ln` distributes over positive products/roots (sound only for positives):
+        // ln(√2)=½ln2, ln(2√3)=ln2+½ln3, −ln(½√2)=½ln2 (the ∫tan boundary form).
+        assert!(matches!(
+            equal(&CasExpr::int(2).sqrt().ln(), &(CasExpr::rat(1, 2) * ln(2))),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(
+                &-(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()).ln(),
+                &(CasExpr::rat(1, 2) * ln(2)),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // Soundness: distinct logs must NOT be certified equal.
         assert!(!matches!(equal(&ln(2), &ln(3)), ZeroTest::Certified { equal: true, .. }));
         assert!(!matches!(equal(&ln(6), &ln(5)), ZeroTest::Certified { equal: true, .. }));
+        // End-to-end: ∫₀^{π/3} tan x dx = ln 2 now certifies.
+        let x = || v("x");
+        let tan_integral =
+            definite_integrate(&x().tan(), "x", &CasExpr::int(0), &(v("pi") / CasExpr::int(3)))
+                .unwrap();
+        assert!(matches!(equal(&tan_integral.value, &ln(2)), ZeroTest::Certified { equal: true, .. }));
     }
 
     #[test]
