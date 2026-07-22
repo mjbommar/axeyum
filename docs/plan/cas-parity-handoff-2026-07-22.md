@@ -13,13 +13,14 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/broad-gap-probe-next`, stacked on CAS parent `0133daa7`; do not
+  `agent/cas/broad-gap-probe-wave2`, stacked on CAS parent `5b7992ae`; do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `527` unit + `147` doctests, **all green**, workspace Clippy-clean,
-  strict stable/nightly rustdoc-green, wasm-green, links-green.
+- **Tests:** `528` unit + `147` doctests, **all green**, warning-denied workspace
+  all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
+  wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37ady**). Keep both in sync when landing features.
+  latest is **Entry 37adz**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -172,6 +173,31 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   non-positive/irrational poles, improper inputs, and overflow decline. The
   foundational DAG and research-question register require no ADR: no public
   operator, backend, evidence format, or logic fragment changed.
+
+**Symmetric-period rational-trig Fourier boundary**
+- The next bounded probe confirmed that polynomial/exponential Fourier series,
+  representative ODEs, assumptions, and repeated-root recurrences already
+  succeed. Repeated irreducible-quadratic inverse-Laplace poles consistently
+  decline and remain the next measured transform family; the elliptic integral
+  prototype also declines but needs a deliberate new head/semantics boundary.
+- The same probe found a correctness-priority representation seam before those
+  missing features: rational-trig Fourier coefficients on `[-π,π]` reached the
+  generic FTC path, whose certified Weierstrass antiderivative is discontinuous
+  at the endpoints. It returned expressions containing `tan(±π/2)`. Their
+  floating evaluations happened to approach the right numbers, but the exact
+  zero-test rejected equality with the known coefficients.
+- `definite_full_period_rational_trig` now treats both `[0,2π]` and `[-π,π]` as
+  canonical full periods. For the symmetric spelling, `t=tan(x/2)` maps the
+  open interval monotonically to `(-∞,∞)`; for the zero-based spelling its two
+  branches concatenate to the same whole-real-line integral. Both retain the
+  existing certified improper rational integration route, while `[0,π]`
+  retains its half-line route.
+- The focused regression independently freezes the exact base integral, first
+  cosine coefficient, and two-harmonic expansion of `1/(2+cos x)`; existing
+  full/half-period and non-rational-trig Fourier controls remain green. This is
+  a proof-boundary correction with no public operator, evidence format,
+  backend, or logic change, so the foundational DAG and research-question
+  register require no ADR.
 
 ---
 
@@ -432,21 +458,27 @@ Ordered roughly by value:
    `i128`. Extending either now requires a deliberate resource/data-model
    decision, not another local cancellation. Fixed-shift `r=8` remains a focused
    exact-growth candidate if a concrete use needs it.
-2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
+2. **Repeated irreducible-quadratic inverse-Laplace poles.** Fresh probes of
+   `1/(s²+1)²`, `s/(s²+1)²`, `1/(s²+1)³`, shifted quadratic powers, and a mixed
+   real/quadratic denominator all decline. The forward transform already covers
+   the required polynomial-times-damped-sinusoid outputs, so an exact bounded
+   partial-fraction reconstruction plus mandatory forward round trip is the next
+   high-value transform increment.
+3. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
    need a dedicated alternating-sign representation or a complex extension.
-3. **Continue gap-probing** — still productive. Areas not yet swept much:
+4. **Continue gap-probing** — still productive. Areas not yet swept much:
    Fourier and additional inverse-transform families, 2nd-order variable-coeff
    ODEs, PDE separation, vector calculus (grad/div/curl), assumptions/`refine`,
    piecewise, elliptic integrals, `bessely`/`besselk` (second-kind / modified-2nd,
    via the proven `UnaryFunc::BesselI(u32)` parameterize-the-variant technique
    but they need log-singular numerics).
-4. **Minor display nits** (value-correct, cosmetic): denominator rationalization
+5. **Minor display nits** (value-correct, cosmetic): denominator rationalization
    `1/√3→√3/3` (doesn't fit the size-gated simplify cleanly); `L{t·eᵗ}` shows
    `−(−1/(s−1)²)` for some internal structures (the manually-built structure folds
    fine — a subtle structural mismatch worth 20 min if it bugs you).
-5. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
+6. **One-sided limits** (`lim_{x→0⁺} √x·ln x = 0`) — the limit API is two-sided;
    `√x` isn't defined for `x<0` so the two-sided limit legitimately declines.
 
 ---
@@ -493,9 +525,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 0133daa7 HEAD
+git merge-base --is-ancestor 5b7992ae HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 527 unit + 147 doctests green
+# → 528 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
