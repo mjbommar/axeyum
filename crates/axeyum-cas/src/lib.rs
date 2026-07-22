@@ -6409,25 +6409,75 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
     if deg_num >= deg_den {
         return None; // improper — the polynomial (δ-function) part is unsupported
     }
-    // Require `deg_den` distinct rational poles (⇒ all simple).
+    // Require `deg_den` distinct rational poles (⇒ all simple). No rational roots
+    // (an irreducible denominator) yields an empty list, not an error.
     let mut poles: Vec<Rational> = Vec::new();
-    for root in ratint::rational_roots(&den)? {
+    for root in ratint::rational_roots(&den).unwrap_or_default() {
         if !poles.contains(&root) {
             poles.push(root);
         }
     }
-    if poles.len() != deg_den {
+    let result = if poles.len() == deg_den {
+        let mut sum = CasExpr::zero();
+        for pole in poles {
+            let res = residue(f, s, pole)?;
+            sum = sum + res * (CasExpr::Const(pole) * CasExpr::var(t)).exp();
+        }
+        sum
+    } else if deg_den == 2 && poles.is_empty() {
+        // Irreducible quadratic denominator (complex-conjugate poles) → damped
+        // sinusoid, when the frequency `b` is rational.
+        inverse_laplace_quadratic(&num, &den, t)?
+    } else {
         return None;
-    }
-    let mut result = CasExpr::zero();
-    for pole in poles {
-        let res = residue(f, s, pole)?;
-        result = result + res * (CasExpr::Const(pole) * CasExpr::var(t)).exp();
-    }
+    };
     // Round-trip certificate: L{result} = F.
     match equal(&laplace_transform(&result, t, s)?, f) {
         ZeroTest::Certified { equal: true, .. } => Some(result),
         _ => None,
+    }
+}
+
+/// `L⁻¹{(c·s+d)/(a₂·s²+a₁·s+a₀)}` for an **irreducible** quadratic (no real poles)
+/// with a **rational** damped frequency: completing the square to `(s−α)²+β²`
+/// gives `e^{αt}·[c·cos(βt) + ((d+cα)/β)·sin(βt)]`. `β = √(q − p²/4)` must be
+/// rational (else the forward round-trip can't certify a surd frequency). Certified
+/// by the caller's round trip.
+fn inverse_laplace_quadratic(num: &[Rational], den: &[Rational], t: &str) -> Option<CasExpr> {
+    let lead = *den.get(2)?;
+    let p_coeff = den.get(1).copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
+    let q_coeff = den.first().copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
+    // α = −p/2, β² = q − p²/4 (> 0 for an irreducible quadratic).
+    let alpha = p_coeff.checked_div(Rational::integer(-2))?;
+    let beta_sq = q_coeff.checked_sub(p_coeff.checked_mul(p_coeff)?.checked_div(Rational::integer(4))?)?;
+    let beta = rational_sqrt(beta_sq)?; // rational frequency only
+    // Numerator (num_lin·s + num_const) over the leading coefficient.
+    let num_lin = num.get(1).copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
+    let num_const = num.first().copied().unwrap_or_else(Rational::zero).checked_div(lead)?;
+    let sin_coeff = num_const.checked_add(num_lin.checked_mul(alpha)?)?.checked_div(beta)?;
+    let tvar = CasExpr::var(t);
+    let bt = CasExpr::Const(beta) * tvar.clone();
+    // Build a distributed **sum** `c·e^{αt}cos(βt) + K·e^{αt}sin(βt)` (not
+    // `e^{αt}·(sum)`) so the forward transform's linearity reaches each term. The
+    // `e^{αt}` envelope is omitted when α = 0 (`exp(0·t)` isn't linear in t).
+    let envelope = |osc: CasExpr| -> CasExpr {
+        if alpha.is_zero() {
+            osc
+        } else {
+            (CasExpr::Const(alpha) * tvar.clone()).exp() * osc
+        }
+    };
+    let mut terms: Vec<CasExpr> = Vec::new();
+    if !num_lin.is_zero() {
+        terms.push(CasExpr::Const(num_lin) * envelope(bt.clone().cos()));
+    }
+    if !sin_coeff.is_zero() {
+        terms.push(CasExpr::Const(sin_coeff) * envelope(bt.sin()));
+    }
+    match terms.len() {
+        0 => Some(CasExpr::zero()),
+        1 => terms.into_iter().next(),
+        _ => Some(CasExpr::Add(terms)),
     }
 }
 
@@ -9676,6 +9726,35 @@ mod tests {
             .unwrap(),
             &(-t().exp() + (CasExpr::int(2) * t()).exp()),
         );
+        // Irreducible-quadratic denominators (complex poles) → (damped) sinusoids,
+        // certified by the L round-trip. L⁻¹{1/(s²+1)} = sin t.
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / (s().pow(2) + CasExpr::int(1))), "s", "t").unwrap(),
+            &t().sin(),
+        );
+        // L⁻¹{1/((s−1)²+4)} = ½·e^{t}·sin(2t).
+        assert_equal(
+            &inverse_laplace(
+                &(CasExpr::int(1) / ((s() - CasExpr::int(1)).pow(2) + CasExpr::int(4))),
+                "s",
+                "t",
+            )
+            .unwrap(),
+            &(CasExpr::rat(1, 2) * (t().exp() * (CasExpr::int(2) * t()).sin())),
+        );
+        // L⁻¹{(s+1)/(s²+2s+5)} = e^{−t}·cos(2t).
+        assert_equal(
+            &inverse_laplace(
+                &((s() + CasExpr::int(1))
+                    / (s().pow(2) + CasExpr::int(2) * s() + CasExpr::int(5))),
+                "s",
+                "t",
+            )
+            .unwrap(),
+            &((CasExpr::int(-1) * t()).exp() * (CasExpr::int(2) * t()).cos()),
+        );
+        // A surd frequency (√2) can't round-trip through the forward transform → declines.
+        assert!(inverse_laplace(&(CasExpr::int(1) / (s().pow(2) + CasExpr::int(2))), "s", "t").is_none());
     }
 
     #[test]
