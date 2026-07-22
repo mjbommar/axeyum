@@ -6766,6 +6766,37 @@ pub fn laguerre_polynomial(n: u32, var: &str) -> Option<CasExpr> {
     })
 }
 
+/// The **Gegenbauer (ultraspherical) polynomial** `Cₙ^λ(x)` for a rational parameter
+/// `λ`, from `(k+1)Cₖ₊₁ = 2(k+λ)x·Cₖ − (k+2λ−1)·Cₖ₋₁` with `C₀=1`, `C₁=2λx`. This
+/// parametric family generalizes several classical ones: `λ=1` is the Chebyshev
+/// `Uₙ`, and `λ=½` is the Legendre `Pₙ`. `None` on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, gegenbauer_polynomial, legendre_polynomial, equal, ZeroTest};
+/// use axeyum_ir::Rational;
+/// // C₃^{1/2}(x) = P₃(x) (Legendre).
+/// let c3 = gegenbauer_polynomial(3, Rational::new(1, 2), "x").unwrap();
+/// assert!(matches!(equal(&c3, &legendre_polynomial(3, "x").unwrap()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn gegenbauer_polynomial(n: u32, lambda: Rational, var: &str) -> Option<CasExpr> {
+    let x = CasExpr::var(var);
+    let c1 = CasExpr::Const(Rational::integer(2).checked_mul(lambda)?) * x.clone();
+    orthogonal_recurrence(n, CasExpr::int(1), c1, |k, ck, ckm1| {
+        // 2(k+λ): `2k + 2λ`.
+        let two_k_lambda = Rational::integer(i128::from(2 * k)).checked_add(
+            Rational::integer(2).checked_mul(lambda)?,
+        )?;
+        // (k + 2λ − 1).
+        let k_two_lambda = Rational::integer(i128::from(k))
+            .checked_add(Rational::integer(2).checked_mul(lambda)?)?
+            .checked_sub(Rational::integer(1))?;
+        let numerator = CasExpr::Const(two_k_lambda) * x.clone() * ck.clone()
+            - CasExpr::Const(k_two_lambda) * ckm1.clone();
+        Some(CasExpr::Const(Rational::checked_new(1, i128::from(k) + 1)?) * numerator)
+    })
+}
+
 /// Fold every elementary head at an argument where it has an exact closed value:
 /// the trigonometric special values of [`evaluate_trig`] (`sin`/`cos`/`tan` at
 /// rational multiples of `π`) **plus** `exp(0)=1`, `ln(1)=0`, `sqrt(0)=0`,
@@ -14563,6 +14594,19 @@ mod tests {
                 - chebyshev_t_polynomial(n - 1, "x").unwrap();
             assert_equal(&chebyshev_t_polynomial(n + 1, "x").unwrap(), &recurrence);
         }
+        // Gegenbauer Cₙ^λ generalizes: λ=1 → Chebyshev Uₙ, λ=½ → Legendre Pₙ.
+        for n in 0..=5u32 {
+            assert_equal(
+                &gegenbauer_polynomial(n, Rational::integer(1), "x").unwrap(),
+                &chebyshev_u_polynomial(n, "x").unwrap(),
+            );
+            assert_equal(
+                &gegenbauer_polynomial(n, Rational::new(1, 2), "x").unwrap(),
+                &legendre_polynomial(n, "x").unwrap(),
+            );
+        }
+        // Explicit: C₂^{2}(x) = 12x² − 2.
+        assert_equal(&gegenbauer_polynomial(2, Rational::integer(2), "x").unwrap(), &(CasExpr::int(12) * x().pow(2) - CasExpr::int(2)));
     }
 
     #[test]
