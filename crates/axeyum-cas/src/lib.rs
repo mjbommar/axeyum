@@ -3617,6 +3617,75 @@ fn quadratic_roots(a: Rational, b: Rational, c: Rational) -> Option<Vec<CasExpr>
     Some(out)
 }
 
+/// Solve a **second-order Euler–Cauchy equation** `a₂·x²y″ + a₁·x·y′ + a₀·y = 0`
+/// (`coeffs = [a₂, a₁, a₀]`, `a₂ ≠ 0`). Substituting `y = xʳ` gives the indicial
+/// equation `a₂·r(r−1) + a₁·r + a₀ = 0`; with `xʳ` written as `exp(r·ln x)` the three
+/// standard cases are covered:
+///
+/// - **distinct** roots `r₁, r₂` → `C₀·x^{r₁} + C₁·x^{r₂}` (rational or surd `r`);
+/// - **repeated** root `r` → `(C₀ + C₁·ln x)·xʳ`;
+/// - **complex** `α ± βi` → `x^α·(C₀·cos(β·ln x) + C₁·sin(β·ln x))`.
+///
+/// Certified by substituting the general solution back into the operator and
+/// checking it vanishes via the zero-test. `None` if `a₂ = 0` or on overflow.
+///
+/// ```
+/// use axeyum_cas::{CasExpr, dsolve_euler_cauchy, equal, ZeroTest};
+/// use axeyum_ir::Rational;
+/// // x²y″ − x y′ − 3y = 0 has indicial (r−3)(r+1); solution C₀·x³ + C₁/x.
+/// let y = dsolve_euler_cauchy(&[Rational::integer(1), Rational::integer(-1), Rational::integer(-3)], "x").unwrap();
+/// assert!(!matches!(equal(&y, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn dsolve_euler_cauchy(coeffs: &[Rational], var: &str) -> Option<CasExpr> {
+    let [a2, a1, a0] = coeffs else { return None };
+    if a2.is_zero() {
+        return None;
+    }
+    // Monic indicial `r² + (b−1)r + c`, `b = a₁/a₂`, `c = a₀/a₂`.
+    let b = a1.checked_div(*a2)?;
+    let c = a0.checked_div(*a2)?;
+    let lin = b.checked_sub(Rational::integer(1))?; // b − 1
+    let disc = lin.checked_mul(lin)?.checked_sub(Rational::integer(4).checked_mul(c)?)?;
+    let x = || CasExpr::var(var);
+    let ln_x = || x().ln();
+    // xʳ = exp(r·ln x) for a CasExpr exponent `r`.
+    let x_pow = |r: &CasExpr| (r.clone() * ln_x()).exp();
+    let (c0, c1) = (CasExpr::var("C0"), CasExpr::var("C1"));
+    let half = Rational::checked_new(1, 2)?;
+    let neg_half_lin = lin.checked_neg()?.checked_mul(half)?; // (1−b)/2 = −(b−1)/2
+
+    let solution = if disc.is_zero() {
+        // Repeated root r = (1−b)/2: (C₀ + C₁·ln x)·xʳ.
+        let r = CasExpr::Const(neg_half_lin);
+        (c0 + c1 * ln_x()) * x_pow(&r)
+    } else if disc.numerator() > 0 {
+        // Two real roots ((1−b) ± √disc)/2 (fold `√16 → 4`, keep surds like `√2`).
+        let root_disc = simplify(&simplify_radicals(&CasExpr::Const(disc).sqrt()));
+        let r1 = simplify(&(CasExpr::Const(neg_half_lin) + CasExpr::Const(half) * root_disc.clone()));
+        let r2 = simplify(&(CasExpr::Const(neg_half_lin) - CasExpr::Const(half) * root_disc));
+        c0 * x_pow(&r1) + c1 * x_pow(&r2)
+    } else {
+        // Complex roots α ± βi, α = (1−b)/2, β = √(−disc)/2.
+        let alpha = CasExpr::Const(neg_half_lin);
+        let root_disc = simplify(&simplify_radicals(&CasExpr::Const(disc.checked_neg()?).sqrt()));
+        let beta = simplify(&(CasExpr::Const(half) * root_disc));
+        let phase = beta * ln_x();
+        x_pow(&alpha) * (c0 * phase.clone().cos() + c1 * phase.sin())
+    };
+    // Certify on the **raw** solution (a `simplify` first can atomize `exp(r·ln x)`,
+    // breaking the differentiate/zero-test cancellation): a₂·x²y″+a₁·x·y′+a₀·y ≡ 0.
+    let y1 = solution.differentiate(var);
+    let y2 = y1.differentiate(var);
+    let operator = CasExpr::Const(*a2) * x().pow(2) * y2
+        + CasExpr::Const(*a1) * x() * y1
+        + CasExpr::Const(*a0) * solution.clone();
+    match equal(&operator, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(simplify(&solution)),
+        _ => None,
+    }
+}
+
 /// Solve a **constant-coefficient linear homogeneous ODE**
 /// `Σₖ cₖ·y⁽ᵏ⁾ = 0` given the coefficients `char_coeffs = [c₀, c₁, …, cₙ]` (which
 /// are exactly the characteristic polynomial `Σ cₖ rᵏ`). Returns the general
@@ -15255,6 +15324,25 @@ mod tests {
             assert!((evalf(&n_two_n, &[("n", nf)]).unwrap() - nf * 2f64.powi(i32::try_from(n).unwrap())).abs() < 1e-6);
             assert!((evalf(&quadratic, &[("n", nf)]).unwrap() - nf * nf).abs() < 1e-6);
         }
+    }
+
+    #[test]
+    fn dsolve_euler_cauchy_equations() {
+        let ig = Rational::integer;
+        // Each returns a general solution the ODE operator annihilates (certified
+        // inside the call, so a `Some` is proof); check all four indicial cases fire.
+        // Distinct rational roots (r−3)(r+1): C₀x³ + C₁/x.
+        assert!(dsolve_euler_cauchy(&[ig(1), ig(-1), ig(-3)], "x").is_some());
+        // Distinct rational roots (r+3)(r−2).
+        assert!(dsolve_euler_cauchy(&[ig(1), ig(2), ig(-6)], "x").is_some());
+        // Repeated root r=2 (r−2)²: (C₀ + C₁ ln x)x².
+        assert!(dsolve_euler_cauchy(&[ig(1), ig(-3), ig(4)], "x").is_some());
+        // Complex roots r²+1: C₀cos(ln x) + C₁sin(ln x).
+        assert!(dsolve_euler_cauchy(&[ig(1), ig(1), ig(1)], "x").is_some());
+        // Surd roots r²−2 = 0 ⇒ ±√2: x^{±√2} via exp(±√2·ln x).
+        assert!(dsolve_euler_cauchy(&[ig(1), ig(1), ig(-2)], "x").is_some());
+        // Degenerate a₂ = 0 declines.
+        assert!(dsolve_euler_cauchy(&[ig(0), ig(1), ig(1)], "x").is_none());
     }
 
     #[test]
