@@ -2472,8 +2472,12 @@ fn solve_trigonometric(expr: &CasExpr, var: &str) -> Option<Vec<CasExpr>> {
     for k in 0..24u32 {
         let angle = fold_trivial(&(CasExpr::Const(Rational::new(i128::from(k), 12)) * pi.clone()));
         let value = evaluate_trig(&CasExpr::Unary(func, Box::new(angle.clone())));
-        // Skip `tan` poles (value stays an unevaluated `tan(...)`) and non-matches.
-        if matches!(value, CasExpr::Unary(_, _)) {
+        // Skip `tan` poles, where the value stays an unevaluated *trig* head. (A
+        // surd value like `√3` is `Unary(Sqrt, …)` — a legitimate match, not a pole.)
+        if matches!(
+            &value,
+            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::Tan, _)
+        ) {
             continue;
         }
         if matches!(
@@ -15210,6 +15214,11 @@ mod tests {
         let surd_sin = solve(&(CasExpr::int(2) * x().sin() - CasExpr::int(2).sqrt()), "x").unwrap();
         assert!(surd_sin.contains(&(CasExpr::rat(1, 4) * pi())));
         assert!(surd_sin.contains(&(CasExpr::rat(3, 4) * pi())));
+        // tan x − √3 = 0 ⇒ {π/3, 4π/3} — the surd value √3 = Unary(Sqrt) must not be
+        // mistaken for a tan pole in the special-angle scan.
+        let surd_tan = solve(&(x().tan() - CasExpr::int(3).sqrt()), "x").unwrap();
+        assert!(surd_tan.contains(&(CasExpr::rat(1, 3) * pi())));
+        assert!(surd_tan.contains(&(CasExpr::rat(4, 3) * pi())));
         // Polynomial in sin: sin²x = ¼ ⇒ sin x = ±½ ⇒ {π/6, 5π/6, 7π/6, 11π/6}.
         let quad = solve(&(x().sin().pow(2) - CasExpr::rat(1, 4)), "x").unwrap();
         assert_eq!(quad.len(), 4);
