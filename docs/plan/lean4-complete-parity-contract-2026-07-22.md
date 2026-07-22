@@ -332,12 +332,14 @@ run/outcome/pair/performance counter remains zero, so TL0.7.1 grants no U2 or
 terminal credit. TL0.7.2--TL0.7.4 must prove actual process and durability
 behavior before TL0.6.3 begins.
 
-TL0.7.2 is now governed by a separate
-[source-first process-adapter plan](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md).
-It freezes eight synthetic process controls, including both registered
-`RLIMIT_AS` lanes and a descendant-bearing timeout, while forbidding case,
-completion, U2, or parity credit. This preregistration is not process evidence;
-TL0.7.2 remains partial until the retained controls and mutation gate exist.
+TL0.7.2 is now complete under its
+[source-first process-adapter plan](lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
+and [bounded result](lean-execution-process-tl0.7.2-2026-07-22.md). Eight of
+eight synthetic controls retain 40 exact files and sixteen raw streams across
+both registered `RLIMIT_AS` lanes, including a descendant-bearing timeout with
+no live group member after cleanup. The result still has zero case/completion
+records, U2 outcomes, paired cells, performance rows, and parity credit.
+TL0.7.3--TL0.7.4 remain mandatory before TL0.6.3.
 
 ## 8. Layer-specific equivalence
 

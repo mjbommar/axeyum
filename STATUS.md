@@ -383,18 +383,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.7.2 process behavior is source-first preregistered; no
-  probe has run.** The
+- **2026-07-22 — TL0.7.2 closes bounded process behavior without Lean, U2,
+  completion, or parity credit.** The
   [plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
-  freezes the exact Linux launch, 4/8 GiB `RLIMIT_AS`, prelaunch/raw-output/
-  terminal record order, process-group timeout cleanup, conservative metric
-  states, and evidence-only terminal classification. Eight ordered synthetic
-  controls cover zero/nonzero exit, self-signal, a descendant-bearing wall
-  timeout, cooperative memory-limit evidence in both lanes, launch failure,
-  and preflight failure. Sixteen mutation families reject guessed OOM,
-  signal-as-timeout, surviving descendants, missing metrics represented as
-  zero, and any case/completion/real/parity promotion. This plan must be pushed
-  before implementation or the first process probe.
+  was pushed at `45bf823a` before implementation or probes; the final adapter
+  was pushed at `367b9f34` before the authoritative pass. The
+  [result](docs/plan/lean-execution-process-tl0.7.2-2026-07-22.md),
+  [authority](docs/plan/lean-execution-process-v1.json), generated
+  [summary](docs/plan/generated/lean-execution-process.md), and 40 retained
+  files now close 8/8 synthetic attempts: zero/nonzero exit, signal, a
+  descendant-bearing timeout with no live member, 4/8 GiB cooperative memory
+  limits, launch failure, and preflight failure. Eleven tests cover sixteen
+  mutation families. There are 16 raw streams but zero case/completion records,
+  official/Axeyum outcomes, paired cells, performance rows, or parity credit.
+  Next: source-first TL0.7.3 durable-store kill/resume qualification.
 
 - **2026-07-22 — TL0.7.1 closes the machine execution-evidence contract with
   zero process or parity outcomes.** The source-first

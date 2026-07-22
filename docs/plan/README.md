@@ -100,6 +100,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   process-group cleanup, typed terminal evidence, eight forced controls, and
   sixteen mutation families. It freezes zero Lean/U2/parity credit and leaves
   immutable resume/completion to TL0.7.3.
+- [`lean-execution-process-tl0.7.2-2026-07-22.md`](lean-execution-process-tl0.7.2-2026-07-22.md),
+  [`lean-execution-process-v1.json`](lean-execution-process-v1.json), and
+  generated [Markdown](generated/lean-execution-process.md)/
+  [JSON](generated/lean-execution-process.json) — TL0.7.2's 8/8 retained
+  synthetic attempts, 40 exact files, 16 raw streams, whole-group timeout
+  cleanup, evidence-backed 4/8 GiB memory classifications, and zero-case/
+  zero-completion/zero-parity boundary. TL0.7.3 durable-store qualification is
+  next.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
