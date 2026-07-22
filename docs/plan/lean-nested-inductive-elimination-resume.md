@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: M3 grammar and mutation design frozen; implementation is next
+Status: M3 complete; M4 importer and exact official declarations next
 
 Date paused: 2026-07-22
 
@@ -23,10 +23,12 @@ and the decision gate remains
   `893afc1f0de3ca60972b3eaf4d84ff0b3d6c66e7`.
 - M2's native kernel implementation is
   `96b6fbd4da7e20277b338f59983fbe7316b31d22`.
+- M3's deterministic grammar and restoration-integrity implementation is
+  `6a2afdd57c969bc1a847d77a85cc99552fa935b1`.
 - Reverify the current branch, local HEAD, tracking ref, and remote ref before
   editing. Do not switch, reset, restore, or force any other live worktree.
-- No partial M3 edits exist at this checkpoint. Inspect ownership again before
-  adding the generated grammar or mutation seams.
+- No partial M4 edits exist at this checkpoint. Inspect ownership again before
+  changing importer policy or observing any frozen official stream.
 - The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
   unrelated dirty benchmark/corpus/review artifacts and remains untouched by
   this lane.
@@ -52,6 +54,10 @@ preflight are complete and pushed:
    copying, fixed-point queuing, ordinary atomic group checking, source-surface
    restoration, deterministic `.rec_N` publication, and transaction-wide
    rollback at `96b6fbd4`.
+6. M3 repeated the exact 640-case public grammar twice, froze descriptor digest
+   `a20fe056c9443a37`, closed independent public-surface/dependency/iota
+   observation, and forced transactional restoration mutations at `6a2afdd5`.
+   The pre-semantic stop-review amendments are `ab5dbf99` and `d03ba0fc`.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
@@ -61,6 +67,8 @@ The complete M1 result is
 [lean-nested-inductive-elimination-m1-2026-07-22.md](lean-nested-inductive-elimination-m1-2026-07-22.md).
 The complete M2 result is
 [lean-nested-inductive-elimination-m2-2026-07-22.md](lean-nested-inductive-elimination-m2-2026-07-22.md).
+The complete M3 result is
+[lean-nested-inductive-elimination-m3-2026-07-22.md](lean-nested-inductive-elimination-m3-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -153,25 +161,42 @@ kernel and importer suites, retained 720/768/840 populations, strict Clippy,
 strict rustdoc, and M0 no-observation contract pass. The importer remains at
 the M1 nested decline and no M0 computation stream was observed.
 
-## Exact next milestone: M3 deterministic nested grammar
+## M3 result
 
-M3's [generated-grammar plan](lean-nested-inductive-elimination-m3-plan-2026-07-22.md)
-freezes schema `axeyum-lean-nested-inductive-grammar-v1`, seed
-`0x4158_4e45_5354_4d33`, the exact 640-case construction, full registered range
-coverage, public observer, private mutation registry, resources, and stop
-conditions before the first generated run. M3 must now run those 640 unique
-public-path nested profiles
-twice, retain a byte-identical summary, and add independent expansion,
-deduplication, restoration, leakage, metadata, rule, and late-publication
-mutation teeth. It must retain exact 720/768/840 populations and direct
-identities without changing importer policy or passing any M0 computation
-stream to Axeyum.
+M3 runs the exact preregistered 640-case grammar twice in fresh kernels with
+byte-identical descriptor digest `a20fe056c9443a37`. The independent observer
+checks exact public families, constructors, recursors, specialized keys,
+motives, minors, per-rule dependency targets, inference, temporary-name
+absence, and 320 main plus 462 auxiliary typed iota reductions. Sixteen
+malformed private mutations prove exact whole-environment rollback and valid
+retry; type-correct recursor mutations reject or change a named observation.
 
-## Remaining milestones after M2
+The independent audit triggered the registered stop condition before semantic
+commit because temporary copied-constructor owner/index/type mutations were
+not consumed by M2 restoration. Amendments `ab5dbf99` and `d03ba0fc` bind a
+narrow validator for the already-checked temporary declaration surface. The
+final audit found no semantic blockers. The complete kernel/importer suites,
+strict tooling, retained 720/768/840 populations, and M0 contracts pass.
+Semantic commit `6a2afdd5` is pushed with local/tracking/remote equality; the
+importer and all frozen M0 streams remain unchanged.
 
-- **M3 — deterministic generated grammar:** run at least 640 unique public-path
-  profiles twice, close expansion/reuse/restoration mutation teeth, and retain
-  exact 720/768/840 population descriptors.
+## Exact next milestone: M4 importer and exact official declarations
+
+M4 removes only the structural nested policy decline after native M2/M3
+support. It must derive rather than trust group-wide `numNested`, auxiliary
+recursor identity, and wire order; import the existing construct plus all three
+frozen computation streams twice; compare exact checked family, constructor,
+recursor, type, rule, owner, index, field, and publication contracts; and close
+the preregistered wire metadata/order/type/rule/publication mutations. The
+well-founded 35-declaration/zero-axiom root and exact 720/768/840/640 generated
+controls remain mandatory.
+
+M4 must not claim cross-nested normal-form computation merely because the
+official declarations import. M5 owns reproduction of the registered normal
+forms, the assurance overlay, and removal of the live decline.
+
+## Remaining milestones after M3
+
 - **M4 — importer and exact official declarations:** remove only the nested
   policy decline after native support, derive rather than trust `numNested` and
   recursor identities, import all frozen official streams twice, compare exact
@@ -202,8 +227,10 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then record a bounded M3 population and mutation plan, inspect current ownership
-one more time, and add the generated grammar without changing importer policy.
+Then inspect M4 ownership and importer transaction boundaries, preregister the
+exact importer/wire mutation implementation if the existing P0--M6 plan is not
+sufficiently concrete, and remove only the structural nested decline without
+claiming M5 computation credit.
 
 ## Tools and resource envelope
 

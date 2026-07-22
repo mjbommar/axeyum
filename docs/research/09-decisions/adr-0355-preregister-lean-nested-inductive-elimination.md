@@ -165,9 +165,40 @@ implements exit-gate foundations 3--6 without changing importer policy:
 Twenty-three focused tests cover the named native shape matrix, typed early and
 late rollbacks, exact final inference, and `main -> rec_1 -> main` computation.
 The semantic implementation is `96b6fbd4da7e20277b338f59983fbe7316b31d22`.
-ADR-0355 remains proposed: M3--M6 still own generated mutation coverage,
-official import/comparison, registered computation streams, assurance, and the
-final aggregate gates.
+
+## M3 evidence
+
+The
+[M3 result](../../plan/lean-nested-inductive-elimination-m3-2026-07-22.md)
+implements the generated and native-mutation exit foundations without changing
+importer policy:
+
+- the exact preregistered 640-case grammar runs twice in fresh kernels with
+  byte-identical descriptor digest `a20fe056c9443a37`;
+- every frozen range endpoint has nonzero realized coverage, with 320 admitted
+  and 320 exact typed-reject profiles;
+- an independently derived public observer checks complete specialized keys,
+  family/constructor/recursor metadata, motive/minor order, exact per-rule
+  dependency maps, inference, restoration, and temporary-name absence;
+- typed recursor applications perform 320 main and 462 auxiliary iota checks
+  across direct and depth-two chains;
+- 16 malformed private expansion/restoration mutations prove complete
+  transaction rollback and unchanged-source retry; and
+- type-correct recursor mutations reject under ordinary typing or change a
+  named independent observation.
+
+The first independent audit triggered the preregistered stop condition because
+temporary copied-constructor owner/index/type mutations survived the M2
+restoration dataflow. Amendments `ab5dbf99` and `d03ba0fc` were committed before
+the semantic checkpoint and permit only exact validation of the already-
+checked temporary family/constructor/map/freshness surface. The ordinary
+inductive worker remains the only semantic admission algorithm. The semantic
+implementation is `6a2afdd57c969bc1a847d77a85cc99552fa935b1`, and the final
+independent audit found no semantic blockers.
+
+ADR-0355 remains proposed: M4--M6 still own exact official import/comparison,
+registered computation streams, assurance, live-decline removal, and the final
+aggregate gates.
 
 ## Alternatives
 

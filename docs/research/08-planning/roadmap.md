@@ -142,8 +142,15 @@ Last updated: 2026-07-22
 > fixed-point expansion, unchanged atomic checking, recursive source-surface
 > restoration, exact string `.rec_N` publication, and transaction/cache
 > rollback. Twenty-three focused tests cover the named native matrix and
-> cross-boundary computation; M3's >=640-case grammar and mutation teeth are
-> next, while importer policy and M0 streams remain untouched.
+> cross-boundary computation. The
+> [M3 result](../../../docs/plan/lean-nested-inductive-elimination-m3-2026-07-22.md)
+> now repeats the exact 640-case grammar twice at descriptor digest
+> `a20fe056c9443a37`, independently checks the complete public declaration,
+> recursor-dependency, and typed iota surface, and closes 16 transactional
+> restoration mutations plus a bounded stop-review temporary-integrity
+> amendment. Complete suites and retained 720/768/840 populations pass. M4
+> exact official import is next; importer policy and M0 streams remain
+> untouched.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."
