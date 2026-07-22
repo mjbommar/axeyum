@@ -976,7 +976,9 @@ def validate_host_command(
     except ValueError as exc:
         raise ContractError("host command source identity escapes the shared root") from exc
     source = read_canonical_json(source_manifest)
-    source_root = Path(argv[1]).resolve().parent
+    if len(argv) < 3 or argv[1] != "-B":
+        raise ContractError("E3 host command must disable staged bytecode writes")
+    source_root = Path(argv[2]).resolve().parent
     validate_source_identity(source, source_root)
     identity_fields = (
         "repository_commit",
@@ -1034,6 +1036,7 @@ def remote_probe(
         "ConnectTimeout=5",
         ssh_target,
         "python3",
+        "-B",
         str(helper),
         "probe",
         "--shared-root",
@@ -1120,6 +1123,7 @@ def start_allocation(
         "ConnectTimeout=5",
         registration["ssh_target"],
         "python3",
+        "-B",
         command["remote_helper_path"],
         "execute-allocation",
         "--command-manifest",
@@ -1205,6 +1209,7 @@ def remote_liveness(
         "ConnectTimeout=5",
         registration["ssh_target"],
         "python3",
+        "-B",
         str(helper),
         "liveness",
         "--unit",
@@ -1255,6 +1260,7 @@ def kill_remote_launcher(
             "ConnectTimeout=5",
             registration["ssh_target"],
             "python3",
+            "-B",
             str(helper),
             "kill-launcher",
             "--unit",
@@ -1305,6 +1311,7 @@ def remote_file_observation(
             "ConnectTimeout=5",
             registration["ssh_target"],
             "python3",
+            "-B",
             str(helper),
             "observe-file",
             "--path",

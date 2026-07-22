@@ -152,6 +152,7 @@ class E3LiveGate(unittest.TestCase):
         solver = f"e3-fake=/usr/bin/python3 {fake_solver} {{bench}} {marker_root}"
         return [
             "/usr/bin/python3",
+            "-B",
             str(staged / "scripts" / "smtcomp_repro" / "compete.py"),
             "--host-run",
             "--host-shards",
