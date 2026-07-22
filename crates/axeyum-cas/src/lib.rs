@@ -7767,6 +7767,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_power_of_inner(expr, var),
         integrate_log_derivative(expr, var),
         integrate_log_power(expr, var),
+        integrate_log_times_cofactor(expr, var),
         integrate_sinusoid_product(expr, var),
         integrate_sqrt_quadratic(expr, var),
         integrate_poly_times_inverse(expr, var),
@@ -9317,6 +9318,66 @@ fn integrate_poly_log_power(p: &[Rational], m: u32, var: &str) -> Option<CasExpr
     let q_over_x: Vec<Rational> = q.into_iter().skip(1).collect();
     let rec = integrate_poly_log_power(&q_over_x, m - 1, var)?;
     Some(first - scaled_term(Rational::integer(i128::from(m)), rec))
+}
+
+/// Whether a `ln` head appears anywhere in `expr`.
+fn expr_contains_ln(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, _) => true,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => expr_contains_ln(a),
+        CasExpr::Div(a, b) => expr_contains_ln(a) || expr_contains_ln(b),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(expr_contains_ln),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
+/// ∫ ln(x)·R(x) dx by parts (`u = ln x`, `dv = R dx`): `V·ln x − ∫ V/x`, where
+/// `V = ∫R`. Generalizes `∫p·ln` to any integrable cofactor — `∫ln x/x² =
+/// −ln x/x − 1/x`, `∫ln x/x³`. Requires the argument of `ln` to be exactly `x`.
+/// Certified downstream.
+fn integrate_log_times_cofactor(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let factors = flatten_mul(expr);
+    let (num_factors, denom): (Vec<CasExpr>, Option<CasExpr>) = match expr {
+        CasExpr::Div(num, den) => (flatten_mul(num), Some(den.as_ref().clone())),
+        _ => (factors, None),
+    };
+    let mut log_seen = false;
+    let mut rest_factors: Vec<CasExpr> = Vec::new();
+    for factor in num_factors {
+        if let CasExpr::Unary(UnaryFunc::Ln, arg) = &factor
+            && matches!(arg.as_ref(), CasExpr::Var(v) if v == var)
+            && !log_seen
+        {
+            log_seen = true;
+            continue;
+        }
+        rest_factors.push(factor);
+    }
+    if !log_seen {
+        return None;
+    }
+    let num_rest = match rest_factors.len() {
+        0 => CasExpr::int(1),
+        1 => rest_factors.into_iter().next()?,
+        _ => CasExpr::Mul(rest_factors),
+    };
+    let cofactor = match denom {
+        Some(d) => CasExpr::Div(Box::new(num_rest), Box::new(d)),
+        None => num_rest,
+    };
+    // V = ∫R, then the residual ∫V/x. If V itself contains `ln` (as when the
+    // cofactor is `1/x`, giving `V = ln x`), the residual `∫V/x` reproduces the
+    // original integrand — decline to avoid non-termination (that case is the
+    // reverse-power-rule `∫ln x/x = ln²x/2`, handled elsewhere).
+    let v = integrate(&cofactor, var)?;
+    if !v.is_certified() || expr_contains_ln(&v.antiderivative) {
+        return None;
+    }
+    let residual = integrate(&(v.antiderivative.clone() / CasExpr::var(var)), var)?;
+    if !residual.is_certified() {
+        return None;
+    }
+    Some(CasExpr::Mul(vec![v.antiderivative, CasExpr::var(var).ln()]) - residual.antiderivative)
 }
 
 /// ∫ P(x)·f(x) dx where `f` is an inverse function with an algebraic derivative
@@ -13661,6 +13722,29 @@ mod tests {
         let r = integrate(&(x() * inv(UnaryFunc::Asin, x())), "x").expect("∫x·asin");
         assert!(r.is_certified());
         assert_equal(&r.antiderivative.differentiate("x"), &(x() * inv(UnaryFunc::Asin, x())));
+    }
+
+    #[test]
+    fn log_times_rational_cofactor_integrals() {
+        let x = || v("x");
+        // ∫ln x·R(x) by parts with a rational cofactor: ∫ln x/x² = −ln x/x − 1/x.
+        for integrand in [
+            x().ln() / x().pow(2),
+            x().ln() / x().pow(3),
+        ] {
+            let r = integrate(&integrand, "x").expect("log × rational cofactor");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
+        // The recursive ∫ln x/x = ln²x/2 is still handled (by the reverse power rule),
+        // not looped by the by-parts path.
+        assert!(matches!(
+            equal(
+                &integrate(&(x().ln() / x()), "x").unwrap().antiderivative,
+                &(CasExpr::rat(1, 2) * x().ln().pow(2)),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
     }
 
     #[test]
