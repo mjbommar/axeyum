@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `512` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `516` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adj**). Keep both in sync when landing features.
+  latest is **Entry 37adk**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -129,7 +129,7 @@ green integration by the `main` owner:
 **★ Zeilberger / Wilf–Zeilberger (the marquee)** — `prove_wz_sum(...)`
 Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
-Vandermonde, fixed-shift binomial convolutions for `r=1,2`, and the first three
+Vandermonde, fixed-shift binomial convolutions for `r=1,2,3`, and the first four
 squared-binomial moments. False near-misses correctly decline.
 
 ---
@@ -143,10 +143,12 @@ Pipeline:
 1. `f = F/rhs`. The WZ pair: a rational certificate `R(n,k)` gives
    `f(n+1,k) − f(n,k) = G(n,k+1) − G(n,k)` with `G = R·f`; summing over `k`
    collapses the RHS to 0, so `S(n)=∑ₖ f` is constant, pinned to 1 by the base.
-2. **Discovery (heuristic):** run the factorial-capable `gosper_sum` on the WZ
-   term at up to eight *small* concrete `n` (sample from `n=1,2,3,…` — larger `n`
-   overflow the rising factorials), extract `R(nᵢ,k)`, monic-normalize the
-   denominator, and interpolate each coefficient over `n` with
+2. **Discovery (heuristic):** run the factorial-capable `gosper_sum`, or its
+   exact structured-ratio fallback, on the WZ term at up to twelve concrete
+   `n`. The small rational ratios are derived while `n` is still symbolic and
+   then specialized, avoiding equivalent concrete gamma towers whose factorial
+   constants overflow. Extract `R(nᵢ,k)`, monic-normalize the denominator, and
+   interpolate each coefficient over `n` with
    `rational_interpolate` (lowest-total-degree `P(n)/Q(n)` with a monic
    denominator, balanced-degree tie-breaking, and validation against every
    available sample — subsumes Lagrange and admits poles such as `1/(2n)`).
@@ -161,11 +163,18 @@ gamma-lowered ratios otherwise overflow despite a small reduced quotient);
 `nonneg_integer_dispersion` scans `j=0..64` by direct shifted polynomial GCD
 instead of materializing an overflow-prone symbolic resultant; and
 consecutive-ratio extraction cancels exact common monomial content before
-requiring a univariate ratio. A structured-difference fallback computes the
-ratio of `f(n+1,k)−f(n,k)` from three smaller exact rational quotients, avoiding
-an expanded additive gamma tower. Fraction reduction peels shared small
-integer-linear factors and can prove a remaining pair coprime over a good finite
-field; inconclusive modular reductions still fall back to exact rational GCD.
+requiring a univariate ratio. A structured-difference fallback uses
+`a=f(n,k+1)/f(n,k)` and `d=f(n+1,k)/f(n,k)` to represent the difference as
+`f(n,k)(d−1)` and its consecutive ratio as
+`a(d(n,k+1)−1)/(d(n,k)−1)`, avoiding an expanded additive gamma tower.
+Polynomial gamma arguments are canonicalized before integer-shift lowering, so
+equivalent zero-shift bases cancel. Fraction reduction peels shared small
+integer-linear factors, cancels a residual denominator cofactor only after exact
+division succeeds on both sides, and can prove a remaining pair coprime over a
+good finite field; inconclusive modular reductions still fall back to exact
+rational GCD. Small interpolation systems first use `i128`, then a dimension-16
+exact `BigRational` fallback; only solutions whose final coefficients fit the
+public `i128` rational type are accepted.
 The preferred Gosper certificate is the full
 telescoping identity; if expanding a concrete gamma tower overflows, the exact
 reduced polynomial Gosper equation certifies the same antidifference. The final
@@ -221,6 +230,22 @@ small consecutive ratio. Its degree-six coefficient fit also motivates the
 eight-sample soft target. Returned certificates still receive the unchanged
 fully symbolic WZ check, and both `rhs+1` controls decline.
 
+### Fixed shift three and the fourth squared moment are closed
+
+The next tier through the same public route is now:
+
+- `∑ₖ C(n,k)C(n,k+3)=C(2n,n−3)`, with
+  `R=k(k+3)(2k−3n)/(2(2n+1)(k−n−1)(k−n+2))`;
+- `∑ₖ k⁴C(n,k)²=n³(n³+n²−3n−1)C(2n,n)/(4(2n−3)(2n−1))`.
+
+The fourth moment is the regression for the strengthened exact-discovery path.
+Symbolic ratio specialization avoids concrete factorial overflow after the
+small samples; exact residual-cofactor cancellation reduces the `n=5` and
+`n=7` quotients; and the bounded bignum linear solve permits the needed 5/5
+rational coefficient fit without widening the public rational representation.
+The soft sample target is twelve. The recovered certificate still passes the
+unchanged fully symbolic WZ equality, and both new `rhs+1` controls decline.
+
 ---
 
 ## 6. Known-open items / candidate next work
@@ -228,9 +253,10 @@ fully symbolic WZ check, and both `rhs+1` controls decline.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the closed first tiers.** Probe
-   fixed-shift convolutions `∑C(n,k)C(n,k+r)=C(2n,n−r)` at `r=3` and then look
-   for a general fixed-`r` route; probe the fourth squared-binomial moment. Retain
-   only identities whose concrete discovery and fully symbolic WZ check both close.
+   fixed-shift convolution at `r=4`, then look for a general fixed-`r` route;
+   probe the fifth squared-binomial moment or derive the moment family from a
+   generating relation. Retain only identities whose exact discovery and fully
+   symbolic WZ check both close.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
    eta `η(s)`. **Blocked by the data model**: `(−1)ᵏ` has no clean real
    representation (`geometric_power(−1)` = `exp(k·ln(−1))`, complex `ln`). Would
@@ -288,7 +314,7 @@ AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXX
 export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 508 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 516 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;

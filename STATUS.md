@@ -374,6 +374,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — proof-carrying CAS closes fixed-shift three and the fourth
+  squared-binomial moment.** The public WZ route now certifies
+  `∑C(n,k)C(n,k+3)=C(2n,n−3)` and
+  `∑k⁴C(n,k)²=n³(n³+n²−3n−1)C(2n,n)/(4(2n−3)(2n−1))`, checks the exact
+  returned certificates, and declines `rhs+1` controls. Discovery now derives
+  the compact inner/outer WZ ratios before concrete specialization, canonicalizes
+  polynomial gamma arguments, cancels residual denominator cofactors only after
+  exact division, and uses a dimension-capped exact bignum fallback when an
+  `i128` interpolation solve overflows but its final coefficients fit. The fully
+  symbolic WZ equality gate remains mandatory. The CAS topic stack passes 516
+  unit tests, 147 doctests, warning-denied all-target Clippy,
+  `wasm32-unknown-unknown`, documentation-link validation, and
+  `git diff --check`. Next: probe `r=4`/general fixed shift and the fifth
+  squared-binomial moment without weakening the symbolic gate.
+
 - **2026-07-22 — proof-carrying CAS closes fixed-shift two and the third
   squared-binomial moment.** The public WZ route now certifies
   `∑C(n,k)C(n,k+2)=C(2n,n−2)` and

@@ -5034,6 +5034,37 @@ fn integer_constant(expr: &CasExpr) -> Option<i128> {
 /// numerator/denominator of a Wilf–Zeilberger certificate discovered by [`prove_wz_sum`].
 type CoeffRows = Vec<(Rational, Vec<Rational>)>;
 
+/// Derive `F(n,k+1)/F(n,k)` and `f(n+1,k)/f(n,k)` while parameters remain
+/// symbolic, cancelling common canonical gamma atoms before concrete sampling.
+fn wz_symbolic_ratios(
+    summand: &CasExpr,
+    rhs: &CasExpr,
+    n: &str,
+    k: &str,
+) -> (CasExpr, CasExpr) {
+    let current_ratio = simplify(&combine_gamma_ratios(&CasExpr::Div(
+        Box::new(summand.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)))),
+        Box::new(summand.clone()),
+    )));
+    let summand_current = simplify(summand);
+    let summand_next = simplify(&summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
+    let summand_outer_ratio = simplify(&combine_gamma_ratios(&CasExpr::Div(
+        Box::new(summand_next),
+        Box::new(summand_current),
+    )));
+    let rhs_current = simplify(rhs);
+    let rhs_next = simplify(&rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1))));
+    let rhs_inverse_raw = combine_gamma_ratios(&CasExpr::Div(
+        Box::new(rhs_current),
+        Box::new(rhs_next),
+    ));
+    let rhs_inverse = gosper::cancel_common_monomial_expression(&rhs_inverse_raw).map_or_else(
+        || simplify(&rhs_inverse_raw),
+        |ratio| simplify(&ratio),
+    );
+    (current_ratio, simplify(&(summand_outer_ratio * rhs_inverse)))
+}
+
 /// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
 /// **Wilf–Zeilberger** method, returning the certificate `R(n,k)` when the proof
 /// succeeds. With `f = F/rhs`, a rational **certificate** `R(n,k)` gives the
@@ -5062,12 +5093,18 @@ pub fn prove_wz_sum(
 ) -> Option<CasExpr> {
     // Collect this many successful concrete-`n` certificate samples (comfortably above
     // the n-degree of the certificate coefficients for the classic identities), trying
-    // up to `SCAN` values and *skipping* any `n` where the concrete Gosper run declines
-    // or overflows (larger `n` grow the rising factorials and can overflow) — the
-    // symbolic verification below is the real gate, so a few missing samples are fine.
-    const TARGET: usize = 8;
+    // up to `SCAN` values and *skipping* any `n` where exact certificate discovery
+    // declines or overflows. Symbolic ratio specialization keeps many larger samples
+    // compact, but the symbolic verification below is the real gate, so missing samples
+    // remain a completeness loss rather than a soundness concern.
+    const TARGET: usize = 12;
     const SCAN: i128 = 24;
     let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
+    // Derive the two small rational quotients while `n` is still symbolic, then
+    // specialize them per sample. This avoids rebuilding their equivalent gamma
+    // towers with rapidly growing concrete factorial constants.
+    let (current_ratio_symbolic, outer_ratio_symbolic) =
+        wz_symbolic_ratios(summand, rhs, n, k);
 
     let (mut num_rows, mut den_rows): (CoeffRows, CoeffRows) = (Vec::new(), Vec::new());
     // Sample from *small* `n` (independent of `base`) — Gosper overflows the rising
@@ -5094,9 +5131,29 @@ pub fn prove_wz_sum(
             // WZ term h(k) = f(n+1,k) − f(n,k); its k-antidifference is the certificate
             // G_ni(k) = R(ni,k)·f(ni,k).
             let h = simplify(&(f_ni1.clone() - f_ni.clone()));
-            let g = gosper_sum(&h, k)
-                .or_else(|| gosper::gosper_sum_difference(&f_ni1, &f_ni, k))?;
-            let quotient = CasExpr::Div(Box::new(g), Box::new(f_ni));
+            let quotient = if let Some(g) = gosper_sum(&h, k) {
+                CasExpr::Div(Box::new(g), Box::new(f_ni.clone()))
+            } else {
+                let current_ratio = simplify(
+                    &current_ratio_symbolic.substitute(n, &CasExpr::int(ni)),
+                );
+                let outer_ratio =
+                    simplify(&outer_ratio_symbolic.substitute(n, &CasExpr::int(ni)));
+                gosper::gosper_sum_difference_quotient_with_current_ratio(
+                    &current_ratio,
+                    &f_ni1,
+                    &f_ni,
+                    k,
+                )
+                .or_else(|| {
+                    gosper::gosper_sum_difference_quotient_from_ratios(
+                        &current_ratio,
+                        &outer_ratio,
+                        k,
+                    )
+                })
+                .or_else(|| gosper::gosper_sum_difference_quotient(&f_ni1, &f_ni, k))?
+            };
             let r = simplify(&combine_gamma_ratios(&quotient));
             let rf = normalize_rational(&r)?;
             let (num, den) =
@@ -7792,6 +7849,7 @@ pub(crate) fn combine_gamma_ratios(expr: &CasExpr) -> CasExpr {
     match expr {
         CasExpr::Unary(UnaryFunc::Gamma, arg) => {
             let arg = combine_gamma_ratios(arg);
+            let arg = normalize(&arg).map_or(arg, |poly| poly.to_expr());
             lower_gamma_to_base(&arg)
                 .unwrap_or_else(|| CasExpr::Unary(UnaryFunc::Gamma, Box::new(arg)))
         }
@@ -17141,6 +17199,29 @@ mod tests {
     }
 
     #[test]
+    fn wilf_zeilberger_fixed_shift_three_convolution() {
+        let n = || v("n");
+        let k = || v("k");
+        let term = binomial_coefficient(&n(), &k())
+            * binomial_coefficient(&n(), &(k() + CasExpr::int(3)));
+        let rhs = binomial_coefficient(&(CasExpr::int(2) * n()), &(n() - CasExpr::int(3)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 3, 0, 0)
+            .expect("fixed-shift-three binomial convolution is WZ-provable");
+        let expected = k()
+            * (k() + CasExpr::int(3))
+            * (CasExpr::int(2) * k() - CasExpr::int(3) * n())
+            / (CasExpr::int(2)
+                * (CasExpr::int(2) * n() + CasExpr::int(1))
+                * (k() - n() - CasExpr::int(1))
+                * (k() - n() + CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 3, 0, 0).is_none());
+    }
+
+    #[test]
     fn wilf_zeilberger_squared_binomial_moments() {
         let n = || v("n");
         let k = || v("k");
@@ -17231,12 +17312,90 @@ mod tests {
     }
 
     #[test]
+    fn wilf_zeilberger_fourth_squared_binomial_moment() {
+        let n = || v("n");
+        let k = || v("k");
+        let central = binomial_coefficient(&(CasExpr::int(2) * n()), &n());
+        let term = k().pow(4) * binomial_coefficient(&n(), &k()).pow(2);
+        let moment_polynomial = n().pow(3) + n().pow(2) - CasExpr::int(3) * n()
+            - CasExpr::int(1);
+        let rhs = n().pow(3) * moment_polynomial * central
+            / (CasExpr::int(4)
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        let certificate = prove_wz_sum(&term, "n", "k", &rhs, 1, 0, 1)
+            .expect("fourth squared-binomial moment is WZ-provable");
+        let inner = CasExpr::int(2) * k().pow(3) * n().pow(4)
+            + CasExpr::int(6) * k().pow(3) * n().pow(3)
+            - CasExpr::int(4) * k().pow(3) * n().pow(2)
+            - CasExpr::int(8) * k().pow(3) * n()
+            + CasExpr::int(4) * k().pow(3)
+            - CasExpr::int(3) * k().pow(2) * n().pow(5)
+            - CasExpr::int(14) * k().pow(2) * n().pow(4)
+            - CasExpr::int(11) * k().pow(2) * n().pow(3)
+            + CasExpr::int(14) * k().pow(2) * n().pow(2)
+            + CasExpr::int(10) * k().pow(2) * n()
+            - CasExpr::int(6) * k().pow(2)
+            + CasExpr::int(6) * k() * n().pow(5)
+            + CasExpr::int(22) * k() * n().pow(4)
+            + CasExpr::int(16) * k() * n().pow(3)
+            - CasExpr::int(4) * k() * n().pow(2)
+            - CasExpr::int(2) * k() * n()
+            + CasExpr::int(2) * k()
+            - CasExpr::int(3) * n().pow(5)
+            - CasExpr::int(10) * n().pow(4)
+            - CasExpr::int(14) * n().pow(3)
+            - CasExpr::int(10) * n().pow(2)
+            - CasExpr::int(3) * n();
+        let expected = (k() - CasExpr::int(1)).pow(2) * inner
+            / (CasExpr::int(2)
+                * k().pow(2)
+                * (n() - CasExpr::int(1))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (k() - n() - CasExpr::int(1)).pow(2)
+                * (n().pow(3) + CasExpr::int(4) * n().pow(2)
+                    + CasExpr::int(2) * n()
+                    - CasExpr::int(2)));
+        assert!(matches!(
+            equal(&certificate, &expected),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(prove_wz_sum(&term, "n", "k", &(rhs + CasExpr::int(1)), 1, 0, 1).is_none());
+    }
+
+    #[test]
     fn rational_interpolation_allows_a_pole_at_zero() {
         let points: Vec<_> = (1..=5)
             .map(|n| (Rational::integer(n), Rational::new(1, 2 * n)))
             .collect();
         let fit = rational_interpolate(&points, "n").expect("1/(2n) is rational-interpolable");
         assert_equal(&fit, &(CasExpr::int(1) / (CasExpr::int(2) * v("n"))));
+    }
+
+    #[test]
+    fn rational_interpolation_uses_bignum_intermediates() {
+        let value = |n: i128| {
+            Rational::integer(-n * (n + 1).pow(2) * (3 * n.pow(2) + 4 * n + 3))
+                / Rational::integer(
+                    2 * (n - 1) * (2 * n - 3) * (n.pow(3) + 4 * n.pow(2) + 2 * n - 2),
+                )
+        };
+        let points: Vec<_> = (2..=13)
+            .map(|n| (Rational::integer(n), value(n)))
+            .collect();
+        let fit = rational_interpolate(&points, "n").expect("5/5 fit needs bignum intermediates");
+        let n = v("n");
+        let expected = -n.clone()
+            * (n.clone() + CasExpr::int(1)).pow(2)
+            * (CasExpr::int(3) * n.clone().pow(2) + CasExpr::int(4) * n.clone()
+                + CasExpr::int(3))
+            / (CasExpr::int(2)
+                * (n.clone() - CasExpr::int(1))
+                * (CasExpr::int(2) * n.clone() - CasExpr::int(3))
+                * (n.clone().pow(3) + CasExpr::int(4) * n.clone().pow(2)
+                    + CasExpr::int(2) * n
+                    - CasExpr::int(2)));
+        assert_equal(&fit, &expected);
     }
 
     #[test]
@@ -21877,6 +22036,11 @@ mod tests {
         // The combined form is genuinely a rational function of k now — no Γ heads left.
         let ratio = (k() + CasExpr::int(3)).gamma() / (k() + CasExpr::int(1)).gamma();
         assert!(!format!("{}", simplify(&ratio)).contains("gamma"));
+        // Equivalent zero-constant polynomial arguments canonicalize even when
+        // no functional-equation step is needed: Γ(2(k+1)−2)/Γ(2k) = 1.
+        let same_base = (CasExpr::int(2) * (k() + CasExpr::int(1)) - CasExpr::int(2)).gamma()
+            / (CasExpr::int(2) * k()).gamma();
+        assert!(certified(&same_base, &CasExpr::int(1)));
     }
 
     #[test]
