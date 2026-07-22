@@ -10727,6 +10727,10 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         // Last resort: power-reduce even trig powers (`eˣsin²x`) — placed here so the
         // direct trig/rational-trig finders keep their canonical forms.
         integrate_power_reduced_trig(expr, var),
+        // Final fallback: expand the integrand and integrate the expansion. Closes
+        // powers of exponential/trig sums the direct finders miss — `∫sinh²x`,
+        // `∫1/cosh²x` (even powers of `(eˣ±e^{−x})`) reduce to sums of exponentials.
+        integrate_via_expansion(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -12622,6 +12626,21 @@ pub fn improper_integrate(
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
+/// Final integration fallback: `expand` the integrand and integrate the expansion.
+/// A power of an exponential/trig **sum** — `sinh²x = (eˣ−e^{−x})²/4`, `1/cosh²x` —
+/// expands to a sum of terms the direct finders each handle, then closes by
+/// linearity. Declines when expansion changes nothing (so it never loops on its own
+/// output). Certified downstream by differentiate-and-check.
+fn integrate_via_expansion(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let expanded = expand(expr)?;
+    if expanded == *expr {
+        return None;
+    }
+    integrate(&expanded, var)
+        .filter(CertifiedIntegral::is_certified)
+        .map(|c| c.antiderivative)
+}
+
 /// Rewrite even powers of `sin`/`cos` by the power-reduction identities
 /// `sin²u = (1−cos 2u)/2`, `cos²u = (1+cos 2u)/2` (applied to `sin²ᵏ = (sin²)ᵏ`),
 /// leaving odd powers and non-trig subexpressions untouched. One pass halves each
@@ -20993,6 +21012,25 @@ mod tests {
             // `prove_derivative`, which reconciles the multiple-angle forms a plain
             // `equal` on the derivative would not).
             let result = integrate(&integrand, "x").expect("power-reduced trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+        }
+    }
+
+    #[test]
+    fn integrate_hyperbolic_powers_via_expansion() {
+        let x = || v("x");
+        let sinh = || (x().exp() - (-x()).exp()) / CasExpr::int(2);
+        let cosh = || (x().exp() + (-x()).exp()) / CasExpr::int(2);
+        // Powers of the exponential sums `sinh`/`cosh` expand to sums of exponentials
+        // the direct finders integrate; the `expand`-fallback closes them. Certified
+        // by differentiate-and-check.
+        for integrand in [
+            sinh().pow(2),
+            cosh().pow(2),
+            CasExpr::int(1) / cosh().pow(2), // sech²x = 1 − tanh²x
+            sinh().pow(3),
+        ] {
+            let result = integrate(&integrand, "x").expect("hyperbolic-power integral");
             assert!(result.is_certified(), "not certified: ∫{integrand}");
         }
     }
