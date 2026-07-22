@@ -110,6 +110,8 @@ parity-docs:
     python3 -m unittest scripts.tests.test_parity_evidence
     python3 -m unittest scripts.tests.test_prototype_lean4export_reader
     python3 -m unittest scripts.tests.test_lean_compatibility
+    python3 -m unittest scripts.tests.test_lean_official_construct_matrix
+    python3 scripts/check-lean-official-construct-matrix.py
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 -m unittest scripts.tests.test_lean_axiom_ledger
     python3 scripts/gen-lean-compatibility.py --check
     MEM_LIMIT_GB=4 ./scripts/mem-run.sh python3 scripts/gen-lean-axiom-ledger.py --check

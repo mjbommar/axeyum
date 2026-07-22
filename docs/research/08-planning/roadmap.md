@@ -70,8 +70,12 @@ Last updated: 2026-07-22
 > [proposed construct-matrix plan](../../../docs/plan/lean-official-construct-matrix-plan-2026-07-22.md):
 > freeze source intent, freeze byte-identical official wire observations with
 > the independent reader, and only then measure the current Rust boundary.
-> Review proposed ADR-0351, reproduce M0, then freeze Stage A sources. TL1.5
-> property fuzzing is dependency-ready; TL2.11
+> M0 and the
+> [machine-checked Stage A source freeze](../../../docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
+> are complete without producing a new export or Rust result. M2 now owns the
+> two-run official export and independent wire-inventory freeze; that Stage B
+> registration must commit before Rust measurement. TL1.5 property fuzzing is
+> dependency-ready; TL2.11
 > positivity remains mandatory before recursive admission widens.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for

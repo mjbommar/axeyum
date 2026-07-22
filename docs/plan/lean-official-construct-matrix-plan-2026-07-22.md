@@ -1,7 +1,7 @@
 # Official Lean construct-matrix execution plan
 
-Status: proposed preregistration; fixture generation and product measurement
-not yet executed
+Status: M0 and Stage A source freeze complete; Stage B export/inventory and
+product measurement not yet executed
 
 Date: 2026-07-22
 
@@ -14,6 +14,12 @@ Parent plans:
   (TL1.8, TL2.11--TL2.16);
 - [Lean system compatibility roadmap](lean-system-compatibility-roadmap-2026-07-21.md);
 - [Rust `lean4export` importer result](lean4export-rust-import-prototype-2026-07-21.md).
+
+Current checkpoint:
+[M0 and Stage A result](lean-official-construct-matrix-stage-a-2026-07-22.md),
+with the canonical source registration in
+[`lean-official-construct-matrix-v1.json`](lean-official-construct-matrix-v1.json).
+No new NDJSON or Rust product outcome exists at this checkpoint; M2 is next.
 
 ## 1. Decision and outcome
 
@@ -328,7 +334,9 @@ and final documentation rather than carrying the full milestone uncommitted.
 ## 8. Resource and reproducibility policy
 
 - all Lean compilation/export and Rust build/test commands run under a hard
-  4 GiB memory cap;
+  4 GiB memory cap; for Lean 4.30 this milestone uses a cgroup
+  (`MemoryMax=4G`) rather than `ulimit -v`, because an address-space cap aborts
+  the runtime during thread creation even at one worker;
 - Lean uses one worker; Rust uses at most two jobs;
 - no broad `Init`, `Std`, or mathlib export is part of this milestone;
 - transient modules and `.olean` files live outside the repository or in an

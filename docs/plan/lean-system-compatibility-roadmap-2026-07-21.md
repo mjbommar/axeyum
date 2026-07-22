@@ -693,12 +693,14 @@ Non-claims until their gates are met:
    hash-bound String closure; execute the
    [official construct-matrix plan](lean-official-construct-matrix-plan-2026-07-22.md)
    for recursive-indexed, reflexive/higher-order, mutual, nested, and well-
-   founded source families.
-5. Freeze source cases before export, then freeze two-run byte-identical
-   official wire observations with the independent Python reader before the
-   Rust importer sees them. Carry the exact direct-recursive positive control
-   beside every negative so the boundary is attributed to the measured feature,
-   not recursion alone.
+   founded source families. Its [M0/Stage A checkpoint](lean-official-construct-matrix-stage-a-2026-07-22.md)
+   has reproduced the historical controls and frozen seven source cases with no
+   new wire or product observation.
+5. Execute M2: freeze two-run byte-identical official wire observations with
+   the independent Python reader before the Rust importer sees them, and commit
+   Stage B first. Carry the exact direct-recursive positive control beside every
+   negative so the boundary is attributed to the measured feature, not
+   recursion alone.
 6. Generate the assurance-separated parsed/translated/admitted/dual-admitted
    matrix from tests and exact fixtures; the selected-family seed advances but
    does not complete TL2.16.

@@ -369,10 +369,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — the official Lean construct-matrix execution plan is written
-  and synchronized; ADR review and M0 are next.** The next milestone is
-  explicitly a measurement artifact, not kernel implementation. The
+- **2026-07-22 — official Lean construct-matrix M0 and Stage A are complete;
+  the independent wire freeze is next.** The next milestone remains explicitly
+  a measurement artifact, not kernel implementation. The
   [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
+  and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
   and [proposed ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
   define six positive/control families (existing direct recursion,
   recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
@@ -385,9 +386,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   independent admission, computation, and assurance credit remain separate
   generated fields. New streams have fixed 1 MiB each / 2 MiB aggregate
   retention bounds, and all Lean/Rust work remains under 4 GiB with one/two
-  workers. **Next:** review proposed ADR-0351, execute M0 baseline reproduction,
-  then commit the M1 Stage A source fixture and roots before any new product
-  measurement. After the matrix, TL2.11 strict positivity is the primary
+  workers. M0 regenerated both historical streams twice with exact hashes and
+  repeated the flat 8-declaration/one-axiom and direct-recursive
+  11-declaration/zero-axiom imports twice without drift. Stage A freezes seven
+  ordered cases and two source hashes in a fail-closed registration: pinned
+  Lean accepts the positive recursive-indexed/reflexive/mutual/nested/well-
+  founded module at 471,712 KiB peak RSS and rejects the non-positive control
+  at the kernel positivity check at 88,972 KiB. Eight contract tests reject
+  source/case/pin/resource/retention drift and all premature Stage B or product
+  fields. No new NDJSON or Rust result exists. **Next:** M2 must export every
+  selected positive root twice, require byte identity, inventory only with the
+  independent Python reader, and commit Stage B before Rust measurement. After
+  the matrix, TL2.11 strict positivity is the primary
   trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
   lane.
 
@@ -6788,6 +6798,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed official Lean construct-matrix M0 and Stage A.**
+  Reproduced the flat and direct-recursive official streams twice at their
+  committed SHA-256 identities and repeated both current importer reports
+  twice. Froze minimal recursive-indexed, Acc-shaped reflexive, mutual, nested,
+  and explicit well-founded sources plus an official non-positive negative;
+  pinned Lean accepts the positive module and rejects the negative in the
+  kernel positivity check under a 4 GiB cgroup. Added the seven-case
+  machine-readable source registration and eight fail-closed tests. No new
+  export or product measurement occurred; ADR-0351 remains proposed and M2
+  official wire freeze is next.
 
 - **2026-07-22 — Proposed the official Lean construct-matrix execution
   plan.** Proposed ADR-0351 and the linked execution plan separate source

@@ -1,0 +1,207 @@
+{
+  "schema": "axeyum-lean-official-construct-matrix-v1",
+  "stage": "source-frozen",
+  "date": "2026-07-22",
+  "decision": "docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md",
+  "pins": {
+    "lean": {
+      "toolchain": "leanprover/lean4:v4.30.0",
+      "version": "4.30.0",
+      "git_commit": "d024af099ca4bf2c86f649261ebf59565dc8c622"
+    },
+    "lean4export": {
+      "version": "v4.30.0",
+      "git_commit": "a3e35a584f59b390667db7269cd37fca8575e4bf",
+      "format": "3.1.0"
+    }
+  },
+  "resource_policy": {
+    "runner": "systemd-run --user --scope",
+    "memory_high": "3G",
+    "memory_max": "4G",
+    "memory_swap_max": "512M",
+    "lean_jobs": 1,
+    "rust_jobs": 2
+  },
+  "retention_policy": {
+    "per_stream_max_bytes": 1048576,
+    "aggregate_new_stream_max_bytes": 2097152
+  },
+  "commands": {
+    "working_directory": "fresh /tmp/axeyum-lean-stage-a.XXXXXX",
+    "resource_runner_argv": [
+      "systemd-run",
+      "--user",
+      "--scope",
+      "--quiet",
+      "-p",
+      "MemoryHigh=3G",
+      "-p",
+      "MemoryMax=4G",
+      "-p",
+      "MemorySwapMax=512M"
+    ],
+    "lean_executable": "/home/mjbommar/.cache/axeyum-lean-gate-v430-audit/elan-home/toolchains/leanprover--lean4---v4.30.0/bin/lean",
+    "compile_positive_argv": [
+      "/usr/bin/time",
+      "-v",
+      "/home/mjbommar/.cache/axeyum-lean-gate-v430-audit/elan-home/toolchains/leanprover--lean4---v4.30.0/bin/lean",
+      "-j1",
+      "-o",
+      "AxeyumConstructMatrix.olean",
+      "AxeyumConstructMatrix.lean"
+    ],
+    "compile_negative_argv": [
+      "/usr/bin/time",
+      "-v",
+      "/home/mjbommar/.cache/axeyum-lean-gate-v430-audit/elan-home/toolchains/leanprover--lean4---v4.30.0/bin/lean",
+      "-j1",
+      "-o",
+      "AxeyumConstructMatrixNegative.olean",
+      "AxeyumConstructMatrixNegative.lean"
+    ]
+  },
+  "historical_controls": [
+    {
+      "id": "flat",
+      "source_path": "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.lean",
+      "source_sha256": "342337c885dd88d3ddc7c7b49aec52b57867206ebc3ae50f81f55e85e236dfb5",
+      "stream_path": "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson",
+      "stream_sha256": "c582b5d5ab19cba61183d592d70c17eb7d101b8a1ad61e8c4c6022dfe95a8280",
+      "regenerated_runs": 2,
+      "imported_runs": 2,
+      "expected_report": {
+        "names": 14,
+        "levels": 2,
+        "expressions": 43,
+        "declaration_records": 5,
+        "admitted_declarations": 8,
+        "axioms": 1
+      }
+    },
+    {
+      "id": "direct-recursive-control",
+      "source_path": "docs/plan/fixtures/lean4export-v4.30-recursive-shapes.lean",
+      "source_sha256": "a8f48840c2f367feb704ad4062b9ca90ba62a802dd99475e848df726529c96bf",
+      "stream_path": "docs/plan/fixtures/lean4export-v4.30-recursive-shapes.ndjson",
+      "stream_sha256": "91df1e44219483b213000b94b06016f9569dc648d0680d9ae91ff3198817db08",
+      "regenerated_runs": 2,
+      "imported_runs": 2,
+      "expected_report": {
+        "names": 30,
+        "levels": 4,
+        "expressions": 130,
+        "declaration_records": 5,
+        "admitted_declarations": 11,
+        "axioms": 0
+      }
+    }
+  ],
+  "sources": {
+    "positive": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix.lean",
+      "sha256": "08c6eeaed9d980a631dff14b30de1e3d8da37011b8ad03b84dbdc03c90bff13d",
+      "module": "AxeyumConstructMatrix",
+      "official_source_outcome": "accepted",
+      "exit_status": 0,
+      "max_rss_kib": 471712
+    },
+    "negative": {
+      "path": "docs/plan/fixtures/lean4export-v4.30-construct-matrix-negative.lean",
+      "sha256": "4c94c6563583b34cbd500075bb76b6a71b7476e7694bcff91253c460d718c71b",
+      "module": "AxeyumConstructMatrixNegative",
+      "official_source_outcome": "rejected",
+      "exit_status": 1,
+      "diagnostic_substring": "has a non positive occurrence of the datatypes being declared",
+      "max_rss_kib": 88972
+    }
+  },
+  "cases": [
+    {
+      "id": "direct-recursive-control",
+      "source_family": "direct-recursive-non-indexed",
+      "role": "positive-control",
+      "source_key": "historical-direct-recursive-control",
+      "module": "AxeyumImportShapes",
+      "selected_root": "AxeyumImportShapes",
+      "computation_witness": "miniOne",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "recursive-indexed",
+      "source_family": "recursive-indexed",
+      "role": "measurement",
+      "source_key": "positive",
+      "module": "AxeyumConstructMatrix",
+      "selected_root": "AxeyumConstructMatrix.recursiveIndexedWitness",
+      "computation_witness": "AxeyumConstructMatrix.recursiveIndexedWitness",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "reflexive-higher-order",
+      "source_family": "reflexive-higher-order",
+      "role": "measurement",
+      "source_key": "positive",
+      "module": "AxeyumConstructMatrix",
+      "selected_root": "AxeyumConstructMatrix.reflexiveWitness",
+      "computation_witness": "AxeyumConstructMatrix.reflexiveWitness",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "mutual",
+      "source_family": "mutual",
+      "role": "measurement",
+      "source_key": "positive",
+      "module": "AxeyumConstructMatrix",
+      "selected_root": "AxeyumConstructMatrix.mutualWitness",
+      "computation_witness": "AxeyumConstructMatrix.mutualWitness",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "nested",
+      "source_family": "nested",
+      "role": "measurement",
+      "source_key": "positive",
+      "module": "AxeyumConstructMatrix",
+      "selected_root": "AxeyumConstructMatrix.nestedWitness",
+      "computation_witness": "AxeyumConstructMatrix.nestedWitness",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "well-founded",
+      "source_family": "well-founded",
+      "role": "measurement",
+      "source_key": "positive",
+      "module": "AxeyumConstructMatrix",
+      "selected_root": "AxeyumConstructMatrix.wellFoundedWitness",
+      "computation_witness": "AxeyumConstructMatrix.wellFoundedWitness",
+      "expected_official_source": "accepted",
+      "stage_b_wire": null,
+      "product_measurement": null
+    },
+    {
+      "id": "non-positive-source-negative",
+      "source_family": "non-positive-inductive",
+      "role": "official-source-negative",
+      "source_key": "negative",
+      "module": "AxeyumConstructMatrixNegative",
+      "selected_root": null,
+      "computation_witness": null,
+      "expected_official_source": "rejected",
+      "stage_b_wire": null,
+      "product_measurement": null
+    }
+  ],
+  "stage_b": null,
+  "product_measurement": null
+}

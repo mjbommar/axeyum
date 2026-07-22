@@ -92,6 +92,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   official cases, with direct-recursive controls, generated assurance classes,
   retention/resource bounds, stop conditions, and the post-matrix TL2.11--TL2.14
   trajectory.
+- [`lean-official-construct-matrix-stage-a-2026-07-22.md`](lean-official-construct-matrix-stage-a-2026-07-22.md)
+  and [`lean-official-construct-matrix-v1.json`](lean-official-construct-matrix-v1.json) —
+  completed M0/Stage A evidence and the fail-closed seven-case source
+  registration: exact pins, source/control hashes, official positive/negative
+  outcomes, resource/retention bounds, and an enforced absence of Stage B wire
+  or Rust product observations.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —
