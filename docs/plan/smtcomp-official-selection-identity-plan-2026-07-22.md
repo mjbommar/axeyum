@@ -165,6 +165,16 @@ the selected track's divisions. The independent adapter and fixture now
 reproduce that two-stage behavior. No official sample was generated or
 observed; another fresh-directory rerun is required.
 
+**S1b third live attempt:** retained negative. The audit at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744522957943433-eb81e506`
+verified all 89 inputs and streamed all 450,472 metadata rows, then stopped
+before historical reduction because neither configured removal ID occurs in
+the pinned metadata. This matches the official anti-join semantics: both rows
+are accepted configuration, and the join removes zero current rows. The
+contract and independent audit now distinguish configured removals from matched
+removals and freeze the exact zero-match fact. No official sample was generated
+or observed; another fresh-directory rerun is required.
+
 ### S2 — verified corpus acquisition
 
 - Download all 90 files from Zenodo record `16740866` into a fresh staging

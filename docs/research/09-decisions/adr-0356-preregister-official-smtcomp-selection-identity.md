@@ -25,8 +25,8 @@ would silently produce a different population.
 The exact corpus release is similarly easy to misidentify. Zenodo concept
 record `15493089` has a May release with 450,474 non-incremental files and an
 August release with 450,472. Upstream `data/benchmarks-2026.json.gz` contains
-450,472 rows and its two explicit removals target that population. The matching
-authority is therefore
+450,472 rows; the two configured explicit-removal identities match zero rows in
+that pinned metadata, making the producer's anti-join idempotent. The matching authority is therefore
 [SMT-LIB 2025 release 2025.08.04, record 16740866](https://zenodo.org/records/16740866),
 not record 15493090.
 
@@ -53,8 +53,8 @@ It binds all of the following before a solver run can refer to it:
 3. The organizer configuration: competition year 2026, old-result years
    2018--2024, difficulty threshold at CPU time less than or equal to 1.0 s,
    current `old_criteria=false`, no status completion from previous results,
-   cap constants 300/0.5/1000/0.1, two explicit removals, and new-family prefix
-   `2025`.
+   cap constants 300/0.5/1000/0.1, two configured explicit removals that match
+   zero metadata rows, and new-family prefix `2025`.
 
 For exact executable identity, the historical predicate is the pinned code's
 `result != Unknown && cpu_time <= 1.0`, applied to every result in an admitted
@@ -172,6 +172,9 @@ result is credited by this decision alone.
   `Participation.get` then retains only matches present in the selected track's
   division table. The independent adapter preserves this two-stage filtering,
   including valid logics that are irrelevant to Single Query.
+- Both configured explicit-removal IDs are absent from the pinned 450,472-row
+  metadata. The producer still performs the anti-join before eligibility; the
+  independent ledger records two configured and zero matched removals.
 
 ## Alternatives
 

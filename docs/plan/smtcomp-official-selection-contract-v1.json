@@ -28,7 +28,7 @@
     {"id": "S06", "statement": "Submission expansion derives competitive logic from more than one competitive participation row."},
     {"id": "S07", "statement": "The non-recursive submissions glob selects 51 direct-child files; its 36 competitive submissions have integer seeds summing to 9684066201 with none missing."},
     {"id": "S08", "statement": "The one global seed is 22731074 after modulo 2^30 and NYSE addition."},
-    {"id": "S09", "statement": "The two explicit removals occur before competitive-logic, difficulty, and cap selection."},
+    {"id": "S09", "statement": "The two configured explicit removals occur before competitive-logic, difficulty, and cap selection and match zero rows in the pinned metadata."},
     {"id": "S10", "statement": "A file with any sat/unsat incoherence across 2018-2024 has no admitted historical year."},
     {"id": "S11", "statement": "A historical year is competitive only when it retains more than one result row."},
     {"id": "S12", "statement": "A file is trivial only when it has an admitted year and every admitted year has no Unknown result and every CPU time is at most 1.0 seconds, matching the pinned executable expression even for other answer enums."},

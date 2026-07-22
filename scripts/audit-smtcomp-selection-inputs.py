@@ -327,7 +327,11 @@ def run(authority_path: Path, output_dir: Path) -> dict[str, Any]:
         raise InputAuditError("streamed official metadata count drift")
     if len(metadata_logics) != authority["benchmark_metadata"]["non_incremental_logics"]:
         raise InputAuditError("streamed official logic count drift")
-    if not removed_ids <= known_ids or len(removed_ids) != authority["policy"]["removed_benchmark_count"]:
+    matched_removed_ids = removed_ids & known_ids
+    if (
+        len(removed_ids) != authority["policy"]["removed_benchmark_count"]
+        or matched_removed_ids
+    ):
         raise InputAuditError("official removal table does not match metadata")
     print(f"METADATA_OK|rows={metadata_count}|logics={len(metadata_logics)}", flush=True)
 
@@ -435,6 +439,7 @@ def run(authority_path: Path, output_dir: Path) -> dict[str, Any]:
         "historical_rows_by_year": historical_counts,
         "logic_summary": logic_summary,
         "metadata_rows": metadata_count,
+        "matched_removed_ids": sorted(matched_removed_ids),
         "new_rows": new_count,
         "reason_counts": dict(sorted(reason_counts.items())),
         "removed_ids": sorted(removed_ids),
