@@ -268,8 +268,17 @@ state.
 > declarations, direct identities, and the 768/840 controls. Every generated
 > recursor type and closed rule value is inferred before the transaction can
 > commit. The importer decline and both M0 official streams remain untouched.
-> M3 next owns the independent >=640-case group grammar. One Lean/Rust
-> worker, 4 GiB caps, the 640-case future group grammar, and the retained
+> The subsequent
+> [M3 result](docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md) now runs
+> 720 unique public-path production records twice to a byte-identical summary:
+> 432 positive admission/inference/iota contracts and 288 exact typed
+> rollbacks. It reads motive/minor order from generated recursor telescopes,
+> counts target recursor constants in rules, and rejects 288 group-order plus
+> 240 target-family expectation mutations while retaining the exact 768/840
+> control descriptors. No production code or importer policy changed, and the
+> M0 streams remain unobserved. M4 next owns importer widening, exact official
+> declaration comparison, and the registered cross-family computations. One Lean/Rust
+> worker, 4 GiB caps, the 720-case group grammar, and the retained
 > 768-case recursive plus 840-case positivity controls are mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

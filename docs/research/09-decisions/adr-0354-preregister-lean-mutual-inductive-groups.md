@@ -152,6 +152,19 @@ still declines mutual groups and neither M0 computation stream has been passed
 to it. See the
 [M2 result](../../plan/lean-mutual-inductive-groups-m2-2026-07-22.md).
 
+M3 establishes the generated native population without changing production or
+importer code. A fixed seed yields 720 unique public group records across one
+through three families, zero through two shared parameters and per-family
+indices, zero through three constructors/recursive fields, zero through five
+total fields, telescope depths zero through two, `Prop`/`Type`, and self/
+earlier/later targets. Two complete runs produce the same descriptor
+`2ea6769fa45ea159`: 432 positive contracts and 288 exact typed rollbacks. The
+oracle reads motive/minor order from recursor `Pi` telescopes and target-family
+counts from rule syntax; independent group-order and target-family mutations
+are detectably unequal. The 768 recursive and 840 positivity controls remain
+exact, while importer policy and M0 streams remain untouched. See the
+[M3 result](../../plan/lean-mutual-inductive-groups-m3-2026-07-22.md).
+
 ADR-0350's declaration-identity v1 remains unchanged in this slice. Group
 membership is checked input to atomic generation and is structurally reflected
 in generated recursor types/rules and direct dependencies. If persistent public

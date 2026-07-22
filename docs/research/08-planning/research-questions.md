@@ -844,8 +844,13 @@ Out of scope:
     implements the native positivity/constructor/motive/minor/recursor/
     publication rule through one group path. Eighteen public rows and focused
     mutation/late-rollback tests cover the registered native matrix without
-    importer widening. The question remains open until M3's >=640-case grammar,
-    M4's official import/computation comparison, and M5's final gates close.
+    importer widening. The
+    [M3 result](../../plan/lean-mutual-inductive-groups-m3-2026-07-22.md) now
+    repeats 720 unique public-path cases byte-identically with 432 positive
+    inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
+    target-rule oracles, and retained 768/840 controls. The question remains
+    open until M4's official import/computation comparison and M5's final gates
+    close.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

@@ -1,7 +1,7 @@
 # Lean mutual inductive groups: TL2.13 execution plan
 
-Status: M2 native mutual semantics complete; M3 deterministic group grammar is
-next
+Status: M3 deterministic group grammar complete; M4 importer and exact official
+groups are next
 
 Date: 2026-07-22
 
@@ -330,6 +330,13 @@ whole-group rollback. The importer and M0 official streams remain untouched.
 - commit, push, and verify remote equality.
 
 ### M3 — deterministic group grammar
+
+Status: **complete**. See the
+[M3 result](lean-mutual-inductive-groups-m3-2026-07-22.md). The independent
+fixed-seed grammar executes 720 unique public-path cases twice with a byte-
+identical summary, 432 positive inference/iota contracts, 288 exact typed
+rollbacks, and generated group-order/target-family mutation teeth. The retained
+768/840 summaries are unchanged; importer policy and M0 streams remain closed.
 
 - land and repeat the >=640-case independent grammar;
 - retain exact 768-case recursive and 840-case positivity summaries;

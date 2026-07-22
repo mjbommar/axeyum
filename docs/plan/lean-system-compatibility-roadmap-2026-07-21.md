@@ -769,8 +769,13 @@ Non-claims until their gates are met:
    decline with native complete-group positivity, globally ordered motives and
    minors, target-family IHs/recursor calls, per-family recursors, mutual-
    `Prop` restriction, and atomic rollback. All 18 public rows plus focused
-   mutation/late-failure tests pass. M3's >=640-case group grammar is next;
-   importer widening stays M4 and TL2.14 frontend lowering stays separate.
+   mutation/late-failure tests pass. The
+   [M3 result](lean-mutual-inductive-groups-m3-2026-07-22.md) now repeats 720
+   unique public-path cases byte-identically: 432 positive contracts, 288 typed
+   rollbacks, direct motive/minor-order and target-rule oracles, and generated
+   group-order/target-family mutation teeth. The 768/840 controls remain exact.
+   Importer widening and official computation stay M4; TL2.14 frontend lowering
+   stays separate.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.

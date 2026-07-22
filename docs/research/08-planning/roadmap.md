@@ -116,8 +116,12 @@ Last updated: 2026-07-22
 > now admits native groups through complete-group positivity, globally ordered
 > motives/minors, target-family recursion, per-family recursors, and atomic
 > rollback. Eighteen public rows and two mutation/late-failure tests pass while
-> importer policy remains closed. M3's >=640-case group grammar is next;
-> TL2.14 frontend lowering remains separate.
+> importer policy remains closed. The
+> [M3 result](../../../docs/plan/lean-mutual-inductive-groups-m3-2026-07-22.md)
+> adds 720 unique public cases repeated byte-identically, with 432 positive
+> inference/iota contracts, 288 typed rollbacks, direct motive/minor-order and
+> target-rule oracles, and retained 768/840 controls. M4 importer/official
+> comparison is next; TL2.14 frontend lowering remains separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

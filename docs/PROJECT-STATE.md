@@ -201,7 +201,11 @@ Again, there are distinct targets:
   order, mixed, empty-constructor, and mutual-`Prop` shapes; two private
   mutation tests exercise recursor contracts and late whole-group rollback.
   Importer support and official mutual computation remain deliberately absent.
-  M3's independent >=640-case group grammar is next.
+  M3 now repeats 720 unique public-path cases byte-identically with 432
+  positive admission/inference/iota contracts, 288 exact typed rollbacks,
+  motive/minor order read from recursor telescopes, and target-family rule
+  signatures. Generated group-order/target-family mutations reject and the
+  768/840 controls remain exact. M4 importer/official comparison is next.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

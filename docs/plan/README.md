@@ -184,6 +184,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   ordered motives/minors, target-family induction hypotheses and recursor
   calls, mutual-`Prop` restriction, 18-row public matrix, mutation/late-rollback
   teeth, retained singleton/768/840 controls, and M3 grammar handoff.
+- [`lean-mutual-inductive-groups-m3-2026-07-22.md`](lean-mutual-inductive-groups-m3-2026-07-22.md)
+  — M3's 720-case independent public-path grammar, byte-identical repetition,
+  direct recursor-telescope order oracle, target-family rule signatures, 432
+  positive iota contracts, 288 typed rollbacks, generated mutation teeth,
+  retained 768/840 controls, and M4 importer handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —
