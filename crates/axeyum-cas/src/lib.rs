@@ -8701,6 +8701,20 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
         }
         return Some(expand(&total).unwrap_or(total));
     }
+    // Negation: `L{−f} = −L{f}` (so a subtractive term like `eᵗ − e⁻ᵗ` transforms).
+    if let CasExpr::Neg(inner) = f {
+        return Some(simplify(&CasExpr::Neg(Box::new(laplace_transform(inner, t, s)?))));
+    }
+    // Division by a constant: `L{f/c} = (1/c)·L{f}` — so e.g. `cosh t = (eᵗ+e⁻ᵗ)/2`
+    // and `sinh t = (eᵗ−e⁻ᵗ)/2` transform via the additive linearity above.
+    if let CasExpr::Div(numerator, denominator) = f
+        && let CasExpr::Const(c) = denominator.as_ref()
+        && !c.is_zero()
+    {
+        let inner = laplace_transform(numerator, t, s)?;
+        let scale = CasExpr::Const(Rational::integer(1).checked_div(*c)?);
+        return Some(simplify(&(scale * inner)));
+    }
 
     // Decompose the term into constant `c`, power `t^power`, an `exp(a·t)` **shift**
     // (`L{e^{at}g}=G(s−a)`), and a transcendental base `g ∈ {1, sin, cos}`. The
@@ -14462,6 +14476,31 @@ mod tests {
         let s = simplify(&f);
         assert_equal(&s, &(x() + CasExpr::int(1)));
         assert_equal(&s, &f);
+    }
+
+    #[test]
+    fn laplace_hyperbolic_and_negation() {
+        let t = || v("t");
+        let s = || v("s");
+        let holds = |f: CasExpr, expected: CasExpr| {
+            assert_equal(&laplace_transform(&f, "t", "s").unwrap(), &expected);
+        };
+        // Division-by-constant and negation linearity: cosh/sinh via their exp form.
+        // L{cosh t} = L{(eᵗ+e⁻ᵗ)/2} = s/(s²−1); L{sinh t} = 1/(s²−1).
+        holds(
+            (t().exp() + (CasExpr::int(-1) * t()).exp()) / CasExpr::int(2),
+            s() / (s().pow(2) - CasExpr::int(1)),
+        );
+        holds(
+            (t().exp() - (CasExpr::int(-1) * t()).exp()) / CasExpr::int(2),
+            CasExpr::int(1) / (s().pow(2) - CasExpr::int(1)),
+        );
+        // L{sinh 3t} = 3/(s²−9); L{−eᵗ} = −1/(s−1).
+        holds(
+            ((CasExpr::int(3) * t()).exp() - (CasExpr::int(-3) * t()).exp()) / CasExpr::int(2),
+            CasExpr::int(3) / (s().pow(2) - CasExpr::int(9)),
+        );
+        holds(CasExpr::Neg(Box::new(t().exp())), CasExpr::int(-1) / (s() - CasExpr::int(1)));
     }
 
     #[test]
