@@ -6739,6 +6739,63 @@ pub fn expand(expr: &CasExpr) -> Option<CasExpr> {
     Some(deatomize_from(&result, expr))
 }
 
+/// Collect the terms of a polynomial expression by powers of `var`, grouping the
+/// coefficient of each `varᵈ` (an expression in the remaining variables) — the
+/// analogue of `SymPy`'s `collect`. `collect(a·x + b·x + c, x) = (a+b)·x + c`,
+/// `collect(a·x² + b·x² + x, x) = (a+b)·x² + x`. `None` if `expr` is not a
+/// polynomial (rational/transcendental atoms are keyed but not re-expanded here).
+///
+/// ```
+/// use axeyum_cas::{CasExpr, collect, equal, ZeroTest};
+/// let x = CasExpr::var("x");
+/// let (a, b) = (CasExpr::var("a"), CasExpr::var("b"));
+/// // a·x + b·x + 3  →  (a+b)·x + 3.
+/// let expr = a.clone() * x.clone() + b.clone() * x.clone() + CasExpr::int(3);
+/// let collected = collect(&expr, "x").unwrap();
+/// let expected = (a + b) * x + CasExpr::int(3);
+/// assert!(matches!(equal(&collected, &expected), ZeroTest::Certified { equal: true, .. }));
+/// ```
+#[must_use]
+pub fn collect(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let poly = normalize(expr)?;
+    // Group each monomial's coefficient by its exponent of `var`.
+    let mut by_degree: BTreeMap<u32, MultiPoly> = BTreeMap::new();
+    for (mono, coeff) in &poly.terms {
+        let degree = mono.powers.get(var).copied().unwrap_or(0);
+        let mut rest = mono.clone();
+        rest.powers.remove(var);
+        let term = MultiPoly {
+            terms: [(rest, *coeff)].into_iter().collect(),
+        };
+        let entry = by_degree.entry(degree).or_insert_with(MultiPoly::zero);
+        *entry = entry.add(&term)?;
+    }
+    // Rebuild Σ_d coeff_d · varᵈ (highest degree first, matching render order).
+    let x = CasExpr::var(var);
+    let mut terms: Vec<CasExpr> = Vec::new();
+    for (degree, coeff_poly) in by_degree.into_iter().rev() {
+        let coeff_expr = coeff_poly.to_expr();
+        let power = if degree == 1 {
+            x.clone()
+        } else {
+            x.clone().pow(degree)
+        };
+        let term = if degree == 0 {
+            coeff_expr
+        } else if matches!(&coeff_expr, CasExpr::Const(c) if *c == Rational::integer(1)) {
+            power
+        } else {
+            CasExpr::Mul(vec![coeff_expr, power])
+        };
+        terms.push(term);
+    }
+    Some(match terms.len() {
+        0 => CasExpr::zero(),
+        1 => terms.into_iter().next()?,
+        _ => CasExpr::Add(terms),
+    })
+}
+
 /// Reduce an expression to lowest terms (the `cancel` transform): a canonical reduced
 /// rational function, value-equal to the input. Univariate functions are fully
 /// reduced via the exact polynomial GCD; multivariate functions are expanded but
@@ -9063,6 +9120,25 @@ mod tests {
             env.insert("x".to_owned(), Rational::integer(xn));
             assert_eq!(c.eval(&env), Some(Rational::integer(xn + 2)));
         }
+    }
+
+    #[test]
+    fn collect_groups_by_powers() {
+        let x = || v("x");
+        let a = || v("a");
+        let b = || v("b");
+        // a·x + b·x + 3 → (a+b)·x + 3.
+        let e1 = a() * x() + b() * x() + CasExpr::int(3);
+        let c1 = collect(&e1, "x").unwrap();
+        assert_equal(&c1, &((a() + b()) * x() + CasExpr::int(3)));
+        assert!(matches!(equal(&e1, &c1), ZeroTest::Certified { equal: true, .. }));
+        // a·x² + b·x + c·x + d → a·x² + (b+c)·x + d (value-preserving).
+        let e2 = a() * x().pow(2) + b() * x() + v("c") * x() + v("d");
+        let c2 = collect(&e2, "x").unwrap();
+        assert!(matches!(equal(&e2, &c2), ZeroTest::Certified { equal: true, .. }));
+        // Grouping preserves multivariate coefficients: x·a·y + x·b → (a·y+b)·x.
+        let e3 = x() * a() * v("y") + x() * b();
+        assert_equal(&collect(&e3, "x").unwrap(), &((a() * v("y") + b()) * x()));
     }
 
     #[test]
