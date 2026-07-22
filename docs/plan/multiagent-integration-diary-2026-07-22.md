@@ -333,6 +333,37 @@ user's WIP is preserved exactly as before. **Lesson (already in
 even for a merge resolution. Reverting to explicit `git add <files>` for all
 future conflict merges.
 
+### Cycle 15 — 2026-07-22 (~14:00 EDT, 3 h heartbeat) — soundness verification + progress
+
+**Merges (all gated green, clean):** Lean M5 computation tests (`edfa7924`); SMT
+S0 official selection authority (`db791ef4`) + adapt inputs (`f8878fee`) —
+`sources=29 submissions=53 competitive=38 non_incremental=450472 seed=22731158`
+(exact-match to the official SMT-COMP population).
+
+**★ Soundness verification — s4 WRONG jumped 2→16; investigated → all stale-binary
+lag, current `main` VERIFIED sound.** Categorized the 16: 1 QF_AUFLIA
+(`pipeline-invalid`, fixed by this session's AUFLIA sound-decline) + 15 QF_FP
+(KLEE `query.26` + **14 new Wintersteiger `div`/`mul`/`fma`**). The new FP cluster
+was *not obviously* covered by the known FP fixes (which were min/max signed-zero,
+add/fma exact-zero, classification — not clearly div/mul), so I did **not**
+overclaim. Instead: rebuilt `smtcomp_cli` from current `main` and ran it on
+representative WRONG cases — **`div-has-solution-811`✓, `div-has-no-other-solution-3577`✓,
+`mul-has-no-other-solution-1475`✓, `fma-has-solution-10232`✓ (4/4 correct, both
+sat and unsat directions).** Conclusion: **current `main` is sound on all of them;
+WRONG=16 is entirely the stale pre-fix s4 binary.** This *verifies* (not just
+asserts) that re-staging s4 → WRONG→0. The FP fixes are more complete than feared.
+
+**★ CAS major progress (uncommitted, ~3 h deep — NOT stuck).** Its `lib.rs` WIP +
+`docs/research/10-cas/diary.md` (Entry 37ads) show it has certified the **entire
+squared-binomial falling-factorial moment hierarchy through order 15**
+(`prove_squared_binomial_falling_moment`, `prove_squared_binomial_moment`; order
+16 is the first measured decline → sound ceiling), plus
+`prove_fixed_shift_binomial_convolution` (`ΣC(n,k)C(n,k+r)=C(2n,n−r)`, r=0..7).
+**521 unit + 147 doctests green** (up from 504) — 17 new certified theorems past
+Vandermonde. A big, high-value CAS merge is pending once the lane commits.
+
+**Health:** transient 82 °C peak (a lane's `just check`), back to 40 °C; no runaways.
+
 ---
 
 ## Cycle log
