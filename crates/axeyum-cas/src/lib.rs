@@ -14677,6 +14677,15 @@ mod tests {
         ));
         // Odd part vanishes: ∫ sin x/(x²+1) = 0.
         assert_equal(&gauss(x().sin() / (x().pow(2) + CasExpr::int(1)), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &CasExpr::zero());
+        // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
+        // (pole at −1+i; damped oscillation).
+        assert!(matches!(
+            equal(
+                &gauss(x().cos() / (x().pow(2) + CasExpr::int(2) * x() + CasExpr::int(2)), LimitPoint::NegInfinity, LimitPoint::PosInfinity),
+                &(v("pi") * CasExpr::int(1).cos() / e()),
+            ),
+            ZeroTest::Certified { equal: true, .. }
+        ));
         // Frullani integrals ∫₀^∞ (f(ax)−f(bx))/x = (f(0)−f(∞))·ln(b/a). The
         // antiderivative is Ci(ax)−Ci(bx) / Ei(−ax)−Ei(−bx), whose lower bound at 0
         // combines the log-singular heads to a finite value — a naïve `Ci(0)−Ci(0)`
