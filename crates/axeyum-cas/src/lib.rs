@@ -10724,6 +10724,9 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_even_quartic_denominator(expr, var),
         integrate_abs_affine(expr, var),
         integrate_nth_root_power(expr, var),
+        // Last resort: power-reduce even trig powers (`eˣsin²x`) — placed here so the
+        // direct trig/rational-trig finders keep their canonical forms.
+        integrate_power_reduced_trig(expr, var),
     ]
     .into_iter()
     .flatten()
@@ -12619,6 +12622,86 @@ pub fn improper_integrate(
 /// Integrate `k·sin²(a·x+b)` or `k·cos²(a·x+b)` (linear argument): the
 /// antiderivative is `k·(x/2 ∓ (1/2a)·sin(u)·cos(u))`, certifiable via the
 /// Pythagorean identity in the zero-test. `None` outside this shape.
+/// Rewrite even powers of `sin`/`cos` by the power-reduction identities
+/// `sin²u = (1−cos 2u)/2`, `cos²u = (1+cos 2u)/2` (applied to `sin²ᵏ = (sin²)ᵏ`),
+/// leaving odd powers and non-trig subexpressions untouched. One pass halves each
+/// even power and doubles its angle; the caller iterates to a fixpoint.
+fn power_reduce_even_trig(expr: &CasExpr) -> CasExpr {
+    match expr {
+        CasExpr::Pow(base, n)
+            if n % 2 == 0
+                && *n >= 2
+                && matches!(
+                    base.as_ref(),
+                    CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos, _)
+                ) =>
+        {
+            let CasExpr::Unary(func, u) = base.as_ref() else {
+                unreachable!("guarded by the match arm")
+            };
+            let double = CasExpr::int(2) * (**u).clone();
+            let half = if *func == UnaryFunc::Sin {
+                (CasExpr::int(1) - double.cos()) / CasExpr::int(2)
+            } else {
+                (CasExpr::int(1) + double.cos()) / CasExpr::int(2)
+            };
+            // `n = 2` → `half` directly (no redundant `Pow(_, 1)` wrapper, which the
+            // downstream finders would not see through).
+            if n / 2 == 1 {
+                half
+            } else {
+                CasExpr::Pow(Box::new(half), n / 2)
+            }
+        }
+        CasExpr::Pow(base, n) => CasExpr::Pow(Box::new(power_reduce_even_trig(base)), *n),
+        CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(power_reduce_even_trig(arg))),
+        CasExpr::Neg(inner) => CasExpr::Neg(Box::new(power_reduce_even_trig(inner))),
+        CasExpr::Add(items) => CasExpr::Add(items.iter().map(power_reduce_even_trig).collect()),
+        CasExpr::Mul(items) => CasExpr::Mul(items.iter().map(power_reduce_even_trig).collect()),
+        // Only the numerator is reduced: rewriting `cos²u` inside a *denominator*
+        // (`1/(1+cos²u)`) would mangle a form the rational-trig/tan-substitution
+        // finders integrate directly.
+        CasExpr::Div(a, b) => CasExpr::Div(Box::new(power_reduce_even_trig(a)), b.clone()),
+        CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
+    }
+}
+
+/// Integrate an integrand carrying even powers of `sin`/`cos` (typically alongside
+/// an exponential or polynomial, where the odd-power `u`-substitutions don't apply)
+/// by **power reduction**: rewrite `sin²u`/`cos²u` to `cos 2u`, expand, and iterate
+/// to a fixpoint (so `sin⁴ → cos²2u → cos 4u`), then integrate the multiple-angle
+/// form term-by-term. Closes `∫eˣsin²x`, `∫eˣcos²x`, `∫eˣsin⁴x`, `∫x·cos²x`.
+/// Declines (returns `None`) when there is no even trig power to reduce, so it never
+/// recurses on its own output. Certified downstream by differentiate-and-check.
+fn integrate_power_reduced_trig(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let reduced = power_reduce_even_trig(expr);
+    if reduced == *expr {
+        return None; // nothing to reduce — avoid re-entering this finder in a loop
+    }
+    // Attempt 1: integrate the once-reduced form directly. This keeps an exponential
+    // factor at its original rate (`e^{2x}` is *not* rewritten to `(eˣ)²`, which
+    // `expand` would do and which breaks the `exp × sinusoid` finder), so all the
+    // squared cases `∫e^{ax}sin²x`, `∫x·cos²x` close here.
+    if let Some(certified) = integrate(&reduced, var).filter(CertifiedIntegral::is_certified) {
+        return Some(certified.antiderivative);
+    }
+    // Attempt 2: iterate `expand`+reduce to a fixpoint for a *higher* even power
+    // (`sin⁴ → cos²2x → cos 4x`), then integrate the multiple-angle form term-by-term.
+    let mut current = reduced;
+    for _ in 0..12 {
+        let expanded = expand(&current).unwrap_or_else(|| current.clone());
+        let next = power_reduce_even_trig(&expanded);
+        if next == current {
+            current = expanded;
+            break;
+        }
+        current = next;
+    }
+    integrate(&current, var)
+        .filter(CertifiedIntegral::is_certified)
+        .map(|c| c.antiderivative)
+}
+
 /// `∫ c·tanⁿ(a·x+b) dx` for an integer `n ≥ 2`, via the reduction
 /// `∫tanⁿu = tanⁿ⁻¹u/(a(n−1)) − ∫tanⁿ⁻²u` (from `tan²u = sec²u − 1`), bottoming at
 /// `∫tan⁰ dx = x` and `∫tan¹u dx = −ln(cos u)/a`. So `∫tan²x = tan x − x`,
@@ -20891,6 +20974,27 @@ mod tests {
         // Explicit value: ∫tan²x = tan x − x.
         let anti = integrate(&x().tan().pow(2), "x").unwrap().antiderivative;
         assert_equal(&simplify(&anti), &(x().tan() - x()));
+    }
+
+    #[test]
+    fn integrate_power_reduced_even_trig() {
+        let x = || v("x");
+        // Even powers of sin/cos alongside an exponential/polynomial close by power
+        // reduction (`sin²=(1−cos2x)/2`), iterated to a fixpoint (`sin⁴→cos4x`), then
+        // integrated term-by-term. All certified by differentiate-and-check.
+        for integrand in [
+            x().exp() * x().sin().pow(2),
+            x().exp() * x().cos().pow(2),
+            x().exp() * x().sin().pow(4),
+            x() * x().cos().pow(2),
+            (CasExpr::int(2) * x()).exp() * x().sin().pow(2),
+        ] {
+            // `is_certified` *is* the differentiate-and-check proof (via
+            // `prove_derivative`, which reconciles the multiple-angle forms a plain
+            // `equal` on the derivative would not).
+            let result = integrate(&integrand, "x").expect("power-reduced trig integral");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+        }
     }
 
     #[test]
