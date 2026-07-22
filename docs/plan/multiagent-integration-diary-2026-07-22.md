@@ -279,6 +279,23 @@ partial environment mutation, and the whole grammar proven complete + byte-ident
 admitted without widening the trusted base unsoundly. Lean-4-kernel parity on this
 feature is now genuinely close.
 
+### Cycle 12 (heartbeat ~13:30 EDT) — no merge; CAS resolved + transient health spike
+
+- **CAS WATCH-ITEM RESOLVED** — not stuck: the in-flight `lib.rs` diff shows it
+  implementing **`prove_squared_binomial_moment`** (`∑ₖ (k)_order·C(n,k)² =
+  closed_form`) and **`prove_fixed_shift_binomial_convolution`**, each carrying a
+  rational WZ certificate + `false_proof` soundness tests. Concrete next-tier
+  theorems past Vandermonde — real, careful work, uncommitted only because the
+  certificate machinery is being gotten right. The sharp end of SymPy parity.
+- **Health spike (transient, self-resolved):** a digest tick caught **3
+  `axeyum-smtcomp` procs + 61 °C** (up from 35). Seconds later (read-only check)
+  the procs had exited, load was falling (2.67 1-min vs 4.55 15-min), temp back to
+  59 °C — a short E3 `_live`/`compete` burst, not an orphaned runaway. No
+  `stop_run.sh` needed. First §4 blip; re-checking temps each tick.
+- **Lean** post-M3 → now preregistering M4 (importer). **SMT** E3 accepted (0 WIP).
+- **s4:** live (last write 13:30), WRONG=2 (stale binary). NB: tail progress
+  markers are per-shard, not a global monotonic counter.
+
 ---
 
 ## Cycle log
