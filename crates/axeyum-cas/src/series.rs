@@ -488,7 +488,11 @@ fn unary_series(func: UnaryFunc, arg: &CasExpr, var: &str, order: usize) -> Opti
         | UnaryFunc::Acosh
         | UnaryFunc::Gamma
         | UnaryFunc::PolyGamma(_)
-        | UnaryFunc::NthRoot(_) => None,
+        | UnaryFunc::NthRoot(_)
+        | UnaryFunc::Ai
+        | UnaryFunc::AiPrime
+        | UnaryFunc::Bi
+        | UnaryFunc::BiPrime => None,
     }
 }
 

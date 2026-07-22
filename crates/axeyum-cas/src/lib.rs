@@ -193,6 +193,15 @@ pub enum UnaryFunc {
     /// derivative tower `ψ⁽ⁿ⁾′ = ψ⁽ⁿ⁺¹⁾` stays inside the fragment (no infinite set
     /// of heads). `PolyGamma(0)` is the digamma, `PolyGamma(1)` the trigamma.
     PolyGamma(u32),
+    /// The **Airy function** `Ai(x)` (a solution of `y″ = x·y`). Its derivative tower
+    /// **closes**: `Ai′ = AiPrime`, and `AiPrime′ = x·Ai` (the Airy equation).
+    Ai,
+    /// The derivative `Ai′(x)` of the Airy function `Ai`.
+    AiPrime,
+    /// The **Airy function** `Bi(x)`, the second solution of `y″ = x·y`.
+    Bi,
+    /// The derivative `Bi′(x)` of the Airy function `Bi`.
+    BiPrime,
 }
 
 impl UnaryFunc {
@@ -237,6 +246,10 @@ impl UnaryFunc {
             UnaryFunc::FresnelC => "FresnelC",
             UnaryFunc::BesselJ(_) => unreachable!("Bessel order handled above"),
             UnaryFunc::NthRoot(_) => unreachable!("root degree handled above"),
+            UnaryFunc::Ai => "Ai",
+            UnaryFunc::AiPrime => "AiPrime",
+            UnaryFunc::Bi => "Bi",
+            UnaryFunc::BiPrime => "BiPrime",
             UnaryFunc::Asin => "asin",
             UnaryFunc::Acos => "acos",
             UnaryFunc::Asinh => "asinh",
@@ -325,6 +338,11 @@ impl UnaryFunc {
             UnaryFunc::PolyGamma(order) => {
                 CasExpr::Unary(UnaryFunc::PolyGamma(order.saturating_add(1)), Box::new(u()))
             }
+            // Airy tower closes: Ai′=AiPrime, AiPrime′=u·Ai; Bi′=BiPrime, BiPrime′=u·Bi.
+            UnaryFunc::Ai => CasExpr::Unary(UnaryFunc::AiPrime, Box::new(u())),
+            UnaryFunc::AiPrime => u() * CasExpr::Unary(UnaryFunc::Ai, Box::new(u())),
+            UnaryFunc::Bi => CasExpr::Unary(UnaryFunc::BiPrime, Box::new(u())),
+            UnaryFunc::BiPrime => u() * CasExpr::Unary(UnaryFunc::Bi, Box::new(u())),
             // d/du u^{1/q} = (1/q)·u^{1/q}/u.
             UnaryFunc::NthRoot(degree) => {
                 CasExpr::Const(Rational::checked_new(1, i128::from(degree)).unwrap_or_else(Rational::zero))
@@ -434,6 +452,18 @@ impl CasExpr {
     #[must_use]
     pub fn cbrt(self) -> Self {
         CasExpr::Unary(UnaryFunc::NthRoot(3), Box::new(self))
+    }
+
+    /// The **Airy function** `Ai(self)` (a solution of `y″ = x·y`).
+    #[must_use]
+    pub fn airy_ai(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Ai, Box::new(self))
+    }
+
+    /// The **Airy function** `Bi(self)` (the second solution of `y″ = x·y`).
+    #[must_use]
+    pub fn airy_bi(self) -> Self {
+        CasExpr::Unary(UnaryFunc::Bi, Box::new(self))
     }
 
     /// The **error function** `erf(self)` as a symbolic head.
@@ -7871,6 +7901,10 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::Acosh => value.acosh(),
                 UnaryFunc::Gamma => gamma_f64(value),
                 UnaryFunc::PolyGamma(order) => polygamma_f64(*order, value),
+                UnaryFunc::Ai => airy_f64(value, false).0,
+                UnaryFunc::AiPrime => airy_f64(value, false).1,
+                UnaryFunc::Bi => airy_f64(value, true).0,
+                UnaryFunc::BiPrime => airy_f64(value, true).1,
                 UnaryFunc::NthRoot(degree) => {
                     let exponent = 1.0 / f64::from(*degree);
                     if value >= 0.0 {
@@ -7883,6 +7917,47 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 }
             })
         }
+    }
+}
+
+/// Numeric **Airy functions** `(Ai, Ai′)` (or `(Bi, Bi′)` when `second`) for
+/// [`evalf`]. Both solve `y″ = x·y`; the two independent Maclaurin solutions `f`
+/// (`f(0)=1, f′(0)=0`) and `g` (`g(0)=0, g′(0)=1`) are summed via the recurrence
+/// `a_{n+2} = a_{n−1}/((n+2)(n+1))`, then combined with the standard initial values.
+/// Accurate for moderate `|x|` (the series converges for all `x`).
+fn airy_f64(x: f64, second: bool) -> (f64, f64) {
+    // f and g and their derivatives, from the y″ = x·y recurrence.
+    let (mut f, mut f_prime, mut g, mut g_prime) = (0.0, 0.0, 0.0, 0.0);
+    // f: coefficients a_{3k}; g: coefficients a_{3k+1}. Sum the series termwise.
+    let (mut f_term, mut g_term) = (1.0, x); // k=0: f=1, g=x
+    f += f_term;
+    g += g_term;
+    g_prime += 1.0; // g'(0)=1 (f'(0)=0)
+    for k in 1..40u32 {
+        let kf = f64::from(k);
+        // f term: x^{3k}·∏ 1/((3j−1)(3j)); g term: x^{3k+1}·∏ 1/((3j)(3j+1)).
+        f_term *= x * x * x / ((3.0 * kf - 1.0) * (3.0 * kf));
+        g_term *= x * x * x / ((3.0 * kf) * (3.0 * kf + 1.0));
+        f += f_term;
+        g += g_term;
+        if x != 0.0 {
+            // d/dx x^{3k} = 3k·x^{3k−1}, so the derivative term is (3k)·(f_term/x).
+            f_prime += (3.0 * kf) * f_term / x;
+            g_prime += (3.0 * kf + 1.0) * g_term / x;
+        }
+        if f_term.abs() < 1e-18 && g_term.abs() < 1e-18 && k > 3 {
+            break;
+        }
+    }
+    if second {
+        // Bi = √3·(Bi₀·f + Bi₀′·g) form via the constants Bi(0), Bi′(0).
+        const BI0: f64 = 0.614_926_627_446_000_7;
+        const BI0P: f64 = 0.448_288_357_353_826_4;
+        (BI0 * f + BI0P * g, BI0 * f_prime + BI0P * g_prime)
+    } else {
+        const AI0: f64 = 0.355_028_053_887_817_2;
+        const AI0P: f64 = -0.258_819_403_792_806_8;
+        (AI0 * f + AI0P * g, AI0 * f_prime + AI0P * g_prime)
     }
 }
 
@@ -19737,6 +19812,29 @@ mod tests {
         close(evalf(&CasExpr::int(1).si(), &[]).unwrap(), 0.946_083);
         close(evalf(&CasExpr::int(1).ci(), &[]).unwrap(), 0.337_404);
         close(evalf(&CasExpr::int(1).ei(), &[]).unwrap(), 1.895_118);
+    }
+
+    #[test]
+    fn airy_functions() {
+        let x = || v("x");
+        // The derivative tower closes: Ai′=AiPrime, Ai″=x·Ai (the Airy equation),
+        // and likewise for Bi.
+        assert_eq!(simplify(&x().airy_ai().differentiate("x")), CasExpr::Unary(UnaryFunc::AiPrime, Box::new(x())));
+        assert!(matches!(
+            equal(&x().airy_ai().differentiate("x").differentiate("x"), &(x() * x().airy_ai())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&x().airy_bi().differentiate("x").differentiate("x"), &(x() * x().airy_bi())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // evalf against standard reference values.
+        let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
+        close(evalf(&CasExpr::int(0).airy_ai(), &[]).unwrap(), 0.355_028);
+        close(evalf(&CasExpr::int(1).airy_ai(), &[]).unwrap(), 0.135_292);
+        close(evalf(&CasExpr::int(2).airy_ai(), &[]).unwrap(), 0.034_924);
+        close(evalf(&CasExpr::int(0).airy_bi(), &[]).unwrap(), 0.614_927);
+        close(evalf(&CasExpr::int(1).airy_bi(), &[]).unwrap(), 1.207_424);
     }
 
     #[test]
