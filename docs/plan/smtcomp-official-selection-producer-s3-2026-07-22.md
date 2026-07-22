@@ -35,8 +35,9 @@ organizer selection code.
 | Repetition equality | exact selected and per-logic bytes |
 
 `QF_UFFP` is the sole one of the 89 corpus logics without a selected row. S4
-must prove this follows the competitive-logic gate rather than silently omit
-it.
+must prove its exact exclusion rather than silently omit it. S1 records both
+of its metadata rows as `excluded-trivial`, leaving zero eligible rows, a zero
+cap, and zero selected rows; it is not excluded by the competitive-logic gate.
 
 ## Runtime and cache identity
 

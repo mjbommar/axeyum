@@ -17,7 +17,7 @@ Section references in the code point at that document.
 | Stage | Rules § | Module | Status |
 |---|---|---|---|
 | A. Legacy candidate selection (local cap/family approximation) | §6 | `selection.py` | **superseded for official-selection claims** |
-| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0--S3 complete; S4 independent audit next** |
+| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0--S3 complete; S4 auditor preregistered, live audit next** |
 | B. Resource-limited execution (wall `T`, CPU `mT`, mem; measures `aw`,`ac`) | §5 | `runner.py` | **done** (self-contained; BenchExec optional) |
 | C. Result → benchmark score tuple ⟨e,n,aw,w,ac,c⟩ (all 5 tracks) | §7.1 | `scoring.py` | **done** |
 | C′. Sequential benchmark score ⟨e_S,n_S,c_S⟩ (virtual CPU limit = T) | §7.1.1 | `scoring.py` | **done** |
@@ -31,7 +31,7 @@ Legacy scoring/selection tests (43): `tests/test_scoring.py` (30, one per rule),
 `tests/test_pipeline.py` (6, full aggregation/ranking plus duplicate rejection),
 `tests/test_selection.py` (5, §6 caps + sampling), and
 `tests/test_provenance.py` (2, family normalization + exact duplicates).
-Fourteen ADR-0356 tests separately validate the pinned 29-source/51-submission/
+Twenty ADR-0356 tests separately validate the pinned 29-source/51-submission/
 90-archive authority, complete synthetic eligibility/decision partition, all
 four cap regions, the inclusive 1.0-second boundary, incoherence and
 single-solver-year handling, exact fixture bytes, and rejecting mutations. The
@@ -56,6 +56,13 @@ and rejects any normalized selection or per-logic repetition drift.
 The successful twice-repeated producer and fresh standard-library rehash are
 recorded in
 [`smtcomp-official-selection-producer-s3-2026-07-22.md`](../../docs/plan/smtcomp-official-selection-producer-s3-2026-07-22.md).
+The live-blocked S4 entry point,
+`scripts/audit-smtcomp-official-selection.py`, independently streams the full
+eligibility/corpus join, verifies every terminal decision and per-logic quota,
+rehashes all 45,905 selected files, executes the 18-mutation register, and
+publishes only to a completion-hash-addressed root. Its verify mode reconstructs
+the 450,472-row published join and rehashes the selected files again from a
+fresh process.
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.
