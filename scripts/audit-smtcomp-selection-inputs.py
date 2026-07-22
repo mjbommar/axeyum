@@ -6,9 +6,11 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import heapq
 import json
 import os
 import sys
+import tempfile
 import urllib.error
 import urllib.request
 from collections import defaultdict
@@ -162,6 +164,55 @@ def iter_gzip_object_array(path: Path, key: str) -> Iterator[Any]:
                 raise InputAuditError("trailing data after streamed JSON object")
     except (gzip.BadGzipFile, UnicodeDecodeError, OSError) as error:
         raise InputAuditError(f"cannot stream {path}") from error
+
+
+def _iter_jsonl(path: Path) -> Iterator[dict[str, Any]]:
+    with path.open("rb") as source:
+        for raw in source:
+            try:
+                row = json.loads(raw)
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise InputAuditError("generated metadata sort chunk is invalid") from error
+            if not isinstance(row, dict):
+                raise InputAuditError("generated metadata sort row is not an object")
+            yield row
+
+
+def iter_sorted_benchmarks(
+    path: Path,
+    scratch_parent: Path,
+    *,
+    chunk_rows: int = 50_000,
+) -> Iterator[dict[str, Any]]:
+    """Externally sort normalized official metadata by benchmark ID."""
+    if isinstance(chunk_rows, bool) or not isinstance(chunk_rows, int) or chunk_rows < 1:
+        raise InputAuditError("metadata sort chunk size must be positive")
+    with tempfile.TemporaryDirectory(prefix=".metadata-sort-", dir=scratch_parent) as temporary:
+        scratch = Path(temporary)
+        chunk: list[dict[str, Any]] = []
+        paths: list[Path] = []
+
+        def flush() -> None:
+            if not chunk:
+                return
+            chunk.sort(key=lambda row: row["benchmark_id"])
+            chunk_path = scratch / f"chunk-{len(paths):06d}.jsonl"
+            with chunk_path.open("xb") as output:
+                for row in chunk:
+                    output.write(canonical_json_bytes(row))
+                output.flush()
+                os.fsync(output.fileno())
+            paths.append(chunk_path)
+            chunk.clear()
+
+        for official_row in iter_gzip_object_array(path, "non_incremental"):
+            chunk.append(normalize_benchmark(adapt_official_benchmark_row(official_row)))
+            if len(chunk) == chunk_rows:
+                flush()
+        flush()
+
+        iterators = [_iter_jsonl(chunk_path) for chunk_path in paths]
+        yield from heapq.merge(*iterators, key=lambda row: row["benchmark_id"])
 
 
 def _download(entry: Mapping[str, Any], root: Path) -> dict[str, Any]:
@@ -353,8 +404,7 @@ def run(authority_path: Path, output_dir: Path) -> dict[str, Any]:
     prior_id: str | None = None
     new_count = 0
     with eligibility_path.open("xb") as output:
-        for official_row in iter_gzip_object_array(benchmark_path, "non_incremental"):
-            benchmark = normalize_benchmark(adapt_official_benchmark_row(official_row))
+        for benchmark in iter_sorted_benchmarks(benchmark_path, output_dir):
             benchmark_id = benchmark["benchmark_id"]
             if prior_id is not None and benchmark_id <= prior_id:
                 raise InputAuditError("official benchmark metadata is not in strict path order")

@@ -53,9 +53,11 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   over the complete `Logic` enum before `Participation.get` filters it through
   the selected track's divisions. A third retained attempt completed metadata
   streaming and proved the two configured removal IDs already match zero
-  metadata rows, so the producer's anti-join is idempotent. The corrected
-  fixture-green runner now awaits a fresh selection-free input run; it cannot
-  produce a selected set.
+  metadata rows, so the producer's anti-join is idempotent. A fourth retained
+  attempt reduced all seven historical files and exposed that official metadata
+  order is not canonical path order. The runner now uses a bounded external
+  merge sort for its canonical ledger and awaits a fresh selection-free input
+  run; it cannot produce a selected set.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it

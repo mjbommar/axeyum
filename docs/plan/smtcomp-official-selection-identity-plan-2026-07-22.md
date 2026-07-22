@@ -175,6 +175,17 @@ contract and independent audit now distinguish configured removals from matched
 removals and freeze the exact zero-match fact. No official sample was generated
 or observed; another fresh-directory rerun is required.
 
+**S1b fourth live attempt:** retained negative. The audit at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/input-audit-1784744715221056942-32ecd649`
+verified all 89 inputs, streamed all 450,472 metadata rows, and reduced all
+5,345,294 historical rows across 2018--2024. It then stopped because organizer
+metadata is not already in strict normalized-path order. Canonical ledger order
+is an Axeyum artifact requirement, not an upstream input-order requirement. The
+runner now performs a standard-library bounded external merge sort during its
+second metadata pass; a retained-input check produced exactly 450,472 strictly
+ordered rows. No official sample was generated or observed; another
+fresh-directory rerun is required.
+
 ### S2 — verified corpus acquisition
 
 - Download all 90 files from Zenodo record `16740866` into a fresh staging
