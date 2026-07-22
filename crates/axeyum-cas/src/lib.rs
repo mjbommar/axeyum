@@ -6167,6 +6167,63 @@ pub fn rationalize(x: f64, max_denominator: i128) -> Option<Rational> {
     Rational::checked_new(numerator, k_curr)
 }
 
+/// Recognize an `f64` as an exact **closed form** (the analogue of `SymPy`'s
+/// `nsimplify`): a rational, a surd `√n`, or a rational multiple of `π`, `e`, or
+/// `√2/√3/√5` — whichever matches to within `~1e-10` (so a genuine irrational is
+/// not mistaken for a coincidental fraction). `nsimplify(1.5708…) = π/2`,
+/// `nsimplify(1.4142…) = √2`, `nsimplify(0.5) = 1/2`. `None` if nothing matches
+/// within `max_denominator`.
+#[must_use]
+pub fn nsimplify(value: f64, max_denominator: i128) -> Option<CasExpr> {
+    const TOL: f64 = 1e-10;
+    if !value.is_finite() {
+        return None;
+    }
+    // Try `value = coeff · reference` for a rational `coeff`; verify the fit.
+    let try_scaled = |reference: f64| -> Option<Rational> {
+        if reference == 0.0 {
+            return None;
+        }
+        let coeff = rationalize(value / reference, max_denominator)?;
+        let approx = evalf(&CasExpr::Const(coeff), &[])? * reference;
+        ((approx - value).abs() < TOL).then_some(coeff)
+    };
+    let scale_by = |coeff: Rational, base: CasExpr| -> CasExpr {
+        if coeff == Rational::integer(1) {
+            base
+        } else {
+            scaled_term(coeff, base)
+        }
+    };
+    // 1. Exact rational.
+    if let Some(coeff) = try_scaled(1.0) {
+        return Some(CasExpr::Const(coeff));
+    }
+    // 2. Surd √n (n a non-square positive integer): value² ≈ n.
+    if value > 0.0
+        && let Some(square) = rationalize(value * value, max_denominator)
+        && square.denominator() == 1
+        && square.numerator() > 1
+        && (evalf(&CasExpr::Const(square), &[])? - value * value).abs() < TOL
+        && isqrt(square.numerator()).is_none_or(|root| root * root != square.numerator())
+    {
+        return Some(CasExpr::int(square.numerator()).sqrt());
+    }
+    // 3. Rational multiples of π, e, and small surds.
+    if let Some(coeff) = try_scaled(std::f64::consts::PI) {
+        return Some(scale_by(coeff, CasExpr::var("pi")));
+    }
+    if let Some(coeff) = try_scaled(std::f64::consts::E) {
+        return Some(scale_by(coeff, CasExpr::int(1).exp()));
+    }
+    for n in [2_u32, 3, 5, 6, 7] {
+        if let Some(coeff) = try_scaled(f64::from(n).sqrt()) {
+            return Some(scale_by(coeff, CasExpr::int(i128::from(n)).sqrt()));
+        }
+    }
+    None
+}
+
 /// Numerically approximate an expression as an `f64`, given `bindings` for its free
 /// variables. Rational constants are exact-to-`f64`; the transcendental heads map to
 /// the corresponding `f64` functions; the reserved constant `pi` defaults to π. A
@@ -12080,6 +12137,28 @@ mod tests {
         // An exact integer.
         assert_eq!(rationalize(5.0, 100), Some(Rational::integer(5)));
         assert!(rationalize(f64::NAN, 100).is_none());
+    }
+
+    #[test]
+    fn nsimplify_recognizes_closed_forms() {
+        // Rationals, surds, and rational multiples of π/e.
+        assert_equal(&nsimplify(0.5, 10_000).unwrap(), &CasExpr::rat(1, 2));
+        assert_equal(&nsimplify(2.0 / 3.0, 10_000).unwrap(), &CasExpr::rat(2, 3));
+        assert_equal(&nsimplify(std::f64::consts::SQRT_2, 10_000).unwrap(), &CasExpr::int(2).sqrt());
+        assert_equal(&nsimplify(3.0_f64.sqrt(), 10_000).unwrap(), &CasExpr::int(3).sqrt());
+        assert_equal(
+            &nsimplify(std::f64::consts::FRAC_PI_2, 10_000).unwrap(),
+            &(CasExpr::rat(1, 2) * v("pi")),
+        );
+        assert_equal(&nsimplify(std::f64::consts::PI, 10_000).unwrap(), &v("pi"));
+        assert_equal(&nsimplify(std::f64::consts::E, 10_000).unwrap(), &CasExpr::int(1).exp());
+        assert_equal(
+            &nsimplify(std::f64::consts::SQRT_2 / 2.0, 10_000).unwrap(),
+            &(CasExpr::rat(1, 2) * CasExpr::int(2).sqrt()),
+        );
+        // A value with no closed form in the fragment (∫₀¹ e^{−x²}) declines.
+        assert!(nsimplify(0.746_824, 10_000).is_none());
+        assert!(nsimplify(f64::NAN, 100).is_none());
     }
 
     #[test]
