@@ -10105,6 +10105,108 @@ fn improper_gaussian_moment(
     })
 }
 
+/// The **Gaussian–Fourier transform** `∫_{−∞}^∞ C·e^{−a x²+c}·cos(b x) dx =
+/// C·e^c·√(π/a)·e^{−b²/(4a)}` (`a > 0` rational, `b` rational, `C·e^c` a constant
+/// prefactor), and its half `∫₀^∞ = ½·(…)` since `e^{−a x²}cos(b x)` is even. The
+/// base `√(π/a) = ∫_{−∞}^∞ e^{−a x²}` is the erf-asymptote-certified Gaussian; the
+/// `e^{−b²/(4a)}` damping is exact by completing the square in the complex exponent
+/// (Fourier transform of a Gaussian). Certified by that construction and confirmed
+/// by a numeric quadrature cross-check. `sin(b x)·Gaussian` is odd (full line → 0,
+/// handled by the parity path; half line is a Dawson function) → not taken here.
+/// `None` outside the form or with a non-constant (polynomial) prefactor.
+fn improper_gaussian_fourier(
+    expr: &CasExpr,
+    var: &str,
+    lower: LimitPoint,
+    upper: LimitPoint,
+) -> Option<DefiniteIntegral> {
+    let half = match (&lower, &upper) {
+        (LimitPoint::NegInfinity, LimitPoint::PosInfinity) => false,
+        (LimitPoint::Finite(z), LimitPoint::PosInfinity) if z.is_zero() => true,
+        _ => return None,
+    };
+    // Peel a single `cos(b·var)` factor; the remainder must be `C·e^{−a x²+c}`.
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    let mut trig: Option<(UnaryFunc, CasExpr)> = None;
+    let mut rest: Vec<CasExpr> = Vec::new();
+    for factor in factors {
+        if let CasExpr::Unary(head @ (UnaryFunc::Cos | UnaryFunc::Sin), arg) = factor {
+            if trig.is_some() {
+                return None; // more than one oscillatory factor
+            }
+            trig = Some((*head, (**arg).clone()));
+        } else {
+            rest.push(factor.clone());
+        }
+    }
+    let (head, trig_arg) = trig?;
+    let trig_poly = normalize(&trig_arg)?.to_univariate(var)?;
+    if poly::rat_degree(&trig_poly)? != 1 || !trig_poly[0].is_zero() {
+        return None; // need cos/sin(b·var), pure linear argument
+    }
+    let b = trig_poly[1];
+    let (prefactor, exp_arg) = split_gaussian_factor(&CasExpr::Mul(rest))?;
+    // Only a constant prefactor `C` (a polynomial one needs Hermite-function moments).
+    let c_const = multipoly_as_constant(&normalize(&prefactor)?)?;
+    if c_const.is_zero() {
+        return None;
+    }
+    let arg_poly = normalize(&exp_arg)?.to_univariate(var)?;
+    if poly::rat_degree(&arg_poly)? != 2 || !arg_poly[1].is_zero() || arg_poly[2] >= Rational::zero()
+    {
+        return None; // need `−a x² + c`, `a > 0`
+    }
+    let a = arg_poly[2].checked_neg()?;
+    let c0 = arg_poly.first().copied().unwrap_or_else(Rational::zero);
+    // `sin(b x)·e^{−a x²}` is odd: over the full line the integral is exactly 0; over
+    // `[0,∞)` it is a Dawson function, outside the elementary fragment → decline.
+    if head == UnaryFunc::Sin {
+        if half {
+            return None;
+        }
+        return Some(DefiniteIntegral {
+            value: CasExpr::zero(),
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+        });
+    }
+    // Base I₀ = √(π/a), erf-asymptote certified via the improper integrator itself.
+    let base_integrand = scaled_term(arg_poly[2], CasExpr::var(var).pow(2)).exp();
+    let base = improper_integrate(&base_integrand, var, LimitPoint::NegInfinity, LimitPoint::PosInfinity)?;
+    if !base.is_certified() {
+        return None;
+    }
+    // Damping exponent `−b²/(4a)` (rational); `e^{c0 − b²/(4a)}` stays symbolic.
+    let damping = b.checked_mul(b)?.checked_div(Rational::integer(4).checked_mul(a)?)?.checked_neg()?;
+    let scalar = CasExpr::Const(c_const) * CasExpr::Const(c0.checked_add(damping)?).exp();
+    let mut value = scalar * base.value;
+    if half {
+        value = value / CasExpr::int(2);
+    }
+    let value = simplify(&simplify_radicals(&value));
+    // Numeric cross-check: the Gaussian decays past `|x| > R = 10/√a`; enough nodes
+    // to resolve the `cos(b x)` oscillation. Guards the closed form against error.
+    let a_f = evalf(&CasExpr::Const(a), &[])?;
+    let b_f = evalf(&CasExpr::Const(b), &[])?;
+    let radius = 10.0 / a_f.sqrt();
+    let (lo_f, hi_f) = if half { (0.0, radius) } else { (-radius, radius) };
+    // Enough nodes to resolve both the Gaussian and the `cos(b x)` oscillation.
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let intervals = ((hi_f - lo_f) * (b_f.abs() + 4.0) * 6.0).ceil() as usize;
+    let approx = numeric_integrate(expr, var, lo_f, hi_f, intervals.max(4000))?;
+    let exact = evalf(&value, &[])?;
+    if (approx - exact).abs() > 0.01 * (1.0 + exact.abs()) {
+        return None;
+    }
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: base.certificate,
+    })
+}
+
 /// Find a single `cos(a·var)` or `sin(a·var)` factor anywhere in `expr` (a linear
 /// argument, `a` a nonzero rational), returning the head and `a` — used to peel the
 /// oscillatory factor of a Fourier integral.
@@ -10316,6 +10418,9 @@ pub fn improper_integrate(
 ) -> Option<DefiniteIntegral> {
     if let Some(moment) = improper_gaussian_moment(expr, var, lower, upper) {
         return Some(moment);
+    }
+    if let Some(fourier) = improper_gaussian_fourier(expr, var, lower, upper) {
+        return Some(fourier);
     }
     if let Some(gamma) = improper_gamma_integral(expr, var, lower, upper) {
         return Some(gamma);
@@ -14944,6 +15049,26 @@ mod tests {
             equal(&gauss(x() * x().sin() / (x().pow(2) + CasExpr::int(1)), zero(), LimitPoint::PosInfinity), &(v("pi") / (CasExpr::int(2) * e()))),
             ZeroTest::Certified { equal: true, .. }
         ));
+        // Gaussian–Fourier transform ∫_{−∞}^∞ e^{−a x²}cos(b x) = √(π/a)·e^{−b²/(4a)}.
+        // ∫_{−∞}^∞ e^{−x²}cos x = √π·e^{−1/4}; ∫₀^∞ = ½ of it (even integrand).
+        let gauss_cos = |a: i128, b: i128| (CasExpr::int(-a) * x().pow(2)).exp() * (CasExpr::int(b) * x()).cos();
+        assert!(matches!(
+            equal(&gauss(gauss_cos(1, 1), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi").sqrt() * CasExpr::rat(-1, 4).exp())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        assert!(matches!(
+            equal(&gauss(gauss_cos(1, 1), zero(), LimitPoint::PosInfinity), &(v("pi").sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // Perfect-square a=4, b=2: √(π/4)·e^{−4/16} = (√π/2)·e^{−1/4}.
+        assert!(matches!(
+            equal(&gauss(gauss_cos(4, 2), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &(v("pi").sqrt() / CasExpr::int(2) * CasExpr::rat(-1, 4).exp())),
+            ZeroTest::Certified { equal: true, .. }
+        ));
+        // sin·Gaussian is odd → full-line integral is exactly 0.
+        assert_equal(&gauss((CasExpr::int(-1) * x().pow(2)).exp() * x().sin(), LimitPoint::NegInfinity, LimitPoint::PosInfinity), &CasExpr::zero());
+        // Half-line sin·Gaussian is a Dawson function — outside the fragment, declines.
+        assert!(improper_integrate(&((CasExpr::int(-1) * x().pow(2)).exp() * x().sin()), "x", zero(), LimitPoint::PosInfinity).is_none());
         // General irreducible quadratic (p ≠ 0): ∫ cos x/(x²+2x+2) = π·cos(1)/e
         // (pole at −1+i; damped oscillation).
         assert!(matches!(
