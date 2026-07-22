@@ -383,6 +383,37 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — active solver work now closes the existing MBQI SAT evidence
+  boundary instead of waiting on more measurement infrastructure.** Proposed
+  ADR-0357 is implemented: a one-binder almost-uninterpreted `Int`/`Real`
+  candidate carries a source-bound finite-profile UF-model certificate only
+  after a separate small checker re-matches the untouched assertion, validates
+  exact function signatures and binder argument positions, derives every table
+  representative plus one all-default point, and evaluates all profiles under
+  a 4,096 cap. Canonical `check_model`, `Evidence::Sat::check`, and
+  `produce_evidence` now accept the genuine result; stale/extra certificates,
+  wrong binders/signatures, missing functions, table violations, nested or
+  interpreted occurrences, and cap overflow fail closed. The unified front
+  door downgrades preprocessed candidates that cannot replay against the
+  caller's original assertions. Completed gates so far: 894 solver unit tests,
+  12 focused model-finder/certificate tests, 15 instantiation tests, capability
+  generation, and the 256-case direct-Z3 smoke differential with zero
+  disagreement. Next: finish warning-denied/full repository gates, accept the
+  ADR, publish the branch, then take the bounded multi-binder finite-profile
+  increment.
+
+- **2026-07-22 — ADR-0356 S4 official selection identity is complete; S5 is
+  deliberately not blocking solver functionality.** The accepted root
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/accepted-322adaa78396bf42d4660d12582e6db1cf2166a765bb912fdfb179975a9c9698`
+  reconstructs all 450,472 terminal decisions and binds 45,905 selected files
+  / 15,148,369,947 bytes. All 18 invariants pass, all 18 mutations reject, and
+  a second fresh process physically rehashed every selected file before
+  returning `SMTCOMP_FINAL_SELECTION_VERIFY_OK`. The exact live-used
+  implementation commit `5f8864bc` is preserved remotely as
+  `agent/smtcomp/s4-audit-5f8864bc`. ADR-0356 is accepted. S5 remains a tiny
+  E1b admission fixture required before any credited run, but is deferred while
+  checked quantified solver work proceeds.
+
 - **2026-07-22 — bounded bignum base checking carries direct moments through
   order 255 and raw moments through 35.** `certifies_wz_sum` retains its
   checked-`i128` finite-base route first, then only on `Unknown` evaluates the
@@ -7504,6 +7535,26 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Implemented checked finite-profile quantified-UF SAT models
+  under ADR-0357.** The old MBQI model finder could return SAT while canonical
+  `check_model` rejected the same infinite-domain source. `Model` now carries a
+  lazily stored exact-source certificate; a separate checker reconstructs the
+  one-binder almost-uninterpreted finite proof from exact UF argument positions,
+  model tables/defaults, and a bounded complete representative set. Public
+  model and evidence replay now succeed, while malformed/tampered/resource-
+  limited cases decline. Focused solver, instantiation, capability, and
+  256-case direct-Z3 differential gates pass with zero disagreement; branch-
+  wide gates remain before ADR acceptance and publication.
+
+- **2026-07-22 — Completed and freshly verified ADR-0356 S4.** The accepted
+  content-addressed selection contains 450,472 decisions and 45,905 selected
+  file identities. The independent full join and second physical selected-file
+  hash pass succeeded; 18/18 invariants pass and 18/18 registered mutations
+  reject. The compact result is
+  [recorded here](docs/plan/smtcomp-official-selection-final-s4-2026-07-22.md),
+  and the live-used pre-rebase implementation commit remains reachable through
+  remote archival branch `agent/smtcomp/s4-audit-5f8864bc`.
 
 - **2026-07-22 — Preregistered the live-blocked ADR-0356 S4 auditor.** The new
   independent standard-library path validates exact prior-stage artifact sets,

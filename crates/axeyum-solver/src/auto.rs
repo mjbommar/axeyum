@@ -119,6 +119,7 @@ pub fn solve(
     if let Some(result) = checked_quantified_fast_path(arena, assertions, config)? {
         return Ok(result);
     }
+    let original_assertions = assertions.to_vec();
 
     // Skolemize top-level existential assertions: `∃x. body` is equisatisfiable
     // with `body[x := fresh]` (the solver picks the witness), so this is exact and
@@ -301,9 +302,26 @@ pub fn solve(
         // implied) or `unknown`; on `unknown` the model-based instantiation loop
         // (MBQI, which itself defers to the trigger-based family) takes over.
         Ok(CheckResult::Unknown(_)) | Err(SolverError::Unsupported(_)) => {
-            match prove_quantified_unsat_via_egraph(arena, assertions, config)? {
-                CheckResult::Unsat => Ok(CheckResult::Unsat),
-                _ => prove_unsat_by_mbqi(arena, assertions, config),
+            if matches!(
+                prove_quantified_unsat_via_egraph(arena, assertions, config)?,
+                CheckResult::Unsat
+            ) {
+                return Ok(CheckResult::Unsat);
+            }
+            let result = prove_unsat_by_mbqi(arena, assertions, config)?;
+            match result {
+                CheckResult::Sat(model) => {
+                    if crate::check_model(arena, &original_assertions, &model)? {
+                        Ok(CheckResult::Sat(model))
+                    } else {
+                        Ok(CheckResult::Unknown(UnknownReason {
+                            kind: UnknownKind::Incomplete,
+                            detail: "MBQI candidate lacks a checked model for the original assertion sequence"
+                                .to_owned(),
+                        }))
+                    }
+                }
+                other => Ok(other),
             }
         }
         other => other,
@@ -4994,6 +5012,7 @@ pub fn prove_unsat_by_mbqi(
     // query defers to the trigger-based fallback (which instantiates uniformly).
     let mut ground: Vec<TermId> = Vec::new();
     let mut universals: Vec<(axeyum_ir::SymbolId, TermId)> = Vec::new();
+    let mut universal_assertions: Vec<TermId> = Vec::new();
     for &a in assertions {
         if let TermNode::App {
             op: Op::Forall(sym),
@@ -5004,6 +5023,7 @@ pub fn prove_unsat_by_mbqi(
                 return prove_unsat_by_ematching(arena, assertions, config);
             }
             universals.push((*sym, args[0]));
+            universal_assertions.push(a);
         } else if has_quantifier(arena, &[a]) {
             return prove_unsat_by_ematching(arena, assertions, config);
         } else {
@@ -5033,7 +5053,7 @@ pub fn prove_unsat_by_mbqi(
         query.extend(instances.iter().copied());
         // The query is now quantifier-free (ground + instances).
         let result = check_auto(arena, &query, config)?;
-        let CheckResult::Sat(model) = result else {
+        let CheckResult::Sat(mut model) = result else {
             // `unsat` (sound — instances are implied) or `unknown` transfers.
             return Ok(result);
         };
@@ -5047,8 +5067,15 @@ pub fn prove_unsat_by_mbqi(
         // turns this loop's `unknown` into `sat`; a decline (`false`) leaves the
         // refutation logic below byte-identical, so the `unsat`/`unknown`
         // directions are unchanged.
-        if crate::mbqi_model_finder::all_universals_genuine(arena, &universals, &model) {
-            return Ok(CheckResult::Sat(model));
+        if let Some(certificates) =
+            crate::mbqi_model_finder::certify_all_universals(arena, &universal_assertions, &model)
+        {
+            for certificate in certificates {
+                model.set_quantified_uf_model_sat_certificate(certificate);
+            }
+            if crate::check_model(arena, assertions, &model)? {
+                return Ok(CheckResult::Sat(model));
+            }
         }
         let assignment = model.to_assignment();
         // Candidate instantiation values: the distinct values the model assigns,

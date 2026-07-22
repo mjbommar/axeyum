@@ -228,6 +228,13 @@ Out of scope:
     proves an exact binder-to-constant equality antecedent false. It recovers
     `issue5365-nqe` without inspecting the implication consequent or granting
     general free-BV model/QE support.
+  - Answer extension (2026-07-22):
+    [ADR-0357](../09-decisions/adr-0357-preregister-checked-finite-profile-quantified-uf-models.md)
+    applies the same public contract to the existing almost-uninterpreted MBQI
+    SAT slice. `Model` carries one exact-source marker per accepted universal;
+    `check_model` independently reconstructs every finite UF-table profile plus
+    one all-default representative. Search-side sampling no longer receives
+    public SAT credit, and unsupported preprocessing combinations decline.
     [ADR-0123](../09-decisions/adr-0123-checked-boolean-discharge-of-quantified-bv-closures.md)
     extends ADR-0107's syntax admission to Bool/Int/BV while keeping every
     non-reflexive BV predicate opaque. A carried complete free-Boolean model may

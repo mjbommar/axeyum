@@ -17,9 +17,9 @@ use crate::model::Model;
 pub enum CheckResult {
     /// The assertions are satisfiable. Ground symbols map to values (backend
     /// model completion fills unconstrained symbols); restricted
-    /// infinite-domain quantified results additionally carry checked Skolem
-    /// certificates. Use `check_model` for canonical replay when the `full`
-    /// feature is enabled.
+    /// infinite-domain quantified results additionally carry checked Skolem or
+    /// finite-profile UF-model certificates. Use `check_model` for canonical
+    /// replay when the `full` feature is enabled.
     Sat(Model),
     /// The assertions are unsatisfiable.
     Unsat,

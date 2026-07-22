@@ -8,17 +8,19 @@
 //! actually satisfy `∀x. body`) would be the worst possible bug, so this harness
 //! exists to catch it: it deterministically generates thousands of small
 //! quantified-UFLIA instances **inside the fragment** (`x` appears only under the
-//! unary UFs `f`/`g`), decides each with both the pure-Rust `solve` front door
-//! and a direct Z3 query over the *same* universal + ground facts, and gates on
-//! the joint verdict:
+//! unary UFs `f`/`g`), decides each with both the pure-Rust public MBQI loop and
+//! a direct Z3 query over the *same* universal + ground facts, and gates on the
+//! joint verdict. The unified `solve` front door is covered separately by the
+//! focused integration tests; calling MBQI directly keeps this differential
+//! specific to the capability under test:
 //!
 //! - axeyum `Sat` ∧ Z3 `Unsat` → **PANIC** (wrong sat — the target bug).
 //! - axeyum `Unsat` ∧ Z3 `Sat` → **PANIC** (wrong unsat).
-//! - axeyum `Sat` → the returned model is **independently replayed**: every
-//!   ground fact must evaluate `true`, and the universal body is re-evaluated at
-//!   a wide sweep of concrete `x`-values (this harness's own reasoning, not the
-//!   finder's); a body that is `false` at any swept `x`, or a false ground fact,
-//!   is a wrong sat and panics regardless of Z3.
+//! - axeyum `Sat` → canonical `check_model` must accept the exact quantified
+//!   source and certificate; the returned model is then additionally sampled:
+//!   every ground fact must evaluate `true`, and the universal body is
+//!   re-evaluated at a wide sweep of concrete `x`-values. Any failure panics
+//!   regardless of Z3.
 //! - axeyum `Unknown` is ALLOWED (incomplete is sound) — counted, never failed.
 //! - Z3 `Unknown`/timeout → the instance is skipped (cannot adjudicate).
 //!
@@ -37,7 +39,7 @@
 use std::time::Duration;
 
 use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, Value, eval};
-use axeyum_solver::{CheckResult, Model, SolverConfig, solve};
+use axeyum_solver::{CheckResult, Model, SolverConfig, check_model, prove_unsat_by_mbqi};
 use z3::ast::{Ast, Bool, Int};
 use z3::{FuncDecl, Params, SatResult, Solver, Sort as Z3Sort};
 
@@ -207,6 +209,31 @@ fn gen_uf_arg(rng: &mut Lcg, depth: usize, num_ground: usize) -> T {
     }
 }
 
+/// Generate a genuinely ground term. Unlike [`gen_term`], this never delegates
+/// to [`gen_uf_arg`], so `X` cannot appear even below an uninterpreted function.
+fn gen_ground_term(rng: &mut Lcg, depth: usize, num_ground: usize) -> T {
+    if depth == 0 {
+        return if rng.below(2) == 0 {
+            T::C(rng.in_range(-4, 4))
+        } else {
+            T::Y(rng.below(num_ground as u64))
+        };
+    }
+    match rng.below(5) {
+        0 => T::Y(rng.below(num_ground as u64)),
+        1 => T::C(rng.in_range(-4, 4)),
+        2 => T::F(Box::new(gen_ground_term(rng, depth - 1, num_ground))),
+        3 => T::G(Box::new(gen_ground_term(rng, depth - 1, num_ground))),
+        _ => T::Lin(
+            rng.in_range(-3, 3),
+            Box::new(gen_ground_term(rng, depth - 1, num_ground)),
+            rng.in_range(-3, 3),
+            Box::new(gen_ground_term(rng, depth - 1, num_ground)),
+            rng.in_range(-3, 3),
+        ),
+    }
+}
+
 impl T {
     fn uses_x(&self) -> bool {
         match self {
@@ -321,8 +348,8 @@ impl Instance {
         for _ in 0..n_ground {
             // Ground facts must be x-free (they live outside the quantifier).
             ground_atoms.push(Atom {
-                lhs: gen_term(rng, MAX_DEPTH, num_ground),
-                rhs: gen_term(rng, MAX_DEPTH, num_ground),
+                lhs: gen_ground_term(rng, MAX_DEPTH, num_ground),
+                rhs: gen_ground_term(rng, MAX_DEPTH, num_ground),
                 cmp: Cmp::pick(rng),
             });
         }
@@ -539,7 +566,7 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         // in that backend's own replay — surfaces here as an `Err` rather than
         // `Unknown`; it is not in the MBQI-model-finding path under test, so the
         // sweep records it and moves on rather than derailing the gate.)
-        let Ok(ax) = solve(&mut arena, &assertions, &cfg) else {
+        let Ok(ax) = prove_unsat_by_mbqi(&mut arena, &assertions, &cfg) else {
             t.ax_error_skipped += 1;
             continue;
         };
@@ -553,6 +580,12 @@ fn run_differential_fuzz(instances: u64, minimum_jointly_decided: u64) {
         // Independent replay of a `sat` model: the model is keyed by this arena's
         // symbol/function ids, so `body`/`ground` replay directly against it.
         if let CheckResult::Sat(model) = &ax {
+            assert!(
+                check_model(&arena, &assertions, model)
+                    .expect("canonical quantified model replay must not error"),
+                "WRONG SAT (seed {seed}): canonical check_model rejected the exact source\ninstance:\n{}",
+                inst.dump()
+            );
             if let Some(why) = replay_violation(&arena, model, x_sym, body, &ground) {
                 panic!(
                     "WRONG SAT (seed {seed}): axeyum returned Sat but {why} — a soundness \

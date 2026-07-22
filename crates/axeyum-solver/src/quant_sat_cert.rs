@@ -463,34 +463,9 @@ pub fn check_model_with_assignment(
     assignment: &Assignment,
 ) -> Result<bool, SolverError> {
     let assertion_set: BTreeSet<_> = assertions.iter().copied().collect();
-    let certificate_count = model.quantified_sat_certificates().count()
-        + model.quantified_bool_model_sat_certificates().count()
-        + model.quantified_guard_sat_certificates().count()
-        + model.quantified_bv_model_sat_certificates().count();
-    if model
-        .quantified_sat_certificates()
-        .any(|cert| !assertion_set.contains(&cert.assertion))
-    {
+    let Some(certificate_count) = source_bound_certificate_count(model, &assertion_set) else {
         return Ok(false);
-    }
-    if model
-        .quantified_bool_model_sat_certificates()
-        .any(|cert| !assertion_set.contains(&cert.assertion))
-    {
-        return Ok(false);
-    }
-    if model
-        .quantified_guard_sat_certificates()
-        .any(|cert| !assertion_set.contains(&cert.assertion))
-    {
-        return Ok(false);
-    }
-    if model
-        .quantified_bv_model_sat_certificates()
-        .any(|cert| !assertion_set.contains(&cert.assertion))
-    {
-        return Ok(false);
-    }
+    };
 
     let mut checked_certificates = BTreeSet::new();
     for &assertion in assertions {
@@ -532,6 +507,13 @@ pub fn check_model_with_assignment(
             checked_certificates.insert(assertion);
             continue;
         }
+        if let Some(cert) = model.quantified_uf_model_sat_certificate(assertion) {
+            if !crate::check_quantified_uf_model_sat(arena, assertion, model, cert) {
+                return Ok(false);
+            }
+            checked_certificates.insert(assertion);
+            continue;
+        }
         match eval(arena, assertion, assignment) {
             Ok(Value::Bool(true)) => {}
             Ok(Value::Bool(false)) => return Ok(false),
@@ -553,6 +535,49 @@ pub fn check_model_with_assignment(
         }
     }
     Ok(checked_certificates.len() == certificate_count)
+}
+
+/// Counts certificates only when every one names an assertion in this query.
+fn source_bound_certificate_count(
+    model: &Model,
+    assertion_set: &BTreeSet<TermId>,
+) -> Option<usize> {
+    let certificate_count = model.quantified_sat_certificates().count()
+        + model.quantified_bool_model_sat_certificates().count()
+        + model.quantified_guard_sat_certificates().count()
+        + model.quantified_bv_model_sat_certificates().count()
+        + model.quantified_uf_model_sat_certificates().count();
+    if model
+        .quantified_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return None;
+    }
+    if model
+        .quantified_bool_model_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return None;
+    }
+    if model
+        .quantified_guard_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return None;
+    }
+    if model
+        .quantified_bv_model_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return None;
+    }
+    if model
+        .quantified_uf_model_sat_certificates()
+        .any(|cert| !assertion_set.contains(&cert.assertion))
+    {
+        return None;
+    }
+    Some(certificate_count)
 }
 
 fn substitute_term(

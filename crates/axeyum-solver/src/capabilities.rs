@@ -873,6 +873,24 @@ pub const CAPABILITIES: &[Capability] = &[
     },
     Capability {
         area: "quantifiers",
+        feature: "checked finite-profile SAT models for one almost-uninterpreted Int/Real \
+                  universal",
+        assurance: Assurance::Checked,
+        evidence: "MBQI search remains untrusted. A source-bound certificate names the exact \
+                   original forall assertion and binder; the canonical model checker independently \
+                   re-matches a quantifier-free body in which every binder occurrence is a direct \
+                   UF argument, validates every relevant finite-table function signature, derives \
+                   special values from the exact occupied argument positions, adds one fresh \
+                   all-default representative, and evaluator-replays every profile under a 4,096 \
+                   cap. Missing/tampered/stale/extra certificates, functions, signatures, table \
+                   violations, nested quantifiers, interpreted binder occurrences, and cap overflow \
+                   fail closed. The unified front door downgrades any preprocessing combination \
+                   that cannot replay against the caller's original assertion sequence. Multiple \
+                   binders, model repair, serialization, and Lean reconstruction remain open",
+        reference: "ADR-0357",
+    },
+    Capability {
+        area: "quantifiers",
         feature: "justified lazy equality-clause scheduling over e-matched instances",
         assurance: Assurance::SoundIncomplete,
         evidence: "disjunctions of equality/disequality literals are evaluated against direct \
