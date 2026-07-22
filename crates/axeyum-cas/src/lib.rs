@@ -5529,6 +5529,11 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
             trig_special_value(*func, &inner)
                 .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
         }
+        CasExpr::Unary(func @ (UnaryFunc::Atan | UnaryFunc::Asin | UnaryFunc::Acos), arg) => {
+            let inner = evaluate_trig(arg);
+            inverse_trig_special_value(*func, &inner)
+                .unwrap_or_else(|| CasExpr::Unary(*func, Box::new(inner)))
+        }
         CasExpr::Unary(func, arg) => CasExpr::Unary(*func, Box::new(evaluate_trig(arg))),
         CasExpr::Add(terms) => CasExpr::Add(terms.iter().map(evaluate_trig).collect()),
         CasExpr::Mul(factors) => CasExpr::Mul(factors.iter().map(evaluate_trig).collect()),
@@ -5540,6 +5545,52 @@ pub fn evaluate_trig(expr: &CasExpr) -> CasExpr {
         CasExpr::Pow(base, exponent) => CasExpr::Pow(Box::new(evaluate_trig(base)), *exponent),
         CasExpr::Const(_) | CasExpr::Var(_) => expr.clone(),
     }
+}
+
+/// Exact values of `atan`/`asin`/`acos` at tabulated **rational** arguments, as a
+/// multiple of `π`: `atan(1)=π/4`, `asin(½)=π/6`, `asin(1)=π/2`, `acos(0)=π/2`,
+/// `acos(−1)=π`, … (and `f(0)` where finite). Surd arguments (`√3/2`, …) are not
+/// tabulated here. `None` for a non-tabulated argument.
+fn inverse_trig_special_value(func: UnaryFunc, arg: &CasExpr) -> Option<CasExpr> {
+    let value = constant_term(arg).filter(|_| matches!(arg, CasExpr::Const(_)))?;
+    let pi = CasExpr::var("pi");
+    // Returns `k·π` (folded: 0, π, or a rational multiple).
+    let pi_multiple = |k: Rational| -> CasExpr {
+        if k.is_zero() {
+            CasExpr::zero()
+        } else if k == Rational::integer(1) {
+            pi.clone()
+        } else {
+            scaled_term(k, pi.clone())
+        }
+    };
+    let table: &[(Rational, Rational)] = match func {
+        // atan: value → k with atan(value) = k·π.
+        UnaryFunc::Atan => &[
+            (Rational::integer(0), Rational::integer(0)),
+            (Rational::integer(1), Rational::new(1, 4)),
+            (Rational::integer(-1), Rational::new(-1, 4)),
+        ],
+        UnaryFunc::Asin => &[
+            (Rational::integer(0), Rational::integer(0)),
+            (Rational::new(1, 2), Rational::new(1, 6)),
+            (Rational::new(-1, 2), Rational::new(-1, 6)),
+            (Rational::integer(1), Rational::new(1, 2)),
+            (Rational::integer(-1), Rational::new(-1, 2)),
+        ],
+        UnaryFunc::Acos => &[
+            (Rational::integer(1), Rational::integer(0)),
+            (Rational::integer(0), Rational::new(1, 2)),
+            (Rational::new(1, 2), Rational::new(1, 3)),
+            (Rational::new(-1, 2), Rational::new(2, 3)),
+            (Rational::integer(-1), Rational::integer(1)),
+        ],
+        _ => return None,
+    };
+    table
+        .iter()
+        .find(|(arg_value, _)| *arg_value == value)
+        .map(|(_, k)| pi_multiple(*k))
 }
 
 /// The **Bernoulli polynomial** `Bₙ(x) = Σ_{k=0}^n C(n,k)·B_k·x^{n−k}` (with `B_k`
@@ -11538,6 +11589,29 @@ mod tests {
         assert!(matches!(
             sin(pi() / CasExpr::int(5)),
             CasExpr::Unary(UnaryFunc::Sin, _)
+        ));
+    }
+
+    #[test]
+    fn exact_inverse_trig_values() {
+        let pi = || v("pi");
+        let inv = |head, arg: CasExpr| evaluate_trig(&CasExpr::Unary(head, Box::new(arg)));
+        // atan: 0→0, 1→π/4, −1→−π/4.
+        assert_equal(&inv(UnaryFunc::Atan, CasExpr::int(0)), &CasExpr::zero());
+        assert_equal(&inv(UnaryFunc::Atan, CasExpr::int(1)), &(CasExpr::rat(1, 4) * pi()));
+        assert_equal(&inv(UnaryFunc::Atan, CasExpr::int(-1)), &(CasExpr::rat(-1, 4) * pi()));
+        // asin: ½→π/6, 1→π/2, 0→0.
+        assert_equal(&inv(UnaryFunc::Asin, CasExpr::rat(1, 2)), &(CasExpr::rat(1, 6) * pi()));
+        assert_equal(&inv(UnaryFunc::Asin, CasExpr::int(1)), &(CasExpr::rat(1, 2) * pi()));
+        // acos: 0→π/2, 1→0, ½→π/3, −1→π.
+        assert_equal(&inv(UnaryFunc::Acos, CasExpr::int(0)), &(CasExpr::rat(1, 2) * pi()));
+        assert_equal(&inv(UnaryFunc::Acos, CasExpr::int(1)), &CasExpr::zero());
+        assert_equal(&inv(UnaryFunc::Acos, CasExpr::rat(1, 2)), &(CasExpr::rat(1, 3) * pi()));
+        assert_equal(&inv(UnaryFunc::Acos, CasExpr::int(-1)), &pi());
+        // A non-tabulated argument is left unevaluated.
+        assert!(matches!(
+            inv(UnaryFunc::Asin, CasExpr::rat(3, 7)),
+            CasExpr::Unary(UnaryFunc::Asin, _)
         ));
     }
 
