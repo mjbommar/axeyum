@@ -61,6 +61,7 @@ fn op_name(op: Op) -> String {
         Op::Bv2Nat => "bv2nat".into(),
         Op::Int2Bv { width } => format!("(_ int2bv {width})"),
         Op::FpFromBits { exp, sig } => format!("(_ to_fp {exp} {sig})"),
+        Op::RoundingModeFromBits => "rounding_mode.from_bits".into(),
         // The function name needs the arena; handled in `render` directly.
         Op::Apply(func) => format!("!fn{}", func.index()),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

@@ -1428,12 +1428,6 @@ fn qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
                 "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_zero.smt2"
             ),
         ),
-        (
-            "qf_fp_misc",
-            include_str!(
-                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
-            ),
-        ),
     ] {
         let mut script = parse_script(input).expect("QF_FP row parses");
         let assertions = script.assertions.clone();
@@ -1466,49 +1460,36 @@ fn qf_fp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
 }
 
 #[test]
-fn qf_bvfp_bitwuzla_rows_use_checked_bv_defined_enum_evidence() {
-    for (tag, input, max_cases) in [
+fn fp_arithmetic_rows_remain_uncertified_at_the_text_boundary() {
+    for (tag, input) in [
+        (
+            "qf_fp_misc",
+            include_str!(
+                "../../../corpus/public-curated/non-incremental/QF_FP/bitwuzla-regress-clean/solver__fp__fp_misc.smt2"
+            ),
+        ),
         (
             "qf_bvfp_float_no_simp3",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__Float-no-simp3-main.smt2"
             ),
-            2,
         ),
         (
             "qf_bvfp_fp_fromsbv",
             include_str!(
                 "../../../corpus/public-curated/non-incremental/QF_BVFP/bitwuzla-regress-clean/solver__fp__fp_fromsbv.smt2"
             ),
-            10,
         ),
     ] {
-        let mut script = parse_script(input).expect("QF_BVFP row parses");
-        let assertions = script.assertions.clone();
-        let report = produce_evidence(&mut script.arena, &assertions, &config())
-            .unwrap_or_else(|error| panic!("{tag}: evidence production failed: {error}"));
-        let Evidence::UnsatBvDefinedEnum(cert) = &report.evidence else {
-            panic!(
-                "{tag}: expected definition-aware scalar enum evidence, got {:?}",
-                report.evidence
-            );
-        };
+        let script =
+            parse_script(input).unwrap_or_else(|error| panic!("{tag}: parse failed: {error}"));
         assert!(
-            (1..=max_cases).contains(&cert.cases),
-            "{tag}: QF_BVFP certificate should stay in the small replay slice, got {} cases",
-            cert.cases
+            script.fp_usage.uses_fp,
+            "{tag}: parser must preserve that an Fpa2Bv reduction occurred"
         );
         assert!(
-            report.evidence.is_certified(),
-            "{tag}: evidence should be certified"
-        );
-        assert!(
-            report.evidence.check(&script.arena, &assertions).unwrap(),
-            "{tag}: evidence should re-check"
-        );
-        assert!(
-            report.trusted_steps.is_empty(),
-            "{tag}: direct structural certificate should carry no trust holes"
+            !script.fp_usage.fpa2bv_simple_op_certified(),
+            "{tag}: whole-reduction certification must stay fail-closed"
         );
     }
 }

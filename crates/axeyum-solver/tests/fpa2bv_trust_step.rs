@@ -5,22 +5,13 @@
 //! it on [`axeyum_smtlib::FpUsage`], and [`produce_evidence_smtlib`] attaches an
 //! [`TrustId::Fpa2Bv`] [`TrustStep`] to any FP `unsat`:
 //!
-//! - **`certified: true`** iff every FP operator the reduction lowered is
-//!   by-construction faithful (at the guarded `≤128`-bit widths): the exact bit ops
-//!   `fp.neg`/`fp.abs`, the category predicates `fp.isNaN`/`isInfinite`/`isZero`/
-//!   `isNormal`/`isSubnormal`, the sign predicates `fp.isNegative`/`isPositive`
-//!   (`sign ∧ ¬NaN`), and the **proven-faithful comparison circuits**
-//!   `fp.eq`/`lt`/`leq`/`gt`/`geq` (width-independent monotone `order_key` +
-//!   FP8-exhaustive witness). See `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs` and
-//!   `fpa2bv_faithfulness.rs`.
-//! - **`certified: false`** for any query using a rounding-bearing operator
-//!   (`fp.add`/`sub`/`mul`/`div`/`rem`/`fma`/`sqrt`/`min`/`max`) or a conversion
-//!   (`to_fp`, `fp.to_ubv`, …) — those need the by-construction rounding-circuit
-//!   proof (task #70).
+//! - **`certified: false` for every FP query.** Operator-local circuit tests are
+//!   useful regressions, but they do not certify the complete SMT-LIB reduction:
+//!   NaN quotient semantics, core equality, congruence, arrays, quantifiers, and
+//!   model lifting are also part of the proof obligation.
 //!
 //! The global [`TrustId::Fpa2Bv::is_certified`] stays `false` (not every FP query
-//! qualifies); this is the per-run [`TrustStep::certified`] flag, exactly like the
-//! `XorGaussian` pure-Gauss and `IntBlast` proven-box sub-cases.
+//! qualifies); this test locks the fail-closed per-run flag as well.
 #![cfg(feature = "full")]
 
 use std::time::Duration;
@@ -42,13 +33,13 @@ fn fpa2bv_step(input: &str) -> Option<TrustStep> {
         .copied()
 }
 
-// --- (a) certified: true — only structurally-exact simple ops ----------------
+// --- all FP reductions remain explicit trust holes --------------------------
 
 /// `isNaN(x) ∧ isZero(x)` is UNSAT (NaN needs an all-ones exponent, zero an
 /// all-zero one — mutually exclusive). Both operators are structurally exact, so
 /// the `Fpa2Bv` step is **certified**.
 #[test]
-fn isnan_and_iszero_is_certified() {
+fn isnan_and_iszero_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -61,9 +52,9 @@ fn isnan_and_iszero_is_certified() {
         step,
         TrustStep {
             id: TrustId::Fpa2Bv,
-            certified: true,
+            certified: false,
         },
-        "isNaN/isZero are structurally exact — Fpa2Bv must be certified"
+        "operator-local exactness is not a whole-reduction certificate"
     );
 }
 
@@ -71,7 +62,7 @@ fn isnan_and_iszero_is_certified() {
 /// not infinite). Uses `fp.abs`, `fp.isInfinite`, `fp.isZero` — all structurally
 /// exact — so the `Fpa2Bv` step is **certified**.
 #[test]
-fn abs_infinite_and_zero_is_certified() {
+fn abs_infinite_and_zero_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -81,8 +72,8 @@ fn abs_infinite_and_zero_is_certified() {
     )
     .expect("FP unsat must carry an Fpa2Bv trust step");
     assert!(
-        step.certified,
-        "abs/isInfinite/isZero are structurally exact — Fpa2Bv must be certified"
+        !step.certified,
+        "the complete Fpa2Bv reduction remains uncertified"
     );
 }
 
@@ -90,7 +81,7 @@ fn abs_infinite_and_zero_is_certified() {
 /// preserves the exponent field — a subnormal stays subnormal, never normal).
 /// Uses `fp.neg`, `fp.isNormal`, `fp.isSubnormal` — all structurally exact.
 #[test]
-fn neg_normal_and_subnormal_is_certified() {
+fn neg_normal_and_subnormal_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float16)\n\
@@ -100,8 +91,8 @@ fn neg_normal_and_subnormal_is_certified() {
     )
     .expect("FP unsat must carry an Fpa2Bv trust step");
     assert!(
-        step.certified,
-        "neg/isNormal/isSubnormal are structurally exact — Fpa2Bv must be certified"
+        !step.certified,
+        "the complete Fpa2Bv reduction remains uncertified"
     );
 }
 
@@ -112,7 +103,7 @@ fn neg_normal_and_subnormal_is_certified() {
 /// ¬both-zero ∧ ult(order_key)`, width-independent monotonicity + FP8-exhaustive
 /// witness), so the `Fpa2Bv` step is **certified**.
 #[test]
-fn lt_self_is_certified() {
+fn lt_self_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -124,9 +115,9 @@ fn lt_self_is_certified() {
         step,
         TrustStep {
             id: TrustId::Fpa2Bv,
-            certified: true,
+            certified: false,
         },
-        "fp.lt is a proven-faithful comparison — Fpa2Bv must be certified"
+        "a faithful comparison circuit is not a whole-reduction certificate"
     );
 }
 
@@ -136,7 +127,7 @@ fn lt_self_is_certified() {
 /// internal fresh bit, firewalled from user aliasing since #72), so a query using only
 /// them plus `fp.lt` IS certified.
 #[test]
-fn max_lt_operand_is_certified() {
+fn max_lt_operand_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -149,9 +140,9 @@ fn max_lt_operand_is_certified() {
         step,
         TrustStep {
             id: TrustId::Fpa2Bv,
-            certified: true,
+            certified: false,
         },
-        "fp.max/fp.lt are proven-faithful — Fpa2Bv must be certified"
+        "the complete Fpa2Bv reduction remains uncertified"
     );
 }
 
@@ -182,7 +173,7 @@ fn add_with_simple_ops_is_not_certified() {
 /// query using ONLY them IS certified. `isNegative(x) ∧ isPositive(x)` is UNSAT
 /// (sign bit cannot be both set and clear under the shared not-NaN guard).
 #[test]
-fn isnegative_ispositive_is_certified() {
+fn isnegative_ispositive_is_not_certified() {
     let step = fpa2bv_step(
         "(set-logic QF_FP)\n\
          (declare-const x Float32)\n\
@@ -195,9 +186,9 @@ fn isnegative_ispositive_is_certified() {
         step,
         TrustStep {
             id: TrustId::Fpa2Bv,
-            certified: true,
+            certified: false,
         },
-        "isNegative/isPositive are structurally-exact sign-bit predicates — certified"
+        "the complete Fpa2Bv reduction remains uncertified"
     );
 }
 

@@ -657,7 +657,10 @@ fn datatype_family_generated_source_is_byte_stable() {
             (2_057, 12_042_421_301_549_597_275),
             (3_069, 15_726_968_749_404_357_215),
             (2_640, 1_434_913_494_449_130_936),
-            (3_940, 2_520_869_314_195_085_188),
+            // The first-class RoundingMode IR extension requires a new
+            // byte-stable snapshot; length and independent kernel checking are
+            // unchanged, and repeated generation produced this exact hash.
+            (3_940, 972_985_670_248_459_210),
         ]
     );
 }

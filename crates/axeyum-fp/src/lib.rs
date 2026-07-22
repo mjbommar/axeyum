@@ -32,7 +32,10 @@
 //! [`IrError`] from an IR builder (which cannot occur for well-formed input).
 #![allow(clippy::missing_errors_doc)] // uniform contract documented above
 
+use core::cmp::Ordering;
+
 use axeyum_ir::{IrError, Rational, Sort, TermArena, TermId, TermNode};
+use num_bigint::{BigInt, BigUint, Sign};
 
 /// An IEEE 754 binary format: `exp_bits` exponent bits and `sig_bits`
 /// significand bits (the latter *including* the hidden bit). The bit width of a
@@ -43,6 +46,80 @@ pub struct FloatFormat {
     pub exp_bits: u32,
     /// Significand width in bits, including the hidden leading bit.
     pub sig_bits: u32,
+}
+
+#[cfg(test)]
+mod fp_p0_regressions {
+    use super::*;
+    use axeyum_ir::{Assignment, Value, eval};
+
+    fn ground_bits(arena: &TermArena, term: TermId) -> u128 {
+        match eval(arena, term, &Assignment::new()).expect("ground FP term evaluates") {
+            Value::Bv { value, .. } => value,
+            other => panic!("expected BV-backed FP value, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn f128_to_bv_uses_all_113_significand_bits() {
+        let mut arena = TermArena::new();
+        let one_plus_min_ulp = (0x3fffu128 << 112) | 1;
+        let x = arena.bv_const(128, one_plus_min_ulp).unwrap();
+        let up = to_ubv(
+            &mut arena,
+            FloatFormat::F128,
+            RoundingMode::TowardPositive,
+            x,
+            8,
+        )
+        .unwrap()
+        .expect("finite in-range conversion folds");
+        let trunc = to_ubv(
+            &mut arena,
+            FloatFormat::F128,
+            RoundingMode::TowardZero,
+            x,
+            8,
+        )
+        .unwrap()
+        .expect("finite in-range conversion folds");
+        assert_eq!(ground_bits(&arena, up), 2);
+        assert_eq!(ground_bits(&arena, trunc), 1);
+    }
+
+    #[test]
+    fn f128_remainder_is_exact_without_f64_narrowing() {
+        let mut arena = TermArena::new();
+        let three = (0x4000u128 << 112) | (1u128 << 111);
+        let two = 0x4000u128 << 112;
+        let neg_one = (1u128 << 127) | (0x3fffu128 << 112);
+        let x = arena.bv_const(128, three).unwrap();
+        let y = arena.bv_const(128, two).unwrap();
+        let result = rem(&mut arena, FloatFormat::F128, x, y)
+            .unwrap()
+            .expect("constant F128 remainder folds");
+        assert_eq!(ground_bits(&arena, result), neg_one);
+    }
+
+    #[test]
+    fn directed_overflow_saturates_inward() {
+        assert_eq!(
+            round_to_format(8, 24, f64::MAX, RoundingMode::TowardZero),
+            0x7f7f_ffff
+        );
+        assert_eq!(
+            round_to_format(8, 24, f64::MAX, RoundingMode::TowardPositive),
+            0x7f80_0000
+        );
+        assert_eq!(
+            round_to_format(8, 24, -f64::MAX, RoundingMode::TowardPositive),
+            0xff7f_ffff
+        );
+        assert_eq!(
+            round_to_format(8, 24, -f64::MAX, RoundingMode::TowardNegative),
+            0xff80_0000
+        );
+    }
 }
 
 impl FloatFormat {
@@ -718,6 +795,16 @@ pub fn pack_value(
     };
     let exp_ones = arena.bv_const(total, ((1u128 << eb) - 1) << (sb - 1))?;
     let inf_bits = arena.bv_or(sign_bit, exp_ones)?;
+    let max_finite_mag = (((1u128 << eb) - 2) << (sb - 1)) | ((1u128 << (sb - 1)) - 1);
+    let max_finite_mag = arena.bv_const(total, max_finite_mag)?;
+    let max_finite_bits = arena.bv_or(sign_bit, max_finite_mag)?;
+    let overflow_to_infinity = match mode {
+        RoundingMode::NearestEven | RoundingMode::NearestAway => arena.bool_const(true),
+        RoundingMode::TowardZero => arena.bool_const(false),
+        RoundingMode::TowardPositive => arena.not(sign)?,
+        RoundingMode::TowardNegative => sign,
+    };
+    let overflow_bits = arena.ite(overflow_to_infinity, inf_bits, max_finite_bits)?;
 
     // Subnormal: exponent field 0, trailing = low (sb-1) bits of q.
     let subnormal_bits = {
@@ -742,7 +829,7 @@ pub fn pack_value(
 
     // Mux: zero, then overflow→∞, then subnormal, else normal.
     let normal_or_sub = arena.ite(subnormal, subnormal_bits, normal_bits)?;
-    let finite = arena.ite(overflow, inf_bits, normal_or_sub)?;
+    let finite = arena.ite(overflow, overflow_bits, normal_or_sub)?;
     arena.ite(is_zero_result, sign_bit, finite)
 }
 
@@ -1326,7 +1413,26 @@ pub fn div(
     arena.ite(nan_flag, qnan, if_inf)
 }
 
-/// Symbolic `fp.add` (round-nearest-ties-to-even): the IEEE 754 addition
+/// Returns whether an exact zero sum has a negative sign when both operands are
+/// themselves zero. A common zero sign is preserved; opposite signs produce
+/// `-0` only under roundTowardNegative.
+fn zero_sum_is_negative(
+    arena: &mut TermArena,
+    left_sign: TermId,
+    right_sign: TermId,
+    mode: RoundingMode,
+) -> Result<TermId, IrError> {
+    let one = arena.bv_const(1, 1)?;
+    let left_is_negative = arena.eq(left_sign, one)?;
+    let right_is_negative = arena.eq(right_sign, one)?;
+    if mode == RoundingMode::TowardNegative {
+        arena.or(left_is_negative, right_is_negative)
+    } else {
+        arena.and(left_is_negative, right_is_negative)
+    }
+}
+
+/// Symbolic `fp.add`: the IEEE 754 addition
 /// bit-blaster via **bounded alignment with a sticky bit**. The larger-exponent
 /// operand is placed with `sb + 2` guard bits below it; the smaller is shifted
 /// right by the exponent difference, with the bits shifted past the window OR'd
@@ -1458,16 +1564,20 @@ pub fn add(
         let neg_inf = arena.bv_or(neg_zero, exp_ones)?;
         arena.ite(inf_is_neg, neg_inf, exp_ones)?
     };
-    // Both zero: −0 only if both are −0; else +0. (RNE: x + −x = +0 too.)
-    let both_neg_zero = {
-        let na_ = arena.eq(sa, one1)?;
-        let nb_ = arena.eq(sbit, one1)?;
-        arena.and(na_, nb_)?
+    // Adding zeros preserves a common sign. Opposite-sign zeros produce -0
+    // only under roundTowardNegative; every other mode produces +0.
+    let bothzero_is_neg = zero_sum_is_negative(arena, sa, sbit, mode)?;
+    let bothzero_total = arena.ite(bothzero_is_neg, neg_zero, pos_zero)?;
+    // An exact nonzero cancellation has the same directed-rounding exception:
+    // -0 under RTN, +0 under every other rounding mode.
+    let cancellation_zero = if mode == RoundingMode::TowardNegative {
+        neg_zero
+    } else {
+        pos_zero
     };
-    let bothzero_total = arena.ite(both_neg_zero, neg_zero, pos_zero)?;
 
-    // Mux: NaN, ∞, both-zero, exact-cancellation→+0, else rounded finite.
-    let r0 = arena.ite(mag_zero, pos_zero, finite)?;
+    // Mux: NaN, infinity, both-zero, exact cancellation, else rounded finite.
+    let r0 = arena.ite(mag_zero, cancellation_zero, finite)?;
     let r1 = arena.ite(both_zero, bothzero_total, r0)?;
     let r2 = arena.ite(inf_flag, inf_total, r1)?;
     arena.ite(nan_flag, qnan, r2)
@@ -1647,23 +1757,21 @@ pub fn fma(
     };
     let mag_zero = arena.eq(result_mag, zero_w)?;
 
-    // Zero-sign rule (RNE): the sum of two zeros is −0 only if *both* the product
-    // and `c` are −0; any other zero result (incl. exact cancellation) is +0.
+    // Zero-sign rule: a zero product plus a zero addend preserves a common sign.
+    // Opposite signs produce -0 only under RTN. Exact nonzero cancellation uses
+    // the same RTN exception and otherwise produces +0.
     let prod_zero = arena.or(za, zb)?; // a·b is zero iff a or b is zero
     let both_zero = arena.and(prod_zero, zc)?;
-    let prod_neg_zero = {
-        let neg = arena.eq(sp_bit, one1)?;
-        arena.and(prod_zero, neg)?
+    let bothzero_is_neg = zero_sum_is_negative(arena, sp_bit, sc, mode)?;
+    let bothzero_total = arena.ite(bothzero_is_neg, neg_zero, pos_zero)?;
+    let cancellation_zero = if mode == RoundingMode::TowardNegative {
+        neg_zero
+    } else {
+        pos_zero
     };
-    let c_neg_zero = {
-        let neg = arena.eq(sc, one1)?;
-        arena.and(zc, neg)?
-    };
-    let both_neg_zero = arena.and(prod_neg_zero, c_neg_zero)?;
-    let bothzero_total = arena.ite(both_neg_zero, neg_zero, pos_zero)?;
 
-    // Mux: NaN, ∞, both-zero, exact-cancellation → +0, else rounded finite.
-    let r0 = arena.ite(mag_zero, pos_zero, finite)?;
+    // Mux: NaN, infinity, both-zero, exact cancellation, else rounded finite.
+    let r0 = arena.ite(mag_zero, cancellation_zero, finite)?;
     let r1 = arena.ite(both_zero, bothzero_total, r0)?;
     let r2 = arena.ite(inf_flag, inf_total, r1)?;
     arena.ite(nan_flag, qnan, r2)
@@ -1740,6 +1848,145 @@ pub fn sqrt_rne(
         return Ok(None);
     };
     Ok(Some(arena.bv_const(fmt.width(), bits)?))
+}
+
+/// Exact IEEE remainder for wide-significand constants.  Values are decoded as
+/// signed dyadics and all quotient/remainder arithmetic is arbitrary-precision
+/// integer arithmetic; the result is exactly representable in the source
+/// format, so the final pack performs no rounding.
+fn ieee_remainder_big(fmt: FloatFormat, x: u128, y: u128) -> Option<u128> {
+    let (eb, sb, width) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    if width > 128 || eb >= 63 || !fmt.is_ieee() {
+        return None;
+    }
+    let exp_mask = (1u128 << eb) - 1;
+    let frac_mask = (1u128 << (sb - 1)) - 1;
+    let classify = |bits: u128| {
+        let exp = (bits >> (sb - 1)) & exp_mask;
+        let frac = bits & frac_mask;
+        (exp, frac)
+    };
+    let (xe, xf) = classify(x);
+    let (ye, yf) = classify(y);
+    let canonical_nan = (exp_mask << (sb - 1)) | (1u128 << (sb - 2));
+    if xe == exp_mask || (ye == exp_mask && yf != 0) || (ye == 0 && yf == 0) {
+        return Some(canonical_nan);
+    }
+    if ye == exp_mask || (xe == 0 && xf == 0) {
+        return Some(x);
+    }
+
+    let (xneg, xm, xexp) = decode_finite_dyadic(fmt, x)?;
+    let (yneg, ym, yexp) = decode_finite_dyadic(fmt, y)?;
+    let (numerator, denominator) = if xexp >= yexp {
+        (xm.clone() << u32::try_from(xexp - yexp).ok()?, ym.clone())
+    } else {
+        (xm.clone(), ym.clone() << u32::try_from(yexp - xexp).ok()?)
+    };
+    let mut quotient = &numerator / &denominator;
+    let remainder = &numerator % &denominator;
+    let twice_remainder = &remainder << 1u32;
+    if twice_remainder > denominator || (twice_remainder == denominator && quotient.bit(0)) {
+        quotient += BigUint::from(1u8);
+    }
+
+    let common_exp = xexp.min(yexp);
+    let x_scaled = xm << u32::try_from(xexp - common_exp).ok()?;
+    let ny_scaled = (quotient * ym) << u32::try_from(yexp - common_exp).ok()?;
+    let signed = |negative: bool, magnitude: BigUint| {
+        BigInt::from_biguint(if negative { Sign::Minus } else { Sign::Plus }, magnitude)
+    };
+    let n_negative = xneg ^ yneg;
+    let result = signed(xneg, x_scaled) - signed(n_negative ^ yneg, ny_scaled);
+    if result.sign() == Sign::NoSign {
+        return Some(u128::from(xneg) << (width - 1));
+    }
+    pack_exact_dyadic(
+        fmt,
+        result.sign() == Sign::Minus,
+        result.magnitude(),
+        common_exp,
+    )
+}
+
+fn decode_finite_dyadic(fmt: FloatFormat, bits: u128) -> Option<(bool, BigUint, i64)> {
+    let (eb, sb, width) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    let negative = bits & (1u128 << (width - 1)) != 0;
+    let exp_mask = (1u128 << eb) - 1;
+    let exp_field = (bits >> (sb - 1)) & exp_mask;
+    let trailing = bits & ((1u128 << (sb - 1)) - 1);
+    if exp_field == exp_mask {
+        return None;
+    }
+    let exponent_bias = (1i64 << (eb - 1)) - 1;
+    if exp_field == 0 {
+        Some((
+            negative,
+            BigUint::from(trailing),
+            1 - exponent_bias - i64::from(sb - 1),
+        ))
+    } else {
+        Some((
+            negative,
+            BigUint::from((1u128 << (sb - 1)) | trailing),
+            i64::try_from(exp_field).ok()? - exponent_bias - i64::from(sb - 1),
+        ))
+    }
+}
+
+fn pack_exact_dyadic(
+    fmt: FloatFormat,
+    negative: bool,
+    magnitude: &BigUint,
+    exponent: i64,
+) -> Option<u128> {
+    if magnitude == &BigUint::from(0u8) {
+        return Some(u128::from(negative) << (fmt.width() - 1));
+    }
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    let bias = (1i64 << (eb - 1)) - 1;
+    let emin = 1 - bias;
+    let top = i64::try_from(magnitude.bits().checked_sub(1)?).ok()?;
+    let unbiased = exponent.checked_add(top)?;
+    let fraction_width = sb - 1;
+    let sign = u128::from(negative) << (fmt.width() - 1);
+    if unbiased >= emin {
+        let exp_field = u128::try_from(unbiased + bias).ok()?;
+        if exp_field >= (1u128 << eb) - 1 {
+            return None;
+        }
+        let significand = if top >= i64::from(fraction_width) {
+            magnitude >> u32::try_from(top - i64::from(fraction_width)).ok()?
+        } else {
+            magnitude << u32::try_from(i64::from(fraction_width) - top).ok()?
+        };
+        let sig = biguint_to_u128(&significand)?;
+        let trailing = sig.checked_sub(1u128 << fraction_width)?;
+        Some(sign | (exp_field << fraction_width) | trailing)
+    } else {
+        let target_exp = emin - i64::from(fraction_width);
+        let trailing = if exponent >= target_exp {
+            magnitude << u32::try_from(exponent - target_exp).ok()?
+        } else {
+            let shift = u32::try_from(target_exp - exponent).ok()?;
+            let divisor = BigUint::from(1u8) << shift;
+            if magnitude % &divisor != BigUint::from(0u8) {
+                return None;
+            }
+            magnitude / divisor
+        };
+        Some(sign | biguint_to_u128(&trailing)?)
+    }
+}
+
+fn biguint_to_u128(value: &BigUint) -> Option<u128> {
+    let digits = value.to_u64_digits();
+    match digits.as_slice() {
+        [] => Some(0),
+        [lo] => Some(u128::from(*lo)),
+        [lo, hi] => Some(u128::from(*lo) | (u128::from(*hi) << 64)),
+        _ => None,
+    }
 }
 
 /// Constant-folds `fp.fma` (fused multiply-add, `x*y + z` with a *single*
@@ -1832,7 +2079,12 @@ pub fn rem(
     let (Some(xv), Some(yv)) = (const_bits(arena, x), const_bits(arena, y)) else {
         return Ok(None);
     };
-    let bits = if fmt == FloatFormat::F32 {
+    let bits = if fmt.sig_bits > 53 {
+        let Some(bits) = ieee_remainder_big(fmt, xv, yv) else {
+            return Ok(None);
+        };
+        bits
+    } else if fmt == FloatFormat::F32 {
         // f32 → f64 is exact; the exact remainder of two f32 values is itself an
         // f32 value, so narrowing back is exact too.
         let r = ieee_remainder(
@@ -2626,7 +2878,7 @@ pub fn round_to_format(eb: u32, sb: u32, v: f64, mode: RoundingMode) -> u128 {
     let top = 127 - i64::from(q.leading_zeros());
     let biased = lsb_exp + top + bias;
     if biased >= exp_field_max as i64 {
-        return sign | (exp_field_max << (sb - 1)); // overflow → ±∞
+        return overflow_bits(eb, sb, negative, mode, sign);
     }
     if biased <= 0 {
         // Subnormal: exponent field 0, trailing significand = q.
@@ -2883,6 +3135,64 @@ pub fn to_real(
     Ok(Some(arena.real_const(Rational::new(num, den))))
 }
 
+/// Symbolic exact FP→Real conversion for finite IEEE values, with `exceptional`
+/// supplying the SMT-LIB-unspecified result on NaN/infinity.  The finite path
+/// decodes the significand through `bv2nat` and scales it by an exact integer
+/// power of two; no host floating-point conversion is involved.
+pub fn to_real_sym(
+    arena: &mut TermArena,
+    fmt: FloatFormat,
+    x: TermId,
+    exceptional: TermId,
+) -> Result<TermId, IrError> {
+    fmt.check(arena, x)?;
+    if arena.sort_of(exceptional) != Sort::Real {
+        return Err(IrError::SortMismatch {
+            expected: "Real",
+            found: arena.sort_of(exceptional),
+        });
+    }
+    let (eb, sb) = (fmt.exp_bits, fmt.sig_bits);
+    if !fmt.is_ieee() || eb >= 63 || sb <= 1 || sb > 127 {
+        return Err(IrError::Unsupported(
+            "symbolic fp.to_real format exceeds the exact Int/Real bridge",
+        ));
+    }
+    let fraction_width = sb - 1;
+    let exp_bits = fmt.exponent(arena, x)?;
+    let trailing_bits = fmt.trailing_sig(arena, x)?;
+    let exp_int = arena.bv2nat(exp_bits)?;
+    let trailing_int = arena.bv2nat(trailing_bits)?;
+    let zero_exp = arena.bv_const(eb, 0)?;
+    let subnormal = arena.eq(exp_bits, zero_exp)?;
+    let hidden = arena.int_const(1i128 << fraction_width);
+    let normal_sig = arena.int_add(trailing_int, hidden)?;
+    let significand = arena.ite(subnormal, trailing_int, normal_sig)?;
+
+    let bias = (1i128 << (eb - 1)) - 1;
+    let normal_offset = arena.int_const(bias + i128::from(fraction_width));
+    let normal_exp = arena.int_sub(exp_int, normal_offset)?;
+    let subnormal_exp = arena.int_const(1 - bias - i128::from(fraction_width));
+    let exponent = arena.ite(subnormal, subnormal_exp, normal_exp)?;
+    let zero_int = arena.int_const(0);
+    let exponent_negative = arena.int_lt(exponent, zero_int)?;
+    let neg_exponent = arena.int_neg(exponent)?;
+    let abs_exponent = arena.ite(exponent_negative, neg_exponent, exponent)?;
+    let scale_int = arena.int_pow2(abs_exponent)?;
+    let sig_real = arena.int_to_real(significand)?;
+    let scale_real = arena.int_to_real(scale_int)?;
+    let scaled_down = arena.real_div(sig_real, scale_real)?;
+    let scaled_up = arena.real_mul(sig_real, scale_real)?;
+    let magnitude = arena.ite(exponent_negative, scaled_down, scaled_up)?;
+    let negative = sign_set(arena, fmt, x)?;
+    let negated = arena.real_neg(magnitude)?;
+    let finite_value = arena.ite(negative, negated, magnitude)?;
+    let nan = is_nan(arena, fmt, x)?;
+    let infinite = is_infinite(arena, fmt, x)?;
+    let exceptional_case = arena.or(nan, infinite)?;
+    arena.ite(exceptional_case, exceptional, finite_value)
+}
+
 /// `m * 2^exp` as an `i128` fraction `(num, den)`, or `None` if it overflows.
 fn scale_to_fraction(m: i128, exp: i64) -> Option<(i128, i128)> {
     if exp >= 0 {
@@ -2902,11 +3212,10 @@ fn scale_to_fraction(m: i128, exp: i64) -> Option<(i128, i128)> {
 }
 
 /// Constant-folds `fp.to_ubv` (FP → unsigned `width`-bit BV) per rounding mode,
-/// for an F32/F64 constant. Folds only when the result is **well-defined**: the
+/// for any IEEE constant up through 128 interchange bits. Folds only when the result is **well-defined**: the
 /// operand is finite and the rounded integer is in `[0, 2^width)`; otherwise
 /// returns `Ok(None)` (SMT leaves NaN/∞/out-of-range unspecified, so refusing to
 /// fold is sound).
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)] // range-checked
 pub fn to_ubv(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -2914,24 +3223,21 @@ pub fn to_ubv(
     x: TermId,
     width: u32,
 ) -> Result<Option<TermId>, IrError> {
-    let Some(v) = decode_to_f64(arena, fmt, x) else {
+    let Some(bits) = const_bits(arena, x) else {
         return Ok(None);
     };
-    if !v.is_finite() {
+    let Some((negative, int)) = rounded_integer_constant(fmt, bits, mode) else {
+        return Ok(None);
+    };
+    if width == 0 || (negative && int != 0) || (width < 128 && int >= (1u128 << width)) {
         return Ok(None);
     }
-    let r = round_f64(v, mode);
-    if r < 0.0 || width == 0 || r >= exp2(width) {
-        return Ok(None);
-    }
-    let int = r as u128;
     Ok(Some(arena.bv_const(width, int)?))
 }
 
 /// Constant-folds `fp.to_sbv` (FP → signed two's-complement `width`-bit BV) per
 /// rounding mode, for an F32/F64 constant. Folds only when well-defined: finite
 /// and the rounded integer is in `[-2^(width-1), 2^(width-1))`; otherwise `None`.
-#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // range-checked
 pub fn to_sbv(
     arena: &mut TermArena,
     fmt: FloatFormat,
@@ -2939,25 +3245,118 @@ pub fn to_sbv(
     x: TermId,
     width: u32,
 ) -> Result<Option<TermId>, IrError> {
-    let Some(v) = decode_to_f64(arena, fmt, x) else {
+    let Some(bits) = const_bits(arena, x) else {
         return Ok(None);
     };
-    if !v.is_finite() || width == 0 {
+    let Some((negative, int)) = rounded_integer_constant(fmt, bits, mode) else {
+        return Ok(None);
+    };
+    if width == 0 {
         return Ok(None);
     }
-    let r = round_f64(v, mode);
-    let limit = exp2(width - 1);
-    if r < -limit || r >= limit {
+    let in_range = match width.cmp(&128) {
+        Ordering::Greater => true,
+        Ordering::Equal => {
+            if negative {
+                int <= 1u128 << 127
+            } else {
+                int < 1u128 << 127
+            }
+        }
+        Ordering::Less => {
+            let limit = 1u128 << (width - 1);
+            if negative { int <= limit } else { int < limit }
+        }
+    };
+    if !in_range {
         return Ok(None);
     }
-    let int = r as i128;
-    let mask = if width >= 128 {
-        u128::MAX
+    if width <= 128 {
+        let mask = if width == 128 {
+            u128::MAX
+        } else {
+            (1u128 << width) - 1
+        };
+        let encoded = if negative {
+            int.wrapping_neg() & mask
+        } else {
+            int
+        };
+        Ok(Some(arena.bv_const(width, encoded)?))
     } else {
-        (1u128 << width) - 1
+        let magnitude = axeyum_ir::WideUint::from_u128(int, width);
+        let encoded = if negative { magnitude.neg() } else { magnitude };
+        Ok(Some(arena.wide_bv_const(encoded)))
+    }
+}
+
+/// Exact integral rounding of a finite IEEE constant.  Returns `(negative,
+/// magnitude)` and never routes through `f64`, so Float128's low 60 payload bits
+/// participate in rounding decisions.
+fn rounded_integer_constant(
+    fmt: FloatFormat,
+    bits: u128,
+    mode: RoundingMode,
+) -> Option<(bool, u128)> {
+    let (eb, sb, total) = (fmt.exp_bits, fmt.sig_bits, fmt.width());
+    if !fmt.is_ieee() || total > 128 || eb >= 63 || sb <= 1 {
+        return None;
+    }
+    let negative = bits & (1u128 << (total - 1)) != 0;
+    let fraction_width = sb - 1;
+    let exp_mask = (1u128 << eb) - 1;
+    let exp_field = (bits >> fraction_width) & exp_mask;
+    let trailing = bits & ((1u128 << fraction_width) - 1);
+    if exp_field == exp_mask {
+        return None;
+    }
+    if exp_field == 0 && trailing == 0 {
+        return Some((negative, 0));
+    }
+    let exponent_bias = (1i64 << (eb - 1)) - 1;
+    let (magnitude, exponent) = if exp_field == 0 {
+        (trailing, 1 - exponent_bias - i64::from(fraction_width))
+    } else {
+        (
+            (1u128 << fraction_width) | trailing,
+            i64::try_from(exp_field).ok()? - exponent_bias - i64::from(fraction_width),
+        )
     };
-    let bits = (int as u128) & mask;
-    Ok(Some(arena.bv_const(width, bits)?))
+
+    if exponent >= 0 {
+        let shift = u32::try_from(exponent).ok()?;
+        if shift >= 128 || (128 - magnitude.leading_zeros()).saturating_add(shift) > 128 {
+            return None;
+        }
+        return Some((negative, magnitude << shift));
+    }
+
+    let shift = u32::try_from(-exponent).ok()?;
+    let (kept, remainder) = if shift >= 128 {
+        (0, magnitude)
+    } else {
+        (magnitude >> shift, magnitude & ((1u128 << shift) - 1))
+    };
+    let round_up = if remainder == 0 {
+        false
+    } else {
+        match mode {
+            RoundingMode::TowardZero => false,
+            RoundingMode::TowardPositive => !negative,
+            RoundingMode::TowardNegative => negative,
+            RoundingMode::NearestEven | RoundingMode::NearestAway => {
+                if shift == 0 || shift > 128 {
+                    false
+                } else {
+                    let half = 1u128 << (shift - 1);
+                    remainder > half
+                        || (remainder == half
+                            && (mode == RoundingMode::NearestAway || kept & 1 == 1))
+                }
+            }
+        }
+    };
+    Some((negative, kept.checked_add(u128::from(round_up))?))
 }
 
 /// Computes the rounded integer **magnitude** of `x` (an FP value), as a `W`-bit
@@ -3127,20 +3526,6 @@ pub fn to_sbv_sym(
     arena.ite(in_range, signed, fresh)
 }
 
-fn decode_to_f64(arena: &TermArena, fmt: FloatFormat, x: TermId) -> Option<f64> {
-    let v = const_bits(arena, x)?;
-    if fmt == FloatFormat::F32 {
-        Some(f64::from(f32::from_bits(low32(v))))
-    } else if fmt == FloatFormat::F64 {
-        Some(f64::from_bits(low64(v)))
-    } else if fmt.is_ieee() {
-        // Every other IEEE format (`sig_bits ≤ 53`) decodes exactly to f64.
-        Some(fmt.decode_ieee_f64(v))
-    } else {
-        None
-    }
-}
-
 fn round_f64(v: f64, mode: RoundingMode) -> f64 {
     match mode {
         RoundingMode::NearestEven => v.round_ties_even(),
@@ -3149,16 +3534,6 @@ fn round_f64(v: f64, mode: RoundingMode) -> f64 {
         RoundingMode::TowardPositive => v.ceil(),
         RoundingMode::TowardNegative => v.floor(),
     }
-}
-
-// power of two is exact in f64 for the BV widths we handle; `width` ≤ 2^31.
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_possible_wrap
-)]
-fn exp2(width: u32) -> f64 {
-    (2.0f64).powi(width as i32)
 }
 
 /// Interprets a `w`-bit value as two's-complement signed.
@@ -3369,27 +3744,28 @@ fn provably_nonzero(arena: &TermArena, fmt: FloatFormat, x: TermId) -> bool {
     }
 }
 
-/// A zero of the format's width whose sign is a **fresh free Boolean**, one per
-/// `fp.min`/`fp.max` application. The fresh symbol's name is a deterministic
-/// function of the operand term ids and the min/max flavor, so the same
-/// syntactic application reuses one bit (consistent — a real function) while
-/// distinct applications get independent bits (so they may differ, exactly as
-/// SMT-LIB permits). Magnitude is `0`; only the sign bit varies.
+/// A zero whose sign is selected by the semantic ordered zero pair, format, and
+/// min/max flavor.  SMT-LIB permits an arbitrary choice for each of
+/// `(+0,-0)` and `(-0,+0)`, but the operator is still a function: two equal
+/// argument pairs cannot make independent choices merely because their syntax
+/// differs.  Two internal selector bits give exactly that freedom while
+/// preserving congruence.
 fn free_sign_zero(
     arena: &mut TermArena,
     fmt: FloatFormat,
     x: TermId,
-    y: TermId,
+    _y: TermId,
     want_smaller: bool,
 ) -> Result<TermId, IrError> {
     let flavor = if want_smaller { "min" } else { "max" };
-    let name = format!("axeyum_fp.{flavor}.signzero.{}.{}", x.index(), y.index());
-    // Mint into the arena's INTERNAL namespace so a user `declare-fun` of this
-    // exact name can never alias the fresh sign bit and pin the SMT-LIB-
-    // unspecified ±0 result (the `af6c8bf` wrong-`unsat` class). Interning by
-    // name inside the internal namespace still lets identical applications share
-    // one bit (determinism), which the `bv_var` sharing below relies on.
-    let sign = arena.bv_var_internal(&name, 1)?;
+    let base = format!(
+        "axeyum_fp.{flavor}.signzero.{}.{}",
+        fmt.exp_bits, fmt.sig_bits
+    );
+    let pos_neg = arena.bv_var_internal(&format!("{base}.pos_neg"), 1)?;
+    let neg_pos = arena.bv_var_internal(&format!("{base}.neg_pos"), 1)?;
+    let x_negative = sign_set(arena, fmt, x)?;
+    let sign = arena.ite(x_negative, neg_pos, pos_neg)?;
     // result = sign-bit ++ (width-1) zero bits = ±0 with the chosen sign.
     let lower = arena.bv_const(fmt.width() - 1, 0)?;
     arena.concat(sign, lower)
@@ -4603,6 +4979,65 @@ mod tests {
         }
     }
 
+    /// Exact cancellation and opposite-sign zero addition have a rounding-mode-
+    /// dependent zero sign: RTN produces `-0`, while the other modes produce
+    /// `+0`. Same-sign zeros retain their common sign in every mode. These cases
+    /// are compared bit-for-bit with the independent software-float oracle.
+    #[test]
+    fn add_zero_sign_matches_apfloat_in_all_rounding_modes() {
+        use rustc_apfloat::Float;
+        use rustc_apfloat::ieee::Single;
+
+        let modes = [
+            (
+                RoundingMode::NearestEven,
+                rustc_apfloat::Round::NearestTiesToEven,
+            ),
+            (
+                RoundingMode::NearestAway,
+                rustc_apfloat::Round::NearestTiesToAway,
+            ),
+            (RoundingMode::TowardZero, rustc_apfloat::Round::TowardZero),
+            (
+                RoundingMode::TowardPositive,
+                rustc_apfloat::Round::TowardPositive,
+            ),
+            (
+                RoundingMode::TowardNegative,
+                rustc_apfloat::Round::TowardNegative,
+            ),
+        ];
+        let cases = [
+            (0x3F80_0000u32, 0xBF80_0000u32), // 1 + -1: exact cancellation
+            (0xBF80_0000, 0x3F80_0000),       // -1 + 1: operand-order control
+            (0x0000_0000, 0x8000_0000),       // +0 + -0
+            (0x8000_0000, 0x0000_0000),       // -0 + +0
+            (0x0000_0000, 0x0000_0000),       // +0 + +0
+            (0x8000_0000, 0x8000_0000),       // -0 + -0
+        ];
+
+        for (mode, oracle_mode) in modes {
+            for (ab, bb) in cases {
+                let mut arena = TermArena::new();
+                let a = arena.bv_const(32, u128::from(ab)).unwrap();
+                let b = arena.bv_const(32, u128::from(bb)).unwrap();
+                let sum = add(&mut arena, FloatFormat::F32, a, b, mode).unwrap();
+                let got = match eval(&arena, sum, &Assignment::new()).unwrap() {
+                    Value::Bv { value, .. } => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let want = Single::from_bits(u128::from(ab))
+                    .add_r(Single::from_bits(u128::from(bb)), oracle_mode)
+                    .value
+                    .to_bits();
+                assert_eq!(
+                    got, want,
+                    "add({ab:#010x}, {bb:#010x}, {mode:?}) zero-sign mismatch"
+                );
+            }
+        }
+    }
+
     #[test]
     fn mul_matches_native_f64() {
         let mut a = TermArena::new();
@@ -5011,6 +5446,71 @@ mod tests {
             let y = (state & 0xFFFF_FFFF) as u32;
             let z = (state >> 32) as u32;
             check(&mut a, x, y, z);
+        }
+    }
+
+    /// FMA applies the same exact-zero sign rule as addition to the unrounded
+    /// product and addend. Hold both cancellation and signed-zero inputs against
+    /// `rustc_apfloat` in every rounding mode so this convention cannot drift.
+    #[test]
+    fn fma_zero_sign_matches_apfloat_in_all_rounding_modes() {
+        use rustc_apfloat::Float;
+        use rustc_apfloat::ieee::Single;
+
+        let modes = [
+            (
+                RoundingMode::NearestEven,
+                rustc_apfloat::Round::NearestTiesToEven,
+            ),
+            (
+                RoundingMode::NearestAway,
+                rustc_apfloat::Round::NearestTiesToAway,
+            ),
+            (RoundingMode::TowardZero, rustc_apfloat::Round::TowardZero),
+            (
+                RoundingMode::TowardPositive,
+                rustc_apfloat::Round::TowardPositive,
+            ),
+            (
+                RoundingMode::TowardNegative,
+                rustc_apfloat::Round::TowardNegative,
+            ),
+        ];
+        let cases = [
+            // 1*1 + -1 and -1*1 + 1: exact nonzero cancellation.
+            (0x3F80_0000u32, 0x3F80_0000u32, 0xBF80_0000u32),
+            (0xBF80_0000, 0x3F80_0000, 0x3F80_0000),
+            // Product/addend opposite-sign and same-sign zero controls.
+            (0x0000_0000, 0x3F80_0000, 0x8000_0000),
+            (0x8000_0000, 0x3F80_0000, 0x0000_0000),
+            (0x0000_0000, 0x3F80_0000, 0x0000_0000),
+            (0x8000_0000, 0x3F80_0000, 0x8000_0000),
+        ];
+
+        for (mode, oracle_mode) in modes {
+            for (ab, bb, cb) in cases {
+                let mut arena = TermArena::new();
+                let a = arena.bv_const(32, u128::from(ab)).unwrap();
+                let b = arena.bv_const(32, u128::from(bb)).unwrap();
+                let c = arena.bv_const(32, u128::from(cb)).unwrap();
+                let result = fma(&mut arena, FloatFormat::F32, a, b, c, mode).unwrap();
+                let got = match eval(&arena, result, &Assignment::new()).unwrap() {
+                    Value::Bv { value, .. } => value,
+                    other => panic!("expected Bv, got {other:?}"),
+                };
+                let want = Single::from_bits(u128::from(ab))
+                    .mul_add_r(
+                        Single::from_bits(u128::from(bb)),
+                        Single::from_bits(u128::from(cb)),
+                        oracle_mode,
+                    )
+                    .value
+                    .to_bits();
+                assert_eq!(
+                    got, want,
+                    "fma({ab:#010x}, {bb:#010x}, {cb:#010x}, {mode:?}) zero-sign mismatch"
+                );
+            }
         }
     }
 
@@ -6859,13 +7359,13 @@ mod fp_to_int_symbolic_tests {
 
     /// On opposite-sign zeros `fp.min`/`fp.max` is SMT-LIB-*unspecified*: the
     /// result may be `+0` OR `−0`, and the choice may differ between argument
-    /// orders. The fix encodes a *fresh per-application* sign bit so:
+    /// orders. The fix encodes one selector per semantic ordered pair so:
     ///   * `fp.max(+0,−0)` and `fp.max(−0,+0)` CAN differ (the sat model that
     ///     `(distinct …)` needs — what was a wrong-`unsat` before),
     ///   * the SAME syntactic term is self-consistent (a real function),
     ///   * a non-opposite-sign case stays the deterministic ordered pick.
     #[test]
-    fn min_max_opposite_sign_zero_is_free_per_application() {
+    fn min_max_opposite_sign_zero_is_free_and_congruent() {
         const POS0: u128 = 0;
         const NEG0: u128 = 1u128 << 63; // F64 sign bit
 
@@ -6885,21 +7385,13 @@ mod fp_to_int_symbolic_tests {
         let m_xy2 = max(&mut a, FloatFormat::F64, xp, yn).unwrap();
         assert_eq!(m_xy, m_xy2, "same fp.max application must reuse its term");
 
-        // The fresh sign bits are deterministically named per application
-        // (`<flavor>.signzero.<x>.<y>`); look them up by that exact name.
+        // The two selectors are keyed by format/flavor and ordered sign pair,
+        // never by operand syntax.
         let s_xy = a
-            .find_internal_symbol(&format!(
-                "axeyum_fp.max.signzero.{}.{}",
-                xp.index(),
-                yn.index()
-            ))
+            .find_internal_symbol("axeyum_fp.max.signzero.11.53.pos_neg")
             .expect("fp.max(+0,−0) declared its fresh sign bit");
         let s_yx = a
-            .find_internal_symbol(&format!(
-                "axeyum_fp.max.signzero.{}.{}",
-                yn.index(),
-                xp.index()
-            ))
+            .find_internal_symbol("axeyum_fp.max.signzero.11.53.neg_pos")
             .expect("fp.max(−0,+0) declared its fresh sign bit");
         assert_ne!(s_xy, s_yx, "swapped-order applications get distinct bits");
 
@@ -6927,6 +7419,7 @@ mod fp_to_int_symbolic_tests {
         for v in [0u128, 1] {
             let mut asg = Assignment::new();
             asg.set(s_xy, Value::Bv { width: 1, value: v });
+            asg.set(s_yx, Value::Bv { width: 1, value: 0 });
             let r = bit(&a, m_xy, &asg);
             assert!(r == POS0 || r == NEG0, "result must be ±0, got {r:#x}");
         }
@@ -6978,18 +7471,10 @@ mod fp_to_int_symbolic_tests {
         let mn_xy = min(&mut a, FloatFormat::F64, xp, yn).unwrap();
         let mn_yx = min(&mut a, FloatFormat::F64, yn, xp).unwrap();
         let s_xy = a
-            .find_internal_symbol(&format!(
-                "axeyum_fp.min.signzero.{}.{}",
-                xp.index(),
-                yn.index()
-            ))
+            .find_internal_symbol("axeyum_fp.min.signzero.11.53.pos_neg")
             .expect("fp.min(+0,−0) declared its fresh sign bit");
         let s_yx = a
-            .find_internal_symbol(&format!(
-                "axeyum_fp.min.signzero.{}.{}",
-                yn.index(),
-                xp.index()
-            ))
+            .find_internal_symbol("axeyum_fp.min.signzero.11.53.neg_pos")
             .expect("fp.min(−0,+0) declared its fresh sign bit");
         let mut differ = Assignment::new();
         differ.set(s_xy, Value::Bv { width: 1, value: 0 });

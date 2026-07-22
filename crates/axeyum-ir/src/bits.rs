@@ -126,9 +126,10 @@ pub fn lsb_bits_to_value(sort: Sort, bits: &[bool]) -> Result<Value, IrError> {
             }
         }
         // Floating-point shares the bit-vector representation: `exp + sig` bits.
-        Sort::BitVec(_) | Sort::Float { .. } => {
+        Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
             let width = match sort {
                 Sort::BitVec(w) => w,
+                Sort::RoundingMode => 3,
                 Sort::Float { exp, sig } => exp + sig,
                 _ => 0, // unreachable given the outer arm, but keeps this total
             };

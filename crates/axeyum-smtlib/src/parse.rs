@@ -12,7 +12,10 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use axeyum_fp::{FloatFormat, RoundingMode};
-use axeyum_ir::{ArraySortKey, FuncId, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode};
+use axeyum_ir::{
+    ArraySortKey, FuncId, MAX_BV_WIDTH, Op, Rational, Sort, SymbolId, TermArena, TermId, TermNode,
+    WideUint,
+};
 
 use crate::SmtError;
 use crate::sexpr::{SExpr, read_all};
@@ -232,23 +235,25 @@ pub struct Script {
     /// `parse_term`), so by the time the solver's `QF_BV` evidence path sees the
     /// query it is already bit-vector terms and the FP op-set is lost. This field
     /// preserves the op-set so the text front door
-    /// (`axeyum_solver::produce_evidence_smtlib`) can decide whether a resulting
-    /// `unsat` may carry a **certified** `Fpa2Bv` trust step — see
+    /// (`axeyum_solver::produce_evidence_smtlib`) can record the fail-closed
+    /// `Fpa2Bv` trust step and report which operator families were involved — see
     /// [`FpUsage::fpa2bv_simple_op_certified`]. Populated by a **conservative**
     /// allow-list scan of the raw s-expressions (see `scan_fp_usage`): it can only
     /// ever over-report a non-simple operator (→ certified `false`), never miss one.
     pub fp_usage: FpUsage,
 }
 
-/// Which floating-point operators (ADR-0023 `Fpa2Bv`) a parsed script uses, split
-/// so the solver can decide whether an `Fpa2Bv` `unsat` may carry a **certified**
-/// trust step (task #69, the per-run `TrustStep::certified` sub-case mechanism —
-/// the global `TrustId::Fpa2Bv::is_certified()` stays `false`).
+/// Which floating-point operators (ADR-0023 `Fpa2Bv`) a parsed script uses.
+/// The inventory is diagnostic and supports targeted regression coverage; it
+/// does not certify the complete reduction. Both the per-run trust step and the
+/// global `TrustId::Fpa2Bv` ledger entry remain uncertified.
 ///
-/// The FP → BV reduction is **faithful-by-construction** exactly when every FP
-/// operator it lowered is faithful at the format's width (FP formats are guarded to
-/// `≤ 128` bits, so the `u128` sign masks the circuits use never overflow). Two
-/// tiers qualify:
+/// The historical operator-local inventory distinguishes circuits validated at
+/// every constructible width from rounding-bearing or otherwise incomplete
+/// cases. That inventory is useful for testing, but it does **not** establish
+/// faithfulness of the complete FP → BV reduction: quotient-domain equality,
+/// congruence, arrays, quantifiers, and model lifting are also obligations. No
+/// query currently qualifies for a certified `Fpa2Bv` trust step.
 ///
 /// **Exact bit operations / predicates** (trivially faithful by inspection at any
 /// width):
@@ -291,13 +296,14 @@ pub struct FpUsage {
 }
 
 impl FpUsage {
-    /// The **by-construction-faithful** FP operator allow-list (faithful at every
+    /// The operator-local FP validation allow-list (tested at every
     /// *constructible* width — FP formats are guarded to `≤ 128` bits, so the `u128`
     /// sign masks the circuits use never overflow). Any operator head symbol **not**
     /// in this set (including unknown / future `fp.*` operators and every
     /// rounding-bearing op / `to_fp`-style conversion) is treated as non-simple — an
     /// allow-list, not a block-list, so an unrecognized FP operator can never be
-    /// silently certified. Two faithfulness tiers, both certified:
+    /// mistaken for a validated local circuit. This does not grant whole-reduction
+    /// certification. Two local-validation tiers are tracked:
     ///
     /// - **exact bit ops** — `fp.neg`/`fp.abs`, the five category predicates, and the
     ///   sign predicates `fp.isNegative`/`fp.isPositive` (trivially faithful by
@@ -312,11 +318,10 @@ impl FpUsage {
     ///   `axeyum-fp/tests/fpa2bv_faithfulness.rs`); the comparisons additionally carry a
     ///   second-width F16 edge witness. `fp.min`/`fp.max` are exact selections (a
     ///   result verbatim, no
-    ///   rounding); their SMT-LIB-*unspecified* opposite-sign-zero result uses a fresh
-    ///   sign bit that is minted in the **internal** symbol namespace
-    ///   (`bv_var_internal`, task #72), so it is genuinely free — a user `declare`
-    ///   cannot alias it — and the reduction over-approximates the FP allowed-result
-    ///   set (`{+0,−0}`), keeping `BV-unsat ⟹ FP-unsat` sound. Width-parametric code +
+    ///   rounding); their SMT-LIB-*unspecified* opposite-sign-zero result uses
+    ///   semantic selector bits minted in the **internal** symbol namespace
+    ///   (`bv_var_internal`, task #72), so a user `declare` cannot alias them and
+    ///   equal argument pairs remain congruent. Width-parametric code +
     ///   a proven-monotone key + an exhaustive width ⇒ faithful at every constructible
     ///   width.
     #[must_use]
@@ -342,20 +347,17 @@ impl FpUsage {
         )
     }
 
-    /// Whether an `Fpa2Bv` `unsat` over this script may carry `certified: true`:
-    /// the FP theory is used **and** every FP operator seen is structurally exact.
+    /// Whether an `Fpa2Bv` `unsat` over this script may carry `certified: true`.
     ///
-    /// Soundness: a free FP variable is lowered to a fresh bit-vector ranging over
-    /// **every** bit pattern (all NaN payloads, both signed zeros), so the BV query
-    /// is an **over-approximation** of the FP query — every SMT-LIB model maps to a
-    /// BV model. Hence `BV-unsat ⟹ FP-unsat` provided every FP *operator* the
-    /// reduction lowered is faithful. When all operators are in the exact allow-list
-    /// (each proven faithful by construction, and confirmed exhaustively against
-    /// `rustc_apfloat` at F16 in `axeyum-fp/tests/fpa2bv_simple_faithfulness.rs`)
-    /// the whole reduction is faithful, so the `unsat` is genuinely certified.
+    /// This is deliberately fail-closed.  Operator-local bit-blast validation is
+    /// not a certificate for the complete SMT-LIB FP reduction: the theory has a
+    /// single NaN value per format even though there are many IEEE NaN encodings,
+    /// and core equality, functions, arrays, quantifiers, and model lifting must
+    /// all respect that quotient.  Until the complete reduction has a small
+    /// checker, every `Fpa2Bv` step remains an explicit trust hole.
     #[must_use]
     pub fn fpa2bv_simple_op_certified(&self) -> bool {
-        self.uses_fp && self.ops.iter().all(|op| Self::certified_faithful_op(op))
+        false
     }
 }
 
@@ -4167,23 +4169,13 @@ fn declare_string_symbol(script: &mut Script, name: &str) -> Result<(), SmtError
     Ok(())
 }
 
-/// Declares a 0-ary `RoundingMode` symbol: a `BitVec(ROUNDING_MODE_BITS)` plus a
-/// `≤ 4` well-formedness constraint (asserted in the flat and incremental views)
-/// so the modeled sort has exactly its 5 inhabitants — the symbol can only take
-/// one of the 5 SMT-LIB rounding-mode tokens, never an unused pattern. Shared by
-/// `declare-const … RoundingMode` and 0-ary `declare-fun … RoundingMode`.
+/// Declares a 0-ary value of the first-class five-element `RoundingMode` sort.
+/// Its three-bit lowering canonicalizes unused codes at every origin, including
+/// function results and quantified binders, so no declaration-local side
+/// constraint is needed.
 fn declare_rounding_mode_symbol(script: &mut Script, name: &str) -> Result<(), SmtError> {
-    let sym = script
-        .arena
-        .declare(name, Sort::BitVec(ROUNDING_MODE_BITS))?;
+    let sym = script.arena.declare(name, Sort::RoundingMode)?;
     record_model_symbol(script, sym);
-    let v = script.arena.var(sym);
-    // `rm ≤ 4` (`#b100`): the 5 valid tokens are `0..=4`.
-    let max = script.arena.bv_const(ROUNDING_MODE_BITS, 4)?;
-    let wf = script.arena.bv_ule(v, max)?;
-    script.assertions.push(wf);
-    script.assertion_names.push(None);
-    script.commands.push(ScriptCommand::Assert(wf));
     Ok(())
 }
 
@@ -4443,7 +4435,7 @@ fn parse_sort(
         // exactly its 5 inhabitants. The 5 literal mode keywords still parse as
         // concrete [`RoundingMode`] values (a fast single-mode path); this sort
         // path only fires when `RoundingMode` is named as a *sort*.
-        SExpr::Atom(a) if a == "RoundingMode" => Ok(Sort::BitVec(ROUNDING_MODE_BITS)),
+        SExpr::Atom(a) if a == "RoundingMode" => Ok(Sort::RoundingMode),
         SExpr::Atom(a) if a == "Seq" => Err(SmtError::Unsupported(format!(
             "the bare `{a}` sort head needs an element sort `(Seq E)` (ADR-0029)"
         ))),
@@ -4462,6 +4454,19 @@ fn parse_sort(
                     items[3].atom().and_then(|s| s.parse::<u32>().ok()),
                 )
             {
+                if eb <= 1 || sb <= 1 {
+                    return Err(SmtError::Syntax(format!(
+                        "FloatingPoint parameters must both be greater than 1, got ({eb}, {sb})"
+                    )));
+                }
+                let total = eb
+                    .checked_add(sb)
+                    .ok_or_else(|| SmtError::Syntax("FloatingPoint width overflow".to_owned()))?;
+                if total > MAX_BV_WIDTH {
+                    return Err(SmtError::Syntax(format!(
+                        "FloatingPoint width {total} exceeds implementation cap {MAX_BV_WIDTH}"
+                    )));
+                }
                 return Ok(Sort::Float { exp: eb, sig: sb });
             }
             if items.len() == 3
@@ -5187,28 +5192,44 @@ fn fresh_quantifier_symbol(
     }
 }
 
-/// A fresh, unconstrained `BitVec(width)` value standing for the *unspecified*
-/// result of an out-of-domain FP→int conversion (NaN/∞/out-of-range; ADR-0026).
-/// Keyed deterministically by `(tag, operand, width, mode)` so two occurrences of
-/// the **same** conversion share one value — an FP→int conversion is a function,
-/// so `(= (fp.to_ubv x) (fp.to_ubv x))` must hold even when the value is
-/// unspecified.
-fn fresh_conversion_value(
+/// Application of a reduction-internal total function interpreting the
+/// SMT-LIB-unspecified result of an out-of-domain FP→int conversion.  A real UF,
+/// rather than a syntax-keyed fresh symbol, is required: semantically equal FP
+/// operands (including the single NaN value) must receive the same result.
+fn unspecified_conversion_value(
     arena: &mut TermArena,
     tag: &str,
     operand: TermId,
     width: u32,
     mode: RoundingMode,
 ) -> Result<TermId, SmtError> {
-    let name = format!("!fp.{tag}.{}.{width}.{mode:?}", operand.index());
-    // Internal namespace: reuse by name for sharing across identical conversions
-    // (a conversion is a function), but never alias a user `declare` of this
-    // name (no-aliasing firewall — see `TermArena::declare_internal`).
-    let sym = match arena.find_internal_symbol(&name) {
-        Some(s) => s,
-        None => arena.declare_internal(&name, Sort::BitVec(width))?,
+    let operand_sort = arena.sort_of(operand);
+    let Sort::Float { exp, sig } = operand_sort else {
+        return Err(SmtError::Syntax(format!(
+            "unspecified FP conversion operand must be Float, got {operand_sort:?}"
+        )));
     };
-    Ok(arena.var(sym))
+    let name = format!("!fp.{tag}.{exp}.{sig}.{width}.{mode:?}");
+    let func = match arena.find_internal_function(&name) {
+        Some(func) => func,
+        None => arena.declare_internal_fun(&name, &[operand_sort], Sort::BitVec(width))?,
+    };
+    Ok(arena.apply(func, &[operand])?)
+}
+
+fn unspecified_to_real_value(arena: &mut TermArena, operand: TermId) -> Result<TermId, SmtError> {
+    let operand_sort = arena.sort_of(operand);
+    let Sort::Float { exp, sig } = operand_sort else {
+        return Err(SmtError::Syntax(format!(
+            "fp.to_real operand must be Float, got {operand_sort:?}"
+        )));
+    };
+    let name = format!("!fp.to_real.{exp}.{sig}");
+    let func = match arena.find_internal_function(&name) {
+        Some(func) => func,
+        None => arena.declare_internal_fun(&name, &[operand_sort], Sort::Real)?,
+    };
+    Ok(arena.apply(func, &[operand])?)
 }
 
 fn queue_let<'a>(items: &'a [SExpr], frames: &mut Vec<Frame<'a>>) -> Result<(), SmtError> {
@@ -7516,7 +7537,8 @@ fn parse_atom(
     // alias body fold to the constant, and lets a literal mode flow as an operand
     // to a symbolic-mode `ite` selection.
     if let Some(mode) = parse_rounding_mode(&SExpr::Atom(a.to_owned())) {
-        return Ok(arena.bv_const(ROUNDING_MODE_BITS, rounding_mode_value(mode))?);
+        let code = arena.bv_const(ROUNDING_MODE_BITS, rounding_mode_value(mode))?;
+        return Ok(arena.rounding_mode_from_bits(code)?);
     }
     // Nullary string/regex constants outside the wired bounded subset
     // (`re.none`/`re.all`/`re.allchar`, …) are declined cleanly (ADR-0029) so a
@@ -7672,28 +7694,20 @@ fn apply_fp_rounded_indexed(
             };
             match arena.sort_of(x) {
                 Sort::Real => {
-                    // Real → FP: fold a dyadic real *constant*; non-dyadic or
-                    // symbolic reals are unsupported (sound — never double-rounded).
+                    // Real → FP: round a rational constant exactly by integer
+                    // arithmetic (including non-dyadic values such as 1/3).
                     let TermNode::RealConst(r) = *arena.node(x) else {
                         return Err(SmtError::Unsupported(
                             "(_ to_fp …) from a non-constant real".to_owned(),
                         ));
                     };
-                    let bits = axeyum_fp::round_rational_to_format(
-                        eb,
-                        sb,
-                        r.numerator(),
-                        r.denominator(),
-                        mode,
-                    )
-                    .ok_or_else(|| {
+                    let bv = axeyum_fp::from_real(arena, dst, mode, r)?.ok_or_else(|| {
                         SmtError::Unsupported(format!(
-                            "(_ to_fp {eb} {sb}) from non-dyadic real {}/{}",
+                            "(_ to_fp {eb} {sb}) exact rational {}/{} exceeds the current integer rounder",
                             r.numerator(),
                             r.denominator()
                         ))
                     })?;
-                    let bv = arena.bv_const(eb + sb, bits)?;
                     as_float(arena, dst, bv)?
                 }
                 Sort::Float { .. } => {
@@ -7747,7 +7761,7 @@ fn apply_fp_rounded_indexed(
             if let Some(c) = axeyum_fp::to_ubv(arena, fmt, mode, xb, width)? {
                 c
             } else {
-                let fresh = fresh_conversion_value(arena, "to_ubv", xb, width, mode)?;
+                let fresh = unspecified_conversion_value(arena, "to_ubv", x, width, mode)?;
                 axeyum_fp::to_ubv_sym(arena, fmt, mode, xb, width, fresh)?
             }
         }
@@ -7758,7 +7772,7 @@ fn apply_fp_rounded_indexed(
             if let Some(c) = axeyum_fp::to_sbv(arena, fmt, mode, xb, width)? {
                 c
             } else {
-                let fresh = fresh_conversion_value(arena, "to_sbv", xb, width, mode)?;
+                let fresh = unspecified_conversion_value(arena, "to_sbv", x, width, mode)?;
                 axeyum_fp::to_sbv_sym(arena, fmt, mode, xb, width, fresh)?
             }
         }
@@ -7881,9 +7895,9 @@ fn rounding_mode_select(
 ) -> Result<TermId, SmtError> {
     // `rm` must be the modeled `BitVec(ROUNDING_MODE_BITS)`; reject anything else
     // (a wrong-width term can never be a sound rounding mode).
-    if arena.sort_of(rm) != Sort::BitVec(ROUNDING_MODE_BITS) {
+    if arena.sort_of(rm) != Sort::RoundingMode {
         return Err(SmtError::Syntax(format!(
-            "symbolic rounding mode must be a RoundingMode (BitVec({ROUNDING_MODE_BITS})) term, \
+            "symbolic rounding mode must have sort RoundingMode, \
              got {:?}",
             arena.sort_of(rm)
         )));
@@ -7893,7 +7907,8 @@ fn rounding_mode_select(
     let (last_mode, _) = *iter.next().expect("ALL_ROUNDING_MODES is non-empty");
     let mut acc = build(arena, last_mode)?;
     for &(mode, value) in iter {
-        let token = arena.bv_const(ROUNDING_MODE_BITS, value)?;
+        let code = arena.bv_const(ROUNDING_MODE_BITS, value)?;
+        let token = arena.rounding_mode_from_bits(code)?;
         let is_mode = arena.eq(rm, token)?;
         let then = build(arena, mode)?;
         acc = arena.ite(is_mode, then, acc)?;
@@ -7919,19 +7934,38 @@ fn parse_indexed_constant(arena: &mut TermArena, items: &[SExpr]) -> Result<Term
             items[3].atom().map(str::parse::<u32>),
         )
     {
-        let total = eb + sb;
-        let sign = 1u128 << (total - 1);
-        let exp_ones = ((1u128 << eb) - 1) << (sb - 1);
-        let bits = match name {
-            "+zero" => Some(0),
-            "-zero" => Some(sign),
-            "+oo" => Some(exp_ones),
-            "-oo" => Some(sign | exp_ones),
-            "NaN" => Some(exp_ones | (1u128 << (sb - 2))), // canonical qNaN
-            _ => None,
-        };
-        if let Some(bits) = bits {
-            let bv = arena.bv_const(total, bits)?;
+        if eb <= 1 || sb <= 1 {
+            return Err(SmtError::Syntax(format!(
+                "FloatingPoint parameters must both be greater than 1, got ({eb}, {sb})"
+            )));
+        }
+        let total = eb
+            .checked_add(sb)
+            .ok_or_else(|| SmtError::Syntax("FloatingPoint width overflow".to_owned()))?;
+        if total > MAX_BV_WIDTH {
+            return Err(SmtError::Syntax(format!(
+                "FloatingPoint width {total} exceeds implementation cap {MAX_BV_WIDTH}"
+            )));
+        }
+        if matches!(name, "+zero" | "-zero" | "+oo" | "-oo" | "NaN") {
+            let mut bits = vec![false; total as usize];
+            if matches!(name, "-zero" | "-oo") {
+                bits[(total - 1) as usize] = true;
+            }
+            if matches!(name, "+oo" | "-oo" | "NaN") {
+                for bit in sb - 1..sb - 1 + eb {
+                    bits[bit as usize] = true;
+                }
+            }
+            if name == "NaN" {
+                bits[(sb - 2) as usize] = true;
+            }
+            let wide = WideUint::from_lsb_bits(&bits);
+            let bv = if total <= 128 {
+                arena.bv_const(total, wide.to_u128())?
+            } else {
+                arena.wide_bv_const(wide)
+            };
             return Ok(arena.fp_from_bits(bv, eb, sb)?); // float-typed (ADR-0026)
         }
     }
@@ -10862,7 +10896,11 @@ fn apply_op(
             need(2)?;
             let fmt = fp_format(arena, args[0])?;
             let (a, b) = (to_bits(arena, args[0])?, to_bits(arena, args[1])?);
-            let r = axeyum_fp::rem_sym(arena, fmt, a, b)?;
+            let r = if let Some(folded) = axeyum_fp::rem(arena, fmt, a, b)? {
+                folded
+            } else {
+                axeyum_fp::rem_sym(arena, fmt, a, b)?
+            };
             as_float(arena, fmt, r)?
         }
         "fp.isNaN" => {
@@ -10911,11 +10949,12 @@ fn apply_op(
             need(1)?;
             let fmt = fp_format(arena, args[0])?;
             let x = to_bits(arena, args[0])?;
-            axeyum_fp::to_real(arena, fmt, x)?.ok_or_else(|| {
-                SmtError::Unsupported(
-                    "fp.to_real is only supported on constant operands".to_owned(),
-                )
-            })?
+            if let Some(constant) = axeyum_fp::to_real(arena, fmt, x)? {
+                constant
+            } else {
+                let exceptional = unspecified_to_real_value(arena, args[0])?;
+                axeyum_fp::to_real_sym(arena, fmt, x, exceptional)?
+            }
         }
         "select" => {
             need(2)?;

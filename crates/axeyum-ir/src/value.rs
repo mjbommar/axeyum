@@ -159,9 +159,9 @@ impl GenericArrayValue {
     ///
     /// Panics if `default` does not have the array element sort.
     pub fn constant(index: ArraySortKey, element: ArraySortKey, default: Value) -> Self {
-        assert_eq!(
-            default.sort(),
-            element.to_sort(),
+        let default = canonicalize_for_sort(element.to_sort(), default);
+        assert!(
+            value_matches_sort(&default, element.to_sort()),
             "generic array default sort must match element sort"
         );
         Self {
@@ -193,14 +193,14 @@ impl GenericArrayValue {
     ///
     /// Panics if `index` does not have the array index sort.
     pub fn select(&self, index: &Value) -> Value {
-        assert_eq!(
-            index.sort(),
-            self.index.to_sort(),
+        assert!(
+            value_matches_sort(index, self.index.to_sort()),
             "generic array index sort mismatch"
         );
+        let index = canonicalize_for_sort(self.index.to_sort(), index.clone());
         self.entries
             .iter()
-            .find(|(i, _)| i == index)
+            .find(|(i, _)| *i == index)
             .map_or_else(|| (*self.default).clone(), |(_, v)| v.clone())
     }
 
@@ -211,16 +211,16 @@ impl GenericArrayValue {
     /// Panics if `index` or `element` has the wrong component sort.
     #[must_use]
     pub fn store(&self, index: Value, element: Value) -> Self {
-        assert_eq!(
-            index.sort(),
-            self.index.to_sort(),
+        assert!(
+            value_matches_sort(&index, self.index.to_sort()),
             "generic array index sort mismatch"
         );
-        assert_eq!(
-            element.sort(),
-            self.element.to_sort(),
+        assert!(
+            value_matches_sort(&element, self.element.to_sort()),
             "generic array element sort mismatch"
         );
+        let index = canonicalize_for_sort(self.index.to_sort(), index);
+        let element = canonicalize_for_sort(self.element.to_sort(), element);
         let mut entries = self.entries.clone();
         if let Some(pos) = entries.iter().position(|(i, _)| *i == index) {
             if element == *self.default {
@@ -314,7 +314,7 @@ fn needs_value_storage(sort: Sort) -> bool {
         | Sort::Array { .. }
         | Sort::Datatype(_)
         | Sort::Seq(_) => true,
-        Sort::Bool | Sort::BitVec(_) | Sort::Uninterpreted(_) => false,
+        Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Uninterpreted(_) => false,
     }
 }
 
@@ -362,11 +362,11 @@ impl FuncValue {
             Self::uses_value_storage_for(&params, result),
             "FuncValue::constant_value is for full-value-storage functions"
         );
-        assert_eq!(
-            default.sort(),
-            result,
+        assert!(
+            value_matches_sort(&default, result),
             "default value sort must match the function result sort"
         );
+        let default = canonicalize_for_sort(result, default);
         Self {
             storage: FuncStorage::FullValue {
                 default,
@@ -436,10 +436,22 @@ impl FuncValue {
                 let code = entries.get(&key).copied().unwrap_or(*default);
                 Value::from_scalar_code(self.result, code)
             }
-            FuncStorage::FullValue { default, entries } => entries
-                .iter()
-                .find(|(k, _)| k.as_slice() == args)
-                .map_or_else(|| default.clone(), |(_, v)| v.clone()),
+            FuncStorage::FullValue { default, entries } => {
+                let key: Vec<Value> = self
+                    .params
+                    .iter()
+                    .copied()
+                    .zip(args.iter().cloned())
+                    .map(|(sort, value)| canonicalize_for_sort(sort, value))
+                    .collect();
+                canonicalize_for_sort(
+                    self.result,
+                    entries
+                        .iter()
+                        .find(|(k, _)| *k == key)
+                        .map_or_else(|| default.clone(), |(_, v)| v.clone()),
+                )
+            }
         }
     }
 
@@ -489,18 +501,23 @@ impl FuncValue {
         };
         assert_eq!(args.len(), self.params.len(), "function arity mismatch");
         for (&sort, arg) in self.params.iter().zip(args) {
-            assert_eq!(
-                arg.sort(),
-                sort,
+            assert!(
+                value_matches_sort(arg, sort),
                 "argument sort must match the parameter sort"
             );
         }
-        assert_eq!(
-            result.sort(),
-            self.result,
+        assert!(
+            value_matches_sort(&result, self.result),
             "result sort must match the function result sort"
         );
-        let key: Vec<Value> = args.to_vec();
+        let key: Vec<Value> = self
+            .params
+            .iter()
+            .copied()
+            .zip(args.iter().cloned())
+            .map(|(sort, value)| canonicalize_for_sort(sort, value))
+            .collect();
+        let result = canonicalize_for_sort(self.result, result);
         let mut entries = entries.clone();
         if let Some(pos) = entries.iter().position(|(k, _)| *k == key) {
             if result == *default {
@@ -588,8 +605,8 @@ fn encode_to(sort: Sort, value: u128) -> u128 {
     match sort {
         Sort::Bool => u128::from(value != 0),
         Sort::BitVec(w) => value & mask(w),
-        // Floating-point values are represented as their `exp + sig`-bit pattern.
-        Sort::Float { exp, sig } => value & mask(exp + sig),
+        Sort::RoundingMode => canonical_rounding_mode(value),
+        Sort::Float { exp, sig } => canonical_float_u128(exp, sig, value),
         Sort::Uninterpreted(_) => value,
         Sort::Array { .. } => panic!("scalar encoding of an array sort"),
         Sort::Int => panic!("scalar encoding of an integer sort"),
@@ -617,10 +634,15 @@ impl Value {
                 width: w,
                 value: code & mask(w),
             },
-            // A floating-point value decodes as its `exp + sig`-bit pattern.
+            Sort::RoundingMode => Value::Bv {
+                width: 3,
+                value: canonical_rounding_mode(code),
+            },
+            // Float values use one canonical representative for SMT-LIB's
+            // single NaN theory value.
             Sort::Float { exp, sig } => Value::Bv {
                 width: exp + sig,
-                value: code & mask(exp + sig),
+                value: canonical_float_u128(exp, sig, code),
             },
             Sort::Uninterpreted(sort) => Value::Uninterpreted { sort, value: code },
             Sort::Array { .. } => panic!("scalar decoding of an array sort"),
@@ -822,6 +844,87 @@ impl Value {
             _ => None,
         }
     }
+}
+
+/// Whether `value` is a concrete representation accepted for `sort`.
+/// Float values deliberately reuse the BV value variants, so their format is
+/// supplied by the owning term/signature rather than recovered from `Value`.
+pub(crate) fn value_matches_sort(value: &Value, sort: Sort) -> bool {
+    match (sort, value) {
+        (Sort::RoundingMode, Value::Bv { width: 3, .. }) => true,
+        (Sort::Float { exp, sig }, Value::Bv { width, .. }) => *width == exp + sig,
+        (Sort::Float { exp, sig }, Value::WideBv(bits)) => bits.width() == exp + sig,
+        _ => value.sort() == sort,
+    }
+}
+
+/// Returns the canonical concrete representative of a value at `sort`.
+/// Currently only Float has a quotient representation: all NaN interchange
+/// encodings denote the same SMT-LIB value and become one positive quiet NaN.
+pub(crate) fn canonicalize_for_sort(sort: Sort, value: Value) -> Value {
+    if sort == Sort::RoundingMode {
+        return match value {
+            Value::Bv { value, .. } => Value::Bv {
+                width: 3,
+                value: canonical_rounding_mode(value),
+            },
+            other => other,
+        };
+    }
+    let Sort::Float { exp, sig } = sort else {
+        return value;
+    };
+    let width = exp + sig;
+    match value {
+        Value::Bv { value, .. } if width <= 128 => Value::Bv {
+            width,
+            value: canonical_float_u128(exp, sig, value),
+        },
+        Value::WideBv(bits) if bits.width() == width => {
+            Value::WideBv(canonical_float_wide(exp, sig, &bits))
+        }
+        other => other,
+    }
+}
+
+fn canonical_rounding_mode(value: u128) -> u128 {
+    match value & 0b111 {
+        0..=4 => value & 0b111,
+        _ => 4,
+    }
+}
+
+fn canonical_float_u128(exp: u32, sig: u32, value: u128) -> u128 {
+    let width = exp + sig;
+    debug_assert!(width <= 128 && exp > 1 && sig > 1);
+    let value = value & mask(width);
+    let fraction_width = sig - 1;
+    let exponent = (value >> fraction_width) & mask(exp);
+    let fraction = value & mask(fraction_width);
+    if exponent == mask(exp) && fraction != 0 {
+        (mask(exp) << fraction_width) | (1u128 << (fraction_width - 1))
+    } else {
+        value
+    }
+}
+
+fn canonical_float_wide(
+    exp: u32,
+    sig: u32,
+    value: &crate::wide::WideUint,
+) -> crate::wide::WideUint {
+    let fraction_width = sig - 1;
+    let exponent_all_ones = (fraction_width..fraction_width + exp).all(|bit| value.bit(bit));
+    let fraction_nonzero = (0..fraction_width).any(|bit| value.bit(bit));
+    if !exponent_all_ones || !fraction_nonzero {
+        return value.clone();
+    }
+    let mut bits = vec![false; (exp + sig) as usize];
+    bits[(fraction_width - 1) as usize] = true;
+    for bit in fraction_width..fraction_width + exp {
+        bits[bit as usize] = true;
+    }
+    crate::wide::WideUint::from_lsb_bits(&bits)
 }
 
 impl core::fmt::Display for Value {

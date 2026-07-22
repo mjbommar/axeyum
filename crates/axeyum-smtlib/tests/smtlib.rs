@@ -273,8 +273,7 @@ fn nested_quantifier_binding_does_not_capture() {
 /// unspecified ±0 result (the `af6c8bf` wrong-`unsat` class).
 #[test]
 fn user_declare_fun_cannot_alias_internal_fp_signzero_helper() {
-    // `fp.max` over +0 / -0 forces the opposite-sign-zero override, minting the
-    // fresh internal sign bit `axeyum_fp.max.signzero.<x>.<y>`.
+    // `fp.max` over +0 / -0 mints the two format/flavor ordered-pair selectors.
     let body = r"(assert (fp.eq (fp.max (_ +zero 8 24) (_ -zero 8 24)) (_ +zero 8 24)))";
     let benign = format!("(set-logic QF_FP)\n{body}\n(check-sat)\n");
     let script = parse_script(&benign).expect("benign fp.max(+0,-0) script parses");
@@ -288,8 +287,8 @@ fn user_declare_fun_cannot_alias_internal_fp_signzero_helper() {
         .collect();
     assert_eq!(
         signzero.len(),
-        1,
-        "expected exactly one fp.max sign-bit helper, found {signzero:?}",
+        2,
+        "expected the two ordered-pair fp.max sign selectors, found {signzero:?}",
     );
     let name = &signzero[0];
     // It lives in the internal namespace, and NO user symbol of that name exists.
@@ -1055,9 +1054,8 @@ fn parses_and_evaluates_rounding_mode_fp_arithmetic() {
 
 #[test]
 fn rounding_mode_sort_symbol_and_alias() {
-    // The `RoundingMode` sort is modeled as a `BitVec(3)`; a declared symbol
-    // carries the `≤ 4` well-formedness constraint, and a `define-fun` alias
-    // binding a literal mode resolves to the constant token.
+    // `RoundingMode` is a first-class five-element sort; a `define-fun` alias
+    // binding a literal mode resolves to a value of that same sort.
     let mut script = parse_script(
         r"
         (set-logic QF_FP)
@@ -1069,12 +1067,12 @@ fn rounding_mode_sort_symbol_and_alias() {
     ",
     )
     .unwrap();
-    // `rm` is a BitVec(3) symbol; the declaration added the `rm <= 4` constraint.
+    // No declaration-local guard is needed: every origin canonicalizes the
+    // three-bit implementation code into the five-value carrier.
     let rm = script.arena.find_symbol("rm").unwrap();
     let rm_var = script.arena.var(rm);
-    assert_eq!(script.arena.sort_of(rm_var), Sort::BitVec(3));
-    // One assertion is the user assert; the other is the `rm <= 4` well-formedness.
-    assert_eq!(script.assertions.len(), 2);
+    assert_eq!(script.arena.sort_of(rm_var), Sort::RoundingMode);
+    assert_eq!(script.assertions.len(), 1);
     // Under rm = 0 (RNE) the symbolic `fp.add rm x x` agrees with the alias
     // `fp.add rne x x` for any x: the `fp.eq` body evaluates to true.
     let x = script.arena.find_symbol("x").unwrap();
@@ -1088,13 +1086,7 @@ fn rounding_mode_sort_symbol_and_alias() {
             value: 0x3F80_0000,
         },
     );
-    // The user assertion (index 1; the wf constraint is index 0 from declare).
-    let body = script
-        .assertions
-        .iter()
-        .copied()
-        .find(|&a| eval(&script.arena, a, &asg) == Ok(Value::Bool(true)))
-        .expect("some assertion is true");
+    let body = script.assertions[0];
     assert_eq!(eval(&script.arena, body, &asg).unwrap(), Value::Bool(true));
 }
 
@@ -1141,8 +1133,7 @@ fn rounding_mode_literal_byte_identical_and_symbolic_modes_differ() {
     )
     .unwrap();
     let rm = sym.arena.find_symbol("rm").unwrap();
-    // The user assertion is the one mentioning `fp.div` (the other is `rm <= 4`):
-    // its truth depends on the rm token (true under RTP, false under RTN).
+    // The assertion's truth depends on the rm value (true under RTP, false under RTN).
     let user = sym
         .assertions
         .iter()
@@ -1306,15 +1297,20 @@ fn parses_and_folds_unambiguous_fp_conversions() {
     .unwrap();
     assert_eq!(v, Value::Bool(true));
 
-    // Non-dyadic real → fp is reported unsupported, never double-rounded.
+    // Non-dyadic real → fp is rounded once by exact integer arithmetic.
     let nd = parse_script(
         r"
         (set-logic QF_FP)
         (assert (fp.isNaN ((_ to_fp 8 24) RNE (/ 1.0 3.0))))
         (check-sat)
     ",
+    )
+    .expect("non-dyadic Real-to-FP is exact and supported");
+    assert_eq!(
+        eval(&nd.arena, nd.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(false),
+        "rounded 1/3 is finite, not NaN"
     );
-    assert!(matches!(nd, Err(SmtError::Unsupported(_))), "got {nd:?}");
 
     // A symbolic bit-vector-source to_fp is now signed-BV->FP (no longer
     // ambiguous, since FP operands carry Sort::Float): it parses into a circuit.
@@ -1461,6 +1457,55 @@ fn float128_nonarithmetic_ops_decide() {
     .expect("F128 arithmetic is supported");
     let v = eval(&script.arena, script.assertions[0], &Assignment::default()).unwrap();
     assert_eq!(v, Value::Bool(true), "F128 (+0 + +0 == +0) should hold");
+}
+
+#[test]
+fn core_float_equality_quotients_nan_encodings() {
+    let script = parse_script(
+        "(set-logic QF_FP)\n\
+         (assert (= (_ NaN 8 24) (fp #b1 #b11111111 #b00000000000000000000001)))\n\
+         (check-sat)\n",
+    )
+    .expect("distinct NaN encodings parse");
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true),
+        "SMT-LIB has one NaN value per Float sort"
+    );
+}
+
+#[test]
+fn wide_special_float_constants_are_valid_and_invalid_formats_reject() {
+    let script = parse_script(
+        "(set-logic QF_FP)\n\
+         (assert (= (_ +zero 15 114) (_ +zero 15 114)))\n\
+         (check-sat)\n",
+    )
+    .expect("129-bit special constant must not shift-panic");
+    assert_eq!(
+        eval(&script.arena, script.assertions[0], &Assignment::new()).unwrap(),
+        Value::Bool(true)
+    );
+    assert!(
+        parse_script("(declare-const x (_ FloatingPoint 1 24))\n(check-sat)\n").is_err(),
+        "SMT-LIB requires both FloatingPoint parameters to exceed one"
+    );
+}
+
+#[test]
+fn rounding_mode_function_results_keep_the_five_value_sort() {
+    let script = parse_script(
+        "(set-logic UFFP)\n\
+         (declare-fun choose (Bool) RoundingMode)\n\
+         (assert (= (choose true) RNE))\n\
+         (check-sat)\n",
+    )
+    .expect("UF-returned rounding modes parse");
+    let application = match script.arena.node(script.assertions[0]) {
+        axeyum_ir::TermNode::App { args, .. } => args[0],
+        other => panic!("expected equality application, got {other:?}"),
+    };
+    assert_eq!(script.arena.sort_of(application), Sort::RoundingMode);
 }
 
 #[test]

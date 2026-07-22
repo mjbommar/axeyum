@@ -565,6 +565,10 @@ impl ReconstructCtx {
                 let body = self.replace_const_aux(body, target, repl, depth + 1);
                 self.kernel.let_(name, ty, val, body)
             }
+            ExprNode::Proj(type_name, field_index, structure) => {
+                let structure = self.replace_const_aux(structure, target, repl, depth);
+                self.kernel.proj(type_name, field_index, structure)
+            }
         }
     }
 

@@ -271,6 +271,127 @@ fn fp_to_int_is_functional_even_when_unspecified() {
     );
 }
 
+/// SMT-LIB floating-point sorts contain one NaN value per format even though
+/// IEEE interchange encodings contain many sign/payload bit patterns. Core
+/// equality therefore identifies distinct NaN encodings.
+#[test]
+fn core_float_equality_uses_the_single_nan_quotient() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_FP)
+(assert (distinct
+  ((_ to_fp 8 24) #x7f800001)
+  ((_ to_fp 8 24) #xffc00000)))
+(check-sat)
+";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// The NaN quotient must be visible to congruence, not only to direct core
+/// equality: an uninterpreted predicate cannot distinguish two free NaNs.
+#[test]
+fn uninterpreted_functions_cannot_distinguish_nan_encodings() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_UFFP)
+(declare-const x Float32)
+(declare-const y Float32)
+(declare-fun p (Float32) Bool)
+(assert (fp.isNaN x))
+(assert (fp.isNaN y))
+(assert (distinct (p x) (p y)))
+(check-sat)
+";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// `RoundingMode` is a five-element theory sort, not an unconstrained BV3.
+#[test]
+fn rounding_mode_quantifier_has_exactly_five_values() {
+    let text = "\
+(set-info :status unsat)
+(set-logic FP)
+(assert (exists ((rm RoundingMode))
+  (and (distinct rm RNE)
+       (distinct rm RNA)
+       (distinct rm RTP)
+       (distinct rm RTN)
+       (distinct rm RTZ))))
+(check-sat)
+";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// Unspecified FP-to-BV results are still functions of their semantic inputs.
+/// Two distinct IEEE NaN encodings denote the same Float32 value and therefore
+/// must receive the same unspecified result.
+#[test]
+fn unspecified_fp_to_bv_is_congruent_over_nan() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_BVFP)
+(assert (distinct
+  ((_ fp.to_ubv 8) RNE ((_ to_fp 8 24) #x7f800001))
+  ((_ fp.to_ubv 8) RNE ((_ to_fp 8 24) #xffc00000))))
+(check-sat)
+";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// The unspecified sign of `fp.min(+0,-0)` is chosen by a semantic selector.
+/// Syntactically different but equal argument pairs must share that choice.
+#[test]
+fn opposite_zero_minimum_is_congruent() {
+    let text = "\
+(set-info :status unsat)
+(set-logic QF_FP)
+(assert (distinct
+  (fp.min (fp.abs (_ -zero 8 24)) (_ -zero 8 24))
+  (fp.min (_ +zero 8 24) (_ -zero 8 24))))
+(check-sat)
+";
+    assert_eq!(run(text).result, CheckResult::Unsat);
+}
+
+/// Overflow selection is rounding-mode and sign sensitive for every arithmetic
+/// path that shares the FP packer.
+#[test]
+fn directed_overflow_matrix_decides_end_to_end() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_FP)
+(assert (and
+  (fp.eq (fp.add RTP ((_ to_fp 8 24) #x7f7fffff) ((_ to_fp 8 24) #x7f7fffff)) (_ +oo 8 24))
+  (fp.eq (fp.add RTZ ((_ to_fp 8 24) #x7f7fffff) ((_ to_fp 8 24) #x7f7fffff)) ((_ to_fp 8 24) #x7f7fffff))
+  (fp.eq (fp.mul RTN ((_ to_fp 8 24) #xff7fffff) ((_ to_fp 8 24) #x40000000)) (_ -oo 8 24))
+  (fp.eq (fp.mul RTP ((_ to_fp 8 24) #xff7fffff) ((_ to_fp 8 24) #x40000000)) ((_ to_fp 8 24) #xff7fffff))
+  (fp.eq (fp.div RTP ((_ to_fp 8 24) #x7f7fffff) ((_ to_fp 8 24) #x3f000000)) (_ +oo 8 24))
+  (fp.eq (fp.fma RTZ ((_ to_fp 8 24) #x7f7fffff) ((_ to_fp 8 24) #x40000000) (_ +zero 8 24)) ((_ to_fp 8 24) #x7f7fffff))))
+(check-sat)
+";
+    assert!(matches!(run(text).result, CheckResult::Sat(_)));
+}
+
+/// Binary128 conversion and remainder must retain low significand bits rather
+/// than narrowing through `f64`.
+#[test]
+fn float128_conversion_and_remainder_are_exact_end_to_end() {
+    let text = "\
+(set-info :status sat)
+(set-logic QF_BVFP)
+(assert (= ((_ fp.to_ubv 8) RTP
+              ((_ to_fp 15 113) #x3fff0000000000000000000000000001))
+           (_ bv2 8)))
+(assert (fp.eq
+  (fp.rem
+    ((_ to_fp 15 113) #x40008000000000000000000000000000)
+    ((_ to_fp 15 113) #x40000000000000000000000000000000))
+  ((_ to_fp 15 113) #xbfff0000000000000000000000000000)))
+(check-sat)
+";
+    assert!(matches!(run(text).result, CheckResult::Sat(_)));
+}
+
 /// Quantifier over a small floating-point format decides by finite-domain
 /// expansion (ADR-0016 + ADR-0026): an 8-value `(_ FloatingPoint 3 3)` domain.
 /// `forall x. (x <= x or isNaN x)` is valid (leq is reflexive except on NaN,

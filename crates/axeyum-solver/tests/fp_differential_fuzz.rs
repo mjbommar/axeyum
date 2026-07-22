@@ -25,7 +25,8 @@
 //! no OS entropy) deterministically generates hundreds of small random `QF_FP`
 //! scripts as **SMT-LIB 2 text**, biased to plant the degenerate operands
 //! (`+zero`/`-zero`/`+oo`/`-oo`/`NaN` leaves; `div`/`rem`/`sqrt`/`min`/`max`
-//! ops). Each script is decided two ways and the verdicts must agree:
+//! ops). Rounded operators draw from all five SMT-LIB rounding modes. Each
+//! script is decided two ways and the verdicts must agree:
 //!
 //! - axeyum: `solve_smtlib` — parse → bit-blast → solve, and (for `Sat`) replay
 //!   the model against the original term. A wrong `Sat` whose model does not
@@ -74,6 +75,8 @@ const Z3_TIMEOUT: Duration = Duration::from_secs(4);
 /// axeyum wall-clock budget per script.
 const AXEYUM_TIMEOUT: Duration = Duration::from_secs(8);
 
+const ROUNDING_MODES: [&str; 5] = ["RNE", "RNA", "RTP", "RTN", "RTZ"];
+
 /// Deterministic LCG (MMIX constants) — reproducible from the seed.
 struct Lcg(u64);
 
@@ -98,6 +101,10 @@ impl Lcg {
     }
 }
 
+fn rounding_mode(rng: &mut Lcg) -> &'static str {
+    ROUNDING_MODES[rng.below(ROUNDING_MODES.len() as u64)]
+}
+
 /// Single-precision (`Float32`) special / concrete leaves, weighted toward the
 /// degenerate operands (zeros, infinities, NaN) that make the underspecified /
 /// edge corners fire. Concrete finite values are written as bit-pattern
@@ -116,16 +123,18 @@ fn leaf(rng: &mut Lcg, nvars: usize) -> String {
             _ => "(_ NaN 8 24)".to_string(),
         }
     } else if roll < 85 {
-        // Concrete finite f32 bit patterns: 1.0, 2.0, -2.0, 0.5, -0.5, 3.0,
-        // a near-overflow big value, and the smallest subnormal.
-        let bits: u32 = match rng.below(8) {
+        // Concrete finite f32 bit patterns: 1.0, -1.0, 2.0, -2.0, 0.5, -0.5,
+        // 3.0, a near-overflow big value, and the smallest subnormal. Including
+        // both 1.0 signs makes exact-cancellation zero-sign cases reachable.
+        let bits: u32 = match rng.below(9) {
             0 => 0x3f80_0000, // 1.0
-            1 => 0x4000_0000, // 2.0
-            2 => 0xc000_0000, // -2.0
-            3 => 0x3f00_0000, // 0.5
-            4 => 0xbf00_0000, // -0.5
-            5 => 0x4040_0000, // 3.0
-            6 => 0x7f00_0000, // ~1.7e38 (near overflow; div/mul can overflow to oo)
+            1 => 0xbf80_0000, // -1.0
+            2 => 0x4000_0000, // 2.0
+            3 => 0xc000_0000, // -2.0
+            4 => 0x3f00_0000, // 0.5
+            5 => 0xbf00_0000, // -0.5
+            6 => 0x4040_0000, // 3.0
+            7 => 0x7f00_0000, // ~1.7e38 (near overflow; div/mul can overflow to oo)
             _ => 0x0000_0001, // smallest positive subnormal
         };
         format!("((_ to_fp 8 24) (_ bv{bits} 32))")
@@ -147,22 +156,35 @@ fn fp_expr(rng: &mut Lcg, depth: u32, nvars: usize) -> String {
         // Unary.
         0 => format!("(fp.abs {})", fp_expr(rng, d, nvars)),
         1 => format!("(fp.neg {})", fp_expr(rng, d, nvars)),
-        2 => format!("(fp.sqrt RNE {})", fp_expr(rng, d, nvars)), // sqrt(neg) = NaN
-        3 => format!("(fp.roundToIntegral RNE {})", fp_expr(rng, d, nvars)),
+        2 => {
+            let rm = rounding_mode(rng);
+            format!("(fp.sqrt {rm} {})", fp_expr(rng, d, nvars)) // sqrt(neg) = NaN
+        }
+        3 => {
+            let rm = rounding_mode(rng);
+            format!("(fp.roundToIntegral {rm} {})", fp_expr(rng, d, nvars))
+        }
         // Binary arithmetic (rounded).
-        4 => format!(
-            "(fp.add RNE {} {})",
-            fp_expr(rng, d, nvars),
-            fp_expr(rng, d, nvars)
-        ),
-        5 => format!(
-            "(fp.mul RNE {} {})",
-            fp_expr(rng, d, nvars),
-            fp_expr(rng, d, nvars)
-        ),
+        4 => {
+            let rm = rounding_mode(rng);
+            format!(
+                "(fp.add {rm} {} {})",
+                fp_expr(rng, d, nvars),
+                fp_expr(rng, d, nvars)
+            )
+        }
+        5 => {
+            let rm = rounding_mode(rng);
+            format!(
+                "(fp.mul {rm} {} {})",
+                fp_expr(rng, d, nvars),
+                fp_expr(rng, d, nvars)
+            )
+        }
         // `fp.div` — by `±0` = `±oo`; `0/0`, `oo/oo` = NaN. Bias the divisor to a
         // signed zero so the degenerate `x/0` shape is planted, not incidental.
         6 => {
+            let rm = rounding_mode(rng);
             let num = fp_expr(rng, d, nvars);
             let den = if rng.below(100) < 45 {
                 if rng.flip() {
@@ -173,7 +195,7 @@ fn fp_expr(rng: &mut Lcg, depth: u32, nvars: usize) -> String {
             } else {
                 fp_expr(rng, d, nvars)
             };
-            format!("(fp.div RNE {num} {den})")
+            format!("(fp.div {rm} {num} {den})")
         }
         // `fp.rem` — takes NO rounding mode; `y=0` = NaN. Bias `y` toward zero.
         7 => {
@@ -201,12 +223,15 @@ fn fp_expr(rng: &mut Lcg, depth: u32, nvars: usize) -> String {
             fp_expr(rng, d, nvars)
         ),
         // Ternary FMA.
-        _ => format!(
-            "(fp.fma RNE {} {} {})",
-            fp_expr(rng, d, nvars),
-            fp_expr(rng, d, nvars),
-            fp_expr(rng, d, nvars)
-        ),
+        _ => {
+            let rm = rounding_mode(rng);
+            format!(
+                "(fp.fma {rm} {} {} {})",
+                fp_expr(rng, d, nvars),
+                fp_expr(rng, d, nvars),
+                fp_expr(rng, d, nvars)
+            )
+        }
     }
 }
 
@@ -273,6 +298,21 @@ impl Instance {
         writeln!(text, "(assert {formula})\n(check-sat)").expect("write to String");
         Instance { text }
     }
+}
+
+#[test]
+fn generated_sweep_covers_all_rounding_modes() {
+    let mut seen = [false; ROUNDING_MODES.len()];
+    for seed in 0..INSTANCES {
+        let inst = Instance::generate(&mut Lcg::new(seed));
+        for (index, mode) in ROUNDING_MODES.iter().enumerate() {
+            seen[index] |= inst.text.contains(mode);
+        }
+    }
+    assert!(
+        seen.iter().all(|mode_seen| *mode_seen),
+        "the deterministic FP generator must cover all five rounding modes (seen={seen:?})"
+    );
 }
 
 /// A coarse verdict label.
@@ -380,6 +420,7 @@ fn fp_differential_fuzz_disagree_zero() {
     let mut z3_skip = 0u64;
     let mut sat_seen = 0u64;
     let mut unsat_seen = 0u64;
+    let mut rounding_modes_seen = [false; ROUNDING_MODES.len()];
 
     for seed in 0..INSTANCES {
         total += 1;
@@ -390,6 +431,9 @@ fn fp_differential_fuzz_disagree_zero() {
             );
         }
         let inst = Instance::generate(&mut Lcg::new(seed));
+        for (index, mode) in ROUNDING_MODES.iter().enumerate() {
+            rounding_modes_seen[index] |= inst.text.contains(mode);
+        }
 
         let ax = axeyum_decide(&inst.text);
         if ax == Verdict::Skip {
@@ -446,6 +490,10 @@ fn fp_differential_fuzz_disagree_zero() {
         sat_seen > 0 && unsat_seen > 0,
         "the FP fuzz must exercise BOTH verdicts (got {sat_seen} sat / {unsat_seen} unsat)"
     );
+    assert!(
+        rounding_modes_seen.iter().all(|seen| *seen),
+        "the FP fuzz must exercise all five rounding modes (seen={rounding_modes_seen:?})"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -454,6 +502,31 @@ fn fp_differential_fuzz_disagree_zero() {
 // These make the exact shapes the Hard Rule names impossible to lose to a
 // generator-coverage gap.
 // ---------------------------------------------------------------------------
+
+/// TOTAL-with-edges — an exact finite cancellation has zero magnitude, but its
+/// sign is rounding-mode-sensitive: RTN produces `-0`; every other rounding
+/// mode produces `+0`. This is the minimized seed class for the real SMT-LIB
+/// wrong-SAT found in the `QF_BVFP/QF_ABVFP` KLEE inventory. Cover addition in
+/// both operand orders and the equivalent exact-cancellation FMA path.
+#[test]
+fn seed_exact_cancellation_zero_sign_all_rounding_modes() {
+    const ONE: &str = "((_ to_fp 8 24) (_ bv1065353216 32))";
+    const NEG_ONE: &str = "((_ to_fp 8 24) (_ bv3212836864 32))";
+
+    for mode in ROUNDING_MODES {
+        for (lhs, rhs, order) in [(ONE, NEG_ONE, "+1 + -1"), (NEG_ONE, ONE, "-1 + +1")] {
+            let text = format!(
+                "(set-logic QF_FP)\n(assert (not (fp.isNegative (fp.add {mode} {lhs} {rhs}))))\n(check-sat)\n"
+            );
+            assert_agrees(&text, &format!("{order} zero sign under {mode}"));
+        }
+
+        let text = format!(
+            "(set-logic QF_FP)\n(assert (not (fp.isNegative (fp.fma {mode} {ONE} {ONE} {NEG_ONE}))))\n(check-sat)\n"
+        );
+        assert_agrees(&text, &format!("fma(+1,+1,-1) zero sign under {mode}"));
+    }
+}
 
 /// UNDERSPEC keystone — `fp.min(+0,-0)` free sign, observed through
 /// `1.0 / min(+0,-0)` ∈ {+oo, -oo}. SMT-LIB permits EITHER sign, so BOTH the

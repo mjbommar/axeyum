@@ -205,7 +205,7 @@ fn update_logic_sort_features(
                 );
             }
         }
-        Sort::BitVec(_) | Sort::Float { .. } => *has_bitvec = true,
+        Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => *has_bitvec = true,
         Sort::Int => *has_integers = true,
         Sort::Real => *has_reals = true,
         // A sequence declares no distinct logic feature bit yet (P2.7); decline
@@ -277,6 +277,7 @@ fn collect_uninterpreted_sort(sort: Sort, out: &mut HashSet<SortId>) {
         | Sort::BitVec(_)
         | Sort::Int
         | Sort::Real
+        | Sort::RoundingMode
         | Sort::Datatype(_)
         | Sort::Float { .. } => {}
     }
@@ -295,6 +296,7 @@ fn sort_str(arena: &TermArena, sort: Sort) -> String {
         }
         Sort::Int => "Int".to_owned(),
         Sort::Real => "Real".to_owned(),
+        Sort::RoundingMode => "RoundingMode".to_owned(),
         Sort::Datatype(id) => format!("(Datatype {})", id.index()),
         Sort::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         Sort::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
@@ -308,6 +310,7 @@ fn array_sort_key_str(arena: &TermArena, sort: ArraySortKey) -> String {
         ArraySortKey::BitVec(w) => format!("(_ BitVec {w})"),
         ArraySortKey::Int => "Int".to_owned(),
         ArraySortKey::Real => "Real".to_owned(),
+        ArraySortKey::RoundingMode => "RoundingMode".to_owned(),
         ArraySortKey::Datatype(id) => format!("(Datatype {})", id.index()),
         ArraySortKey::Uninterpreted(id) => symbol_syntax(arena.uninterpreted_sort_name(id)),
         ArraySortKey::Float { exp, sig } => format!("(_ FloatingPoint {exp} {sig})"),
@@ -419,6 +422,20 @@ fn render_node(arena: &TermArena, root: TermId, names: &HashMap<TermId, String>)
                         );
                         continue;
                     }
+                    if matches!(op, Op::RoundingModeFromBits) {
+                        let code = match names.get(&args[0]) {
+                            Some(n) if args[0] != root => n.clone(),
+                            _ => memo[&args[0]].clone(),
+                        };
+                        memo.insert(
+                            t,
+                            format!(
+                                "(ite (= {code} #b000) RNE (ite (= {code} #b001) RNA \
+                                 (ite (= {code} #b010) RTP (ite (= {code} #b011) RTN RTZ))))"
+                            ),
+                        );
+                        continue;
+                    }
                     let head = match op {
                         Op::Apply(func) => symbol_syntax(arena.function(*func).0),
                         _ => op_str(*op),
@@ -501,6 +518,9 @@ fn op_str(op: Op) -> String {
         Op::Int2Bv { width } => format!("(_ int2bv {width})"),
         // The bit-reinterpret head `((_ to_fp eb sb) bv)` (ADR-0026).
         Op::FpFromBits { exp, sig } => format!("(_ to_fp {exp} {sig})"),
+        Op::RoundingModeFromBits => {
+            unreachable!("rounding-mode codes render via a five-way ite")
+        }
         // Applications are rendered via the function name in `render_node`.
         Op::Apply(_) => unreachable!("Op::Apply is rendered via its function name"),
         Op::IntNeg | Op::IntSub | Op::RealNeg | Op::RealSub => "-".into(),

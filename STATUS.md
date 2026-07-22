@@ -12,13 +12,18 @@ session. Status legend: `TODO` · `WIP` · `DONE` · `BLOCKED`.
 ## Project reality check (updated 2026-07-21)
 
 **Measured status vs the [north star](PLAN.md#where-we-are-vs-the-north-star--measured-reality-check-2026-06-28):
-soundness holding, parity not yet reached, the road there fully mapped.** Sound
-everywhere measured, dominant on a growing fragment set, with the remaining
-decide-rate / performance / proof-coverage work decomposed into sized,
+legacy baselines sound, full-library P0 fixed locally with slice revalidation
+open; parity not yet reached, the road there fully mapped.** The remaining
+decide-rate / performance / proof-coverage work is decomposed into sized,
 exit-criteria'd tracks we advance one increment at a time.
-- **Soundness:** `DISAGREE = 0` across all 35 measured baselines (the
-  oracle-compared count lives in the generated scoreboard) — *holding*. (Two consumer-app wrong-safes found by new fuzzes
-  + fixed this session.)
+- **Soundness:** the legacy 35 measured baselines remain at `DISAGREE = 0`, but
+  the 2026-07-22 full-library run found a real QF_ABVFP/QF_BVFP wrong-`sat`:
+  exact FP cancellation under RTN was incorrectly forced to `+0`. The add/FMA
+  convention is fixed locally, bit-for-bit all-mode tests and a 600-script cvc5
+  differential sweep are green, and both preserved full queries now return
+  `unsat`. The complete QF_FP/QF_BVFP/QF_ABVFP selected slices must return to
+  DISAGREE = 0 before the broader soundness floor is called restored. (Two
+  consumer-app wrong-safes were also found by earlier fuzzes and fixed.)
 - **Decide-rate (the central gap):** see the generated
   [SCOREBOARD](bench-results/SCOREBOARD.md) totals (authoritative; this line
   intentionally does not hand-copy the aggregate), 0–100% across divisions;
@@ -368,6 +373,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 > Full lane history archived: [docs/status-archive/process-documentation-lane-through-2026-07-06.md](docs/status-archive/process-documentation-lane-through-2026-07-06.md)
 
 ## Current focus
+
+- **2026-07-22 — P0 FP wrong-`sat` is fixed locally; complete affected-slice
+  validation is next.** The full-library run exposed exact finite cancellation
+  under `roundTowardNegative` being lowered to `+0` instead of `-0`. The same
+  latent rule existed in FMA. `axeyum-fp` now selects exact-zero signs by
+  rounding mode; independent `rustc_apfloat` tests cover add/FMA, operand order,
+  signed-zero inputs, and all five modes. The QF_FP differential generator now
+  uses all five modes and includes the minimized cancellation seed class; 600
+  scripts agree with cvc5 1.3.4 (267 `sat`, 333 `unsat`, zero disagreements).
+  The preserved QF_BVFP and QF_ABVFP originals both return `unsat` through the
+  SMT-COMP CLI. Re-run the complete QF_FP/QF_BVFP/QF_ABVFP selected slices before
+  restoring the full-library DISAGREE = 0 claim. The separate Lean
+  reconstruction `ExprNode::Proj` exhaustiveness error found by the all-feature
+  gate is also repaired; workspace check and warning-denied Clippy are green.
+  The detailed state and resume sequence are in
+  [the FP audit handoff](docs/plan/fp-theory-soundness-audit-handoff-2026-07-22.md).
 
 - **2026-07-22 — TL2.13 mutual inductive groups are complete; TL2.14 M0 is
   frozen and M1 diagnostic preflight is next.**
@@ -7034,6 +7055,17 @@ plan is built and committed on the current branch:
   link, and diff gates pass; the checker is registered in both aggregate
   routes. M1 may correct only the diagnostic preflight; no nested admission is
   yet authorized.
+
+- **2026-07-22 — Fixed the full-library FP exact-cancellation wrong-`sat`.** The
+  add bit-blaster had an RNE-only exact-zero convention and always emitted `+0`
+  for finite cancellation; RTN requires `-0`. FMA carried the same latent bug.
+  Both paths now share the correct mode-sensitive zero-sign rule. Added
+  bit-for-bit `rustc_apfloat` tests across all five modes, a minimized QF_FP
+  regression, an all-mode deterministic differential generator, and directed
+  add/FMA seeds. A cvc5 1.3.4 differential run decided 600/600 scripts with zero
+  disagreement (267 `sat`, 333 `unsat`), and both preserved QF_BVFP/QF_ABVFP
+  originals changed from wrong-`sat` to `unsat`. Complete affected-slice
+  revalidation remains the P0 exit gate.
 
 - **2026-07-22 — Corrected and preregistered the post-TL2.13 trust boundary.**
   Direct inspection of pinned Lean 4.30 shows nested-inductive elimination in

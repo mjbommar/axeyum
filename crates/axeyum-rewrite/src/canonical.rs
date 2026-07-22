@@ -726,6 +726,7 @@ fn rewrite_app(
             | Sort::Array { .. }
             | Sort::Int
             | Sort::Real
+            | Sort::RoundingMode
             | Sort::Datatype(_)
             | Sort::Uninterpreted(_)
             | Sort::Float { .. }
@@ -853,6 +854,7 @@ fn rewrite_app(
         | Op::Bv2Nat
         | Op::Int2Bv { .. }
         | Op::FpFromBits { .. }
+        | Op::RoundingModeFromBits
         | Op::Apply(_)
         | Op::IntNeg
         | Op::IntAdd
@@ -2011,6 +2013,7 @@ pub fn build_app(arena: &mut TermArena, op: Op, args: &[TermId]) -> Result<TermI
         Op::Bv2Nat => arena.bv2nat(args[0]),
         Op::Int2Bv { width } => arena.int2bv(width, args[0]),
         Op::FpFromBits { exp, sig } => arena.fp_from_bits(args[0], exp, sig),
+        Op::RoundingModeFromBits => arena.rounding_mode_from_bits(args[0]),
         Op::Apply(func) => arena.apply(func, args),
         Op::IntNeg => arena.int_neg(args[0]),
         Op::IntAdd => arena.int_add(args[0], args[1]),

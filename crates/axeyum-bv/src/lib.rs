@@ -304,8 +304,10 @@ pub fn first_unsupported_sort(arena: &TermArena, roots: &[TermId]) -> Option<(Te
             continue;
         }
         match arena.sort_of(term) {
-            // Floating-point lowers structurally to BitVec(exp+sig) (ADR-0026).
-            Sort::Bool | Sort::BitVec(_) | Sort::Float { .. } => {}
+            // Floating-point lowers structurally to BitVec(exp+sig) (ADR-0026),
+            // and the five-element rounding-mode carrier lowers to its
+            // canonical three-bit code.
+            Sort::Bool | Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {}
             other => return Some((term, other)),
         }
         if let TermNode::App { args, .. } = arena.node(term) {
@@ -1618,7 +1620,7 @@ impl<'a> LoweringBuilder<'a> {
                 let shift = by % width;
                 self.recorded_bit(args[0], (bit + shift) % width)?
             }
-            Op::FpFromBits { .. } => self.recorded_bit(args[0], bit)?,
+            Op::FpFromBits { .. } | Op::RoundingModeFromBits => self.recorded_bit(args[0], bit)?,
             _ => return Err(BitLowerError::UnsupportedOp { term, op }),
         };
         Ok(literal)
@@ -1683,6 +1685,27 @@ impl<'a> LoweringBuilder<'a> {
                     .map(Some)
                     .collect()
             }
+        };
+        let bits = if matches!(
+            self.arena.sort_of(term),
+            Sort::Float { .. } | Sort::RoundingMode
+        ) {
+            let complete = bits
+                .into_iter()
+                .enumerate()
+                .map(|(bit, literal)| {
+                    literal.ok_or(BitLowerError::MissingDemandedBit {
+                        term,
+                        bit_index: u32::try_from(bit).expect("term bit fits u32"),
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            self.canonicalize_sort_bits(self.arena.sort_of(term), complete)
+                .into_iter()
+                .map(Some)
+                .collect()
+        } else {
+            bits
         };
         if bits.len() != width {
             return Err(BitLowerError::BitWidthMismatch {
@@ -1813,7 +1836,7 @@ impl<'a> LoweringBuilder<'a> {
                 let shift = by % width;
                 get(args[0], (bit + shift) % width)?
             }
-            Op::FpFromBits { .. } => get(args[0], bit)?,
+            Op::FpFromBits { .. } | Op::RoundingModeFromBits => get(args[0], bit)?,
             _ => {
                 return Err(BitLowerError::UnsupportedOp { term, op });
             }
@@ -1925,10 +1948,10 @@ impl<'a> LoweringBuilder<'a> {
 
     fn lower_symbol(&mut self, symbol: SymbolId) -> Vec<AigLit> {
         let (name, sort) = self.arena.symbol(symbol);
-        match sort {
+        let bits = match sort {
             Sort::Bool => vec![self.symbol_input(symbol, name, sort, 0)],
             // Floating-point shares the bit-vector lowering: `exp + sig` input bits.
-            Sort::BitVec(_) | Sort::Float { .. } => {
+            Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
                 (0..sort.lowered_width().expect("bitvec/float has a width"))
                     .map(|bit_index| self.symbol_input(symbol, name, sort, bit_index))
                     .collect()
@@ -1953,13 +1976,67 @@ impl<'a> LoweringBuilder<'a> {
             Sort::Seq(_) => {
                 unreachable!("sequence terms are rejected before bit lowering (P2.7)")
             }
+        };
+        self.canonicalize_sort_bits(sort, bits)
+    }
+
+    /// Canonicalizes quotient-valued finite sorts at the bit-blast boundary.
+    ///
+    /// SMT-LIB's floating-point carrier has exactly one NaN per format, while
+    /// IEEE interchange encodings contain many NaN payload/sign patterns.  The
+    /// lowering therefore maps every NaN encoding to the positive quiet-NaN
+    /// code (all-one exponent, top fraction bit set, all other bits clear).
+    /// This is applied to symbols and every Float-producing application, so
+    /// core equality, Ackermann congruence, arrays, and quantified instances all
+    /// see the semantic quotient rather than raw payload bits.
+    fn canonicalize_sort_bits(&mut self, sort: Sort, bits: Vec<AigLit>) -> Vec<AigLit> {
+        if sort == Sort::RoundingMode {
+            debug_assert_eq!(bits.len(), 3);
+            // Codes 5, 6, and 7 are outside the five-element carrier.  Collapse
+            // them to RTZ (code 4 = LSB-first 0,0,1), giving the bit-level
+            // representation exactly five semantic values at every origin.
+            let low_nonzero = self.aig.or(bits[0], bits[1]);
+            let invalid = self.aig.and(bits[2], low_nonzero);
+            return bits
+                .into_iter()
+                .enumerate()
+                .map(|(bit, original)| self.aig.mux(invalid, const_lit(bit == 2), original))
+                .collect();
         }
+        let Sort::Float { exp, sig } = sort else {
+            return bits;
+        };
+        debug_assert_eq!(bits.len(), (exp + sig) as usize);
+        debug_assert!(exp > 1 && sig > 1);
+
+        let frac_end = sig - 1;
+        let exp_end = frac_end + exp;
+        let exponent_all_ones = bits[frac_end as usize..exp_end as usize]
+            .iter()
+            .copied()
+            .fold(AigLit::TRUE, |acc, bit| self.aig.and(acc, bit));
+        let fraction_nonzero = bits[..frac_end as usize]
+            .iter()
+            .copied()
+            .fold(AigLit::FALSE, |acc, bit| self.aig.or(acc, bit));
+        let is_nan = self.aig.and(exponent_all_ones, fraction_nonzero);
+
+        bits.into_iter()
+            .enumerate()
+            .map(|(index, original)| {
+                let bit = u32::try_from(index).expect("float bit index fits u32");
+                let canonical = bit >= frac_end && bit < exp_end || bit == frac_end - 1;
+                self.aig.mux(is_nan, const_lit(canonical), original)
+            })
+            .collect()
     }
 
     fn symbol_input(&mut self, symbol: SymbolId, name: &str, sort: Sort, bit_index: u32) -> AigLit {
         let label = match sort {
             Sort::Bool => format!("{name}:bool"),
-            Sort::BitVec(_) | Sort::Float { .. } => format!("{name}[{bit_index}]"),
+            Sort::BitVec(_) | Sort::RoundingMode | Sort::Float { .. } => {
+                format!("{name}[{bit_index}]")
+            }
             Sort::Array { .. } => {
                 unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
             }
@@ -2065,8 +2142,9 @@ impl<'a> LoweringBuilder<'a> {
                 Op::BvShl | Op::BvLshr | Op::BvAshr => self.lower_shift_op(term, op, operands)?,
                 Op::RotateLeft { by } => Self::lower_rotate_op(term, operands, by, true)?,
                 Op::RotateRight { by } => Self::lower_rotate_op(term, operands, by, false)?,
-                // A floating-point reinterpret is identity on the bits (ADR-0026).
-                Op::FpFromBits { .. } => {
+                // The raw reinterpret is followed by sort-level NaN
+                // canonicalization below.
+                Op::FpFromBits { .. } | Op::RoundingModeFromBits => {
                     let [source] = operands else {
                         return Err(BitLowerError::BitWidthMismatch {
                             term,
@@ -2123,6 +2201,7 @@ impl<'a> LoweringBuilder<'a> {
                     return Err(BitLowerError::UnsupportedOp { term, op });
                 }
             };
+        let bits = self.canonicalize_sort_bits(self.arena.sort_of(term), bits);
         self.check_width(term, &bits)?;
         Ok(bits)
     }
@@ -2978,6 +3057,7 @@ impl<'a> LoweringBuilder<'a> {
         match self.arena.sort_of(term) {
             Sort::Bool => 1,
             Sort::BitVec(width) => width,
+            Sort::RoundingMode => 3,
             Sort::Float { exp, sig } => exp + sig,
             Sort::Array { .. } => {
                 unreachable!("array terms are eliminated before bit lowering (ADR-0010)")
@@ -3180,6 +3260,7 @@ struct DemandAdmissionScreen {
 }
 
 impl DemandAdmissionScreen {
+    #[allow(clippy::too_many_lines)]
     fn compute(
         arena: &TermArena,
         roots: &[TermId],
@@ -3214,6 +3295,7 @@ impl DemandAdmissionScreen {
             ..BitDemandStats::default()
         };
         let mut candidate = false;
+        let mut has_quotient_sort = false;
         let mut slice_uses = vec![0u32; arena.len()];
         let mut slice_min = vec![u32::MAX; arena.len()];
         let mut slice_max = vec![0u32; arena.len()];
@@ -3225,6 +3307,8 @@ impl DemandAdmissionScreen {
             let term = arena
                 .term_by_index(term_index)
                 .expect("dense term index belongs to the arena");
+            has_quotient_sort |=
+                matches!(arena.sort_of(term), Sort::Float { .. } | Sort::RoundingMode);
             stats.term_bits_available = stats
                 .term_bits_available
                 .saturating_add(usize_to_u64_saturating(sort_width(arena.sort_of(term))));
@@ -3278,6 +3362,14 @@ impl DemandAdmissionScreen {
             stats.estimated_bits_avoided = stats
                 .estimated_bits_avoided
                 .saturating_add(u64::from(width.saturating_sub(live_envelope)));
+        }
+        // Range-demand lowering materializes individual result bits.  Float
+        // NaN canonicalization makes every result bit depend on the full
+        // exponent/fraction, so use the ordinary full lowering for any slice
+        // containing a Float term.  Dense demand has an explicit full-promotion
+        // rule and remains available to callers that request it directly.
+        if has_quotient_sort {
+            candidate = false;
         }
         stats.admission = start.elapsed();
         Ok(Self {
@@ -3448,7 +3540,8 @@ impl RangeDemandPlan {
                 | Op::BvNand
                 | Op::BvNor
                 | Op::BvXnor
-                | Op::FpFromBits { .. } => {
+                | Op::FpFromBits { .. }
+                | Op::RoundingModeFromBits => {
                     for range in demand.ranges(term_width) {
                         for &arg in args {
                             complete &= add(arg, range);
@@ -3665,6 +3758,20 @@ impl DenseBitDemand {
             }
             let width = sort_width(arena.sort_of(term));
             let term_bits = &mut demanded_term_bits[term.index()];
+            // Any output bit of a Float depends on the complete exponent and
+            // fraction because NaN payloads are canonicalized at lowering.
+            // Promote the term to full demand once, then process its bits via
+            // the ordinary transfer table.
+            if matches!(arena.sort_of(term), Sort::Float { .. } | Sort::RoundingMode)
+                && term_bits.is_empty()
+            {
+                *term_bits = vec![false; width];
+                for float_bit in 0..width {
+                    demand_stack
+                        .push((term, u32::try_from(float_bit).expect("float bit fits u32")));
+                }
+                continue;
+            }
             if term_bits.is_empty() {
                 *term_bits = vec![false; width];
             }
@@ -3730,6 +3837,7 @@ fn is_demand_local_op(op: Op) -> bool {
             | Op::RotateLeft { .. }
             | Op::RotateRight { .. }
             | Op::FpFromBits { .. }
+            | Op::RoundingModeFromBits
     )
 }
 
@@ -3772,7 +3880,8 @@ fn propagate_bit_demand(arena: &TermArena, term: TermId, bit: u32, stack: &mut V
         | Op::BvNand
         | Op::BvNor
         | Op::BvXnor
-        | Op::FpFromBits { .. } => {
+        | Op::FpFromBits { .. }
+        | Op::RoundingModeFromBits => {
             stack.extend(args.iter().map(|arg| (*arg, bit)));
         }
         Op::Ite => {
@@ -3814,6 +3923,7 @@ fn sort_width(sort: Sort) -> usize {
     match sort {
         Sort::Bool => 1,
         Sort::BitVec(width) => width as usize,
+        Sort::RoundingMode => 3,
         Sort::Float { exp, sig } => (exp + sig) as usize,
         Sort::Array { .. } => {
             unreachable!("array terms are eliminated before bit lowering (ADR-0010)")

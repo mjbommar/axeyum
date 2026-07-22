@@ -51,16 +51,26 @@ is **ahead of every decide-rate item below**.
 - **Repro preserved:** [`../../bench-results/smtcomp-full-library-20260722/soundness-fp-wrong-sat/`](../../bench-results/smtcomp-full-library-20260722/soundness-fp-wrong-sat/)
   (both `.smt2` files + provenance).
 
-**Status: fix in progress (separate agent).** This plan does not touch the FP
-code. **Exit criteria** (per the project Hard Rules on underspecified/edge
-operators):
-1. Root-cause the wrong-`sat` in `axeyum-fp` (likely `fp.add` non-default
-   rounding-mode rounding, or `to_fp`/NaN/`abs` interaction).
-2. Add a **fuzz seed-class that deliberately generates FP arithmetic under every
-   rounding mode** (`roundTowardNegative/Positive/Zero`, not just
-   `roundNearestTiesToEven`) — the differential FP fuzz must emit the corner it
-   missed, or the gate stays blind exactly where soundness is most fragile.
-3. Re-run the QF_FP/QF_BVFP/QF_ABVFP slices to confirm DISAGREE returns to 0.
+**Status: root cause fixed locally; full-slice revalidation remains open.** The
+finite add path forced every exact nonzero cancellation to `+0`. Under
+`roundTowardNegative`, IEEE/SMT-LIB semantics require `-0`; the same latent
+convention existed in FMA. Because model replay evaluates the same lowered FP
+circuit, it could not independently detect the bad convention. The local fix
+selects the exact-zero sign from the rounding mode for both add and FMA.
+
+**Exit criteria** (per the project Hard Rules on underspecified/edge operators):
+1. **DONE:** root-cause and repair exact-cancellation/signed-zero selection in
+   `axeyum-fp::add` and `axeyum-fp::fma`.
+2. **DONE:** add bit-for-bit `rustc_apfloat` tests over all five rounding modes,
+   a minimized QF_FP regression, and a differential fuzz seed-class. The random
+   generator now draws every rounded FP operator from all five modes and has a
+   deterministic coverage assertion. A 600-script cvc5 1.3.4 run jointly
+   decided all 600 (267 `sat`, 333 `unsat`) with **0 disagreements**; 15 directed
+   add/FMA cancellation cases also agree.
+3. **PARTIAL:** the preserved full QF_BVFP and QF_ABVFP twins now both return
+   `unsat` through the SMT-COMP CLI. Re-run the complete QF_FP/QF_BVFP/QF_ABVFP
+   selected slices before declaring the new full-library soundness floor
+   restored to DISAGREE = 0.
 4. This maps onto Track 3 **P3.0** (trust ledger) and the **P2.8** FP row
    ([`track-2-theories/README.md`](track-2-theories/README.md)); the fuzz-coverage
    rule is the FP analogue of the div/mod-by-0 lesson (ADR referenced in CLAUDE.md).
@@ -159,8 +169,9 @@ existing priority orders in
 [`gap-analysis-z3-cvc5-2026-07-07.md`](gap-analysis-z3-cvc5-2026-07-07.md) (leverage
 order), and [`decide-rate-frontier-2026-06-28.md`](decide-rate-frontier-2026-06-28.md).
 
-### Rank 0 — Fix the P0 FP wrong-`sat` (soundness floor) — *in progress*
-See §0. Nothing else ships as "parity" while DISAGREE > 0. Track 3 **P3.0** / **P2.8**.
+### Rank 0 — Fix the P0 FP wrong-`sat` (soundness floor) — *fixed locally; slice validation open*
+See §0. Nothing else ships as "parity" until the three affected full-library
+slices are re-run at DISAGREE = 0. Track 3 **P3.0** / **P2.8**.
 
 ### Rank 1 — Finish the measurement itself (G0–G3), because it re-ranks everything
 The s4 run *is* the instrument the current queue asked for. Complete it, then
@@ -277,8 +288,10 @@ specified but had not yet executed at full scale:
 
 ## 5. Concrete next actions (rank-ordered, checkable)
 
-1. **[P0, other agent]** Root-cause + fix the `fp.add`-non-default-rounding
-   wrong-`sat`; add the rounding-mode fuzz seed-class; re-run FP slices → DISAGREE 0.
+1. **[P0 validation]** Review/land the exact-zero sign fix and re-run the full
+   QF_FP/QF_BVFP/QF_ABVFP selected slices → DISAGREE 0. The root cause, focused
+   tests, minimized regression, all-mode fuzz widening, 600-case cvc5 sweep, and
+   the two original full-query reruns are already green.
 2. **[measurement]** Let the s4 §6 run finish (thermally-safe config on s4 only,
    N=8; s5–s7 available if scaled); keep a persistent `WRONG` grep on the shard
    logs. On completion, run `inventory.py` → a dated `bench-results/` record with
