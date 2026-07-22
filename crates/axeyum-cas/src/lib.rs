@@ -7666,6 +7666,57 @@ pub fn definite_integrate(
     })
 }
 
+/// The **Fourier series** partial sum of `f` on `[−L, L]` up to `n_terms`
+/// harmonics: `a₀/2 + Σ_{k=1}^{n} [aₖ·cos(kπx/L) + bₖ·sin(kπx/L)]`, with the Euler
+/// coefficients `aₖ = (1/L)∫_{−L}^{L} f·cos(kπx/L) dx`, `bₖ = (1/L)∫_{−L}^{L}
+/// f·sin(kπx/L) dx` computed by exact [`definite_integrate`]. E.g. `f(x)=x` on
+/// `[−π, π]` gives `2 sin x − sin 2x + (2/3) sin 3x − …`. `None` if any coefficient
+/// integral is unavailable (`f` outside the integrable fragment).
+#[must_use]
+pub fn fourier_series(
+    f: &CasExpr,
+    var: &str,
+    half_period: &CasExpr,
+    n_terms: u32,
+) -> Option<CasExpr> {
+    let l = half_period;
+    let neg_l = CasExpr::Neg(Box::new(l.clone()));
+    let pi = CasExpr::var("pi");
+    let x = CasExpr::var(var);
+    let coefficient = |integrand: &CasExpr| -> Option<CasExpr> {
+        let integral = definite_integrate(integrand, var, &neg_l, l)?;
+        if !integral.is_certified() {
+            return None;
+        }
+        Some(simplify(&(integral.value / l.clone())))
+    };
+    // Constant term a₀/2.
+    let a0 = coefficient(f)?;
+    let mut terms: Vec<CasExpr> = vec![simplify(&scaled_term(Rational::new(1, 2), a0))];
+    for k in 1..=n_terms {
+        // Harmonic argument kπx/L.
+        let arg = simplify(&(CasExpr::Mul(vec![CasExpr::int(i128::from(k)), pi.clone(), x.clone()]) / l.clone()));
+        let ak = coefficient(&(f.clone() * arg.clone().cos()))?;
+        let bk = coefficient(&(f.clone() * arg.clone().sin()))?;
+        // Append aₖ·cos + bₖ·sin, dropping terms with a zero coefficient.
+        if !matches!(&ak, CasExpr::Const(c) if c.is_zero()) {
+            terms.push(simplify(&(ak * arg.clone().cos())));
+        }
+        if !matches!(&bk, CasExpr::Const(c) if c.is_zero()) {
+            terms.push(simplify(&(bk * arg.sin())));
+        }
+    }
+    let nonzero: Vec<CasExpr> = terms
+        .into_iter()
+        .filter(|t| !matches!(t, CasExpr::Const(c) if c.is_zero()))
+        .collect();
+    Some(match nonzero.len() {
+        0 => CasExpr::zero(),
+        1 => nonzero.into_iter().next()?,
+        _ => CasExpr::Add(nonzero),
+    })
+}
+
 /// The **average (mean) value** of `f` over `[lower, upper]`,
 /// `(1/(upper − lower))·∫_lower^upper f dx`, via [`definite_integrate`]. Carries
 /// the same certificate as the underlying definite integral. `None` if the
@@ -13060,6 +13111,25 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative, &g.ln());
         }
+    }
+
+    #[test]
+    fn fourier_series_of_x_and_x_squared() {
+        let x = || v("x");
+        let pi = || v("pi");
+        // f(x)=x on [−π,π]: 2 sin x − sin 2x + (2/3) sin 3x.
+        let fx = fourier_series(&x(), "x", &pi(), 3).unwrap();
+        let expected_x = CasExpr::int(2) * x().sin() - (CasExpr::int(2) * x()).sin()
+            + CasExpr::rat(2, 3) * (CasExpr::int(3) * x()).sin();
+        assert_equal(&fx, &expected_x);
+        // f(x)=x² on [−π,π]: π²/3 − 4 cos x + cos 2x − (4/9) cos 3x.
+        let fx2 = fourier_series(&x().pow(2), "x", &pi(), 3).unwrap();
+        let expected_x2 = CasExpr::rat(1, 3) * pi().pow(2) - CasExpr::int(4) * x().cos()
+            + (CasExpr::int(2) * x()).cos()
+            - CasExpr::rat(4, 9) * (CasExpr::int(3) * x()).cos();
+        assert_equal(&fx2, &expected_x2);
+        // A constant is its own Fourier series.
+        assert_equal(&fourier_series(&CasExpr::int(5), "x", &pi(), 2).unwrap(), &CasExpr::int(5));
     }
 
     #[test]
