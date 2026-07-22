@@ -6546,6 +6546,24 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if let Some(value) = limit_rational(expr, var, point) {
         return Some(value);
     }
+    // Linearity: `lim (f + g) = lim f + lim g` when both are finite — computes a
+    // sum term-by-term (`x/(x²+1) + atan x → 0 + π/2` at ∞). Falls through if any
+    // term's limit doesn't exist (an `∞ − ∞` form is left to other rules).
+    if let CasExpr::Add(terms) = expr {
+        let mut sum = CasExpr::zero();
+        let mut all_finite = true;
+        for term in terms {
+            if let Some(value) = limit(term, var, point) {
+                sum = sum + value;
+            } else {
+                all_finite = false;
+                break;
+            }
+        }
+        if all_finite {
+            return Some(simplify(&sum));
+        }
+    }
     // `lim exp(g) = exp(lim g)` when the inner limit is finite — resolves `1^∞`
     // forms written as `exp(g)`, e.g. `(1+1/x)^x = exp(x·ln(1+1/x)) → e`. Falls
     // through if the inner limit doesn't exist (leaving `exp`-dominance to decide).
@@ -11855,6 +11873,18 @@ mod tests {
         )
         .unwrap();
         assert_equal(&arctan_half.value, &(CasExpr::rat(1, 2) * v("pi")));
+        // Repeated irreducible quadratic (rational→0 + atan→π/2 by limit linearity):
+        // ∫_{−∞}^∞ 1/(x²+1)² = π/2, 1/(x²+1)³ = 3π/8, x²/(x²+1)² = π/2.
+        for (integrand, value) in [
+            (CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(2), CasExpr::rat(1, 2) * v("pi")),
+            (CasExpr::int(1) / (x().pow(2) + CasExpr::int(1)).pow(3), CasExpr::rat(3, 8) * v("pi")),
+            (x().pow(2) / (x().pow(2) + CasExpr::int(1)).pow(2), CasExpr::rat(1, 2) * v("pi")),
+        ] {
+            let r = improper_integrate(&integrand, "x", LimitPoint::NegInfinity, LimitPoint::PosInfinity)
+                .unwrap();
+            assert!(r.is_certified());
+            assert_equal(&r.value, &value);
+        }
     }
 
     #[test]
