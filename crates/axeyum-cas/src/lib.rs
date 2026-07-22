@@ -174,6 +174,11 @@ pub enum UnaryFunc {
     /// variant so the recurrence derivative `Jₙ′ = (Jₙ₋₁ − Jₙ₊₁)/2` (with `J₀′ = −J₁`)
     /// stays inside the fragment for every order.
     BesselJ(u32),
+    /// The **modified Bessel function of the first kind** `Iₙ(x)`, order `n` in the
+    /// variant so the recurrence derivative `Iₙ′ = (Iₙ₋₁ + Iₙ₊₁)/2` (with `I₀′ = I₁`)
+    /// stays inside the fragment for every order. (Same series as `Jₙ` without the
+    /// alternating sign: `Iₙ(x) = Σ (x/2)^{2k+n}/(k!(k+n)!)`.)
+    BesselI(u32),
     /// **Arcsine** `asin(x)` (with `asin′(x) = 1/√(1−x²)`).
     Asin,
     /// **Arccosine** `acos(x)` (with `acos′(x) = −1/√(1−x²)`).
@@ -223,6 +228,9 @@ impl UnaryFunc {
         if let UnaryFunc::BesselJ(order) = self {
             return format!("BesselJ{order}");
         }
+        if let UnaryFunc::BesselI(order) = self {
+            return format!("BesselI{order}");
+        }
         if let UnaryFunc::NthRoot(degree) = self {
             return format!("root{degree}");
         }
@@ -247,7 +255,9 @@ impl UnaryFunc {
             UnaryFunc::Chi => "Chi",
             UnaryFunc::FresnelS => "FresnelS",
             UnaryFunc::FresnelC => "FresnelC",
-            UnaryFunc::BesselJ(_) => unreachable!("Bessel order handled above"),
+            UnaryFunc::BesselJ(_) | UnaryFunc::BesselI(_) => {
+                unreachable!("Bessel order handled above")
+            }
             UnaryFunc::NthRoot(_) => unreachable!("root degree handled above"),
             UnaryFunc::Ai => "Ai",
             UnaryFunc::AiPrime => "AiPrime",
@@ -326,6 +336,13 @@ impl UnaryFunc {
             UnaryFunc::BesselJ(order) => {
                 (CasExpr::Unary(UnaryFunc::BesselJ(order - 1), Box::new(u()))
                     - CasExpr::Unary(UnaryFunc::BesselJ(order + 1), Box::new(u())))
+                    / CasExpr::int(2)
+            }
+            // d/du Iₙ(u): I₀′ = I₁; for n ≥ 1, Iₙ′ = (Iₙ₋₁ + Iₙ₊₁)/2.
+            UnaryFunc::BesselI(0) => CasExpr::Unary(UnaryFunc::BesselI(1), Box::new(u())),
+            UnaryFunc::BesselI(order) => {
+                (CasExpr::Unary(UnaryFunc::BesselI(order - 1), Box::new(u()))
+                    + CasExpr::Unary(UnaryFunc::BesselI(order + 1), Box::new(u())))
                     / CasExpr::int(2)
             }
             // Inverse trig/hyperbolic derivatives.
@@ -516,6 +533,12 @@ impl CasExpr {
     #[must_use]
     pub fn bessel_j(self, n: u32) -> Self {
         CasExpr::Unary(UnaryFunc::BesselJ(n), Box::new(self))
+    }
+
+    /// The **modified Bessel function of the first kind** `Iₙ(self)` of order `n`.
+    #[must_use]
+    pub fn bessel_i(self, n: u32) -> Self {
+        CasExpr::Unary(UnaryFunc::BesselI(n), Box::new(self))
     }
 
     /// The **sine integral** `Si(self)` as a symbolic head.
@@ -8211,6 +8234,7 @@ pub fn evalf(expr: &CasExpr, bindings: &[(&str, f64)]) -> Option<f64> {
                 UnaryFunc::FresnelS => fresnel_f64(value, true),
                 UnaryFunc::FresnelC => fresnel_f64(value, false),
                 UnaryFunc::BesselJ(order) => bessel_j_f64(value, *order),
+                UnaryFunc::BesselI(order) => bessel_i_f64(value, *order),
                 UnaryFunc::Asin => value.asin(),
                 UnaryFunc::Acos => value.acos(),
                 UnaryFunc::Asinh => value.asinh(),
@@ -8489,6 +8513,26 @@ fn bessel_j_f64(x: f64, order: u32) -> f64 {
     for k in 1..100u32 {
         // Ratio to previous term: −(x/2)² / (k·(k+m)).
         term *= -half * half / (f64::from(k) * f64::from(k + order));
+        sum += term;
+        if term.abs() < 1e-18 {
+            break;
+        }
+    }
+    sum
+}
+
+/// The modified Bessel function of the first kind `Iₙ(x)` by its Maclaurin series
+/// `Iₙ(x) = Σ_k (x/2)^{2k+n} / (k!·(k+n)!)` — the `Jₙ` series without the alternating
+/// sign, so every term is positive and the ratio is `+(x/2)²/(k·(k+n))`.
+fn bessel_i_f64(x: f64, order: u32) -> f64 {
+    let half = x / 2.0;
+    let mut term = half.powi(i32::try_from(order).unwrap_or(0));
+    for factor in 1..=order {
+        term /= f64::from(factor);
+    }
+    let mut sum = term;
+    for k in 1..100u32 {
+        term *= half * half / (f64::from(k) * f64::from(k + order));
         sum += term;
         if term.abs() < 1e-18 {
             break;
@@ -20156,6 +20200,25 @@ mod tests {
         close(evalf(&j(2, CasExpr::int(2)), &[]).unwrap(), 0.352_834);
         close(evalf(&j(3, CasExpr::int(5)), &[]).unwrap(), 0.364_831);
         close(evalf(&j(1, CasExpr::int(0)), &[]).unwrap(), 0.0);
+    }
+
+    #[test]
+    fn modified_bessel_i_arbitrary_order() {
+        let x = || v("x");
+        let i = |n: u32, a: CasExpr| a.bessel_i(n);
+        // Recurrence derivative Iₙ′ = (Iₙ₋₁ + Iₙ₊₁)/2 for n ≥ 1, and I₀′ = I₁ (all
+        // plus signs, unlike Jₙ) — stays inside the fragment for every order.
+        assert_equal(&i(0, x()).differentiate("x"), &i(1, x()));
+        assert_equal(&i(1, x()).differentiate("x"), &((i(0, x()) + i(2, x())) / CasExpr::int(2)));
+        assert_equal(&i(2, x()).differentiate("x"), &((i(1, x()) + i(3, x())) / CasExpr::int(2)));
+        // Numeric values against known references (monotone increasing, all positive).
+        let close = |got: f64, want: f64| assert!((got - want).abs() < 1e-4, "{got} vs {want}");
+        close(evalf(&i(0, CasExpr::int(0)), &[]).unwrap(), 1.0);
+        close(evalf(&i(0, CasExpr::int(1)), &[]).unwrap(), 1.266_066);
+        close(evalf(&i(1, CasExpr::int(1)), &[]).unwrap(), 0.565_159);
+        close(evalf(&i(0, CasExpr::int(2)), &[]).unwrap(), 2.279_585);
+        close(evalf(&i(2, CasExpr::int(1)), &[]).unwrap(), 0.135_748);
+        close(evalf(&i(1, CasExpr::int(0)), &[]).unwrap(), 0.0);
     }
 
     #[test]
