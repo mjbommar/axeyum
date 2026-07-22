@@ -17,7 +17,7 @@ Section references in the code point at that document.
 | Stage | Rules § | Module | Status |
 |---|---|---|---|
 | A. Legacy candidate selection (local cap/family approximation) | §6 | `selection.py` | **superseded for official-selection claims** |
-| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0--S2 complete; S3 pinned producer next** |
+| A′. Official Single Query selection identity | §6 | `official_selection.py`, ADR-0356 | **S0--S3 complete; S4 independent audit next** |
 | B. Resource-limited execution (wall `T`, CPU `mT`, mem; measures `aw`,`ac`) | §5 | `runner.py` | **done** (self-contained; BenchExec optional) |
 | C. Result → benchmark score tuple ⟨e,n,aw,w,ac,c⟩ (all 5 tracks) | §7.1 | `scoring.py` | **done** |
 | C′. Sequential benchmark score ⟨e_S,n_S,c_S⟩ (virtual CPU limit = T) | §7.1.1 | `scoring.py` | **done** |
@@ -53,6 +53,9 @@ rehashes the exact 88-file organizer bundle twice, derives a hash-required
 14-package runtime closure from the pinned Poetry lock, executes the pinned
 cache-builder AST and official Polars sampler in two fresh one-thread venvs,
 and rejects any normalized selection or per-logic repetition drift.
+The successful twice-repeated producer and fresh standard-library rehash are
+recorded in
+[`smtcomp-official-selection-producer-s3-2026-07-22.md`](../../docs/plan/smtcomp-official-selection-producer-s3-2026-07-22.md).
 Six additional generator tests exercise the active v2 18-invariant/28-scenario
 resume contract. V2 preserves observed timeout responses, uses typed process
 outcomes, and attributes each record to an attempt.

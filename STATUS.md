@@ -695,12 +695,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact 450,472-file / 82,270,961,563-byte metadata-tree bijection published.
   A separate fresh process rehashed every archive and extracted file and
   reconstructed the canonical ledger and completion dependencies.
-  `selection_observed=false`. The S3 producer implementation now materializes
-  two exact 88-file no-Git bundles, derives a hash-required 14-package runtime
-  closure from the pinned Poetry lock, executes the exact official cache-builder
-  AST and Polars 1.39.2 sampler in fresh one-thread environments, and requires
-  exact selected/per-logic repetition equality. Its bounded gate, commit, and
-  push must precede live use. No solver run or selection credit is granted yet.
+  S3 is complete after its implementation commit and push: two exact 88-file
+  no-Git bundles, hash-required 14-package environments, independent official
+  cache sets, and one-thread Polars 1.39.2 runs produced byte-identical
+  45,905-path selections (2,709 new / 43,196 old). A fresh standard-library
+  process rehashed both complete runs. `selection_observed=true`; S4's complete
+  independent decision and selected-file audit is next. No solver run or
+  selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7469,6 +7470,18 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-22 — Completed the twice-repeated ADR-0356 S3 official producer.**
+  The first live attempt ran only after implementation commit `38c5f2af` was
+  pushed. Both exact 88-file bundles, hash-required 14-package environments,
+  three-cache sets, and pinned one-thread Polars 1.39.2 runs produced the same
+  45,905 selected paths: 2,709 new and 43,196 old across 88 logics. The selected
+  bytes have SHA-256
+  `49744be7b373b2baef41289bfd5d2a7e59619db2859233e892b0592cd34a8b5b`.
+  A fresh standard-library process rehashed both complete runs and every
+  completion dependency. The compact result is
+  [recorded here](docs/plan/smtcomp-official-selection-producer-s3-2026-07-22.md).
+  `selection_observed=true`; independent S4 is next.
+
 - **2026-07-22 — Implemented the preregistered ADR-0356 S3 official producer.**
   The live-blocked entry point binds S1 and S2 completions, copies and rehashes
   exactly 88 authority files into each of two no-Git bundles, derives the
@@ -7491,7 +7504,8 @@ plan is built and committed on the current branch:
   A separate fresh process rehashed all archives and all 450,472 extracted
   files and reconstructed every count. The compact result is
   [recorded here](docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md).
-  `selection_observed=false`; S3 is next.
+  `selection_observed=false`; S3 has since completed.
+
 - **2026-07-22 — Seeded TL0.6's fail-closed complete-Lean-parity registry.**
   The exact U0-U9 populations, A0-A11 axes, eight paired outcomes, and G1-G10
   terminal gates now have one validated machine-readable source and generated
