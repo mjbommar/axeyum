@@ -233,8 +233,16 @@ Again, there are distinct targets:
   source-surface restoration, deterministic `.rec_N` publication, and
   transaction/cache rollback. Twenty-three focused native tests include exact
   final inference and `main -> rec_1 -> main` computation. Official importer
-  admission and frozen-stream computation remain M4/M5 work; M3's >=640-case
-  generated grammar and forced mutation teeth are next.
+  admission and frozen-stream computation remain M4/M5 work. M3 now repeats
+  the exact 640-case public grammar twice at descriptor digest
+  `a20fe056c9443a37`, independently checks exact public declarations,
+  per-rule recursor dependency maps, and 320 main plus 462 auxiliary typed iota
+  reductions, and closes 16 transactional restoration mutations. A bounded
+  stop-review amendment validates the already-checked temporary surface after
+  copied-constructor metadata mutants survived M2 restoration. Complete
+  kernel/importer suites, strict tooling, M0 contracts, and retained
+  720/768/840 populations pass. M4 exact official import is next; importer
+  policy and all frozen M0 computation streams remain untouched.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

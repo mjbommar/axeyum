@@ -2,7 +2,7 @@
 
 Date: 2026-07-22
 
-Status: preregistered before the first generated run
+Status: complete
 
 Parent:
 [TL2.14 P0--M6 plan](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
@@ -14,6 +14,11 @@ Decision gate:
 [proposed ADR-0355](../research/09-decisions/adr-0355-preregister-lean-nested-inductive-elimination.md)
 
 Baseline documentation checkpoint: `70c1c7e786e038d1b39bcaf7a90f47cbb1c231bb`
+
+Semantic implementation: `6a2afdd57c969bc1a847d77a85cc99552fa935b1`
+
+Result:
+[M3 deterministic grammar and restoration integrity](lean-nested-inductive-elimination-m3-2026-07-22.md)
 
 ## Boundary
 

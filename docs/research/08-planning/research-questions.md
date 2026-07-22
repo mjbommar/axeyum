@@ -890,8 +890,13 @@ Out of scope:
     now implements the proposed native discovery/copy/fixed-point/check/restore
     rule with exact `.rec_N` publication, rollback-aware private group metadata,
     23 focused native cases, final-surface inference, and cross-boundary
-    computation. M3's generated grammar and mutation teeth are next. Close this
-    question only when ADR-0355's
+    computation. The
+    [M3 result](../../plan/lean-nested-inductive-elimination-m3-2026-07-22.md)
+    repeats the exact 640-case grammar twice at descriptor digest
+    `a20fe056c9443a37`, independently observes the exact public declaration,
+    dependency, and typed iota surface, and closes 16 transactional restoration
+    mutations plus the bounded temporary-integrity stop-review amendment. M4
+    exact official import is next. Close this question only when ADR-0355's
     native, generated, import, computation, mutation, retention, and final
     gates pass.
 - [x] Should the proof-assistant bridge export obligations to Lean, import

@@ -204,7 +204,7 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   exact current nested and already-passing well-founded product boundaries.
 - [`lean-nested-inductive-elimination-resume.md`](lean-nested-inductive-elimination-resume.md)
   — **single resume entry point** for TL2.14 work: exact pushed state,
-  completed P0/M0/M1/M2 evidence, M3's frozen bounded task, remaining M3--M6 work,
+  completed P0/M0/M1/M2/M3 evidence, M4's exact importer task, remaining M4--M6 work,
   validation commands, ownership rules, resource caps, and stop conditions.
 - [`lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md`](lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md)
   — proposed ADR-0355's trusted expansion/restoration rule, source/wire freeze,
@@ -228,6 +228,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M3's pre-run frozen schema/seed, exact 640-case construction, complete
   registered range coverage, independent public observer, private forced
   mutation registry, retained descriptors, resources, and stop conditions.
+- [`lean-nested-inductive-elimination-m3-2026-07-22.md`](lean-nested-inductive-elimination-m3-2026-07-22.md)
+  — M3's twice-repeated exact 640-case grammar and descriptor, independent
+  public declaration/dependency/iota observer, 16 transactional restoration
+  mutations, bounded stop-review validator amendment, retained controls, and
+  M4 exact-import handoff.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

@@ -327,13 +327,22 @@ state.
 > kernel/importer suites and retained populations pass; importer policy and M0
 > streams remain untouched.
 > M3's [pre-run grammar plan](docs/plan/lean-nested-inductive-elimination-m3-plan-2026-07-22.md)
-> now freezes schema `axeyum-lean-nested-inductive-grammar-v1`, seed
-> `0x4158_4e45_5354_4d33`, an exact 640-case construction spanning every
-> registered range endpoint, the independent public observer, private forced
-> mutation registry, resources, and stop conditions. No generated run or
-> importer observation occurred at this checkpoint. Resume from the single authoritative
-> [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md), which
-> records the exact pushed state, M3's generated-grammar task, remaining M3--M6 work,
+> froze schema `axeyum-lean-nested-inductive-grammar-v1`, seed
+> `0x4158_4e45_5354_4d33`, and the exact 640-case construction before execution.
+> The [M3 result](docs/plan/lean-nested-inductive-elimination-m3-2026-07-22.md)
+> now repeats all 640 profiles twice with committed descriptor digest
+> `a20fe056c9443a37`; independently checks exact public declarations, motives,
+> minors, per-rule recursor dependency maps, and 320 main plus 462 auxiliary
+> typed iota reductions; and closes 16 transactional private restoration
+> mutations with exact rollback/retry. A pre-semantic stop-review amendment
+> added bounded validation of the already-checked temporary declaration surface
+> after copied-constructor metadata mutants survived the M2 restoration
+> dataflow. The complete kernel/importer suites, strict tooling, M0 no-
+> observation contract, and retained 720/768/840 populations pass. Semantic
+> commit `6a2afdd5` is pushed with local/tracking/remote equality. Importer
+> policy and all M0 computation streams remain untouched. Resume from the
+> authoritative [TL2.14 handoff](docs/plan/lean-nested-inductive-elimination-resume.md),
+> which records M4's exact official-import task, remaining M4--M6 work,
 > ownership constraints, commands, and stop conditions.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,

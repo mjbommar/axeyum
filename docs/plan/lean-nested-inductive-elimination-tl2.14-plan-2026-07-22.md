@@ -1,6 +1,6 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: M3 generated-grammar and restoration-mutation design frozen; implementation next
+Status: M3 complete; M4 importer and exact official declarations next
 
 Date: 2026-07-22
 
@@ -298,6 +298,9 @@ the M1 typed decline, and the frozen M0 computation streams remain unobserved.
 
 ### M3 — deterministic nested grammar
 
+Status: **complete**. See the
+[M3 result](lean-nested-inductive-elimination-m3-2026-07-22.md).
+
 - frozen before the first generated run in the
   [M3 grammar plan](lean-nested-inductive-elimination-m3-plan-2026-07-22.md):
   schema `axeyum-lean-nested-inductive-grammar-v1`, seed
@@ -308,6 +311,18 @@ the M1 typed decline, and the frozen M0 computation streams remain unobserved.
 - retain exact 720/768/840 populations and direct identities;
 - leave importer policy and M0 streams untouched;
 - commit, push, and verify remote equality.
+
+The exact 640-case population now runs twice in fresh kernels with committed
+descriptor digest `a20fe056c9443a37`. Its independent public observer checks
+the complete declaration surface, exact recursor dependency maps, and 320
+main plus 462 auxiliary typed iota reductions. Sixteen malformed private
+restoration mutations prove whole-environment rollback and retry; type-correct
+recursor mutations reject or change a named observation. A preregistered
+stop-review amendment added bounded validation of the already-checked temporary
+declaration surface after copied-constructor metadata mutants survived the M2
+restoration dataflow. The complete kernel/importer suites, retained
+720/768/840 populations, strict tooling, and M0 no-observation contract pass.
+Importer policy and all frozen M0 computation streams remain untouched.
 
 ### M4 — importer and exact official declarations
 
