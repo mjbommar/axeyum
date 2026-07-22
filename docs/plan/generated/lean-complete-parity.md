@@ -27,7 +27,7 @@ These facts are regenerated from existing manifests. They are scoped evidence, n
 - Selected construct matrix: 7 rows; 6 official accepts, 1 official rejects, 6 independently admitted, 4 computation-checked, and 0 current declines.
 - Axiom ledger: 65 rows; `unclassified`=65.
 - U2 registration authority: 3678 default and 3723 full-Lake CTest cases; 0 official executions, 0 Axeyum executions, and 0 paired cells. This is bounded registration evidence, not complete U2 authority.
-- Implementation ledger: 136 rows; `DONE`=21, `PARTIAL`=5, `TODO`=110, `BLOCKED`=0.
+- Implementation ledger: 136 rows; `DONE`=21, `PARTIAL`=6, `TODO`=109, `BLOCKED`=0.
 
 ## U0-U9 population authorities
 

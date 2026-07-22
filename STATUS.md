@@ -383,6 +383,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — TL0.6.2 official CI profile derivation is preregistered
+  before selected counts are observed.** The
+  [plan](docs/plan/lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md)
+  binds the pinned workflow/build/preset/registration/bootstrap inputs, the 17
+  semantically distinct official-repository event contexts, 153 candidate job
+  cells, primary versus unfiltered stage-1 rebootstrap attempts, factored exact
+  case-selection sets, fourteen fail-closed mutation classes, and explicit
+  stop conditions. Equal `src`/stage0 stdlib-flag hashes preregister stage 1 at
+  this pin. No new selection count, official outcome, Axeyum outcome, paired
+  cell, or terminal credit has been observed. Next: commit and publish this
+  boundary, then implement the isolated workflow evaluator and independent
+  CTest membership cross-check.
+
 - **2026-07-22 — bounded bignum base checking carries direct moments through
   order 255 and raw moments through 35.** `certifies_wz_sum` retains its
   checked-`i128` finite-base route first, then only on `Unknown` evaluates the
@@ -7527,6 +7540,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Preregistered TL0.6.2 official CI profile derivation.** The
+  source identities, context closure, candidate-cell schema, CTest and
+  rebootstrap rules, selection factoring, mutation matrix, outputs, and stop
+  conditions are frozen before implementation or derived profile counts. U2
+  remains bounded and records no execution or paired-result credit.
 
 - **2026-07-22 — Preregistered the live-blocked ADR-0356 S4 auditor.** The new
   independent standard-library path validates exact prior-stage artifact sets,

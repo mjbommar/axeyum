@@ -65,6 +65,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   sidecars, output policy, and support subtree; the artifact explicitly records
   zero official executions, zero Axeyum executions, and zero paired cells, so
   U2 remains a bounded profile rather than a complete authority.
+- [`lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md`](lean-u2-official-ci-profiles-tl0.6.2-plan-2026-07-22.md) — preregistered
+  follow-up that evaluates the pinned dynamic workflow into exact official
+  event/check-level/platform/preset/filter/stage/rebootstrap profiles. It
+  freezes 17 official-repository contexts, 153 candidate matrix cells,
+  factored case-selection sets, mutation teeth, and the no-outcomes boundary
+  before observing derived per-profile counts.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered
