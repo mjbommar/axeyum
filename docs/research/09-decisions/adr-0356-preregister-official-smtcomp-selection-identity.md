@@ -178,6 +178,10 @@ result is credited by this decision alone.
 - The pinned metadata array is not in normalized path order. The independent
   auditor accepts its byte-frozen input order but uses a bounded external merge
   sort before emitting the canonical path-ordered eligibility ledger.
+- The completed S1b audit is recorded in
+  [`smtcomp-official-selection-input-audit-s1b-2026-07-22.md`](../../plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md).
+  Its fifth fresh run verified 89 inputs, 450,472 metadata rows, and 5,345,294
+  historical rows while keeping `selection_observed=false`.
 
 ## Alternatives
 

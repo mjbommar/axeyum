@@ -407,8 +407,7 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   must prove release-byte closure, competitive-logics/difficulty eligibility,
   per-logic caps, complete decision reasons, and selected-file hashes. S0 now
   freezes 29 source/config files, 51 direct-child submissions, seven historical
-  result
-  inputs, 90 archives, 18 invariants, 18 mutations, and nine exact fixture
+  result inputs, 90 archives, 18 invariants, 18 mutations, and nine exact fixture
   files; the S1a official-format/AST adapter and S1b bounded-memory streaming
   runner raise the offline gate to fourteen tests. The runner is committed
   before use and emits only eligibility/cap facts, never an official sample.
@@ -427,8 +426,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   completed all seven historical streams (5,345,294 rows) and proved organizer
   metadata order is not canonical path order. A standard-library, bounded
   external merge sort now supplies the canonical ledger order and has sorted
-  all 450,472 retained rows exactly. Another fresh-input rerun is next. No
-  solver run or selection credit is granted yet.
+  all 450,472 retained rows exactly. S1b is complete on the fifth fresh run:
+  89 inputs, 450,472 metadata rows, 5,345,294 historical rows, and a
+  256,182,191-byte eligibility ledger were independently rehashed and
+  recounted. The resulting aggregate cap is 45,905 with 2,709 new and 43,196
+  old quota slots. `selection_observed=false`; S2 verified corpus acquisition
+  is next. No solver run or selection credit is granted yet.
 
 - **2026-07-22 — G1 E3 multi-host durability is complete, and the
   second full-library P0 is sound-declined.** The opt-in resumable path now
@@ -7191,6 +7194,17 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed ADR-0356 S1 independent input audit.** The fifth
+  fresh S1b run verified 89 pinned inputs, normalized 450,472 metadata rows
+  across 89 logics, reduced 5,345,294 historical rows, and published a
+  256,182,191-byte canonical eligibility ledger. It reports 3,445 eligible new,
+  249,915 eligible old, 197,112 trivial, zero matched removals, and aggregate
+  cap 45,905 split 2,709 new / 43,196 old. A fresh-process checker rehashed
+  every input and completion dependency and reconstructed the counts. The
+  compact result is
+  [recorded here](docs/plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md).
+  `selection_observed=false`; S2 is next.
 
 - **2026-07-22 — Added bounded canonical ordering for the S1b ledger.** The
   fourth retained attempt passed the 89-input and 450,472-row metadata gates,

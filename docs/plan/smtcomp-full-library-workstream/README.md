@@ -55,9 +55,10 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   streaming and proved the two configured removal IDs already match zero
   metadata rows, so the producer's anti-join is idempotent. A fourth retained
   attempt reduced all seven historical files and exposed that official metadata
-  order is not canonical path order. The runner now uses a bounded external
-  merge sort for its canonical ledger and awaits a fresh selection-free input
-  run; it cannot produce a selected set.
+  order is not canonical path order. S1b is now complete: the fifth fresh run
+  verified 89 inputs, 450,472 metadata rows, and 5,345,294 historical rows,
+  then published a 256,182,191-byte path-sorted eligibility ledger with
+  `selection_observed=false`. S2 verified corpus acquisition is next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
