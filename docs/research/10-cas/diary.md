@@ -1326,7 +1326,23 @@ fractional powers (integer powers stay on FTC). (Cosmetic: `simplify_radicals` d
 
 **Bivariate power factorization** (Entry 37k): `factor_binomial_powers` — `xⁿ−yⁿ=(x−y)Σx^{n−1−k}yᵏ`, odd-`n` `xⁿ+yⁿ=(x+y)Σ(−1)ᵏx^{n−1−k}yᵏ`, certified by re-multiplication; `x³−y³`,`x⁵+y⁵`,`2x³−2y³`. Plus a `simplify_radicals` fix: fold `(√u)^{2k}→u^k` (was missing on the `Pow` case, so `√π²` didn't reduce).
 
-**Session tally (Entries 37–37k): 28 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
+---
+
+## 2026-07-22 — Entry 37l: sign/floor/ceiling head family (458 tests)
+
+Took on a **new head subsystem** (the assumptions/piecewise-constant axis). `Abs` already existed;
+added `Sign`, `Floor`, `Ceiling` as first-class `UnaryFunc` heads — the memory's "adding a head = 4
+exhaustive match sites" pattern held exactly (`name`, `UnaryFunc::differentiate` → `0` since they're
+locally constant, `evalf` → `signum`/`floor`/`ceil` with `sign(0)=0` corrected from f64's `signum`, and
+`series::unary_series` → decline). Builders `.sign()`/`.floor()`/`.ceiling()` fold a rational constant
+(`⌊−7/2⌋=−4`, `⌈−7/2⌉=−3` via `div_euclid`; `sign(±c)=±1`, `sign(0)=0`). `fold_elementary_constants`
+re-folds them after a substitution, and `simplify_under_assumptions` resolves `sign(x)→±1/0` once the
+assumptions engine fixes the argument's sign (SymPy `refine`). NOTE: the natural next step in this axis —
+a `Piecewise` data model, and symbolic `Gamma`/`digamma`/`polygamma` — both need a **data-model change**
+(a new `CasExpr` variant / a 2-arg indexed head), touching every match site; deferred as a deliberate,
+scoped effort rather than a risky mid-session refactor.
+
+**Session tally (Entries 37–37l): 29 substantial certified features** (incl. homogeneous linear-combination trig `cos x+sin x=0`, and exponential-base equations `2^x=8⇒3` via `solve_power_equation`) across integration (rational-trig
 half/full period, Gaussian moments, Dirichlet/Fresnel, even quartics + `∫_{−∞}^∞1/(x⁴+1)=π/√2`),
 series (Taylor w/ transcendental coeffs), limits (log-vs-power at +∞, conjugate `√(x²+x)−x=½`),
 summation (geometric base any spelling), factoring (full ℚ-irreducible), ODEs (surd-root homogeneous,
