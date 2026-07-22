@@ -7710,6 +7710,20 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
             }
         }
     }
+    // Distribute a product over a sum — `x·(eˣ − e^{−x}) → x·eˣ − x·e^{−x}` — so the
+    // additive-linearity path can reach each term (e.g. `∫x·sinh x`, `∫sinh·cosh`).
+    if let Some(distributed) = distribute_over_sum(expr)
+        && let Some(result) = integrate(&distributed, var)
+        && result.is_certified()
+    {
+        let certificate = prove_derivative(&result.antiderivative, var, expr);
+        if matches!(certificate, ZeroTest::Certified { equal: true, .. }) {
+            return Some(CertifiedIntegral {
+                antiderivative: result.antiderivative,
+                certificate,
+            });
+        }
+    }
     // Try each finder (univariate rational via Horowitz; elementary-function
     // table). Every candidate is certified by differentiate-and-check, so a
     // finder shortfall or out-of-fragment case declines to `None` rather than
@@ -8267,6 +8281,12 @@ fn split_constant_factor(expr: &CasExpr) -> Option<(Rational, CasExpr)> {
             for factor in flatten_mul(expr) {
                 match factor {
                     CasExpr::Const(c) => constant = constant.checked_mul(c)?,
+                    // A negated factor contributes `−1` to the pulled constant
+                    // (`x·(−e^{−x}) → −1·(x·e^{−x})`).
+                    CasExpr::Neg(inner) => {
+                        constant = constant.checked_neg()?;
+                        rest.push(*inner);
+                    }
                     other => rest.push(other),
                 }
             }
@@ -9104,6 +9124,66 @@ fn integrate_sqrt_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         }
         _ => None,
     }
+}
+
+/// Distribute a product with a sum factor one level — `(∏ others)·(Σ terms) →
+/// Σ (∏ others · termᵢ)` — returning the resulting sum, or `None` if `expr` is not
+/// a `Mul` with an `Add` factor. Used so the integrator's linearity can reach the
+/// terms of an expanded product.
+fn distribute_over_sum(expr: &CasExpr) -> Option<CasExpr> {
+    let CasExpr::Mul(factors) = expr else {
+        return None;
+    };
+    // A distributable factor is an `Add`, or a `Div` whose numerator is an `Add`
+    // (`(eˣ−e^{−x})/2`) — the divisor rides along on each distributed term.
+    for (index, factor) in factors.iter().enumerate() {
+        let (terms, divisor) = match factor {
+            CasExpr::Add(terms) => (terms.clone(), None),
+            CasExpr::Div(numerator, denominator) => match numerator.as_ref() {
+                CasExpr::Add(terms) => (terms.clone(), Some(denominator.clone())),
+                _ => continue,
+            },
+            _ => continue,
+        };
+        let others: Vec<CasExpr> = factors
+            .iter()
+            .enumerate()
+            .filter(|(i, _)| *i != index)
+            .map(|(_, f)| f.clone())
+            .collect();
+        // A *constant* divisor becomes a leading coefficient `1/c` (which
+        // `split_constant_factor` later pulls); a non-constant one stays a `Div`.
+        let constant_divisor = match &divisor {
+            Some(denominator) => match denominator.as_ref() {
+                CasExpr::Const(c) => Some(Rational::integer(1).checked_div(*c)?),
+                _ => None,
+            },
+            None => None,
+        };
+        let distributed: Vec<CasExpr> = terms
+            .iter()
+            .map(|term| {
+                let mut product = others.clone();
+                product.push(term.clone());
+                let combined = match product.len() {
+                    1 => product.into_iter().next().unwrap_or_else(CasExpr::zero),
+                    _ => CasExpr::Mul(product),
+                };
+                let piece = match (&constant_divisor, &divisor) {
+                    (Some(inverse), _) => scaled_term(*inverse, combined),
+                    (None, Some(denominator)) => {
+                        CasExpr::Div(Box::new(combined), denominator.clone())
+                    }
+                    (None, None) => combined,
+                };
+                // Fold so a `Neg`/`Const` sign is pulled to the front, letting the
+                // poly×exp finder recognize each term.
+                fold_trivial(&piece)
+            })
+            .collect();
+        return Some(CasExpr::Add(distributed));
+    }
+    None
 }
 
 /// ∫ of a **product of two sinusoids** `k·f(u)·g(v)` (`f,g ∈ {sin,cos}`, `u,v`
@@ -13420,6 +13500,25 @@ mod tests {
         assert_equal(&fx2, &expected_x2);
         // A constant is its own Fourier series.
         assert_equal(&fourier_series(&CasExpr::int(5), "x", &pi(), 2).unwrap(), &CasExpr::int(5));
+    }
+
+    #[test]
+    fn distributed_product_integrals() {
+        let x = || v("x");
+        let two = || CasExpr::int(2);
+        let sinh = (x().exp() - (CasExpr::int(-1) * x()).exp()) / two();
+        let cosh = (x().exp() + (CasExpr::int(-1) * x()).exp()) / two();
+        // Products that expand to poly×exp sums (with a divisor and a negated term):
+        // ∫x·sinh x, ∫x·cosh x, ∫(x+1)(eˣ+e^{−x}). Certified by differentiate-and-check.
+        for integrand in [
+            x() * sinh,
+            x() * cosh,
+            (x() + CasExpr::int(1)) * (x().exp() + (CasExpr::int(-1) * x()).exp()),
+        ] {
+            let r = integrate(&integrand, "x").expect("distributed product integral");
+            assert!(r.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&r.antiderivative.differentiate("x"), &integrand);
+        }
     }
 
     #[test]
