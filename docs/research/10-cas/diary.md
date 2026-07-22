@@ -1102,3 +1102,30 @@ Rounding out the *applied* mathematics surface a working analyst reaches for:
 heads, general multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch,
 arbitrary-precision N[expr,d]. Known limitation: `normalize` (public poly normalizer) doesn't atomize
 transcendentals, so `real_part`/`imaginary_part` decline surd complex coefficients.
+
+## 2026-07-21 — Entry 35: integration & limit completeness wave (445 tests)
+
+A sustained push closing the long tail of standard first/second-year integrals and limits, each
+certified by differentiate-and-check:
+
+- **Substitution family filled out.** `u=eˣ` for `∫R(eˣ)` (`∫1/(eˣ+1)=x−ln(eˣ+1)`, via
+  `exp_to_power` + the `ln(eˣ)→x` fold); `u=x²` for odd-numerator/even-denominator rationals
+  (`∫x/(x⁴+1)=½atan(x²)` — the ℚ-irreducible case the factoring path can't reach); the reverse
+  power rule extended to the **n=1** bare-base case `∫g′·g=g²/2` (`∫atan x/(1+x²)=½atan²x`,
+  `∫sin·cos`).
+- **By-parts generalized.** `∫ln x·R(x)` for a rational cofactor (`∫ln x/x²=−ln x/x−1/x`) — with a
+  recursion guard declining the `∫ln x/x` case (whose `V=ln x` reproduces the integrand; that's the
+  reverse-power-rule `ln²x/2`). **Distributed products** `∫x·sinh x`, `∫(x+1)(eˣ+e^{−x})` — a
+  `Mul`-with-`Add`-factor is distributed (folding a constant divisor into `1/c`), and
+  `split_constant_factor` now pulls `−1` from a `Neg` factor.
+- **Limits.** Linearity `lim(f+g)=lim f+lim g` (finite terms) — closes improper integrals of repeated
+  irreducible quadratics `∫_{−∞}^∞1/(x²+1)ⁿ` (rational→0 + atan→π/2); the squeeze theorem
+  (`sin x/x→0`); `lim exp(g)=exp(lim g)` + reciprocal substitution `x→1/t` (with `deep_normalize`) →
+  the compound-interest limit `(1+1/x)^x→e`.
+- Plus (Entry 34 surface): Fourier series, IVPs, `numeric_integrate`, `nsimplify`, complex `argument`,
+  Gaussian `∫_{−∞}^∞e^{−x²}=√π`, sinusoid-product Fourier orthogonality, surd inverse-trig values.
+
+**445 unit + 143 doctests, clippy-pedantic clean, WASM-green.** Frontier remaining (all large
+subsystems): residue-based contour integration (complex poles), Gamma/digamma heads, general
+multivariate factorization, Puiseux, Zeilberger, Weierstrass/general Risch, arbitrary-precision
+N[expr,d], symbolic-coefficient series.
