@@ -9579,6 +9579,96 @@ fn definite_beta_integral(
     Some(simplify(&simplify_radicals(&simplify(&(CasExpr::Const(coefficient) * beta)))))
 }
 
+/// Dilogarithm integrals `∫₀^1 c·K(x) dx` where `K` is one of the four canonical
+/// kernels whose value is a classical `Li₂(±1)`:
+///
+/// | kernel `K(x)`   | `∫₀^1 K` |
+/// |-----------------|----------|
+/// | `ln(1−x)/x`     | `−ζ(2)`  |
+/// | `ln(x)/(1−x)`   | `−ζ(2)`  |
+/// | `ln(1+x)/x`     | `+ζ(2)/2`|
+/// | `ln(x)/(1+x)`   | `−ζ(2)/2`|
+///
+/// None of these has an elementary antiderivative, so FTC can't reach them. The
+/// value is built from the **rigorously derived** `special::zeta(2) = π²/6` (Euler's
+/// formula from Bernoulli numbers), not a literal. Soundness: the integrand must be
+/// a rational multiple `c·K` with `c` recovered numerically then **proven** by the
+/// zero-test (`equal(expr, c·K)`), so only genuine kernel multiples certify — a
+/// numeric integral cross-check guards the four hard-coded kernel values.
+fn definite_dilog_integral(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<CasExpr> {
+    // Only over `[0, 1]`, and only for integrands carrying a logarithm.
+    if !matches!(equal(lower, &CasExpr::zero()), ZeroTest::Certified { equal: true, .. })
+        || !matches!(equal(upper, &CasExpr::int(1)), ZeroTest::Certified { equal: true, .. })
+        || !contains_ln_head(expr)
+    {
+        return None;
+    }
+    let zeta2 = special::zeta(2)?; // π²/6, from the Bernoulli-number formula
+    let vx = CasExpr::var(var);
+    let one = CasExpr::int(1);
+    let log_one_minus = (one.clone() - vx.clone()).ln();
+    let log_one_plus = (one.clone() + vx.clone()).ln();
+    let lnx = vx.clone().ln();
+    let kernels = [
+        (log_one_minus / vx.clone(), -zeta2.clone()), // ln(1−x)/x  → −ζ(2)
+        (lnx.clone() / (one.clone() - vx.clone()), -zeta2.clone()), // ln x/(1−x) → −ζ(2)
+        (log_one_plus / vx.clone(), zeta2.clone() / CasExpr::int(2)), // ln(1+x)/x → ζ(2)/2
+        (lnx / (one + vx), -zeta2 / CasExpr::int(2)), // ln x/(1+x) → −ζ(2)/2
+    ];
+    let simple_expr = simplify(expr);
+    for (kernel, value) in kernels {
+        // Recover the proportionality constant `c = expr/kernel` at interior sample
+        // points; require it constant (structural proportionality) and rational.
+        let ratio = |point: f64| -> Option<f64> {
+            let den = evalf(&kernel, &[(var, point)])?;
+            if den.abs() < 1e-9 {
+                return None;
+            }
+            Some(evalf(expr, &[(var, point)])? / den)
+        };
+        let (Some(r1), Some(r2), Some(r3)) = (ratio(0.2), ratio(0.45), ratio(0.7)) else {
+            continue;
+        };
+        if (r1 - r2).abs() > 1e-6 || (r1 - r3).abs() > 1e-6 {
+            continue; // not a constant multiple of this kernel
+        }
+        let Some(coeff) = rationalize(r1, 10_000) else {
+            continue;
+        };
+        // Prove `expr = c·kernel` exactly — the numeric ratio only proposed `c`.
+        let scaled = simplify(&(CasExpr::Const(coeff) * kernel));
+        if !matches!(equal(&simple_expr, &scaled), ZeroTest::Certified { equal: true, .. }) {
+            continue;
+        }
+        let result = simplify(&(CasExpr::Const(coeff) * value));
+        // Belt-and-suspenders: confirm the closed form against a numeric quadrature
+        // over `[δ, 1−δ]` (the omitted slivers at the integrable log endpoints are
+        // negligible), catching any typo in the hard-coded kernel value.
+        let approx = numeric_integrate(expr, var, 1e-7, 1.0 - 1e-7, 4000)?;
+        let exact = evalf(&result, &[])?;
+        if (approx - exact).abs() < 1e-3 {
+            return Some(result);
+        }
+    }
+    None
+}
+
+/// Whether a natural-log head `ln(·)` appears anywhere in `expr`.
+fn contains_ln_head(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Ln, _) => true,
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => contains_ln_head(a),
+        CasExpr::Div(a, b) => contains_ln_head(a) || contains_ln_head(b),
+        CasExpr::Add(items) | CasExpr::Mul(items) => items.iter().any(contains_ln_head),
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+    }
+}
+
 /// The definite integral of `expr` in `var` from `lower` to `upper`, via the
 /// fundamental theorem of calculus: find a certified antiderivative `F` with
 /// [`integrate`], then return `F(upper) − F(lower)`.
@@ -9615,6 +9705,15 @@ pub fn definite_integrate(
     // Beta integral `∫₀^1 x^p(1−x)^q = B(p+1,q+1)` (fractional powers, no elementary
     // antiderivative) — before the FTC path, which can't reach it.
     if let Some(value) = definite_beta_integral(expr, var, lower, upper) {
+        return Some(DefiniteIntegral {
+            value,
+            antiderivative: CasExpr::zero(),
+            certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+        });
+    }
+    // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
+    // `c·Li₂(±1)` via `ζ(2)`; no elementary antiderivative, so before the FTC path.
+    if let Some(value) = definite_dilog_integral(expr, var, lower, upper) {
         return Some(DefiniteIntegral {
             value,
             antiderivative: CasExpr::zero(),
@@ -17128,6 +17227,40 @@ mod tests {
             assert!(r.is_certified(), "not certified: ∫{integrand}");
             assert_equal(&r.antiderivative.differentiate("x"), &integrand);
         }
+    }
+
+    #[test]
+    fn dilogarithm_definite_integrals() {
+        let x = || v("x");
+        let one = || CasExpr::int(1);
+        let zero = || CasExpr::int(0);
+        let pi_sq = || v("pi").pow(2);
+        // The four canonical Li₂(±1) kernels on [0,1], value via ζ(2)=π²/6.
+        let check = |integrand: CasExpr, want: CasExpr| {
+            let got = definite_integrate(&integrand, "x", &zero(), &one()).unwrap();
+            assert!(got.is_certified(), "not certified: {integrand}");
+            assert!(
+                matches!(equal(&got.value, &want), ZeroTest::Certified { equal: true, .. }),
+                "{integrand} → {} (want {want})",
+                got.value
+            );
+        };
+        // ∫₀^1 ln(1−x)/x = −π²/6, ∫₀^1 ln x/(1−x) = −π²/6.
+        check((one() - x()).ln() / x(), CasExpr::int(-1) * pi_sq() / CasExpr::int(6));
+        check(x().ln() / (one() - x()), CasExpr::int(-1) * pi_sq() / CasExpr::int(6));
+        // ∫₀^1 ln(1+x)/x = π²/12, ∫₀^1 ln x/(1+x) = −π²/12.
+        check((one() + x()).ln() / x(), pi_sq() / CasExpr::int(12));
+        check(x().ln() / (one() + x()), CasExpr::int(-1) * pi_sq() / CasExpr::int(12));
+        // Constant multiples / equivalent spellings: ∫₀^1 ln x/(x−1) = π²/6 (= −K₂),
+        // ∫₀^1 2·ln(1+x)/x = π²/6.
+        check(x().ln() / (x() - one()), pi_sq() / CasExpr::int(6));
+        check(CasExpr::int(2) * (one() + x()).ln() / x(), pi_sq() / CasExpr::int(6));
+        // Soundness: a log integral that is NOT a kernel multiple (∫₀^1 ln(1+x²)/x =
+        // π²/24) must not be mis-mapped by the dilog handler — the zero-test
+        // proportionality gate rejects it, so this path declines (FTC also can't
+        // reach it), i.e. no false certificate for the wrong closed form.
+        let non_kernel = (one() + x().pow(2)).ln() / x();
+        assert!(super::definite_dilog_integral(&non_kernel, "x", &zero(), &one()).is_none());
     }
 
     #[test]
