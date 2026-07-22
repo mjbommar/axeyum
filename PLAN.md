@@ -141,8 +141,11 @@ state.
 > is now frozen against the remote Stage B revision: ten direct-recursive
 > controls pass, all five declines repeat twice with exact typed payloads, and
 > no error publishes `CompletedImport`. It also exposes the valid nested stream's
-> current `Malformed` misclassification. M4 is next: generate the assurance
-> matrix from the registration without changing importer or kernel semantics.
+> current `Malformed` misclassification. M4 now generates the
+> [seven-row assurance matrix](docs/plan/generated/lean-official-construct-matrix.md)
+> from those facts and rejects false admission/computation promotions. TL2.16
+> is PARTIAL for this selected population, not complete. M5 final bounded gates,
+> decision closure, and handoff are next.
 > TL2.11 strict positivity remains the first semantic widening prerequisite.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
@@ -186,8 +189,9 @@ state.
 > and [Stage B](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
 > checkpoints and the completed
 > [M3 product measurement](docs/plan/lean-official-construct-matrix-product-2026-07-22.md):
-> generate the assurance-separated matrix, then complete M5 documentation and
-> gates. Do not repair the nested classification inside this measurement
+> the [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
+> is complete; run M5 documentation/decision/final gates next. Do not repair the
+> nested classification inside this measurement
 > milestone. TL1.5 property
 > fuzzing is dependency-ready, but TL2.11 positivity remains mandatory before
 > recursive admission widens. Native

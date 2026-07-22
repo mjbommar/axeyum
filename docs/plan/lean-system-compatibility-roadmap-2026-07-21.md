@@ -702,9 +702,10 @@ Non-claims until their gates are met:
    carries ten exact direct-recursive controls beside two stable outcomes for
    every new row. It records kernel/policy declines, the nested format
    misclassification, and completion-only failure without changing semantics.
-6. Generate the assurance-separated parsed/translated/admitted/dual-admitted
-   matrix from tests and exact fixtures; the selected-family seed advances but
-   does not complete TL2.16.
+6. **M4 DONE:** the [assurance result](lean-official-construct-matrix-m4-2026-07-22.md)
+   generates the parsed/translated/admitted/computation-separated matrix from
+   tests and exact fixtures. The selected-family seed advances TL2.16 to PARTIAL
+   but does not complete its full population. Run M5 final gates and handoff.
 7. **TL1.3-TL1.4 and TL1.7 DONE; TL1.5 DEPENDENCY-READY:** preserve owned
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The

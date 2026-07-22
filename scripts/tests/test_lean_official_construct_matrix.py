@@ -84,6 +84,48 @@ class LeanOfficialConstructMatrixTests(unittest.TestCase):
         self.assertTrue(any("must not publish CompletedImport" in failure for failure in failures))
         self.assertTrue(any("product measurement link drift" in failure for failure in failures))
 
+    def test_generated_assurance_matrix_is_deterministic_and_current(self) -> None:
+        first = CHECK.render_matrix(self.data)
+        second = CHECK.render_matrix(copy.deepcopy(self.data))
+        self.assertEqual(first, second)
+        self.assertEqual(CHECK.OUT_MD.read_text(encoding="utf-8"), first)
+        rows = {row["id"]: row for row in CHECK.derive_matrix_rows(self.data)}
+        self.assertEqual(
+            {case_id: row["assurance_class"] for case_id, row in rows.items()},
+            {
+                "direct-recursive-control": "independently-admitted",
+                "recursive-indexed": "translated-kernel-declined",
+                "reflexive-higher-order": "parsed-declined",
+                "mutual": "parsed-declined",
+                "nested": "official-export-inventory-only",
+                "well-founded": "parsed-declined",
+                "non-positive-source-negative": "official-source-rejected",
+            },
+        )
+        self.assertIn("misclassified as malformed", first)
+        self.assertIn("declines on Acc dependency before selected root", first)
+
+    def test_impossible_assurance_promotions_reject(self) -> None:
+        rows = {row["id"]: row for row in CHECK.derive_matrix_rows(self.data)}
+
+        recursive = copy.deepcopy(rows["recursive-indexed"])
+        recursive["assurance_class"] = "independently-admitted"
+        self.assertTrue(
+            any("independent-admission/class" in failure for failure in CHECK.validate_matrix_row(recursive))
+        )
+
+        nested = copy.deepcopy(rows["nested"])
+        nested["assurance_class"] = "parsed-declined"
+        self.assertTrue(
+            any("Unsupported outcome" in failure for failure in CHECK.validate_matrix_row(nested))
+        )
+
+        control = copy.deepcopy(rows["direct-recursive-control"])
+        control["assurance_class"] = "dual-admitted-computation-checked"
+        self.assertTrue(
+            any("computation/class" in failure for failure in CHECK.validate_matrix_row(control))
+        )
+
     def test_unknown_fields_reject(self) -> None:
         self.data["cases"][0]["claim"] = "full Lean parity"
         self.assertTrue(any("fields drift" in failure for failure in self.failures()))

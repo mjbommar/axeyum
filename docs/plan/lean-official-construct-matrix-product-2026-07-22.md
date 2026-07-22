@@ -104,6 +104,9 @@ The product freezer binds those outcomes to the Stage B revision and the
 
 ## Next gate
 
+This section records the successor known at M3. It has now been completed by the
+[M4 assurance result](lean-official-construct-matrix-m4-2026-07-22.md).
+
 M4 now generates the public assurance matrix from the registration. It must
 keep official acceptance/export, independent Python inventory, Rust policy or
 kernel decline, admission, and computation in separate columns. In particular:

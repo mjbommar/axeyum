@@ -108,6 +108,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   controls, two exact typed outcomes per new row, no partial publication, and
   the explicit nested-format misclassification and well-founded `Acc`
   dependency stop.
+- [`lean-official-construct-matrix-m4-2026-07-22.md`](lean-official-construct-matrix-m4-2026-07-22.md)
+  and the generated [`official Lean construct matrix`](generated/lean-official-construct-matrix.md) —
+  seven assurance-separated selected-family rows, implication checks against
+  false parser/admission/computation promotion, and the explicit TL1.8/TL2.16
+  partial boundary.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

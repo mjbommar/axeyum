@@ -29,7 +29,7 @@ step test   cargo test --workspace --all-features
 export RUSTDOCFLAGS="-D warnings" # match CI's deny-warnings rustdoc
 step doc    cargo doc --workspace --all-features --no-deps
 step lean-construct-matrix-tests python3 -m unittest scripts.tests.test_lean_official_construct_matrix
-step lean-construct-matrix python3 scripts/check-lean-official-construct-matrix.py
+step lean-construct-matrix python3 scripts/check-lean-official-construct-matrix.py --check
 step lean-construct-matrix-stage-b python3 scripts/freeze-lean-official-construct-matrix-stage-b.py --check
 step lean-construct-matrix-product-freeze python3 scripts/freeze-lean-official-construct-matrix-product.py --check
 step foundational-resources ./scripts/check-foundational-resources.sh

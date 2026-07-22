@@ -369,13 +369,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — official Lean construct-matrix M0 through M3 are complete;
-  the generated assurance matrix is next.** The milestone remains explicitly
+- **2026-07-22 — official Lean construct-matrix M0 through M4 are complete;
+  final validation and handoff are next.** The milestone remains explicitly
   a measurement artifact, not kernel implementation. The
   [execution plan](docs/plan/lean-official-construct-matrix-plan-2026-07-22.md)
   and [Stage A result](docs/plan/lean-official-construct-matrix-stage-a-2026-07-22.md)
   and [Stage B result](docs/plan/lean-official-construct-matrix-stage-b-2026-07-22.md)
   and [M3 product result](docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
+  and [M4 assurance result](docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
   and [proposed ADR-0351](docs/research/09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
   define six positive/control families (existing direct recursion,
   recursive-indexed, Acc-shaped reflexive/higher-order, mutual, nested, and
@@ -410,8 +411,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   transactional but incorrect `Malformed` classification for its valid two-
   recursor official group. The product freezer, 11 contract tests, and Rust
   integration test bind every payload and forbid a published `CompletedImport`.
-  **Next:** M4 generates the assurance-separated matrix and must preserve the
-  nested misclassification and well-founded dependency stop. After the matrix,
+  M4 now derives the seven-row
+  [generated matrix](docs/plan/generated/lean-official-construct-matrix.md): one
+  independently admitted control, one translated-kernel decline, three parsed/
+  policy declines, one inventory-only nested misclassification, one official-
+  source rejection, and zero computation-checked rows. Thirteen contract tests
+  reject false admission, parsed, or computation promotion. **Next:** M5 final
+  bounded gates, ADR-0351 exit review, and push/ref equality. After the matrix,
   TL2.11 strict positivity is the primary
   trusted-kernel task; TL1.5 property fuzzing remains an independent hardening
   lane.
@@ -6813,6 +6819,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Completed official Lean construct-matrix M4 generated
+  assurance output.** The checked seven-row matrix derives one exact independent
+  admission, one translated-kernel decline, three parsed/policy declines, one
+  inventory-only nested format misclassification, one official source
+  rejection, and zero computation-checked rows from the canonical registration.
+  Implication tests reject promotion without `CompletedImport`, promotion of
+  nested `Malformed` to parsed/unsupported credit, and computation credit
+  without a check. TL2.16 is now PARTIAL for this selected population; M5 final
+  gates and ADR closure remain.
 
 - **2026-07-22 — Completed official Lean construct-matrix M3 current-product
   measurement.** At the pushed Stage B revision, ran the immutable direct-

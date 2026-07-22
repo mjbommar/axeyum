@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import sys
@@ -12,6 +13,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs" / "plan" / "lean-official-construct-matrix-v1.json"
+OUT_MD = ROOT / "docs" / "plan" / "generated" / "lean-official-construct-matrix.md"
 SCRIPTS = str(ROOT / "scripts")
 if SCRIPTS not in sys.path:
     sys.path.insert(0, SCRIPTS)
@@ -220,6 +222,14 @@ EXPECTED_PRODUCT_OUTCOMES = {
         "inductive-reflexive",
         None,
     ),
+}
+ALLOWED_ASSURANCE_CLASSES = {
+    "official-source-rejected",
+    "official-export-inventory-only",
+    "parsed-declined",
+    "translated-kernel-declined",
+    "independently-admitted",
+    "dual-admitted-computation-checked",
 }
 EXPECTED_CASES = [
     (
@@ -696,7 +706,226 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
     return failures
 
 
+def derive_matrix_rows(data: dict[str, Any]) -> list[dict[str, str]]:
+    failures = validate_manifest(data)
+    if failures:
+        raise ValueError("invalid registration: " + "; ".join(failures))
+    if data.get("stage") != "product-measured":
+        raise ValueError("assurance rows require the frozen product-measured stage")
+
+    historical = {entry["id"]: entry for entry in data["historical_controls"]}
+    streams = data["stage_b"]["streams"]
+    outcomes = data["product_measurement"]["outcomes"]
+    rows: list[dict[str, str]] = []
+    for case in data["cases"]:
+        case_id = case["id"]
+        common = {
+            "id": case_id,
+            "source_family": case["source_family"],
+            "official_source": case["expected_official_source"],
+            "selected_root": case["selected_root"] or "—",
+        }
+        if case_id == "non-positive-source-negative":
+            row = {
+                **common,
+                "stream": "none",
+                "wire_inventory": "not applicable",
+                "rust_outcome": "not run: official source rejected",
+                "rust_variant": "NotRun",
+                "independent_admission": "no",
+                "computation": "not applicable",
+                "assurance_class": "official-source-rejected",
+                "boundary": "official kernel strict-positivity rejection; no NDJSON assigned",
+            }
+        elif case_id == "direct-recursive-control":
+            control = historical["direct-recursive-control"]
+            report = control["expected_report"]
+            row = {
+                **common,
+                "stream": control["stream_path"],
+                "wire_inventory": (
+                    f"N/L/E/D={report['names']}/{report['levels']}/"
+                    f"{report['expressions']}/{report['declaration_records']}; "
+                    "direct recursive, non-indexed"
+                ),
+                "rust_outcome": "CompletedImport: 11 declarations, 0 axioms",
+                "rust_variant": "CompletedImport",
+                "independent_admission": "yes",
+                "computation": "not checked in this matrix",
+                "assurance_class": "independently-admitted",
+                "boundary": "exact fixture only; no computation or ecosystem credit",
+            }
+        else:
+            stream = streams[case_id]
+            inventory = stream["inventory"]
+            outcome = outcomes[case_id]
+            blockers = ", ".join(inventory["blockers"]) or "none"
+            if outcome["variant"] == "Kernel":
+                rust_outcome = (
+                    f"Kernel line {outcome['line']}: {outcome['source_variant']} "
+                    f"at {outcome['declaration']}"
+                )
+                assurance = "translated-kernel-declined"
+            elif outcome["variant"] == "Unsupported":
+                rust_outcome = (
+                    f"Unsupported line {outcome['line']}: {outcome['code']}"
+                )
+                assurance = "parsed-declined"
+            else:
+                rust_outcome = (
+                    f"Malformed line {outcome['line']}: {outcome['message']}"
+                )
+                assurance = "official-export-inventory-only"
+            if case_id == "nested":
+                boundary = "valid official nested group is misclassified as malformed"
+            elif case_id == "well-founded":
+                boundary = "declines on Acc dependency before selected root"
+            else:
+                boundary = "stable transactional decline; no completed environment"
+            row = {
+                **common,
+                "stream": stream["path"],
+                "wire_inventory": (
+                    f"N/L/E/D={inventory['names']}/{inventory['levels']}/"
+                    f"{inventory['exprs']}/{inventory['decls']}; {blockers}"
+                ),
+                "rust_outcome": rust_outcome,
+                "rust_variant": outcome["variant"],
+                "independent_admission": "no",
+                "computation": "not reached",
+                "assurance_class": assurance,
+                "boundary": boundary,
+            }
+        row_failures = validate_matrix_row(row)
+        if row_failures:
+            raise ValueError(f"{case_id}: " + "; ".join(row_failures))
+        rows.append(row)
+    return rows
+
+
+def validate_matrix_row(row: dict[str, str]) -> list[str]:
+    failures: list[str] = []
+    assurance = row.get("assurance_class")
+    admitted = row.get("independent_admission") == "yes"
+    computation_checked = row.get("computation") == "checked"
+    variant = row.get("rust_variant")
+    if assurance not in ALLOWED_ASSURANCE_CLASSES:
+        failures.append("unregistered assurance class")
+    if admitted != (
+        assurance
+        in {
+            "independently-admitted",
+            "dual-admitted-computation-checked",
+        }
+    ):
+        failures.append("independent-admission/class implication violated")
+    if computation_checked != (assurance == "dual-admitted-computation-checked"):
+        failures.append("computation/class implication violated")
+    if assurance == "official-source-rejected" and (
+        row.get("official_source") != "rejected" or row.get("stream") != "none"
+    ):
+        failures.append("source-rejected credit requires rejection and no stream")
+    if assurance == "translated-kernel-declined" and variant != "Kernel":
+        failures.append("translated-kernel decline requires a Kernel outcome")
+    if assurance == "parsed-declined" and variant != "Unsupported":
+        failures.append("parsed decline requires an Unsupported outcome")
+    if assurance == "official-export-inventory-only" and variant not in {"NotRun", "Malformed"}:
+        failures.append("inventory-only credit has an incompatible Rust outcome")
+    if admitted and variant != "CompletedImport":
+        failures.append("independent admission requires CompletedImport")
+    return failures
+
+
+def markdown_link(path: str) -> str:
+    if path == "none":
+        return "none"
+    prefix = "../" if path.startswith("docs/plan/") else "../../../"
+    relative = path.removeprefix("docs/plan/")
+    return f"[fixture]({prefix}{relative})"
+
+
+def escape_cell(value: str) -> str:
+    return value.replace("|", "\\|").replace("\n", " ")
+
+
+def render_matrix(data: dict[str, Any]) -> str:
+    rows = derive_matrix_rows(data)
+    counts: dict[str, int] = {}
+    for row in rows:
+        assurance = row["assurance_class"]
+        counts[assurance] = counts.get(assurance, 0) + 1
+    lines = [
+        "# Official Lean construct matrix",
+        "",
+        "Generated from [`lean-official-construct-matrix-v1.json`](../lean-official-construct-matrix-v1.json).",
+        "Do not edit by hand; regenerate with",
+        "`python3 scripts/check-lean-official-construct-matrix.py --write`.",
+        "",
+        "This selected-family matrix separates official source/export evidence, independent Python",
+        "wire inventory, current Rust outcomes, independent admission, and computation. It is not",
+        "full Lean kernel, frontend, ecosystem, or mathlib compatibility.",
+        "",
+        "## Summary",
+        "",
+        f"- rows: {len(rows)}; official accepted: 6; official rejected: 1;",
+        "- independently admitted: 1; computation-checked in this matrix: 0;",
+        "- current transactional declines: 5, including one valid-wire format misclassification;",
+        "- assurance classes: "
+        + ", ".join(f"`{key}`={counts[key]}" for key in sorted(counts))
+        + ".",
+        "",
+        "## Matrix",
+        "",
+        "| Case | Source family | Official source | Selected root | Exact stream / independent wire inventory | Current Rust outcome | Independent admission | Computation | Assurance class | Exact boundary |",
+        "|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for row in rows:
+        stream = markdown_link(row["stream"])
+        wire = f"{stream}; {row['wire_inventory']}" if stream != "none" else row["wire_inventory"]
+        values = [
+            f"`{row['id']}`",
+            row["source_family"],
+            row["official_source"],
+            f"`{row['selected_root']}`" if row["selected_root"] != "—" else "—",
+            wire,
+            row["rust_outcome"],
+            row["independent_admission"],
+            row["computation"],
+            f"`{row['assurance_class']}`",
+            row["boundary"],
+        ]
+        lines.append("| " + " | ".join(escape_cell(value) for value in values) + " |")
+    lines.extend(
+        [
+            "",
+            "## Interpretation",
+            "",
+            "- `independently-admitted` means the exact official stream produced a completed owned",
+            "  environment through Axeyum's trusted gate. It does not imply a checked computation.",
+            "- `translated-kernel-declined` means an official declaration reached the independent",
+            "  kernel and received a typed rejection.",
+            "- `parsed-declined` means importer policy recognized and transactionally declined the",
+            "  official construct before independent admission.",
+            "- `official-export-inventory-only` grants official bytes and independent Python wire",
+            "  inventory only. Here it preserves the nested row's current malformed/unsupported",
+            "  classification defect rather than laundering it into parser or kernel credit.",
+            "- `official-source-rejected` has no export by construction.",
+            "",
+            "The well-founded row stops at the reflexive, recursive-indexed `Acc` dependency before",
+            "its selected definition/theorem root. The row therefore provides no well-founded-root",
+            "translation or admission credit.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check", action="store_true", help="check generated Markdown")
+    mode.add_argument("--write", action="store_true", help="write generated Markdown")
+    args = parser.parse_args()
     try:
         data = load_manifest()
     except (OSError, json.JSONDecodeError, ValueError) as error:
@@ -707,6 +936,23 @@ def main() -> int:
         for failure in failures:
             print(f"lean construct matrix: {failure}", file=sys.stderr)
         return 1
+    try:
+        rendered = render_matrix(data) if data.get("stage") == "product-measured" else None
+    except ValueError as error:
+        print(f"lean construct matrix: {error}", file=sys.stderr)
+        return 1
+    if args.write:
+        if rendered is None:
+            print("lean construct matrix: product measurement is not frozen", file=sys.stderr)
+            return 1
+        OUT_MD.write_text(rendered, encoding="utf-8")
+    elif args.check:
+        if rendered is None or not OUT_MD.is_file():
+            print("lean construct matrix: generated matrix is missing", file=sys.stderr)
+            return 1
+        if OUT_MD.read_text(encoding="utf-8") != rendered:
+            print("lean construct matrix: generated matrix drift", file=sys.stderr)
+            return 1
     print(
         f"lean construct matrix {data['stage']} valid: "
         f"{len(data['cases'])} cases, 2 source outcomes, "

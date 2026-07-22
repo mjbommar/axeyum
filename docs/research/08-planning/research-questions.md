@@ -754,7 +754,8 @@ Out of scope:
     population. Stage B now freezes five byte-identical official streams and
     their full independent group metadata. M3 now freezes two current-product
     outcomes per row beside ten passing direct-recursive controls, without
-    changing semantics; the generated matrix remains open. See
+    changing semantics. M4 now generates seven implication-checked assurance
+    rows; only final validation/decision closure remains. See
     [proposed ADR-0351](../09-decisions/adr-0351-preregister-official-lean-construct-matrix.md)
     and the
     [execution plan](../../plan/lean-official-construct-matrix-plan-2026-07-22.md)
@@ -764,6 +765,8 @@ Out of scope:
     [Stage B result](../../plan/lean-official-construct-matrix-stage-b-2026-07-22.md).
     The typed declines are in the
     [M3 product result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
+    The generated selected-family result is in the
+    [M4 assurance report](../../plan/lean-official-construct-matrix-m4-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

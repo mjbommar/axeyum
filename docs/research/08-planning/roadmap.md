@@ -79,8 +79,10 @@ Last updated: 2026-07-22
 > [M3 product measurement](../../../docs/plan/lean-official-construct-matrix-product-2026-07-22.md)
 > now freezes two exact current outcomes per row beside ten passing immutable
 > direct-recursive controls, including the nested stream's `Malformed`
-> misclassification, without admission changes. M4 generated assurance output
-> is next. TL1.5 property fuzzing is
+> misclassification, without admission changes. The
+> [M4 assurance result](../../../docs/plan/lean-official-construct-matrix-m4-2026-07-22.md)
+> now generates seven implication-checked rows; TL2.16 is PARTIAL for this
+> selected population. M5 final validation and handoff are next. TL1.5 property fuzzing is
 > dependency-ready; TL2.11
 > positivity remains mandatory before recursive admission widens.
 > Live per-session state is in

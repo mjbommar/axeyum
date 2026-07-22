@@ -10,8 +10,9 @@ and Stage B is complete in the
 [wire-freeze result](../../plan/lean-official-construct-matrix-stage-b-2026-07-22.md).
 M3 product measurement is complete in the
 [typed outcome result](../../plan/lean-official-construct-matrix-product-2026-07-22.md).
-The generated assurance gate remains open, so this ADR is deliberately still
-proposed.
+The generated assurance gate is complete in the
+[M4 result](../../plan/lean-official-construct-matrix-m4-2026-07-22.md). M5 final
+gates and handoff remain, so this ADR is deliberately still proposed.
 
 ## Context
 
