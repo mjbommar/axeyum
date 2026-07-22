@@ -10146,6 +10146,67 @@ fn definite_integrate_abs_periodic(
     })
 }
 
+/// Find the argument `g` of the first `sign(g)` subexpression whose argument is
+/// **affine** in `var` — a step of `±1` with a jump at `g`'s root. Also reached
+/// through `heaviside(g) = (1 + sign(g))/2`.
+fn find_affine_sign(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    match expr {
+        CasExpr::Unary(UnaryFunc::Sign, arg) if expr_contains_var(arg, var) => {
+            if univariate_affine(arg, var).is_some() {
+                return Some((**arg).clone());
+            }
+            find_affine_sign(arg, var)
+        }
+        CasExpr::Unary(_, a) | CasExpr::Neg(a) | CasExpr::Pow(a, _) => find_affine_sign(a, var),
+        CasExpr::Div(a, b) => find_affine_sign(a, var).or_else(|| find_affine_sign(b, var)),
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().find_map(|t| find_affine_sign(t, var))
+        }
+        CasExpr::Const(_) | CasExpr::Var(_) => None,
+    }
+}
+
+/// A definite integral of an integrand containing `sign(g)` with `g` affine in `var`
+/// (so also `heaviside(g)`): split at `g`'s root and on each piece replace `sign(g)`
+/// by `±1` (its definite sign there), integrating exactly. `∫_{−1}^1 sign(x) = 0`,
+/// `∫₀^3 sign(x−1) = 1`, `∫₀^2 H(x−1)·x = 3/2`.
+fn definite_integrate_sign(
+    expr: &CasExpr,
+    var: &str,
+    lower: &CasExpr,
+    upper: &CasExpr,
+) -> Option<DefiniteIntegral> {
+    let g = find_affine_sign(expr, var)?;
+    let [intercept, slope] = univariate_affine(&g, var)?;
+    let root = intercept.checked_neg()?.checked_div(slope)?;
+    let target = CasExpr::Unary(UnaryFunc::Sign, Box::new(g.clone()));
+    let lo_f = evalf(lower, &[])?;
+    let hi_f = evalf(upper, &[])?;
+    let root_f = evalf(&CasExpr::Const(root), &[])?;
+    let piece = |a: &CasExpr, b: &CasExpr| -> Option<CasExpr> {
+        let midpoint = f64::midpoint(evalf(a, &[])?, evalf(b, &[])?);
+        let step = if evalf(&g, &[(var, midpoint)])? >= 0.0 {
+            CasExpr::int(1)
+        } else {
+            CasExpr::int(-1)
+        };
+        let replaced = replace_subexpr(expr, &target, &step);
+        let definite = definite_integrate(&replaced, var, a, b)?;
+        definite.is_certified().then_some(definite.value)
+    };
+    let value = if root_f > lo_f + 1e-9 && root_f < hi_f - 1e-9 {
+        let split = CasExpr::Const(root);
+        simplify(&(piece(lower, &split)? + piece(&split, upper)?))
+    } else {
+        piece(lower, upper)?
+    };
+    Some(DefiniteIntegral {
+        value,
+        antiderivative: CasExpr::zero(),
+        certificate: ZeroTest::Certified { equal: true, witness: MultiPoly::zero() },
+    })
+}
+
 /// A definite integral of an integrand containing `abs(g)` with `g` **affine** in
 /// `var`: split the interval at `g`'s root (a sign change), and on each piece replace
 /// `abs(g)` by `±g` (the definite sign of `g` there), integrating each piece exactly
@@ -10533,6 +10594,10 @@ pub fn definite_integrate(
     }
     // `abs(sin(affine))`/`abs(cos(affine))` — split at the periodic trig zeros.
     if let Some(result) = definite_integrate_abs_periodic(expr, var, lower, upper) {
+        return Some(result);
+    }
+    // `sign(affine)` / `heaviside(affine)` — split at the root, replace by ±1.
+    if let Some(result) = definite_integrate_sign(expr, var, lower, upper) {
         return Some(result);
     }
     // Dilogarithm integrals `∫₀^1 c·ln(1±x)/x`, `∫₀^1 c·ln x/(1±x)` — value
@@ -18706,6 +18771,12 @@ mod tests {
         check((x() / CasExpr::int(3)).floor(), 0, 6, CasExpr::int(3));
         // Polynomial × step: ∫₀^3 x·floor(x) = 0 + ∫₁^2 x + ∫₂^3 2x = 3/2 + 5 = 13/2.
         check(x() * x().floor(), 0, 3, CasExpr::rat(13, 2));
+        // sign / Heaviside: ∫_{−1}^1 sign(x)=0, ∫₀^3 sign(x−1)=1 (−1 then +1),
+        // ∫₀^2 H(x−1)=1, ∫₀^2 H(x−1)·x=3/2 (= ∫₁^2 x).
+        check(x().sign(), -1, 1, CasExpr::int(0));
+        check((x() - CasExpr::int(1)).sign(), 0, 3, CasExpr::int(1));
+        check(heaviside(&(x() - CasExpr::int(1))), 0, 2, CasExpr::int(1));
+        check(heaviside(&(x() - CasExpr::int(1))) * x(), 0, 2, CasExpr::rat(3, 2));
     }
 
     #[test]
