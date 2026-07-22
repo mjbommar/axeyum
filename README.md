@@ -119,7 +119,7 @@ returns a wrong answer**. Current surface (522 tests, clippy-clean):
   `definite_integrate` (FTC), `limit`, `series`/`series_at` (Taylor), summation,
   and checker-backed WZ families for fixed-shift binomial convolutions and
   squared-binomial falling-factorial moments through order thirty-three, with
-  Stirling-composed raw moments through order ten.
+  Stirling-composed raw moments through order nineteen.
 - **Algebra** — `expand`, `simplify`, `factor` (full ℤ/ℚ, Berlekamp–Zassenhaus),
   `cancel`, `apart`, `poly_gcd`, `resultant`, `discriminant`, `solve` (rational,
   quadratic, complex, factorable degree ≥ 3), Gröbner bases, radical simplification.

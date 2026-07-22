@@ -374,6 +374,25 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — structured composition carries raw squared-binomial moments
+  through order 19.** Raw order 11 was mathematically valid but hit two
+  representation limits: exhaustive rational-root search overflowed on its
+  remaining degree-11 residual, and recombining eleven Gamma-valued component
+  RHSs in one equality overflowed. The compositor now peels only exactly dividing
+  bounded integer roots and retains an unfactored residual, constructs the
+  remaining `(2n)ₘ` denominator from known uncancelled linear factors with an
+  exact reconstruction check, and verifies composition after cancelling the
+  shared central binomial. Each component and final quotient is compared as
+  exact monic numerator/denominator parts after checked cancellation of known
+  `(2n)ⱼ` factors. Orders 0 through 19 certify; order 20 is the first measured
+  decline because common-numerator term 13 overflows checked `i128` polynomial
+  normalization, while all twenty direct WZ component candidates still
+  construct. Regressions freeze the explicit order-11 form, bounded exact
+  direct sums, tamper/missing-evidence rejection, and the ceiling. Next: explore
+  product-level common-factor extraction for raw order 20 or a deliberate
+  bignum exact-polynomial path; falling order 34 independently needs a bignum
+  base checker.
+
 - **2026-07-22 — nested quotient cancellation carries direct moments through
   order 33.** Order 19's symbolic quotient was mathematically small, but Gamma
   lowering left equal atoms and polynomial factors inside nested divisions;

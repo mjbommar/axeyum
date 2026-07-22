@@ -16,7 +16,7 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
 - **Tests:** `522` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adu**). Keep both in sync when landing features.
+  latest is **Entry 37adv**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -132,7 +132,7 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), a direct squared-binomial falling-factorial family (regressed for
 orders `0..=33`), and Stirling-composed raw moments (regressed for orders
-`0..=10`). False near-misses correctly decline.
+`0..=19`). False near-misses correctly decline.
 
 ---
 
@@ -327,17 +327,28 @@ unchanged symbolic equality gate through order 33. Order 34 passes that symbolic
 gate too, then declines at the exact base case because `34!` exceeds the `i128`
 rational domain.
 
-The raw compositor now forms all Stirling terms over the known common
-denominator `(2n)ₘ` and cancels a linear denominator factor only when exact
-polynomial division succeeds. `MAX_PROVED_SQUARED_BINOMIAL_MOMENT` is therefore
-10. Regressions cover falling-factorial orders `0..=33` and raw orders `0..=10`,
-direct-sum cross-check every member, recover the known compact fifth- through
-eighth-moment forms, and reject tampered results, certificates, and missing
-components. The eighth raw form is
-`n³(n⁹+6n⁸−31n⁷−106n⁶+315n⁵+294n⁴−693n³+18n²+96n−20)C(2n,n)/(16(2n−7)(2n−5)(2n−3)(2n−1))`.
-An order-11 probe constructs the exact common numerator and cancels its proven
-linear factors, then declines in bounded numerator factorization; public calls
-therefore stop before that work.
+The raw compositor forms all Stirling terms over the known common denominator
+`(2n)ₘ` and cancels a linear denominator factor only when exact polynomial
+division succeeds. It now constructs the remaining denominator directly from
+those known uncancelled factors and checks that their product reconstructs the
+computed monic denominator. The numerator path peels only exactly dividing
+small integer roots; if general factorization exhausts checked arithmetic on
+the residual, the exact residual is retained rather than rejecting a valid
+closed form.
+
+The composite checker no longer expands one large sum of Gamma-valued component
+RHSs. It replays every component WZ proof, certifies the Stirling power identity,
+divides each stored component and the final closed form by the shared central
+binomial, cancels only the known `(2n)ⱼ` linear factors by exact division, and
+compares separately normalized monic numerator/denominator coefficient vectors.
+This structured exact route extends
+`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` to 19. Regressions cover raw orders
+`0..=19`, exact direct-sum samples, the explicit compact order-11 form, and
+tampered results, certificates, missing components, and the ceiling. Order 20
+is the first measured decline: all twenty falling-factorial WZ candidates
+construct, but normalization of common-numerator Stirling term 13 exceeds the
+checked `i128` polynomial domain. The separately bounded direct family remains
+at order 33, with order 34 blocked by `34! > i128::MAX` at its exact base case.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -358,10 +369,12 @@ semantics changed.
 Ordered roughly by value:
 
 1. **Broaden certified creative telescoping beyond the current exact bounds.**
-   Isolate the raw order-11 numerator-factorization limit without weakening
-   compositional checking. Falling order 34 is now an explicit exact-value
-   domain boundary (`34! > i128::MAX`), so extending it needs a deliberate
-   bignum checker path rather than another symbolic simplification. For fixed
+   Raw order 20 now has an exact boundary: common-numerator term 13 overflows
+   checked `i128` polynomial normalization even though all component WZ proofs
+   construct. Explore product-level common-factor extraction before expansion,
+   or choose a deliberate bignum polynomial path; do not weaken the structured
+   checker. Falling order 34 is likewise an explicit exact-value boundary
+   (`34! > i128::MAX`) and needs a deliberate bignum base checker. For fixed
    shifts, investigate the `r=8` exact-growth decline only if a concrete use
    needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet

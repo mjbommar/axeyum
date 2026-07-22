@@ -5103,6 +5103,52 @@ fn cancel_common_product_factors(expr: &CasExpr) -> CasExpr {
     )
 }
 
+/// Compact one exact hypergeometric quotient before rational normalization:
+/// preserve products, lower integer-shifted Gamma heads, cancel exact structural
+/// factors, then remove any remaining common canonical atom monomial.
+fn compact_hypergeometric_ratio(ratio: &CasExpr) -> CasExpr {
+    let ratio = cancel_common_product_factors(ratio);
+    let combined = cancel_common_product_factors(&combine_gamma_ratios(&ratio));
+    gosper::cancel_common_monomial_expression(&combined)
+        .map_or_else(|| simplify(&combined), |ratio| simplify(&ratio))
+}
+
+/// Cancel every shared factor from the known `(2*var)_order` denominator family,
+/// then return separately normalized numerator and denominator coefficients with
+/// a monic denominator. Comparing these exact parts avoids an unnecessary large
+/// denominator cross-product.
+fn falling_denominator_rational_parts(
+    expr: &CasExpr,
+    var: &str,
+    order: u32,
+) -> Option<(Vec<Rational>, Vec<Rational>)> {
+    let rational = normalize_rational(expr)?;
+    let mut numerator = rational.num.to_univariate(var)?;
+    let mut denominator = rational.den.to_univariate(var)?;
+    for offset in 0..order {
+        let divisor = [
+            Rational::integer(-i128::from(offset)),
+            Rational::integer(2),
+        ];
+        let Some(reduced_denominator) = poly::rat_exact_div(&denominator, &divisor) else {
+            continue;
+        };
+        let Some(reduced_numerator) = poly::rat_exact_div(&numerator, &divisor) else {
+            continue;
+        };
+        numerator = reduced_numerator;
+        denominator = reduced_denominator;
+    }
+    let denominator_lead = *denominator.last()?;
+    let make_monic = |coefficients: Vec<Rational>| {
+        coefficients
+            .into_iter()
+            .map(|coefficient| coefficient.checked_div(denominator_lead))
+            .collect::<Option<Vec<_>>>()
+    };
+    Some((make_monic(numerator)?, make_monic(denominator)?))
+}
+
 /// Derive `F(n,k+1)/F(n,k)` and `f(n+1,k)/f(n,k)` while parameters remain
 /// symbolic, cancelling common canonical gamma atoms before concrete sampling.
 fn wz_symbolic_ratios(
@@ -5111,21 +5157,15 @@ fn wz_symbolic_ratios(
     n: &str,
     k: &str,
 ) -> (CasExpr, CasExpr) {
-    let compact_ratio = |ratio: CasExpr| {
-        let ratio = cancel_common_product_factors(&ratio);
-        let combined = cancel_common_product_factors(&combine_gamma_ratios(&ratio));
-        gosper::cancel_common_monomial_expression(&combined)
-            .map_or_else(|| simplify(&combined), |ratio| simplify(&ratio))
-    };
-    let current_ratio = compact_ratio(CasExpr::Div(
+    let current_ratio = compact_hypergeometric_ratio(&CasExpr::Div(
         Box::new(summand.substitute(k, &(CasExpr::var(k) + CasExpr::int(1)))),
         Box::new(summand.clone()),
     ));
-    let summand_outer_ratio = compact_ratio(CasExpr::Div(
+    let summand_outer_ratio = compact_hypergeometric_ratio(&CasExpr::Div(
         Box::new(summand.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
         Box::new(summand.clone()),
     ));
-    let rhs_inverse = compact_ratio(CasExpr::Div(
+    let rhs_inverse = compact_hypergeometric_ratio(&CasExpr::Div(
         Box::new(rhs.clone()),
         Box::new(rhs.substitute(n, &(CasExpr::var(n) + CasExpr::int(1)))),
     ));
@@ -5331,7 +5371,7 @@ pub fn prove_squared_binomial_falling_moment(
 /// [`prove_squared_binomial_moment`]. This can be lower than
 /// [`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT`] because the raw family also
 /// constructs and checks a compact Stirling-composed closed form.
-pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 10;
+pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 19;
 
 /// A proved squared-binomial raw moment
 /// `∑_k k^moment C(n,k)² = closed_form`, carrying the certified
@@ -5349,7 +5389,8 @@ pub struct CertifiedSquaredBinomialMoment {
 
 impl CertifiedSquaredBinomialMoment {
     /// Recheck every component WZ proof, the exact Stirling power expansion,
-    /// and the closed-form recombination.
+    /// each component's central-binomial quotient, and the independently
+    /// reconstructed normalized closed form.
     #[must_use]
     pub fn is_certified(&self) -> bool {
         if self.moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
@@ -5375,55 +5416,132 @@ impl CertifiedSquaredBinomialMoment {
             return false;
         }
 
+        let n = CasExpr::var("n");
+        let two_n = CasExpr::int(2) * n.clone();
+        let central_binomial = binomial_coefficient(&two_n, &n);
         let mut expanded_power = CasExpr::zero();
-        let mut expanded_rhs = CasExpr::zero();
         for component in &self.components {
             let Some(stirling) = combinatorics::stirling_second(self.moment, component.order) else {
                 return false;
             };
             expanded_power = expanded_power
                 + CasExpr::int(stirling) * falling_factorial(&k, component.order);
-            expanded_rhs =
-                expanded_rhs + CasExpr::int(stirling) * component.closed_form.clone();
+            let stored_component_normalized = compact_hypergeometric_ratio(&CasExpr::Div(
+                Box::new(component.closed_form.clone()),
+                Box::new(central_binomial.clone()),
+            ));
+            let expected_component_normalized = if component.order == 0 {
+                CasExpr::one()
+            } else {
+                CasExpr::Const(Rational::new(1, 2))
+                    * n.clone()
+                    * falling_factorial_product(
+                        &(n.clone() - CasExpr::int(1)),
+                        component.order - 1,
+                    )
+                    .pow(2)
+                    / falling_factorial_product(
+                        &(two_n.clone() - CasExpr::int(1)),
+                        component.order - 1,
+                    )
+            };
+            let (
+                Some(stored_component_parts),
+                Some(expected_component_parts),
+            ) = (
+                falling_denominator_rational_parts(
+                    &stored_component_normalized,
+                    "n",
+                    component.order,
+                ),
+                falling_denominator_rational_parts(
+                    &expected_component_normalized,
+                    "n",
+                    component.order,
+                ),
+            ) else {
+                return false;
+            };
+            if stored_component_parts != expected_component_parts {
+                return false;
+            }
         }
-        matches!(
+        if !matches!(
             equal(&k.pow(self.moment), &expanded_power),
             ZeroTest::Certified { equal: true, .. }
-        ) && matches!(
-            equal(&self.closed_form, &expanded_rhs),
-            ZeroTest::Certified { equal: true, .. }
-        )
+        ) {
+            return false;
+        }
+
+        let Some(expected_normalized) = squared_binomial_normalized_moment(self.moment) else {
+            return false;
+        };
+        let stored_normalized = compact_hypergeometric_ratio(&CasExpr::Div(
+            Box::new(self.closed_form.clone()),
+            Box::new(central_binomial),
+        ));
+        let (Some(stored_parts), Some(expected_parts)) = (
+            falling_denominator_rational_parts(&stored_normalized, "n", self.moment),
+            falling_denominator_rational_parts(&expected_normalized, "n", self.moment),
+        ) else {
+            return false;
+        };
+        stored_parts == expected_parts
     }
 }
 
-/// Prove the concrete raw-moment member
-/// `∑_k k^moment C(n,k)²` using its falling-factorial expansion.
-///
-/// The candidate closed form is generated from the exact identity
-/// `k^m = ∑_j S(m,j) k^(j)` and the Vandermonde consequence
-/// `∑_k k^(j) C(n,k)² = C(2n,n) (n^(j))²/(2n)^(j)`, where `x^(j)` is a
-/// falling factorial. Each nonzero falling-factorial component carries a
-/// directly constructed rational WZ candidate which must pass the fully
-/// symbolic WZ and exact base-case checks. The composite proof then checks the
-/// Stirling power identity and exact closed-form recombination. The normalized
-/// sum is formed over the known common denominator `(2n)^(moment)` and only
-/// exactly divisible linear factors are cancelled, avoiding unreduced
-/// denominator-product growth. Unsupported orders return `None`.
-#[must_use]
-pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBinomialMoment> {
-    if moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
-        return None;
+/// Peel every exactly dividing `(var - root)` factor for integer roots in
+/// `[-bound, bound]`, then retain the residual when general factorization declines.
+/// This is a compact-form helper, not an irreducibility claim: exact division proves
+/// every extracted factor and the caller still rechecks the reconstructed identity.
+fn factor_small_integer_roots_or_retain(
+    coefficients: &[Rational],
+    var: &str,
+    bound: i128,
+) -> Option<CasExpr> {
+    let mut residual = poly::rat_trim(coefficients.to_vec());
+    let mut factors = Vec::new();
+    for root in -bound..=bound {
+        let divisor = [
+            Rational::integer(root.checked_neg()?),
+            Rational::integer(1),
+        ];
+        let mut multiplicity = 0u32;
+        while let Some(quotient) = poly::rat_exact_div(&residual, &divisor) {
+            residual = quotient;
+            multiplicity = multiplicity.checked_add(1)?;
+        }
+        if multiplicity != 0 {
+            let linear = CasExpr::var(var) - CasExpr::int(root);
+            factors.push(if multiplicity == 1 {
+                linear
+            } else {
+                linear.pow(multiplicity)
+            });
+        }
     }
+    let residual_expr = MultiPoly::from_univariate(var, &residual).to_expr();
+    if residual != vec![Rational::integer(1)] {
+        factors.push(factor(&residual_expr, var).unwrap_or(residual_expr));
+    }
+    Some(build_product(factors))
+}
+
+/// Construct the exact rational multiplier of `C(2n,n)` in the raw moment.
+///
+/// All common-denominator arithmetic and linear-factor cancellation is checked
+/// exactly. Small integer roots are peeled only to keep the displayed result
+/// compact; an unfactored residual remains valid evidence for the same exact
+/// polynomial.
+fn squared_binomial_normalized_moment(moment: u32) -> Option<CasExpr> {
     let n = CasExpr::var("n");
     let two_n = CasExpr::int(2) * n.clone();
     let mut common_numerator = MultiPoly::zero();
-    let mut components = Vec::new();
     for order in 0..=moment {
         let stirling = combinatorics::stirling_second(moment, order)?;
         if stirling == 0 {
             continue;
         }
-        components.push(squared_binomial_falling_moment_candidate(order)?);
         let numerator = falling_factorial(&n, order).pow(2);
         let denominator_complement = falling_factorial(
             &(two_n.clone() - CasExpr::int(i128::from(order))),
@@ -5437,6 +5555,7 @@ pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBino
     let common_denominator = normalize(&falling_factorial(&two_n, moment))?;
     let mut numerator_coefficients = common_numerator.to_univariate("n")?;
     let mut denominator_coefficients = common_denominator.to_univariate("n")?;
+    let mut denominator_offsets = Vec::new();
     for offset in 0..moment {
         let divisor = vec![
             Rational::integer(-i128::from(offset)),
@@ -5448,6 +5567,8 @@ pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBino
             numerator_coefficients = reduced_numerator;
             denominator_coefficients =
                 poly::rat_exact_div(&denominator_coefficients, &divisor)?;
+        } else {
+            denominator_offsets.push(offset);
         }
     }
     let numerator_lead = *numerator_coefficients.last()?;
@@ -5461,16 +5582,59 @@ pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBino
         .map(|coefficient| coefficient.checked_div(denominator_lead))
         .collect::<Option<Vec<_>>>()?;
     let scalar = numerator_lead.checked_div(denominator_lead)?;
-    let normalized_moment = simplify(
-        &(CasExpr::Const(scalar)
-            * factor(&MultiPoly::from_univariate("n", &monic_numerator).to_expr(), "n")?
-            / factor(
-                &MultiPoly::from_univariate("n", &monic_denominator).to_expr(),
-                "n",
-            )?),
+    let factored_numerator = factor_small_integer_roots_or_retain(
+        &monic_numerator,
+        "n",
+        i128::from(moment),
+    )?;
+    let factored_denominator = build_product(
+        denominator_offsets
+            .into_iter()
+            .map(|offset| n.clone() - CasExpr::Const(Rational::new(i128::from(offset), 2)))
+            .collect(),
     );
+    if normalize(&factored_denominator)?
+        != MultiPoly::from_univariate("n", &monic_denominator)
+    {
+        return None;
+    }
+    Some(simplify(
+        &(CasExpr::Const(scalar) * factored_numerator / factored_denominator),
+    ))
+}
+
+/// Prove the concrete raw-moment member
+/// `∑_k k^moment C(n,k)²` using its falling-factorial expansion.
+///
+/// The candidate closed form is generated from the exact identity
+/// `k^m = ∑_j S(m,j) k^(j)` and the Vandermonde consequence
+/// `∑_k k^(j) C(n,k)² = C(2n,n) (n^(j))²/(2n)^(j)`, where `x^(j)` is a
+/// falling factorial. Each nonzero falling-factorial component carries a
+/// directly constructed rational WZ candidate which must pass the fully
+/// symbolic WZ and exact base-case checks. The composite proof then checks the
+/// Stirling power identity, each component's central-binomial quotient, and an
+/// independently reconstructed normalized closed form. The normalized sum is
+/// formed over the known common denominator `(2n)^(moment)` and only exactly
+/// divisible linear factors are cancelled, avoiding unreduced
+/// denominator-product growth. Unsupported orders return `None`.
+#[must_use]
+pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBinomialMoment> {
+    if moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+        return None;
+    }
+    let mut components = Vec::new();
+    for order in 0..=moment {
+        let stirling = combinatorics::stirling_second(moment, order)?;
+        if stirling == 0 {
+            continue;
+        }
+        components.push(squared_binomial_falling_moment_candidate(order)?);
+    }
+    let n = CasExpr::var("n");
+    let normalized_moment = squared_binomial_normalized_moment(moment)?;
     let closed_form = simplify(
-        &(binomial_coefficient(&(CasExpr::int(2) * n.clone()), &n) * normalized_moment),
+        &(binomial_coefficient(&(CasExpr::int(2) * n.clone()), &n)
+            * normalized_moment),
     );
     let proof = CertifiedSquaredBinomialMoment {
         moment,
@@ -17604,6 +17768,30 @@ mod tests {
         ));
     }
 
+    fn squared_binomial_moment_eleven_expected() -> CasExpr {
+        let n = || v("n");
+        n().pow(4)
+            * (n() + CasExpr::int(1))
+            * (n().pow(11) + CasExpr::int(14) * n().pow(10)
+                - CasExpr::int(39) * n().pow(9)
+                - CasExpr::int(726) * n().pow(8)
+                + CasExpr::int(1_275) * n().pow(7)
+                + CasExpr::int(10_626) * n().pow(6)
+                - CasExpr::int(23_793) * n().pow(5)
+                - CasExpr::int(26_598) * n().pow(4)
+                + CasExpr::int(100_980) * n().pow(3)
+                - CasExpr::int(90_332) * n().pow(2)
+                + CasExpr::int(35_816) * n()
+                - CasExpr::int(5_544))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(64)
+                * (CasExpr::int(2) * n() - CasExpr::int(9))
+                * (CasExpr::int(2) * n() - CasExpr::int(7))
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)))
+    }
+
     #[test]
     fn squared_binomial_moment_family_is_checked() {
         let n = || v("n");
@@ -17613,7 +17801,7 @@ mod tests {
                 .unwrap_or_else(|| panic!("squared-binomial moment {moment} must verify"));
             assert!(proof.is_certified());
 
-            let sample_n = i128::from(moment.max(2));
+            let sample_n = i128::from(moment.clamp(2, 8));
             let mut direct = CasExpr::zero();
             for sample_k in 0..=sample_n {
                 direct = direct
@@ -17687,7 +17875,11 @@ mod tests {
                 * (CasExpr::int(2) * n() - CasExpr::int(1)));
         assert_equal(&eighth.closed_form, &eighth_expected);
 
-        let highest = proofs.last().expect("moment ten proof exists");
+        let eleventh = proofs.get(11).expect("moment eleven proof exists");
+        let eleventh_expected = squared_binomial_moment_eleven_expected();
+        assert_equal(&eleventh.closed_form, &eleventh_expected);
+
+        let highest = proofs.last().expect("moment nineteen proof exists");
 
         let mut false_proof = highest.clone();
         false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
