@@ -63,10 +63,11 @@ The measurement lane is **not ready for another credited 64,345-file run**.
   4,890,207,406 compressed bytes, then proved an exact 450,472-file,
   82,270,961,563-byte metadata/tree bijection across 89 logic trees. A fresh
   process rehashed every retained archive and extracted file. The official
-  sample remains unobserved. S3's twice-repeated pinned Polars producer now has
-  an 88-file no-Git bundle contract, hash-required lockfile runtime closure,
-  exact official cache-builder AST route, and fail-closed repetition checker;
-  its bounded gate and pre-observation commit are next.
+  S3 is complete: after its implementation was committed and pushed, two fresh
+  88-file no-Git bundles and hash-required 14-package environments generated
+  byte-identical official 45,905-path selections (2,709 new / 43,196 old).
+  A fresh standard-library process rehashed both complete runs. S4's complete
+  independent decision and selected-file audit is next.
 
 The old s4 run remains useful only as a bug-discovery stream. It predates both
 soundness repairs, uses end-of-shard raw output, and does not satisfy E1-E3; it
@@ -247,9 +248,9 @@ gate.
 
 ## 5. Remaining work, in dependency order
 
-1. **Selection identity.** S0--S2 now close authority, eligibility, release,
-   and exact corpus bytes. Implement the twice-repeated official producer and
-   independent final decision/selected-file audit in S3--S4. Keep this policy
+1. **Selection identity.** S0--S3 now close authority, eligibility, release,
+   exact corpus bytes, and twice-repeated official production. Implement the
+   independent final decision/selected-file audit in S4. Keep this policy
    artifact separate from the E1b execution ledger. Follow
    [the preregistered plan](../smtcomp-official-selection-identity-plan-2026-07-22.md)
    under proposed
@@ -290,6 +291,8 @@ Repository:
   `docs/plan/smtcomp-official-selection-input-audit-s1b-2026-07-22.md`;
 - official selection S2 corpus result:
   `docs/plan/smtcomp-official-selection-corpus-s2-2026-07-22.md`;
+- official selection S3 producer result:
+  `docs/plan/smtcomp-official-selection-producer-s3-2026-07-22.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -310,6 +313,8 @@ NAS (shared, corpus read-only in practice):
   `/nas3/data/axeyum/harness/e3-gate/source-bundles/83e9f5e5ec37c0ecb0a62b0da730c6ed99c465bcfd6fab76a7086b07423b8b05/`.
 - verified SMT-LIB 2025.08.04 S2 corpus acquisition:
   `/nas3/data/axeyum/harness/official-selection-2026-sq/corpus-acquisition-1784745749642951377-d48fb0dc/`.
+- twice-repeated S3 official producer:
+  `/nas3/data/axeyum/harness/official-selection-2026-sq/official-producer-1784755629430228923-38c5f2af/`.
 
 ---
 
@@ -323,9 +328,9 @@ NAS (shared, corpus read-only in practice):
    treating the stale run as evidence.
 4. Continue the independent official selection-identity ledger. Keep the v2
    result schema and E1-E3 gates fixed unless a failing mutation demonstrates a
-   necessary correction. S0--S2 are complete and the official sample remains
-   unobserved. Commit and push the S3 producer and repetition gate before its
-   first live invocation, then close the independent S4 decision/file audit.
+   necessary correction. S0--S3 are complete and the official sample is now
+   observed only through the twice-repeated pinned producer. Commit and push
+   the independent S4 auditor before closing the decision/file audit.
 5. Update `STATUS.md` and this file before handoff; push only a green topic
    branch for the integration owner.
 

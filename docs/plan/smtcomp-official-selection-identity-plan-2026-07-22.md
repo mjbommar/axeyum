@@ -1,6 +1,6 @@
 # SMT-COMP 2026 Single Query selection-identity plan
 
-Status: S0--S2 complete; S3 pinned official producer next
+Status: S0--S3 complete; S4 independent audit next
 Date: 2026-07-22
 Owner: SMT-COMP measurement/full-library lane
 Decision: [proposed ADR-0356](../research/09-decisions/adr-0356-preregister-official-smtcomp-selection-identity.md)
@@ -228,7 +228,7 @@ materialized 89 logic trees, and proved an exact 450,472-file,
 every retained archive and extracted file and reconstructed the canonical
 ledger and completion dependencies. The compact
 [S2 result](smtcomp-official-selection-corpus-s2-2026-07-22.md) records the
-artifact roots. `selection_observed=false`; S3 is next.
+artifact roots. `selection_observed=false`; S3 has since completed.
 
 ### S3 — pinned official producer
 
@@ -256,13 +256,22 @@ thread.
 The worker extracts the exact `create_cache` function AST from the pinned
 `smtcomp/main.py` (stripping only its Typer decorator), requires AST identity
 `ca792a12...d2009617` under CPython 3.11.15, creates all three official Feather
-caches, and invokes
-the pinned `smtcomp.selection.helper` for Single Query. The already-observed S1
-eligibility ledger freezes the expected aggregate count at 45,905 without
-revealing membership. Each run emits a sorted LF-terminated selected list,
-per-logic new/old counts, cache hashes, and runtime facts. Completion is
-published only if fresh bundles, venvs, caches, normalized selected bytes, and
-per-logic bytes are exactly equal.
+caches, and invokes the pinned `smtcomp.selection.helper` for Single Query. The
+already-observed S1 eligibility ledger freezes the expected aggregate count at
+45,905 without revealing membership. Each run emits a sorted LF-terminated
+selected list, per-logic new/old counts, cache hashes, and runtime facts.
+Completion is published only if fresh bundles, venvs, caches, normalized
+selected bytes, and per-logic bytes are exactly equal.
+
+**S3 result:** complete. The first live attempt at
+`/nas3/data/axeyum/harness/official-selection-2026-sq/official-producer-1784755629430228923-38c5f2af`
+produced 45,905 selected paths (2,709 new and 43,196 old) across 88 logics.
+Both fresh 88-file bundles, 14-package environments, official cache sets,
+normalized selected bytes, and per-logic bytes are identical. A fresh
+standard-library process rehashed both complete runs and their completion
+dependencies. The compact
+[S3 result](smtcomp-official-selection-producer-s3-2026-07-22.md) records the
+artifact roots. `selection_observed=true`; S4 is next.
 
 ### S4 — full independent audit and publication
 
@@ -300,7 +309,8 @@ S2--S4, not ordinary offline CI jobs.
 
 ## Current next action
 
-Finish the bounded S3 tests, commit and push the pinned producer before its
-first live invocation, then run it into a fresh attempt directory. Treat any
-bundle, lock, runtime, cache, count, selected-byte, or per-logic repetition
-drift as a blocker; do not choose between outputs.
+Implement, test, commit, and push the standard-library S4 auditor before using
+the selected population for any solver execution. Join all 450,472 eligibility
+and corpus rows to the official selected set, prove the complete decision
+partition and per-logic quotas, hash every selected file, run the registered
+mutation matrix, and publish completion last.

@@ -192,6 +192,12 @@ result is credited by this decision alone.
   It verified all 90 release files and 4,890,207,406 compressed bytes, proved
   the exact 450,472-file / 82,270,961,563-byte metadata-tree bijection, and
   passed a fresh all-archive/all-file rehash with `selection_observed=false`.
+- The completed S3 producer is recorded in
+  [`smtcomp-official-selection-producer-s3-2026-07-22.md`](../../plan/smtcomp-official-selection-producer-s3-2026-07-22.md).
+  Its two fresh 88-file/14-package runs produced byte-identical 45,905-path
+  selections with SHA-256
+  `49744be7b373b2baef41289bfd5d2a7e59619db2859233e892b0592cd34a8b5b`;
+  a fresh standard-library process rehashed both complete runs.
 
 ## Alternatives
 
