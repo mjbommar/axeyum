@@ -10719,6 +10719,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_ln_composite(expr, var),
         integrate_sinusoid_product(expr, var),
         integrate_sqrt_quadratic(expr, var),
+        integrate_sqrt_quadratic_general(expr, var),
         integrate_poly_times_inverse(expr, var),
         integrate_split_fraction(expr, var),
         integrate_even_quartic_denominator(expr, var),
@@ -14375,6 +14376,43 @@ fn integrate_power_of_inner(expr: &CasExpr, var: &str) -> Option<CasExpr> {
 ///   ∫√(x²−1) = ½(x√(x²−1) − acosh x),  ∫x²/√(x²−1) = ½(x√(x²−1) + acosh x)
 /// Recognized structurally; certified downstream by differentiate-and-check (which
 /// folds `(√u)²=u`). Also unlocks `∫x·asin x` etc. via the by-parts residual.
+/// `∫ √(a² ∓ x²) dx` for a **general** positive `a²` (the unit case `a=1` is in
+/// [`integrate_sqrt_quadratic`]): `∫√(a²−x²) = ½(x√(a²−x²) + a²·atan(x/√(a²−x²)))`,
+/// `∫√(a²+x²) = ½(x√(a²+x²) + a²·ln(x+√(x²+a²)))`, `∫√(x²−a²) = ½(x√(x²−a²) −
+/// a²·ln(x+√(x²−a²)))`. So `∫√(4−x²)`, `∫√(x²+4)`, `∫√(x²−4)`, `∫√(2−x²)` (surd
+/// `a²=2`). The `atan`/`ln` forms are chosen deliberately so their derivative carries
+/// the **same** radical `√(a²∓x²)` as the integrand (the `asin(x/a)`/`asinh(x/a)`
+/// forms would introduce a rescaled `√(1∓x²/a²)` the radical zero-test can't relate),
+/// letting the differentiate-and-check certificate decide. The radicand is `c₀ + c₂x²`
+/// with `c₂ = ±1`.
+fn integrate_sqrt_quadratic_general(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let CasExpr::Unary(UnaryFunc::Sqrt, radicand) = expr else {
+        return None;
+    };
+    let x = CasExpr::var(var);
+    let [c0, c1, c2] = <[Rational; 3]>::try_from(normalize(radicand)?.to_univariate(var)?).ok()?;
+    if !c1.is_zero() || c0.is_zero() {
+        return None;
+    }
+    let a_sq = CasExpr::Const(if c0.numerator() < 0 { c0.checked_neg()? } else { c0 });
+    let sqrt = (**radicand).clone().sqrt();
+    let x_sqrt = CasExpr::Mul(vec![x.clone(), sqrt.clone()]);
+    let ln_term = || (x.clone() + sqrt.clone()).ln();
+    let body = if c2 == Rational::integer(-1) && c0.numerator() > 0 {
+        // a²−x² → x√ + a²·atan(x/√(a²−x²)).
+        x_sqrt + a_sq * CasExpr::Unary(UnaryFunc::Atan, Box::new(x / sqrt))
+    } else if c2 == Rational::integer(1) && c0.numerator() > 0 {
+        // a²+x² → x√ + a²·ln(x+√(x²+a²)).
+        x_sqrt + a_sq * ln_term()
+    } else if c2 == Rational::integer(1) && c0.numerator() < 0 {
+        // x²−a² → x√ − a²·ln(x+√(x²−a²)).
+        x_sqrt - a_sq * ln_term()
+    } else {
+        return None;
+    };
+    Some(scaled_term(Rational::new(1, 2), body))
+}
+
 fn integrate_sqrt_quadratic(expr: &CasExpr, var: &str) -> Option<CasExpr> {
     let x = CasExpr::var(var);
     // Classify the radicand 1−x², 1+x², or x²−1 by its coefficient vector, and
@@ -20017,6 +20055,12 @@ mod tests {
             x() * inv(UnaryFunc::Asin, x()),
             x() * inv(UnaryFunc::Acosh, x()),
             x() * inv(UnaryFunc::Asinh, x()),
+            // General a² (not just 1): ∫√(a²∓x²), via the atan/ln forms whose
+            // derivative carries the same radical the check needs.
+            (CasExpr::int(4) - x().pow(2)).sqrt(),  // ∫√(4−x²)
+            (x().pow(2) + CasExpr::int(4)).sqrt(),  // ∫√(x²+4)
+            (x().pow(2) - CasExpr::int(4)).sqrt(),  // ∫√(x²−4)
+            (CasExpr::int(2) - x().pow(2)).sqrt(),  // ∫√(2−x²), surd a=√2
         ] {
             let r = integrate(&integrand, "x").expect("trig-sub radical integral");
             assert!(r.is_certified(), "not certified: ∫{integrand}");
