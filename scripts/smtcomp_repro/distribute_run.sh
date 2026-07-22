@@ -17,13 +17,12 @@ INT=$(( CEILING * 1000 - 1000 ))
 mkdir -p "$OUTDIR"
 
 # host plan: name first_shard n_workers mem_gb  (total shards = sum of n_workers)
+# Thermally-limited: these boxes hit 92-99C at full core load, so we cap workers
+# per host well below core count to hold temps under ~80C (verified live).
 PLAN=(
-  "s4 0 16 6"
-  "s5 16 12 2"
-  "s6 28 12 2"
-  "s7 40 12 2"
+  "s4 0 8 8"
 )
-NSHARDS=52
+NSHARDS=8
 
 echo "distributing $TAG: $(wc -l < "$FILELIST") files, ${CEILING}s ceiling, $NSHARDS shards -> $OUTDIR"
 for entry in "${PLAN[@]}"; do
@@ -31,6 +30,7 @@ for entry in "${PLAN[@]}"; do
   last=$(( first + n - 1 ))
   ssh -o BatchMode=yes "$host" bash -s <<REMOTE 2>&1 | sed "s/^/[$host] /"
 cd $H
+export RAYON_NUM_THREADS=1 OMP_NUM_THREADS=1 AYU_THREADS=1
 for s in \$(seq $first $last); do
   nohup python3 smtcomp_repro/compete.py \
     --file-list $FILELIST --shard \${s}/$NSHARDS \
