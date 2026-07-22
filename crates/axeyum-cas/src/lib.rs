@@ -3908,6 +3908,105 @@ pub fn dsolve_bernoulli(p: &CasExpr, q: &CasExpr, var: &str) -> Option<CasExpr> 
     }
 }
 
+/// The multiplicity of `root` in the polynomial `poly` (LSB-first coefficients):
+/// the number of consecutive derivatives `p, p′, p″, …` that vanish at `root`. `0`
+/// if `root` is not a root at all.
+fn rational_root_multiplicity(poly: &[Rational], root: Rational) -> Option<usize> {
+    let mut current = poly.to_vec();
+    let mut multiplicity = 0;
+    loop {
+        let trimmed = poly::rat_trim(current.clone());
+        if trimmed.len() <= 1 && trimmed.first().is_some_and(|c| !c.is_zero()) {
+            break; // nonzero constant — not a root of this derivative
+        }
+        if poly::eval_rat_poly(&trimmed, root)?.is_zero() && trimmed.len() > 1 {
+            multiplicity += 1;
+        } else {
+            break;
+        }
+        // Differentiate: `d/dx Σ cᵢxⁱ = Σ i·cᵢ xⁱ⁻¹`.
+        let mut derivative = Vec::with_capacity(current.len().saturating_sub(1));
+        for (i, coeff) in current.iter().enumerate().skip(1) {
+            derivative.push(coeff.checked_mul(Rational::integer(i128::try_from(i).ok()?))?);
+        }
+        current = derivative;
+    }
+    Some(multiplicity)
+}
+
+/// Solve a constant-coefficient recurrence whose characteristic spectrum is entirely
+/// **positive rational** (with possible repeats): a root `r` of multiplicity `m`
+/// contributes the basis `rⁿ, n·rⁿ, …, n^{m−1}·rⁿ`. The amplitudes are fixed by the
+/// linear solve against the initial conditions over the basis `nᵖ·rⁿ` (column `j` =
+/// `jᵖ·rʲ`), and the closed form is certified by substitution. `None` unless the
+/// multiplicities of the positive rational roots sum to `order`.
+fn solve_recurrence_repeated_rational(
+    char_poly: &[Rational],
+    coefficients: &[Rational],
+    initial: &[Rational],
+    order: usize,
+    var: &str,
+) -> Option<CasExpr> {
+    let mut grouped: Vec<(Rational, usize)> = Vec::new();
+    let mut total_multiplicity = 0usize;
+    for &root in &ratint::rational_roots(char_poly)? {
+        if root.numerator() <= 0 {
+            continue; // only positive rational roots (rⁿ = exp(n·ln r))
+        }
+        let multiplicity = rational_root_multiplicity(char_poly, root)?;
+        total_multiplicity += multiplicity;
+        grouped.push((root, multiplicity));
+    }
+    if total_multiplicity != order {
+        return None;
+    }
+    let mut columns: Vec<Vec<Rational>> = Vec::with_capacity(order);
+    let mut basis: Vec<(Rational, usize)> = Vec::with_capacity(order); // (root, power p)
+    for (root, multiplicity) in &grouped {
+        for p in 0..*multiplicity {
+            let mut column = Vec::with_capacity(order);
+            let mut root_pow = Rational::integer(1); // rʲ
+            for j in 0..order {
+                // jᵖ with the convention 0⁰ = 1.
+                let mut index_pow = Rational::integer(1);
+                for _ in 0..p {
+                    index_pow = index_pow.checked_mul(Rational::integer(i128::try_from(j).ok()?))?;
+                }
+                column.push(index_pow.checked_mul(root_pow)?);
+                root_pow = root_pow.checked_mul(*root)?;
+            }
+            columns.push(column);
+            basis.push((*root, p));
+        }
+    }
+    let amplitudes = ratint::solve_linear(&columns, initial)?;
+    // Closed form Σ Aᵢ · nᵖ · exp(var·ln r).
+    let index = CasExpr::var(var);
+    let mut closed = CasExpr::zero();
+    for (amplitude, (root, p)) in amplitudes.iter().zip(&basis) {
+        if amplitude.is_zero() {
+            continue;
+        }
+        let mut term = CasExpr::Const(*amplitude);
+        if *p > 0 {
+            term = term * index.clone().pow(u32::try_from(*p).ok()?);
+        }
+        term = term * (index.clone() * CasExpr::Const(*root).ln()).exp();
+        closed = closed + term;
+    }
+    // Certify: a(n) − Σₖ cₖ·a(n−k) ≡ 0.
+    let mut residual = closed.clone();
+    for (k, coeff) in coefficients.iter().enumerate() {
+        let shift = i128::try_from(k + 1).ok()?;
+        let shifted = closed.substitute(var, &(index.clone() - CasExpr::int(shift)));
+        residual = residual - CasExpr::Const(*coeff) * shifted;
+    }
+    match equal(&residual, &CasExpr::zero()) {
+        ZeroTest::Certified { equal: true, .. } => Some(closed),
+        _ => None,
+    }
+}
+
 /// Solve a **constant-coefficient linear recurrence** `aₙ = c₁·aₙ₋₁ + … + c_d·aₙ₋d`
 /// with the given `coefficients = [c₁, …, c_d]` and `initial = [a₀, …, a_{d−1}]`,
 /// returning a closed form `a(var)` for the general term.
@@ -3996,6 +4095,14 @@ pub fn solve_recurrence(
             ZeroTest::Certified { equal: true, .. } => Some(closed),
             _ => None,
         };
+    }
+
+    // Repeated **positive rational** roots (`(A + Bn + …)·rⁿ`) — reached only when the
+    // distinct-root path did not fire (there is a repeat).
+    if let Some(closed) =
+        solve_recurrence_repeated_rational(&char_poly, coefficients, initial, order, var)
+    {
+        return Some(closed);
     }
 
     // Fallback: an order-2 recurrence with a conjugate pair of **positive**
@@ -14295,6 +14402,19 @@ mod tests {
             #[allow(clippy::cast_precision_loss)]
             let got = evalf(&lucas, &[("n", n as f64)]).unwrap();
             assert!((got - want).abs() < 1e-6, "L({n}) = {got}, want {want}");
+        }
+        // Repeated roots. aₙ = 2aₙ₋₁ − aₙ₋₂ (root 1, double), a₀=0,a₁=1 ⇒ aₙ = n.
+        let linear = solve_recurrence(&[ig(2), ig(-1)], &[ig(0), ig(1)], "n").expect("double root 1");
+        // aₙ = 4aₙ₋₁ − 4aₙ₋₂ (root 2, double), a₀=0,a₁=2 ⇒ aₙ = n·2ⁿ.
+        let n_two_n = solve_recurrence(&[ig(4), ig(-4)], &[ig(0), ig(2)], "n").expect("double root 2");
+        // aₙ = 3aₙ₋₁ − 3aₙ₋₂ + aₙ₋₃ (root 1, triple), a₀=0,a₁=1,a₂=4 ⇒ aₙ = n².
+        let quadratic = solve_recurrence(&[ig(3), ig(-3), ig(1)], &[ig(0), ig(1), ig(4)], "n").expect("triple root 1");
+        for n in 0usize..6 {
+            #[allow(clippy::cast_precision_loss)]
+            let nf = n as f64;
+            assert!((evalf(&linear, &[("n", nf)]).unwrap() - nf).abs() < 1e-6);
+            assert!((evalf(&n_two_n, &[("n", nf)]).unwrap() - nf * 2f64.powi(i32::try_from(n).unwrap())).abs() < 1e-6);
+            assert!((evalf(&quadratic, &[("n", nf)]).unwrap() - nf * nf).abs() < 1e-6);
         }
     }
 
