@@ -21219,11 +21219,14 @@ mod tests {
         assert!(s.is_certified());
         assert_equal(&s.antiderivative.differentiate("x"), &x().ln().sin());
         // The `eᵘ` from `dx` may cancel an `eᵘ` in the denominator: `∫1/(x(1+ln x)) =
-        // ln(1+ln x)`, `∫1/(x ln x) = ln(ln x)` (`→ ∫1/(1+u) du`, `∫1/u du`).
-        let r1 = integrate(&(CasExpr::int(1) / (x() * (CasExpr::int(1) + x().ln()))), "x").expect("∫1/(x(1+ln x))");
+        // ln(1+ln x)`, `∫1/(x ln x) = ln(ln x)` (`→ ∫1/(1+u) du`, `∫1/u du`). Verified
+        // by the certificate (differentiate-and-check), which is order-independent.
+        let i1 = CasExpr::int(1) / (x() * (CasExpr::int(1) + x().ln()));
+        let r1 = integrate(&i1, "x").expect("∫1/(x(1+ln x))");
         assert!(r1.is_certified());
-        assert_equal(&simplify(&r1.antiderivative), &(CasExpr::int(1) + x().ln()).ln());
-        let r2 = integrate(&(CasExpr::int(1) / (x() * x().ln())), "x").expect("∫1/(x ln x)");
+        assert_equal(&r1.antiderivative.differentiate("x"), &i1);
+        let i2 = CasExpr::int(1) / (x() * x().ln());
+        let r2 = integrate(&i2, "x").expect("∫1/(x ln x)");
         assert!(r2.is_certified());
         assert_equal(&simplify(&r2.antiderivative), &x().ln().ln());
         // Termination guard: `∫ln(x²+1)` (not a pure function of ln x) must not send
