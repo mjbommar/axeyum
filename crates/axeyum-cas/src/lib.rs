@@ -5067,10 +5067,13 @@ pub fn prove_wz_sum(
     let f = CasExpr::Div(Box::new(summand.clone()), Box::new(rhs.clone()));
 
     let (mut num_rows, mut den_rows): (CoeffRows, CoeffRows) = (Vec::new(), Vec::new());
-    let mut step = 1;
-    while num_rows.len() < TARGET && step <= SCAN {
-        let ni = base + step;
-        step += 1;
+    // Sample from *small* `n` (independent of `base`) — Gosper overflows the rising
+    // factorials at larger `n`, so the low values yield the most usable samples.
+    let mut ni = 1;
+    while num_rows.len() < TARGET && ni <= SCAN {
+        let ni_now = ni;
+        ni += 1;
+        let ni = ni_now;
         let sample = (|| {
             let f_ni = simplify(&f.substitute(n, &CasExpr::int(ni)));
             let f_ni1 = simplify(&f.substitute(n, &CasExpr::int(ni + 1)));
@@ -5123,10 +5126,12 @@ pub fn prove_wz_sum(
     matches!(equal(&total, &rhs_base), ZeroTest::Certified { equal: true, .. }).then_some(big_r)
 }
 
-/// Interpolate a `k`-polynomial whose coefficients are polynomials in `n`, from rows
-/// `(nᵢ, coeff_vec_in_k)`: for each `k`-power `j`, fit `pⱼ(n)` through `(nᵢ, coeff_i[j])`
-/// (Lagrange) and assemble `∑ⱼ pⱼ(n)·kʲ`. Used to lift a Gosper certificate found at
-/// concrete `n` to a symbolic `R(n,k)`. `None` on empty input or interpolation failure.
+/// Interpolate a `k`-polynomial whose coefficients are **rational functions of `n`**,
+/// from rows `(nᵢ, coeff_vec_in_k)`: for each `k`-power `j`, fit `Rⱼ(n)` through
+/// `(nᵢ, coeff_i[j])` and assemble `∑ⱼ Rⱼ(n)·kʲ`. Rational (not just polynomial)
+/// fitting is needed because a Zeilberger certificate for a term like `k²·C(n,k)`
+/// carries `n` in its coefficient denominators. `None` on empty input or a
+/// coefficient that no rational function fits.
 fn interpolate_coeffs_over_n(rows: &[(Rational, Vec<Rational>)], n: &str, k: &str) -> Option<CasExpr> {
     let width = rows.iter().map(|(_, v)| v.len()).max()?;
     let mut terms: Vec<CasExpr> = Vec::new();
@@ -5135,18 +5140,96 @@ fn interpolate_coeffs_over_n(rows: &[(Rational, Vec<Rational>)], n: &str, k: &st
             .iter()
             .map(|(ni, v)| (*ni, v.get(j).copied().unwrap_or_else(Rational::zero)))
             .collect();
-        let coeff_poly = approx::lagrange_interpolation(&points, n)?;
+        let coeff = rational_interpolate(&points, n)?;
         let power = if j == 0 {
             CasExpr::int(1)
         } else {
             CasExpr::var(k).pow(u32::try_from(j).ok()?)
         };
-        terms.push(coeff_poly * power);
+        terms.push(coeff * power);
     }
     Some(match terms.len() {
         1 => terms.into_iter().next()?,
         _ => CasExpr::Add(terms),
     })
+}
+
+/// The lowest-degree rational function `P(var)/Q(var)` (with `Q(0)=1`) passing through
+/// every `(xᵢ, yᵢ)`, or `None` if none does. Tries total degree `deg P + deg Q` from 0
+/// upward; for each split it solves a square system on the first `deg+1` points and
+/// **validates against all** points, so an over-fit is rejected. Subsumes polynomial
+/// interpolation (`deg Q = 0`).
+fn rational_interpolate(points: &[(Rational, Rational)], var: &str) -> Option<CasExpr> {
+    let m = points.len();
+    for total in 0..m {
+        for pdeg in 0..=total {
+            if let Some(expr) = try_rational_fit(points, pdeg, total - pdeg, var) {
+                return Some(expr);
+            }
+        }
+    }
+    None
+}
+
+/// Attempt a rational fit `P/Q` with `deg P = pdeg`, `deg Q = qdeg` (`Q(0)=1`): solve
+/// the exact square system `P(xᵢ) − yᵢ·Q(xᵢ) = 0` on the first `pdeg+1+qdeg` points,
+/// then require `P(xᵢ)/Q(xᵢ) = yᵢ` at **every** point. `None` if singular, if any
+/// `Q(xᵢ)=0`, or if validation fails.
+fn try_rational_fit(points: &[(Rational, Rational)], pdeg: usize, qdeg: usize, var: &str) -> Option<CasExpr> {
+    let unknowns = pdeg + 1 + qdeg; // p₀..p_pdeg, q₁..q_qdeg  (q₀ fixed to 1)
+    if points.len() < unknowns {
+        return None;
+    }
+    let rat_pow = |x: Rational, e: usize| -> Option<Rational> {
+        let mut acc = Rational::integer(1);
+        for _ in 0..e {
+            acc = acc.checked_mul(x)?;
+        }
+        Some(acc)
+    };
+    // Square system on the first `unknowns` points, column-major for `solve_linear`.
+    let rows = &points[..unknowns];
+    let mut cols: Vec<Vec<Rational>> = Vec::with_capacity(unknowns);
+    for j in 0..=pdeg {
+        cols.push(rows.iter().map(|(x, _)| rat_pow(*x, j)).collect::<Option<_>>()?);
+    }
+    for j in 1..=qdeg {
+        cols.push(
+            rows.iter()
+                .map(|(x, y)| y.checked_neg()?.checked_mul(rat_pow(*x, j)?))
+                .collect::<Option<_>>()?,
+        );
+    }
+    let rhs: Vec<Rational> = rows.iter().map(|(_, y)| *y).collect();
+    let solution = ratint::solve_linear(&cols, &rhs)?;
+    let (p_coeffs, q_tail) = solution.split_at(pdeg + 1);
+    let eval = |coeffs: &[Rational], x: Rational| -> Option<Rational> {
+        let mut acc = Rational::zero();
+        for (j, c) in coeffs.iter().enumerate() {
+            acc = acc.checked_add(c.checked_mul(rat_pow(x, j)?)?)?;
+        }
+        Some(acc)
+    };
+    // Validate `P(x)/Q(x) = y` at every point (`Q(x) = 1 + Σ qⱼ xʲ`).
+    for (x, y) in points {
+        let p_val = eval(p_coeffs, *x)?;
+        let mut q_val = Rational::integer(1);
+        for (j, q) in q_tail.iter().enumerate() {
+            q_val = q_val.checked_add(q.checked_mul(rat_pow(*x, j + 1)?)?)?;
+        }
+        if q_val.is_zero() || p_val != y.checked_mul(q_val)? {
+            return None;
+        }
+    }
+    // Assemble P(var)/Q(var).
+    let p_expr = MultiPoly::from_univariate(var, p_coeffs).to_expr();
+    if qdeg == 0 {
+        return Some(p_expr);
+    }
+    let mut q_full = vec![Rational::integer(1)];
+    q_full.extend_from_slice(q_tail);
+    let q_expr = MultiPoly::from_univariate(var, &q_full).to_expr();
+    Some(CasExpr::Div(Box::new(p_expr), Box::new(q_expr)))
 }
 
 /// The closed form of `∑_{k=0}^{var−1} f(k)` for a polynomial summand `f` — the
@@ -16578,6 +16661,12 @@ mod tests {
         // ∑_k k·C(n,k) = n·2^{n−1}.
         let rhs2 = n() * two_n.clone() / CasExpr::int(2);
         assert!(prove_wz_sum(&(k() * binomial_coefficient(&n(), &k())), "n", "k", &rhs2, 2, 0, 2).is_some());
+
+        // ∑_k k²·C(n,k) = n(n+1)·2^{n−2} — the certificate coefficients are *rational*
+        // in n (`(n+1)/(n+2)`, …), so this exercises the rational (not just polynomial)
+        // interpolation over the concrete samples.
+        let rhs_sq = n() * (n() + CasExpr::int(1)) * two_n.clone() / CasExpr::int(4);
+        assert!(prove_wz_sum(&(k().pow(2) * binomial_coefficient(&n(), &k())), "n", "k", &rhs_sq, 2, 0, 2).is_some());
 
         // Soundness: a FALSE identity ∑_k C(n,k) = 3ⁿ must not be "proven".
         let three_n = geometric_power(Rational::new(3, 1), "n");
