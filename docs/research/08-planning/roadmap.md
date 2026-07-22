@@ -97,6 +97,15 @@ Last updated: 2026-07-22
 > [M5 result](../../../docs/plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
 > accepts the decision after every bounded gate and hands the semantic path to
 > TL2.13 mutual groups; the completed TL2.11 guard remains mandatory.
+> TL2.13 is now preregistered under
+> [proposed ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> and a
+> [P0--M5 plan](../../../docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md):
+> one atomic ordered group path checks shared parameters/universes and complete-
+> group positivity, derives all motives/minors, selects the recursive target
+> family's motive/recursor, and publishes all families or none. M0 next freezes
+> explicit non-indexed/indexed mutual recursor computations without product
+> observation; TL2.14 frontend lowering remains separate.
 > Live per-session state is in
 > **[STATUS.md](../../../STATUS.md)**. Read those for "what's next"; read this for
 > "how the foundation was sequenced."

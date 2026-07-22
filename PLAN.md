@@ -233,6 +233,19 @@ state.
 > import, 4 GiB caps, and milestone-by-milestone commit/push are mandatory.
 > Mutual groups are now the primary TL2.13 semantic path; nested/well-founded
 > frontend lowering remains TL2.14.
+> TL2.13 is now preregistered by
+> [proposed ADR-0354](docs/research/09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+> and its
+> [P0--M5 execution plan](docs/plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
+> The trusted unit is one ordered group, not repeated single-family calls:
+> parameters are shared, positivity ranges over every group family, every
+> recursor binds all motives and all minors, and a recursive field selects the
+> motive and recursor of its terminal family. `add_inductive` must become a
+> behavior- and identity-preserving singleton wrapper. M0 next freezes explicit
+> non-indexed and indexed cross-family recursor computations in pinned Lean and
+> official format-3.1 streams without Axeyum product observation. One Lean/Rust
+> worker, 4 GiB caps, the 640-case future group grammar, and the retained
+> 768-case recursive plus 840-case positivity controls are mandatory.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,

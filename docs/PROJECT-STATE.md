@@ -185,7 +185,11 @@ Again, there are distinct targets:
   generated/exported recursor comparison; separate computation streams reduce
   to the registered Vector and Acc normal forms in both official Lean and
   Axeyum. Mutual-group positivity/recursors, nested/well-founded frontend
-  lowering, and broad Lean admission remain open.
+  lowering, and broad Lean admission remain open. Mutual groups are now the
+  active preregistered TL2.13 slice: the planned unit is one atomic ordered
+  group with shared parameters, complete-group positivity, all motives/minors,
+  target-family recursive calls, and all-or-nothing publication; no mutual
+  admission credit exists yet.
   Quotient and String literals are still absent. These are exact K0/K1 slices,
   not general kernel parity.
 - **Lean language and ecosystem compatibility:** absent today, but now staged

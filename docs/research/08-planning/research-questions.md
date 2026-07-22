@@ -809,6 +809,24 @@ Out of scope:
     [M5 result](../../plan/lean-recursive-induction-hypotheses-final-2026-07-22.md)
     closes all bounded gates and marks TL2.12 DONE. TL2.13 mutual groups are
     the next atomic semantic widening.
+- [ ] What is the trusted admission/publication unit for mutual inductive
+      groups, and how must motives, minors, positivity, indices, and recursive
+      target families be ordered?
+  - Proposed answer (2026-07-22): use one atomic ordered group, never repeated
+    single-family calls. Check common universe parameters and definitionally
+    equal shared parameter telescopes, equivalent result universes, and the
+    complete group occurrence set before publication. Order motives by family
+    and minors by family then constructor. For a field
+    `u : Pi xs, I_j params indices`, generate
+    `Pi xs, motive_j indices (u xs)` and call `I_j.rec` with every group motive
+    and minor. Each owner-family recursor then binds its own indices/major and
+    returns its own motive. Restrict mutual predicates to `Prop`, disable mutual
+    K-like reduction, infer-check every recursor, and commit all declarations or
+    none. Preserve `add_inductive` as a singleton wrapper and keep TL2.14
+    frontend lowering separate. See
+    [proposed ADR-0354](../09-decisions/adr-0354-preregister-lean-mutual-inductive-groups.md)
+    and the
+    [TL2.13 execution plan](../../plan/lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md).
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?

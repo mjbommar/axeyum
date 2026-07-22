@@ -749,7 +749,14 @@ Non-claims until their gates are met:
    completion-only publication, the 226-case mutation corpus, and canonical
    axiom/declaration/dependency identity when property fuzzing begins. The
    primary semantic path is TL2.13 mutual groups, with every TL2.11/TL2.12
-   guard retained.
+   guard retained. **TL2.13 is preregistered under proposed ADR-0354:** one
+   ordered atomic group gate owns shared parameters/universes, group-wide
+   positivity, per-family indices, all motives/minors, target-family recursive
+   calls, mutual-`Prop` elimination, and all-or-nothing publication. The
+   [P0--M5 plan](lean-mutual-inductive-groups-tl2.13-plan-2026-07-22.md)
+   requires exact official non-indexed/indexed computation, a >=640-case group
+   grammar, singleton identity preservation, and the retained 768/840 controls.
+   M0 source/wire freeze is next; TL2.14 frontend lowering stays separate.
 9. **DONE (inventory/digest):** retain the runtime-derived, type-digested
    65-row prelude ledger. TL3.2 next classifies the rows, then chooses the first
    five derivable assumptions to discharge from existing arithmetic/CAS evidence.
