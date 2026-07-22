@@ -1,6 +1,6 @@
 # Lean nested-inductive elimination: TL2.14 execution plan
 
-Status: M3 complete; M4 importer and exact official declarations next
+Status: M4 complete; M5 computation and assurance next
 
 Date: 2026-07-22
 
@@ -326,14 +326,24 @@ Importer policy and all frozen M0 computation streams remain untouched.
 
 ### M4 — importer and exact official declarations
 
-Status: **design frozen; implementation next**. See the
-[M4 exact importer plan](lean-nested-inductive-elimination-m4-plan-2026-07-22.md).
+Status: **complete**. See the
+[M4 result](lean-nested-inductive-elimination-m4-2026-07-22.md).
 
 - remove only the structural nested policy decline after native support;
 - derive and compare `numNested`, main/auxiliary recursors, and every contract;
 - import the existing construct and new computation streams twice;
 - close wire metadata/order/type/rule/publication mutations;
 - commit, push, and verify remote equality.
+
+The importer now derives auxiliary count from checked main-recursor motives,
+maps the exact main/auxiliary population by generated name, and compares every
+type, universe, count, rule, restored constructor, and field contract. The
+construct stream plus all three frozen computation streams import twice with
+exact full-report equality at 22/34/34/34 declarations and zero axioms. Twenty
+wire/publication rejection classes and all order non-authority controls pass;
+the well-founded 35/0 control and exact 640/720/768/840 populations remain
+green. No kernel, fixture, identity, assurance, or live-decline artifact
+changed. M5 owns explicit registered normal forms and the assurance transition.
 
 ### M5 — computation and assurance
 

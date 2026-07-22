@@ -1,6 +1,6 @@
 # Resume here: Lean TL2.14 nested-inductive elimination
 
-Status: M3 complete; M4 importer and exact official declarations next
+Status: M4 complete; M5 computation and assurance next
 
 Date paused: 2026-07-22
 
@@ -25,10 +25,12 @@ and the decision gate remains
   `96b6fbd4da7e20277b338f59983fbe7316b31d22`.
 - M3's deterministic grammar and restoration-integrity implementation is
   `6a2afdd57c969bc1a847d77a85cc99552fa935b1`.
+- M4's exact official importer implementation is
+  `f03dfcdf2b3e49d86a5bb9ad00aeef20c99926ee`.
 - Reverify the current branch, local HEAD, tracking ref, and remote ref before
   editing. Do not switch, reset, restore, or force any other live worktree.
-- No partial M4 edits exist at this checkpoint. Inspect ownership again before
-  changing importer policy or observing any frozen official stream.
+- No partial M5 edits exist at this checkpoint. Inspect ownership again before
+  adding explicit normal-form or assurance observations.
 - The integration checkout at `/home/mjbommar/projects/personal/axeyum` had
   unrelated dirty benchmark/corpus/review artifacts and remains untouched by
   this lane.
@@ -58,6 +60,9 @@ preflight are complete and pushed:
    `a20fe056c9443a37`, closed independent public-surface/dependency/iota
    observation, and forced transactional restoration mutations at `6a2afdd5`.
    The pre-semantic stop-review amendments are `ab5dbf99` and `d03ba0fc`.
+7. M4 derived auxiliary identity from checked recursor motives, imported the
+   construct plus all three frozen computation streams twice, and closed 20
+   wire/publication rejection classes at `f03dfcdf`.
 
 The complete M0 narrative is
 [lean-nested-inductive-elimination-m0-2026-07-22.md](lean-nested-inductive-elimination-m0-2026-07-22.md),
@@ -69,6 +74,8 @@ The complete M2 result is
 [lean-nested-inductive-elimination-m2-2026-07-22.md](lean-nested-inductive-elimination-m2-2026-07-22.md).
 The complete M3 result is
 [lean-nested-inductive-elimination-m3-2026-07-22.md](lean-nested-inductive-elimination-m3-2026-07-22.md).
+The complete M4 result is
+[lean-nested-inductive-elimination-m4-2026-07-22.md](lean-nested-inductive-elimination-m4-2026-07-22.md).
 
 ### Frozen M0 evidence
 
@@ -180,35 +187,28 @@ strict tooling, retained 720/768/840 populations, and M0 contracts pass.
 Semantic commit `6a2afdd5` is pushed with local/tracking/remote equality; the
 importer and all frozen M0 streams remain unchanged.
 
-## Exact next milestone: M4 importer and exact official declarations
+## M4 result
 
-M4 removes only the structural nested policy decline after native M2/M3
-support. It must derive rather than trust group-wide `numNested`, auxiliary
-recursor identity, and wire order; import the existing construct plus all three
-frozen computation streams twice; compare exact checked family, constructor,
-recursor, type, rule, owner, index, field, and publication contracts; and close
-the preregistered wire metadata/order/type/rule/publication mutations. The
-well-founded 35-declaration/zero-axiom root and exact 720/768/840/640 generated
-controls remain mandatory.
+M4 imports the construct and three frozen computation streams twice with exact
+reports at 22/34/34/34 declarations and zero axioms. It derives `numNested`
+from checked motive population, compares main/auxiliary records by generated
+name, closes all 20 wire/publication classes, and retains order non-authority,
+well-founded 35/0, and exact 640/720/768/840 controls. Historical M0 remains an
+immutable no-observation snapshot; M4 is its planned first product import. The
+live assurance decline remains because no explicit registered normal form has
+yet been recorded.
 
-The
-[M4 exact importer plan](lean-nested-inductive-elimination-m4-plan-2026-07-22.md)
-is frozen before implementation. It derives the auxiliary count from checked
-main-recursor motive metadata, compares the complete name-keyed main/auxiliary
-surface, binds four twice-imported official inventories, freezes 20 rejecting
-wire/publication classes plus order non-authority controls, and leaves all
-kernel, fixture, identity, assurance, and live-decline artifacts untouched.
+## Exact next milestone: M5 computation and assurance
 
-M4 must not claim cross-nested normal-form computation merely because the
-official declarations import. M5 owns reproduction of the registered normal
-forms, the assurance overlay, and removal of the live decline.
+M5 must repeat pinned-Lean compilation and explicitly inspect each selected
+theorem in the completed Axeyum imports. It must extract the equality sides,
+infer the proof, require definitional equality, normalize the registered side,
+and compare the exact three-successor, indexed, and five-successor normal forms
+from M0. It then appends a TL2.14 assurance overlay without rewriting history
+and removes the live nested decline only after all retained controls pass.
 
-## Remaining milestones after M3
+## Remaining milestones after M4
 
-- **M4 — importer and exact official declarations:** remove only the nested
-  policy decline after native support, derive rather than trust `numNested` and
-  recursor identities, import all frozen official streams twice, compare exact
-  contracts, and close wire/publication mutations.
 - **M5 — computation and assurance:** reproduce the pinned-Lean computations,
   require the registered cross-nested normal forms in Axeyum, append a
   history-preserving assurance overlay, and only then remove the live decline.
@@ -235,8 +235,9 @@ sed -n '1,460p' crates/axeyum-lean-kernel/src/inductive.rs
 sed -n '1,365p' docs/plan/lean-nested-inductive-elimination-tl2.14-plan-2026-07-22.md
 ```
 
-Then reverify M4 ownership and implement the frozen exact importer plan. Remove
-only the structural nested decline without claiming M5 computation credit.
+Then inspect M5 assurance/generated-document ownership and preregister the
+exact normal-form and overlay transition if the parent plan is not sufficiently
+concrete. Do not rewrite M0 history or claim final closure before M6.
 
 ## Tools and resource envelope
 

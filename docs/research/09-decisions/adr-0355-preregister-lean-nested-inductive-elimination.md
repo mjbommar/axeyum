@@ -196,9 +196,34 @@ inductive worker remains the only semantic admission algorithm. The semantic
 implementation is `6a2afdd57c969bc1a847d77a85cc99552fa935b1`, and the final
 independent audit found no semantic blockers.
 
-ADR-0355 remains proposed: M4--M6 still own exact official import/comparison,
-registered computation streams, assurance, live-decline removal, and the final
-aggregate gates.
+## M4 evidence
+
+The
+[M4 result](../../plan/lean-nested-inductive-elimination-m4-2026-07-22.md)
+implements the exact official-import exit foundations without claiming
+computation or assurance credit:
+
+- the importer derives the auxiliary population from the checked first main
+  recursor's motive count rather than trusting `numNested`;
+- the construct stream and three frozen computation streams import twice with
+  exact full-report equality at 22/34/34/34 admitted declarations and zero
+  axioms;
+- every source main and `First.rec_N` auxiliary record is selected by generated
+  name and compared for exact types, universes, counts, rules, restored
+  constructors, fields, and closed rule bodies;
+- reversed recursor arrays preserve the complete report and declaration
+  identities, proving that wire order is not authority; and
+- 20 registered wire/publication mutation classes reject with exact typed
+  diagnostics while the well-founded 35/0 and exact 640/720/768/840 controls
+  remain green.
+
+The semantic implementation is
+`f03dfcdf2b3e49d86a5bb9ad00aeef20c99926ee`. M0 remains the immutable
+pre-product no-observation snapshot; M4 is the planned first product import of
+those streams.
+
+ADR-0355 remains proposed: M5--M6 still own registered computation
+normal forms, assurance, live-decline removal, and the final aggregate gates.
 
 ## Alternatives
 
