@@ -374,6 +374,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — direct falling-factorial composition reaches the sixth raw
+  squared-binomial moment.** `prove_squared_binomial_falling_moment(order)` now
+  constructs one parameterized rational WZ certificate and replays it through
+  the shared symbolic/base checker for orders `0..=6`.
+  `prove_squared_binomial_moment(moment)` composes those proofs via the exact
+  Stirling expansion, and its proof object rechecks every component, the power
+  identity, and closed-form recombination. This closes order six without raw WZ
+  interpolation, cuts the family regression from roughly 55 to 15 seconds, and
+  rejects tampered/missing evidence. Both public ceilings are explicitly 6;
+  order seven currently declines under bounded exact symbolic checking. The CAS
+  topic stack passes 521 unit tests, 147 doctests, warning-denied all-target
+  Clippy, `wasm32-unknown-unknown`, links, and `git diff --check`. Next: isolate
+  the order-seven normalization boundary without weakening the checker.
+
 - **2026-07-22 — squared-binomial raw moments are now a generated checked
   family.** `prove_squared_binomial_moment(moment)` derives the candidate from
   the exact Stirling/falling-factorial expansion

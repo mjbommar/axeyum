@@ -5144,43 +5144,155 @@ pub fn prove_fixed_shift_binomial_convolution(shift: u32) -> Option<CasExpr> {
     .then_some(certificate)
 }
 
-/// Largest squared-binomial raw-moment order currently accepted by
-/// [`prove_squared_binomial_moment`].
-pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 = 5;
+/// Largest falling-factorial squared-binomial moment currently accepted by
+/// [`prove_squared_binomial_falling_moment`].
+pub const MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT: u32 = 6;
 
-/// A proved squared-binomial raw moment
-/// `∑_k k^moment C(n,k)² = closed_form`, carrying its rational WZ certificate.
+/// A proved falling-factorial squared-binomial moment
+/// `∑_k (k)_order C(n,k)² = closed_form`, carrying its rational WZ certificate.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CertifiedSquaredBinomialMoment {
-    /// The nonnegative raw-moment order.
-    pub moment: u32,
+pub struct CertifiedSquaredBinomialFallingMoment {
+    /// The nonnegative falling-factorial order.
+    pub order: u32,
     /// The exact closed form as an expression in `n`.
     pub closed_form: CasExpr,
     /// The rational Wilf–Zeilberger multiplier `R(n,k)`.
     pub certificate: CasExpr,
 }
 
-impl CertifiedSquaredBinomialMoment {
+impl CertifiedSquaredBinomialFallingMoment {
     /// Recheck the symbolic WZ identity and exact finite base case from the
-    /// stored moment, closed form, and certificate.
+    /// stored order, closed form, and certificate.
     #[must_use]
     pub fn is_certified(&self) -> bool {
-        if self.moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+        if self.order > MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
             return false;
         }
         let n = CasExpr::var("n");
         let k = CasExpr::var("k");
-        let summand = k.clone().pow(self.moment) * binomial_coefficient(&n, &k).pow(2);
-        let base = i128::from(self.moment.max(1));
+        let summand = falling_factorial(&k, self.order) * binomial_coefficient(&n, &k).pow(2);
         certifies_wz_sum(
             &summand,
             &self.closed_form,
             &self.certificate,
             "n",
             "k",
-            base,
+            i128::from(self.order),
             0,
-            base,
+            i128::from(self.order),
+        )
+    }
+}
+
+fn squared_binomial_falling_moment_candidate(
+    order: u32,
+) -> Option<CertifiedSquaredBinomialFallingMoment> {
+    if order > MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
+        return None;
+    }
+    let n = CasExpr::var("n");
+    let k = CasExpr::var("k");
+    let order_expr = CasExpr::int(i128::from(order));
+    let closed_form = falling_factorial(&n, order)
+        * binomial_coefficient(
+            &(CasExpr::int(2) * n.clone() - order_expr.clone()),
+            &(n.clone() - order_expr.clone()),
+        );
+    let n_plus_one = n.clone() + CasExpr::int(1);
+    let certificate = k.clone()
+        * (order_expr.clone() - k.clone())
+        * (order_expr.clone() * k.clone()
+            - CasExpr::int(2) * order_expr.clone() * n_plus_one.clone()
+            - CasExpr::int(2) * k.clone() * n_plus_one.clone()
+            + CasExpr::int(3) * n_plus_one.pow(2))
+        / ((order_expr.clone() - CasExpr::int(2) * n.clone() - CasExpr::int(2))
+            * (order_expr - CasExpr::int(2) * n.clone() - CasExpr::int(1))
+            * (k - n - CasExpr::int(1)).pow(2));
+    Some(CertifiedSquaredBinomialFallingMoment {
+        order,
+        closed_form,
+        certificate,
+    })
+}
+
+/// Prove the concrete falling-factorial moment
+/// `∑_k (k)_order C(n,k)² = (n)_order C(2n-order,n-order)`.
+///
+/// The parameterized rational WZ certificate is constructed directly, then
+/// accepted only after the shared symbolic telescoping and exact base-case
+/// checker succeeds. Unsupported orders return `None` before proof work begins.
+#[must_use]
+pub fn prove_squared_binomial_falling_moment(
+    order: u32,
+) -> Option<CertifiedSquaredBinomialFallingMoment> {
+    let proof = squared_binomial_falling_moment_candidate(order)?;
+    proof.is_certified().then_some(proof)
+}
+
+/// Largest squared-binomial raw-moment order currently accepted by
+/// [`prove_squared_binomial_moment`].
+pub const MAX_PROVED_SQUARED_BINOMIAL_MOMENT: u32 =
+    MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT;
+
+/// A proved squared-binomial raw moment
+/// `∑_k k^moment C(n,k)² = closed_form`, carrying the certified
+/// falling-factorial moments used in its Stirling expansion.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertifiedSquaredBinomialMoment {
+    /// The nonnegative raw-moment order.
+    pub moment: u32,
+    /// The exact closed form as an expression in `n`.
+    pub closed_form: CasExpr,
+    /// The independently WZ-certified nonzero falling-factorial components, in
+    /// ascending order.
+    pub components: Vec<CertifiedSquaredBinomialFallingMoment>,
+}
+
+impl CertifiedSquaredBinomialMoment {
+    /// Recheck every component WZ proof, the exact Stirling power expansion,
+    /// and the closed-form recombination.
+    #[must_use]
+    pub fn is_certified(&self) -> bool {
+        if self.moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
+            return false;
+        }
+        let k = CasExpr::var("k");
+        let mut expected_orders = Vec::new();
+        for order in 0..=self.moment {
+            let Some(stirling) = combinatorics::stirling_second(self.moment, order) else {
+                return false;
+            };
+            if stirling != 0 {
+                expected_orders.push(order);
+            }
+        }
+        if self.components.len() != expected_orders.len()
+            || self
+                .components
+                .iter()
+                .zip(&expected_orders)
+                .any(|(component, order)| component.order != *order || !component.is_certified())
+        {
+            return false;
+        }
+
+        let mut expanded_power = CasExpr::zero();
+        let mut expanded_rhs = CasExpr::zero();
+        for component in &self.components {
+            let Some(stirling) = combinatorics::stirling_second(self.moment, component.order) else {
+                return false;
+            };
+            expanded_power = expanded_power
+                + CasExpr::int(stirling) * falling_factorial(&k, component.order);
+            expanded_rhs =
+                expanded_rhs + CasExpr::int(stirling) * component.closed_form.clone();
+        }
+        matches!(
+            equal(&k.pow(self.moment), &expanded_power),
+            ZeroTest::Certified { equal: true, .. }
+        ) && matches!(
+            equal(&self.closed_form, &expanded_rhs),
+            ZeroTest::Certified { equal: true, .. }
         )
     }
 }
@@ -5191,22 +5303,25 @@ impl CertifiedSquaredBinomialMoment {
 /// The candidate closed form is generated from the exact identity
 /// `k^m = ∑_j S(m,j) k^(j)` and the Vandermonde consequence
 /// `∑_k k^(j) C(n,k)² = C(2n,n) (n^(j))²/(2n)^(j)`, where `x^(j)` is a
-/// falling factorial. The generated expression is not trusted: [`prove_wz_sum`]
-/// must discover a rational certificate and pass the fully symbolic WZ and
-/// exact base-case checks. Unsupported orders return `None`.
+/// falling factorial. Each nonzero falling-factorial component carries a
+/// directly constructed rational WZ candidate which must pass the fully
+/// symbolic WZ and exact base-case checks. The composite proof then checks the
+/// Stirling power identity and exact closed-form recombination. Unsupported
+/// orders return `None`.
 #[must_use]
 pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBinomialMoment> {
     if moment > MAX_PROVED_SQUARED_BINOMIAL_MOMENT {
         return None;
     }
     let n = CasExpr::var("n");
-    let k = CasExpr::var("k");
     let mut normalized_moment = CasExpr::zero();
+    let mut components = Vec::new();
     for order in 0..=moment {
         let stirling = combinatorics::stirling_second(moment, order)?;
         if stirling == 0 {
             continue;
         }
+        components.push(squared_binomial_falling_moment_candidate(order)?);
         let numerator = falling_factorial(&n, order).pow(2);
         let denominator = falling_factorial(&(CasExpr::int(2) * n.clone()), order);
         normalized_moment = normalized_moment
@@ -5237,14 +5352,12 @@ pub fn prove_squared_binomial_moment(moment: u32) -> Option<CertifiedSquaredBino
     let closed_form = simplify(
         &(binomial_coefficient(&(CasExpr::int(2) * n.clone()), &n) * normalized_moment),
     );
-    let summand = k.clone().pow(moment) * binomial_coefficient(&n, &k).pow(2);
-    let base = i128::from(moment.max(1));
-    let certificate = prove_wz_sum(&summand, "n", "k", &closed_form, base, 0, base)?;
-    Some(CertifiedSquaredBinomialMoment {
+    let proof = CertifiedSquaredBinomialMoment {
         moment,
         closed_form,
-        certificate,
-    })
+        components,
+    };
+    proof.is_certified().then_some(proof)
 }
 
 /// Prove the definite hypergeometric identity `∑_k F(n,k) = rhs(n)` by the
@@ -17387,7 +17500,7 @@ mod tests {
             proofs.push(proof);
         }
 
-        let fifth = proofs.last().expect("moment five proof exists");
+        let fifth = proofs.get(5).expect("moment five proof exists");
         let fifth_expected = n().pow(4)
             * (n() + CasExpr::int(1))
             * (n().pow(2) + CasExpr::int(2) * n() - CasExpr::int(5))
@@ -17397,15 +17510,68 @@ mod tests {
                 * (CasExpr::int(2) * n() - CasExpr::int(1)));
         assert_equal(&fifth.closed_form, &fifth_expected);
 
-        let mut false_proof = fifth.clone();
+        let sixth = proofs.last().expect("moment six proof exists");
+        let sixth_expected = n().pow(3)
+            * (n().pow(6) + CasExpr::int(3) * n().pow(5)
+                - CasExpr::int(13) * n().pow(4)
+                - CasExpr::int(15) * n().pow(3)
+                + CasExpr::int(30) * n().pow(2)
+                + CasExpr::int(8) * n()
+                - CasExpr::int(2))
+            * binomial_coefficient(&(CasExpr::int(2) * n()), &n())
+            / (CasExpr::int(8)
+                * (CasExpr::int(2) * n() - CasExpr::int(5))
+                * (CasExpr::int(2) * n() - CasExpr::int(3))
+                * (CasExpr::int(2) * n() - CasExpr::int(1)));
+        assert_equal(&sixth.closed_form, &sixth_expected);
+
+        let mut false_proof = sixth.clone();
         false_proof.closed_form = false_proof.closed_form + CasExpr::int(1);
         assert!(!false_proof.is_certified());
 
-        let mut false_proof = fifth.clone();
-        false_proof.certificate = CasExpr::zero();
+        let mut false_proof = sixth.clone();
+        false_proof.components[0].certificate = CasExpr::zero();
+        assert!(!false_proof.is_certified());
+
+        let mut false_proof = sixth.clone();
+        false_proof.components.pop();
         assert!(!false_proof.is_certified());
 
         assert!(prove_squared_binomial_moment(MAX_PROVED_SQUARED_BINOMIAL_MOMENT + 1).is_none());
+    }
+
+    #[test]
+    fn squared_binomial_falling_moment_family_is_checked() {
+        let mut proofs = Vec::new();
+        for order in 0..=MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT {
+            let proof = prove_squared_binomial_falling_moment(order)
+                .unwrap_or_else(|| panic!("falling-factorial moment {order} must verify"));
+            assert!(proof.is_certified());
+
+            let sample_n = i128::from(order.max(2));
+            let mut direct = CasExpr::zero();
+            for sample_k in 0..=sample_n {
+                direct = direct
+                    + falling_factorial(&CasExpr::int(sample_k), order)
+                        * binomial_coefficient(&CasExpr::int(sample_n), &CasExpr::int(sample_k))
+                            .pow(2);
+            }
+            assert_equal(
+                &direct,
+                &proof.closed_form.substitute("n", &CasExpr::int(sample_n)),
+            );
+            proofs.push(proof);
+        }
+
+        let mut false_proof = proofs.last().expect("order six proof exists").clone();
+        false_proof.certificate = CasExpr::zero();
+        assert!(!false_proof.is_certified());
+        assert!(
+            prove_squared_binomial_falling_moment(
+                MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT + 1
+            )
+            .is_none()
+        );
     }
 
     #[test]

@@ -13,10 +13,10 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner.
-- **Tests:** `520` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
+- **Tests:** `521` unit + `147` doctests, **all green**, clippy-clean, wasm-green.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37adn**). Keep both in sync when landing features.
+  latest is **Entry 37ado**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -131,7 +131,7 @@ Proves definite hypergeometric identities *soundly*. Currently proven:
 `∑ₖ C(n,k)=2ⁿ`, `∑ₖ k·C(n,k)=n·2ⁿ⁻¹`, `∑ₖ k²·C(n,k)=n(n+1)2ⁿ⁻²`,
 Vandermonde, a checked fixed-shift binomial-convolution family (regressed for
 `r=0..7`), and a generated squared-binomial raw-moment family (regressed for
-orders `0..=5`). False near-misses correctly decline.
+orders `0..=6`). False near-misses correctly decline.
 
 ---
 
@@ -281,27 +281,32 @@ cover `r=0..7` and reject a zero certificate; larger shifts may still decline on
 exact coefficient growth. The public API therefore preserves `Option` semantics
 rather than claiming an unbounded completeness result.
 
-### Squared-binomial moments are now a generated checked family
+### Squared-binomial moments compose a directly checked falling-factorial family
 
 `prove_squared_binomial_moment(moment)` generates the candidate identity
 
 `∑ₖ k^m C(n,k)² = C(2n,n) ∑ⱼ S(m,j) (n)ⱼ²/(2n)ⱼ`
 
 from the Stirling expansion `k^m=∑ⱼS(m,j)(k)ⱼ` and the falling-factorial
-Vandermonde moment. It reduces the rational factor exactly, makes its numerator
-and denominator monic before factoring to keep coefficients bounded, and then
-passes the resulting candidate through `prove_wz_sum`. A returned
-`CertifiedSquaredBinomialMoment` carries the order, closed form, and rational WZ
-certificate; `is_certified()` independently reruns the fully symbolic WZ and
-exact base-case checks over that payload.
+Vandermonde moment. `prove_squared_binomial_falling_moment(order)` constructs
+the parameterized WZ candidate
 
-`MAX_PROVED_SQUARED_BINOMIAL_MOMENT=5` makes that resource boundary explicit
-and rejects larger requests before candidate generation. Regressions cover
-orders `0..=5`, compare every generated member with a direct
-finite sum, recover the known compact fifth-moment identity, and reject both a
-tampered closed form and a zero certificate. An exploratory order-six request
-did not pass bounded WZ discovery, so the public contract remains fail-closed
-rather than claiming completeness for every `u32` order.
+`R=k(j−k)(jk−2j(n+1)−2k(n+1)+3(n+1)²)/((j−2n−2)(j−2n−1)(k−n−1)²)`
+
+for `∑ₖ(k)ⱼC(n,k)²=(n)ⱼC(2n−j,n−j)` and accepts it only through the shared
+fully symbolic WZ and exact base-case checker. The raw-moment prover composes
+the nonzero certified falling-factorial members, checks
+`k^m=∑ⱼS(m,j)(k)ⱼ` exactly, and checks their closed forms against the compact
+factored result. `CertifiedSquaredBinomialMoment::is_certified()` independently
+replays all three obligations; it does not trust the Stirling expansion or
+component list.
+
+`MAX_PROVED_SQUARED_BINOMIAL_FALLING_MOMENT` and
+`MAX_PROVED_SQUARED_BINOMIAL_MOMENT` are both 6. Regressions cover both families
+through order six, direct-sum cross-check every member, recover the known compact
+fifth- and sixth-moment identities, and reject tampered results, certificates,
+and missing components. Order seven currently exceeds bounded exact symbolic
+checking, so larger requests decline immediately.
 The foundational DAG and research-question register require no new ADR here:
 this adds no IR operator or backend semantics and keeps evidence explicit and
 checker-backed.
@@ -312,9 +317,9 @@ checker-backed.
 
 Ordered roughly by value:
 
-1. **Broaden certified creative telescoping beyond the two checked families.**
-   Investigate why order six exceeds the bounded WZ discovery path and whether
-   a direct falling-factorial certificate composition can avoid interpolation;
+1. **Broaden certified creative telescoping beyond the current exact bounds.**
+   Investigate the falling-factorial order-seven symbolic-check decline and
+   whether compact product-aware normalization can extend the direct family;
    keep the fully symbolic checker boundary unchanged. For fixed shifts,
    investigate the `r=8` exact-growth decline only if a concrete use needs it.
 2. **Alternating series** `∑(−1)ᵏ/k = −ln2`, `∑(−1)ᵏ/(2k+1)=π/4−…`, Dirichlet
@@ -374,7 +379,7 @@ AXEYUM_CAS_TMP="$(mktemp -d /nas4/data/workspace-infosec/axeyum-cas-doctmp.XXXXX
 export AXEYUM_CAS_TMP
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
 git merge-base --is-ancestor origin/main HEAD
-TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 520 + 147 green
+TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas   # → 521 + 147 green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
