@@ -2947,23 +2947,35 @@ pub fn dsolve_homogeneous(char_coeffs: &[Rational], var: &str) -> Option<CasExpr
             let disc = b
                 .checked_mul(b)?
                 .checked_sub(Rational::integer(4).checked_mul(a)?.checked_mul(c)?)?;
-            if disc.numerator() >= 0 {
-                return None; // real irrational roots — not handled here
-            }
-            let beta_sq = Rational::zero()
-                .checked_sub(disc)?
-                .checked_div(two_a.checked_mul(two_a)?)?;
-            let beta = rational_sqrt(beta_sq)?;
-            let cos_c = CasExpr::var(&format!("C{c_index}"));
-            let sin_c = CasExpr::var(&format!("C{}", c_index + 1));
-            let bx = scaled_term(beta, x());
-            let inner = cos_c * bx.clone().cos() + sin_c * bx.sin();
-            // e^(αx)·(…); drop the exponential when α = 0 (e.g. a harmonic oscillator).
-            terms.push(if alpha.is_zero() {
-                inner
+            if disc.numerator() < 0 {
+                // Complex-conjugate pair α ± βi → e^{αx}(C·cos βx + C·sin βx). β is
+                // generally a surd `√(−disc)/(2|a|)`, kept symbolic (the certificate
+                // folds `β²` back to a rational).
+                let beta_sq = Rational::zero()
+                    .checked_sub(disc)?
+                    .checked_div(two_a.checked_mul(two_a)?)?;
+                let cos_c = CasExpr::var(&format!("C{c_index}"));
+                let sin_c = CasExpr::var(&format!("C{}", c_index + 1));
+                // `simplify_radicals` folds a perfect-square `β` (`√1→1`, `√9→3`).
+                let bx = simplify_radicals(&CasExpr::Const(beta_sq).sqrt()) * x();
+                let inner = cos_c * bx.clone().cos() + sin_c * bx.sin();
+                terms.push(if alpha.is_zero() {
+                    inner
+                } else {
+                    CasExpr::Mul(vec![scaled_term(alpha, x()).exp(), inner])
+                });
             } else {
-                CasExpr::Mul(vec![scaled_term(alpha, x()).exp(), inner])
-            });
+                // Two real (irrational) roots `α ± √(disc)/(2a)` → C·e^{r₁x} +
+                // C·e^{r₂x}. `disc > 0` here (a `disc = 0` repeated root is rational
+                // and already peeled by the rational-root loop).
+                let radius_sq = disc.checked_div(two_a.checked_mul(two_a)?)?;
+                let radius = simplify_radicals(&CasExpr::Const(radius_sq).sqrt()); // √(disc)/(2|a|)
+                let alpha_x = scaled_term(alpha, x());
+                for (index, sign) in [radius.clone(), CasExpr::Neg(Box::new(radius))].into_iter().enumerate() {
+                    let root_x = alpha_x.clone() + sign * x();
+                    terms.push(CasExpr::var(&format!("C{}", c_index + index)) * root_x.exp());
+                }
+            }
         }
         _ => return None, // higher-degree irreducible / irrational — not handled
     }
@@ -2981,7 +2993,9 @@ pub fn dsolve_homogeneous(char_coeffs: &[Rational], var: &str) -> Option<CasExpr
         operator = operator + CasExpr::Const(*coeff) * derivative.clone();
         derivative = derivative.differentiate(var);
     }
-    match equal(&operator, &CasExpr::zero()) {
+    // Fold surd powers first (`√(3/4)³` from the higher derivatives of a
+    // complex-pair basis) so the zero-test decides the identity.
+    match equal(&simplify_radicals(&simplify(&operator)), &CasExpr::zero()) {
         ZeroTest::Certified { equal: true, .. } => Some(solution),
         _ => None,
     }
@@ -11685,6 +11699,18 @@ mod tests {
         let h = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").expect("solvable");
         let hpp = h.differentiate("x").differentiate("x");
         assert_equal(&(hpp + h.clone()), &CasExpr::zero());
+        // Surd roots (beyond the rational-β slice) — `dsolve_homogeneous` returns
+        // `Some` only after its own substitute-and-check certificate passes, so
+        // `is_some()` witnesses the ODE is satisfied. y″ − 2y = 0 → real roots ±√2;
+        // y″ + y′ + y = 0 → complex −½ ± (√3/2)i.
+        assert!(dsolve_homogeneous(&[ig(-2), ig(0), ig(1)], "x").is_some());
+        assert!(dsolve_homogeneous(&[ig(1), ig(1), ig(1)], "x").is_some());
+        // Degree-3 char polynomials (rational root + complex pair / three roots):
+        // y‴ − y = 0 (x³−1 = (x−1)(x²+x+1)); y‴ − 2y″ − y′ + 2y = 0 (roots 1,−1,2).
+        assert!(dsolve_homogeneous(&[ig(-1), ig(0), ig(0), ig(1)], "x").is_some());
+        assert!(dsolve_homogeneous(&[ig(2), ig(-1), ig(-2), ig(1)], "x").is_some());
+        // Two irreducible quadratics (x⁴+1) is beyond the single-quadratic tail.
+        assert!(dsolve_homogeneous(&[ig(1), ig(0), ig(0), ig(0), ig(1)], "x").is_none());
     }
 
     #[test]
