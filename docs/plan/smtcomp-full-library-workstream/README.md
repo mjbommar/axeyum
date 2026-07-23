@@ -2,7 +2,7 @@
 
 **This folder is the single entry point for the SMT-COMP measurement,
 full-library inventory, and gap-closing lane.** Updated 2026-07-23 after F1
-integration and the fixture-only F2 preparation implementation.
+integration and the fixture-only F2 host/sentinel preflight implementation.
 
 The goal is an honest, reproducible per-logic decide/decline/**wrong** map over
 a source-balanced SMT-COMP-style population, followed by a measured and ranked
@@ -350,8 +350,8 @@ gate.
    now closes that boundary: all populations account, zero known-status
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
-3. **Credited full population — F1 and the process-free F2 implementation are
-   integrated.** The
+3. **Credited full population — F1 and the base process-free F2 implementation
+   are integrated; explicit host/sentinel binding is topic-ready.** The
    [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
    freezes the same 45,905-file selection for all three solvers, a 96-shard/
    48-allocation wave schedule, six-worker aggregate/16-GiB-per-host resource envelope,
@@ -364,10 +364,14 @@ gate.
    adds clean-`origin/main` readiness evidence, a content-addressed staged source
    bundle, frozen oracle checks, a complete artifact ledger, completion-last
    publication, durable Git-object replay, and zero-execution-evidence gates.
-   The implementation landed by merge `502e8875`; this result/status document
-   still requires normal integration. Live preparation is blocked by out-of-lane
-   bench/CAS format drift and the not-yet-implemented Lean R7 current-source
-   identity repair. No host probe, sentinel, NAS preparation root, resource
+   The base implementation landed by merge `502e8875`. Topic commit `43f871ad`
+   adds a sealed preparation-schema-v2 preflight that semantically replays the
+   exact three host observations and registrations, eight ordered incident
+   sentinels and byte sidecars, safe outcomes, and a 30-minute publication
+   window. Those bytes and this result/status refresh still require normal
+   integration. Live preparation is blocked by out-of-lane bench/CAS format
+   drift and the missing Lean R7 current-source identity repair on
+   `origin/main`. No host probe, sentinel, NAS preparation root, resource
    session, allocation, or solver process was started.
 
 The same implementation rule continues to apply: prove each new mechanism and
@@ -428,6 +432,8 @@ Repository:
   `docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md`;
 - credited full-population F1 fixture result:
   `docs/plan/smtcomp-credited-full-population-f1-result-2026-07-23.md`;
+- credited full-population F2 preparation implementation result:
+  `docs/plan/smtcomp-credited-full-preparation-f2-implementation-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -469,14 +475,15 @@ NAS (shared, corpus read-only in practice):
    retry. The combined three-cell repaired-P0 comparison is also complete and
    keeps the 1,305-row FP scope separate from the 1,810-row Axeyum/cvc5 scope.
    The credited full-population F1 fixture result and supervised-wave bytes are
-   integrated. Its F2 process-free preparation mechanism is also integrated,
-   but its result/status document and registered source set remain on the SMT
-   topic branch and no live root has been published. Integrate those bytes,
-   revalidate the exact current `origin/main`, run both registered green gates,
-   then perform the
-   separately reviewed host/sentinel preparation and publish only a process-free
-   `launch_authorized=false` root. Do not probe hosts, mutate the NAS, or launch
-   a solver allocation while `origin/main` is branch-wide red. The active solver
+   integrated. Its base F2 process-free preparation mechanism is also
+   integrated. The explicit semantic host/sentinel preflight and refreshed
+   result/status surfaces remain on the SMT topic branch, and no live root has
+   been published. Integrate those bytes, revalidate the exact current
+   `origin/main`, run both registered green gates, then perform the separately
+   reviewed host/sentinel capture and publish only a process-free
+   `launch_authorized=false` root inside its frozen 30-minute window. Do not
+   probe hosts, mutate the NAS, or launch a solver allocation while
+   `origin/main` is branch-wide red. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
