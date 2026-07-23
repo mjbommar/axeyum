@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -46,6 +47,12 @@ from full_prepare import (  # noqa: E402
     validate_full_selection,
 )
 from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
+from full_readiness import (  # noqa: E402
+    DEFAULT_REQUIRED_PATHS,
+    build_gate_observation,
+    build_readiness,
+    validate_readiness,
+)
 import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
@@ -141,6 +148,34 @@ def accepted_fixture(shared: Path, corpus: Path) -> Path:
     accepted = shared / f"accepted-{sha256_file(complete)}"
     staging.rename(accepted)
     return accepted
+
+
+def readiness_repository(
+    root: Path, required: tuple[str, ...] = ("a.txt", "b.txt")
+) -> tuple[str, ...]:
+    subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "fixture@example.invalid"],
+        cwd=root,
+        check=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Fixture"], cwd=root, check=True
+    )
+    for path in required:
+        target = root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"{path}\n", encoding="utf-8")
+    subprocess.run(["git", "add", *required], cwd=root, check=True)
+    subprocess.run(
+        ["git", "commit", "-m", "fixture"], cwd=root, check=True, capture_output=True
+    )
+    subprocess.run(
+        ["git", "update-ref", "refs/remotes/origin/main", "HEAD"],
+        cwd=root,
+        check=True,
+    )
+    return required
 
 
 class FullPopulationContractTests(unittest.TestCase):
@@ -1166,6 +1201,99 @@ class FullPopulationContractTests(unittest.TestCase):
         )
         self.assertEqual(outcome["status"], "blocked-unclosed")
         launch.assert_not_called()
+
+    def test_readiness_requires_clean_origin_main_and_both_exact_green_gates(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root, DEFAULT_REQUIRED_PATHS)
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=f"green: {command[0]}\n".encode("ascii"),
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                require_ready=True,
+            )
+            self.assertTrue(readiness["ready_for_live_preparation"])
+            self.assertEqual(
+                validate_readiness(readiness, repository_root=root)["record_sha256"],
+                readiness["record_sha256"],
+            )
+
+            bad_gate = build_gate_observation(
+                repository_root=root,
+                command=["just", "check"],
+                exit_code=1,
+                stdout=b"",
+                stderr=b"format drift\n",
+                started_at_ns=2000,
+                ended_at_ns=2001,
+            )
+            rejected = build_readiness(
+                repository_root=root,
+                gate_observations=[bad_gate, gates[1]],
+                required_paths=required,
+            )
+            self.assertFalse(rejected["ready_for_live_preparation"])
+            with self.assertRaisesRegex(ContractError, "not ready"):
+                build_readiness(
+                    repository_root=root,
+                    gate_observations=[bad_gate, gates[1]],
+                    required_paths=required,
+                    require_ready=True,
+                )
+
+    def test_readiness_rejects_stale_gate_or_resealed_conclusion(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            required = readiness_repository(root)
+            gates = [
+                build_gate_observation(
+                    repository_root=root,
+                    command=list(command),
+                    exit_code=0,
+                    stdout=b"green\n",
+                    stderr=b"",
+                    started_at_ns=1000 + index * 10,
+                    ended_at_ns=1001 + index * 10,
+                )
+                for index, command in enumerate(
+                    (("just", "check"), ("./scripts/check-smtcomp-resume.sh",))
+                )
+            ]
+            readiness = build_readiness(
+                repository_root=root,
+                gate_observations=gates,
+                required_paths=required,
+                fixture_only=True,
+            )
+            self.assertTrue(readiness["prerequisites_satisfied"])
+            self.assertFalse(readiness["ready_for_live_preparation"])
+            mutated = copy.deepcopy(readiness)
+            mutated["ready_for_live_preparation"] = True
+            with self.assertRaises(ContractError):
+                validate_readiness(reseal(mutated), repository_root=root)
+
+            (root / "untracked.txt").write_text("drift\n", encoding="utf-8")
+            with self.assertRaisesRegex(ContractError, "repository state drift"):
+                build_readiness(
+                    repository_root=root,
+                    gate_observations=gates,
+                    required_paths=required,
+                    fixture_only=True,
+                )
 
 
 if __name__ == "__main__":
