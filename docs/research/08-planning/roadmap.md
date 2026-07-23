@@ -48,6 +48,13 @@ Last updated: 2026-07-23
 > resolvers, providers, closures, native outcomes, pairs, and parity credit
 > remain unbound, `not-run`, or zero. M2.1-M2.7 exact closure and M3 review are
 > still required; schema scale is not behavioral coverage.
+> TL0.6.5's post-parent matched-execution schema is preregistered but has no
+> input authority or process authorization. Its R1 correction now recomputes
+> domain-separated seals for each official/Axeyum execution, the comparison,
+> and the whole paired cell; every comparison cites both exact side seals, and
+> each U0-U9 population authority binds count, sorted IDs, and sorted cell
+> seals. This closes ID-preserving content substitution without changing the
+> current zero-outcome, zero-pair, zero-credit boundary.
 > M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
 > and full-parser comparator are now pushed and CI-gated; the runner also has
 > preregistered live file-backed stream ceilings and sealed launch failures.

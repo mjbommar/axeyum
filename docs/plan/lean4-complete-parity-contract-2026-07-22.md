@@ -329,10 +329,15 @@ The executable
 [TL0.6.5 contract](lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
 corrects the registry's original flat shape before any pair exists. A
 comparison is a third evidence object over two independent executions, not a
-shared command/environment/attempt record. It also registers an exact
-count-and-sorted-ID authority for each U0-U9 paired population. G3 requires all
-ten authorities to be `complete_authority` and every expected cell to agree;
-one nonempty all-agree subset cannot satisfy it.
+shared command/environment/attempt record. Each side, comparison, and whole
+cell carries a recomputed domain-separated seal; the comparison cites both
+exact side seals. Each U0-U9 paired population also registers exact count,
+sorted-ID, and sorted `(id, cell_sha256)` authorities. G3 requires all ten
+authorities to be `complete_authority` and every expected cell to agree; one
+nonempty all-agree subset, an ID-preserving content mutation, or a correctly
+resealed cell under a stale population authority cannot satisfy it. The
+[R1 seal result](lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md)
+records the validator and mutation controls.
 
 The result taxonomy is:
 

@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "4741b47d24ac6d8f7ab92165b0bf3861b9a33e9f76f2cca4f51dacaa0cd7eb9b"
+      "sha256": "7cb223b5a18924f40d5a33d263316b37024728d90c6834a539c2d3c950551697"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -88,11 +88,15 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "d906a53ef37e6bd20252f2d0d45f66d61f2d78426598be94237272d6d01a25c3"
+      "sha256": "8c0fc367138d46f6173d92264eba869dc1e325c52c11dae1ae998d1c058188f2"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
+      "sha256": "f5448811ff4b4cc41660c2def4bc9b7c6dce85ce4ded0b9a05016e7c94dec455"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "b471dcd7ed523ce1466a27715950ae2826e1270027150a4c54d90100e9d5518b"
+      "sha256": "591f50a291d2d50e4b6b42085e1da1d7d573b95aa4ba0efe412edd73b3e6f4ce"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
@@ -348,11 +352,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "b0c4ced0bec2db169435bb262c9591c680856312f14c3d8953fcc2a41deb87e9"
+      "sha256": "25c97bd7672be08735b67083502a32a02da260f2cac9eeb0eec4c015f54f1a2a"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "d2d5f9f24bae3cf6df4968036ac074dabc2fbacde0bef3751b86643066a4e918"
+      "sha256": "dab6370b1c6eb51352cf5396d7dcdc3eac38ddc0fe6680d79c1e5f6493dff1fd"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1667,7 +1671,11 @@
         },
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent official and Axeyum execution records, typed absent/invalid states, a separate normalization/comparison record, exact pair-population count/ID authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent sealed official and Axeyum execution records, typed absent/invalid states, a comparison that cites both side seals, exact pair-population count/ID/cell-seal authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R1 schema correction: versioned deterministic execution, comparison, cell, and population cell-seal digests are recomputed with mutation teeth; all native outcomes, paired cells, complete pair authorities, gates, and parity credit remain zero."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",

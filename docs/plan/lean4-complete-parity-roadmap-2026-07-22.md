@@ -288,7 +288,8 @@ separates 3,723 case rows, 408,374 candidate execution slots, and the later
 layer-expanded comparison-obligation denominator; represents official Lean and
 native Axeyum as independent execution records; and makes normalization a
 third completed comparison object. Typed absent/invalid sides keep `not-run`
-and `invalid-run` rows visible. Exact per-population count/ID authorities mean
+and `invalid-run` rows visible. Exact per-population count/ID/cell-seal
+authorities mean
 one all-agree subset cannot satisfy G3. This is schema/preregistration progress
 only: no comparison authority, Axeyum process, native outcome, pair,
 performance row, or credit exists before complete accepted TL0.6.3 and
@@ -427,7 +428,8 @@ execution, and content/dependency-complete U2 classification.
 9. Land the native source/syntax substrate and first end-to-end
    source-to-independent-kernel cell before widening tactics or mathlib.
 10. After complete accepted TL0.6.3/TL0.6.4 parents, derive TL0.6.5's exact
-    comparison-obligation count and sorted-ID digest before any native launch;
+    comparison-obligation count, sorted-ID digest, and sorted cell-seal digest
+    before any native launch;
     then form the first official/Axeyum U2 pair with separate side identities,
     exact normalization, assurance, resources, and raw comparison evidence.
     Report overlap direction even when both totals are equal, retain every

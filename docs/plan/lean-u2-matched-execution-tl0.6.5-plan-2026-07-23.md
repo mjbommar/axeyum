@@ -100,14 +100,17 @@ The terminal registry must carry one paired-population authority row for each
 - `not_registered` — no authoritative comparison population exists;
 - `bounded_profile` — an exact scoped comparison population exists but cannot
   satisfy terminal G3; or
-- `complete_authority` — the complete terminal obligation list and ordered-ID
-  digest are registered with retained evidence.
+- `complete_authority` — the complete terminal obligation list, ordered-ID
+  digest, and ordered cell-seal digest are registered with retained evidence.
 
 A row records the expected comparison-cell count and the domain-separated
-digest of its sorted IDs. `complete_authority` is valid only when the registered
-cells for that population match both values exactly. G3 derives satisfied only
-when all ten paired-population authorities are complete and every expected cell
-is classified `agree-success` or `agree-reject`.
+digest of its sorted IDs plus a second domain-separated digest over each sorted
+`(id, cell_sha256)` pair. `complete_authority` is valid only when the registered
+cells for that population match all three values exactly. The content digest
+prevents a cell from being altered and resealed under an unchanged ID-only
+authority. G3 derives satisfied only when all ten paired-population authorities
+are complete and every expected cell is classified `agree-success` or
+`agree-reject`.
 
 This closes two vacuity paths in the current generator:
 
@@ -141,6 +144,7 @@ records and one comparison record.
 | `official` | official-Lean execution record in section 5.2 |
 | `axeyum` | native Axeyum execution record in section 5.2 |
 | `comparison` | normalization, classification, and evidence in section 5.3 |
+| `cell_sha256` | canonical seal over every other common, side, and comparison field |
 
 `population_member_id` is deliberately separate from `source_sha256`: two
 official test occurrences with equal bytes remain two members. `profile_id` is
@@ -171,6 +175,7 @@ values:
 | `peak_rss_kib` | non-negative peak RSS, not a parity verdict |
 | `artifact_bytes` | non-negative retained artifact bytes |
 | `evidence` | nonempty repository-relative evidence links |
+| `record_sha256` | canonical seal over every other field in this execution record |
 
 For `complete`, every scalar identity and metric is present and validates.
 For `not-run` and `invalid`, unavailable execution-derived values are JSON
@@ -187,6 +192,8 @@ attempt creates a new immutable execution record while history stays visible.
 | `normalization_id` | stable named normalization and version |
 | `normalization_sha256` | exact normalization implementation/rule-set identity |
 | `contract_sha256` | exact selected-observable, ignored-field, equivalence, and taxonomy contract |
+| `official_record_sha256` | exact cited official execution-record seal |
+| `axeyum_record_sha256` | exact cited Axeyum execution-record seal |
 | `result_sha256` | canonical comparison-result identity |
 | `completed` | comparison record was installed last over the two cited side records |
 | `evidence` | nonempty raw/normalized diff and independent-check links |
@@ -196,6 +203,29 @@ fields. It binds the two side records and records how their declared
 observables were compared. `completed = true` means the comparison projection
 is complete for the evidence available; it does not imply both systems ran or
 that they agree.
+
+### 5.4 Canonical content seals
+
+Every seal is recomputed; a lowercase 64-hex string is not accepted merely
+because it has the right shape. The internal v1 encoding is UTF-8 JSON with
+recursively sorted object keys, original array order, no insignificant
+whitespace, non-ASCII retained, and NaN/infinity rejected. It is intentionally
+specified as an Axeyum internal encoding rather than claimed as RFC 8785 JCS.
+SHA-256 receives an ASCII domain, one NUL byte, and then the encoded value:
+
+| Seal | Domain | Hashed value |
+|---|---|---|
+| execution `record_sha256` | `axeyum-lean-paired-execution-v1` | execution object excluding `record_sha256` |
+| comparison `result_sha256` | `axeyum-lean-paired-comparison-v1` | comparison object excluding `result_sha256`, including both cited execution seals |
+| `cell_sha256` | `axeyum-lean-paired-cell-v1` | whole cell excluding `cell_sha256` |
+| authority `expected_cell_seals_sha256` | `axeyum-lean-paired-cell-seals-v1` | ID-sorted array of exact `{id, cell_sha256}` objects |
+
+The existing ID authority remains independently computed under
+`axeyum-lean-paired-cell-ids-v1`. This layered shape gives useful diagnostics:
+an execution mutation breaks its record seal, a changed citation or
+normalization breaks the comparison seal, a common-identity mutation breaks
+the cell seal, and a correctly resealed cell still breaks the frozen
+population cell-seal authority.
 
 Outcome/state coherence is exact:
 
@@ -275,7 +305,8 @@ TL0.6.5 may publish deterministic bounded prefixes after each valid Axeyum
 attempt. A prefix must include:
 
 - one immutable attempt authority and completion-valid side records;
-- the exact comparison obligations covered and their ordered-ID digest;
+- the exact comparison obligations covered and their ordered-ID and
+  ordered-cell-seal digests;
 - every outcome class, including `not-run` and `invalid-run` rows in scope;
 - exact overlap and direction counts rather than equal total counts;
 - functional, assurance, and performance projections kept separate; and
@@ -299,12 +330,12 @@ is retained for TL0.6.6 and blocks U2 promotion.
 
 | Milestone | Work | Exit | Non-credit boundary |
 |---|---|---|---|
-| M0 — obligation authority | after both parents, expand every accepted execution slot into exact comparison obligations | count, ordered IDs/digest, layer/normalization ownership, exclusions, and zero executions validate | no process or outcome |
+| M0 — obligation authority | after both parents, expand every accepted execution slot into exact comparison obligations | count, ordered IDs/digest, ordered cell-seal digest, layer/normalization ownership, exclusions, and zero executions validate | no process or outcome |
 | M1 — comparison implementation | implement side/comparison records, normalizers, joiner, store, projector, and independent validator | all schema, mutation, determinism, and copied-root controls pass | synthetic controls only |
 | M2 — attempt authority | bind exact native executable, commands, environment, platform/resources, shard mapping, output root, and stop rules | explicit authorization digest validates | no launch before authorization |
 | M3 — bounded native execution | execute one preregistered bounded shard and install completion last | every selected side record and absence/invalid row validates | bounded profile only |
 | M4 — incremental campaign | resume over disjoint exact obligations with immutable attempts | every U2 execution slot has a selected native record or explicit terminal absence | no U2 promotion |
-| M5 — comparison closure | normalize and compare every expected obligation | paired authority count/digest exact; every row classified and reproducible | disagreements remain blockers |
+| M5 — comparison closure | normalize and compare every expected obligation | paired authority count, ID digest, and cell-seal digest exact; every row classified and reproducible | disagreements remain blockers |
 | M6 — independent acceptance | review full authority, aggregate projections, controls, and residual | TL0.6.5 result accepted or rejected with complete action ledger | TL0.6.6 owns U2 promotion |
 
 This plan is M0-prior documentation only in the roadmap sense; its own status
@@ -322,7 +353,8 @@ Before this plan can be registered as the TL0.6.5 contract:
    zero digest or borrowed attempt;
 4. outcome/state coherence rejects agreement without two complete sides,
    `not-run` without an absent side, and `invalid-run` without an invalid side;
-5. paired-population authorities bind expected count and sorted-ID digest;
+5. paired-population authorities bind expected count, sorted-ID digest, and
+   sorted `(id, cell_sha256)` digest;
 6. G3 rejects a nonempty proper subset even if every registered row agrees;
 7. source/path/content/member/profile identities remain distinct;
 8. generator output is byte-identical under `--check` from a detached copied
@@ -351,6 +383,13 @@ Before this plan can be registered as the TL0.6.5 contract:
   keeps commands/configurations, task sets, limits, per-execution results,
   resource measurements, and raw logs explicit. It is a methodology reference;
   TL0.6.5 does not adopt BenchExec or authorize a process.
+- [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785.html) explains why
+  repeatable cryptographic hashing requires invariant serialization. Axeyum
+  adopts that requirement but freezes the narrower internal encoding in
+  section 5.4 rather than claiming JCS compatibility.
+- The [in-toto Statement v1 specification](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
+  binds an attestation to immutable subjects by digest. TL0.6.5 analogously
+  cites both immutable side-record seals before sealing the comparison.
 - Axeyum's accepted
   [resumable execution ADR](../research/09-decisions/adr-0344-preregister-resumable-distributed-benchmark-execution.md),
   [execution-evidence contract](lean-execution-evidence-tl0.7.1-2026-07-22.md),

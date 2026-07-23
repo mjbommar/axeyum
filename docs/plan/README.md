@@ -66,8 +66,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   granting zero terminal denominator or paired-cell credit. The corrected
   paired schema gives official Lean and Axeyum separate execution records,
   stores normalization/classification in a third comparison record, and makes
-  G3 depend on exact per-population expected counts and sorted-ID digests rather
-  than any nonempty agreeing subset.
+  G3 depend on exact per-population expected counts, sorted-ID digests, and
+  sorted cell-seal digests rather than any nonempty agreeing subset. Execution,
+  comparison, and whole-cell seals are recomputed and the comparison cites the
+  exact two side-record seals.
 - [`lean-u2-test-authority-2026-07-22.md`](lean-u2-test-authority-2026-07-22.md),
   [`lean-u2-test-authority-v1.json`](lean-u2-test-authority-v1.json), and the
   generated [Markdown](generated/lean-u2-test-authority.md)/
@@ -440,10 +442,13 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   and native Axeyum separate executable/configuration/command/environment/
   resource/attempt/completion/outcome/assurance identities; and stores
   normalization and classification in a third comparison record. Typed
-  `not-run`/`invalid` sides plus per-population expected-count and sorted-ID
-  authorities prevent omitted rows and nonempty agreeing subsets from
-  satisfying G3. It authorizes no process and creates no native outcome, pair,
-  performance row, U2 promotion, or parity credit.
+  `not-run`/`invalid` sides plus per-population expected-count, sorted-ID, and
+  sorted cell-seal authorities prevent omitted rows, content substitution, and
+  nonempty agreeing subsets from satisfying G3. The accepted
+  [R1 content-seal correction](lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md)
+  recomputes versioned execution/comparison/cell seals and binds both cited
+  execution records. It authorizes no process and creates no native outcome,
+  pair, performance row, U2 promotion, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths
