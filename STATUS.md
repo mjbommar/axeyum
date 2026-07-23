@@ -384,17 +384,20 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 ## Current focus
 
 - **2026-07-23 — credited SMT-COMP full-population F2 is implementation-ready,
-  not live-ready.** F1 and its supervised-wave executor are integrated. The SMT
-  preparation implementation is integrated by merge `502e8875`; it seals and
-  durably replays a process-free, completion-last F2 candidate with every
-  registered input under one attempt and with zero execution evidence. The
+  not live-ready.** F1 and its supervised-wave executor are integrated. The base
+  SMT preparation implementation is integrated by merge `502e8875`; topic
+  commit `43f871ad` adds the explicit sealed preflight required before live
+  preparation. It reconstructs the exact three host registrations and
+  environment from captured observations, replays the ordered eight incident
+  sentinels including byte sidecars and semantic outcomes, enforces a 30-minute
+  publication window, and binds the result into completion schema v2. The
   focused 28 tests and 115-test portable gate pass.
   Next: wait for a green current `origin/main`—including the Lean R7
   current-source identity implementation and out-of-lane formatting repair—then
   rebase, run both exact readiness gates, perform the separately reviewed
-  host/sentinel checks, and publish only an empty `launch_authorized=false`
-  preparation. No host probe, NAS mutation, allocation, or solver launch is
-  authorized before that boundary.
+  host/sentinel capture, and publish only an empty `launch_authorized=false`
+  preparation inside that frozen window. No host probe, NAS mutation,
+  allocation, or solver launch is authorized before that boundary.
 
 - **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime and process-free export
   closure are complete; cvc5 remains integration-gated.** The v1 Axeyum
@@ -8639,6 +8642,22 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Bound F2 host and incident-sentinel evidence explicitly;
+  no live observation or execution occurred.** Topic commit `43f871ad` adds a
+  process-free full-preflight builder/validator, upgrades full-preparation
+  completion to schema v2, and makes the repaired-P0 producer retain exact
+  sentinel capture intervals. The preflight requires exactly `s5`/`s6`/`s7`,
+  reconstructs the environment and all composition registrations, checks
+  coordinator/host Python identity, and semantically replays the ordered eight
+  sentinels with their staged inputs, solver commands, one-thread environment,
+  stdout/stderr bytes, safe termination classes, and preregistered outcomes.
+  Publication must follow capture and occur within 30 minutes. Resealed missing,
+  duplicate, reordered, host-drifted, unsafe-outcome, and expired mutations all
+  reject; post-completion sentinel, binary, namespace, and artifact drift also
+  reject. The focused 41-test pair and 115-test portable gate pass with one
+  expected live-host skip. No SSH, solver, systemd, resource, allocation, or NAS
+  action ran.
 
 - **2026-07-23 — Implemented the sealed process-free F2 preparation candidate;
   no live preparation or execution occurred.** Current `origin/main` includes

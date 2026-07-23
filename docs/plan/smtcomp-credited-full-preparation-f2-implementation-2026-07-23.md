@@ -1,7 +1,8 @@
 # SMT-COMP credited full-population F2 preparation implementation
 
-Status: process-free implementation integrated by `origin/main` merge
-`502e8875`; result/status integration and live preparation remain outstanding
+Status: base process-free implementation integrated by `origin/main` merge
+`502e8875`; explicit host/sentinel preflight binding implemented on topic commit
+`43f871ad`; integration and live preparation remain outstanding
 
 Date: 2026-07-23
 
@@ -21,6 +22,16 @@ The candidate requires:
 - exact successful observations for `just check` and
   `./scripts/check-smtcomp-resume.sh`, bound to that commit and worktree-status
   digest;
+- exactly three replay-valid `s5`/`s6`/`s7` host observations, the reconstructed
+  environment manifest and host registrations, and coordinator/host Python byte
+  identity;
+- the exact ordered eight-row incident-sentinel matrix with frozen input,
+  solver-binary, command, environment, stdout, stderr, timestamp, and safe
+  termination identities;
+- completed `unsat` FP sentinels for all three solvers, completed `sat` cvc5
+  QF_AUFLIA, and only the preregistered Axeyum QF_AUFLIA outcomes;
+- publication after the captured observations but no later than 30 minutes from
+  the capture start;
 - byte identity between every registered preparation source and `origin/main`;
 - the frozen 45,905-row accepted selection and full list/manifest identities;
 - all process-free input manifests under the candidate attempt root;
@@ -32,9 +43,10 @@ The candidate requires:
 - three replay-valid cells containing the exact common schedule and all 432
   allocation command manifests.
 
-Publication first installs sealed copies of the selection, composition, and
-readiness records. It then inventories every file under the attempt root and
-installs `complete.json` last. The completion state is
+Publication first installs sealed copies of the selection, composition,
+readiness, and full-preflight records. It then inventories every file under the
+attempt root and installs `complete.json` last. Preparation schema v2 binds the
+preflight record seal in the completion. The completion state is
 `prepared-no-launch`, and `launch_authorized` is always `false`.
 
 ## Replay and mutation boundary
@@ -46,23 +58,31 @@ built and when a candidate is published.
 
 The validator rehashes the accepted selection, staged source bundle, source
 identity, run/plan/schedule/command records, binaries, copied component records,
-and complete artifact namespace. It rejects:
+host observations, reconstructed registrations, environment manifest,
+sentinel inputs and byte sidecars, and complete artifact namespace. It rejects:
 
 - a stale gate, changed conclusion, dirty or non-main live source state;
 - missing, reordered, external, or mutated preparation inputs;
 - source-bundle, binary, run-manifest, selection, or command drift;
+- missing, duplicate, reordered, stale, externally rooted, or mutated sentinel
+  evidence;
+- host observation, registration, environment, coordinator-Python, timestamp,
+  termination-class, or semantic-outcome drift;
 - a second or pre-existing completion;
 - any nonempty `multi-host-attempts`, `multi-host-terminals`, `records`, or
   `resource-sessions` namespace; and
 - any file added, removed, or changed after completion.
 
 The fixture intercepts the publisher's atomic installs and proves that
-`complete.json` is the final call. It then injects execution evidence and
-mutates a solver binary; both replays reject.
+`complete.json` is the final call. It also reseals reordered, missing,
+duplicate, host-drifted, semantically unsafe, and expired preflight mutations;
+all reject. Post-completion execution evidence, sentinel stdout mutation, and
+solver-binary mutation also reject on replay.
 
 ## Gates
 
-The following pass after rebasing onto current `origin/main` `502e8875`:
+The following pass on topic commit `43f871ad` over current `origin/main`
+`502e8875`:
 
 ```text
 python3 -m unittest scripts.tests.test_smtcomp_full_population
@@ -74,8 +94,9 @@ runner/scoring/pipeline/selection/provenance checks, OK
 generated resume contract, selection authority, and repaired-P0 comparison, OK
 ```
 
-This result/status document and its readiness-source registration are not yet
-integrated. Independently, the branch-wide gate is not green:
+The explicit preflight implementation, this refreshed result/status document,
+and their readiness-source registration are not yet integrated. Independently,
+the branch-wide gate is not green:
 `cargo fmt --all --check` reports existing
 format drift in the bench/CAS lane, which this increment did not edit. The
 focused Lean store check also still fails exactly because live
@@ -87,9 +108,11 @@ not yet on `origin/main`.
 
 ## Authorization boundary
 
-This result proves only the process-free candidate mechanism. It is not an F2
-live result and does not authorize F3. Live F2 remains conditional on a clean,
-green, byte-identical `origin/main`, fresh accepted-population rehash, reviewed
-host/environment/thermal probes, repaired-P0 and incident sentinels, and
-completion of an empty `launch_authorized=false` preparation. F3 remains
-forbidden until that exact live F2 result is integrated by the mainline owner.
+This result proves only the process-free candidate mechanism and semantic
+preflight replay. It is not an F2 live result and does not authorize F3. Live F2
+remains conditional on a clean, green, byte-identical `origin/main`, fresh
+accepted-population rehash, reviewed host/environment/thermal probes, the exact
+repaired-P0 incident sentinels, and completion of an empty
+`launch_authorized=false` preparation inside the frozen capture window. F3
+remains forbidden until that exact live F2 result is integrated by the mainline
+owner.
