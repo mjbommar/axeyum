@@ -487,6 +487,16 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   live store tests pass, and the complete-parity check succeeds from a
   differently rooted detached worktree. This is gate portability, not added
   Lean parity credit.
+- [`Lean complete-parity current-source identity R7 plan`](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md),
+  [`amendment`](lean-complete-parity-current-source-identity-r7-amendment-2026-07-23.md),
+  and [`result`](lean-complete-parity-current-source-identity-r7-result-2026-07-23.md)
+  — preserve the historical `resume_fs.py` identity while admitting only the
+  exact reviewed SMT successor for current validation. Retained store cells
+  derive worker/primitive hashes from their validated implementation revision;
+  new results remain bound to committed current bytes. All accepted authorities
+  and evidence aggregates stay byte-identical, and both owning-root and
+  detached-root complete-parity checks pass. This is a pushed topic result
+  pending current-main integration, with no outcome or parity credit.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

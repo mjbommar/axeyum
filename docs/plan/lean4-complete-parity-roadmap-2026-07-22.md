@@ -42,6 +42,15 @@ authority adds 64 disjoint local cases, so aggregate unique coverage is now
 65/3,678 rather than the historical singleton's 1/3,678. There are still zero
 native Axeyum U2 outcomes and zero paired cells.
 
+The pushed
+[`R7 current-source identity result`](lean-complete-parity-current-source-identity-r7-result-2026-07-23.md)
+repairs the only post-integration Lean/SMT source-pin drift without changing
+those counts. Historical store/acceptance/U2 authorities retain the exact
+evidence-producing filesystem primitive, current validators freeze the exact
+reviewed SMT successor, and both owning-root and detached-root terminal checks
+pass. Integration to current `main` and a post-merge replay remain required
+before M2.1 authorization; the repair itself adds no execution credit.
+
 The accepted
 [`M1 shard result`](lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md)
 closes immediate action 2's scheduling derivation only: eight official

@@ -392,11 +392,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "dba6941609484e2169a2b7e6f95b22e7c82203648e7db8d545fda1b90bcde62e"
+      "sha256": "20a2224b101d1dc3bb66a69214d4a1f8a8692b87aa03f3ac827f68ee945b0a78"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "e378293860f99d5e5ede8fddb0072795c14d25594b3f5bb7bf2f49ae4e1d5170"
+      "sha256": "1bd1015532d9d46f2bd4da8fd444e861b1b2e188a8d0eedc2fe0c3a49eb84965"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",

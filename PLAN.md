@@ -724,6 +724,14 @@ state.
 > A0--A11 axes, paired cells, and terminal gates remain incomplete or zero.
 > Next: authorize M2.1 only through its exact preregistered command, validate
 > that evidence, then bind M2.2 separately before any downstream native pair.
+> The pushed
+> [R7 current-source identity result](docs/plan/lean-complete-parity-current-source-identity-r7-result-2026-07-23.md)
+> then repairs the later `resume_fs.py` merge drift without changing the shared
+> SMT primitive or historical evidence. Retained cells validate against their
+> evidence-producing source rows, current gates freeze the exact reviewed
+> successor, 93 focused tests pass with one expected skip, and both owning-root
+> and detached-root terminal checks remain honestly zero-credit. Current-main
+> integration and a post-merge replay precede any M2.1 authorization.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
