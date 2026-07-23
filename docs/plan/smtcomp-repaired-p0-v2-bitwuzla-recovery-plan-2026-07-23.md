@@ -1,7 +1,8 @@
 # SMT-COMP repaired P0 v2 Bitwuzla recovery plan
 
-Status: preregistered; implementation complete and portable-gated; no recovery
-mutation or retry launch performed
+Status: recovery executed; sole retry completed inner work but outer
+finalization failed; superseded by the
+[post-run closure plan](smtcomp-repaired-p0-v2-bitwuzla-post-run-closure-plan-2026-07-23.md)
 Date: 2026-07-23
 Predecessor: [cvc5 result](smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md)
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
@@ -221,5 +222,7 @@ git diff --check
   passed
 ```
 
-Next: integrate the implementation/checkpoint bytes, revalidate the frozen stop
-state against the integrated source, then execute only `retry-1`.
+The implementation/checkpoint bytes were integrated and exactly one `retry-1`
+executed. It published all 435 shard-1 records and completion, then outer
+finalization stopped on the original pre-launch diagnostic terminal. Do not
+retry again; resume only from the linked process-free post-run closure plan.

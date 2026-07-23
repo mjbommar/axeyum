@@ -8583,6 +8583,22 @@ plan is built and committed on the current branch:
 
 ## Changelog
 
+- **2026-07-23 — Completed and green-gated the process-free Bitwuzla
+  post-run closure implementation; live evidence remains unchanged.** The sole
+  frozen retry actually completed all 435 shard-1 cases, leaving 1,305/1,305
+  inner records (432 `sat`, 789 `unsat`, 84 timeout/no-verdict) with zero
+  known-status contradiction and zero Axeyum/cvc5 disagreement. Outer E2/E3
+  finalization failed only because the original pre-launch diagnostic terminal
+  has no launch manifest. The hash-pinned closure plan forbids another retry.
+  Commit `0eff5d64` retains both failed outer terminals, binds the successful
+  inner completion plus exact diagnostic/recovery/liveness evidence, performs
+  only an exact fsynced quarantine move, and emits a closure-bound v2
+  multi-host completion. It deliberately leaves `resume_fs.py` unchanged, so
+  it adds no new Lean pin drift. Thirty-one focused tests and the 75-test
+  portable, mandatory-cgroup, and live-E3 gates pass; live E3 has no skips.
+  Integration of `e9178ed2` and `0eff5d64` is required before the explicit
+  no-launch closure command may touch the real run.
+
 - **2026-07-23 — Implemented and pushed the Axeyum v2 process-free closure
   without operating on live evidence.** Commit `5c06ec76` separates all
   coordinator outputs, binds completion last, hard-codes the frozen live hashes,

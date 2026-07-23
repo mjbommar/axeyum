@@ -1,6 +1,7 @@
 # SMT-COMP repaired P0 v2 Bitwuzla post-run closure plan
 
-Status: preregistered; no closure mutation performed
+Status: preregistered; implementation complete and green; no live closure
+mutation performed
 Date: 2026-07-23
 Predecessor: [Bitwuzla recovery plan](smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md)
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
@@ -232,6 +233,58 @@ After closure, credit is limited to this repaired P0 population and its frozen
 resource policy. A process-free evidence repair does not erase the two harness
 incidents, prove official SMT-COMP equivalence, or authorize a larger run.
 
-Next: implement and mutation-gate this exact closure on the topic branch,
-commit it separately, obtain integrator green-gating, then execute only the
-process-free closure.
+## Implementation checkpoint
+
+Commit `0eff5d64` implements the preregistered process-free path:
+
+- `axeyum.smtcomp-post-run-validation-closure.v1` binds the failed outer
+  allocation/resource evidence, successful inner attempt/completion, exact
+  diagnostic terminal, recovery authority, complete record/canonical bundle,
+  and dead-unit/launcher observation;
+- the closure authority is installed under the quarantine namespace before an
+  exact, deterministic, fsynced diagnostic-terminal move;
+- crash replay accepts exactly the pre-move or post-move state, while duplicate,
+  missing, symlinked, or hash-drifted evidence rejects;
+- `axeyum.smtcomp-multi-host-completion.v2` binds the closure record hash while
+  retaining the original failed outer terminals unchanged;
+- resource completion distinguishes closed failed recovery sessions from
+  genuinely terminal-less recovered sessions;
+- ordinary v1 completion/loss/retry evidence remains unchanged; and
+- the explicit Bitwuzla coordinator mode validates both prior cells, every
+  frozen hash above, and the final external result without calling the
+  allocation launcher.
+
+The first draft would have broadened `resume_fs.py`, but review removed that
+dependency. The generic strict loader is unchanged, and this increment creates
+no new Lean live-source pin drift. A disposable byte-for-byte copy of the live
+1,305-record run completed the new closure, produced a validating v2 multi-host
+completion, and replayed canonical bundle SHA-256
+`93e62151c9ef8798a9a84bbea80f772b9092b751eff686ae1dfbe249b87cee95`.
+The real NAS run was not changed.
+
+Current gates on committed `0eff5d64`:
+
+```text
+python3 -m unittest \
+  scripts.tests.test_smtcomp_resume_fs \
+  scripts.tests.test_smtcomp_multi_host \
+  scripts.tests.test_smtcomp_resource_enforcement \
+  scripts.tests.test_smtcomp_p0_prepare
+  31 tests, OK
+
+./scripts/check-smtcomp-resume.sh
+  75 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
+  75 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
+  75 tests, OK, no skips
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784841036231463027-0eff5d64cc60
+  control=514f316102fa4f64cfc90af7e62336a1b0bb774521b6a7a1fa7e7d3172f5a756
+  loss=1b665db7f48adf973c4fe28097a5b0242bd42a64d2f1d3728d2d4165516c7994
+```
+
+Next: the integration owner green-gates and lands `e9178ed2` plus `0eff5d64`.
+After exact `origin/main` revalidation, execute only
+`--close-post-run-validation-failure retry-1`; do not launch a solver retry.
