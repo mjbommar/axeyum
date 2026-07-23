@@ -379,6 +379,16 @@ performance row, or terminal credit. TL0.7 is complete and TL0.6.3 is
 unblocked; the parity scoreboard remains at zero complete populations, axes,
 paired cells, and terminal gates.
 
+TL0.6.3 M0 is now governed by a
+[source-first official-case plan](lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md).
+It selects `compile/534.lean` as a singleton child shard of the exact
+release-tag Linux-release 3,678-case selection and registers a separate local
+8 GiB/one-worker CTest lane. No M0 harness or test has run. A valid completed
+pass may add one local official-case outcome, but cannot complete the parent
+official profile, claim its provider, create an Axeyum outcome or pair, publish
+performance evidence, or advance any complete population, axis, or terminal
+gate.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
