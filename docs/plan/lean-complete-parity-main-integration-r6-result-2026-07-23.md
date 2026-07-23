@@ -2,8 +2,8 @@
 
 Date: 2026-07-23
 
-Status: **integration is on `main`; post-merge validation is still in progress;
-no process or parity credit**
+Status: **integration is on `main` and post-merge validation is complete; no
+process or parity credit**
 
 Plan: [R6 preregistration](lean-complete-parity-main-integration-r6-plan-2026-07-23.md)
 
@@ -49,7 +49,7 @@ The final merged base-validator SHA-256 is
 `2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50`.
 No accepted historical evidence was rewritten.
 
-## 3. Validation completed so far
+## 3. Validation result
 
 Before the merge commit:
 
@@ -70,11 +70,31 @@ On the exact post-merge `27828c40` tree:
 - `just benchmark-repetition-tests foundational-resources rules-as-code
   smtcomp-resume` passed;
 - `just qfbv-profile reflection-semantics-gate` passed; and
-- `just test` remains in progress. Every completed crate and integration suite
-  has passed so far, including the CAS, CNF, solver, Lean-kernel,
-  nested-inductive, evidence, arithmetic, quantifier, and differential suites.
-  Expected ignored diagnostic, measurement, and release-only stress tests are
-  not failures.
+- `just test` passed with exit zero, including all ordinary workspace unit,
+  integration, differential, Lean-reconstruction, and doctest suites. Expected
+  ignored diagnostic, measurement, corpus-scale, and release-only stress tests
+  remained explicitly ignored rather than failed.
+
+The full test run included the expensive differential gates rather than
+substituting a reduced suite. In particular, the QF_NIA variable-divisor and
+UFLIA differential tests passed after 1,791.56 seconds and 1,968.32 seconds of
+thermally throttled wall time, respectively. The five frontier timing JSON
+files rewritten by the test harness were restored to the committed versions;
+they are not R6 evidence changes.
+
+`just glaurung-qfbv-regular` then passed both policies over the pinned corrected
+five-driver representative capture:
+
+| Policy | Files | SAT | UNSAT | Unknown | Errors | Manifest agreement | Decided |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| raw | 162 | 88 | 74 | 0 | 0 | 162/162 | 100% |
+| canonical | 162 | 88 | 74 | 0 | 0 | 162/162 | 100% |
+
+Both policies also reported zero unsupported cases, disagreements, manifest
+disagreements, model-replay failures, and rewrite SAT/UNSAT conflicts. The raw
+run reported Axeyum/Z3 time `0.119448/0.258156` seconds (ratio `0.463`); the
+canonical run reported `0.055830/0.185038` seconds (ratio `0.302`). These are
+validation timings, not a new benchmark authority.
 
 `cargo fmt --all --check` found only pre-existing formatting drift in nine
 unrelated Rust files:
@@ -89,8 +109,7 @@ unrelated Rust files:
 - `crates/axeyum-cas/src/series.rs`; and
 - `crates/axeyum-cas/src/special.rs`.
 
-R6 changes no Rust and does not reformat another lane's files. The final
-result will record the complete `just test` and Glaurung QF_BV gate outcomes.
+R6 changes no Rust and does not reformat another lane's files.
 
 ## 4. Parity truth after integration
 
