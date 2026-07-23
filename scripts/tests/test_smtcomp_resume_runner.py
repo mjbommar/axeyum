@@ -204,7 +204,9 @@ def reseal_selection_root(root: Path, completion: dict) -> Path:
     return accepted
 
 
-def install_official_selection(layout: Layout) -> Path:
+def install_official_selection(
+    layout: Layout, *, execution_benchmarks: list[Path] | None = None
+) -> Path:
     attempt = layout.root / "selection-attempt"
     attempt.mkdir()
     benchmark_ids = [
@@ -242,6 +244,11 @@ def install_official_selection(layout: Layout) -> Path:
         "status": "complete",
     }
     accepted = reseal_selection_root(attempt, completion)
+    if execution_benchmarks is not None:
+        layout.file_list.write_text(
+            "".join(f"{path}\n" for path in execution_benchmarks),
+            encoding="utf-8",
+        )
     layout.selection_manifest.write_bytes(
         canonical_bytes(
             official_selection_input_manifest(
@@ -295,6 +302,96 @@ def fixed_result(command: list[str], **_kwargs) -> RunResult:
 
 
 class ResumeRunnerTests(unittest.TestCase):
+    def test_admitted_selection_executes_ordered_subset(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            layout = Layout(root)
+            accepted = install_official_selection(
+                layout, execution_benchmarks=[layout.benchmarks[1]]
+            )
+            run_dir = root / "admitted-subset-run"
+            self.assertTrue(
+                layout.execute(
+                    run_dir,
+                    runner=fixed_result,
+                    official_selection_root=accepted,
+                )
+            )
+            selection = read_canonical_json(layout.selection_manifest)
+            self.assertEqual(selection["official_selection"]["selected_files"]["rows"], 2)
+            self.assertEqual(len(selection["benchmarks"]), 1)
+            self.assertEqual(selection["benchmarks"][0]["sequence"], 0)
+            self.assertEqual(selection["benchmarks"][0]["benchmark_id"], "QF_BV/fixture/case-b.smt2")
+
+    def test_admitted_subset_rejects_nonmember_order_duplicate_and_unrequested_drift(
+        self,
+    ) -> None:
+        for mutation in range(1, 6):
+            with (
+                self.subTest(mutation=f"S5.1-M{mutation:02d}"),
+                tempfile.TemporaryDirectory() as tmp,
+            ):
+                root = Path(tmp)
+                layout = Layout(root)
+                accepted = install_official_selection(
+                    layout, execution_benchmarks=[layout.benchmarks[0]]
+                )
+                run_dir = root / "must-not-exist"
+                if mutation == 1:
+                    missing = layout.benchmarks[0].with_name("not-selected.smt2")
+                    missing.write_text(layout.benchmarks[0].read_text(encoding="utf-8"))
+                    layout.file_list.write_text(f"{missing}\n", encoding="utf-8")
+                    with self.assertRaisesRegex(ContractError, "not officially selected"):
+                        official_selection_input_manifest(
+                            layout.file_list, "non-incremental/", accepted
+                        )
+                elif mutation in {2, 3}:
+                    execution = (
+                        [layout.benchmarks[1], layout.benchmarks[0]]
+                        if mutation == 2
+                        else [layout.benchmarks[0], layout.benchmarks[0]]
+                    )
+                    layout.file_list.write_text(
+                        "".join(f"{path}\n" for path in execution),
+                        encoding="utf-8",
+                    )
+                    with self.assertRaisesRegex(ContractError, "strictly ordered"):
+                        official_selection_input_manifest(
+                            layout.file_list, "non-incremental/", accepted
+                        )
+                elif mutation == 4:
+                    ledger_path = accepted / "selected-files.jsonl"
+                    rows = ledger_path.read_bytes().splitlines(keepends=True)
+                    second = json.loads(rows[1])
+                    second["benchmark_id"] = second["benchmark_id"].replace(
+                        "case-b", "case-z"
+                    )
+                    rows[1] = canonical_bytes(second)
+                    ledger_path.write_bytes(b"".join(rows))
+                    completion = read_canonical_json(accepted / "complete.json")
+                    completion["artifacts"]["selected-files.jsonl"] = file_sha256(
+                        ledger_path
+                    )
+                    staging = accepted.with_name("selection-mutated")
+                    accepted.rename(staging)
+                    accepted = reseal_selection_root(staging, completion)
+                    with self.assertRaisesRegex(ContractError, "ledger identity mismatch"):
+                        layout.execute(
+                            run_dir,
+                            runner=fixed_result,
+                            official_selection_root=accepted,
+                        )
+                else:
+                    with layout.benchmarks[0].open("ab") as benchmark:
+                        benchmark.write(b"; subset physical drift\n")
+                    with self.assertRaisesRegex(ContractError, "benchmark bytes differ"):
+                        layout.execute(
+                            run_dir,
+                            runner=fixed_result,
+                            official_selection_root=accepted,
+                        )
+                self.assertFalse(run_dir.exists())
+
     def test_admitted_selection_executes_tiny_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
