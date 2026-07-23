@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -16,11 +17,17 @@ from full_execute import (  # noqa: E402
     load_wave_checkpoints,
     publish_wave_checkpoint,
 )
+from full_coordinator import derive_full_execution_authority  # noqa: E402
+import full_coordinator as full_coordinator_module  # noqa: E402
 from full_population import (  # noqa: E402
+    WAVE_COUNT,
     build_schedule,
     build_wave_checkpoint,
     cumulative_benchmark_count,
 )
+from full_result import CELL_RESULT_SCHEMA  # noqa: E402
+from multi_host import COMPLETION_SCHEMA as MULTI_HOST_COMPLETION_SCHEMA  # noqa: E402
+from resource_enforcement import COMPLETION_SCHEMA as RESOURCE_COMPLETION_SCHEMA  # noqa: E402
 from resume_contract import ContractError, digest  # noqa: E402
 
 
@@ -37,7 +44,7 @@ def reseal(value: dict) -> dict:
     return result
 
 
-def checkpoint(schedule: dict, wave_index: int) -> dict:
+def checkpoint(schedule: dict, wave_index: int, *, cell_id: str = CELL_ID) -> dict:
     terminals = [
         {
             "allocation_id": allocation_id,
@@ -53,10 +60,116 @@ def checkpoint(schedule: dict, wave_index: int) -> dict:
         schedule=schedule,
         plan_sha256=PLAN_ID,
         run_identity_sha256=RUN_ID,
-        cell_id=CELL_ID,
+        cell_id=cell_id,
         wave_index=wave_index,
         allocation_terminals=terminals,
         cumulative_records=cumulative_benchmark_count(schedule, wave_index),
+    )
+
+
+def cell_records(solver_id: str, *, first_status: str = "sat") -> list[dict]:
+    return [
+        reseal(
+            {
+                "solver_id": solver_id,
+                "sequence": 0,
+                "benchmark_id": "QF_BV/fixture/a.smt2",
+                "benchmark_sha256": "1" * 64,
+                "expected_status": "sat",
+                "reported_status": first_status,
+                "termination_class": "completed",
+            }
+        ),
+        reseal(
+            {
+                "solver_id": solver_id,
+                "sequence": 1,
+                "benchmark_id": "QF_UF/fixture/b.smt2",
+                "benchmark_sha256": "2" * 64,
+                "expected_status": None,
+                "reported_status": "unknown",
+                "termination_class": "completed",
+            }
+        ),
+    ]
+
+
+def completion_records(
+    *, run_id: str = RUN_ID, plan_id: str = PLAN_ID, canonical_bundle: str = "c" * 64
+) -> tuple[dict, dict]:
+    resource = reseal(
+        {
+            "schema": RESOURCE_COMPLETION_SCHEMA,
+            "run_identity_sha256": run_id,
+            "enforcement_id": ENFORCEMENT_ID,
+            "session_ids": ["session-0"],
+            "terminal_session_ids": ["session-0"],
+            "unclosed_session_ids": [],
+            "observed_peak_memory_bytes": 1024,
+            "completed_at_ns": 100,
+        }
+    )
+    multi = reseal(
+        {
+            "schema": MULTI_HOST_COMPLETION_SCHEMA,
+            "plan_sha256": plan_id,
+            "run_identity_sha256": run_id,
+            "allocation_attempt_ids": ["attempt-0"],
+            "unclosed_allocation_attempt_ids": [],
+            "recovery_record_sha256s": [],
+            "resource_session_ids": ["session-0"],
+            "canonical_bundle_sha256": canonical_bundle,
+            "resource_completion_sha256": resource["record_sha256"],
+            "fault_record_sha256": None,
+            "completed_at_ns": 200,
+        }
+    )
+    return resource, multi
+
+
+def checkpoint_material(
+    schedule: dict, *, cell_id: str
+) -> tuple[list[dict], list[dict]]:
+    checkpoints = [
+        checkpoint(schedule, wave_index, cell_id=cell_id)
+        for wave_index in range(WAVE_COUNT)
+    ]
+    terminal_by_hash = {}
+    for row in checkpoints:
+        for shard in row["shard_completions"]:
+            terminal_by_hash.setdefault(
+                shard["terminal_record_sha256"],
+                {
+                    "allocation_id": shard["allocation_id"],
+                    "attempt_id": shard["attempt_id"],
+                    "status": shard["status"],
+                    "terminal_record_sha256": shard[
+                        "terminal_record_sha256"
+                    ],
+                },
+            )
+    return checkpoints, list(terminal_by_hash.values())
+
+
+def prior_completion(solver_id: str) -> dict:
+    return reseal(
+        {
+            "schema": CELL_RESULT_SCHEMA,
+            "fixture_only": True,
+            "solver_id": solver_id,
+            "preparation_record_sha256": "d" * 64,
+            "selection_record_sha256": "e" * 64,
+            "execution_authority_record_sha256": "3" * 64,
+            "execution_authority_file_sha256": "4" * 64,
+            "adjudication_record_sha256": "5" * 64,
+            "adjudication_file_sha256": "6" * 64,
+            "records_file_sha256": "7" * 64,
+            "population_count": 2,
+            "key_set_sha256": "8" * 64,
+            "record_set_sha256": "9" * 64,
+            "safe_to_continue": True,
+            "published_at_ns": 300,
+        }
     )
 
 
@@ -187,6 +300,141 @@ class FullExecutionCheckpointTests(unittest.TestCase):
                     run_identity_sha256=RUN_ID,
                     cell_id=CELL_ID,
                 )
+
+
+class FullExecutionAuthorityTests(unittest.TestCase):
+    def authority(
+        self,
+        solver_id: str,
+        records: list[dict],
+        *,
+        prior: list[tuple[dict, list[dict]]] | None = None,
+    ) -> dict:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        checkpoints, terminals = checkpoint_material(schedule, cell_id=solver_id)
+        resource, multi = completion_records()
+        return derive_full_execution_authority(
+            solver_id=solver_id,
+            fixture_only=True,
+            preparation_record_sha256="d" * 64,
+            selection_record_sha256="e" * 64,
+            run_identity_sha256=RUN_ID,
+            plan_sha256=PLAN_ID,
+            schedule=schedule,
+            checkpoints=checkpoints,
+            records=records,
+            terminal_evidence=terminals,
+            resource_completion=resource,
+            multi_host_completion=multi,
+            canonical_bundle_sha256="c" * 64,
+            expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+            prior_cell_results=[] if prior is None else prior,
+        )
+
+    def test_authority_derives_all_sixteen_checkpoints_and_exact_terminals(self) -> None:
+        authority = self.authority("axeyum", cell_records("axeyum"))
+        self.assertEqual(len(authority["wave_checkpoint_record_sha256s"]), 16)
+        self.assertEqual(authority["population_count"], 2)
+        self.assertEqual(authority["prior_cell_result_record_sha256s"], [])
+        self.assertEqual(authority["cross_solver_disagreement_count"], 0)
+
+    def test_missing_or_reassigned_terminal_blocks_authority(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        checkpoints, terminals = checkpoint_material(schedule, cell_id="axeyum")
+        resource, multi = completion_records()
+        common = {
+            "solver_id": "axeyum",
+            "fixture_only": True,
+            "preparation_record_sha256": "d" * 64,
+            "selection_record_sha256": "e" * 64,
+            "run_identity_sha256": RUN_ID,
+            "plan_sha256": PLAN_ID,
+            "schedule": schedule,
+            "checkpoints": checkpoints,
+            "records": cell_records("axeyum"),
+            "resource_completion": resource,
+            "multi_host_completion": multi,
+            "canonical_bundle_sha256": "c" * 64,
+            "expected_logic_counts": {"QF_BV": 1, "QF_UF": 1},
+            "prior_cell_results": [],
+        }
+        with self.assertRaisesRegex(ContractError, "exact terminal evidence"):
+            derive_full_execution_authority(
+                **common, terminal_evidence=terminals[1:]
+            )
+        reassigned = copy.deepcopy(terminals)
+        reassigned[0]["allocation_id"] = "full-initial-01"
+        with self.assertRaisesRegex(ContractError, "exact terminal evidence"):
+            derive_full_execution_authority(
+                **common, terminal_evidence=reassigned
+            )
+        extra = [
+            *terminals,
+            {
+                "allocation_id": "full-retry-00",
+                "attempt_id": "unreferenced-completed",
+                "status": "completed",
+                "terminal_record_sha256": "f" * 64,
+            },
+        ]
+        with self.assertRaisesRegex(ContractError, "accounting drift"):
+            derive_full_execution_authority(**common, terminal_evidence=extra)
+
+    def test_prior_cell_population_and_disagreement_are_recomputed(self) -> None:
+        axeyum_records = cell_records("axeyum", first_status="sat")
+        cvc5_records = cell_records("cvc5", first_status="unsat")
+        authority = self.authority(
+            "cvc5",
+            cvc5_records,
+            prior=[(prior_completion("axeyum"), axeyum_records)],
+        )
+        self.assertEqual(
+            authority["prior_cell_result_record_sha256s"],
+            [prior_completion("axeyum")["record_sha256"]],
+        )
+        self.assertEqual(authority["cross_solver_disagreement_count"], 1)
+
+        drifted = copy.deepcopy(axeyum_records)
+        drifted.pop()
+        with self.assertRaises(ContractError):
+            self.authority(
+                "cvc5",
+                cvc5_records,
+                prior=[(prior_completion("axeyum"), drifted)],
+            )
+
+    def test_publication_entrypoint_replays_execution_before_result_install(self) -> None:
+        authority = {"record_sha256": "a" * 64}
+        records = cell_records("axeyum")
+        published = {"record_sha256": "b" * 64}
+        with (
+            mock.patch.object(
+                full_coordinator_module,
+                "load_full_execution_authority",
+                return_value=(authority, records),
+            ) as load,
+            mock.patch.object(
+                full_coordinator_module,
+                "publish_full_cell_result",
+                return_value=published,
+            ) as publish,
+        ):
+            observed = (
+                full_coordinator_module.publish_full_cell_result_from_execution(
+                    Path("/fixture/preparation"),
+                    Path("/fixture/result"),
+                    repository_root=ROOT,
+                    solver_id="axeyum",
+                    expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                    prior_result_roots={},
+                    inspect_shared_root=False,
+                    published_at_ns=1000,
+                )
+            )
+        self.assertEqual(observed, published)
+        load.assert_called_once()
+        self.assertEqual(publish.call_args.kwargs["execution_authority"], authority)
+        self.assertEqual(publish.call_args.kwargs["records"], records)
 
 
 if __name__ == "__main__":

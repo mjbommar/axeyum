@@ -372,6 +372,8 @@ def load_bundle(root: Path) -> Bundle:
         "multi-host-recoveries",
         "multi-host-fault.json",
         "multi-host-completion.json",
+        "full-schedule.json",
+        "full-wave-checkpoints",
     }
     if not root.is_dir():
         raise ContractError(f"missing run directory: {root}")

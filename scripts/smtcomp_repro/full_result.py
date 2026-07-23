@@ -238,6 +238,19 @@ def _load_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def load_full_cell_result(
+    output_root: Path,
+    *,
+    expected_logic_counts: dict[str, int],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Validate one external result and return its completion plus records."""
+
+    completion = validate_full_cell_result(
+        output_root, expected_logic_counts=expected_logic_counts
+    )
+    return completion, _load_records(output_root / "records.jsonl")
+
+
 def _derive_adjudication(
     *,
     records: list[dict[str, Any]],
@@ -515,7 +528,7 @@ def load_full_cell_results(
     records_by_solver = {}
     for solver_id in SOLVER_IDS:
         root = result_roots[solver_id]
-        completion = validate_full_cell_result(
+        completion, records = load_full_cell_result(
             root, expected_logic_counts=expected_logic_counts
         )
         _expect(
@@ -523,5 +536,5 @@ def load_full_cell_results(
             "full comparison cell result root identity mismatch",
         )
         completions.append(completion)
-        records_by_solver[solver_id] = _load_records(root / "records.jsonl")
+        records_by_solver[solver_id] = records
     return comparison_authority_from_cell_results(completions), records_by_solver
