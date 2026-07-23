@@ -5322,6 +5322,33 @@ fn replay_one_level_fixed_mbqi_candidate(
     crate::check_model(arena, assertions, &model).map(|accepted| accepted.then_some(model))
 }
 
+/// ADR-0363's additive source-guided default repair. Candidate values and
+/// defaults remain untrusted; every universal receives an independent
+/// finite-profile certificate and the exact full source is replayed here.
+fn complete_mbqi_source_guided_default_candidate(
+    arena: &TermArena,
+    assertions: &[TermId],
+    universal_assertions: &[TermId],
+    initial_model: &Model,
+    deadline: Option<Instant>,
+) -> Result<Option<Model>, SolverError> {
+    let Some((mut repaired, certificates)) =
+        crate::mbqi_model_finder::repair_and_certify_all_universals_with_source_int_values(
+            arena,
+            assertions,
+            universal_assertions,
+            initial_model,
+            deadline,
+        )
+    else {
+        return Ok(None);
+    };
+    for certificate in certificates {
+        repaired.set_quantified_uf_model_sat_certificate(certificate);
+    }
+    crate::check_model(arena, assertions, &repaired).map(|accepted| accepted.then_some(repaired))
+}
+
 /// ADR-0362's structurally one-level, first-candidate fixed-query retry. The
 /// inner MBQI entry is invoked with this retry disabled, so the shared deadline
 /// is not the only recursion bound. Only one exact-source free `Int` and the
@@ -5388,7 +5415,7 @@ fn prove_unsat_by_mbqi_inner(
     arena: &mut TermArena,
     assertions: &[TermId],
     config: &SolverConfig,
-    allow_one_level_fixed_retry: bool,
+    allow_outer_candidate_retries: bool,
 ) -> Result<CheckResult, SolverError> {
     // Split into ground assertions and top-level universal prefixes. The
     // refutation loop below remains single-binder. Multi-binder prefixes get a
@@ -5499,7 +5526,7 @@ fn prove_unsat_by_mbqi_inner(
         // inner entry disables this retry, and a decline continues into the
         // complete ADR-0360 search and every established refutation route.
         if round == 0
-            && allow_one_level_fixed_retry
+            && allow_outer_candidate_retries
             && let Some(model) = complete_mbqi_one_level_fixed_candidate(
                 arena,
                 assertions,
@@ -5525,6 +5552,22 @@ fn prove_unsat_by_mbqi_inner(
                 config,
                 deadline,
             )
+        {
+            return Ok(CheckResult::Sat(model));
+        }
+        // ADR-0363: only after ADR-0362 and ADR-0360 decline, augment the
+        // established default-only repair with exact-source integer values.
+        // This runs once on the outer initial candidate; the inner fixed-query
+        // invocation disables it together with the recursive retry.
+        if round == 0
+            && allow_outer_candidate_retries
+            && let Some(model) = complete_mbqi_source_guided_default_candidate(
+                arena,
+                assertions,
+                &universal_assertions,
+                &model,
+                deadline,
+            )?
         {
             return Ok(CheckResult::Sat(model));
         }
