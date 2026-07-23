@@ -356,7 +356,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "c37454502f1446562bb77b15187bd32d2976952ac79c8b87285d4b27482749ea"
+      "sha256": "febcdd79108faee49901a7173335d98e97607d5460a7d9c312038db43b8da555"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
