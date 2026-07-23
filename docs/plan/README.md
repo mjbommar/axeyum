@@ -713,6 +713,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   — M6's twelve-gate ADR audit, fresh positive/negative pinned-Lean replay,
   final bounded aggregate, accepted ADR-0355, completed TL2.14, exact non-
   claims, and broader Lean-program handoff.
+- [`lean-quotient-package-tl2.10-plan-2026-07-23.md`](lean-quotient-package-tl2.10-plan-2026-07-23.md)
+  — proposed ADR-0365's source-backed TL2.10 contract for canonical Eq
+  validation, atomic four-declaration quotient admission, exact `lift`/`ind`
+  reduction, ordered private importer buffering, additive v1 identities,
+  generated seam coverage, mutation/rollback gates, and explicit no-credit
+  boundary before implementation.
 - [`lean-import-transactional-publication-tl1.3-2026-07-22.md`](lean-import-transactional-publication-tl1.3-2026-07-22.md),
   [`lean-import-mutation-corpus-tl1.4-2026-07-22.md`](lean-import-mutation-corpus-tl1.4-2026-07-22.md),
   and [`lean-declaration-identity-tl1.7-2026-07-22.md`](lean-declaration-identity-tl1.7-2026-07-22.md) —

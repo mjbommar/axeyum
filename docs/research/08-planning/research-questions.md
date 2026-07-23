@@ -935,6 +935,22 @@ Out of scope:
     Containing-commit push/ref equality finalizes accepted ADR-0355 and TL2.14
     DONE. Native source elaboration and well-founded recursion
     remain TL4.9/TL4.10 rather than silently moving into this kernel result.
+- [ ] How must Lean's fixed quotient package be admitted, reduced, imported,
+      identified, and rendered without trusting wire declarations or exposing
+      a partial package?
+  - Proposed answer (2026-07-23): validate canonical `Eq`/`Eq.refl`, derive and
+    atomically admit exactly `Quot`, `Quot.mk`, `Quot.lift`, and `Quot.ind`, and
+    permit no ordinary single-declaration insertion. Reproduce pinned Lean's
+    exact WHNF-major `lift`/`ind` reductions, including three-argument
+    `Quot.mk` shape and trailing-argument replay. Buffer the ordered exporter
+    records privately; reject incomplete/interleaved/mutated packages without
+    `CompletedImport`. Extend identity v1 additively while preserving all old
+    digests, keep the framework package out of the axiom ledger, and use Lean's
+    built-ins rather than redeclaring them in reconstruction. See
+    [proposed ADR-0365](../09-decisions/adr-0365-preregister-lean-quotient-package.md)
+    and the
+    [TL2.10 plan](../../plan/lean-quotient-package-tl2.10-plan-2026-07-23.md).
+    No admission, differential, construct-matrix, or parity credit exists at P0.
 - [x] Should the proof-assistant bridge export obligations to Lean, import
       checked rewrite rules from Lean, or both — and how early is a
       Lean-checked rewrite-rule library worth prototyping?
