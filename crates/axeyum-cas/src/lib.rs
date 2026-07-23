@@ -11020,8 +11020,9 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
 /// or admit a bounded argument or borderline/supercritical rate, where applying
 /// the combined envelope would be unsound. Zero powers remain on the ordinary
 /// rational/simplification route and do not count as Bessel factors. A positive
-/// power may wrap a pure finite Bessel-J product; nested powers distribute their
-/// multiplicity structurally without expanding the expression.
+/// power may wrap a finite product of Bessel-J and rational-weight factors;
+/// nested powers distribute both decay and rational-growth multiplicities
+/// structurally without expanding the expression.
 fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
         return None;
@@ -11029,16 +11030,26 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let (_, core) = split_var_free_factor(expr, var);
     let mut arguments = Vec::new();
     let mut weight_factors = Vec::new();
+    let mut powered_weight_factors = Vec::new();
     for factor in flatten_mul(&core) {
         match factor {
             CasExpr::Unary(UnaryFunc::BesselJ(_), inner) => arguments.push((*inner, 1_u128)),
             powered @ CasExpr::Pow(_, multiplicity) if multiplicity > 0 => {
                 let mut powered_arguments = Vec::new();
-                if collect_powered_bessel_j_product(&powered, var, 1, &mut powered_arguments)
-                    .is_some()
+                let mut powered_weights = Vec::new();
+                if collect_powered_bessel_j_product(
+                    &powered,
+                    var,
+                    1,
+                    false,
+                    &mut powered_arguments,
+                    &mut powered_weights,
+                )
+                .is_some()
                     && !powered_arguments.is_empty()
                 {
                     arguments.extend(powered_arguments);
+                    powered_weight_factors.extend(powered_weights);
                 } else {
                     weight_factors.push(powered);
                 }
@@ -11059,6 +11070,22 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
     let weight_denominator = weight_ratio.den.to_univariate(var)?;
     let weight_numerator_degree = poly::rat_degree(&weight_numerator)?;
     let weight_denominator_degree = poly::rat_degree(&weight_denominator)?;
+    let mut weight_numerator_degree = u128::try_from(weight_numerator_degree).ok()?;
+    let mut weight_denominator_degree = u128::try_from(weight_denominator_degree).ok()?;
+    for (factor, multiplicity, denominator_position) in powered_weight_factors {
+        let ratio = normalize_rational(&factor)?;
+        let numerator = ratio.num.to_univariate(var)?;
+        let denominator = ratio.den.to_univariate(var)?;
+        let mut numerator_degree = u128::try_from(poly::rat_degree(&numerator)?).ok()?;
+        let mut denominator_degree = u128::try_from(poly::rat_degree(&denominator)?).ok()?;
+        if denominator_position {
+            std::mem::swap(&mut numerator_degree, &mut denominator_degree);
+        }
+        weight_numerator_degree = weight_numerator_degree
+            .checked_add(numerator_degree.checked_mul(multiplicity)?)?;
+        weight_denominator_degree = weight_denominator_degree
+            .checked_add(denominator_degree.checked_mul(multiplicity)?)?;
+    }
     let mut argument_growth = 0_u128;
     for (argument, multiplicity) in arguments {
         let ratio = normalize_rational(&argument)?;
@@ -11071,48 +11098,88 @@ fn limit_bessel_j_at_infinity(expr: &CasExpr, var: &str, point: LimitPoint) -> O
         argument_growth = argument_growth.saturating_add(repeated_growth);
     }
     let weight_growth = weight_numerator_degree.saturating_sub(weight_denominator_degree);
-    if u128::try_from(weight_growth).ok()?.checked_mul(2)? >= argument_growth {
+    if weight_growth.checked_mul(2)? >= argument_growth {
         return None;
     }
     Some(CasExpr::zero())
 }
 
-/// Collect a positive integer power whose variable-dependent part is entirely a
-/// finite Bessel-J product. Multiplicity is composed structurally in `u128`, so
-/// nested and hostile public `u32` powers never expand the expression. Saturation
-/// is proof-preserving here: on supported 32/64-bit targets, an overflowed decay
-/// budget is necessarily larger than twice any `usize`-derived rational weight
-/// degree. Any variable-dependent non-Bessel factor makes this bounded recognizer
-/// decline; variable-free factors, signs, and denominators are harmless constants.
+/// Collect a positive integer power whose variable-dependent part is a finite
+/// product of Bessel-J factors and rational weights. Multiplicity is composed
+/// structurally in `u128`, so nested and hostile public `u32` powers never expand
+/// the expression. Saturation is proof-preserving for the Bessel decay budget:
+/// on supported 32/64-bit targets, an overflowed budget is larger than twice any
+/// representable exact rational-weight degree. Rational degrees use checked
+/// arithmetic and decline on overflow. Bessel factors in denominator position
+/// remain unsupported; signs and variable-free factors are harmless constants.
 fn collect_powered_bessel_j_product(
     expr: &CasExpr,
     var: &str,
     multiplicity: u128,
+    denominator_position: bool,
     arguments: &mut Vec<(CasExpr, u128)>,
+    weights: &mut Vec<(CasExpr, u128, bool)>,
 ) -> Option<()> {
     match expr {
-        CasExpr::Unary(UnaryFunc::BesselJ(_), inner) => {
+        CasExpr::Unary(UnaryFunc::BesselJ(_), inner) if !denominator_position => {
             arguments.push(((**inner).clone(), multiplicity));
             Some(())
         }
         CasExpr::Mul(factors) => {
             for factor in factors {
-                collect_powered_bessel_j_product(factor, var, multiplicity, arguments)?;
+                collect_powered_bessel_j_product(
+                    factor,
+                    var,
+                    multiplicity,
+                    denominator_position,
+                    arguments,
+                    weights,
+                )?;
             }
             Some(())
         }
         CasExpr::Pow(base, exponent) if *exponent > 0 => {
             let combined = multiplicity.saturating_mul(u128::from(*exponent));
-            collect_powered_bessel_j_product(base, var, combined, arguments)
+            collect_powered_bessel_j_product(
+                base,
+                var,
+                combined,
+                denominator_position,
+                arguments,
+                weights,
+            )
         }
-        CasExpr::Neg(inner) => {
-            collect_powered_bessel_j_product(inner, var, multiplicity, arguments)
-        }
-        CasExpr::Div(numerator, denominator) if !expr_contains_var(denominator, var) => {
-            collect_powered_bessel_j_product(numerator, var, multiplicity, arguments)
+        CasExpr::Neg(inner) => collect_powered_bessel_j_product(
+            inner,
+            var,
+            multiplicity,
+            denominator_position,
+            arguments,
+            weights,
+        ),
+        CasExpr::Div(numerator, denominator) => {
+            collect_powered_bessel_j_product(
+                numerator,
+                var,
+                multiplicity,
+                denominator_position,
+                arguments,
+                weights,
+            )?;
+            collect_powered_bessel_j_product(
+                denominator,
+                var,
+                multiplicity,
+                !denominator_position,
+                arguments,
+                weights,
+            )
         }
         other if !expr_contains_var(other, var) => Some(()),
-        _ => None,
+        other => {
+            weights.push((other.clone(), multiplicity, denominator_position));
+            Some(())
+        }
     }
 }
 
@@ -22256,9 +22323,9 @@ mod tests {
             assert_equal(&limit(expression, "x", neg()).unwrap(), &CasExpr::zero());
         }
 
-        // A zero outer power remains one. Variable-dependent non-Bessel factors
-        // inside the power, modified-I factors, and Bessel denominators remain
-        // outside this fail-closed theorem recognizer.
+        // A zero outer power remains one. Borderline rational rates, modified-I
+        // factors, and Bessel denominators remain outside this fail-closed
+        // theorem recognizer.
         assert_equal(
             &limit(
                 &(x().bessel_j(0) * x().bessel_j(1)).pow(0),
@@ -22271,14 +22338,6 @@ mod tests {
         assert!(limit(&(x() * x().bessel_j(0)).pow(2), "x", pos()).is_none());
         assert!(
             limit(
-                &(x() * x().pow(3).bessel_j(0)).pow(2),
-                "x",
-                pos(),
-            )
-            .is_none()
-        );
-        assert!(
-            limit(
                 &(x().bessel_i(0) * x().bessel_j(0)).pow(2),
                 "x",
                 pos(),
@@ -22288,6 +22347,80 @@ mod tests {
         assert!(
             limit(
                 &(x() / (x().bessel_j(0) * x().bessel_j(1)).pow(2)),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn limits_of_rational_weights_inside_powered_bessel_j_products_and_declines() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+        let rational_argument =
+            (x().pow(5) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(1));
+        let cases = [
+            (x() * x().pow(3).bessel_j(0)).pow(2),
+            (((x().pow(3) + CasExpr::int(1)) / (x() + CasExpr::int(1)))
+                * x().pow(5).bessel_j(2))
+            .pow(3),
+            (x() * rational_argument.bessel_j(2)).pow(2),
+            x() * (x() * x().pow(5).bessel_j(0)).pow(2),
+            (x().bessel_j(0) / x()).pow(2),
+            ((x() / (x().pow(2) + CasExpr::int(1))) * x().bessel_j(3)).pow(3),
+            (x() * x().pow(3).bessel_j(0)).pow(2).pow(3),
+            (x() * x().pow(3).bessel_j(0)).pow(u32::MAX),
+        ];
+
+        // Rational growth inside a powered product inherits that power's
+        // multiplicity just as every Bessel envelope does. External and internal
+        // rational degrees are combined before the strict rate comparison, while
+        // rational denominator factors correctly reduce the net growth.
+        for expression in &cases {
+            assert_equal(&limit(expression, "x", pos()).unwrap(), &CasExpr::zero());
+            assert_equal(&limit(expression, "x", neg()).unwrap(), &CasExpr::zero());
+        }
+
+        // Equality in the rate and faster internal weights remain outside the
+        // zero theorem. Bessel denominators, modified-I mixtures, and symbolic
+        // rational coefficients likewise fail closed.
+        assert!(
+            limit(
+                &(x() * x().pow(2).bessel_j(0)).pow(2),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(x().pow(2) * x().pow(3).bessel_j(0)).pow(2),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(x() / x().pow(3).bessel_j(0)).pow(2),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &(x() * x().pow(3).bessel_j(0) * x().bessel_i(0)).pow(2),
+                "x",
+                pos(),
+            )
+            .is_none()
+        );
+        assert!(
+            limit(
+                &((x() / (x() + v("a"))) * x().bessel_j(0)).pow(2),
                 "x",
                 pos(),
             )
