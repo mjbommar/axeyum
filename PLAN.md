@@ -714,6 +714,16 @@ state.
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)
 > now reconciles this U2 boundary with the SMT-LIB evidence layers and the
 > dependency-ordered R0-R10 path to all U0-U9/A0-A11/G1-G10 exits.
+> The subsequent
+> [R6 current-main integration result](docs/plan/lean-complete-parity-main-integration-r6-result-2026-07-23.md)
+> confirms that the ROOT-relative worktree-path repair, its detached-mount
+> replay, and the previously held 69-commit complete-parity stack are together
+> on `main` at `27828c40`. Focused, detached-root, parity-document, repository
+> test, and pinned Glaurung QF_BV gates pass. This removes the integration
+> blocker without creating a Lean/Axeyum observation: all U0--U9 authorities,
+> A0--A11 axes, paired cells, and terminal gates remain incomplete or zero.
+> Next: authorize M2.1 only through its exact preregistered command, validate
+> that evidence, then bind M2.2 separately before any downstream native pair.
 > The runtime-derived
 > TL0.4 ledger now freezes **65** prelude assumptions (real 30, integer 34,
 > string 1) by canonical type digest before dependent native elaborator, Lake,
