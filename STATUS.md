@@ -383,6 +383,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified unbounded rational-function integer-order Bessel-J
+  limits.** Wave fourteen extends the exact fixed-order DLMF asymptotic from
+  polynomials to rational arguments `r(x)=p(x)/q(x)` with rational
+  coefficients and `deg p>deg q`, the precise degree condition proving
+  `|r(x)|→∞` at both real infinities. `limit` therefore returns zero for
+  `c·Jₙ(r(x))` at either infinity for every public order and `x`-free `c`, still
+  in constant time in `n`. Orders 0, 3, 32, and `u32::MAX`, three signed
+  degree-growing rational shapes, and both infinities pass; SymPy independently
+  agrees for orders 0 through 3. Equal-degree bounded arguments, symbolic
+  denominator coefficients, irrational coefficients, modified Bessel `I`, and
+  variable-dependent weights decline, while `J₀(1/x)→1` remains unchanged. The
+  thermally managed 555-unit/147-doctest suite is green, together with workspace
+  warning-denied Clippy, stable/nightly rustdoc, WASM, links, whitespace, and
+  owned-line formatting. Next: resume broad probing; quadratic-pole inverse Z
+  remains representation-bound.
+
 - **2026-07-22 — certified rational-polynomial integer-order Bessel-J limits.**
   Wave thirteen ranks the nonlinear Bessel neighbor ahead of quadratic-pole
   inverse Z: every nonconstant real polynomial has unbounded magnitude at both
@@ -397,7 +413,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   passed (1478.68 s for units), with workspace warning-denied Clippy (10.69 s
   warm), stable/nightly rustdoc, WASM, links, whitespace, and owned-line
   formatting green. Next: resume broad probing; quadratic-pole inverse Z still
-  requires an oscillatory-sequence transform fragment.
+  requires an oscillatory-sequence transform fragment. Wave fourteen
+  subsequently closes exact rational functions whose numerator degree exceeds
+  their denominator degree, while preserving bounded and decaying neighbors.
 
 - **2026-07-22 — certified affine integer-order Bessel-J limits at both
   infinities.** Wave twelve closes the remaining measured Bessel asymptotic gap
@@ -8334,6 +8352,13 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified unbounded rational-function Bessel-J infinity
+  limits.** The fixed-order DLMF envelope now closes `c·Jₙ(p(x)/q(x))→0` at
+  both real infinities whenever the exact rational-coefficient numerator degree
+  exceeds the denominator degree, with bounded, decaying, irrational,
+  symbolic-coefficient, modified-Bessel, and weighted neighbors remaining
+  fail-closed or preserving their established result. CAS now has 555 units and
+  147 doctests.
 - **2026-07-22 — Added certified rational-polynomial Bessel-J infinity
   limits.** The fixed-order DLMF envelope now closes `c·Jₙ(p(x))→0` at both
   infinities for every nonconstant rational-coefficient polynomial `p`, with

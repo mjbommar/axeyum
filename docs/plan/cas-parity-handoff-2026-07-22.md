@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/gap-probe-wave-thirteen`, based on integration parent `4682a486`,
-  with implementation commit `3a361b0a` (integrated by `44e08f0b`); do not
+  `agent/cas/gap-probe-wave-fourteen`, based on integration parent `af03bb56`,
+  with implementation commit `8929c197` (integrated by `3de63067`); do not
   rebase it onto `main` ahead of the integration owner.
-- **Tests:** `554` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `555` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37afb**). Keep both in sync when landing features.
+  latest is **Entry 37afc**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -544,10 +544,28 @@ orders `0..=255`), and Stirling-composed raw moments (regressed for orders
   `c`. Orders through `u32::MAX`, degrees two through four, both leading signs
   and infinities, a half coefficient, shifts, and symbolic factors pass. SymPy
   independently agrees for orders 0 through 3 on all four polynomial shapes.
-- Rational-function arguments such as `x+1/x`, irrational or symbolic
-  polynomial coefficients, modified Bessel `I`, and variable-dependent outer
-  weights decline. No public head, operator, backend, evidence format, or logic
-  fragment changed, so no ADR is required.
+- At this checkpoint, rational-function arguments such as `x+1/x`, irrational
+  or symbolic polynomial coefficients, modified Bessel `I`, and
+  variable-dependent outer weights declined. Wave fourteen subsequently closes
+  exactly the unbounded rational-function subset below. No public head,
+  operator, backend, evidence format, or logic fragment changed, so no ADR is
+  required.
+
+**Certified unbounded rational-function integer-order Bessel-J limits**
+- Wave fourteen generalized the same theorem-backed limit rule to exact
+  rational functions `r(x)=p(x)/q(x)` with rational coefficients and
+  `deg p > deg q`. That degree condition proves `|r(x)|→∞` at both real
+  infinities, so DLMF 10.17.3's fixed-order envelope and 10.11.1's
+  integer-order continuation still apply.
+- `limit` now returns zero for `c·Jₙ(r(x))` at either real infinity for every
+  public order and `x`-free `c`. Orders 0, 3, 32, and `u32::MAX`, three
+  positive/negative degree-growing rational shapes, and both infinities pass;
+  SymPy independently agrees for orders 0 through 3.
+- Equal-degree bounded arguments, symbolic denominator coefficients,
+  irrational coefficients, modified Bessel `I`, and variable-dependent outer
+  weights decline. The established decaying case `J₀(1/x)→1` remains unchanged.
+  No public head, operator, backend, evidence format, or logic fragment changed,
+  so no ADR is required.
 
 ---
 
@@ -805,8 +823,10 @@ Ordered roughly by value:
    Bessel antiderivatives through order 32 are closed through the normal
    certificate path; order 33 is the explicit discovery boundary. Rational-scale
    integer-order Bessel-J improper integrals on `[0,∞)` and nonconstant
-   rational-polynomial integer-order Bessel-J limits at both real infinities
-   are also closed. The moment families retain separate explicit resource
+   rational-function integer-order Bessel-J limits with numerator degree greater
+   than denominator degree at both real infinities are also closed. Bounded and
+   other non-degree-growing rational arguments retain their established
+   behavior. The moment families retain separate explicit resource
    boundaries:
    direct order 256 needs `Γ(257)`, raw order 36 needs public coefficients beyond
    `i128`, and repeated-quadratic inverse Laplace multiplicity 8 exceeds
@@ -880,9 +900,9 @@ esac
 export AXEYUM_CAS_TMP
 trap 'find "$AXEYUM_CAS_TMP" -depth -delete' EXIT
 git rev-parse --abbrev-ref HEAD        # → agent/cas/...
-git merge-base --is-ancestor 3a361b0a HEAD
+git merge-base --is-ancestor 8929c197 HEAD
 CARGO_BUILD_JOBS=1 TMPDIR="$AXEYUM_CAS_TMP" cargo test -p axeyum-cas --jobs 1
-# → 554 unit + 147 doctests green
+# → 555 unit + 147 doctests green
 ```
 Then: read `docs/research/10-cas/diary.md` tail for the latest context, and pick
 up from §6 or resume the gap-probing loop. Push the green owned topic branch;
