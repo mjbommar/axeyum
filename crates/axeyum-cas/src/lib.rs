@@ -1229,6 +1229,96 @@ impl MultiPoly {
         Some(out)
     }
 
+    /// Reduce the polynomial Bessel recurrences needed by the order-one product
+    /// derivatives:
+    ///
+    /// - `u·J₂(u) = 2·J₁(u) − u·J₀(u)`;
+    /// - `u·I₂(u) = u·I₀(u) − 2·I₁(u)`.
+    ///
+    /// Each descriptor is `(order-two atom key, modified?, argument expression,
+    /// normalized polynomial argument)`. A term is rewritten only when the full
+    /// coefficient of an order-two atom is exactly divisible by its argument.
+    /// Consequently this introduces no `1/u` domain seam. Every successful step
+    /// strictly lowers that order-two atom's exponent, so processing terminates
+    /// after the finite descriptor list. Non-divisible terms remain untouched.
+    fn fold_bessel_order_two(
+        &self,
+        recurrences: &[(String, bool, CasExpr, MultiPoly)],
+    ) -> Option<MultiPoly> {
+        let mut reduced = self.clone();
+        for (order_two, modified, argument, argument_poly) in recurrences {
+            if argument_poly.is_zero() {
+                continue;
+            }
+            let max_exponent = reduced
+                .terms
+                .keys()
+                .map(|monomial| monomial.powers.get(order_two).copied().unwrap_or(0))
+                .max()
+                .unwrap_or(0);
+            if max_exponent == 0 {
+                continue;
+            }
+
+            let family = if *modified {
+                UnaryFunc::BesselI
+            } else {
+                UnaryFunc::BesselJ
+            };
+            let order_zero = MultiPoly::single_var(&atom_name(&family(0).name(), argument));
+            let order_one = MultiPoly::single_var(&atom_name(&family(1).name(), argument));
+            let two = MultiPoly::constant(Rational::integer(2));
+            let replacement = if *modified {
+                // u·I₂ = u·I₀ − 2·I₁.
+                argument_poly
+                    .mul(&order_zero)?
+                    .add(&two.mul(&order_one)?.neg()?)?
+            } else {
+                // u·J₂ = 2·J₁ − u·J₀.
+                two.mul(&order_one)?
+                    .add(&argument_poly.mul(&order_zero)?.neg()?)?
+            };
+
+            let argument_mv = mvpoly::MvPoly::from_cas_expr(&argument_poly.to_expr())?;
+            let mut next = MultiPoly::zero();
+            for exponent in 0..=max_exponent {
+                let mut coefficient_terms = BTreeMap::new();
+                for (monomial, coefficient) in &reduced.terms {
+                    if monomial.powers.get(order_two).copied().unwrap_or(0) != exponent {
+                        continue;
+                    }
+                    let mut powers = monomial.powers.clone();
+                    powers.remove(order_two);
+                    coefficient_terms.insert(Monomial { powers }, *coefficient);
+                }
+                let coefficient = MultiPoly {
+                    terms: coefficient_terms,
+                };
+                if coefficient.is_zero() {
+                    continue;
+                }
+
+                let term = if exponent == 0 {
+                    coefficient
+                } else {
+                    let quotient = mvpoly::MvPoly::from_cas_expr(&coefficient.to_expr())
+                        .and_then(|poly| poly.exact_div(&argument_mv))
+                        .and_then(|poly| normalize(&poly.to_cas_expr()));
+                    if let Some(quotient) = quotient {
+                        quotient
+                            .mul(&replacement)?
+                            .mul(&MultiPoly::single_var_pow(order_two, exponent - 1))?
+                    } else {
+                        coefficient.mul(&MultiPoly::single_var_pow(order_two, exponent))?
+                    }
+                };
+                next = next.add(&term)?;
+            }
+            reduced = next;
+        }
+        Some(reduced)
+    }
+
     /// The monomial `var^exp` as a one-term polynomial (or the constant `1` when
     /// `exp == 0`).
     fn single_var_pow(var: &str, exp: u32) -> MultiPoly {
@@ -2162,6 +2252,7 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
     let mut radicands: BTreeMap<String, MultiPoly> = BTreeMap::new();
     let mut abs_args: BTreeMap<String, MultiPoly> = BTreeMap::new();
     let mut nth_roots: BTreeMap<String, (u32, MultiPoly)> = BTreeMap::new();
+    let mut bessel_order_two: Vec<(String, bool, CasExpr, MultiPoly)> = Vec::new();
     for (key, atom) in &atoms {
         match atom {
             // Radicand of a `sqrt` atom for `(√u)² = u`.
@@ -2182,6 +2273,25 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
                     nth_roots.insert(key.clone(), (*q, poly));
                 }
             }
+            // Polynomial, division-free forms of the n=1 recurrences. Arguments
+            // over a rational constant denominator are still polynomials after
+            // absorbing that denominator into their coefficients.
+            CasExpr::Unary(func @ (UnaryFunc::BesselJ(2) | UnaryFunc::BesselI(2)), arg) => {
+                if let Some(ratio) = normalize_rational(arg)
+                    && let Some(denominator) = multipoly_as_constant(&ratio.den)
+                    && !denominator.is_zero()
+                    && let Some(inverse) = Rational::integer(1).checked_div(denominator)
+                    && let Some(argument_poly) = ratio.num.mul(&MultiPoly::constant(inverse))
+                    && !argument_poly.is_zero()
+                {
+                    bessel_order_two.push((
+                        key.clone(),
+                        matches!(func, UnaryFunc::BesselI(2)),
+                        (**arg).clone(),
+                        argument_poly,
+                    ));
+                }
+            }
             _ => {}
         }
     }
@@ -2192,6 +2302,7 @@ fn equal_core(a: &CasExpr, b: &CasExpr) -> ZeroTest {
         .and_then(|w| w.fold_radical(&radicands))
         .and_then(|w| w.fold_abs(&abs_args))
         .and_then(|w| w.fold_nth_root(&nth_roots))
+        .and_then(|w| w.fold_bessel_order_two(&bessel_order_two))
     {
         Some(witness) => ZeroTest::Certified {
             equal: witness.is_zero(),
@@ -12794,6 +12905,7 @@ pub fn integrate(expr: &CasExpr, var: &str) -> Option<CertifiedIntegral> {
         integrate_log_substitution(expr, var),
         integrate_gaussian(expr, var),
         integrate_special_integral(expr, var),
+        integrate_weighted_bessel_order_zero(expr, var),
         integrate_bessel_order_one(expr, var),
         integrate_fresnel(expr, var),
         integrate_inverse_radical(expr, var),
@@ -15960,6 +16072,57 @@ fn integrate_bessel_order_one(expr: &CasExpr, var: &str) -> Option<CasExpr> {
         (**argument).clone().bessel_j(0)
     };
     Some(simplify(&(free * scaled_term(coefficient, base))))
+}
+
+/// Integrate a rational-affine Bessel argument multiplied by itself:
+///
+/// - `∫ c·u·J₀(u) dvar = (c/slope)·u·J₁(u)`;
+/// - `∫ c·u·I₀(u) dvar = (c/slope)·u·I₁(u)`;
+///
+/// where `u = slope·var + intercept` and `c` is var-free. The weight may be
+/// written as any exact rational multiple of `u` (so `var·J₀(2·var)` is
+/// accepted). The public certificate closes with the division-free order-one
+/// recurrence reducer in [`MultiPoly::fold_bessel_order_two`]. A mismatched
+/// weight, nonlinear argument, symbolic slope, or nonzero remainder declines.
+fn integrate_weighted_bessel_order_zero(expr: &CasExpr, var: &str) -> Option<CasExpr> {
+    let (free, core) = split_var_free_factor(expr, var);
+    let mut factors = flatten_mul(&core);
+    let bessel_index = factors.iter().position(|factor| {
+        matches!(
+            factor,
+            CasExpr::Unary(UnaryFunc::BesselJ(0) | UnaryFunc::BesselI(0), _)
+        )
+    })?;
+    let CasExpr::Unary(head, argument) = factors.remove(bessel_index) else {
+        return None;
+    };
+    if factors.iter().any(|factor| {
+        matches!(
+            factor,
+            CasExpr::Unary(UnaryFunc::BesselJ(0) | UnaryFunc::BesselI(0), _)
+        )
+    }) {
+        return None;
+    }
+    let weight = build_product(factors);
+    let [_, slope] = univariate_affine(&argument, var)?;
+
+    // Require `weight/argument` to be one exact rational constant. This admits
+    // both the literal `u·Bessel0(u)` spelling and scaled equivalents without
+    // guessing a cancellation across symbolic or variable denominators.
+    let ratio = normalize_rational(&(weight / (*argument).clone()))?.reduced()?;
+    let numerator = multipoly_as_constant(&ratio.num)?;
+    let denominator = multipoly_as_constant(&ratio.den)?;
+    let weight_scale = numerator.checked_div(denominator)?;
+    let coefficient = weight_scale.checked_div(slope)?;
+    let order_one = match head {
+        UnaryFunc::BesselJ(0) => (*argument).clone().bessel_j(1),
+        UnaryFunc::BesselI(0) => (*argument).clone().bessel_i(1),
+        _ => return None,
+    };
+    Some(simplify(&(
+        free * scaled_term(coefficient, (*argument).clone() * order_one)
+    )))
 }
 
 /// Distribute integration over a fraction whose numerator is a sum:
@@ -23875,10 +24038,101 @@ mod tests {
             x().pow(2).bessel_j(1),
             (v("y") * x()).bessel_i(1),
             scaled_term(Rational::integer(i128::MIN), x()).bessel_j(1),
-            x() * (CasExpr::int(2) * x()).bessel_j(0),
-            x() * (CasExpr::int(2) * x()).bessel_i(0),
         ] {
             assert!(integrate(&unsupported, "x").is_none(), "unexpected integral: {unsupported}");
+        }
+    }
+
+    #[test]
+    fn bessel_order_one_recurrences_are_certified_without_division() {
+        let x = v("x");
+        let shifted = CasExpr::int(2) * x.clone() + CasExpr::int(3);
+        let symbolic = v("A");
+
+        for argument in [x, shifted] {
+            let j_recurrence = argument.clone() * argument.clone().bessel_j(2)
+                + argument.clone() * argument.clone().bessel_j(0)
+                - CasExpr::int(2) * argument.clone().bessel_j(1);
+            let i_recurrence = argument.clone() * argument.clone().bessel_i(2)
+                - argument.clone() * argument.clone().bessel_i(0)
+                + CasExpr::int(2) * argument.clone().bessel_i(1);
+            assert_equal(&j_recurrence, &CasExpr::zero());
+            assert_equal(&(symbolic.clone() * i_recurrence), &CasExpr::zero());
+
+            // A near-miss must remain nonzero; the reducer changes only exact
+            // argument multiples and exact recurrence coefficients.
+            assert_not_equal(
+                &(argument.clone() * argument.clone().bessel_j(2)
+                    + argument.clone() * argument.clone().bessel_j(0)
+                    - CasExpr::int(3) * argument.bessel_j(1)),
+                &CasExpr::zero(),
+            );
+        }
+    }
+
+    #[test]
+    fn integrate_weighted_order_zero_bessel_pairs() {
+        let x = || v("x");
+        let shifted = CasExpr::int(2) * x() + CasExpr::int(3);
+        let reflected = CasExpr::int(3) - x() / CasExpr::int(2);
+        let symbolic_scale = v("A");
+
+        // DLMF 10.6.1/10.29.1 imply d/du[u·J₁(u)] = u·J₀(u) and
+        // d/du[u·I₁(u)] = u·I₀(u). Every case still passes the
+        // public differentiate-and-zero-test certificate.
+        for (integrand, expected) in [
+            (x() * x().bessel_j(0), x() * x().bessel_j(1)),
+            (
+                x() * (CasExpr::int(2) * x()).bessel_j(0),
+                x() * (CasExpr::int(2) * x()).bessel_j(1) / CasExpr::int(2),
+            ),
+            (
+                shifted.clone() * shifted.clone().bessel_j(0),
+                shifted.clone() * shifted.clone().bessel_j(1) / CasExpr::int(2),
+            ),
+            (
+                reflected.clone() * reflected.clone().bessel_i(0),
+                CasExpr::int(-2) * reflected.clone() * reflected.clone().bessel_i(1),
+            ),
+            (x() * x().bessel_i(0), x() * x().bessel_i(1)),
+            (
+                symbolic_scale.clone() * x() * (CasExpr::int(2) * x()).bessel_i(0),
+                symbolic_scale * x() * (CasExpr::int(2) * x()).bessel_i(1)
+                    / CasExpr::int(2),
+            ),
+        ] {
+            let result = integrate(&integrand, "x").expect("weighted Bessel pair");
+            assert!(result.is_certified(), "not certified: ∫{integrand}");
+            assert_equal(&result.antiderivative, &expected);
+            assert_equal(&result.antiderivative.differentiate("x"), &integrand);
+        }
+
+        let definite = definite_integrate(
+            &(x() * x().bessel_j(0)),
+            "x",
+            &CasExpr::zero(),
+            &CasExpr::int(2),
+        )
+        .expect("weighted definite Bessel integral");
+        assert!(definite.is_certified());
+        assert_equal(
+            &definite.value,
+            &(CasExpr::int(2) * CasExpr::int(2).bessel_j(1)),
+        );
+
+        for unsupported in [
+            x().bessel_j(0),
+            x() * (CasExpr::int(2) * x() + CasExpr::int(3)).bessel_j(0),
+            x().pow(2) * x().bessel_i(0),
+            x() * x().bessel_j(1),
+            x().pow(2) * x().pow(2).bessel_j(0),
+            x() * (v("a") * x()).bessel_i(0),
+            x() * scaled_term(Rational::integer(i128::MIN), x()).bessel_j(0),
+        ] {
+            assert!(
+                integrate(&unsupported, "x").is_none(),
+                "unexpected integral: {unsupported}"
+            );
         }
     }
 
