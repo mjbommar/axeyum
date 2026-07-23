@@ -152,12 +152,14 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   completion, mutation, and credit boundaries before any test process. Even a
   valid pass cannot complete the parent profile or create Axeyum/parity credit.
 - [`lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m0-attempt-001-2026-07-22.md)
-  and [`R1 plan`](lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md) —
+  plus the [`R1 plan`](lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
+  and [`Git-mode amendment`](lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md) —
   retained attempt 001's exited-8 thread-creation failure, exact terminal/
   JUnit/CTest evidence, and zero-outcome closure. Source inspection showed
   that `LEAN_NUM_THREADS=1` did not constrain Lean's command-line shell. R1
   preregisters supported test-array `-j1`, corrected worker evidence, and the
-  preset-created CTest log set before a fresh retry.
+  preset-created CTest log set before a fresh retry. The amendment distinguishes
+  live `0444` installation from portable Git `100644` checkout validation.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

@@ -479,7 +479,11 @@ state.
 > native default was 24 workers with 1 GiB task stacks, and CTest wrote three
 > undeclared preset logs. The [R1 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
 > freezes explicit official-test-array `-j1`, corrected resource fields, and
-> the CTest log set before any retry. Attempt 001 has zero outcomes; even a
+> the CTest log set before any retry. Its
+> [Git-mode amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
+> separates strict live `0444` installation validation from portable offline
+> Git-tree/content validation because Git records both `0444` and `0644` as
+> regular mode `100644`. Attempt 001 has zero outcomes; even a
 > valid R1 pass can create only one local official-case outcome, not parent-
 > profile, provider, Axeyum, pairing, performance, axis, gate, or parity credit.
 > The runtime-derived
