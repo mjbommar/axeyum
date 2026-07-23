@@ -4,7 +4,7 @@
   "source_identities": [
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "190c846d6cb72a5d40f4fc5a341a56e01af2105b60c298735e712b2b3ade4e9d"
+      "sha256": "ee5931eee7ae7c43f1234663ff47b8c6bff4ad81a0fe23887c2505c7af945dc1"
     },
     {
       "path": "docs/plan/generated/lean-execution-evidence.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "94a32fc9b2fd3aa18747e7af747deb35c90a7563198aaa0a7a5370b4e0d4d9d1"
+      "sha256": "2f4f63f1d51d2e3c726d5e305999f715642ea07b1445f56bdefa291b96da8d25"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -276,23 +276,23 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "7fb314d552e811de1e3a799d104d9cdace45e3f81f220d6a25bb56008efa9d7d"
+      "sha256": "49c62cbd75c98b3a9bdc3e5d0365055fd0b571a98e3c33966fe48d5f330030cc"
     },
     {
       "path": "scripts/lean_execution_process.py",
-      "sha256": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007"
+      "sha256": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948"
     },
     {
       "path": "scripts/lean_execution_store.py",
-      "sha256": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679"
+      "sha256": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2"
+      "sha256": "2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "03502d99a007cbcb3a6b5ee76585694ad4a8eae39c753d3266fec8396ec65788"
+      "sha256": "7b5bcd52a9ed12a323f84561f2a0d3e1fbce898178371e148d2bab5a020a8127"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -328,7 +328,7 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_store.py",
-      "sha256": "26bea458a5a29434a0013aab5c1733a6e5d41918a9d6ba4f370cc93e14c702c8"
+      "sha256": "e61fd7400f3c885916fafa21f6aa6c2731e79a4752cf84d1700428a7810a9c75"
     },
     {
       "path": "scripts/lean_u2_official_execution_r3_result.py",
@@ -344,7 +344,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
-      "sha256": "985c6bba645d24c5b13d7071da64d3d63316222c8889b4f6f48c8d1dcb70e7e4"
+      "sha256": "02b575078ca72dbfa0ee3281c882bb7231606f98bea1c813fc08270daf043e6b"
     },
     {
       "path": "scripts/tests/test_lean_execution_evidence.py",
@@ -352,11 +352,11 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_process.py",
-      "sha256": "5aea0fe02b3fa3278153807f7c1a1c8068ed1bfa7ea910f9b3aca08ae4a6521d"
+      "sha256": "1c2121c19dd8d9b484b26ef4729cf48855dfbfab4f734de6994ccb99b01f20b7"
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",
-      "sha256": "1ef995ace9fccd59af05640c5b256782b9183e9c9665101df99127a24b65d72f"
+      "sha256": "c37454502f1446562bb77b15187bd32d2976952ac79c8b87285d4b27482749ea"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -368,11 +368,11 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution.py",
-      "sha256": "0b5346109aba8b5222056577ef72ce9d375ebb63bb2883a3e91e588bcb4b2119"
+      "sha256": "68d39bf890e37b7efd927bee454d423d366eca48423e88124f8aeb79a2bc0960"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2.py",
-      "sha256": "3a33a6e3fd7e1cd42bf25127442b59f57c495226fed3edc19768c4cd2704f710"
+      "sha256": "00c0cec55a876ed24332836d662b1558ef3611818ae44baac5497d99ff17b81b"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
@@ -380,7 +380,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r3.py",
-      "sha256": "451c91b6d1d70d924b4cdafbc65c139387ec5469ad064f58c6e9461cf8aa05b2"
+      "sha256": "123e17f452e53b5a88d7c6eb81ff3a6a1a0ef21a74d80162a628e5d2b57ea957"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r4.py",

@@ -79,6 +79,18 @@ REPOSITORY_INPUTS = {
     ),
 }
 
+CURRENT_REPOSITORY_INPUT_OVERRIDES = {
+    "scripts/lean_u2_official_execution.py": (
+        "2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50"
+    ),
+    "scripts/lean_execution_process.py": (
+        "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948"
+    ),
+    "scripts/lean_execution_store.py": (
+        "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8"
+    ),
+}
+
 CHILD_VALIDATOR = ROOT / "scripts/gen-lean-u2-official-child-shards.py"
 CHILD_VALIDATOR_SHA256 = (
     "e1f6bb869fe5fb6ec740589d6e3b0f514e6efbc5604b0010bdd9dd44e10434a3"
@@ -158,7 +170,10 @@ def validate_repository_inputs() -> list[str]:
     failures = []
     if not PLAN.is_file() or BASE.sha256_file(PLAN) != PLAN_SHA256:
         failures.append("M2 preregistration plan drift")
-    for relative, expected in REPOSITORY_INPUTS.items():
+    for relative, historical_expected in REPOSITORY_INPUTS.items():
+        expected = CURRENT_REPOSITORY_INPUT_OVERRIDES.get(
+            relative, historical_expected
+        )
         path = ROOT / relative
         if not path.is_file() or BASE.sha256_file(path) != expected:
             failures.append(f"frozen M2 repository input drift: {relative}")

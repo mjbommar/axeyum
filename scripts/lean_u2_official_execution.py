@@ -121,6 +121,23 @@ REPOSITORY_INPUTS = {
     "scripts/smtcomp_repro/resume_fs.py": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
 }
 
+CURRENT_REPOSITORY_INPUT_OVERRIDES = {
+    "scripts/lean_execution_process.py": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948",
+    "scripts/lean_execution_store.py": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8",
+    "scripts/smtcomp_repro/resume_contract.py": "c128444f940b04a99a5be5def253d56df9f17d488dcb2d739891b0085dd0efd7",
+}
+
+HISTORICAL_RESULT_GENERATOR_INPUTS = (
+    {
+        "path": "scripts/lean_u2_official_execution.py",
+        "sha256": "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2",
+    },
+    {
+        "path": "scripts/tests/test_lean_u2_official_execution.py",
+        "sha256": "0b5346109aba8b5222056577ef72ce9d375ebb63bb2883a3e91e588bcb4b2119",
+    },
+)
+
 ZERO_NON_OFFICIAL_CREDITS = {
     "axeyum_outcomes": 0,
     "paired_cells": 0,
@@ -353,7 +370,10 @@ def validate_repository_inputs() -> list[str]:
         failures.append("R1 preregistration plan drift")
     if not R1_AMENDMENT.is_file() or sha256_file(R1_AMENDMENT) != R1_AMENDMENT_SHA256:
         failures.append("R1 Git-mode amendment drift")
-    for relative, expected in REPOSITORY_INPUTS.items():
+    for relative, historical_expected in REPOSITORY_INPUTS.items():
+        expected = CURRENT_REPOSITORY_INPUT_OVERRIDES.get(
+            relative, historical_expected
+        )
         path = ROOT / relative
         if not path.is_file() or sha256_file(path) != expected:
             failures.append(f"frozen repository input drift: {relative}")
@@ -1994,11 +2014,11 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
     terminal = load_canonical(root / "terminal.json")
     if spec["implementation_revision"] != implementation_revision:
         raise U2ExecutionError("result implementation revision differs from retained spec")
-    test_path = ROOT / "scripts/tests/test_lean_u2_official_execution.py"
+    test_path = ROOT / HISTORICAL_RESULT_GENERATOR_INPUTS[1]["path"]
     if not test_path.is_file():
         raise U2ExecutionError("missing official execution contract tests")
     source_inputs = [
-        {"path": path, "sha256": sha256_file(ROOT / path)}
+        {"path": path, "sha256": REPOSITORY_INPUTS[path]}
         for path in sorted(REPOSITORY_INPUTS)
     ] + [
         {"path": PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(PLAN)},
@@ -2007,15 +2027,7 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
             "path": R1_AMENDMENT.relative_to(ROOT).as_posix(),
             "sha256": sha256_file(R1_AMENDMENT),
         },
-        {
-            "path": Path(__file__).resolve().relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(Path(__file__).resolve()),
-        },
-        {
-            "path": test_path.relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(test_path),
-        },
-    ]
+    ] + list(HISTORICAL_RESULT_GENERATOR_INPUTS)
     credits = case["credits"]
     return seal(
         {

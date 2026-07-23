@@ -380,6 +380,36 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
                 ),
                 [],
             )
+            relocated = copy.deepcopy(process)
+            relocated_root = Path("/var/tmp/independent-axeyum-worktree")
+            relocated["command"][1] = str(
+                relocated_root / STORE.WORKER.relative_to(STORE.ROOT)
+            )
+            relocated["command_sha256"] = STORE.digest(relocated["command"])
+            relocated["environment"]["PYTHONPATH"] = str(
+                relocated_root / STORE.SMTCOMP.relative_to(STORE.ROOT)
+            )
+            relocated["environment_sha256"] = STORE.digest(relocated["environment"])
+            self.assertEqual(
+                STORE.validate_process_evidence(
+                    relocated,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                ),
+                [],
+            )
+            relocated["environment"]["PYTHONPATH"] = str(STORE.SMTCOMP)
+            relocated["environment_sha256"] = STORE.digest(relocated["environment"])
+            self.assertIn(
+                "kill cell environment drift",
+                STORE.validate_process_evidence(
+                    relocated,
+                    target_path=target,
+                    phase=phase,
+                    evidence_directory=evidence,
+                ),
+            )
             changed = copy.deepcopy(process)
             changed["command"][1] = "/usr/bin/lean"
             changed["command_sha256"] = STORE.digest(changed["command"])
@@ -406,6 +436,17 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
     def test_unknown_implementation_revision_fails_closed(self) -> None:
         with self.assertRaisesRegex(STORE.StoreEvidenceError, "not an ancestor"):
             STORE.validate_implementation_revision("0" * 40, [STORE.PRIMITIVE])
+
+    def test_historical_result_source_selection_is_exact(self) -> None:
+        authority = json.loads(STORE.RESULT_AUTHORITY.read_bytes())
+        self.assertEqual(
+            authority["preregistration"]["implementation_revision"],
+            STORE.HISTORICAL_IMPLEMENTATION_REVISION,
+        )
+        self.assertEqual(
+            STORE.result_source_inputs(STORE.HISTORICAL_IMPLEMENTATION_REVISION),
+            authority["source_inputs"],
+        )
 
     def test_result_builder_rejects_partial_population(self) -> None:
         with tempfile.TemporaryDirectory(dir=STORE.ROOT) as temporary:

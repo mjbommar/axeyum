@@ -153,6 +153,28 @@ FROZEN_REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md": "27b948b21bc9b2b14e185d2534e2bb96c13648750871c7f4e682b2eece479ec1",
 }
 
+CURRENT_REPOSITORY_INPUTS = {
+    **FROZEN_REPOSITORY_INPUTS,
+    "scripts/lean_execution_process.py": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948",
+    "scripts/lean_execution_store.py": "1ee32b411970331cd8afcc85495f91c69400cc5fb98e1af6608f551117dbc6f8",
+    "scripts/install-pinned-lean.sh": "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
+}
+
+HISTORICAL_RESULT_GENERATOR_INPUTS = (
+    {
+        "path": "scripts/lean_execution_acceptance.py",
+        "sha256": "7fb314d552e811de1e3a799d104d9cdace45e3f81f220d6a25bb56008efa9d7d",
+    },
+    {
+        "path": "scripts/tests/test_lean_execution_acceptance.py",
+        "sha256": "985c6bba645d24c5b13d7071da64d3d63316222c8889b4f6f48c8d1dcb70e7e4",
+    },
+    {
+        "path": "docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md",
+        "sha256": "107a91baf7a601b965af490c4c4d5095930eac9f8480c65f72026ce2ad92ad28",
+    },
+)
+
 LANES = {
     COMPILE_CONTROL: {
         "lane_id": "standard-local-4g",
@@ -345,13 +367,20 @@ def _install_bytes(root: Path, relative: str, value: bytes) -> str:
 
 def validate_repository_inputs() -> list[str]:
     failures = []
-    for relative, expected in FROZEN_REPOSITORY_INPUTS.items():
+    for relative, expected in CURRENT_REPOSITORY_INPUTS.items():
         path = ROOT / relative
         if not path.is_file() or sha256_file(path) != expected:
             failures.append(f"frozen repository input drift: {relative}")
     if sha256_file(PREREGISTRATION_PLAN) == "":  # pragma: no cover - documents intent.
         failures.append("preregistration plan is empty")
     return failures
+
+
+def historical_result_source_inputs() -> list[dict[str, str]]:
+    return [
+        {"path": path, "sha256": expected}
+        for path, expected in sorted(FROZEN_REPOSITORY_INPUTS.items())
+    ] + [dict(row) for row in HISTORICAL_RESULT_GENERATOR_INPUTS]
 
 
 def _run_text(command: list[str], *, cwd: Path) -> str:
@@ -386,32 +415,57 @@ def _file_record(relative: str, path: Path) -> dict[str, Any]:
 
 
 def _accepted_readonly_mode(path: Path) -> bool:
-    """Accept live 0444 or Git-checkout 0644 for already tracked evidence.
+    """Accept live 0444 or a clean tracked non-executable Git checkout file.
 
     Git stores only the executable bit, so a committed 0444 checkpoint is
-    materialized as 0644 in a fresh checkout. Untracked/live evidence must
-    still be 0444; this exception cannot make a temporary mutation fixture
-    pass.
+    materialized with checkout/umask-dependent write bits. Untracked/live
+    evidence must still be 0444; this exception cannot make a temporary
+    mutation fixture pass.
     """
 
+    if not path.is_file() or path.is_symlink():
+        return False
     mode = stat.S_IMODE(path.stat().st_mode)
     if mode == 0o444:
         return True
-    if mode != 0o644:
+    if mode & 0o111:
         return False
     try:
         relative = path.resolve().relative_to(ROOT).as_posix()
     except ValueError:
         return False
-    completed = subprocess.run(
-        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "--error-unmatch", "--", relative],
+    clean = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "diff", "--quiet", "HEAD", "--", relative],
         stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
         check=False,
         timeout=5,
     )
-    return completed.returncode == 0
+    if clean.returncode != 0:
+        return False
+    listed = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "--stage", "-z", "--", relative],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=5,
+    )
+    if listed.returncode != 0:
+        return False
+    records = [record for record in listed.stdout.split(b"\0") if record]
+    if len(records) != 1:
+        return False
+    metadata, separator, raw_path = records[0].partition(b"\t")
+    fields = metadata.split()
+    return (
+        bool(separator)
+        and len(fields) == 3
+        and fields[0] == b"100644"
+        and fields[2] == b"0"
+        and os.fsdecode(raw_path) == relative
+    )
 
 
 def capture_build_record(
@@ -1758,14 +1812,7 @@ def build_result_authority(
             "preregistration_commit": PREREGISTRATION_COMMIT,
             "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
             "implementation_revision": implementation_revision,
-            "source_inputs": [
-                {"path": path, "sha256": sha256_file(ROOT / path)}
-                for path in sorted(FROZEN_REPOSITORY_INPUTS)
-            ] + [
-                {"path": "scripts/lean_execution_acceptance.py", "sha256": sha256_file(Path(__file__).resolve())},
-                {"path": "scripts/tests/test_lean_execution_acceptance.py", "sha256": sha256_file(ROOT / "scripts/tests/test_lean_execution_acceptance.py")},
-                {"path": PREREGISTRATION_PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(PREREGISTRATION_PLAN)},
-            ],
+            "source_inputs": historical_result_source_inputs(),
             "build": {
                 "record_sha256": build["record_sha256"],
                 "exporter_sha256": build["executable"]["sha256"],
@@ -1839,6 +1886,8 @@ def validate_result_authority(authority: Any) -> list[str]:
         failures.append("result preregistration identity drift")
     if authority.get("credits") != ZERO_CREDITS:
         failures.append("acceptance result cannot receive parity credit")
+    if authority.get("source_inputs") != historical_result_source_inputs():
+        failures.append("result historical source-input identity drift")
     summary = authority.get("summary", {})
     for field in (
         "u2_cases", "case_records", "official_outcomes", "axeyum_outcomes",

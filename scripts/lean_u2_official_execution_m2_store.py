@@ -4,6 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -101,6 +104,57 @@ def _validate_descriptor(root: Path, descriptor: Any, expected_path: str) -> Non
         raise M2StoreError(f"M2 retained payload descriptor drift: {expected_path}")
 
 
+def _clean_tracked_checkout_files(root: Path) -> set[str]:
+    """Return non-executable tracked files when Git reproduces retained bytes.
+
+    Git stores only the executable bit, so the creation-time 0444 permission is
+    not portable to a fresh worktree.  A normal writable checkout is equivalent
+    only when the file is a clean, tracked 100644 entry under this evidence root.
+    """
+    try:
+        relative_root = root.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return set()
+    git = shutil.which("git")
+    if git is None:
+        return set()
+    git = os.path.realpath(git)
+    clean = subprocess.run(
+        [git, "diff", "--quiet", "--no-ext-diff", "--", relative_root],
+        cwd=ROOT,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if clean.returncode != 0:
+        return set()
+    listed = subprocess.run(
+        [git, "ls-files", "--stage", "-z", "--", relative_root],
+        cwd=ROOT,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+    )
+    if listed.returncode != 0:
+        return set()
+    tracked = set()
+    prefix = relative_root.rstrip("/") + "/"
+    for raw_record in listed.stdout.split(b"\0"):
+        if not raw_record:
+            continue
+        try:
+            metadata, raw_path = raw_record.split(b"\t", 1)
+            mode = metadata.split(b" ", 1)[0]
+            repository_path = os.fsdecode(raw_path)
+        except ValueError:
+            return set()
+        if mode == b"100644" and repository_path.startswith(prefix):
+            tracked.add(repository_path[len(prefix) :])
+    return tracked
+
+
 def accepted_inventory(root: Path, *, include_completion: bool) -> list[dict[str, Any]]:
     if not root.is_dir() or root.is_symlink():
         raise M2StoreError("M2 evidence root must be a real directory")
@@ -108,6 +162,7 @@ def accepted_inventory(root: Path, *, include_completion: bool) -> list[dict[str
     if extras:
         raise M2StoreError(f"unexpected M2 evidence entry: {extras[0]}")
     rows = []
+    clean_tracked_files: set[str] | None = None
     for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
         relative = path.relative_to(root)
         if relative.parts[0] == "quarantine":
@@ -120,8 +175,14 @@ def accepted_inventory(root: Path, *, include_completion: bool) -> list[dict[str
             continue
         if not path.is_file():
             raise M2StoreError(f"non-regular M2 evidence path: {relative.as_posix()}")
-        if path.stat().st_mode & 0o777 != 0o444:
-            raise M2StoreError(f"mutable M2 evidence file: {relative.as_posix()}")
+        permissions = path.stat().st_mode & 0o777
+        if permissions != 0o444:
+            if clean_tracked_files is None:
+                clean_tracked_files = _clean_tracked_checkout_files(root)
+            if permissions & 0o111 or relative.as_posix() not in clean_tracked_files:
+                raise M2StoreError(
+                    f"mutable M2 evidence file: {relative.as_posix()}"
+                )
         rows.append(BASE.file_record(relative.as_posix(), path))
     return rows
 

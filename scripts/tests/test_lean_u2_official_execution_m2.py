@@ -113,6 +113,22 @@ class LeanU2OfficialExecutionM2Tests(unittest.TestCase):
         )
         self.assertEqual(sum(1 for row in contract["cases"] if row["family"] == "docparse"), 35)
 
+    def test_current_u2_runner_override_preserves_historical_identity(self) -> None:
+        relative = "scripts/lean_u2_official_execution.py"
+        self.assertEqual(
+            M2.REPOSITORY_INPUTS[relative],
+            "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2",
+        )
+        self.assertEqual(
+            M2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative],
+            "2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50",
+        )
+        self.assertEqual(
+            BASE.sha256_file(BASE.ROOT / relative),
+            "2fe3ecf1c57db598060a82061ba4fa45fa3ca84b89ef673d8aba8636b4d4ed50",
+        )
+        self.assertEqual(M2.validate_repository_inputs(), [])
+
     def test_spec_is_exact_and_forbids_execution_shortcuts(self) -> None:
         spec = self.spec()
         self.assertEqual(M2.validate_spec(spec), [])

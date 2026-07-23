@@ -13,6 +13,55 @@ from scripts import lean_execution_acceptance as ACCEPTANCE
 
 
 class LeanExecutionAcceptanceContractTests(unittest.TestCase):
+    def test_readonly_mode_separates_live_and_clean_checkout_files(self) -> None:
+        tracked = ACCEPTANCE.DEFAULT_EVIDENCE_ROOT / "preparation/build.json"
+        self.assertTrue(ACCEPTANCE._accepted_readonly_mode(tracked))
+
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            path = Path(temporary) / "evidence.bin"
+            path.write_bytes(b"evidence")
+            path.chmod(0o664)
+            self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+            path.chmod(0o444)
+            self.assertTrue(ACCEPTANCE._accepted_readonly_mode(path))
+            path.chmod(0o755)
+            self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
+    def test_checkout_mode_requires_clean_stage_zero_100644_identity(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            path = Path(temporary) / "evidence.bin"
+            path.write_bytes(b"evidence")
+            path.chmod(0o664)
+            relative = path.resolve().relative_to(ACCEPTANCE.ROOT).as_posix()
+
+            clean = mock.Mock(returncode=0)
+
+            def listed(row: bytes) -> mock.Mock:
+                return mock.Mock(returncode=0, stdout=row)
+
+            valid = f"100644 {'a' * 40} 0\t{relative}\0".encode()
+            with mock.patch.object(
+                ACCEPTANCE.subprocess, "run", side_effect=[clean, listed(valid)]
+            ):
+                self.assertTrue(ACCEPTANCE._accepted_readonly_mode(path))
+
+            invalid_rows = (
+                f"100755 {'a' * 40} 0\t{relative}\0".encode(),
+                f"100644 {'a' * 40} 1\t{relative}\0".encode(),
+                f"100644 {'a' * 40} 0\twrong/path\0".encode(),
+                valid + valid,
+                b"malformed\0",
+            )
+            for row in invalid_rows:
+                with self.subTest(row=row), mock.patch.object(
+                    ACCEPTANCE.subprocess, "run", side_effect=[clean, listed(row)]
+                ):
+                    self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
+            dirty = mock.Mock(returncode=1)
+            with mock.patch.object(ACCEPTANCE.subprocess, "run", return_value=dirty):
+                self.assertFalse(ACCEPTANCE._accepted_readonly_mode(path))
+
     def build_record(self) -> dict:
         lake = "/opt/lean-4.30/bin/lake"
         environment = {
@@ -230,6 +279,29 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
 
     def test_01_repository_and_fixture_pins_are_exact(self) -> None:
         self.assertEqual(ACCEPTANCE.validate_repository_inputs(), [])
+        installer = ACCEPTANCE.ROOT / "scripts/install-pinned-lean.sh"
+        self.assertEqual(
+            ACCEPTANCE.FROZEN_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
+            "75acb49a48e18b43523257ac22bc82889d614a6678c1cc3a457b3a150e1c7f71",
+        )
+        self.assertEqual(
+            ACCEPTANCE.CURRENT_REPOSITORY_INPUTS["scripts/install-pinned-lean.sh"],
+            "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
+        )
+        original_sha256_file = ACCEPTANCE.sha256_file
+        with mock.patch.object(
+            ACCEPTANCE,
+            "sha256_file",
+            side_effect=lambda path: (
+                "0" * 64
+                if Path(path) == installer
+                else original_sha256_file(Path(path))
+            ),
+        ):
+            self.assertIn(
+                "frozen repository input drift: scripts/install-pinned-lean.sh",
+                ACCEPTANCE.validate_repository_inputs(),
+            )
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.FLAT_SOURCE), ACCEPTANCE.FLAT_SOURCE_SHA256)
         self.assertEqual(ACCEPTANCE.sha256_file(ACCEPTANCE.REFERENCE_STREAM), ACCEPTANCE.REFERENCE_SHA256)
         self.assertEqual(ACCEPTANCE.REFERENCE_STREAM.stat().st_size, 3_849)
@@ -507,7 +579,7 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
                 "preregistration_commit": ACCEPTANCE.PREREGISTRATION_COMMIT,
                 "r1_preregistration_commit": ACCEPTANCE.R1_PREREGISTRATION_COMMIT,
                 "implementation_revision": "a" * 40,
-                "source_inputs": [],
+                "source_inputs": ACCEPTANCE.historical_result_source_inputs(),
                 "build": {},
                 "failed_attempt": {
                     "control_id": ACCEPTANCE.FAILED_COMPILE_CONTROL,
