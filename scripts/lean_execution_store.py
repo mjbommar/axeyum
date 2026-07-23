@@ -67,6 +67,7 @@ CELL_SCHEMA = "axeyum-lean-execution-store-kill-cell-v1"
 RESULT_SCHEMA = "axeyum-lean-execution-store-result-v1"
 SUMMARY_SCHEMA = "axeyum-lean-execution-store-summary-v1"
 PREREGISTRATION_COMMIT = "8bad614645137164eafec6ab6cf068e5035695b5"
+HISTORICAL_IMPLEMENTATION_REVISION = "afe7db6e04c78fcbce04c6f502268ce2d9934121"
 CONTROL_ID = "interrupted-resumed"
 CREDIT_CLASS = "synthetic-no-credit"
 STORAGE_CLASS_IDS = (
@@ -1433,6 +1434,32 @@ def validate_historical_result_revision(implementation_revision: str) -> None:
             )
 
 
+def result_source_paths() -> list[Path]:
+    return [
+        PREREGISTRATION_PLAN,
+        Path(__file__).resolve(),
+        ROOT / "scripts/tests/test_lean_execution_store.py",
+        PRIMITIVE,
+        WORKER,
+        ROOT / "scripts/gen-lean-execution-evidence.py",
+        ROOT / "docs/plan/lean-execution-evidence-v1.json",
+        ROOT / "docs/plan/lean-execution-process-v1.json",
+    ]
+
+
+def result_source_inputs(implementation_revision: str) -> list[dict[str, str]]:
+    """Select immutable historical rows or a newly frozen current revision."""
+    if implementation_revision == HISTORICAL_IMPLEMENTATION_REVISION:
+        validate_historical_result_revision(implementation_revision)
+        return copy.deepcopy(list(HISTORICAL_RESULT_SOURCE_INPUTS))
+    source_paths = result_source_paths()
+    validate_implementation_revision(implementation_revision, source_paths)
+    return [
+        {"path": path.relative_to(ROOT).as_posix(), "sha256": sha256_file(path)}
+        for path in source_paths
+    ]
+
+
 def build_result_authority(evidence_root: Path, *, implementation_revision: str) -> dict[str, Any]:
     evidence_root = evidence_root.resolve()
     try:
@@ -1441,7 +1468,7 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
         raise StoreEvidenceError("store evidence root must be inside repository") from exc
     storage_document, cells = validate_evidence_root(evidence_root)
     evidence_files = _evidence_manifest(evidence_root)
-    validate_historical_result_revision(implementation_revision)
+    source_inputs = result_source_inputs(implementation_revision)
     phase_counts = Counter(cell["phase"] for cell in cells)
     target_counts = Counter(cell["target_role"] for cell in cells)
     class_counts = Counter(cell["storage_class_id"] for cell in cells)
@@ -1457,7 +1484,7 @@ def build_result_authority(evidence_root: Path, *, implementation_revision: str)
             "plan_published_before_implementation": True,
             "implementation_published_before_kill_matrix": True,
         },
-        "source_inputs": copy.deepcopy(list(HISTORICAL_RESULT_SOURCE_INPUTS)),
+        "source_inputs": source_inputs,
         "evidence_root": relative_evidence_root,
         "evidence_files": evidence_files,
         "storage_classes": storage_document["storage_classes"],
