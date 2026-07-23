@@ -182,6 +182,17 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   unique official case. Coverage remains 1/3,678 with zero provider,
   Axeyum, pair, performance, axis, gate, or parity credit; next derive fresh
   child shards rather than rerunning the singleton.
+- [`lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m1-shard-plan-2026-07-22.md),
+  accepted [result](lean-u2-official-execution-tl0.6.3-m1-shard-result-2026-07-22.md),
+  [`lean-u2-official-child-shards-v1.json`](lean-u2-official-child-shards-v1.json),
+  and generated [Markdown](generated/lean-u2-official-child-shards.md)/
+  [JSON](generated/lean-u2-official-child-shards.json) — TL0.6.3 M1's
+  deterministic, non-executed breadth projection. Eight selection identities
+  factor into five exact ordered memberships and 289 physical shards capped at
+  64 cases: 461 selection-expanded and 6,451 attempt-expanded occurrences.
+  All 111 official attempts remain `not-run`; the historical M0 singleton is
+  annotation only, so U2 execution, native pairing, performance, and parity
+  credit do not advance.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

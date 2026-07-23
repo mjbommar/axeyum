@@ -69,6 +69,19 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(u2_ci["derivation"]["ctest_attempts"], 111)
         self.assertEqual(u2_ci["derivation"]["selection_sets"], 8)
         self.assertEqual(u2_ci["outcomes"]["official_executed_attempts"], 0)
+        u2_shards = first["bounded_snapshot"]["u2_child_shard_authority"]
+        self.assertEqual(u2_shards["status"], "complete-derivation-not-run")
+        self.assertEqual(u2_shards["summary"]["distinct_membership_plans"], 5)
+        self.assertEqual(u2_shards["summary"]["physical_child_shards"], 289)
+        self.assertEqual(
+            u2_shards["summary"]["selection_expanded_shard_occurrences"], 461
+        )
+        self.assertEqual(
+            u2_shards["summary"]["attempt_expanded_shard_occurrences"], 6451
+        )
+        self.assertTrue(u2_shards["claims"]["parent_memberships_partitioned"])
+        self.assertFalse(u2_shards["claims"]["official_execution_complete"])
+        self.assertTrue(all(value == 0 for value in u2_shards["credits"].values()))
         execution = first["bounded_snapshot"]["execution_evidence_authority"]
         self.assertEqual(execution["lane_policies"], 2)
         self.assertEqual(execution["termination_classes"], 12)
@@ -128,6 +141,8 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("scripts/gen-lean-complete-parity.py", source_paths)
         self.assertIn("docs/plan/lean-u2-test-authority-v1.json", source_paths)
         self.assertIn("docs/plan/lean-u2-official-ci-profiles-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-u2-official-child-shards-v1.json", source_paths)
+        self.assertIn("scripts/gen-lean-u2-official-child-shards.py", source_paths)
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)
@@ -146,7 +161,10 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIsNone(population["raw_denominator"])
         self.assertIsNone(population["normalized_denominator"])
         self.assertIsNone(population["content_digest"])
-        self.assertIn("One unique official case is not complete", population["residual"])
+        self.assertIn(
+            "every new shard and all 111 official attempts remain not run",
+            population["residual"],
+        )
 
     def test_population_order_and_incomplete_denominators_are_fail_closed(self) -> None:
         self.data["populations"][0], self.data["populations"][1] = (

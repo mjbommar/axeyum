@@ -30,6 +30,7 @@ CONSTRUCT_MATRIX = ROOT / "docs" / "plan" / "lean-official-construct-matrix-v1.j
 AXIOM_LEDGER = ROOT / "docs" / "plan" / "lean-axiom-ledger-v1.json"
 U2_AUTHORITY = ROOT / "docs" / "plan" / "lean-u2-test-authority-v1.json"
 U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
+U2_CHILD_SHARDS = ROOT / "docs" / "plan" / "lean-u2-official-child-shards-v1.json"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -658,6 +659,25 @@ def u2_ci_profile_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_child_shard_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_child_shards_for_complete_parity",
+        ROOT / "scripts" / "gen-lean-u2-official-child-shards.py",
+    )
+    data = load_json(U2_CHILD_SHARDS)
+    failures = checker.validate_authority(data)
+    if failures:
+        raise RuntimeError("invalid U2 child-shard authority: " + "; ".join(failures))
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "policy": data["policy"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+    }
+
+
 def execution_evidence_snapshot() -> dict[str, Any]:
     checker = load_script(
         "lean_execution_evidence_for_complete_parity",
@@ -815,6 +835,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         AXIOM_LEDGER,
         U2_AUTHORITY,
         U2_CI_PROFILES,
+        U2_CHILD_SHARDS,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -828,6 +849,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_u2_test_authority.py",
         ROOT / "scripts" / "gen-lean-u2-official-ci-profiles.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_official_ci_profiles.py",
+        ROOT / "scripts" / "gen-lean-u2-official-child-shards.py",
+        ROOT / "scripts" / "tests" / "test_lean_u2_official_child_shards.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -869,6 +892,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "axiom_ledger": axiom_snapshot(),
             "u2_test_authority": u2_test_snapshot(),
             "u2_ci_profile_authority": u2_ci_profile_snapshot(),
+            "u2_child_shard_authority": u2_child_shard_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -944,6 +968,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     axioms = bounded["axiom_ledger"]
     u2_tests = bounded["u2_test_authority"]
     u2_ci = bounded["u2_ci_profile_authority"]
+    u2_shards = bounded["u2_child_shard_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1011,6 +1036,14 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_ci['derivation']['selection_sets']} exact selection sets; "
             f"{u2_ci['outcomes']['official_executed_attempts']} official executions "
             "and zero parity credit.",
+            f"- U2 child-shard derivation: "
+            f"{u2_shards['summary']['distinct_membership_plans']} distinct ordered "
+            f"memberships, {u2_shards['summary']['physical_child_shards']} physical "
+            f"shards, {u2_shards['summary']['selection_expanded_shard_occurrences']} "
+            f"selection-expanded shard occurrences, and "
+            f"{u2_shards['summary']['attempt_expanded_shard_occurrences']:,} "
+            "attempt-expanded shard occurrences. All 111 attempt bindings remain "
+            "not-run; execution, pairing, performance, and parity credit remain zero.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "
