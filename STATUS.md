@@ -640,8 +640,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   16 GiB process adapter, harmless stack and nine-dedicated-task controls,
   inherited 124/67/56/1 tiered closure, five focused tests, and CI/generator
   integration. No R4 control, harness, discovery, or selected process has run.
-  Next push this documentation checkpoint, then run the two controls and exact
-  external preflight from that remote-equal revision before invoking R4 once.
+  At clean pushed revision `80b8b86d`, the stack control passed but the fanout
+  source failed to elaborate because its task-join lambda omitted `do`; a
+  diagnostic repetition confirmed that exact syntax error. No selected root or
+  process was created. The source-first
+  [R1 correction](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-plan-2026-07-23.md)
+  froze only that token, and its
+  [implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-fanout-control-r1-implementation-2026-07-23.md)
+  records clean pushed commit `d8b0404b`. Next push this documentation
+  checkpoint, then rerun the two controls and exact external preflight from
+  that remote-equal revision before invoking R4 once.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7953,6 +7961,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Corrected the no-credit R4 fanout control without consuming
+  attempt 003.** The first clean pushed control run passed the stack probe but
+  exposed a missing `do` in the fanout source before task creation. Plan commit
+  `2405741e` froze the one-token correction; implementation `d8b0404b` applies
+  it and refreshes tests/generator identity. No selected source, harness,
+  discovery, evidence root, or process exists.
 
 - **2026-07-23 — Implemented and pushed M2 R4 attempt 003 without consuming
   it.** Commit `3748427d` binds the frozen R3 timeout authority, changes only

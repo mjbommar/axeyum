@@ -89,6 +89,7 @@ class LeanU2OfficialExecutionM2R4Tests(unittest.TestCase):
         )
 
     def test_fanout_control_is_harmless_bound_and_cleanup_sensitive(self) -> None:
+        self.assertIn(b"fun task => do IO.ofExcept", R4.FANOUT_SOURCE)
         with tempfile.TemporaryDirectory(prefix="axeyum-r4-fanout-test-") as temporary:
             toolchain = Path(temporary) / "toolchain"
             (toolchain / "bin").mkdir(parents=True)

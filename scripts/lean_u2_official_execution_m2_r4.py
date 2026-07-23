@@ -79,7 +79,7 @@ FANOUT_SCHEMA = "axeyum-lean-u2-official-execution-m2-r4-fanout-control-v1"
 FANOUT_SUCCESS = b"R4_FANOUT_OK|tasks=9|sum=36\n"
 FANOUT_SOURCE = '''def main : IO Unit := do
   let tasks <- (List.range 9).mapM fun i => IO.asTask (prio := .dedicated) (pure i)
-  let values <- tasks.mapM fun task => IO.ofExcept (← IO.wait task)
+  let values <- tasks.mapM fun task => do IO.ofExcept (← IO.wait task)
   IO.println s!"R4_FANOUT_OK|tasks={values.length}|sum={values.foldl (fun a b => a + b) 0}"
 '''.encode("utf-8")
 
