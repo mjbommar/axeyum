@@ -649,3 +649,46 @@ representation — the open structural item).
 **Note.** The SMT-COMP resume README warned `main` was RED (missing
 `ExprNode::Proj` match arm in `quantifier.rs:537`). That blocker is **already
 resolved upstream** — `cargo check --workspace` is green at `4b0cef35`.
+
+---
+
+### Cycle 30 — 2026-07-22 (~18:00–19:30 EDT) — ★ MBQI landed + the A/B reality check
+
+**The SMT lane finally shipped decide-rate-adjacent CODE** (after 5 rounds of
+selection provenance S0–S4): `abbf7abd feat(quant): check finite-profile MBQI
+models` (→ main `f37b3b9e`). New `quant_uf_model_sat_cert.rs` (+311) does the
+finite-profile *proof*; `mbqi_model_finder.rs` is now the search-side bridge;
+`certify_all_universals` returns a certificate ONLY when the model is
+independently proved to satisfy every universal, else declines. Wired into
+`auto`/`capabilities`/`support_matrix`. **Gate: GREEN** — `mbqi_model_finder`
+12 tests + `quantified_uflia_model_finder_differential_fuzz_disagree_zero`
+(154 s, **0 disagreements** vs reference) + `cargo check --workspace` exit 0.
+
+**★ A/B on real SMT-LIB (the user asked "does it flip to green?") — answer: NO.**
+Built old (pre-MBQI) vs new (MBQI) binaries, ran on 29 quantified-sat
+UF/UFLIA/UFNIA/AUFLIA benchmarks + synthetic on-fragment cases:
+**0 net new decides** (28 still `unknown`, 1 already-sat, **0 wrong**). MBQI IS
+reachable (CLI decides `∀x:Int. f(x)≥0` → sat, checked) and sound, but everything
+it decides the pre-MBQI binary *already* decided. **Corrected my over-claim:** this
+commit **hardens existing narrow MBQI to be proof-carrying**, it does NOT expand
+coverage. The real lever — general model-based instantiation (T2.6.5), MAM,
+trigger inference — is still ahead. **Decide-rate on real quantified problems:
+unchanged.** (Lesson: green tests ≠ moved needle; test capability on real
+benchmarks, exactly as the user pushed.)
+
+**CAS broad-gap-probe waves** (branches `bignum-wz-base` → `broad-gap-probe-*` →
+`inverse-laplace-repeated-quadratic`): order-255 squared-binomial moments +
+Z-transform families + symmetric rational-trig Fourier periods — **528 tests**,
+all capped-gate-green. **Lean-parity**: still docs/registry (TL0.7.x checkpoint
+store/evidence/acceptance) — building the parity-tracking machinery, honest-zero.
+
+**Thermal lesson (logged to memory).** The order-255 CAS gate drives this host to
+~90–93 °C by itself; run it thread-capped (`RAYON_NUM_THREADS=4 … --jobs 4 --
+--test-threads 4`) in the background, keep the merge staged until green, and do NOT
+kill/restart over a blip (governor self-protects; restart wastes ~15 min + more heat).
+
+**Honest scoreboard (~180 commits, 59 merges):** soundness parity delivered +
+verified (WRONG→0 re-staged); quantifier path now proof-carrying (but not more
+capable); CAS moment/transform machinery deep; Lean nested-inductive done + full
+parity registry building. **The QF_*/quantifier COVERAGE gap remains ~50% decided
+and essentially unmoved** — the climb (plan Ranks 1–2, 5) is still not underway.
