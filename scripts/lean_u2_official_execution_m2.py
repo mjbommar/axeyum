@@ -907,7 +907,6 @@ def build_case_records(
     spec: dict[str, Any],
     terminal: dict[str, Any],
     junit: dict[str, Any],
-    post: dict[str, Any],
 ) -> list[dict[str, Any]]:
     spec_failures = validate_spec(spec)
     if spec_failures:
@@ -919,10 +918,8 @@ def build_case_records(
         not isinstance(terminal, dict)
         or not BASE.HEX64.fullmatch(str(terminal.get("record_sha256", "")))
         or junit.get("terminal_sha256") != terminal["record_sha256"]
-        or not BASE.valid_seal(post, POST_SCHEMA)
-        or post.get("junit_sha256") != junit["record_sha256"]
     ):
-        raise M2ContractError("M2 case terminal/JUnit/post linkage drift")
+        raise M2ContractError("M2 case terminal/JUnit linkage drift")
     outcomes = {row["id"]: row["outcome"] for row in junit["cases"]}
     records = []
     for ordinal, case in enumerate(selected_contract()["cases"]):
@@ -947,7 +944,6 @@ def build_case_records(
                     "parent": spec["parent"],
                     "terminal_sha256": terminal["record_sha256"],
                     "junit_sha256": junit["record_sha256"],
-                    "post_sha256": post["record_sha256"],
                     "outcome": outcome,
                     "local_shard_only": True,
                     "official_provider_claimed": False,
@@ -966,13 +962,12 @@ def validate_case_records(
     spec: dict[str, Any],
     terminal: dict[str, Any],
     junit: dict[str, Any],
-    post: dict[str, Any],
 ) -> list[str]:
     if not isinstance(records, list):
         return ["M2 case records are not a list"]
     try:
         expected = build_case_records(
-            spec=spec, terminal=terminal, junit=junit, post=post
+            spec=spec, terminal=terminal, junit=junit
         )
     except (KeyError, TypeError, M2ContractError) as error:
         return [f"M2 case records cannot be reconstructed: {error}"]
