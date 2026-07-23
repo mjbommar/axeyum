@@ -460,6 +460,11 @@ Required refresh points:
 - Generated artifacts need stable provenance fields: semantics version, rewrite
   rule set version, bit-blaster version, CNF encoder version, SAT backend
   version, seed, resource limits, and source corpus hash.
+- A differential comparison is a third artifact over two separately identified
+  executions. Each side retains its own command, environment, resource,
+  attempt, completion, result, and diagnostics; the comparison retains the
+  normalization/equivalence contract and exact expected-population identity.
+  An agreeing observed subset is not evidence that omitted rows agree.
 - Avoid adding public operators whose model replay cannot be implemented yet.
 - Treat model projection as a first-class output of every transformation, not a
   side table that can be dropped after solving.

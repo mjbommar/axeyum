@@ -200,6 +200,10 @@
           "detail": "Preregistered M3.0 independent complete-row review semantics: exact primary dispositions for all 3,723 cases and 408,374 applicable cells, secondary concurrence for risk-bearing rows, resumable append-only review with explicit supersession, fail-closed repair routing, and bounded TL0.6.4 classification acceptance with no accepted M2 parent, review event, or parity credit."
         },
         {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent official and Axeyum execution records, typed absent/invalid states, a separate normalization/comparison record, exact pair-population count/ID authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
+        },
+        {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
           "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },

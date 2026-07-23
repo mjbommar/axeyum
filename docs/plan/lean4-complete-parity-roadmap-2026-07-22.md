@@ -281,6 +281,19 @@ Any evidence defect returns to a new M2 correction/result. No M3 authority,
 assignment, event, disposition, TL0.6.4 acceptance, outcome, pair, performance
 row, or credit exists.
 
+TL0.6.5's
+[matched official/Axeyum execution plan](lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+now fixes the comparison contract before either required parent exists. It
+separates 3,723 case rows, 408,374 candidate execution slots, and the later
+layer-expanded comparison-obligation denominator; represents official Lean and
+native Axeyum as independent execution records; and makes normalization a
+third completed comparison object. Typed absent/invalid sides keep `not-run`
+and `invalid-run` rows visible. Exact per-population count/ID authorities mean
+one all-agree subset cannot satisfy G3. This is schema/preregistration progress
+only: no comparison authority, Axeyum process, native outcome, pair,
+performance row, or credit exists before complete accepted TL0.6.3 and
+TL0.6.4 parents.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -413,10 +426,13 @@ execution, and content/dependency-complete U2 classification.
    counts as trust closure.
 9. Land the native source/syntax substrate and first end-to-end
    source-to-independent-kernel cell before widening tactics or mathlib.
-10. Form the first native official/Axeyum U2 pair with exact normalization,
-   assurance, resources, and raw evidence; report overlap direction even when
-   both totals are equal, then regenerate the terminal scoreboard and keep the
-   public complete/full/100% guard closed until its switch derives true.
+10. After complete accepted TL0.6.3/TL0.6.4 parents, derive TL0.6.5's exact
+    comparison-obligation count and sorted-ID digest before any native launch;
+    then form the first official/Axeyum U2 pair with separate side identities,
+    exact normalization, assurance, resources, and raw comparison evidence.
+    Report overlap direction even when both totals are equal, retain every
+    missing/invalid obligation, and keep the public complete/full/100% guard
+    closed until its switch derives true.
 
 ## 7. The terminal claim switch
 

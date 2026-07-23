@@ -63,7 +63,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   fail-closed registry seed for exact U0-U9 populations, A0-A11 axes, paired
   outcome classes, G1-G10 terminal gates, and the public-claim guard. It
   derives current bounded K-profile, construct, task, and axiom facts while
-  granting zero terminal denominator or paired-cell credit.
+  granting zero terminal denominator or paired-cell credit. The corrected
+  paired schema gives official Lean and Axeyum separate execution records,
+  stores normalization/classification in a third comparison record, and makes
+  G3 depend on exact per-population expected counts and sorted-ID digests rather
+  than any nonempty agreeing subset.
 - [`lean-u2-test-authority-2026-07-22.md`](lean-u2-test-authority-2026-07-22.md),
   [`lean-u2-test-authority-v1.json`](lean-u2-test-authority-v1.json), and the
   generated [Markdown](generated/lean-u2-test-authority.md)/
@@ -429,6 +433,17 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   cannot sample, silently replay, or repair M2 in place. It creates no M3
   authority, assignment, event, disposition, TL0.6.4 acceptance, outcome,
   pair, performance row, or parity credit.
+- [`TL0.6.5 matched official/Axeyum execution plan`](lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+  — preregisters the post-classification comparison program without consuming
+  its missing TL0.6.3/TL0.6.4 parents. It distinguishes case, execution-slot,
+  and layer-expanded comparison-obligation denominators; gives official Lean
+  and native Axeyum separate executable/configuration/command/environment/
+  resource/attempt/completion/outcome/assurance identities; and stores
+  normalization and classification in a third comparison record. Typed
+  `not-run`/`invalid` sides plus per-population expected-count and sorted-ID
+  authorities prevent omitted rows and nonempty agreeing subsets from
+  satisfying G3. It authorizes no process and creates no native outcome, pair,
+  performance row, U2 promotion, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths

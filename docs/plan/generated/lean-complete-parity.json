@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "881a0d622cf242720d92fbec819fee5008c4cd0ab81bab6491219fe2ae668ce4"
+      "sha256": "aa2d3efe951f1881111f8f9999a8aee30a1745a36b4915cc385bccfc70783935"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -88,7 +88,11 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "28828996d6a50a8f2ae086548c3d8f9fefd5154861379f20a6ca948996b2a4a6"
+      "sha256": "d906a53ef37e6bd20252f2d0d45f66d61f2d78426598be94237272d6d01a25c3"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+      "sha256": "b471dcd7ed523ce1466a27715950ae2826e1270027150a4c54d90100e9d5518b"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
@@ -344,11 +348,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "315c18fd75cb185865f0352e962069750f077f0fceb2ce77a38db60592794504"
+      "sha256": "b0c4ced0bec2db169435bb262c9591c680856312f14c3d8953fcc2a41deb87e9"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "998424e56fdd21b642a4b8d121b2490962857f75e7984908cb92275c7e98cd61"
+      "sha256": "d2d5f9f24bae3cf6df4968036ac074dabc2fbacde0bef3751b86643066a4e918"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1468,8 +1472,8 @@
       "rows": 140,
       "status_counts": {
         "DONE": 27,
-        "PARTIAL": 7,
-        "TODO": 106,
+        "PARTIAL": 8,
+        "TODO": 105,
         "BLOCKED": 0
       }
     }
@@ -1660,6 +1664,10 @@
         {
           "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
           "detail": "Preregistered M3.0 independent complete-row review semantics: exact primary dispositions for all 3,723 cases and 408,374 applicable cells, secondary concurrence for risk-bearing rows, resumable append-only review with explicit supersession, fail-closed repair routing, and bounded TL0.6.4 classification acceptance with no accepted M2 parent, review event, or parity credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
+          "detail": "Preregistered TL0.6.5 matched-execution semantics: distinct case/execution-slot/comparison-obligation denominators, independent official and Axeyum execution records, typed absent/invalid states, a separate normalization/comparison record, exact pair-population count/ID authorities, non-vacuous G3 derivation, and zero execution or credit before complete accepted TL0.6.3/TL0.6.4 parents."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",

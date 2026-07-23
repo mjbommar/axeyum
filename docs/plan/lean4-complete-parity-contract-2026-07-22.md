@@ -311,15 +311,28 @@ fills a higher one.
 Every comparison cell must retain at least:
 
 - target release/commit and population ID;
-- normalized case ID, exact source bytes, dependency-closure digest, and source
-  family;
-- official and Axeyum executable/configuration identities;
-- command, environment, platform, resource envelope, attempt, and completion
-  identities;
-- layer being compared and the declared normalization;
-- official outcome, Axeyum outcome, assurance fields, diagnostics, duration,
-  peak RSS, and artifact sizes; and
-- links to raw output and independently checked artifacts.
+- normalized member and profile IDs, exact source bytes, dependency-closure
+  digest, source family, axis, and layer;
+- a distinct official execution record with its own executable, configuration,
+  command, environment, platform, resource envelope, attempt, completion,
+  outcome, assurance, diagnostics, duration, peak RSS, artifact size, and raw
+  evidence identities;
+- a structurally separate native Axeyum execution record with those same
+  execution-local fields and no borrowed official identity;
+- a third completed comparison record binding the declared normalization,
+  exact comparison contract/result, taxonomy outcome, and retained raw/
+  normalized diff evidence; and
+- typed `complete`, `not-run`, or `invalid` state per execution. Missing values
+  are JSON `null`, never fabricated zero digests or borrowed attempts.
+
+The executable
+[TL0.6.5 contract](lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+corrects the registry's original flat shape before any pair exists. A
+comparison is a third evidence object over two independent executions, not a
+shared command/environment/attempt record. It also registers an exact
+count-and-sorted-ID authority for each U0-U9 paired population. G3 requires all
+ten authorities to be `complete_authority` and every expected cell to agree;
+one nonempty all-agree subset cannot satisfy it.
 
 The result taxonomy is:
 
@@ -337,6 +350,15 @@ The result taxonomy is:
 Totals are always accompanied by exact overlap. `agree-success = N` alone is
 insufficient without the `official-only`, `axeyum-only`, mismatch,
 unadjudicated, and not-run denominators.
+
+Outcome/state coherence is fail-closed. Agreement, directional difference,
+semantic mismatch, and unadjudicated comparison require two complete side
+records. `not-run` requires at least one absent side and no invalid side;
+`invalid-run` requires at least one invalid side. A completed timeout, resource
+exhaustion, or supported decline remains a completed typed execution and can
+produce a directional outcome. Total absence of launch/completion is
+`not-run`; inconsistent pins, artifacts, or attempt evidence are
+`invalid-run`, even after exit zero.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 

@@ -386,6 +386,20 @@ Again, there are distinct targets:
   representative, silently replay, or repair M2 in place. No accepted M2
   parent, M3 authority, assignment, review event, disposition, TL0.6.4
   acceptance, outcome, pair, performance row, or parity credit exists.
+  TL0.6.5's
+  [matched-execution plan](plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
+  now corrects the terminal pair schema before any pair exists. Official Lean
+  and native Axeyum each retain independent executable, configuration,
+  command, environment, platform, resource, attempt, completion, outcome,
+  assurance, diagnostics, metrics, and evidence identities; normalization and
+  taxonomy live in a third comparison record. Separate case, 408,374 candidate
+  execution-slot, and future layer-expanded comparison-obligation denominators
+  prevent accidental count collapse. Per-population expected-count/sorted-ID
+  authorities and typed `not-run`/`invalid` sides prevent a nonempty agreeing
+  subset or omitted failures from satisfying G3. This is contract/schema
+  progress only: the required parents, comparison authority, Axeyum process,
+  native outcome, pair, performance row, U2 promotion, and parity credit remain
+  absent.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and
