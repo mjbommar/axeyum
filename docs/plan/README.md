@@ -447,10 +447,12 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   nonempty agreeing subsets from satisfying G3. The accepted
   [R1 content-seal correction](lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md)
   recomputes versioned execution/comparison/cell seals and binds both cited
-  execution records. The preregistered
-  [R2 outcome-derivation correction](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md)
+  execution records. The accepted
+  [R2 outcome-derivation correction](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md)
   adds typed per-side result classes and side-specific normalized-observable
-  identities so the taxonomy is derived instead of merely sealed. It
+  identities so the taxonomy is derived instead of merely sealed; its
+  [source-first plan](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md)
+  freezes the exact mapping and controls. It
   authorizes no process and creates no native outcome, pair, performance row,
   U2 promotion, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)

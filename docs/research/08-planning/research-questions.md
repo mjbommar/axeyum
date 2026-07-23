@@ -965,12 +965,16 @@ Out of scope:
     comparison; comparison and common identity are sealed by the whole cell;
     and per-U0-U9 expected-count, sorted-ID, and sorted-cell-seal authorities
     prevent a nonempty agreeing subset or ID-preserving content substitution
-    from satisfying G3. This corrects the
+    from satisfying G3. Each complete side also projects a typed result class,
+    the comparison binds separate normalized-observable identities, and the
+    eight-class outcome is derived from state/result/normalization coherence
+    rather than trusted because it is sealed. This corrects the
     empty pre-observation registry under ADR-0344's accepted per-result identity
     and ADR-0343's occurrence/content/population separation; it does not create
     a competing evidence policy. See the
     [TL0.6.5 plan](../../plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md)
-    and [R1 seal result](../../plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md).
+    [R1 seal result](../../plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md),
+    and [R2 outcome result](../../plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md).
 - [x] When two theories exist, is Nelson-Oppen combination implemented
       directly or via a CDCL(T) core from the start?
   - Answer: expose each live combined theory through the shared `TheorySolver`

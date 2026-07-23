@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "245e6b8864e099a91b571fe1267f5806770e2fc8eaa1c03cad138fbb80f728a6"
+      "sha256": "15799218f5ad6438f945f44d583cbe8e118c230293b610baf7f2e6f720a675b5"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -88,7 +88,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "8c0fc367138d46f6173d92264eba869dc1e325c52c11dae1ae998d1c058188f2"
+      "sha256": "de78daa07d33b92fe4581b1e4004ab77e2463b3d1a06b88439a775d0dc1938f1"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-content-seals-r1-result-2026-07-23.md",
@@ -97,6 +97,10 @@
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
       "sha256": "5bcbc34f3d11828132a04266ba6d01ac3be101771d2d4e5bc84b37b5ca0c4293"
+    },
+    {
+      "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+      "sha256": "4a2c07b6f8e9d9cd8d30d1b9de5baf698a57b85677a57edfffdae09ccf408b14"
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
@@ -356,11 +360,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "ebd713ee2c3d08940331df6cd0f6eedde8330d044cb9656776acff181a38e58b"
+      "sha256": "262bed58ef31f1e699960a7b0c786ccbd304040f78d65486ab63aafbf10b24b1"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "dab6370b1c6eb51352cf5396d7dcdc3eac38ddc0fe6680d79c1e5f6493dff1fd"
+      "sha256": "d1fed3fd4a915cbfaaf87fb0790752784c06a27a99a7f78e498768801de4045d"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1684,6 +1688,10 @@
         {
           "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-plan-2026-07-23.md",
           "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
+        },
+        {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R2 schema result: all eight outcomes derive from typed side states/results and normalized-observable equality, including fully resealed semantic mutation controls; all real pair and parity counters remain zero."
         },
         {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",

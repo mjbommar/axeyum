@@ -289,8 +289,11 @@ layer-expanded comparison-obligation denominator; represents official Lean and
 native Axeyum as independent execution records; and makes normalization a
 third completed comparison object. Typed absent/invalid sides keep `not-run`
 and `invalid-run` rows visible. Exact per-population count/ID/cell-seal
-authorities mean
-one all-agree subset cannot satisfy G3. This is schema/preregistration progress
+authorities mean one all-agree subset cannot satisfy G3. R1 recomputes every
+record/cell/population seal; R2 adds typed complete-side result classes and
+separate official/Axeyum normalized-observable identities, then derives all
+eight outcomes. Completion alone can no longer claim agreement. This is
+schema/validator progress
 only: no comparison authority, Axeyum process, native outcome, pair,
 performance row, or credit exists before complete accepted TL0.6.3 and
 TL0.6.4 parents.

@@ -427,8 +427,10 @@ state.
 > controls are now closed. Official U2 outcomes remain open under TL0.6.3;
 > exact paired records remain later TL0.6.5 work. Their preregistered schema
 > now recomputes execution/comparison/cell seals and binds each population by
-> count, sorted IDs, and sorted cell seals; this is contract hardening, not an
-> observed pair or parity credit.
+> count, sorted IDs, and sorted cell seals. It also requires typed complete-side
+> result classes and distinct normalized-observable identities, deriving all
+> eight comparison outcomes instead of trusting a sealed label. This is
+> contract hardening, not an observed pair or parity credit.
 > TL0.7.2's source-first
 > [process-adapter plan](docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md)
 > was pushed before implementation or probes. The subsequent

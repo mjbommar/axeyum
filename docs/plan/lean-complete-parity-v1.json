@@ -212,6 +212,10 @@
           "detail": "Preregistered TL0.6.5 R2 schema correction: complete side records project typed success/reject/decline/timeout/resource/failure classes, comparisons bind separate canonical normalized identities, and all eight comparison outcomes are derived rather than trusted; this authorizes no process or credit."
         },
         {
+          "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md",
+          "detail": "Accepted bounded TL0.6.5 R2 schema result: all eight outcomes derive from typed side states/results and normalized-observable equality, including fully resealed semantic mutation controls; all real pair and parity counters remain zero."
+        },
+        {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
           "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },

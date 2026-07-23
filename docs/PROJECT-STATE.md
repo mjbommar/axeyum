@@ -392,11 +392,16 @@ Again, there are distinct targets:
   and native Axeyum each retain independent executable, configuration,
   command, environment, platform, resource, attempt, completion, outcome,
   assurance, diagnostics, metrics, and evidence identities; normalization and
-  taxonomy live in a third comparison record. Separate case, 408,374 candidate
+  taxonomy live in a third comparison record. R1 seals both executions, the
+  comparison, the whole cell, and the sorted population cell-seal list. R2 now
+  requires a typed result class on each complete side, retains separate
+  official/Axeyum normalized-observable identities, and derives all eight
+  outcomes instead of trusting a sealed label. Separate case, 408,374 candidate
   execution-slot, and future layer-expanded comparison-obligation denominators
-  prevent accidental count collapse. Per-population expected-count/sorted-ID
-  authorities and typed `not-run`/`invalid` sides prevent a nonempty agreeing
-  subset or omitted failures from satisfying G3. This is contract/schema
+  prevent accidental count collapse. Per-population expected-count/sorted-ID/
+  sorted-cell-seal authorities and typed `not-run`/`invalid` sides prevent a
+  nonempty agreeing subset, content substitution, or omitted failures from
+  satisfying G3. This is contract/schema
   progress only: the required parents, comparison authority, Axeyum process,
   native outcome, pair, performance row, U2 promotion, and parity credit remain
   absent.

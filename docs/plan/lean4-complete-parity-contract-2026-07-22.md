@@ -367,6 +367,10 @@ completed timeout, resource exhaustion, or supported decline remains a
 completed typed execution and can produce a directional outcome. Total absence
 of launch/completion is `not-run`; inconsistent pins, artifacts, or attempt
 evidence are `invalid-run`, even after exit zero.
+The accepted
+[R2 result](lean-u2-matched-execution-tl0.6.5-outcome-derivation-r2-result-2026-07-23.md)
+implements this derivation with positive coverage for all eight outcomes and
+fully resealed semantic mutation controls.
 
 ### 7.1 TL0.7.1 execution-evidence checkpoint
 

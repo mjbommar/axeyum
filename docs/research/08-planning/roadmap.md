@@ -55,6 +55,12 @@ Last updated: 2026-07-23
 > each U0-U9 population authority binds count, sorted IDs, and sorted cell
 > seals. This closes ID-preserving content substitution without changing the
 > current zero-outcome, zero-pair, zero-credit boundary.
+> R2 additionally separates execution completion from semantic result and
+> correctness: each complete side projects a typed result class, comparisons
+> bind distinct official/Axeyum normalized-observable identities, and the
+> validator derives all eight outcomes. Fully resealed result/normalization
+> mutations cannot preserve stale agreement. Layer normalizers and real pairs
+> remain future post-parent work.
 > M2.1's 4,092-source/32-batch/14-control/39-process input authority, runner,
 > and full-parser comparator are now pushed and CI-gated; the runner also has
 > preregistered live file-backed stream ceilings and sealed launch failures.
