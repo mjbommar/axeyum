@@ -303,7 +303,7 @@ def build_readiness(
 
 
 def validate_readiness(
-    readiness: dict[str, Any], *, repository_root: Path
+    readiness: dict[str, Any], *, repository_root: Path, inspect_current: bool = True
 ) -> dict[str, Any]:
     if set(readiness) != READINESS_FIELDS or readiness.get("schema") != READINESS_SCHEMA:
         raise ContractError("full-preparation readiness field/schema mismatch")
@@ -312,17 +312,54 @@ def validate_readiness(
     root = repository_root.resolve(strict=True)
     if readiness.get("repository_root") != str(root):
         raise ContractError("full-preparation readiness root mismatch")
-    observed = build_readiness_state(root)
-    for field in (
-        "head_commit",
-        "origin_main_commit",
-        "worktree_status_sha256",
-        "worktree_clean",
+    if type(inspect_current) is not bool:
+        raise ContractError("inspect_current must be Boolean")
+    recorded_head = readiness.get("head_commit")
+    recorded_origin = readiness.get("origin_main_commit")
+    for value in (recorded_head, recorded_origin):
+        if (
+            not isinstance(value, str)
+            or len(value) != 40
+            or any(character not in "0123456789abcdef" for character in value)
+        ):
+            raise ContractError("full-preparation readiness commit mismatch")
+        if _commit(root, value) != value:
+            raise ContractError("full-preparation readiness commit object drift")
+    status_sha256 = readiness.get("worktree_status_sha256")
+    worktree_clean = readiness.get("worktree_clean")
+    if (
+        not isinstance(status_sha256, str)
+        or len(status_sha256) != 64
+        or any(character not in "0123456789abcdef" for character in status_sha256)
+        or type(worktree_clean) is not bool
+        or (worktree_clean and status_sha256 != _sha256_bytes(b""))
     ):
-        if readiness.get(field) != observed[field]:
-            raise ContractError("full-preparation readiness repository drift")
+        raise ContractError("full-preparation readiness worktree state mismatch")
+    observed = (
+        build_readiness_state(root)
+        if inspect_current
+        else {
+            "head_commit": recorded_head,
+            "origin_main_commit": recorded_origin,
+            "worktree_status_sha256": status_sha256,
+            "worktree_clean": worktree_clean,
+        }
+    )
+    if inspect_current:
+        for field in (
+            "head_commit",
+            "origin_main_commit",
+            "worktree_status_sha256",
+            "worktree_clean",
+        ):
+            if readiness.get(field) != observed[field]:
+                raise ContractError("full-preparation readiness repository drift")
     paths = readiness.get("required_paths")
-    if not isinstance(paths, list) or not paths:
+    if (
+        not isinstance(paths, list)
+        or not paths
+        or any(not isinstance(row, dict) for row in paths)
+    ):
         raise ContractError("full-preparation readiness path inventory mismatch")
     relative_paths = [row.get("path") for row in paths if isinstance(row, dict)]
     if (
@@ -349,12 +386,25 @@ def validate_readiness(
         }:
             raise ContractError("full-preparation readiness path row mismatch")
         relative = row["path"]
+        head_bytes = _git(root, "show", f"{recorded_head}:{relative}")
+        origin_bytes = _git(root, "show", f"{recorded_origin}:{relative}")
         local = root / relative
-        origin_bytes = _git(root, "show", f"origin/main:{relative}")
+        if inspect_current and (local.is_symlink() or not local.is_file()):
+            raise ContractError("full-preparation readiness local path drift")
+        expected_local_sha = (
+            sha256_file(local)
+            if inspect_current
+            else _sha256_bytes(head_bytes)
+        )
+        expected_equal = (
+            local.read_bytes() == origin_bytes
+            if inspect_current
+            else head_bytes == origin_bytes
+        )
         if (
-            row["local_sha256"] != sha256_file(local)
+            row["local_sha256"] != expected_local_sha
             or row["origin_main_sha256"] != _sha256_bytes(origin_bytes)
-            or row["byte_identical"] is not (local.read_bytes() == origin_bytes)
+            or row["byte_identical"] is not expected_equal
         ):
             raise ContractError("full-preparation readiness path drift")
     gates = readiness.get("gate_observations")
