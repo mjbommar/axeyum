@@ -396,7 +396,11 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   4,757,134 bytes, but no post/case/completion exists and all credit is zero.
   The [R1 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
   freezes `TEST_LEAN_ARGS=(-j1)`, `TEST_LEANI_ARGS=(-j1)`, corrected worker
-  evidence, and declared preset logs. No R1 process has run. The child shard
+  evidence, and declared preset logs. A preregistered
+  [Git-mode amendment](docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
+  keeps strict live `0444` installation checks while making offline validation
+  depend on Git mode `100644`, exact bytes, seals, and manifest identity. No R1
+  process has run. The child shard
   cannot complete the parent/provider; even a valid pass adds only one local
   official outcome while Axeyum, pairs, performance, axes, gates, and parity
   remain zero.

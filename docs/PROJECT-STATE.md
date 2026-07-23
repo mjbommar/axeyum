@@ -322,7 +322,10 @@ Again, there are distinct targets:
   but no case or completion: its supposed one-worker control did not reach the
   Lean command-line shell. The [R1 plan](plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md)
   freezes explicit shell `-j1` and the preset log closure before retry. Attempt
-  001 has zero outcomes. A valid R1 result may create only one local official-
+  001's [Git-mode amendment](plan/lean-u2-official-execution-tl0.6.3-m0-r1-git-mode-amendment-2026-07-22.md)
+  separates live `0444` installation enforcement from Git-checkout validation,
+  where ordinary files are necessarily `100644`. Attempt 001 has zero
+  outcomes. A valid R1 result may create only one local official-
   case outcome, not parent-profile/provider, Axeyum, pairing, performance,
   axis, gate, or parity credit.
 
