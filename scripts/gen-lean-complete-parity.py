@@ -40,6 +40,9 @@ U2_NATIVE_CONTENT = (
 U2_NATIVE_DEPENDENCY = (
     ROOT / "docs" / "plan" / "lean-u2-native-dependency-v1.json"
 )
+U2_NATIVE_HEADER_CONTRACT = (
+    ROOT / "docs" / "plan" / "lean-u2-native-header-contract-m2.1-v1.json"
+)
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -749,6 +752,27 @@ def u2_native_dependency_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_native_header_contract_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_u2_native_header_contract_for_complete_parity",
+        ROOT / "scripts" / "lean_u2_native_dependency_m2_1.py",
+    )
+    data = load_json(U2_NATIVE_HEADER_CONTRACT)
+    failures = checker.validate_contract(data)
+    if failures:
+        raise RuntimeError(
+            "invalid U2 native-header contract: " + "; ".join(failures)
+        )
+    return {
+        "scope": data["scope"],
+        "status": data["status"],
+        "summary": data["summary"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+        "record_sha256": data["record_sha256"],
+    }
+
+
 def execution_evidence_snapshot() -> dict[str, Any]:
     checker = load_script(
         "lean_execution_evidence_for_complete_parity",
@@ -980,6 +1004,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NATIVE_SURFACES,
         U2_NATIVE_CONTENT,
         U2_NATIVE_DEPENDENCY,
+        U2_NATIVE_HEADER_CONTRACT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -1007,6 +1032,12 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         / "test_lean_u2_native_surface_content.py",
         ROOT / "scripts" / "gen-lean-u2-native-dependency.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_native_dependency.py",
+        ROOT / "scripts" / "lean_u2_native_dependency_m2_1.py",
+        ROOT / "scripts" / "lean_u2_header_full_parser.lean",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_native_dependency_m2_1.py",
         ROOT / "scripts" / "gen-lean-execution-evidence.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_evidence.py",
         ROOT / "scripts" / "lean_execution_process.py",
@@ -1079,6 +1110,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_native_surface_authority": u2_native_surface_snapshot(),
             "u2_native_content_authority": u2_native_content_snapshot(),
             "u2_native_dependency_authority": u2_native_dependency_snapshot(),
+            "u2_native_header_contract_authority": u2_native_header_contract_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1159,6 +1191,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_surfaces = bounded["u2_native_surface_authority"]
     u2_content = bounded["u2_native_content_authority"]
     u2_dependency = bounded["u2_native_dependency_authority"]
+    u2_header = bounded["u2_native_header_contract_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1269,6 +1302,21 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_dependency['summary']['native_outcomes']} / "
             f"{u2_dependency['summary']['paired_cells']} / "
             f"{u2_dependency['credits']['parity_credit']}.",
+            f"- U2 M2.1 header input/control contract: "
+            f"{u2_header['summary']['corpus_rows']:,} exact Lean sources / "
+            f"{u2_header['summary']['corpus_bytes']:,} bytes in "
+            f"{u2_header['summary']['batches']} deterministic batches, with "
+            f"{u2_header['summary']['controls']} frozen controls and "
+            f"{u2_header['summary']['planned_processes']} planned processes. "
+            "This is a pre-execution authority: observed processes, declared "
+            f"header edges, resolved nodes/edges, native outcomes, paired cells, "
+            f"and parity credit remain {u2_header['summary']['observed_processes']} / "
+            f"{u2_header['summary']['declared_header_edges']} / "
+            f"{u2_header['summary']['resolved_nodes']} / "
+            f"{u2_header['summary']['resolved_edges']} / "
+            f"{u2_header['summary']['native_outcomes']} / "
+            f"{u2_header['summary']['paired_cells']} / "
+            f"{u2_header['credits']['parity_credit']}.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "

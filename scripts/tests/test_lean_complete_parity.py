@@ -238,6 +238,29 @@ class LeanCompleteParityTests(unittest.TestCase):
             "scripts/gen-lean-u2-native-dependency.py",
             source_paths,
         )
+        header = first["bounded_snapshot"]["u2_native_header_contract_authority"]
+        self.assertEqual(header["summary"]["corpus_rows"], 4092)
+        self.assertEqual(header["summary"]["corpus_bytes"], 9_697_571)
+        self.assertEqual(header["summary"]["batches"], 32)
+        self.assertEqual(header["summary"]["controls"], 14)
+        self.assertEqual(header["summary"]["planned_processes"], 39)
+        self.assertEqual(header["summary"]["observed_processes"], 0)
+        self.assertEqual(header["summary"]["declared_header_edges"], 0)
+        self.assertFalse(header["claims"]["fast_parser_observed"])
+        self.assertFalse(header["claims"]["header_declarations_complete"])
+        self.assertTrue(all(value == 0 for value in header["credits"].values()))
+        self.assertIn(
+            "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
+            source_paths,
+        )
+        self.assertIn(
+            "scripts/lean_u2_native_dependency_m2_1.py",
+            source_paths,
+        )
+        self.assertIn(
+            "scripts/lean_u2_header_full_parser.lean",
+            source_paths,
+        )
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)
