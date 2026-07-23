@@ -32,12 +32,22 @@ if str(SMTCOMP) not in sys.path:
 
 from scripts import lean_execution_process as PROCESS  # noqa: E402
 from scripts import lean_execution_store as STORE  # noqa: E402
+from resume_contract import canonical_bytes  # noqa: E402
 from resume_fs import atomic_install_bytes, atomic_install_json  # noqa: E402
 
 
 PLAN = ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md"
 PREREGISTRATION_COMMIT = "cdc6b94f2ebe68cc4b2ac254ca79a99e8f6f6e00"
 PLAN_SHA256 = "6c8aeeadca17ac79b9b949f504b1a4b8a9bc1c52c8343e4f2eebcbd045158e90"
+R1_PLAN = ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-plan-2026-07-22.md"
+R1_PREREGISTRATION_COMMIT = "01d357d07b9fa699e42569ce27b085880f2c2a31"
+R1_PLAN_SHA256 = "bdf5348916db12668b0bed53ac67f1b5408f58a2efaecce7c54d95cb52045ec4"
+R1_AMENDMENT = ROOT / (
+    "docs/plan/lean-u2-official-execution-tl0.6.3-m0-r1-"
+    "git-mode-amendment-2026-07-22.md"
+)
+R1_AMENDMENT_COMMIT = "77623b4067093b518ad36b39bc848ae1847c59bb"
+R1_AMENDMENT_SHA256 = "13b3152b1f7e78cef2991b20d4403dc1f0c1d4940e2453436689ebca7b99ab28"
 RESULT_AUTHORITY = ROOT / "docs/plan/lean-u2-official-execution-tl0.6.3-m0-v1.json"
 RESULT_JSON = ROOT / "docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0.json"
 RESULT_MARKDOWN = ROOT / "docs/plan/generated/lean-u2-official-execution-tl0.6.3-m0.md"
@@ -87,12 +97,13 @@ CC_SHA256 = "b5f1b773a7c733738352000c92a077dc5852a1a2fc6d836b1e411be1e9ec5f88"
 DIFF_SHA256 = "0abb2ec6b0a64efc7fa84747a8534f1d10a2d823599de932a8df4cabf31ca98e"
 PERL_SHA256 = "50036d900bc669506ea0899f0ad5c117806d6815c606cba442f955cd1b2ee1cf"
 
-LANE_ID = "official-ctest-local-8g-v1"
+LANE_ID = "official-ctest-local-8g-lean-j1-v2"
 MEMORY_LIMIT_BYTES = 8_589_934_592
 WALL_TIMEOUT_MS = 120_000
 TERMINATE_GRACE_MS = 1_000
 RUN_ID = "tl0.6.3-m0-release-tag-linux-release-compile-534"
-ATTEMPT_ID = "attempt-001"
+ATTEMPT_ID = "attempt-002"
+SEQUENCE = 2
 SHARD_ID = "release-tag-l3-linux-release-compile-534-singleton-v1"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
@@ -106,6 +117,7 @@ REPOSITORY_INPUTS = {
     "docs/plan/lean-execution-acceptance-v1.json": "bd3f01fc5ac61bbcfdf23a82055fd58d47cf8167240727ec35e51ceb2a4be05f",
     "scripts/lean_execution_process.py": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
     "scripts/lean_execution_store.py": "06d388a49d927a2f1b65a4632cd6297b140a579cf80edd5177fc6849b62ec679",
+    "scripts/smtcomp_repro/resume_contract.py": "4713707b26d81e0e5444acc7c653b461fa79c2a94c392873c8565b443ba33930",
     "scripts/smtcomp_repro/resume_fs.py": "1968e7b6424c2dd9273bff5041e96fc21b83ec01b2205dcc840d5dc942be1aec",
 }
 
@@ -120,6 +132,40 @@ ZERO_NON_OFFICIAL_CREDITS = {
     "parent_profile_completions": 0,
     "provider_completions": 0,
 }
+
+FAILED_EVIDENCE_ROOT = ROOT / (
+    "docs/plan/evidence/"
+    "lean-u2-official-execution-tl0.6.3-m0-attempt-001-failed"
+)
+FAILED_EVIDENCE_FILE_COUNT = 18
+FAILED_EVIDENCE_BYTES = 4_757_134
+FAILED_EVIDENCE_MANIFEST_DOMAIN = (
+    "axeyum-lean-u2-official-execution-attempt-evidence-v1"
+)
+FAILED_EVIDENCE_MANIFEST_SHA256 = (
+    "7b8452e0a003a11867d2fc2150c00af99a0a61f41b10238b88a3ed2bb3838065"
+)
+FAILED_EVIDENCE_JSON_PATHS = (
+    "harness.json",
+    "junit.json",
+    "prelaunch.json",
+    "run.json",
+    "source.json",
+    "spec.json",
+    "terminal.json",
+    "toolchain.json",
+    "tools.json",
+)
+FAILED_TERMINAL_SHA256 = (
+    "93d033a92b1ba13631cf754ec717cf6058afb5a76e4a617eab1891331d93a55e"
+)
+FAILED_JUNIT_SHA256 = (
+    "03b4aec0d34fdbbadd9acae8327934d7d90da87593ae74ecd49cc01f0069f687"
+)
+UNICODE_SOURCE_PATHS = (
+    "tests/compile/utf8Path.lean.英語",
+    "tests/elab/utf8英語.lean",
+)
 
 SPEC_SCHEMA = "axeyum-lean-u2-official-execution-spec-v1"
 SOURCE_SCHEMA = "axeyum-lean-u2-official-execution-source-v1"
@@ -136,15 +182,28 @@ COMPLETION_SCHEMA = "axeyum-lean-u2-official-execution-completion-v1"
 RESULT_SCHEMA = "axeyum-lean-u2-official-execution-result-v1"
 SUMMARY_SCHEMA = "axeyum-lean-u2-official-execution-summary-v1"
 
-GENERATED_SOURCE_PATHS = (
+CASE_GENERATED_SOURCE_PATHS = (
     "tests/with_stage1_test_env.sh",
     "tests/compile/534.lean.c",
     "tests/compile/534.lean.out",
     "tests/compile/534.lean.out.produced",
 )
+CTEST_SOURCE_PATHS = (
+    "build/release/Testing/Temporary/CTestCostData.txt",
+    "build/release/Testing/Temporary/LastTest.log",
+    "build/release/Testing/Temporary/LastTestsFailed.log",
+)
+CTEST_REQUIRED_SOURCE_PATHS = CTEST_SOURCE_PATHS[:2]
+GENERATED_SOURCE_PATHS = (*CASE_GENERATED_SOURCE_PATHS, *CTEST_SOURCE_PATHS)
 EVIDENCE_GENERATED_PATHS = {
-    relative: f"artifacts/generated/{Path(relative).name}"
-    for relative in GENERATED_SOURCE_PATHS
+    **{
+        relative: f"artifacts/generated/{Path(relative).name}"
+        for relative in CASE_GENERATED_SOURCE_PATHS
+    },
+    **{
+        relative: f"artifacts/ctest/{Path(relative).name}"
+        for relative in CTEST_SOURCE_PATHS
+    },
 }
 BASE_EVIDENCE_PATHS = (
     "source.json",
@@ -163,7 +222,10 @@ BASE_EVIDENCE_PATHS = (
     "raw/junit.xml",
     "junit.json",
     "post.json",
-    *(EVIDENCE_GENERATED_PATHS[path] for path in GENERATED_SOURCE_PATHS),
+    *(
+        EVIDENCE_GENERATED_PATHS[path]
+        for path in (*CASE_GENERATED_SOURCE_PATHS, *CTEST_REQUIRED_SOURCE_PATHS)
+    ),
     "case.json",
     "completion.json",
 )
@@ -173,7 +235,9 @@ class U2ExecutionError(ValueError):
     """The source, selection, process, JUnit, store, or credit contract failed."""
 
 
-def canonical_bytes(value: Any) -> bytes:
+def legacy_canonical_bytes(value: Any) -> bytes:
+    """Attempt-001's frozen ASCII-escaping seal serializer."""
+
     return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
@@ -211,6 +275,21 @@ def valid_seal(value: Any, schema: str) -> bool:
         and value.get("schema") == schema
         and value.get("record_sha256")
         == domain_digest(
+            schema, {key: item for key, item in value.items() if key != "record_sha256"}
+        )
+    )
+
+
+def legacy_domain_digest(domain: str, value: Any) -> str:
+    return sha256_bytes(domain.encode("ascii") + b"\0" + legacy_canonical_bytes(value))
+
+
+def valid_legacy_seal(value: Any, schema: str) -> bool:
+    return (
+        isinstance(value, dict)
+        and value.get("schema") == schema
+        and value.get("record_sha256")
+        == legacy_domain_digest(
             schema, {key: item for key, item in value.items() if key != "record_sha256"}
         )
     )
@@ -270,6 +349,10 @@ def validate_repository_inputs() -> list[str]:
     failures = []
     if not PLAN.is_file() or sha256_file(PLAN) != PLAN_SHA256:
         failures.append("preregistration plan drift")
+    if not R1_PLAN.is_file() or sha256_file(R1_PLAN) != R1_PLAN_SHA256:
+        failures.append("R1 preregistration plan drift")
+    if not R1_AMENDMENT.is_file() or sha256_file(R1_AMENDMENT) != R1_AMENDMENT_SHA256:
+        failures.append("R1 Git-mode amendment drift")
     for relative, expected in REPOSITORY_INPUTS.items():
         path = ROOT / relative
         if not path.is_file() or sha256_file(path) != expected:
@@ -299,6 +382,120 @@ def _git(repo: Path, *args: str) -> str:
             + completed.stderr.decode("utf-8", errors="replace").strip()
         )
     return completed.stdout.decode("utf-8", errors="strict").strip()
+
+
+def failed_attempt_dependency(
+    *, live_readonly_validated: bool, git_index_validated: bool
+) -> dict[str, Any]:
+    return {
+        "path": FAILED_EVIDENCE_ROOT.relative_to(ROOT).as_posix(),
+        "implementation_revision": "bc59fda54a2b6d7aa253173e5203c0aa4c0461ca",
+        "attempt_id": "attempt-001",
+        "files": FAILED_EVIDENCE_FILE_COUNT,
+        "bytes": FAILED_EVIDENCE_BYTES,
+        "manifest_domain": FAILED_EVIDENCE_MANIFEST_DOMAIN,
+        "manifest_sha256": FAILED_EVIDENCE_MANIFEST_SHA256,
+        "terminal_sha256": FAILED_TERMINAL_SHA256,
+        "junit_sha256": FAILED_JUNIT_SHA256,
+        "physical_utf8_canonical_validated": True,
+        "frozen_legacy_seals_validated": True,
+        "no_case_post_or_completion": True,
+        "official_outcomes": 0,
+        "parity_credit": 0,
+        "live_readonly_mode": {
+            "validated": live_readonly_validated,
+            "mode": "0444" if live_readonly_validated else None,
+        },
+        "git_index_mode": {
+            "validated": git_index_validated,
+            "mode": "100644" if git_index_validated else None,
+        },
+    }
+
+
+def _validate_git_regular_modes(root: Path, relative_paths: list[str]) -> None:
+    try:
+        relative_root = root.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError as exc:
+        raise U2ExecutionError("failed evidence is outside the repository") from exc
+    staged = _git(ROOT, "ls-files", "--stage", "--", relative_root)
+    rows: dict[str, str] = {}
+    for line in staged.splitlines():
+        metadata, separator, path = line.partition("\t")
+        fields = metadata.split()
+        if not separator or len(fields) != 3:
+            raise U2ExecutionError("malformed Git index row for failed evidence")
+        rows[path] = fields[0]
+    expected = {f"{relative_root}/{relative}" for relative in relative_paths}
+    if set(rows) != expected or any(rows[path] != "100644" for path in expected):
+        raise U2ExecutionError("failed evidence Git path or regular-file mode drift")
+
+
+def validate_failed_attempt(
+    root: Path = FAILED_EVIDENCE_ROOT,
+    *,
+    require_live_readonly: bool,
+    require_git_index: bool,
+) -> dict[str, Any]:
+    if not root.is_dir() or root.is_symlink():
+        raise U2ExecutionError("failed-attempt evidence root must be a real directory")
+    rows: list[dict[str, Any]] = []
+    for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+        relative = path.relative_to(root).as_posix()
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            raise U2ExecutionError(f"symlinked failed-attempt evidence: {relative}")
+        if stat.S_ISREG(info.st_mode):
+            if require_live_readonly and stat.S_IMODE(info.st_mode) != 0o444:
+                raise U2ExecutionError(
+                    f"live failed-attempt evidence is not mode 0444: {relative}"
+                )
+            rows.append(file_record(relative, path))
+        elif not stat.S_ISDIR(info.st_mode):
+            raise U2ExecutionError(f"non-regular failed-attempt evidence: {relative}")
+    if (
+        len(rows) != FAILED_EVIDENCE_FILE_COUNT
+        or sum(row["bytes"] for row in rows) != FAILED_EVIDENCE_BYTES
+        or domain_digest(FAILED_EVIDENCE_MANIFEST_DOMAIN, rows)
+        != FAILED_EVIDENCE_MANIFEST_SHA256
+    ):
+        raise U2ExecutionError("failed-attempt path, byte, hash, or manifest drift")
+    paths = [row["path"] for row in rows]
+    if any(path in paths for path in ("post.json", "case.json", "completion.json")):
+        raise U2ExecutionError("failed attempt gained a retrospective outcome")
+    for relative in FAILED_EVIDENCE_JSON_PATHS:
+        record = load_canonical(root / relative)
+        schema = record.get("schema") if isinstance(record, dict) else None
+        if not isinstance(schema, str) or not valid_legacy_seal(record, schema):
+            raise U2ExecutionError(f"failed-attempt legacy seal drift: {relative}")
+    source = load_canonical(root / "source.json")
+    source_paths = {
+        row.get("path") for row in source.get("files", []) if isinstance(row, dict)
+    }
+    if not set(UNICODE_SOURCE_PATHS).issubset(source_paths):
+        raise U2ExecutionError("failed source manifest lost frozen Unicode paths")
+    if load_canonical(root / "terminal.json").get("record_sha256") != FAILED_TERMINAL_SHA256:
+        raise U2ExecutionError("failed terminal identity drift")
+    if load_canonical(root / "junit.json").get("record_sha256") != FAILED_JUNIT_SHA256:
+        raise U2ExecutionError("failed JUnit identity drift")
+    if require_git_index:
+        _validate_git_regular_modes(root, paths)
+    return failed_attempt_dependency(
+        live_readonly_validated=require_live_readonly,
+        git_index_validated=require_git_index,
+    )
+
+
+def validate_live_readonly_tree(root: Path) -> None:
+    if not root.is_dir() or root.is_symlink():
+        raise U2ExecutionError("live evidence root must be a real directory")
+    for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
+        info = path.lstat()
+        if stat.S_ISLNK(info.st_mode):
+            raise U2ExecutionError(f"symlinked live evidence path: {relative}")
+        if stat.S_ISREG(info.st_mode) and stat.S_IMODE(info.st_mode) != 0o444:
+            raise U2ExecutionError(f"live evidence is not mode 0444: {relative}")
 
 
 def manifest_tree(root: Path) -> list[dict[str, Any]]:
@@ -381,9 +578,14 @@ def resource_envelope() -> dict[str, Any]:
         "memory_scope": "per-process-address-space",
         "memory_enforcement": "explicit-rlimit-as",
         "ctest_worker_limit": metric("observed", 1, "workers"),
-        "lean_worker_limit": metric("observed", 1, "workers"),
-        "thread_limit": metric("not-enforced", None, "threads"),
+        "ctest_worker_enforcement": "explicit-command-argument",
+        "lean_shell_worker_limit": metric("observed", 1, "workers"),
+        "lean_shell_worker_enforcement": "explicit-official-test-argument-array",
+        "generated_runtime_worker_limit": metric("requested", 1, "workers"),
+        "generated_runtime_worker_enforcement": "LEAN_NUM_THREADS",
+        "os_thread_limit": metric("not-enforced", None, "threads"),
         "task_stack_limit": metric("not-observed", None, "bytes"),
+        "task_stack_policy": "unmodified-Lean-default-no-s-option",
         "aggregate_memory_limit": metric("not-enforced", None, "bytes"),
         "swap_limit": metric("not-enforced", None, "bytes"),
         "wall_timeout": metric("observed", WALL_TIMEOUT_MS, "milliseconds"),
@@ -418,10 +620,15 @@ def build_spec(*, implementation_revision: str, source_root: Path, toolchain_roo
         {
             "schema": SPEC_SCHEMA,
             "preregistration_commit": PREREGISTRATION_COMMIT,
+            "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
+            "r1_plan_sha256": R1_PLAN_SHA256,
+            "r1_amendment_commit": R1_AMENDMENT_COMMIT,
+            "r1_amendment_sha256": R1_AMENDMENT_SHA256,
+            "failed_attempt_manifest_sha256": FAILED_EVIDENCE_MANIFEST_SHA256,
             "implementation_revision": implementation_revision,
             "run_id": RUN_ID,
             "attempt_id": ATTEMPT_ID,
-            "sequence": 1,
+            "sequence": SEQUENCE,
             "shard_id": SHARD_ID,
             "parent": {
                 "context_id": PARENT_CONTEXT_ID,
@@ -459,10 +666,16 @@ def validate_spec(spec: Any) -> list[str]:
         return ["spec identity drift"]
     if (
         spec.get("preregistration_commit") != PREREGISTRATION_COMMIT
+        or spec.get("r1_preregistration_commit") != R1_PREREGISTRATION_COMMIT
+        or spec.get("r1_plan_sha256") != R1_PLAN_SHA256
+        or spec.get("r1_amendment_commit") != R1_AMENDMENT_COMMIT
+        or spec.get("r1_amendment_sha256") != R1_AMENDMENT_SHA256
+        or spec.get("failed_attempt_manifest_sha256")
+        != FAILED_EVIDENCE_MANIFEST_SHA256
         or not HEX40.fullmatch(spec.get("implementation_revision", ""))
         or spec.get("run_id") != RUN_ID
         or spec.get("attempt_id") != ATTEMPT_ID
-        or spec.get("sequence") != 1
+        or spec.get("sequence") != SEQUENCE
         or spec.get("shard_id") != SHARD_ID
     ):
         failures.append("spec run/preregistration identity drift")
@@ -669,6 +882,8 @@ def render_environment_wrapper(source_root: Path, toolchain_root: Path) -> bytes
     return (
         "#!/usr/bin/env bash\n"
         f"export {variables}\n"
+        "TEST_LEAN_ARGS=(-j1)\n"
+        "TEST_LEANI_ARGS=(-j1)\n"
         'source "$TEST_DIR/util.sh"\n\n'
         'TEST_SCRIPT="$1"; shift\n'
         'cd "$(dirname "$TEST_SCRIPT")"\n'
@@ -870,7 +1085,7 @@ def execute_process(spec: dict[str, Any], private_root: Path, prelaunch_sha256: 
             "schema": TERMINAL_SCHEMA,
             "run_id": RUN_ID,
             "attempt_id": ATTEMPT_ID,
-            "sequence": 1,
+            "sequence": SEQUENCE,
             "prelaunch_sha256": prelaunch_sha256,
             "class": terminal_class,
             "exit_code": return_code if return_code is not None and return_code >= 0 else None,
@@ -1011,6 +1226,9 @@ def validate_source_record(record: Any) -> list[str]:
     ):
         if by_path.get(relative, {}).get("sha256") != expected:
             failures.append(f"source identity drift: {relative}")
+    for relative in UNICODE_SOURCE_PATHS:
+        if by_path.get(relative, {}).get("kind") != "file":
+            failures.append(f"source Unicode path missing: {relative}")
     return failures
 
 
@@ -1133,15 +1351,25 @@ def build_run_record(
     )
 
 
-def build_prelaunch(spec: dict[str, Any], run: dict[str, Any]) -> dict[str, Any]:
+def build_prelaunch(
+    spec: dict[str, Any],
+    run: dict[str, Any],
+    failed_attempt: dict[str, Any],
+) -> dict[str, Any]:
+    expected_failed = failed_attempt_dependency(
+        live_readonly_validated=True, git_index_validated=True
+    )
+    if failed_attempt != expected_failed:
+        raise U2ExecutionError("prelaunch failed-attempt dependency is not fully validated")
     return seal(
         {
             "schema": PRELAUNCH_SCHEMA,
             "run_id": RUN_ID,
             "attempt_id": ATTEMPT_ID,
-            "sequence": 1,
+            "sequence": SEQUENCE,
             "spec_sha256": spec["record_sha256"],
             "run_sha256": run["record_sha256"],
+            "failed_attempt": failed_attempt,
             "recorded_before_launch": True,
             "terminal": None,
             "selection_case_ids": [CASE_ID],
@@ -1247,7 +1475,10 @@ def build_post_record(
     source_root: Path,
     source: dict[str, Any],
     wrapper_bytes: bytes,
+    outcome: str,
 ) -> tuple[dict[str, Any], dict[str, bytes]]:
+    if outcome not in {"passed", "failed"}:
+        raise U2ExecutionError("post-run outcome is not decided")
     before = {row["path"]: row for row in source["files"]}
     after_rows = manifest_tree(source_root)
     after = {row["path"]: row for row in after_rows}
@@ -1258,8 +1489,23 @@ def build_post_record(
     undeclared = sorted(set(new_paths) - set(GENERATED_SOURCE_PATHS))
     if undeclared:
         raise U2ExecutionError("undeclared generated source artifacts: " + ", ".join(undeclared))
-    if "tests/with_stage1_test_env.sh" not in new_paths:
-        raise U2ExecutionError("generated environment wrapper is missing post-run")
+    present = set(new_paths)
+    required = {
+        "tests/with_stage1_test_env.sh",
+        *CTEST_REQUIRED_SOURCE_PATHS,
+    }
+    if outcome == "passed":
+        if CTEST_SOURCE_PATHS[2] in present:
+            raise U2ExecutionError("passing case retained LastTestsFailed.log")
+        expected = {*CASE_GENERATED_SOURCE_PATHS, *CTEST_REQUIRED_SOURCE_PATHS}
+        if present != expected:
+            raise U2ExecutionError("passing case did not create the exact declared artifact set")
+    else:
+        required.add(CTEST_SOURCE_PATHS[2])
+        if not required.issubset(present):
+            raise U2ExecutionError("failed case did not create the required CTest artifact set")
+    if any(after[path].get("kind") != "file" for path in new_paths):
+        raise U2ExecutionError("generated artifact is not a regular file")
     payloads = {path: (source_root / path).read_bytes() for path in new_paths}
     if payloads["tests/with_stage1_test_env.sh"] != wrapper_bytes:
         raise U2ExecutionError("generated environment wrapper mutated")
@@ -1272,6 +1518,12 @@ def build_post_record(
                 "original_file_count": len(before),
                 "original_files_unchanged": True,
                 "generated_paths": new_paths,
+                "case_generated_paths": [
+                    path for path in new_paths if path in CASE_GENERATED_SOURCE_PATHS
+                ],
+                "ctest_generated_paths": [
+                    path for path in new_paths if path in CTEST_SOURCE_PATHS
+                ],
                 "generated_files": generated,
                 "generated_files_sha256": domain_digest(
                     "axeyum-lean-u2-generated-files-v1", generated
@@ -1384,9 +1636,15 @@ def _accepted_readonly(path: Path) -> bool:
     return path.is_file() and not path.is_symlink() and stat.S_IMODE(path.stat().st_mode) == 0o444
 
 
-def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+def validate_evidence_root(
+    root: Path, *, require_live_readonly: bool = False
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     if not root.is_dir() or root.is_symlink():
         raise U2ExecutionError("official execution evidence root must be a real directory")
+    validate_failed_attempt(
+        require_live_readonly=False,
+        require_git_index=True,
+    )
     required_records = (
         "source.json", "toolchain.json", "tools.json", "harness.json", "spec.json",
         "run.json", "prelaunch.json", "terminal.json", "junit.json", "post.json",
@@ -1413,7 +1671,7 @@ def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, A
             raise U2ExecutionError(f"symlinked evidence path: {relative}")
         if path.is_file():
             actual.add(relative)
-            if not _accepted_readonly(path):
+            if require_live_readonly and not _accepted_readonly(path):
                 raise U2ExecutionError(f"accepted evidence is not read-only: {relative}")
     if actual != expected:
         raise U2ExecutionError("official execution evidence file set drift")
@@ -1506,9 +1764,13 @@ def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, A
         not valid_seal(prelaunch, PRELAUNCH_SCHEMA)
         or prelaunch.get("run_id") != RUN_ID
         or prelaunch.get("attempt_id") != ATTEMPT_ID
-        or prelaunch.get("sequence") != 1
+        or prelaunch.get("sequence") != SEQUENCE
         or prelaunch.get("spec_sha256") != spec.get("record_sha256")
         or prelaunch.get("run_sha256") != run.get("record_sha256")
+        or prelaunch.get("failed_attempt")
+        != failed_attempt_dependency(
+            live_readonly_validated=True, git_index_validated=True
+        )
         or prelaunch.get("recorded_before_launch") is not True
         or prelaunch.get("terminal") is not None
         or prelaunch.get("selection_case_ids") != [CASE_ID]
@@ -1527,7 +1789,7 @@ def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, A
         not valid_seal(terminal, TERMINAL_SCHEMA)
         or terminal.get("run_id") != RUN_ID
         or terminal.get("attempt_id") != ATTEMPT_ID
-        or terminal.get("sequence") != 1
+        or terminal.get("sequence") != SEQUENCE
         or terminal.get("prelaunch_sha256") != prelaunch.get("record_sha256")
         or terminal.get("class") != "exited"
         or terminal.get("signal") is not None
@@ -1563,6 +1825,10 @@ def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, A
         or post.get("original_file_count") != len(source_by_path)
         or post.get("original_files_unchanged") is not True
         or post.get("undeclared_paths") != []
+        or post.get("case_generated_paths")
+        != [path for path in generated_paths if path in CASE_GENERATED_SOURCE_PATHS]
+        or post.get("ctest_generated_paths")
+        != [path for path in generated_paths if path in CTEST_SOURCE_PATHS]
         or post.get("generated_files_sha256")
         != domain_digest("axeyum-lean-u2-generated-files-v1", generated_rows)
         or [row.get("path") for row in generated_rows] != generated_paths
@@ -1582,8 +1848,18 @@ def validate_evidence_root(root: Path) -> tuple[dict[str, Any], list[dict[str, A
         failures.append("post-run wrapper is missing")
 
     outcome = junit.get("testcase", {}).get("outcome") if isinstance(junit, dict) else None
-    if outcome == "passed" and set(generated_paths) != set(GENERATED_SOURCE_PATHS):
-        failures.append("passing case did not retain the exact generated artifact set")
+    if outcome == "passed":
+        expected_pass = {*CASE_GENERATED_SOURCE_PATHS, *CTEST_REQUIRED_SOURCE_PATHS}
+        if set(generated_paths) != expected_pass:
+            failures.append("passing case did not retain the exact generated artifact set")
+    elif outcome == "failed":
+        required_failure = {
+            "tests/with_stage1_test_env.sh",
+            *CTEST_REQUIRED_SOURCE_PATHS,
+            CTEST_SOURCE_PATHS[2],
+        }
+        if not required_failure.issubset(generated_paths):
+            failures.append("failed case did not retain the required CTest artifact set")
     expected_case = (
         build_case_record(spec, terminal, junit, post)
         if isinstance(junit, dict) and valid_seal(junit, JUNIT_SCHEMA)
@@ -1606,6 +1882,10 @@ def run_m0(args: argparse.Namespace) -> None:
     failures = validate_repository_inputs() + validate_selection_authorities()
     if failures:
         raise U2ExecutionError("; ".join(failures))
+    failed_attempt = validate_failed_attempt(
+        require_live_readonly=True,
+        require_git_index=True,
+    )
     current = _git(ROOT, "rev-parse", "HEAD")
     if current != args.implementation_revision:
         raise U2ExecutionError("working revision differs from implementation revision")
@@ -1642,7 +1922,7 @@ def run_m0(args: argparse.Namespace) -> None:
     storage = STORE.capture_storage_class(STORE.STORAGE_CLASS_IDS[0], ROOT)
     STORE.preflight_storage_class(storage)
     run = build_run_record(spec, source, toolchain, tools, harness, storage)
-    prelaunch = build_prelaunch(spec, run)
+    prelaunch = build_prelaunch(spec, run, failed_attempt)
 
     args.evidence_root.mkdir(parents=True, mode=0o755)
     for relative, value in (
@@ -1658,11 +1938,13 @@ def run_m0(args: argparse.Namespace) -> None:
     install_bytes(args.evidence_root, "artifacts/with_stage1_test_env.sh", wrapper_bytes)
     install_bytes(args.evidence_root, "artifacts/CTestTestfile.cmake", ctest_bytes)
     install_bytes(args.evidence_root, "raw/discovery.json", discovery_raw)
+    validate_live_readonly_tree(args.evidence_root)
 
     terminal, stdout, stderr = execute_process(spec, private_root, prelaunch["record_sha256"])
     install_bytes(args.evidence_root, "raw/stdout.bin", stdout)
     install_bytes(args.evidence_root, "raw/stderr.bin", stderr)
     install_json(args.evidence_root, "terminal.json", terminal)
+    validate_live_readonly_tree(args.evidence_root)
     process = terminal["process"]
     if (
         terminal["class"] != "exited"
@@ -1678,15 +1960,21 @@ def run_m0(args: argparse.Namespace) -> None:
     install_bytes(args.evidence_root, "raw/junit.xml", raw_junit)
     junit = parse_junit(raw_junit, terminal)
     install_json(args.evidence_root, "junit.json", junit)
-    post, generated = build_post_record(source_root, source, wrapper_bytes)
+    validate_live_readonly_tree(args.evidence_root)
+    post, generated = build_post_record(
+        source_root, source, wrapper_bytes, junit["testcase"]["outcome"]
+    )
     for source_path, payload in generated.items():
         install_bytes(args.evidence_root, EVIDENCE_GENERATED_PATHS[source_path], payload)
     install_json(args.evidence_root, "post.json", post)
+    validate_live_readonly_tree(args.evidence_root)
     case = build_case_record(spec, terminal, junit, post)
     install_json(args.evidence_root, "case.json", case)
+    validate_live_readonly_tree(args.evidence_root)
     completion = build_completion(args.evidence_root, case)
     install_json(args.evidence_root, "completion.json", completion)
-    validate_evidence_root(args.evidence_root)
+    validate_live_readonly_tree(args.evidence_root)
+    validate_evidence_root(args.evidence_root, require_live_readonly=True)
     print(
         f"LEAN_U2_OFFICIAL_M0|case={CASE_ID}|outcome={case['outcome']}|"
         "official_outcomes=1|parent_complete=false|provider=false|parity_credit=0"
@@ -1701,6 +1989,7 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
         raise U2ExecutionError("; ".join(failures))
     completion, evidence = validate_evidence_root(root)
     spec = load_canonical(root / "spec.json")
+    prelaunch = load_canonical(root / "prelaunch.json")
     case = load_canonical(root / "case.json")
     terminal = load_canonical(root / "terminal.json")
     if spec["implementation_revision"] != implementation_revision:
@@ -1713,6 +2002,11 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
         for path in sorted(REPOSITORY_INPUTS)
     ] + [
         {"path": PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(PLAN)},
+        {"path": R1_PLAN.relative_to(ROOT).as_posix(), "sha256": sha256_file(R1_PLAN)},
+        {
+            "path": R1_AMENDMENT.relative_to(ROOT).as_posix(),
+            "sha256": sha256_file(R1_AMENDMENT),
+        },
         {
             "path": Path(__file__).resolve().relative_to(ROOT).as_posix(),
             "sha256": sha256_file(Path(__file__).resolve()),
@@ -1728,8 +2022,33 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
             "schema": RESULT_SCHEMA,
             "status": "complete-local-official-case-outcome",
             "preregistration_commit": PREREGISTRATION_COMMIT,
+            "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
+            "r1_amendment_commit": R1_AMENDMENT_COMMIT,
             "implementation_revision": implementation_revision,
             "source_inputs": source_inputs,
+            "failed_attempt": prelaunch["failed_attempt"],
+            "attempts": [
+                {
+                    "id": "attempt-001",
+                    "sequence": 1,
+                    "status": "incomplete-process-failure",
+                    "terminal_sha256": FAILED_TERMINAL_SHA256,
+                    "junit_sha256": FAILED_JUNIT_SHA256,
+                    "evidence_manifest_sha256": FAILED_EVIDENCE_MANIFEST_SHA256,
+                    "official_outcomes": 0,
+                    "parity_credit": 0,
+                },
+                {
+                    "id": ATTEMPT_ID,
+                    "sequence": SEQUENCE,
+                    "status": "complete-local-official-case-outcome",
+                    "terminal_sha256": terminal["record_sha256"],
+                    "junit_sha256": load_canonical(root / "junit.json")["record_sha256"],
+                    "completion_sha256": completion["record_sha256"],
+                    "official_outcomes": 1,
+                    "parity_credit": 0,
+                },
+            ],
             "parent": spec["parent"],
             "shard": {
                 "id": SHARD_ID,
@@ -1751,6 +2070,9 @@ def build_result_authority(root: Path, *, implementation_revision: str) -> dict[
             },
             "summary": {
                 "parent_selected_cases": PARENT_SELECTED_COUNT,
+                "process_attempts": 2,
+                "incomplete_process_attempts": 1,
+                "completed_process_attempts": 1,
                 "local_shard_selected_cases": 1,
                 "local_shard_completed_cases": 1,
                 "official_outcomes": 1,
@@ -1792,9 +2114,41 @@ def validate_result_authority(authority: Any) -> list[str]:
     if (
         authority.get("status") != "complete-local-official-case-outcome"
         or authority.get("preregistration_commit") != PREREGISTRATION_COMMIT
+        or authority.get("r1_preregistration_commit") != R1_PREREGISTRATION_COMMIT
+        or authority.get("r1_amendment_commit") != R1_AMENDMENT_COMMIT
         or not HEX40.fullmatch(authority.get("implementation_revision", ""))
     ):
         failures.append("result preregistration or implementation identity drift")
+    if authority.get("failed_attempt") != failed_attempt_dependency(
+        live_readonly_validated=True, git_index_validated=True
+    ):
+        failures.append("result failed-attempt dependency drift")
+    attempts = authority.get("attempts")
+    if (
+        not isinstance(attempts, list)
+        or len(attempts) != 2
+        or attempts[0]
+        != {
+            "id": "attempt-001",
+            "sequence": 1,
+            "status": "incomplete-process-failure",
+            "terminal_sha256": FAILED_TERMINAL_SHA256,
+            "junit_sha256": FAILED_JUNIT_SHA256,
+            "evidence_manifest_sha256": FAILED_EVIDENCE_MANIFEST_SHA256,
+            "official_outcomes": 0,
+            "parity_credit": 0,
+        }
+        or not isinstance(attempts[1], dict)
+        or attempts[1].get("id") != ATTEMPT_ID
+        or attempts[1].get("sequence") != SEQUENCE
+        or attempts[1].get("status") != "complete-local-official-case-outcome"
+        or attempts[1].get("official_outcomes") != 1
+        or attempts[1].get("parity_credit") != 0
+        or not HEX64.fullmatch(attempts[1].get("terminal_sha256", ""))
+        or not HEX64.fullmatch(attempts[1].get("junit_sha256", ""))
+        or not HEX64.fullmatch(attempts[1].get("completion_sha256", ""))
+    ):
+        failures.append("result attempt history drift")
     parent = authority.get("parent", {})
     if parent.get("completed") is not False or parent.get("selected_count") != PARENT_SELECTED_COUNT:
         failures.append("result parent profile completion drift")
@@ -1819,6 +2173,9 @@ def validate_result_authority(authority: Any) -> list[str]:
     }
     if (
         summary.get("parent_selected_cases") != PARENT_SELECTED_COUNT
+        or summary.get("process_attempts") != 2
+        or summary.get("incomplete_process_attempts") != 1
+        or summary.get("completed_process_attempts") != 1
         or summary.get("local_shard_selected_cases") != 1
         or summary.get("local_shard_completed_cases") != 1
         or summary.get("official_outcomes") != 1
@@ -1852,6 +2209,7 @@ def result_summary(authority: dict[str, Any]) -> dict[str, Any]:
         "schema": SUMMARY_SCHEMA,
         "status": authority["status"],
         "implementation_revision": authority["implementation_revision"],
+        "attempts": authority["attempts"],
         "case": authority["case"],
         "summary": authority["summary"],
         "claims": authority["claims"],
@@ -1872,12 +2230,14 @@ Generated from [`lean-u2-official-execution-tl0.6.3-m0-v1.json`](../lean-u2-offi
 - Implementation revision: `{authority['implementation_revision']}`
 - Official case: `{case['id']}` — **{case['outcome']}**
 - Process terminal: `{terminal['class']}` / exit `{terminal['exit_code']}`
+- Process attempts: **2** (**1** incomplete / **1** completed local outcome)
 - Parent selection coverage: **1 / {PARENT_SELECTED_COUNT:,}**
 - Retained evidence: **{len(authority['evidence_files'])} files / {evidence_bytes:,} bytes**
 - Parent-profile completions, provider completions, Axeyum outcomes, matched pairs, performance rows: **0**
 - Complete parity axes / satisfied terminal gates / Lean parity credit: **0 / 0 / 0**
 
-This is one retained local outcome from an official Lean CTest registration. It
+This authority retains attempt 001's process failure with zero outcomes and
+attempt 002's one local outcome from an official Lean CTest registration. It
 does not complete the parent release-tag Linux-release profile, reproduce an
 official GitHub Actions provider, observe Axeyum, form a matched both-system
 cell, measure performance, or establish complete Lean 4 parity.
