@@ -676,8 +676,13 @@ state.
 > unexecuted. M2.2's
 > [source-first resolution plan](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
 > now freezes first-prefix candidate semantics, separate leaf-existence/content
-> checks, released inventories, transitive module-data closure, and controls,
-> but no M2.2 input authority, process, observation, or credit. Next actions are
+> checks, released inventories, transitive module-data closure, and controls.
+> Its source-first
+> [R1 correction](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+> now also separates raw imports from Lean's modifier-sensitive effective load
+> fixed point and freezes ordered incremental `.olean` parts, IR-only
+> reachability, and bounded cycle declines. There is still no M2.2 input
+> authority, process, observation, or credit. Next actions are
 > to authorize and validate M2.1 only when the user explicitly permits its
 > exact command, then bind M2.2 under a separate source-first authority and
 > continue M2.3-M2.7 plus M3 review before

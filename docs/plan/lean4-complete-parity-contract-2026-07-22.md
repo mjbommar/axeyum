@@ -589,6 +589,16 @@ there are no M2.2 frozen inputs, processes, observations, rows, edges, native
 outcomes, pairs, or terminal credit. Binding M2.2 remains downstream of an
 accepted M2.1 result and requires its own source-first authority.
 
+The source-audited
+[M2.2 R1 correction](lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+closes a pre-implementation ambiguity in that plan. Raw module-data adjacency
+is not Lean's effective import/load closure: root mode and `public`, `meta`, and
+`all` modifiers form a least fixed point, and a repeated path can upgrade a
+module and force descendant revisits. R1 also freezes exported/server/private
+`.olean` files as one ordered incremental serialization, separate `.ir`
+reachability, and bounded cycle declines. These are future M2.2 proof
+obligations, not current resolver or parity observations.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:

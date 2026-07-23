@@ -61,6 +61,12 @@ Last updated: 2026-07-23
 > closure, the complete CLI process formula, and 18 controls. It has no input
 > authority, process budget, observations, resolutions, or credit before an
 > accepted M2.1 result and a separately bound authority.
+> Its source-audited
+> [R1 correction](../../../docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+> additionally separates raw imports from the modifier-sensitive effective
+> load fixed point and freezes repeated-path upgrades, ordered incremental
+> `.olean` parts, IR-only reachability, bounded cycle declines, and added
+> controls. These remain unexecuted obligations, not closure evidence.
 > Its
 > [completion audit](../../../docs/plan/lean-system-roadmap-completion-audit-2026-07-21.md)
 > verifies every named environment gap and the current Axeyum/Lean/mathlib

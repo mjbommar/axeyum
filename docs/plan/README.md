@@ -366,14 +366,19 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   header-edge, resolution, native, pair, and parity counts remain zero pending
   explicit authorization.
 - [`TL0.6.4 M2.2 source-first resolution plan`](lean-u2-native-dependency-tl0.6.4-m2.2-plan-2026-07-23.md)
+  and [effective-import R1 correction](lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
   — preregisters exact Lean 4.30 first-prefix candidate behavior,
   absent-versus-empty search-path semantics, independent source and artifact
   existence/content checks, the released module and `.olean` sidecar universe,
   transitive module-data closure, a full-population CLI process formula, and 18
-  controls. Candidate selection alone does not prove leaf existence. No M2.2
-  input authority, process budget, evidence, resolution row, native outcome,
-  pair, or parity credit exists before accepted M2.1 evidence and a separately
-  bound M2.2 authority.
+  controls. R1 additionally separates raw adjacency from Lean's
+  modifier-sensitive effective load fixed point, freezes repeated-path state
+  upgrades, ordered incremental `.olean` parts, IR-only reachability, bounded
+  cycle declines, and twelve added control families. Candidate selection alone
+  does not prove leaf existence, and raw closure does not prove effective
+  loading. No M2.2 input authority, process budget, evidence, resolution row,
+  native outcome, pair, or parity credit exists before accepted M2.1 evidence
+  and a separately bound M2.2 authority.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

@@ -202,6 +202,16 @@ and records no observations, resolutions, native outcomes, pairs, or parity
 credit. M2.2 may be bound only after M2.1 evidence is accepted under a
 separate source-first checkpoint.
 
+The subsequent
+[M2.2 R1 correction](lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+prevents the later implementation from equating that raw graph with Lean's
+effective load behavior. The pinned loader joins `public`/`meta`/`all` state
+across repeated paths, revisits upgraded descendants, can require IR without
+module data, and reads exported/server/private `.olean` data only as an
+ordered incremental prefix. R1 freezes those states, bounded cycle declines,
+and added controls, but still supplies no M2.2 input, process, observation, or
+credit.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:

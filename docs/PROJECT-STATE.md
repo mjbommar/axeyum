@@ -326,7 +326,14 @@ Again, there are distinct targets:
   controls. A returned candidate is not proof that its leaf exists. This is
   semantics-only preregistration: no M2.2 input authority, process,
   observation, resolved edge, native outcome, pair, or parity credit exists
-  before accepted M2.1 evidence and a separately bound M2.2 authority.
+  before accepted M2.1 evidence and a separately bound M2.2 authority. The
+  source-audited
+  [R1 correction](plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+  further requires separate raw and effective closures: Lean joins
+  `public`/`meta`/`all` state across repeated module paths and may load IR
+  without module data. It also binds `.olean`, `.olean.server`, and
+  `.olean.private` as one ordered incremental family, not three independently
+  readable artifacts, and turns cyclic module imports into bounded declines.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

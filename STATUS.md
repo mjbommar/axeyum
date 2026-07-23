@@ -411,7 +411,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   transitive module-data closure, full CLI process formula, and controls. It
   creates no M2.2 authority or observation: no M2.2 input is frozen, no process
   is budgeted or run, and resolution/native/pair/parity credit remains zero
-  until M2.1 is accepted and M2.2 receives a separate bound authority.
+  until M2.1 is accepted and M2.2 receives a separate bound authority. The
+  source-audited
+  [R1 correction](docs/plan/lean-u2-native-dependency-tl0.6.4-m2.2-effective-import-r1-plan-2026-07-23.md)
+  additionally prevents raw transitive imports from standing in for Lean's
+  `public`/`meta`/`all`-sensitive effective load fixed point. It freezes
+  ordered incremental `.olean` parts, IR-only reachability, bounded cycle
+  declines, and at least twelve added control families, still with no process
+  or credit.
 
 - **2026-07-23 — TL0.6.4 M2.0 accepts the typed U2 dependency/provider
   contract without claiming dependency closure or Lean parity.** The
@@ -8107,7 +8114,7 @@ plan is built and committed on the current branch:
 |---|---|---|
 | P3.6p | `Prop` large-elimination soundness incident | **DONE / contained (ADR-0165, `d26ad887`, `a10c8cde`, `de249d48`)** — exact Lean syntactic-subsingleton test; restricted motive universe and arity for other potentially-`Prop` families; complete exploit inverted; positive/negative/exact-index/polymorphic/generated-matrix coverage; pinned mandatory real-Lean flat-inductive/iota CI gate; downstream `Or.rec`/`Exists.rec` reconstruction aligned and the complete 4 GiB serialized `just check` gate green. Full recursive-indexed `Acc` remains an honest pre-existing fragment deferral, not a soundness exception |
 | P3.6 / TL2.12 | Recursive indexed/reflexive induction hypotheses | **DONE (ADR-0353 accepted)** — one `Pi telescope, motive indices (field args)` rule covers direct, indexed, higher-order, and combined native fields. M0-M3 freeze the streams, close fourteen native rows/twelve mutation classes/768 recursive profiles, and complete both construct targets with exact recursor comparison. M4 confirms pinned Lean and Axeyum computations twice at `MiniNat.succ MiniNat.zero` and `True`; the generated matrix has four admitted, two computation-checked, and two declined rows. M5 closes every bounded gate. Mutual groups followed in TL2.13; a later audit separates TL2.14 kernel nested elimination from TL4.9/TL4.10 source elaboration. |
-| P3.6 / TL0.6.4 | U2 native-surface classification | **WIP — M0/M1/M2.0 accepted; M2.1 pre-execution ready; M2.2 semantics preregistered.** M0 supplies the 3,723-case harness floor; M1 supplies the complete 7,004-file content census; M2.0 freezes the empty typed dependency/provider graph across 111 official variants and 408,374 factored case/variant occurrences. M2.1 now freezes 4,092 exact Lean inputs, 32 batches, 14 controls, and a 39-process no-retry fast/full header pass, but observed processes and edges remain zero pending explicit authorization. M2.2 freezes first-prefix candidate resolution, separate existence/content checks, the released module universe, transitive module-data closure, and controls, but has no input authority, process budget, observations, or credit. Next: validate/publish M2.1, bind and execute M2.2-M2.7 exact closure, then M3 complete-row review. |
+| P3.6 / TL0.6.4 | U2 native-surface classification | **WIP — M0/M1/M2.0 accepted; M2.1 pre-execution ready; M2.2 plus R1 semantics preregistered.** M0 supplies the 3,723-case harness floor; M1 supplies the complete 7,004-file content census; M2.0 freezes the empty typed dependency/provider graph across 111 official variants and 408,374 factored case/variant occurrences. M2.1 now freezes 4,092 exact Lean inputs, 32 batches, 14 controls, and a 39-process no-retry fast/full header pass, but observed processes and edges remain zero pending explicit authorization. M2.2 freezes first-prefix candidate resolution, separate existence/content checks, the released module universe, raw versus modifier-sensitive effective closure, ordered incremental `.olean` parts, IR-only reachability, bounded cycle declines, and controls, but has no input authority, process budget, observations, or credit. Next: validate/publish M2.1, bind and execute M2.2-M2.7 exact closure, then M3 complete-row review. |
 | P3.6 / TL2.13 | Mutual inductive groups | **DONE (ADR-0354 accepted)** — M0 freezes the exact source, two byte-identical official streams, semantic/wire-order contract, and no-product boundary. M1-M4 land ordered representation, native complete-group semantics across 18 public rows, the byte-identical 720-case grammar, exact official import/computation, and 22 rejecting importer/publication mutation classes while retaining the 768/840 controls. M5 adds the history-preserving assurance overlay (5 admitted, 3 computation-checked, 1 current decline), removes the obsolete live decline, and closes every bounded gate. |
 | P3.6 / TL2.14 | Nested-inductive kernel elimination | **DONE (ADR-0355 accepted after containing-commit publication)** — M0 freezes three explicit computations and 114,596 bytes / 2,022 records without product observation. M1 establishes typed non-admission. M2 implements native fixed-point expansion/restoration and exact `.rec_N` publication. M3 repeats the exact 640-case grammar twice at digest `a20fe056c9443a37`, observes exact dependency/iota surfaces, and closes 16 transactional mutations plus the bounded integrity amendment. M4 derives auxiliary identity from checked motives, imports the construct plus all three frozen computation streams twice at 22/34/34/34 declarations and zero axioms, and closes 20 wire/publication classes plus order non-authority. M5 checks the registered 3/3/5-successor normal forms twice, appends the history-preserving current assurance overlay (7 rows / 6 admitted / 4 computation-checked / 0 current declines), and removes only the obsolete live nested decline. M6 closes exits 1--11 and every non-publication component of exit 12; the containing commit's push/ref equality completes the decision. Complete suites and exact 640/720/768/840 and well-founded 35/0 controls pass. Native source elaboration remains TL4.9/TL4.10. |
 | P4.1d | Retained warm array relations | **DONE, literal relation slice (ADR-0089)** — projection-owned positive equality merges before function construction; exact private diff witnesses cover top-level disequality across supported structural parents. Scope/core/filter/replay, Bool/BV256, exact depth, 192 clean comparisons, 816 solver units, 77 symexec tests, and complete EVM gates pass; EVM has no whole-array relation case, so no timing claim |
@@ -8163,6 +8170,16 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Corrected TL0.6.4 M2.2's effective-import and `.olean`
+  part boundary before implementation.** Pinned Lean 4.30 computes a
+  modifier- and root-level-sensitive import/load fixed point, not the raw
+  transitive union, and revisits modules whose state is upgraded through
+  another path. Its exported/server/private `.olean` family is an ordered
+  incremental serialization whose later parts cannot be read independently.
+  R1 freezes those rules, IR-only loads, bounded cycle declines, sealed state
+  transitions, and twelve added control families. No M2.2 authority, process,
+  observation, edge, native outcome, pair, or parity credit exists.
 
 - **2026-07-23 — Preregistered TL0.6.4 M2.2's exact module-resolution
   boundary.** The source-first plan freezes Lean 4.30 first-prefix candidate
