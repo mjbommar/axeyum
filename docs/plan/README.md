@@ -134,6 +134,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   task stacks exhausted address space. The retained no-credit matrices bound
   the cause; R1 freezes a 512 MiB `-s` task stack and terminal-before-artifact
   failure closure before retry.
+- [`lean-execution-acceptance-tl0.7.4-2026-07-22.md`](lean-execution-acceptance-tl0.7.4-2026-07-22.md),
+  [`lean-execution-acceptance-v1.json`](lean-execution-acceptance-v1.json), and
+  generated [Markdown](generated/lean-execution-acceptance.md)/
+  [JSON](generated/lean-execution-acceptance.json) — TL0.7.4's final bounded
+  result: one retained failed compile plus a completed 4 GiB compile and 8 GiB
+  official export, exact equality to the committed 65-line stream, 67 retained
+  files / 142,523 bytes, and zero U2/Axeyum/pair/performance/parity credit.
+  This closes TL0.7's local policy prerequisite and unblocks TL0.6.3; it is not
+  an official test result or Lean parity claim.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

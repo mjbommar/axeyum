@@ -383,8 +383,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-22 — TL0.7.4 attempt 001 failed closed at the exact 4 GiB
-  boundary; R1 is source-first preregistered and the exporter has not run.** The
+- **2026-07-22 — TL0.7.4 closes the real local execution controls without U2,
+  Axeyum, pairing, performance, or parity credit.** The
   [plan](docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md)
   freezes the exact Lean 4.30 binary/toolchain, official `lean4export` v4.30.0
   commit/tree/build, committed flat source and 65-line NDJSON oracle, 4/8 GiB
@@ -403,7 +403,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `-s` values through 768 MiB pass and produce identical `.olean` bytes, while
   960 MiB/1 GiB fail. The [R1 plan](docs/plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md)
   freezes `-s524288`, preserves the [failed result](docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md),
-  and hardens terminal-before-artifact retention before any retry.
+  and hardens terminal-before-artifact retention. Published R1 control source
+  `679f4b9d` then completed both real controls: the 4 GiB compile produced the
+  9,672-byte `.olean`, and the 8 GiB exporter produced the exact committed
+  3,849-byte/65-line stream. Every process group was reaped. The
+  [final result](docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md),
+  [authority](docs/plan/lean-execution-acceptance-v1.json), generated
+  [summary](docs/plan/generated/lean-execution-acceptance.md), and two evidence
+  roots retain three process attempts, one failure, two completions, and 67
+  files / 142,523 bytes. All U2/Axeyum/pair/performance/parity counters remain
+  zero. TL0.7 is complete; TL0.6.3's first preregistered official U2 execution
+  slice is next.
 
 - **2026-07-22 — TL0.7.3 closes registered local process-interruption
   checkpointing without Lean, U2, durability, or parity credit.** The
@@ -420,8 +430,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   mutation families. This is local process-interruption recovery, not power/
   host loss, NFS, provider, object, or distributed durability. Real/U2
   outcomes, paired cells, performance rows, and parity credit remain zero.
-  Next: source-first TL0.7.4 no-credit pinned-Lean/export controls; TL0.6.3
-  remains blocked.
+  TL0.7.4 has since closed the remaining local execution-policy prerequisite;
+  TL0.6.3 is now unblocked.
 
 - **2026-07-22 — TL0.7.2 closes bounded process behavior without Lean, U2,
   completion, or parity credit.** The
@@ -436,8 +446,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   limits, launch failure, and preflight failure. Eleven tests cover sixteen
   mutation families. There are 16 raw streams but zero case/completion records,
   official/Axeyum outcomes, paired cells, performance rows, or parity credit.
-  TL0.7.3 now supplies the bounded local process-interruption store; TL0.7.4's
-  two no-credit real controls are next.
+  TL0.7.3 supplies the bounded local process-interruption store; TL0.7.4 has
+  since completed the two no-credit real controls and closes TL0.7.
 
 - **2026-07-22 — TL0.7.1 closes the machine execution-evidence contract with
   zero process or parity outcomes.** The source-first

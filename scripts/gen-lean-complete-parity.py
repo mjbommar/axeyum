@@ -33,6 +33,7 @@ U2_CI_PROFILES = ROOT / "docs" / "plan" / "lean-u2-official-ci-profiles-v1.json"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
+EXECUTION_ACCEPTANCE = ROOT / "docs" / "plan" / "lean-execution-acceptance-v1.json"
 IMPLEMENTATION_PLAN = ROOT / "docs" / "plan" / "lean-system-implementation-plan-2026-07-21.md"
 
 POPULATION_IDS = tuple(f"U{index}" for index in range(10))
@@ -721,6 +722,40 @@ def execution_store_snapshot() -> dict[str, Any]:
     }
 
 
+def execution_acceptance_snapshot() -> dict[str, Any]:
+    checker = load_script(
+        "lean_execution_acceptance_for_complete_parity",
+        ROOT / "scripts" / "lean_execution_acceptance.py",
+    )
+    data = load_json(EXECUTION_ACCEPTANCE)
+    failures = checker.validate_result_authority(data)
+    if failures:
+        raise RuntimeError(
+            "invalid Lean execution acceptance authority: " + "; ".join(failures)
+        )
+    return {
+        "status": data["status"],
+        "observed_external_process_attempts": data["summary"][
+            "observed_external_process_attempts"
+        ],
+        "failed_external_process_attempts": data["summary"][
+            "failed_external_process_attempts"
+        ],
+        "completed_external_controls": data["summary"][
+            "completed_external_controls"
+        ],
+        "retained_files": data["summary"]["retained_files"],
+        "retained_bytes": data["summary"]["retained_bytes"],
+        "u2_cases": data["summary"]["u2_cases"],
+        "official_outcomes": data["summary"]["official_outcomes"],
+        "axeyum_outcomes": data["summary"]["axeyum_outcomes"],
+        "paired_cells": data["summary"]["paired_cells"],
+        "performance_rows": data["summary"]["performance_rows"],
+        "claims": data["claims"],
+        "credits": data["credits"],
+    }
+
+
 def task_snapshot() -> dict[str, Any]:
     rows = TASK_ROW.findall(IMPLEMENTATION_PLAN.read_text(encoding="utf-8"))
     counts = Counter(status for _, status in rows)
@@ -743,6 +778,7 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
+        EXECUTION_ACCEPTANCE,
         IMPLEMENTATION_PLAN,
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
@@ -757,6 +793,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / "scripts" / "tests" / "test_lean_execution_process.py",
         ROOT / "scripts" / "lean_execution_store.py",
         ROOT / "scripts" / "tests" / "test_lean_execution_store.py",
+        ROOT / "scripts" / "lean_execution_acceptance.py",
+        ROOT / "scripts" / "tests" / "test_lean_execution_acceptance.py",
     }
     for collection in (data["populations"], data["axes"], data["terminal_gates"]):
         for item in collection:
@@ -789,6 +827,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
+            "execution_acceptance_authority": execution_acceptance_snapshot(),
             "implementation_tasks": task_snapshot(),
         },
         "population_summary": {
@@ -862,6 +901,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
+    acceptance = bounded["execution_acceptance_authority"]
     tasks = bounded["implementation_tasks"]
     terminal = report["terminal"]
     claim_guard = report["claim_guard"]
@@ -944,6 +984,18 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{store['performance_rows']} performance rows, and "
             f"{store['parity_credit']} parity credit. Process interruption is not "
             "power/host loss or network/object durability.",
+            f"- Lean external acceptance controls: "
+            f"{acceptance['observed_external_process_attempts']} process attempts, "
+            f"{acceptance['failed_external_process_attempts']} retained failure, "
+            f"{acceptance['completed_external_controls']} completed controls, and "
+            f"{acceptance['retained_files']} files / {acceptance['retained_bytes']:,} bytes; "
+            f"{acceptance['u2_cases']} U2 cases, "
+            f"{acceptance['official_outcomes']} official outcomes, "
+            f"{acceptance['axeyum_outcomes']} Axeyum outcomes, "
+            f"{acceptance['paired_cells']} paired cells, "
+            f"{acceptance['performance_rows']} performance rows, and "
+            f"{acceptance['credits']['parity_credit']} parity credit. The real controls "
+            "qualify the local execution path only.",
             f"- Implementation ledger: {tasks['rows']} rows; "
             + ", ".join(
                 f"`{key}`={value}" for key, value in tasks["status_counts"].items()

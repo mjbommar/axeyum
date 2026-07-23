@@ -1,0 +1,43 @@
+{
+  "schema": "axeyum-lean-execution-acceptance-summary-v1",
+  "status": "accepted-no-credit-real-controls",
+  "implementation_revision": "679f4b9d1941b166c86db652501f1ba7df417da0",
+  "summary": {
+    "observed_external_controls": 2,
+    "observed_external_process_attempts": 3,
+    "failed_external_process_attempts": 1,
+    "completed_external_controls": 2,
+    "retained_files": 67,
+    "retained_bytes": 142523,
+    "u2_cases": 0,
+    "case_records": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0
+  },
+  "claims": {
+    "real_process_controls": true,
+    "failed_compile_attempt_retained": true,
+    "pinned_lean_compile_observed": true,
+    "official_export_observed": true,
+    "reference_stream_byte_equal": true,
+    "official_u2_execution": false,
+    "axeyum_import_or_check": false,
+    "paired_comparison": false,
+    "performance_measurement": false,
+    "power_or_host_loss_durability": false
+  },
+  "credits": {
+    "credited_runs": 0,
+    "official_u2_cases": 0,
+    "official_outcomes": 0,
+    "axeyum_outcomes": 0,
+    "paired_cells": 0,
+    "performance_rows": 0,
+    "complete_axes": 0,
+    "satisfied_gates": 0,
+    "parity_credit": 0
+  },
+  "authority_sha256": "f8a4d949b5dda4f37f8115a674702eb6dcaccc96394889d1ae3c28febeb4bfa5"
+}

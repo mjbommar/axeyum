@@ -96,6 +96,21 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertEqual(store["parity_credit"], 0)
         self.assertTrue(store["claims"]["process_sigkill_recovery"])
         self.assertFalse(store["claims"]["power_loss_recovery"])
+        acceptance = first["bounded_snapshot"]["execution_acceptance_authority"]
+        self.assertEqual(acceptance["status"], "accepted-no-credit-real-controls")
+        self.assertEqual(acceptance["observed_external_process_attempts"], 3)
+        self.assertEqual(acceptance["failed_external_process_attempts"], 1)
+        self.assertEqual(acceptance["completed_external_controls"], 2)
+        self.assertEqual(acceptance["retained_files"], 67)
+        self.assertEqual(acceptance["retained_bytes"], 142523)
+        self.assertEqual(acceptance["u2_cases"], 0)
+        self.assertEqual(acceptance["official_outcomes"], 0)
+        self.assertEqual(acceptance["axeyum_outcomes"], 0)
+        self.assertEqual(acceptance["paired_cells"], 0)
+        self.assertEqual(acceptance["performance_rows"], 0)
+        self.assertTrue(acceptance["claims"]["real_process_controls"])
+        self.assertFalse(acceptance["claims"]["official_u2_execution"])
+        self.assertTrue(all(value == 0 for value in acceptance["credits"].values()))
         source_paths = {item["path"] for item in first["source_identities"]}
         self.assertIn(".github/workflows/ci.yml", source_paths)
         self.assertIn(
@@ -107,6 +122,8 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertIn("docs/plan/lean-execution-evidence-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-process-v1.json", source_paths)
         self.assertIn("docs/plan/lean-execution-store-v1.json", source_paths)
+        self.assertIn("docs/plan/lean-execution-acceptance-v1.json", source_paths)
+        self.assertIn("scripts/lean_execution_acceptance.py", source_paths)
 
     def test_u2_registration_is_bounded_not_terminal_authority(self) -> None:
         population = self.population("U2")
