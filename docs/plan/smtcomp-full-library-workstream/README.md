@@ -430,4 +430,12 @@ Z3-SAT seeds 122/175/182 plus independently certified Z3-timeout seed 226 in
 and 219/219 replay with no ordinary Z3-SAT residual. Implement only this
 32-round/32-instance, fail-closed boundary next; do not use the measured-bad
 blind batch, grant fresh time, transfer inner UNSAT, or rewrite arbitrary
-function entries.*
+function entries. Commit `1c8e5125` now implements that exact boundary. Two
+production runs reach 236/236 agreement, exactly 219 SAT, 24 UNSAT, 13 Unknown,
+219/219 replay, zero errors/disagreements, and no ordinary Z3-SAT residual.
+Focused controls, solver Clippy, strict rustdoc, and one uninterrupted CI-mode
+all-feature solver-package run pass, including all 913 library tests, every
+non-ignored integration test, and both doctests. ADR-0364 remains proposed only
+on the unchanged Lean-owned parity-evidence run/spec attribution drift; do not
+rewrite that evidence here. Publish these checkpoints, then resume the ranked
+full-library gap plan without widening this quantified-UF boundary.*

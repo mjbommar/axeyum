@@ -637,6 +637,22 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   runner or process exists yet.** The source-first
 - **2026-07-22 — TL0.6.3 M2's pure 64-case execution contract is implemented
   and pushed; no live runner or process exists yet.** The source-first
+- **2026-07-23 — ADR-0364's profile-guided quantified-UF completion boundary is
+  implemented and passes the full solver package.** Commit `1c8e5125` adds only
+  the preregistered outer SAT-only, single-`Int`-binder loop under the original
+  remaining deadline. Exact source definitions and checker-derived falsifiers
+  remain untrusted search hints; every SAT model still needs the independent
+  finite-profile certificate and exact original-query replay. Two production
+  differentials return 236/236 agreements, exactly 219 SAT, 24 UNSAT, and 13
+  Unknown, 219/219 replay, zero errors/disagreements, and no ordinary Z3-SAT
+  residual. Focused profile, definition, falsifier, cap, deadline, and
+  non-transfer controls pass, as do warning-denied all-feature solver Clippy and
+  strict rustdoc. One uninterrupted CI-mode all-feature solver-package run
+  passes all 913 library tests, every non-ignored integration test, and both
+  doctests. ADR-0364 remains proposed only on the unchanged cross-lane Lean
+  parity-evidence run/spec attribution drift; this lane did not rewrite that
+  evidence. Next: publish the implementation/docs checkpoints and resume the
+  ranked full-library gap plan without widening this boundary.
 - **2026-07-23 — ADR-0364 preregisters profile-guided quantified-UF model
   completion.** The exact post-ADR-0363 residuals require table structure:
   seed 122 needs distinct ground `g` points plus a total `f`, seed 175's ground

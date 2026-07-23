@@ -9291,6 +9291,17 @@ coverage never regresses):
    bad: it overfits seeds 175/182 and reaches exhaustion/timeout. Implement only
    ADR-0364's 32-round/32-instance fail-closed boundary next, with no fresh
    timeout, non-SAT transfer, checker widening, or arbitrary entry rewrite.
+   Commit `1c8e5125` now implements that exact boundary. Two production
+   differential runs return 236/236 joint agreements, exactly 219 SAT, 24
+   UNSAT, and 13 Unknown, 219/219 exact replay, zero errors/disagreements, and no
+   ordinary Z3-SAT residual. Focused definition/falsifier/cap/deadline/
+   non-transfer controls, warning-denied all-feature solver Clippy, and strict
+   rustdoc pass. One uninterrupted CI-mode all-feature solver-package run passes
+   all 913 library tests, every non-ignored integration test, and both doctests.
+   Keep ADR-0364 proposed only on the unchanged cross-lane Lean parity-evidence
+   run/spec attribution drift; do not rewrite that retained evidence here. Next:
+   publish this implementation checkpoint, then resume the ranked full-library
+   gap plan without widening this quantified-UF boundary.
 3. **Bank the CDCL(T) spine** (Gap 3): the default-dispatch ADR for the
    built-but-opt-in `CdclT` routes, then port arrays-lazy
    ([P2.2](docs/plan/track-2-theories/P2.2-arrays-lazy.md)) onto it — the
