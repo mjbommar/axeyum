@@ -11579,7 +11579,8 @@ pub fn laurent_series(f: &CasExpr, var: &str, order: usize) -> Option<CasExpr> {
 /// `c/√((s−a)²+b²) ↦ c·e^{at}J₀(bt)` and
 /// `c/√((s−a)²−b²) ↦ c·e^{at}I₀(bt)` for rational `a` and `c` and nonzero
 /// rational `b`, together with the corresponding order-one and order-two
-/// `Jₙ`/`Iₙ` pairs.
+/// `Jₙ`/`Iₙ` pairs and finite additive combinations whose radical-bearing
+/// summands all invert independently.
 /// **Certified** by the round trip `L{result} = F` (via [`laplace_transform`] and
 /// the zero-test). Returns `None` for improper rational inputs, unsupported pole
 /// families, irrational frequencies, or resource overflow.
@@ -11604,6 +11605,11 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
             _ => None,
         };
     }
+    if inverse_laplace_contains_sqrt(f)
+        && let Some(result) = inverse_laplace_additive_radicals(f, s, t)
+    {
+        return Some(result);
+    }
     let rf = normalize_rational(f)?;
     let num = rf.num.to_univariate(s)?;
     let den = rf.den.to_univariate(s)?;
@@ -11624,7 +11630,12 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
         let mut sum = CasExpr::zero();
         for pole in poles {
             let res = residue(f, s, pole)?;
-            sum = sum + res * (CasExpr::Const(pole) * CasExpr::var(t)).exp();
+            let basis = if pole.is_zero() {
+                CasExpr::int(1)
+            } else {
+                (CasExpr::Const(pole) * CasExpr::var(t)).exp()
+            };
+            sum = sum + res * basis;
         }
         sum
     } else if deg_den == 2 && poles.is_empty() {
@@ -11640,6 +11651,46 @@ pub fn inverse_laplace(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
     match equal(&laplace_transform(&result, t, s)?, f) {
         ZeroTest::Certified { equal: true, .. } => Some(result),
         _ => None,
+    }
+}
+
+/// Invert a nontrivial additive expression containing radical transform terms
+/// only when every summand independently inverts and the combined public
+/// forward transform certifies the complete original input. Recursion is
+/// structural because each call receives one strict child of the input sum.
+fn inverse_laplace_additive_radicals(f: &CasExpr, s: &str, t: &str) -> Option<CasExpr> {
+    let CasExpr::Add(terms) = f else {
+        return None;
+    };
+    if terms.len() < 2 {
+        return None;
+    }
+    let inverse_terms = terms
+        .iter()
+        .map(|term| inverse_laplace(term, s, t))
+        .collect::<Option<Vec<_>>>()?;
+    let result = CasExpr::Add(inverse_terms);
+    match equal(&laplace_transform(&result, t, s)?, f) {
+        ZeroTest::Certified { equal: true, .. } => Some(result),
+        _ => None,
+    }
+}
+
+/// Whether an expression contains at least one square-root head. The additive
+/// inverse route uses this as a narrow dispatch guard so ordinary rational sums
+/// retain their established whole-expression inversion path.
+fn inverse_laplace_contains_sqrt(expr: &CasExpr) -> bool {
+    match expr {
+        CasExpr::Const(_) | CasExpr::Var(_) => false,
+        CasExpr::Add(items) | CasExpr::Mul(items) => {
+            items.iter().any(inverse_laplace_contains_sqrt)
+        }
+        CasExpr::Neg(inner) | CasExpr::Pow(inner, _) => inverse_laplace_contains_sqrt(inner),
+        CasExpr::Div(numerator, denominator) => {
+            inverse_laplace_contains_sqrt(numerator) || inverse_laplace_contains_sqrt(denominator)
+        }
+        CasExpr::Unary(UnaryFunc::Sqrt, _) => true,
+        CasExpr::Unary(_, argument) => inverse_laplace_contains_sqrt(argument),
     }
 }
 
@@ -20736,6 +20787,86 @@ mod tests {
     }
 
     #[test]
+    fn inverse_laplace_additive_bessel_pairs() {
+        let s = || v("s");
+        let t = || v("t");
+        let transform = |function: &CasExpr| {
+            laplace_transform(function, "t", "s")
+                .unwrap_or_else(|| panic!("missing transform for {function}"))
+        };
+
+        let j0_function = t().bessel_j(0);
+        let scaled_j0_function = (CasExpr::int(2) * t()).bessel_j(0);
+        let j1_function = t().bessel_j(1);
+        let i0_function = t().bessel_i(0);
+        let j0 = transform(&j0_function);
+        let scaled_j0 = transform(&scaled_j0_function);
+        let j1 = transform(&j1_function);
+        let i0 = transform(&i0_function);
+        assert_equal(
+            &inverse_laplace(&(CasExpr::int(1) / s()), "s", "t").expect("inverse zero pole"),
+            &CasExpr::int(1),
+        );
+        for (input, expected) in [
+            (
+                j0.clone() + j1.clone(),
+                j0_function.clone() + j1_function.clone(),
+            ),
+            (
+                j0.clone() + i0.clone(),
+                j0_function.clone() + i0_function.clone(),
+            ),
+            (
+                j0.clone() + scaled_j0,
+                j0_function.clone() + scaled_j0_function,
+            ),
+            (
+                CasExpr::int(1) / s() + j0.clone(),
+                CasExpr::int(1) + j0_function.clone(),
+            ),
+        ] {
+            let inverse = inverse_laplace(&input, "s", "t")
+                .unwrap_or_else(|| panic!("missing additive inverse for {input}"));
+            assert_equal(&inverse, &expected);
+            assert_equal(&transform(&inverse), &input);
+        }
+
+        let nested_input =
+            CasExpr::Add(vec![j0.clone(), CasExpr::Add(vec![j1.clone(), i0.clone()])]);
+        assert_equal(
+            &inverse_laplace(&nested_input, "s", "t").expect("nested additive inverse"),
+            &(j0_function.clone() + j1_function + i0_function),
+        );
+
+        let shifted_j2 = CasExpr::int(-3)
+            * (CasExpr::int(2) * t()).exp()
+            * (CasExpr::rat(1, 2) * t()).bessel_j(2);
+        let rational = CasExpr::int(2) * (CasExpr::int(-1) * t()).exp();
+        let combined = shifted_j2.clone() + rational.clone();
+        let combined_transform = transform(&shifted_j2) + transform(&rational);
+        assert_equal(
+            &inverse_laplace(&combined_transform, "s", "t")
+                .expect("scaled shifted additive inverse"),
+            &combined,
+        );
+
+        let order_three = transform(&t().bessel_j(3));
+        assert!(inverse_laplace(&(j0.clone() + order_three), "s", "t").is_none());
+        let irrational_root = (s().pow(2) + CasExpr::int(2)).sqrt();
+        let irrational_order_one = (irrational_root.clone() - s()) / irrational_root;
+        assert!(inverse_laplace(&(j0 + irrational_order_one), "s", "t").is_none());
+
+        // A sum that simplifies to a proper rational transform must retain the
+        // established whole-expression rational route rather than splitting an
+        // individually improper term.
+        assert_equal(
+            &inverse_laplace(&(s() / (s() + CasExpr::int(1)) - CasExpr::int(1)), "s", "t")
+                .expect("rational cancellation control"),
+            &(CasExpr::int(-1) * (CasExpr::int(-1) * t()).exp()),
+        );
+    }
+
+    #[test]
     fn inverse_laplace_bessel_order_declines() {
         let s = || v("s");
         let t = || v("t");
@@ -20757,15 +20888,6 @@ mod tests {
         assert!(
             inverse_laplace(
                 &((wrong_numerator_root.clone() - CasExpr::int(2) * s()) / wrong_numerator_root),
-                "s",
-                "t"
-            )
-            .is_none()
-        );
-        assert!(
-            inverse_laplace(
-                &(CasExpr::int(1) / (s().pow(2) + CasExpr::int(1)).sqrt()
-                    + CasExpr::int(1) / (s().pow(2) + CasExpr::int(4)).sqrt()),
                 "s",
                 "t"
             )
