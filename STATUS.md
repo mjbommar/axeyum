@@ -408,6 +408,27 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   exact v2 admission bytes, execute Axeyum, cvc5, and Bitwuzla sequentially
   under the frozen commands; stop on the first contradiction, disagreement,
   or evidence/identity failure.
+- **2026-07-22 — certified positive-integer powers in rational-rate Bessel-J
+  products.** Wave nineteen extends the fixed-order product envelope to
+  `c·w(x)·∏Jₙᵢ(rᵢ(x))^mᵢ` for positive integer multiplicities: if exact
+  rational arguments grow like `|x|^dᵢ` and the exact rational weight like
+  `|x|^e`, `limit` returns zero only under the checked strict condition
+  `2e<Σmᵢdᵢ`. Squares, cubes, mixed direct/powered products, polynomial and
+  rational arguments, reflected signs, orders through `u32::MAX`, a
+  `u32::MAX` exponent, and both infinities pass without expanding the powers.
+  Zero powers retain their ordinary exact simplification; borderline and
+  supercritical rates, modified-I powers, and powered denominators decline.
+  Moving the bounded theorem recognizer ahead of generic rational normalization
+  prevents hostile public powers from entering atom-based normalization while
+  preserving fail-closed fallback. A 10-case 80-digit mpmath leading-asymptotic
+  check has maximum envelope-scaled error 0.00916891831061; SymPy proves the
+  simple square and leaves four weighted/mixed prototypes unevaluated. The
+  thermally managed 560-unit/147-doctest suite passed (2415.34 s for units),
+  with workspace warning-denied Clippy (5.58 s warm), WASM (6.93 s), strict
+  stable/nightly rustdoc (1.85/1.80 s), links, whitespace, and owned-line
+  formatting green. Source `8c82e7d1` was integrated exactly by `ac2571ce`.
+  Next: resume broad probing; quadratic-pole inverse Z remains
+  representation-bound.
 - **2026-07-22 — certified rational-rate products of integer-order Bessel J.**
   Wave eighteen composes the fixed-order envelope across a finite direct product:
   if exact rational arguments grow like `|x|^dᵢ` and an exact rational weight
@@ -8493,6 +8514,12 @@ plan is built and committed on the current branch:
   R1/R2 history, a new run/evidence root, universal 512 MiB Lean runtime stacks
   from pinned source semantics, and the measured tiered artifact store. It
   authorizes one process only after separately pushed implementation gates.
+- **2026-07-22 — Added certified powered rational-rate Bessel-J product
+  limits.** Positive integer powers now contribute multiplicity-weighted exact
+  argument growth, closing `c·w(x)·∏Jₙᵢ(rᵢ(x))^mᵢ→0` whenever
+  `2·growth(w)<Σmᵢgrowth(rᵢ)`, with hostile exponents handled without expansion
+  and strict zero-power, borderline/supercritical, modified-I, and denominator
+  controls. CAS now has 560 units and 147 doctests.
 - **2026-07-22 — Added certified rational-rate Bessel-J product limits.** The
   fixed-order envelope now composes across finite direct products and closes
   `c·w(x)·∏Jₙᵢ(rᵢ(x))→0` whenever exact rational degree growth satisfies
