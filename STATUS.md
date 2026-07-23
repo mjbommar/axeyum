@@ -457,8 +457,10 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   `retry-1`. Twenty-three focused tests directly cover fresh retry, completed-
   retry finalization, and completed-result replay; the 71-test portable gate
   passes with one live-host skip. Live state revalidation remains read-only.
-  Recovery stays blocked until these source and checkpoint bytes are integrated
-  and the clean mandatory cgroup/E3 gates pass.
+  Mandatory cgroup and live multi-host E3 gates are clean on `eab74458`; the
+  live gate passes 71 tests without skips at
+  `/nas3/data/axeyum/harness/e3-gate/live-1784832792764426288-eab74458d98c`.
+  Recovery stays blocked until these source and checkpoint bytes are integrated.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each

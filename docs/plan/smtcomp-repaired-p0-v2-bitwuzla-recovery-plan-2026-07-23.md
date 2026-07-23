@@ -191,6 +191,15 @@ python3 -m unittest \
 ./scripts/check-smtcomp-resume.sh
   71 tests, OK, one live-host skip
 
+AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
+  71 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
+  71 tests, OK, no skips
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784832792764426288-eab74458d98c
+  control=73890cfa5573c99407ad3ca58c15b4a946d4eede2b221786e58b486511d91fe9
+  loss=4dd128af5d82281094b56a38b116c4a00d52068d85bd90147fc09e9c7ed8cc7e
+
 ./scripts/check-links.sh
   passed
 
@@ -201,6 +210,5 @@ git diff --check
   passed
 ```
 
-Next: commit and integrate the implementation/checkpoint bytes, rerun mandatory
-cgroup and live multi-host E3 from the clean commit, then revalidate the frozen
-stop state and execute only `retry-1`.
+Next: integrate the implementation/checkpoint bytes, revalidate the frozen stop
+state against the integrated source, then execute only `retry-1`.
