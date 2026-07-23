@@ -1,6 +1,6 @@
 # Checked multi-binder quantified-UF models
 
-Status: implemented; final branch-wide gate pending
+Status: accepted and branch-wide green
 Date: 2026-07-22
 Decision: [ADR-0358](../research/09-decisions/adr-0358-preregister-multi-binder-finite-profile-quantified-uf-models.md)
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
@@ -47,7 +47,7 @@ The checker declines:
 - stale, extra, or wrong-outer-binder certificates through the inherited model
   contract.
 
-## Completed focused gates
+## Completed gates
 
 - MBQI model finder: 18/18, including integer and mixed-sort front-door SAT,
   Cartesian table-point rejection, fallback UNSAT, malformed prefixes, and both
@@ -62,8 +62,17 @@ The checker declines:
 - new two-binder direct-Z3 matrix: 64/64 agreements, split 32 SAT / 32 UNSAT,
   with every Axeyum SAT result passing canonical source replay.
 
-Workspace-wide tests, strict rustdoc, foundational resources, parity/link
-checks, and lane provenance gates remain before ADR acceptance.
+- workspace tests and doctests, including all solver, evidence, consumer, and
+  verification integration targets;
+- workspace all-target/all-feature warning-denied Clippy and strict rustdoc;
+- foundational resources: 137 concept rows and 174 example packs;
+- parity documentation with 680 compared decisions and zero disagreement;
+- link checks, SMT-COMP recovery (52 tests, one environment skip), and the
+  QF_BV profile gate; and
+- clean generated state and `git diff --check` after discarding timing-only
+  frontier rewrites produced by the workspace tests.
+
+ADR-0358 is accepted on this evidence.
 
 ## Deliberate next boundary
 
