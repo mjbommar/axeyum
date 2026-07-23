@@ -323,6 +323,8 @@ Repository:
   `docs/plan/smtcomp-official-selection-final-s4-2026-07-22.md`;
 - repaired P0-S1 preparation result:
   `docs/plan/smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md`;
+- retained repaired-P0 v1 layout incident:
+  `docs/plan/smtcomp-repaired-p0-v1-layout-incident-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
