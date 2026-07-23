@@ -11235,9 +11235,10 @@ fn linear_var_coefficient(arg: &CasExpr, var: &str) -> Option<Rational> {
 }
 
 /// The Laplace transform `L{g}(s)` of a single elementary "base" `g` in `t`
-/// (`1`, `e^{a·t}`, `sin(b·t)`, `cos(b·t)`, `J₀(b·t)`), returned in the variable
-/// `s`. `None` outside that table. The Bessel pair is
-/// [NIST DLMF 3.5.40](https://dlmf.nist.gov/3.5.E40).
+/// (`1`, `e^{a·t}`, `sin(b·t)`, `cos(b·t)`, `Jₙ(b·t)`), returned in the variable
+/// `s`. `None` outside that table. The Bessel pair is the nonnegative-integer
+/// specialization of [NIST DLMF 10.22.49](https://dlmf.nist.gov/10.22.E49):
+/// `L{Jₙ(bt)} = ((√(s²+b²)−s)/b)ⁿ / √(s²+b²)` for `b ≠ 0`.
 fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     let s_var = CasExpr::var(s);
     match g {
@@ -11254,13 +11255,21 @@ fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
             let b = linear_var_coefficient(arg, t)?; // cos(b·t) → s/(s²+b²)
             Some(s_var.clone() / (s_var.pow(2) + CasExpr::Const(b.checked_mul(b)?)))
         }
-        CasExpr::Unary(UnaryFunc::BesselJ(0), arg) => {
-            let b = linear_var_coefficient(arg, t)?; // J₀(b·t) → 1/√(s²+b²)
+        CasExpr::Unary(UnaryFunc::BesselJ(order), arg) => {
+            let b = linear_var_coefficient(arg, t)?;
             if b.is_zero() {
-                Some(CasExpr::int(1) / s_var) // J₀(0)=1; avoid the branchy √(s²)
-            } else {
-                Some(CasExpr::int(1) / (s_var.pow(2) + CasExpr::Const(b.checked_mul(b)?)).sqrt())
+                return if *order == 0 {
+                    Some(CasExpr::int(1) / s_var) // J₀(0)=1; avoid the branchy √(s²)
+                } else {
+                    Some(CasExpr::zero()) // Jₙ(0)=0 for every positive integer n
+                };
             }
+            let root = (s_var.clone().pow(2) + CasExpr::Const(b.checked_mul(b)?)).sqrt();
+            if *order == 0 {
+                return Some(CasExpr::int(1) / root);
+            }
+            let ratio = (root.clone() - s_var) / CasExpr::Const(b);
+            Some(ratio.pow(*order) / root)
         }
         _ => None,
     }
@@ -11268,8 +11277,8 @@ fn laplace_base(g: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
 
 /// The Laplace transform `L{f}(s) = ∫₀^∞ f(t)·e^{−st} dt` of an elementary function
 /// `f` in `t`, returned in the variable `s`. Handles linear combinations of
-/// `tᵏ·e^{a·t}`, `tᵏ·sin(b·t)`, `tᵏ·cos(b·t)`, `tᵏ·J₀(b·t)`, and polynomials
-/// (via `L{tᵏ·g} = (−1)ᵏ dᵏ/dsᵏ L{g}` and the `1, e^{at}, sin, cos, J₀` table).
+/// `tᵏ·e^{a·t}`, `tᵏ·sin(b·t)`, `tᵏ·cos(b·t)`, `tᵏ·Jₙ(b·t)`, and polynomials
+/// (via `L{tᵏ·g} = (−1)ᵏ dᵏ/dsᵏ L{g}` and the `1, e^{at}, sin, cos, Jₙ` table).
 /// `None` outside that fragment or on overflow.
 ///
 /// ```
@@ -11306,7 +11315,7 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
     }
 
     // Decompose the term into constant `c`, power `t^power`, an `exp(a·t)` **shift**
-    // (`L{e^{at}g}=G(s−a)`), and a transcendental base `g ∈ {1, sin, cos, J₀}`. The
+    // (`L{e^{at}g}=G(s−a)`), and a transcendental base `g ∈ {1, sin, cos, Jₙ}`. The
     // exp is always extracted as a shift, which subsumes `L{e^{at}} = 1/(s−a)` and
     // enables `L{e^{at}·sin(bt)}` etc.
     let factors = flatten_mul(f); // flatten the left-nested `*` tree
@@ -11332,7 +11341,7 @@ pub fn laplace_transform(f: &CasExpr, t: &str, s: &str) -> Option<CasExpr> {
                 shift = arg_poly[1];
                 shift_seen = true;
             }
-            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::BesselJ(0), _) => {
+            CasExpr::Unary(UnaryFunc::Sin | UnaryFunc::Cos | UnaryFunc::BesselJ(_), _) => {
                 if base_seen {
                     return None; // more than one transform-table base — unsupported
                 }
@@ -19922,9 +19931,8 @@ mod tests {
                 * (CasExpr::rat(1, 2) * t()).bessel_j(0)),
         );
 
-        // The bounded table does not pretend to cover other orders or
-        // irrational frequencies; malformed radical families also decline.
-        assert!(laplace_transform(&t().bessel_j(1), "t", "s").is_none());
+        // Irrational frequencies and malformed radical families remain outside
+        // this exact table.
         assert!(laplace_transform(&(CasExpr::int(2).sqrt() * t()).bessel_j(0), "t", "s").is_none());
         assert!(
             inverse_laplace(
@@ -19942,6 +19950,100 @@ mod tests {
             )
             .is_none()
         );
+    }
+
+    #[test]
+    fn laplace_bessel_j_higher_orders_scaling_and_composition() {
+        let s = || v("s");
+        let t = || v("t");
+        let quadratic = |shift: i128, frequency_squared: Rational| {
+            (s() - CasExpr::int(shift)).pow(2) + CasExpr::Const(frequency_squared)
+        };
+
+        // Higher nonnegative integer orders use the exact DLMF 10.22.49
+        // specialization. Rational/negative scales retain Jₙ(−x)=(−1)ⁿJₙ(x).
+        let unit_quadratic = quadratic(0, Rational::integer(1));
+        let unit_root = unit_quadratic.clone().sqrt();
+        assert_equal(
+            &laplace_transform(&t().bessel_j(1), "t", "s").expect("J1 transform"),
+            &(CasExpr::int(1) - s() / unit_root),
+        );
+        let scaled_root = quadratic(0, Rational::integer(4)).sqrt();
+        assert_equal(
+            &laplace_transform(&(CasExpr::int(2) * t()).bessel_j(2), "t", "s")
+                .expect("scaled J2 transform"),
+            &(((scaled_root.clone() - s()) / CasExpr::int(2)).pow(2) / scaled_root),
+        );
+        let half = CasExpr::rat(1, 2);
+        let half_root = quadratic(0, Rational::new(1, 4)).sqrt();
+        let positive_j3 = laplace_transform(&(half.clone() * t()).bessel_j(3), "t", "s")
+            .expect("positive rational-scale J3 transform");
+        let negative_j3 = laplace_transform(&(-half * t()).bessel_j(3), "t", "s")
+            .expect("negative rational-scale J3 transform");
+        assert_equal(
+            &positive_j3,
+            &(((half_root.clone() - s()) / CasExpr::rat(1, 2)).pow(3) / half_root),
+        );
+        assert_equal(&negative_j3, &(-positive_j3));
+        assert_equal(
+            &laplace_transform(&CasExpr::zero().bessel_j(4), "t", "s")
+                .expect("positive-order Bessel at zero"),
+            &CasExpr::zero(),
+        );
+        assert!(laplace_transform(&t().bessel_j(u32::MAX), "t", "s").is_some());
+
+        // Existing shift and transform-derivative rules compose with every order.
+        assert_equal(
+            &laplace_transform(&(t().exp() * t().bessel_j(1)), "t", "s")
+                .expect("shifted J1 transform"),
+            &(CasExpr::int(1)
+                - (s() - CasExpr::int(1))
+                    / ((s() - CasExpr::int(1)).pow(2) + CasExpr::int(1)).sqrt()),
+        );
+        assert_equal(
+            &laplace_transform(&(t() * t().bessel_j(1)), "t", "s")
+                .expect("polynomial-weighted J1 transform"),
+            &(CasExpr::int(1) / (unit_quadratic.clone() * unit_quadratic.sqrt())),
+        );
+
+        // Modified Bessel, irrational scales, and affine arguments retain honest declines.
+        assert!(laplace_transform(&t().bessel_i(0), "t", "s").is_none());
+        assert!(laplace_transform(&(CasExpr::int(2).sqrt() * t()).bessel_j(1), "t", "s").is_none());
+        assert!(laplace_transform(&(t() + CasExpr::int(1)).bessel_j(1), "t", "s").is_none());
+    }
+
+    #[test]
+    fn laplace_bessel_j_order_family_replays_derivative_recurrence() {
+        let s = || v("s");
+        let t = || v("t");
+        for scale in [
+            Rational::integer(1),
+            Rational::integer(-2),
+            Rational::new(1, 2),
+        ] {
+            let transforms: Vec<CasExpr> = (0..=17)
+                .map(|order| {
+                    laplace_transform(&(CasExpr::Const(scale) * t()).bessel_j(order), "t", "s")
+                        .unwrap_or_else(|| panic!("missing J{order} transform at scale {scale:?}"))
+                })
+                .collect();
+
+            // d/dt J₀(bt)=−bJ₁(bt), J₀(0)=1 gives sF₀+bF₁=1.
+            assert_equal(
+                &(s() * transforms[0].clone() + CasExpr::Const(scale) * transforms[1].clone()),
+                &CasExpr::int(1),
+            );
+            // d/dt Jₙ(bt)=b(Jₙ₋₁−Jₙ₊₁)/2 and Jₙ(0)=0 for n>0.
+            // This exact family replay is independent of the closed-form construction.
+            for order in 1..=16 {
+                assert_equal(
+                    &(s() * transforms[order].clone()),
+                    &(CasExpr::Const(scale)
+                        * CasExpr::rat(1, 2)
+                        * (transforms[order - 1].clone() - transforms[order + 1].clone())),
+                );
+            }
+        }
     }
 
     #[test]

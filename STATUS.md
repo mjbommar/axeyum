@@ -388,6 +388,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — arbitrary-order Bessel-`Jₙ` Laplace transforms.** The
+  existing rational-scale Bessel table now covers every public nonnegative
+  integer order using the exact DLMF 10.22.49 specialization
+  `L{Jₙ(bt)}=((√(s²+b²)−s)/b)ⁿ/√(s²+b²)`, with exact `b=0` handling and no
+  order-sized construction loop. Existing exponential-shift and transform-
+  derivative rules compose with the whole family. Unit, positive/negative
+  rational-scale, shifted, polynomial-weighted, zero-argument, and
+  `u32::MAX` controls pass; an independent derivative-recurrence replay checks
+  orders 0 through 17 at three scales. Modified Bessel, irrational-scale, and
+  affine-argument inputs still decline. The full 536-unit/147-doctest suite,
+  warning-denied workspace all-target/all-feature Clippy, strict stable/nightly
+  rustdoc, WASM build, links, and whitespace checks pass.
+
 - **2026-07-22 — certified generic first-order inhomogeneous routing.**
   `dsolve_inhomogeneous` now recognizes a trimmed degree-one constant-
   coefficient operator with non-polynomial forcing, divides both coefficients
@@ -7860,6 +7873,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Extended Laplace transforms to arbitrary Bessel-`Jₙ`
+  order.** The rational-scale table now implements the exact closed form for
+  every public nonnegative integer order, composes with the existing shift and
+  polynomial-weight rules, and is replay-checked against the Bessel derivative
+  recurrence. Explicit boundary and decline controls bring the CAS surface to
+  536 unit tests and 147 doctests.
 
 - **2026-07-22 — Routed generic first-order inhomogeneous ODEs.**
   Non-polynomial degree-one constant-coefficient equations now reuse the
