@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -34,6 +36,11 @@ from full_population import (  # noqa: E402
     validate_thermal_stop,
     validate_wave_checkpoint,
 )
+from full_prepare import (  # noqa: E402
+    full_host_argv,
+    materialize_full_selection,
+    validate_full_selection,
+)
 from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
     REGISTRATION_SCHEMA,
@@ -41,7 +48,7 @@ from multi_host import (  # noqa: E402
     validate_plan,
 )
 from resource_enforcement import MULTI_HOST_KIND  # noqa: E402
-from resume_contract import ContractError, digest  # noqa: E402
+from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 
 
 ENFORCEMENT_ID = "e" * 64
@@ -63,6 +70,68 @@ def seal_as(value: dict, field: str) -> dict:
     result.pop(field, None)
     result[field] = digest(result)
     return result
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def accepted_fixture(shared: Path, corpus: Path) -> Path:
+    rows = (
+        (
+            "non-incremental/QF_BV/fixture/a.smt2",
+            "QF_BV",
+            "(set-logic QF_BV)\n(set-info :status sat)\n(check-sat)\n",
+        ),
+        (
+            "non-incremental/QF_UF/fixture/b.smt2",
+            "QF_UF",
+            "(set-logic QF_UF)\n(set-info :status unsat)\n(check-sat)\n",
+        ),
+    )
+    staging = shared / "accepted-staging"
+    staging.mkdir()
+    selected = staging / "official-selected.txt"
+    selected.write_text("".join(f"{row[0]}\n" for row in rows), encoding="utf-8")
+    ledger = staging / "selected-files.jsonl"
+    ledger_bytes = bytearray()
+    for benchmark_id, logic, content in rows:
+        benchmark = corpus / benchmark_id
+        benchmark.parent.mkdir(parents=True, exist_ok=True)
+        benchmark.write_text(content, encoding="utf-8")
+        ledger_bytes.extend(
+            canonical_bytes(
+                {
+                    "archive": f"{logic}.tar.zst",
+                    "benchmark_id": benchmark_id,
+                    "bytes": benchmark.stat().st_size,
+                    "logic": logic,
+                    "sha256": sha256_file(benchmark),
+                }
+            )
+        )
+    ledger.write_bytes(bytes(ledger_bytes))
+    completion = {
+        "artifacts": {
+            "official-selected.txt": sha256_file(selected),
+            "selected-files.jsonl": sha256_file(ledger),
+        },
+        "authority_sha256": "a" * 64,
+        "metadata_rows": len(rows),
+        "payload_sha256": "",
+        "schema": "axeyum-smtcomp-official-selection-v1",
+        "selected_files": len(rows),
+        "selection_observed": True,
+        "status": "complete",
+    }
+    completion["payload_sha256"] = digest(
+        {key: value for key, value in completion.items() if key != "payload_sha256"}
+    )
+    complete = staging / "complete.json"
+    complete.write_bytes(canonical_bytes(completion))
+    accepted = shared / f"accepted-{sha256_file(complete)}"
+    staging.rename(accepted)
+    return accepted
 
 
 class FullPopulationContractTests(unittest.TestCase):
@@ -583,6 +652,119 @@ class FullPopulationContractTests(unittest.TestCase):
                 post_stop_unit_state="inactive",
                 stopped_at_ns=2000,
             )
+
+    def test_fixture_selection_materialization_rehashes_every_selected_file(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shared = root / "shared"
+            corpus = shared / "corpus"
+            output = shared / "output"
+            output.mkdir(parents=True)
+            accepted = accepted_fixture(shared, corpus)
+            record = materialize_full_selection(
+                accepted_root=accepted,
+                corpus_root=corpus,
+                output_dir=output,
+                fixture_only=True,
+            )
+            self.assertEqual(record["population_count"], 2)
+            self.assertFalse(record["launch_authorized"])
+            self.assertEqual(
+                validate_full_selection(record)["record_sha256"],
+                record["record_sha256"],
+            )
+            benchmark = corpus / "non-incremental/QF_BV/fixture/a.smt2"
+            benchmark.write_text("mutated\n", encoding="utf-8")
+            with self.assertRaises(ContractError):
+                validate_full_selection(record)
+
+    def test_fixture_population_cannot_pass_the_live_preregistration_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            shared = root / "shared"
+            corpus = shared / "corpus"
+            output = shared / "output"
+            output.mkdir(parents=True)
+            accepted = accepted_fixture(shared, corpus)
+            with self.assertRaisesRegex(ContractError, "differs from preregistration"):
+                materialize_full_selection(
+                    accepted_root=accepted,
+                    corpus_root=corpus,
+                    output_dir=output,
+                    fixture_only=False,
+                )
+
+    def test_full_host_argv_freezes_multi_shard_workers_and_no_launch_side_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            staged = root / "staged"
+            staged.mkdir()
+            solver = root / "solver"
+            solver.write_bytes(b"fixture solver")
+            paths = {}
+            for name in (
+                "files.txt",
+                "run.json",
+                "selection.json",
+                "accepted",
+                "corpus.json",
+                "environment.json",
+                "source-identity.json",
+            ):
+                path = root / name
+                if name == "accepted":
+                    path.mkdir()
+                else:
+                    path.write_bytes(b"fixture\n")
+                paths[name] = path
+            (staged / "compete.py").write_bytes(b"fixture\n")
+            run_dir = root / "run"
+            run_dir.mkdir()
+            argv = full_host_argv(
+                python_executable=Path(sys.executable),
+                staged_source=staged,
+                solver_id="axeyum",
+                solver_binary=solver,
+                shard_ids=[0, 1],
+                session_id="full-axeyum-initial-00",
+                file_list=paths["files.txt"],
+                run_manifest=paths["run.json"],
+                run_dir=run_dir,
+                selection_manifest=paths["selection.json"],
+                accepted_root=paths["accepted"],
+                corpus_manifest=paths["corpus.json"],
+                environment_manifest=paths["environment.json"],
+                source_identity_manifest=paths["source-identity.json"],
+                internal_timeout_ms=19_000,
+            )
+            self.assertEqual(argv[argv.index("--host-shards") + 1], "0,1")
+            self.assertEqual(argv[argv.index("--internal-timeout-ms") + 1], "19000")
+            self.assertNotIn("--allow-unadmitted-selection-fixture", argv)
+            self.assertEqual(
+                [
+                    argv[index + 1]
+                    for index, value in enumerate(argv)
+                    if value == "--solver-env"
+                ],
+                ["AYU_THREADS=1", "OMP_NUM_THREADS=1", "RAYON_NUM_THREADS=1"],
+            )
+            with self.assertRaises(ContractError):
+                full_host_argv(
+                    python_executable=Path(sys.executable),
+                    staged_source=staged,
+                    solver_id="cvc5",
+                    solver_binary=solver,
+                    shard_ids=[1, 0],
+                    session_id="bad",
+                    file_list=paths["files.txt"],
+                    run_manifest=paths["run.json"],
+                    run_dir=run_dir,
+                    selection_manifest=paths["selection.json"],
+                    accepted_root=paths["accepted"],
+                    corpus_manifest=paths["corpus.json"],
+                    environment_manifest=paths["environment.json"],
+                    source_identity_manifest=paths["source-identity.json"],
+                )
 
 
 if __name__ == "__main__":
