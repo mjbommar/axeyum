@@ -236,6 +236,10 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   payloads (106,610 bytes), bind 56 reproducible C/executable intermediates
   (950,219,754 bytes) by exact metadata, append diagnostic completion last,
   and preserve zero R1/M2 credit.
+- [`lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md`](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md) —
+  pushed offline-only R2 implementation checkpoint for commit `e846daf9`, exact
+  source/test hashes, real 124/67/56/1 projection, copied completion-last
+  replay, CI wiring, and no live append or process.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

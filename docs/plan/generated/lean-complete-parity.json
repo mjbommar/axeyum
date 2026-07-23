@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "68736ca80e0f881debc5d4f5aeb52b1a67d917774c5fe0028632ab262cb2e837"
+      "sha256": "15548b465be9db6a495980e78f98b47a04ff41d29b6a2dce9424f1504dab3827"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -145,6 +145,10 @@
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r1-symlink-preflight-plan-2026-07-22.md",
       "sha256": "e0fd948ee39e0f1808eec459a18766683d3781e602cc481c8fa10a70e9a0d5f9"
+    },
+    {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md",
+      "sha256": "29fa1fff9eaef4f17875a198727827833d1d31cd874ef8cc4c7a1a0ae0a11009"
     },
     {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md",
@@ -874,6 +878,10 @@
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md",
           "detail": "Preregistered zero-process, zero-credit diagnostic closure with exact family-specific artifact classification and retained-byte versus metadata-only storage split."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md",
+          "detail": "Pushed offline-only R2 implementation with exact projection, copied completion-last replay, CI wiring, and no live append or process."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",
