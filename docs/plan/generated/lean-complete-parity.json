@@ -192,7 +192,7 @@
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_run.py",
-      "sha256": "bb6d484f542369c42679c816deb5d7cce132dc57df22f1bbc64320026f4961e4"
+      "sha256": "5763298bb33c97baacc0c29d6cc67a8df2ece796f7ea182c59957f5be59eb593"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_store.py",
@@ -244,7 +244,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
-      "sha256": "1c86f48e432ba1988e7905239f766f458ea0ac051bda8a9b3e60072256292f2d"
+      "sha256": "dd8db7fc2f65b99f0ba6ad11d863a29927463544b6fabf5b2dd836d928f4f2e8"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_store.py",
@@ -712,6 +712,8 @@
         "cases": 64,
         "store_cases": 64,
         "lane": "official-ctest-local-8g-lean-j1-shard64-v1",
+        "r1_preregistration_commit": "3e761588eb8487dab510906e6d5fc3c90cc08fef",
+        "r1_plan_sha256": "e0fd948ee39e0f1808eec459a18766683d3781e602cc481c8fa10a70e9a0d5f9",
         "run_command_exposed": true,
         "live_execution_observed": false
       }
