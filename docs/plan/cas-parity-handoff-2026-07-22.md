@@ -13,15 +13,15 @@ elsewhere in `docs/plan/`). Read this file first when resuming.
   [multi-agent operations guide](../contributor-guide/multi-agent-operations.md):
   work only in the dedicated CAS worktree on an `agent/cas/*` branch, push that
   branch, and leave `main` to the integration owner. The current increment is
-  `agent/cas/bessel-maclaurin-series`, based on integration parent `867243c1`,
-  with implementation commit `13aec070`; do not rebase it onto `main` ahead of
+  `agent/cas/bessel-antiderivatives`, based on integration parent `1c66b68c`,
+  with implementation commit `8d33ffbc`; do not rebase it onto `main` ahead of
   the integration owner.
-- **Tests:** `544` unit + `147` doctests, **all green**, warning-denied workspace
+- **Tests:** `545` unit + `147` doctests, **all green**, warning-denied workspace
   all-target/all-feature Clippy-clean, strict stable/nightly rustdoc-green,
   wasm-green, links-green, and whitespace-clean.
 - **Source of truth for capabilities:** `docs/research/10-cas/README.md`
   (capability table) and `docs/research/10-cas/diary.md` (chronological entries;
-  latest is **Entry 37af1**). Keep both in sync when landing features.
+  latest is **Entry 37af2**). Keep both in sync when landing features.
 - **Method that works:** empirical **gap-probing** (below). It found every recent
   feature *and* a serious infinite-hang regression.
 
@@ -636,11 +636,10 @@ semantics changed.
 
 Ordered roughly by value:
 
-1. **Bessel antiderivative follow-up.** The fifth probe measured `J₁`, `I₁`,
-   `xJ₀`, and `xI₀` (including rational argument scales) as declines. Start with
-   the direct derivative pairs and require the normal public differentiate-and-
-   check certificate; do not add recurrence rewriting unless it is separately
-   value-preserving and termination-safe.
+1. **Weighted Bessel antiderivative follow-up.** Direct rational-affine `J₁`
+   and `I₁` pairs are closed. `xJ₀` and `xI₀` remain measured declines because
+   their certificates need a separately value-preserving, termination-safe
+   Bessel recurrence normalization; do not bypass differentiate-and-check.
 2. **Resume broad, timeout-bounded gap probing.** The moment families now have
    explicit resource boundaries: direct order 256 needs `Γ(257)`, raw order 36
    needs public coefficients beyond `i128`, and repeated-quadratic inverse

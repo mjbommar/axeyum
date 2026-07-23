@@ -388,6 +388,16 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — certified direct order-one Bessel antiderivatives.** Rational-
+  affine `J₁`/`I₁` arguments now integrate through `J₀′=−J₁` / `I₀′=I₁`, with
+  every result accepted only by the normal differentiate-and-zero-test gate.
+  Unit, shifted/reflected, scaled, symbolic-factor, and FTC cases pass; weighted
+  `xJ₀`/`xI₀` remain explicit recurrence-boundary declines. An adjacent
+  `u32::MAX` derivative overflow panic is replaced by exact backward recurrences.
+  The 545-unit/147-doctest suite passed (933.50 s for units), with workspace
+  Clippy, stable/nightly rustdoc, WASM, links, and whitespace green. Next:
+  decide the weighted-pair recurrence proof or resume broad bounded probing.
+
 - **2026-07-22 — exact arbitrary-order Bessel Maclaurin series and zero
   limits.** The existing `series` compute path now composes every nonnegative
   integer-order `Jₙ` and `Iₙ` whose argument vanishes at the origin, using the
@@ -8026,6 +8036,10 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added certified direct order-one Bessel antiderivatives.**
+  Rational-affine `J₁`/`I₁` pairs, FTC controls, explicit recurrence declines,
+  and maximum-order derivative hardening bring CAS to 545 units/147 doctests.
 
 - **2026-07-22 — Added exact arbitrary-order Bessel Maclaurin series and zero
   limits.** Checked `Jₙ`/`Iₙ` coefficient recurrences, independent fixtures and
