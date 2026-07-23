@@ -1942,9 +1942,13 @@ def _load_recoveries(
             )
             if not attempt_path.is_file() or not terminal_path.is_file():
                 raise ContractError("released recovery allocation evidence is missing")
+            failed_attempt = read_canonical_json(attempt_path)
             failed_terminal = read_canonical_json(terminal_path)
             if (
-                failed_terminal.get("status") != "failed"
+                failed_attempt.get("attempt_id") != record["failed_attempt_id"]
+                or failed_attempt.get("allocation_id") != failed["allocation_id"]
+                or failed_attempt.get("session_id") != record["resource_session_id"]
+                or failed_terminal.get("status") != "failed"
                 or failed_terminal.get("record_sha256")
                 != record["failed_terminal_record_sha256"]
             ):

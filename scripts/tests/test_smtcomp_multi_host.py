@@ -499,6 +499,7 @@ class MultiHostPortableTests(unittest.TestCase):
             (layout.root / "records").mkdir()
             failed_attempt = {
                 "attempt_id": "failed-attempt",
+                "allocation_id": "initial-0",
                 "session_id": session_id,
             }
             failed_terminal = seal(

@@ -710,6 +710,13 @@ def validate_frozen_bitwuzla_recovery(
     records = _records(run_dir)
     if (
         len(records) != frozen["record_count"]
+        or any(
+            row.get("record_sha256")
+            != digest(
+                {key: value for key, value in row.items() if key != "record_sha256"}
+            )
+            for row in records
+        )
         or digest(sorted(row["record_sha256"] for row in records))
         != frozen["record_set_sha256"]
         or Counter(row.get("shard_id") for row in records) != {"0": 435, "2": 435}
