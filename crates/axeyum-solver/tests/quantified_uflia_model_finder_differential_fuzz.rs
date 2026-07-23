@@ -38,10 +38,10 @@
 
 use std::{
     collections::{BTreeMap, BTreeSet},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, Value, eval};
+use axeyum_ir::{Assignment, FuncId, Sort, SymbolId, TermArena, TermId, TermNode, Value, eval};
 use axeyum_solver::{
     CheckResult, Model, SolverConfig, check_auto, check_model, prove_unsat_by_mbqi,
 };
@@ -967,6 +967,170 @@ fn push_scalar_candidate(values: &mut Vec<i128>, candidate: i128) {
     if values.len() < 16 && !values.contains(&candidate) {
         values.push(candidate);
     }
+}
+
+fn evaluated_int_candidate_pool(
+    arena: &TermArena,
+    assertions: &[TermId],
+    model: &Model,
+) -> BTreeSet<i128> {
+    let assignment = model.to_assignment();
+    let mut values = BTreeSet::from([0]);
+    for (_, value) in model.iter() {
+        if let Value::Int(integer) = value {
+            values.insert(integer);
+        }
+    }
+    for (_, function) in model.functions() {
+        if let Value::Int(integer) = function.default_value() {
+            values.insert(integer);
+        }
+        for (_, value) in function.value_entries() {
+            if let Value::Int(integer) = value {
+                values.insert(*integer);
+            }
+        }
+    }
+
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        if arena.sort_of(term) == Sort::Int
+            && let Ok(Value::Int(integer)) = eval(arena, term, &assignment)
+        {
+            values.insert(integer);
+        }
+        if let TermNode::App { args, .. } = arena.node(term) {
+            stack.extend(args.iter().rev().copied());
+        }
+    }
+    values
+}
+
+fn exact_source_symbols(arena: &TermArena, assertions: &[TermId]) -> BTreeSet<SymbolId> {
+    let mut symbols = BTreeSet::new();
+    let mut seen = BTreeSet::new();
+    let mut stack: Vec<TermId> = assertions.iter().rev().copied().collect();
+    while let Some(term) = stack.pop() {
+        if !seen.insert(term) {
+            continue;
+        }
+        match arena.node(term) {
+            TermNode::Symbol(symbol) => {
+                symbols.insert(*symbol);
+            }
+            TermNode::App { args, .. } => stack.extend(args.iter().rev().copied()),
+            _ => {}
+        }
+    }
+    symbols
+}
+
+#[test]
+#[ignore = "diagnostic; set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS"]
+fn diagnose_evaluated_source_scalar_completion_for_quantified_uflia_unknowns() {
+    const MAX_VALUES: usize = 32;
+    const MAX_TUPLES: usize = 1_024;
+
+    let raw = std::env::var("AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS")
+        .expect("set AXEYUM_QUANT_UFLIA_SCALAR_DIAGNOSTIC_SEEDS");
+    let cfg = SolverConfig::new().with_timeout(AXEYUM_TIMEOUT);
+    let mut sat = 0_u64;
+    let mut unknown = 0_u64;
+    let mut candidate_checks = 0_u64;
+
+    for field in raw.split(',') {
+        let seed: u64 = field.trim().parse().expect("diagnostic seed must be u64");
+        let mut rng = Lcg::new(seed);
+        let inst = Instance::generate(&mut rng);
+        assert_eq!(z3_decide(&inst), Verdict::Sat);
+
+        let (mut ground_arena, _, y_symbols, _, ground, ground_assertions) = inst.build_axeyum();
+        let source_symbols = exact_source_symbols(&ground_arena, &ground_assertions);
+        let relevant_y_symbols: Vec<SymbolId> = y_symbols
+            .into_iter()
+            .filter(|symbol| source_symbols.contains(symbol))
+            .collect();
+        let ground_model = match check_auto(&mut ground_arena, &ground, &cfg) {
+            Ok(CheckResult::Sat(model)) => model,
+            other => panic!("seed {seed} ground slice must be SAT, got {other:?}"),
+        };
+        let base_values =
+            evaluated_int_candidate_pool(&ground_arena, &ground_assertions, &ground_model);
+        let mut candidate_values = base_values.clone();
+        for base in base_values.iter().copied() {
+            if let Some(predecessor) = base.checked_sub(1) {
+                candidate_values.insert(predecessor);
+            }
+            if let Some(successor) = base.checked_add(1) {
+                candidate_values.insert(successor);
+            }
+        }
+
+        let values: Vec<i128> = candidate_values.iter().copied().collect();
+        let tuple_count = values
+            .len()
+            .checked_pow(u32::try_from(relevant_y_symbols.len()).unwrap())
+            .unwrap_or(usize::MAX);
+        let mut found = None;
+        let deadline = Instant::now() + AXEYUM_TIMEOUT;
+        if values.len() <= MAX_VALUES && tuple_count <= MAX_TUPLES {
+            'assignments: for tuple_index in 0..tuple_count {
+                let Some(remaining) = deadline.checked_duration_since(Instant::now()) else {
+                    break;
+                };
+                let mut remaining_index = tuple_index;
+                let mut chosen = vec![0; relevant_y_symbols.len()];
+                for slot in (0..chosen.len()).rev() {
+                    chosen[slot] = values[remaining_index % values.len()];
+                    remaining_index /= values.len();
+                }
+
+                candidate_checks += 1;
+                let (mut arena, _, candidate_y_symbols, _, _, mut fixed_assertions) =
+                    inst.build_axeyum();
+                let original_assertions = fixed_assertions.clone();
+                let candidate_source_symbols = exact_source_symbols(&arena, &fixed_assertions);
+                let candidate_relevant_y_symbols: Vec<SymbolId> = candidate_y_symbols
+                    .into_iter()
+                    .filter(|symbol| candidate_source_symbols.contains(symbol))
+                    .collect();
+                assert_eq!(candidate_relevant_y_symbols.len(), chosen.len());
+                for (&symbol, &value) in candidate_relevant_y_symbols.iter().zip(&chosen) {
+                    let variable = arena.var(symbol);
+                    let constant = arena.int_const(value);
+                    fixed_assertions.push(arena.eq(variable, constant).unwrap());
+                }
+                let candidate_cfg = SolverConfig::new().with_timeout(remaining);
+                if let CheckResult::Sat(model) =
+                    prove_unsat_by_mbqi(&mut arena, &fixed_assertions, &candidate_cfg)
+                        .expect("evaluated-source scalar diagnostic must not error")
+                    && check_model(&arena, &original_assertions, &model).unwrap()
+                {
+                    found = Some(chosen);
+                    break 'assignments;
+                }
+            }
+        }
+
+        if found.is_some() {
+            sat += 1;
+        } else {
+            unknown += 1;
+        }
+        println!(
+            "seed {seed}: evaluated_base_pool={base_values:?}, neighbor_pool={candidate_values:?}, \
+             relevant_symbols={}, tuples={tuple_count}, checked_sat_scalars={found:?}",
+            relevant_y_symbols.len()
+        );
+    }
+
+    println!(
+        "EVALUATED_SOURCE_SCALAR_COMPLETION|sat={sat}|unknown={unknown}|candidate_checks={candidate_checks}"
+    );
 }
 
 #[test]
