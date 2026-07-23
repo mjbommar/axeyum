@@ -99,3 +99,6 @@ repair, serialized proof exchange, or Lean SAT reconstruction. The next
 capability increment is multi-binder Cartesian finite-profile checking, but only
 now that this one-binder evidence boundary is green under differential and
 branch-wide validation.
+
+That follow-up is implemented under proposed ADR-0358 and recorded in the
+[multi-binder result](checked-multi-binder-quantified-uf-models-2026-07-22.md).
