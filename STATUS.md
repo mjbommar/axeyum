@@ -383,8 +383,9 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
-- **2026-07-23 — repaired SMT-COMP P0 v2 is immutably prepared, with no solver
-  allocation launched.** The v1 Axeyum cell completed its 1,810 records but
+- **2026-07-23 — repaired SMT-COMP P0 v2 Axeyum runtime is complete; derived
+  export closure is preregistered and cvc5 remains blocked.** The v1 Axeyum
+  cell completed its 1,810 records but
   exposed a fail-closed evidence-layout defect at aggregate finalization;
   those records and timings remain diagnostic-only and receive no P0 credit.
   The integrated repair keeps immutable run manifests under `inputs/`, outside
@@ -449,6 +450,18 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   formatting green. Source `8c82e7d1` was integrated exactly by `ac2571ce`.
   Next: resume broad probing; quadratic-pole inverse Z remains
   representation-bound.
+  The integrated v2 admission then authorized exactly the three Axeyum initial
+  allocations. All 1,810 records, three shard completions, resource completion,
+  and multi-host completion are now closed. Adjudication reports 450 `sat`, 464
+  `unsat`, 280 `unknown`, 616 no verdict, zero known-status contradictions, zero
+  cross-solver disagreements, and `safe_to_continue=true`. Final raw export
+  nevertheless rejected because the coordinator placed its adjudication file
+  inside the strict generic run root. No cvc5/Bitwuzla process ran. The
+  hash-pinned process-free closure plan separates coordinator outputs, preserves
+  the validator allowlist, and forbids any solver rerun or runtime-evidence
+  rewrite. Next: integrate that plan, implement and gate the closure, integrate
+  the implementation, close and document the frozen Axeyum cell, then admit
+  cvc5 only after the exact result bytes land on `origin/main`.
 - **2026-07-22 — certified rational-rate products of integer-order Bessel J.**
   Wave eighteen composes the fixed-order envelope across a finite direct product:
   if exact rational arguments grow like `|x|^dᵢ` and an exact rational weight
@@ -8410,6 +8423,14 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Froze and preregistered the Axeyum v2 export-layout closure.**
+  All three initial allocations completed 1,810 records with closed aggregate
+  resource/multi-host evidence and safe adjudication. Raw export then failed
+  closed on the coordinator-owned top-level adjudication artifact. The repair
+  moves all coordinator results to `cell-results/<solver>/`, keeps the generic
+  validator unchanged, and permits only an exact hash-pinned process-free
+  closure. Axeyum has no P0 credit yet; cvc5 and Bitwuzla remain untouched.
 
 - **2026-07-23 — Published the repaired SMT-COMP P0-S1 v2 preparation for
   integration review.** Integrated `be4cb33c` passes the portable, cgroup, and
