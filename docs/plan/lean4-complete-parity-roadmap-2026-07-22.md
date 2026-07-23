@@ -138,7 +138,11 @@ After publication, the direct stack probe passed but delegated control history
 preflight recursed before root creation. The source-first
 [`R1 correction`](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
 freezes captured-original R5 validation/restoration; attempt 004 remains
-unconsumed. Next implement/test/push R1 before repeating the harmless control.
+unconsumed. The separate
+[`R1 implementation`](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
+is pushed at `70268f2d` and tests the exact temporary binding path. Next publish
+that checkpoint and repeat one fresh control; selected execution remains
+unauthorized.
 
 ## 2. What the SMT-LIB comparison actually says
 

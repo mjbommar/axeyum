@@ -632,7 +632,11 @@ state.
 > source-first
 > [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
 > freezes only captured-original R5 history delegation and restoration. Next
-> implement/test/push R1; attempt 004 remains unconsumed;
+> implement/test/push R1; attempt 004 remains unconsumed. The
+> [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
+> records clean pushed `70268f2d`, complete original-binding restoration, ten
+> focused tests, and no repeated control. Next push this checkpoint, verify
+> remote equality, and repeat the harmless controls from a fresh revision root;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

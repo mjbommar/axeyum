@@ -532,8 +532,12 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   rebound R6 adapter before root creation or Lean launch. The source-first
   [R1 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md)
   freezes only captured-original R5 history delegation/restoration. Next
-  implement/test/push R1. Attempt 004 remains unconsumed and no selected
-  process is authorized.
+  implement/test/push R1. The
+  [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
+  records clean pushed `70268f2d`, complete original-binding restoration, ten
+  focused tests, and no repeated control. Next push this checkpoint, verify
+  remote equality, and repeat the harmless controls from a fresh revision root.
+  Attempt 004 remains unconsumed and no selected process is authorized.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -7845,6 +7849,12 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Implemented and pushed the R6 control-history correction.**
+  Commit `70268f2d` temporarily restores the complete captured R5 binding set
+  during diagnostic validation and restores the R6 caller in `finally`. The
+  exact control-context regression and ten focused tests pass; no repeated
+  control or selected process exists.
 
 - **2026-07-23 — Preregistered the pre-process R6 control-history correction.**
   The stack probe passed, then temporary `R5.validate_history` rebinding caused

@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "c8a9844931528e3338bbe75f83382587df36f2dfa35560309a884eef3999078d"
+      "sha256": "f602cd881537805c6ba6c970f97dbda305334e745e7f41a431596c6af5aee0a1"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "b17a5687434cfd3c86bec4519d04394a8eb00ae275efcbb9c56e59bb067c8b2c"
+      "sha256": "5032e9a5d5fd2307e1796308c3aa0ad595eb8ba1bbad911e8cdbc777e33b8ce9"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -211,6 +211,10 @@
       "sha256": "80d6f4875dcd11a90c79940f4b460bd3ede25f67139f22565f79dd64d8b33754"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md",
+      "sha256": "0647942c1cd0e39b2abad8a057d9a274e39d687e8a9e77629019de3f0c23559d"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-plan-2026-07-23.md",
       "sha256": "d5069a7cdcc139e18508f2db23b00b371866283a3b25d0bb8816e4642f999bde"
     },
@@ -228,7 +232,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "ed3cf9000b108417db847053e58b64b817c40619b10da1742679005aa837c00c"
+      "sha256": "ffb42b0339cad64fab8e603534f042de568e38589decd1bcb1dc42f8486eb7b7"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -1095,6 +1099,10 @@
           "detail": "Preregistered captured-original R5 history delegation after temporary control binding recursed before root creation; attempt 004 remains unconsumed."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md",
+          "detail": "Pushed complete original-R5 binding restoration with exact temporary-control-context regression, ten focused tests, and no repeated control or selected process."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1163,7 +1171,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. Its completed zero-process diagnostic closure binds 68 appended files, including 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion. R5 remains zero-outcome and cannot retry. Attempt 004 and its implementation are pushed with fresh roots, the unchanged qualified resource lane, and JUnit-selected conditional failure-log semantics. Its first control invocation stopped in history preflight before root/process creation; the source-first captured-history correction is preregistered, and a corrected fresh control plus the one selected execution remain open. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are seven consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, and invalid M2 R5. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. R2 completed its zero-process diagnostic append with unchanged credit. M2 R3 exported LEAN_STACK_SIZE_KB=524288, printed seven diagnostic passes, then timed out after channel thread-creation failure; its 17-file root has no JUnit/cases/completion and zero credit. R4's 16 GiB nine-task control failed before selected discovery, leaving attempt 003 unconsumed. R5's completion-grade 32 GiB control passed, and selected attempt 003 then exited cleanly with exact 64/64 JUnit passes. Fail-closed post capture nevertheless rejected the absent all-pass LastTestsFailed.log: 123 generated paths versus 124 preregistered. Its completed zero-process diagnostic closure binds 68 appended files, including 66 retained payloads, 56 metadata rows, conditional-log absence, and invalid zero-credit completion. R5 remains zero-outcome and cannot retry. Attempt 004 and its implementation are pushed with fresh roots, the unchanged qualified resource lane, and JUnit-selected conditional failure-log semantics. Its first control invocation stopped in history preflight before root/process creation; the pushed captured-history correction now passes the exact temporary-control-context regression. A corrected fresh control plus the one selected execution remain open. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",
