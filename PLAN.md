@@ -562,7 +562,12 @@ state.
 > The [R2 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md)
 > records pushed offline-only commit `e846daf9` and two exact projection/store
 > tests. Next publish that checkpoint, revalidate clean ref equality, and append
-> the diagnostic namespace once without launching Lean or changing R1 credit;
+> the diagnostic namespace once without launching Lean or changing R1 credit.
+> The [R2 result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md)
+> now records successful completion-last append: 69 new files / 159,346 bytes,
+> zero processes, zero outcomes, and unchanged invalid R1 credit. Next publish
+> that evidence/result, then preregister any new process with a new attempt/root
+> and universal `LEAN_STACK_SIZE_KB` control;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

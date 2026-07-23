@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "15548b465be9db6a495980e78f98b47a04ff41d29b6a2dce9424f1504dab3827"
+      "sha256": "fa1cbebf6630893f9b6cd93ce5dcdf64552a4366bd3975743a2cc848f34f401a"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -155,6 +155,10 @@
       "sha256": "91f1d6d42f55a5717fef731df301bb7f2d49eb00eef5689c5bc7f7e17f7aff67"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md",
+      "sha256": "a9b2a9f20d3a19e4e7e306bce568c86bb76baae32fd7d0f72842844de2742784"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -268,7 +272,7 @@
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_r2.py",
-      "sha256": "ce68a0331c3d6537fd6a0d482a8e89d5950b1a9b45b94cfae4d98497117d7be3"
+      "sha256": "a12b8be616c92b31e5d9cbd549862283e74f2d5e43e5fa442521f43ca27754e2"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_execution_m2_run.py",
@@ -882,6 +886,10 @@
         {
           "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-implementation-2026-07-22.md",
           "detail": "Pushed offline-only R2 implementation with exact projection, copied completion-last replay, CI wiring, and no live append or process."
+        },
+        {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md",
+          "detail": "Completed append-only diagnostic closure with 69 new files, zero processes/outcomes, and unchanged invalid R1 credit."
         },
         {
           "path": "docs/plan/lean-execution-evidence-v1.json",

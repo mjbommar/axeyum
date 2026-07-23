@@ -1,0 +1,3 @@
+libc++abi: terminating due to uncaught exception of type lean::exception: failed to create thread
+uncaught exception: Expected JSON-RPC response, got: '{"error":{"code":-32902,"message":"Server process for file:///home/sebastian/lean4/tests/bench/identifier_completion.lean crashed, likely due to a stack overflow or a bug."},"id":1,"jsonrpc":"2.0"}'
+Watchdog error: Cannot read LSP message: Stream was closed

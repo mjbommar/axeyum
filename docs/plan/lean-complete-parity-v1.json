@@ -140,6 +140,10 @@
           "detail": "Pushed offline-only R2 implementation with exact projection, copied completion-last replay, CI wiring, and no live append or process."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-result-2026-07-22.md",
+          "detail": "Completed append-only diagnostic closure with 69 new files, zero processes/outcomes, and unchanged invalid R1 credit."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },

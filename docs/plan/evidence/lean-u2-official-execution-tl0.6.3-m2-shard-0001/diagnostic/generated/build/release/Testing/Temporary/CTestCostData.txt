@@ -1,0 +1,99 @@
+compile/uint_fold.lean 1 0.570111
+compile/unreachable.lean 1 0.472792
+compile/uset.lean 1 0.478174
+compile/utf8Path.lean 1 0.445802
+compile/wait_dedicated.lean 1 0.677255
+compile_bench/binarytrees.lean 1 1.55035
+compile_bench/binarytrees.st.lean 1 1.58301
+compile_bench/channel.lean 0 0
+compile_bench/const_fold.lean 1 0.767331
+compile_bench/deriv.lean 1 0.886569
+compile_bench/hashmap.lean 1 2.04028
+compile_bench/identifier_completion.lean 0 0
+compile_bench/ilean_roundtrip.lean 1 0.901339
+compile_bench/iterators.lean 1 2.80467
+compile_bench/liasolver.lean 1 5.48786
+compile_bench/nat_repr.lean 1 0.537384
+compile_bench/parser.lean 1 1.02224
+compile_bench/phashmap.lean 1 1.77022
+compile_bench/qsort.lean 1 1.38424
+compile_bench/rbmap.lean 1 1.29134
+compile_bench/rbmap_checkpoint.lean 1 1.35283
+compile_bench/rbmap_fbip.lean 1 0.700068
+compile_bench/rbmap_library.lean 1 0.846276
+compile_bench/server_startup.lean 1 0.967234
+compile_bench/sigmaIterator.lean 1 0.898982
+compile_bench/treemap.lean 1 2.10052
+compile_bench/unionfind.lean 1 1.62769
+compile_bench/watchdogRss.lean 1 4.41083
+compile_bench/workspaceSymbolsNewRanges.lean 1 3.26828
+docparse/arg_0001.txt 0 0
+docparse/arg_0002.txt 0 0
+docparse/arg_0003.txt 0 0
+docparse/arg_0004.txt 0 0
+docparse/arg_0005.txt 0 0
+docparse/arg_0006.txt 1 0.291033
+docparse/arg_0007.txt 0 0
+docparse/arg_0008.txt 0 0
+docparse/arg_0009.txt 0 0
+docparse/arg_0010.txt 0 0
+docparse/arg_0011.txt 0 0
+docparse/arg_0012.txt 0 0
+docparse/arg_0013.txt 0 0
+docparse/arg_0014.txt 0 0
+docparse/arg_0015.txt 0 0
+docparse/arg_0016.txt 1 0.309368
+docparse/arg_0017.txt 0 0
+docparse/arg_0018.txt 0 0
+docparse/arg_val_0001.txt 0 0
+docparse/arg_val_0002.txt 0 0
+docparse/arg_val_0003.txt 0 0
+docparse/arg_val_0004.txt 0 0
+docparse/arg_val_0005.txt 0 0
+docparse/arg_val_0006.txt 0 0
+docparse/arg_val_0007.txt 0 0
+docparse/args_0001.txt 1 0.313774
+docparse/args_0002.txt 0 0
+docparse/args_0003.txt 0 0
+docparse/blockOpener_0001.txt 0 0
+docparse/blockOpener_0002.txt 0 0
+docparse/blockOpener_0003.txt 0 0
+docparse/block_0001.txt 0 0
+docparse/block_0002.txt 0 0
+docparse/block_0003.txt 0 0
+docparse/block_0004.txt 0 0
+---
+compile_bench/channel.lean
+compile_bench/identifier_completion.lean
+docparse/arg_0001.txt
+docparse/arg_0002.txt
+docparse/arg_0003.txt
+docparse/arg_0004.txt
+docparse/arg_0005.txt
+docparse/arg_0007.txt
+docparse/arg_0008.txt
+docparse/arg_0009.txt
+docparse/arg_0010.txt
+docparse/arg_0011.txt
+docparse/arg_0012.txt
+docparse/arg_0013.txt
+docparse/arg_0014.txt
+docparse/arg_0015.txt
+docparse/arg_0017.txt
+docparse/arg_0018.txt
+docparse/arg_val_0001.txt
+docparse/arg_val_0002.txt
+docparse/arg_val_0003.txt
+docparse/arg_val_0004.txt
+docparse/arg_val_0005.txt
+docparse/arg_val_0006.txt
+docparse/arg_val_0007.txt
+docparse/args_0002.txt
+docparse/args_0003.txt
+docparse/blockOpener_0001.txt
+docparse/blockOpener_0002.txt
+docparse/blockOpener_0003.txt
+docparse/block_0001.txt
+docparse/block_0002.txt
+docparse/block_0003.txt
+docparse/block_0004.txt
