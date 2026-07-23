@@ -232,7 +232,7 @@ class LeanCompleteParityTests(unittest.TestCase):
             population["residual"],
         )
         self.assertIn(
-            "Its completed zero-process diagnostic closure binds 68 appended files",
+            "R6 attempt 004 then passed 64/64 under conditional semantics",
             population["residual"],
         )
 

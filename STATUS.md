@@ -747,7 +747,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   records clean pushed `70268f2d`, complete original-binding restoration, ten
   focused tests, and no repeated control. Next push this checkpoint, verify
   remote equality, and repeat the harmless controls from a fresh revision root.
-  Attempt 004 remains unconsumed and no selected process is authorized.
+  At `dc588033`, both controls passed and attempt 004 ran once. The
+  [pending-validation result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-pending-validation-result-2026-07-23.md)
+  freezes clean exit 0, 64/64 JUnit, conditional 123/66/56/1 post, and
+  completion `1f0b9af8`, but post-install replay used the pre-install completion
+  mode. The source-first
+  [R2 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
+  authorizes validator-only `allow_completion=true` replay. Attempt 004 is
+  consumed; credit remains zero pending exact validation and no retry exists.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8059,6 +8066,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-23 — Consumed R6 attempt 004 with a complete-looking 64-pass store
+  pending validator-only replay.** The corrected control passed; one selected
+  run exited 0 and installed 152 files, exact 64/64 JUnit, conditional all-pass
+  post, projection, and completion last. Validation then reused pre-install
+  completion mode and stopped. R2 freezes only `allow_completion=true`; current
+  credit remains zero and no retry is allowed.
 
 - **2026-07-23 — Implemented and pushed the R6 control-history correction.**
   Commit `70268f2d` temporarily restores the complete captured R5 binding set
