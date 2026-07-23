@@ -36,7 +36,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "1b8597ef79525a07feb45d9d1ba10a6f671e76bcbfe36160201cb087e6219e3d"
+      "sha256": "f2d69e6889531199a77f4dc9f00cf312ef13785f69f16ea72c2a2334f33ba8db"
     },
     {
       "path": "docs/plan/lean-execution-acceptance-tl0.7.4-2026-07-22.md",
@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean-system-implementation-plan-2026-07-21.md",
-      "sha256": "2e606e08a58f906570a001a8128f8ac75b86dba5b9c7f19580462f753715b273"
+      "sha256": "3c1a55e6f2ec09102ed7e619a722c5d236d5090d85995fd3c01ccceaa6ad0289"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -175,6 +175,10 @@
       "sha256": "13ac5126e964aa997504dc3e8da06524849fbe91015cfff53e8ed026c4f8eae2"
     },
     {
+      "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md",
+      "sha256": "b38566390250d98d3e4c1667c6a3a4215ac5ac962cdc96686b0c7fc6a2307d1e"
+    },
+    {
       "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-shard-0001-plan-2026-07-22.md",
       "sha256": "4cef4ba9c57820f5bff82e4cfdfdc524b3d0d54665a947cf2b27560767ec81dd"
     },
@@ -184,11 +188,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "52b84f517242a5e509a6b4d195274d160515f99dd690868824db120d87296d6a"
+      "sha256": "029ddc3054357336be5fce68bb58d8af28f52b87f40465c1d867283a339ad1fa"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "830fcf12787976974291ba58abab19866195aa07d13f8b5b74526768a902df66"
+      "sha256": "c4775023d9382f5e3956f41ff115a4c68506b9c1913c05e2aba429e79f279b98"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -949,6 +953,10 @@
           "detail": "Bounded result and thread-creation/channel-deadlock diagnosis with explicit non-claims and no retry."
         },
         {
+          "path": "docs/plan/lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md",
+          "detail": "Preregistered one-variable 16 GiB lane correction with unchanged stack/shard/store, harmless nine-thread control, one selected process, and no retry."
+        },
+        {
           "path": "docs/plan/lean-execution-evidence-v1.json",
           "detail": "TL0.7.1 contract authority for explicit resource lanes, typed terminations, immutable run/attempt/case/artifact/completion records, and zero real outcomes."
         },
@@ -1017,7 +1025,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. Publish and preserve this failure before any new source-first resource or isolation plan. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited execution coverage remains two decided official outcomes for one unique case from a 3,678-case parent, with zero Axeyum outcomes or pairs. There are six consumed process attempts: four M0 attempts, invalid M2 R1, and timeout M2 R3. M1 partitions all eight official selections into five exact ordered memberships and 289 physical child shards, but every derived shard and all 111 official attempts remain incomplete. M2 R1 retained exact 64-row JUnit with 30 passes and 34 failures, but family-blind docparse artifact closure stopped before post/projection/completion. Completion-last policy therefore grants zero M2 case or shard credit. R2 then completed a zero-process diagnostic append that binds all 124 generated rows, retains 67 outcome/log payloads, keeps 56 large reproducible intermediates metadata-only, and leaves credit unchanged. M2 R3 exported LEAN_STACK_SIZE_KB=524288 and ran attempt 002 once. CTest printed seven diagnostic passes, then compile_bench/channel.lean failed dedicated-thread creation and deadlocked; the one-hour watchdog reaped the group. The retained 17-file root has no JUnit, cases, post, projection, or completion, so R3 adds zero outcome or shard credit and cannot retry. The source-first R4 attempt-003 plan changes only the local RLIMIT_AS lane from 8 to 16 GiB, requires a harmless nine-dedicated-thread qualification, and preserves the stack, shard, command, store, one-shot, and zero-terminal-credit rules. Implement, test, commit, and push R4 without selected execution. Then classify native surfaces and run matched Axeyum cases. Scheduling metadata, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

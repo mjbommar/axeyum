@@ -100,6 +100,12 @@ retains a 3,600,038 ms watchdog timeout: seven CTest rows printed pass, then
 `compile_bench/channel.lean` failed dedicated-thread creation and deadlocked.
 The group was reaped, but no JUnit/case/post/projection/completion exists; R3 is
 consumed and grants zero M2 credit.
+The source-first
+[`R4 attempt-003 plan`](lean-u2-official-execution-tl0.6.3-m2-r4-attempt-003-plan-2026-07-23.md)
+now selects the larger-address-space branch of that decision: one 16 GiB local
+lane, unchanged 512 MiB stack and exact shard/command/store, a harmless
+nine-dedicated-thread control, one selected process, and no retry or terminal
+promotion.
 
 ## 2. What the SMT-LIB comparison actually says
 
@@ -209,10 +215,10 @@ execution/classification.
 3. Repair and attest the remote official-Lean executable identity across changed
    working directories, then retain the first true remote 71/71 result without
    converting it into native parity credit.
-4. Preserve the consumed M2 R3 timeout and its zero-credit boundary. Before
-   another official process, preregister a new attempt that explicitly chooses
-   among a smaller universal stack, a larger address-space lane, or
-   family-aware isolation/timeout; do not retry or reinterpret R3.
+4. Implement/test/push the preregistered M2 R4 16 GiB lane and harmless
+   nine-dedicated-thread control without selected execution. Only after exact
+   clean remote-equal preflight may attempt 003 run once; do not retry or
+   reinterpret R3.
 5. Classify every executed U2 case into kernel/import, parser/macro,
    elaborator/declaration, tactic/meta, module/Lake, server, runtime/compiler,
    FFI, or adversarial dependency ownership.
