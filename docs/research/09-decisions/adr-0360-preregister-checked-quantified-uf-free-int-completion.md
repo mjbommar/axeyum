@@ -108,6 +108,15 @@ explicit UF table preservation, exact source/evidence replay, non-Int and
 three-symbol declines, complete-pool overflow, and shared-deadline expiry. The
 normal 256-case differential reaches 225/225 agreement with 207/207 SAT replay;
 the exact eleven-seed Z3-SAT residual matches the corrected preregistration.
-The complete solver package gate is green. ADR status remains proposed until
-the workspace/static/resource/parity/link/profile/recovery acceptance gate is
-also complete.
+The complete solver package and complementary non-solver workspace test gates
+are green, as are workspace Clippy, strict rustdoc, foundational resources,
+QF_BV profile, reflection semantics, benchmark repetition, the pinned
+Glaurung QF_BV pack, rules-as-code, SMT-COMP recovery, and links. ADR status
+remains proposed because the branch-wide `parity-docs` gate currently fails in
+the pre-existing Lean execution-process/store evidence checks: retained
+synthetic commands embed the `axeyum-lean-parity` worktree path while the
+checker reconstructs commands from the current worktree, producing
+`run/spec attribution drift` and `kill cell environment drift`. Their unit
+suites pass; the generated-evidence check is not worktree-independent. That
+cross-lane gate must be repaired or refreshed by its owner before ADR-0360 is
+accepted.

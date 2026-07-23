@@ -1,6 +1,6 @@
 # Quantified-UFLIA free-Int completion measurement
 
-Status: implemented; ADR-0360 acceptance gates in progress
+Status: implemented; ADR-0360 acceptance blocked on cross-lane parity evidence
 Date: 2026-07-22
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -75,6 +75,25 @@ case for which the direct Z3 run returns Unknown. The complete
 `axeyum-solver --all-features` package gate is green: 901 unit tests, all normal
 integration/differential suites, and solver doctests pass; explicitly ignored
 measurement and release-stress tests remain opt-in.
+
+The complementary workspace test gate excluding `axeyum-solver` also passes;
+it filters only the two separately registered CAS moment-family stress tests.
+Workspace Clippy with warnings denied, strict rustdoc, foundational resources,
+QF_BV profile, reflection semantics, all 130 benchmark-repetition tests, the
+pinned 162-file Glaurung QF_BV raw/canonical pack, rules-as-code, the 52-test
+portable SMT-COMP recovery gate, and links are green. The Glaurung pack decides
+162/162 under both policies with zero manifest disagreements and zero
+SAT/UNSAT conflicts.
+
+ADR acceptance remains blocked on an unrelated branch-wide parity-evidence
+failure. `just parity-docs` passes its ordinary compatibility/authority tests,
+then the retained Lean process/store checks compare absolute commands captured
+under `/home/mjbommar/projects/personal/axeyum-lean-parity` with commands
+reconstructed from this worktree. The result is deterministic `run/spec
+attribution drift` followed by `kill cell environment drift`; the associated
+11-process and 23-store unit suites themselves pass. This lane does not own
+those Lean evidence generators or retained artifacts, so it does not rewrite
+them merely to accept ADR-0360.
 
 ## Reproduction
 
