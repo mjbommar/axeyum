@@ -45,6 +45,7 @@ from full_prepare import (  # noqa: E402
     validate_full_cell_composition,
     validate_full_selection,
 )
+from full_execute import WaveHandle, supervise_one_wave  # noqa: E402
 import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
@@ -953,6 +954,218 @@ class FullPopulationContractTests(unittest.TestCase):
                     remote_helper_path=Path("/tmp/full-multi-host.py"),
                     unit=unit,
                 )
+
+    def test_supervised_wave_closes_checkpoint_and_honors_boundary_pause(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        prewave = self.thermal_observations(
+            schedule, wave_index=0, temperatures=(40, 40, 40)
+        )
+
+        def launch(allocation: dict) -> WaveHandle:
+            session = f"session-{allocation['allocation_id']}"
+            return WaveHandle(
+                allocation_id=allocation["allocation_id"],
+                host_id=allocation["host_id"],
+                attempt_id=f"attempt-{allocation['allocation_id']}",
+                session_id=session,
+                remote_unit=f"axeyum-smtcomp-e3-{session}.service",
+            )
+
+        def terminal(handle: WaveHandle) -> dict:
+            return {
+                "allocation_id": handle.allocation_id,
+                "attempt_id": handle.attempt_id,
+                "status": "completed",
+                "terminal_record_sha256": "3" * 64,
+            }
+
+        for paused, expected in ((False, "wave-completed"), (True, "wave-completed-paused")):
+            pause_calls = 0
+
+            def pause() -> bool:
+                nonlocal pause_calls
+                pause_calls += 1
+                return paused and pause_calls > 1
+
+            outcome = supervise_one_wave(
+                schedule=schedule,
+                checkpoints=[],
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                open_attempt_ids=[],
+                failed_allocation_ids=[],
+                lost_allocation_ids=[],
+                cooldown_required=False,
+                prewave_thermal_observations=prewave,
+                launch=launch,
+                poll_terminal=terminal,
+                observe_active=mock.Mock(),
+                stop_overheated=mock.Mock(),
+                now_ns=lambda: 2000,
+                wait=mock.Mock(),
+                pause_requested=pause,
+            )
+            self.assertEqual(outcome["status"], expected)
+            self.assertEqual(
+                outcome["launched_allocation_ids"],
+                schedule["waves"][0]["allocation_ids"],
+            )
+            self.assertEqual(outcome["checkpoint"]["wave_index"], 0)
+
+    def test_supervisor_stops_only_overheated_handle_and_withholds_checkpoint(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        prewave = self.thermal_observations(
+            schedule, wave_index=0, temperatures=(40, 40, 40)
+        )
+        polls: dict[str, int] = {}
+        stopped: list[str] = []
+
+        def launch(allocation: dict) -> WaveHandle:
+            session = f"session-{allocation['allocation_id']}"
+            return WaveHandle(
+                allocation["allocation_id"],
+                allocation["host_id"],
+                f"attempt-{allocation['allocation_id']}",
+                session,
+                f"axeyum-smtcomp-e3-{session}.service",
+            )
+
+        def poll(handle: WaveHandle) -> dict | None:
+            polls[handle.allocation_id] = polls.get(handle.allocation_id, 0) + 1
+            if polls[handle.allocation_id] == 1:
+                return None
+            return {
+                "allocation_id": handle.allocation_id,
+                "attempt_id": handle.attempt_id,
+                "status": "failed" if handle.host_id == "s5" else "completed",
+                "terminal_record_sha256": "4" * 64,
+            }
+
+        def observe(handle: WaveHandle, observed_at_ns: int) -> dict:
+            temperature = 90 if handle.host_id == "s5" else 40
+            return build_thermal_observation(
+                sensors_json=self.sensors_json(temperature),
+                plan_sha256=PLAN_ID,
+                run_identity_sha256=RUN_ID,
+                cell_id=CELL_ID,
+                wave_index=0,
+                allocation_id=handle.allocation_id,
+                attempt_id=handle.attempt_id,
+                host_id=handle.host_id,
+                observed_at_ns=observed_at_ns,
+            )
+
+        def stop(handle: WaveHandle, observation: dict) -> dict:
+            stopped.append(handle.allocation_id)
+            return build_thermal_stop(
+                observation=observation,
+                session_id=handle.session_id,
+                unit_prefix="axeyum-smtcomp-e3",
+                exit_code=0,
+                post_stop_unit_state="inactive",
+                stopped_at_ns=observation["observed_at_ns"] + 1,
+            )
+
+        times = iter((2000, 2000 + 60_000_000_000))
+        outcome = supervise_one_wave(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            open_attempt_ids=[],
+            failed_allocation_ids=[],
+            lost_allocation_ids=[],
+            cooldown_required=False,
+            prewave_thermal_observations=prewave,
+            launch=launch,
+            poll_terminal=poll,
+            observe_active=observe,
+            stop_overheated=stop,
+            now_ns=lambda: next(times),
+            wait=lambda: None,
+            pause_requested=lambda: False,
+        )
+        self.assertEqual(outcome["status"], "cell-stopped")
+        self.assertIsNone(outcome["checkpoint"])
+        self.assertEqual(stopped, ["full-initial-00"])
+        self.assertEqual(len(outcome["allocation_terminals"]), 3)
+
+    def test_supervisor_drains_started_handle_after_partial_launch_failure(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        prewave = self.thermal_observations(
+            schedule, wave_index=0, temperatures=(40, 40, 40)
+        )
+        launches = 0
+
+        def launch(allocation: dict) -> WaveHandle:
+            nonlocal launches
+            launches += 1
+            if launches == 2:
+                raise OSError("fixture launch failure")
+            session = f"session-{allocation['allocation_id']}"
+            return WaveHandle(
+                allocation["allocation_id"],
+                allocation["host_id"],
+                f"attempt-{allocation['allocation_id']}",
+                session,
+                f"axeyum-smtcomp-e3-{session}.service",
+            )
+
+        outcome = supervise_one_wave(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            open_attempt_ids=[],
+            failed_allocation_ids=[],
+            lost_allocation_ids=[],
+            cooldown_required=False,
+            prewave_thermal_observations=prewave,
+            launch=launch,
+            poll_terminal=lambda handle: {
+                "allocation_id": handle.allocation_id,
+                "attempt_id": handle.attempt_id,
+                "status": "completed",
+                "terminal_record_sha256": "5" * 64,
+            },
+            observe_active=mock.Mock(),
+            stop_overheated=mock.Mock(),
+            now_ns=lambda: 2000,
+            wait=mock.Mock(),
+            pause_requested=lambda: False,
+        )
+        self.assertEqual(outcome["status"], "cell-stopped")
+        self.assertEqual(outcome["launched_allocation_ids"], ["full-initial-00"])
+        self.assertEqual(len(outcome["allocation_terminals"]), 1)
+        self.assertIsNone(outcome["checkpoint"])
+
+    def test_supervisor_does_not_call_launcher_when_scheduler_blocks(self) -> None:
+        schedule = build_schedule(ENFORCEMENT_ID)
+        launch = mock.Mock()
+        outcome = supervise_one_wave(
+            schedule=schedule,
+            checkpoints=[],
+            plan_sha256=PLAN_ID,
+            run_identity_sha256=RUN_ID,
+            cell_id=CELL_ID,
+            open_attempt_ids=["open-attempt"],
+            failed_allocation_ids=[],
+            lost_allocation_ids=[],
+            cooldown_required=False,
+            prewave_thermal_observations=[],
+            launch=launch,
+            poll_terminal=mock.Mock(),
+            observe_active=mock.Mock(),
+            stop_overheated=mock.Mock(),
+            now_ns=lambda: 2000,
+            wait=mock.Mock(),
+            pause_requested=lambda: False,
+        )
+        self.assertEqual(outcome["status"], "blocked-unclosed")
+        launch.assert_not_called()
 
 
 if __name__ == "__main__":
