@@ -437,6 +437,17 @@ class LeanExecutionStoreContractTests(unittest.TestCase):
         with self.assertRaisesRegex(STORE.StoreEvidenceError, "not an ancestor"):
             STORE.validate_implementation_revision("0" * 40, [STORE.PRIMITIVE])
 
+    def test_historical_result_source_selection_is_exact(self) -> None:
+        authority = json.loads(STORE.RESULT_AUTHORITY.read_bytes())
+        self.assertEqual(
+            authority["preregistration"]["implementation_revision"],
+            STORE.HISTORICAL_IMPLEMENTATION_REVISION,
+        )
+        self.assertEqual(
+            STORE.result_source_inputs(STORE.HISTORICAL_IMPLEMENTATION_REVISION),
+            authority["source_inputs"],
+        )
+
     def test_result_builder_rejects_partial_population(self) -> None:
         with tempfile.TemporaryDirectory(dir=STORE.ROOT) as temporary:
             root = Path(temporary)
