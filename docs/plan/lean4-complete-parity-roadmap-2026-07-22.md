@@ -142,7 +142,14 @@ unconsumed. The separate
 [`R1 implementation`](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
 is pushed at `70268f2d` and tests the exact temporary binding path. Next publish
 that checkpoint and repeat one fresh control; selected execution remains
-unauthorized.
+unauthorized. The corrected control then passed at `dc588033` and attempt 004
+ran once. Its
+[`pending-validation result`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-pending-validation-result-2026-07-23.md)
+retains clean 64/64 JUnit and completion last, but replay used pre-install
+completion mode. The
+[`R2 plan`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
+authorizes only validator-mode correction over the unchanged root. R6 remains
+zero-credit until exact replay passes; no selected retry exists.
 
 ## 2. What the SMT-LIB comparison actually says
 

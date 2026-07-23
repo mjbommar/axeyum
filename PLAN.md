@@ -636,7 +636,15 @@ state.
 > [R1 implementation checkpoint](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
 > records clean pushed `70268f2d`, complete original-binding restoration, ten
 > focused tests, and no repeated control. Next push this checkpoint, verify
-> remote equality, and repeat the harmless controls from a fresh revision root;
+> remote equality, and repeat the harmless controls from a fresh revision root.
+> At `dc588033`, both controls passed and attempt 004 ran once. The
+> [pending-validation result](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-pending-validation-result-2026-07-23.md)
+> freezes a clean 63,812 ms exit, 64/64 JUnit, conditional 123/66/56/1 post,
+> and completion `1f0b9af8`, but post-install replay incorrectly used the
+> pre-install completion mode. Credit remains zero. The source-first
+> [R2 correction plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
+> authorizes only explicit `allow_completion=true` validation of the unchanged
+> root. Next commit/push the frozen evidence and plans, then implement R2;
 > then form native pairs. Do not rerun
 > the singleton for population credit. The
 > [complete-parity execution roadmap](docs/plan/lean4-complete-parity-roadmap-2026-07-22.md)

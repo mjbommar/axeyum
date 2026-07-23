@@ -306,6 +306,11 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   pushed complete original-binding restoration with an exact temporary-control-
   context regression, ten focused tests, and no repeated control or selected
   process.
+- [`R6 pending-validation result`](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-pending-validation-result-2026-07-23.md)
+  and [`R2 completion-replay plan`](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md) —
+  consumed 64-pass attempt with completion installed last, but zero current
+  credit until a source-first validator-only mode correction replays the exact
+  unchanged 152-file root.
 - [`lean-compatibility-v1.json`](lean-compatibility-v1.json) and generated
   [`Lean compatibility matrix`](generated/lean-compatibility.md) — TL0.2's
   executable eight-field assurance contract, K0-K6 profile gates, registered

@@ -1,0 +1,1666 @@
+Start testing: Jul 23 07:32 UTC
+----------------------------------------------------------
+1/64 Testing: compile/uint_fold.lean
+1/64 Test: compile/uint_fold.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile/run_test.sh" "uint_fold.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile
+"compile/uint_fold.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./uint_fold.lean.out
+12760
+12720
+11
+6
+44
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run uint_fold.lean
+12760
+12720
+11
+6
+44
+<end of output>
+Test time =   0.54 sec
+----------------------------------------------------------
+Test Passed.
+"compile/uint_fold.lean" end time: Jul 23 07:32 UTC
+"compile/uint_fold.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+2/64 Testing: compile/unreachable.lean
+2/64 Test: compile/unreachable.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile/run_test.sh" "unreachable.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile
+"compile/unreachable.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./unreachable.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run unreachable.lean
+<end of output>
+Test time =   0.40 sec
+----------------------------------------------------------
+Test Passed.
+"compile/unreachable.lean" end time: Jul 23 07:32 UTC
+"compile/unreachable.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+3/64 Testing: compile/uset.lean
+3/64 Test: compile/uset.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile/run_test.sh" "uset.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile
+"compile/uset.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./uset.lean.out
+1
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run uset.lean
+1
+<end of output>
+Test time =   0.44 sec
+----------------------------------------------------------
+Test Passed.
+"compile/uset.lean" end time: Jul 23 07:32 UTC
+"compile/uset.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+4/64 Testing: compile/utf8Path.lean
+4/64 Test: compile/utf8Path.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile/run_test.sh" "utf8Path.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile
+"compile/utf8Path.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./utf8Path.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run utf8Path.lean
+<end of output>
+Test time =   0.41 sec
+----------------------------------------------------------
+Test Passed.
+"compile/utf8Path.lean" end time: Jul 23 07:32 UTC
+"compile/utf8Path.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+5/64 Testing: compile/wait_dedicated.lean
+5/64 Test: compile/wait_dedicated.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile/run_test.sh" "wait_dedicated.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile
+"compile/wait_dedicated.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./wait_dedicated.lean.out
+Hi there
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run wait_dedicated.lean
+Hi there
+<end of output>
+Test time =   0.64 sec
+----------------------------------------------------------
+Test Passed.
+"compile/wait_dedicated.lean" end time: Jul 23 07:32 UTC
+"compile/wait_dedicated.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+6/64 Testing: compile_bench/binarytrees.lean
+6/64 Test: compile_bench/binarytrees.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "binarytrees.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/binarytrees.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./binarytrees.lean.out 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run binarytrees.lean 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+<end of output>
+Test time =   1.51 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/binarytrees.lean" end time: Jul 23 07:32 UTC
+"compile_bench/binarytrees.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+7/64 Testing: compile_bench/binarytrees.st.lean
+7/64 Test: compile_bench/binarytrees.st.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "binarytrees.st.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/binarytrees.st.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./binarytrees.st.lean.out 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run binarytrees.st.lean 14
+stretch tree of depth 15	 check: 65535
+16384	 trees of depth 4	 check: 507904
+4096	 trees of depth 6	 check: 520192
+1024	 trees of depth 8	 check: 523264
+256	 trees of depth 10	 check: 524032
+64	 trees of depth 12	 check: 524224
+16	 trees of depth 14	 check: 524272
+long lived tree of depth 14	 check: 32767
+<end of output>
+Test time =   1.47 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/binarytrees.st.lean" end time: Jul 23 07:32 UTC
+"compile_bench/binarytrees.st.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+8/64 Testing: compile_bench/channel.lean
+8/64 Test: compile_bench/channel.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "channel.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/channel.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./channel.lean.out 4 1000
+measurement: bounded0_spsc 0.004000 s
+measurement: bounded0_mpsc 0.008000 s
+measurement: bounded0_mpmc 0.007000 s
+measurement: bounded1_spsc 0.013000 s
+measurement: bounded1_mpsc 0.017000 s
+measurement: bounded1_mpmc 0.024000 s
+measurement: boundedn_spsc 0.002000 s
+measurement: boundedn_mpsc 0.001000 s
+measurement: boundedn_mpmc 0.003000 s
+measurement: boundedn_seq 0.000000 s
+measurement: unbounded_spsc 0.002000 s
+measurement: unbounded_mpsc 0.001000 s
+measurement: unbounded_mpmc 0.004000 s
+measurement: unbounded_seq 0.000000 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run channel.lean 4 1000
+measurement: bounded0_spsc 0.005000 s
+measurement: bounded0_mpsc 0.004000 s
+measurement: bounded0_mpmc 0.004000 s
+measurement: bounded1_spsc 0.004000 s
+measurement: bounded1_mpsc 0.007000 s
+measurement: bounded1_mpmc 0.016000 s
+measurement: boundedn_spsc 0.001000 s
+measurement: boundedn_mpsc 0.001000 s
+measurement: boundedn_mpmc 0.001000 s
+measurement: boundedn_seq 0.001000 s
+measurement: unbounded_spsc 0.001000 s
+measurement: unbounded_mpsc 0.001000 s
+measurement: unbounded_mpmc 0.002000 s
+measurement: unbounded_seq 0.000000 s
+<end of output>
+Test time =   0.96 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/channel.lean" end time: Jul 23 07:32 UTC
+"compile_bench/channel.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+9/64 Testing: compile_bench/const_fold.lean
+9/64 Test: compile_bench/const_fold.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "const_fold.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/const_fold.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Setting stack size to unlimited
+Compiling and executing lean file
+const_fold.lean:55:2: warning: unused variable `e`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+const_fold.lean:64:6: warning: unused variable `x`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./const_fold.lean.out 15
+93011 93011
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run const_fold.lean 15
+93011 93011
+<end of output>
+Test time =   0.95 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/const_fold.lean" end time: Jul 23 07:32 UTC
+"compile_bench/const_fold.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+10/64 Testing: compile_bench/deriv.lean
+10/64 Test: compile_bench/deriv.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "deriv.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/deriv.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+deriv.lean:13:2: warning: unused variable `a`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./deriv.lean.out 7
+1 count: 6
+2 count: 22
+3 count: 90
+4 count: 420
+5 count: 2202
+6 count: 12886
+7 count: 83648
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run deriv.lean 7
+1 count: 6
+2 count: 22
+3 count: 90
+4 count: 420
+5 count: 2202
+6 count: 12886
+7 count: 83648
+<end of output>
+Test time =   0.80 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/deriv.lean" end time: Jul 23 07:32 UTC
+"compile_bench/deriv.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+11/64 Testing: compile_bench/hashmap.lean
+11/64 Test: compile_bench/hashmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "hashmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/hashmap.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./hashmap.lean.out 11 100
+measurement: containsHit 11.726700 s
+measurement: containsMiss 25.098700 s
+measurement: iterate 72.115500 s
+measurement: insertIfNewHit 13.779100 s
+measurement: insertHit 25.976100 s
+measurement: insertMissEmpty 55.033800 s
+measurement: insertMissEmptyWithCapacity 32.566500 s
+measurement: eraseInsert 68.931300 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run hashmap.lean 11 100
+measurement: containsHit 1496.246400 s
+measurement: containsMiss 2160.990300 s
+measurement: iterate 1253.203200 s
+measurement: insertIfNewHit 1592.837800 s
+measurement: insertHit 2224.614000 s
+measurement: insertMissEmpty 4845.880000 s
+measurement: insertMissEmptyWithCapacity 2080.380000 s
+measurement: eraseInsert 5419.747700 s
+<end of output>
+Test time =   3.06 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/hashmap.lean" end time: Jul 23 07:32 UTC
+"compile_bench/hashmap.lean" time elapsed: 00:00:03
+----------------------------------------------------------
+
+12/64 Testing: compile_bench/identifier_completion.lean
+12/64 Test: compile_bench/identifier_completion.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "identifier_completion.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/identifier_completion.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run identifier_completion.lean
+measurement: completion 2.339000 s
+<end of output>
+Test time =   5.74 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/identifier_completion.lean" end time: Jul 23 07:32 UTC
+"compile_bench/identifier_completion.lean" time elapsed: 00:00:05
+----------------------------------------------------------
+
+13/64 Testing: compile_bench/ilean_roundtrip.lean
+13/64 Test: compile_bench/ilean_roundtrip.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "ilean_roundtrip.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/ilean_roundtrip.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./ilean_roundtrip.lean.out 1000
+measurement: compress 0.008000 s
+measurement: parse 0.005000 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run ilean_roundtrip.lean 1000
+measurement: compress 0.004000 s
+measurement: parse 0.002000 s
+<end of output>
+Test time =   0.88 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/ilean_roundtrip.lean" end time: Jul 23 07:32 UTC
+"compile_bench/ilean_roundtrip.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+14/64 Testing: compile_bench/iterators.lean
+14/64 Test: compile_bench/iterators.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "iterators.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/iterators.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+iterators.lean:55:5: warning: `Std.Iter.count` has been deprecated: Use `Std.Iter.length` instead
+
+Note: The updated constant has a different type:
+  {α β : Type w} → [inst : Std.Iterator α Id β] → [Std.IteratorLoop α Id Id] → Std.Iter β → Nat
+instead of
+  {α β : Type u_1} → [inst : Std.Iterator α Id β] → [Std.IteratorLoop α Id Id] → Std.Iter β → Nat
+++ ./iterators.lean.out
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run iterators.lean
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+xs[0] = 0
+xs[10000] = 10000
+xs[20000] = 20000
+xs[30000] = 30000
+xs[40000] = 40000
+xs[50000] = 50000
+xs[60000] = 60000
+xs[70000] = 70000
+xs[80000] = 80000
+xs[90000] = 90000
+<end of output>
+Test time =   2.67 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/iterators.lean" end time: Jul 23 07:32 UTC
+"compile_bench/iterators.lean" time elapsed: 00:00:02
+----------------------------------------------------------
+
+15/64 Testing: compile_bench/liasolver.lean
+15/64 Test: compile_bench/liasolver.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "liasolver.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/liasolver.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+liasolver.lean:337:6: warning: unused variable `nEquations`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+liasolver.lean:342:8: warning: unused variable `nTerms`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./liasolver.lean.out liasolver.lean.ex-50-50-1.leq
+SAT
+-104 -253 65 75 -271 269 234 -125 59 -291 23 -150 -127 -232 11 -66 -199 133 -51 -120 -141 276 24 6 -85 28 240 54 -182 -160 128 14 -212 269 -154 28 134 -125 -49 192 14 -130 69 -53 -157 264 103 48 -271 184
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run liasolver.lean liasolver.lean.ex-50-50-1.leq
+SAT
+-104 -253 65 75 -271 269 234 -125 59 -291 23 -150 -127 -232 11 -66 -199 133 -51 -120 -141 276 24 6 -85 28 240 54 -182 -160 128 14 -212 269 -154 28 134 -125 -49 192 14 -130 69 -53 -157 264 103 48 -271 184
+<end of output>
+Test time =   6.00 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/liasolver.lean" end time: Jul 23 07:32 UTC
+"compile_bench/liasolver.lean" time elapsed: 00:00:06
+----------------------------------------------------------
+
+16/64 Testing: compile_bench/nat_repr.lean
+16/64 Test: compile_bench/nat_repr.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "nat_repr.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/nat_repr.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./nat_repr.lean.out 500
+324355
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run nat_repr.lean 500
+324355
+<end of output>
+Test time =   0.55 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/nat_repr.lean" end time: Jul 23 07:32 UTC
+"compile_bench/nat_repr.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+17/64 Testing: compile_bench/parser.lean
+17/64 Test: compile_bench/parser.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "parser.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/parser.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./parser.lean.out ../../src/Init/Prelude.lean 2
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run parser.lean ../../src/Init/Prelude.lean 2
+<end of output>
+Test time =   0.99 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/parser.lean" end time: Jul 23 07:32 UTC
+"compile_bench/parser.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+18/64 Testing: compile_bench/phashmap.lean
+18/64 Test: compile_bench/phashmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "phashmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/phashmap.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./phashmap.lean.out 11 100
+measurement: containsHit 8.374100 s
+measurement: containsMiss 16.042800 s
+measurement: iterate 48.557800 s
+measurement: insertHit 25.152700 s
+measurement: insertMissEmpty 36.364800 s
+measurement: insertMissEmptyShared 88.530700 s
+measurement: eraseInsert 109.847600 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run phashmap.lean 11 100
+measurement: containsHit 1045.166700 s
+measurement: containsMiss 1698.729800 s
+measurement: iterate 969.382100 s
+measurement: insertHit 1874.434400 s
+measurement: insertMissEmpty 1544.959600 s
+measurement: insertMissEmptyShared 1613.740600 s
+measurement: eraseInsert 3392.155800 s
+<end of output>
+Test time =   1.78 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/phashmap.lean" end time: Jul 23 07:32 UTC
+"compile_bench/phashmap.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+19/64 Testing: compile_bench/qsort.lean
+19/64 Test: compile_bench/qsort.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "qsort.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/qsort.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+qsort.lean:7:7: warning: unused variable `seed`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./qsort.lean.out 80
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run qsort.lean 80
+<end of output>
+Test time =   1.89 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/qsort.lean" end time: Jul 23 07:32 UTC
+"compile_bench/qsort.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+20/64 Testing: compile_bench/rbmap.lean
+20/64 Test: compile_bench/rbmap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "rbmap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/rbmap.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap.lean.out 100000
+10000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap.lean 100000
+10000
+<end of output>
+Test time =   1.54 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap.lean" end time: Jul 23 07:32 UTC
+"compile_bench/rbmap.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+21/64 Testing: compile_bench/rbmap_checkpoint.lean
+21/64 Test: compile_bench/rbmap_checkpoint.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "rbmap_checkpoint.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/rbmap_checkpoint.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_checkpoint.lean.out 100000 10
+10001 10000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_checkpoint.lean 100000 10
+10001 10000
+<end of output>
+Test time =   1.42 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_checkpoint.lean" end time: Jul 23 07:32 UTC
+"compile_bench/rbmap_checkpoint.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+22/64 Testing: compile_bench/rbmap_fbip.lean
+22/64 Test: compile_bench/rbmap_fbip.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "rbmap_fbip.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/rbmap_fbip.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_fbip.lean.out 2000
+200
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_fbip.lean 2000
+200
+<end of output>
+Test time =   0.68 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_fbip.lean" end time: Jul 23 07:32 UTC
+"compile_bench/rbmap_fbip.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+23/64 Testing: compile_bench/rbmap_library.lean
+23/64 Test: compile_bench/rbmap_library.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "rbmap_library.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/rbmap_library.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./rbmap_library.lean.out 2000
+1999
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run rbmap_library.lean 2000
+1999
+<end of output>
+Test time =   0.87 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/rbmap_library.lean" end time: Jul 23 07:32 UTC
+"compile_bench/rbmap_library.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+24/64 Testing: compile_bench/server_startup.lean
+24/64 Test: compile_bench/server_startup.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "server_startup.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/server_startup.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./server_startup.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run server_startup.lean
+<end of output>
+Test time =   1.03 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/server_startup.lean" end time: Jul 23 07:32 UTC
+"compile_bench/server_startup.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+25/64 Testing: compile_bench/sigmaIterator.lean
+25/64 Test: compile_bench/sigmaIterator.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "sigmaIterator.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/sigmaIterator.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./sigmaIterator.lean.out 100
+4950
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run sigmaIterator.lean 100
+4950
+<end of output>
+Test time =   0.91 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/sigmaIterator.lean" end time: Jul 23 07:32 UTC
+"compile_bench/sigmaIterator.lean" time elapsed: 00:00:00
+----------------------------------------------------------
+
+26/64 Testing: compile_bench/treemap.lean
+26/64 Test: compile_bench/treemap.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "treemap.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/treemap.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./treemap.lean.out 11 100
+measurement: containsHit 11.257200 s
+measurement: containsMiss 18.462600 s
+measurement: iterate 17.094100 s
+measurement: insertIfNewHit 12.788200 s
+measurement: insertHit 39.921100 s
+measurement: insertRandomMissEmpty 45.043700 s
+measurement: insertSequentialMissEmpty 49.935600 s
+measurement: insertRandomMissEmptyShared 101.915800 s
+measurement: eraseInsert 101.636900 s
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run treemap.lean 11 100
+measurement: containsHit 1648.046700 s
+measurement: containsMiss 2582.670600 s
+measurement: iterate 437.463400 s
+measurement: insertIfNewHit 1779.873900 s
+measurement: insertHit 4439.869700 s
+measurement: insertRandomMissEmpty 4572.551400 s
+measurement: insertSequentialMissEmpty 5004.198700 s
+measurement: insertRandomMissEmptyShared 4973.186600 s
+measurement: eraseInsert 11547.755700 s
+<end of output>
+Test time =   2.26 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/treemap.lean" end time: Jul 23 07:32 UTC
+"compile_bench/treemap.lean" time elapsed: 00:00:02
+----------------------------------------------------------
+
+27/64 Testing: compile_bench/unionfind.lean
+27/64 Test: compile_bench/unionfind.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "unionfind.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/unionfind.lean" start time: Jul 23 07:32 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+unionfind.lean:7:55: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+unionfind.lean:29:19: warning: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+unionfind.lean:125:16: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+unionfind.lean:126:19: warning: unused variable `s`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+++ ./unionfind.lean.out 70000
+ok 69000
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run unionfind.lean 70000
+ok 69000
+<end of output>
+Test time =   1.70 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/unionfind.lean" end time: Jul 23 07:33 UTC
+"compile_bench/unionfind.lean" time elapsed: 00:00:01
+----------------------------------------------------------
+
+28/64 Testing: compile_bench/watchdogRss.lean
+28/64 Test: compile_bench/watchdogRss.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "watchdogRss.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/watchdogRss.lean" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+++ ./watchdogRss.lean.out
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run watchdogRss.lean
+<end of output>
+Test time =   4.59 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/watchdogRss.lean" end time: Jul 23 07:33 UTC
+"compile_bench/watchdogRss.lean" time elapsed: 00:00:04
+----------------------------------------------------------
+
+29/64 Testing: compile_bench/workspaceSymbolsNewRanges.lean
+29/64 Test: compile_bench/workspaceSymbolsNewRanges.lean
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench/run_test.sh" "workspaceSymbolsNewRanges.lean"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/compile_bench
+"compile_bench/workspaceSymbolsNewRanges.lean" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+Compiling and executing lean file
+workspaceSymbolsNewRanges.lean:28:22: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:31:45: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:31:59: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:41: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:61: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:34:81: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:35:29: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:35:61: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:40:19: warning: `String.mkIterator` has been deprecated: Use `String.Legacy.mkIterator` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.mkIterator` to `String.Legacy.mkIterator x`).
+workspaceSymbolsNewRanges.lean:43:30: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:200:18: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:200:45: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:131:29: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+workspaceSymbolsNewRanges.lean:131:53: warning: `String.get` has been deprecated: Use `String.Pos.Raw.get` instead
+
+Note: The updated constant is in a different namespace. Dot notation may need to be changed (e.g., from `x.get` to `String.Pos.Raw.get x`).
+++ ./workspaceSymbolsNewRanges.lean.out
+315 matches
+339 matches
+37 matches
+1 matches
+29 matches
+40 matches
+3 matches
+73 matches
+321 matches
+11 matches
+9 matches
+1 matches
+Interpreting lean file
+++ lean -Dlinter.all=false -j1 --run workspaceSymbolsNewRanges.lean
+315 matches
+339 matches
+37 matches
+1 matches
+29 matches
+40 matches
+3 matches
+73 matches
+321 matches
+11 matches
+9 matches
+1 matches
+<end of output>
+Test time =   4.38 sec
+----------------------------------------------------------
+Test Passed.
+"compile_bench/workspaceSymbolsNewRanges.lean" end time: Jul 23 07:33 UTC
+"compile_bench/workspaceSymbolsNewRanges.lean" time elapsed: 00:00:04
+----------------------------------------------------------
+
+30/64 Testing: docparse/arg_0001.txt
+30/64 Test: docparse/arg_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0001.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0001.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_ident `x))
+All input consumed.
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0001.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+31/64 Testing: docparse/arg_0002.txt
+31/64 Test: docparse/arg_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0002.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0002.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named_no_paren
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_num (num "1")))
+All input consumed.
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0002.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+32/64 Testing: docparse/arg_0003.txt
+32/64 Test: docparse/arg_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0003.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0003.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_num (num "1"))
+   ")")
+All input consumed.
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0003.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+33/64 Testing: docparse/arg_0004.txt
+33/64 Test: docparse/arg_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0004.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0004.txt
+Failure @0 (⟨1, 0⟩): expected '(', '+', '-', expected identifier, string, or number or token
+Final stack:
+  <missing>
+Remaining: "\n(x:=1)"
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0004.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+34/64 Testing: docparse/arg_0005.txt
+34/64 Test: docparse/arg_0005.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0005.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0005.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0005.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.flag_on "+" `foo)
+All input consumed.
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0005.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0005.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+35/64 Testing: docparse/arg_0006.txt
+35/64 Test: docparse/arg_0006.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0006.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0006.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0006.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.flag_off "-" `other)
+All input consumed.
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0006.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0006.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+36/64 Testing: docparse/arg_0007.txt
+36/64 Test: docparse/arg_0007.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0007.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0007.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0007.txt
+Failure @2 (⟨1, 2⟩): expected no space before
+Final stack:
+  (Lean.Doc.Syntax.flag_off "-" `other)
+Remaining: "other"
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0007.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0007.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+37/64 Testing: docparse/arg_0008.txt
+37/64 Test: docparse/arg_0008.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0008.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0008.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0008.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_num (num "1"))
+   ")")
+Remaining:
+"\n"
+<end of output>
+Test time =   0.41 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0008.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0008.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+38/64 Testing: docparse/arg_0009.txt
+38/64 Test: docparse/arg_0009.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0009.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0009.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0009.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named_no_paren
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_ident `y))
+All input consumed.
+<end of output>
+Test time =   0.40 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0009.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0009.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+39/64 Testing: docparse/arg_0010.txt
+39/64 Test: docparse/arg_0010.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0010.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0010.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0010.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_ident `y)
+   ")")
+All input consumed.
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0010.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0010.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+40/64 Testing: docparse/arg_0011.txt
+40/64 Test: docparse/arg_0011.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0011.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0011.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0011.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.named_no_paren
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_str (str "\"y\"")))
+All input consumed.
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0011.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0011.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+41/64 Testing: docparse/arg_0012.txt
+41/64 Test: docparse/arg_0012.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0012.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0012.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0012.txt
+Failure @3 (⟨1, 3⟩): unterminated string literal
+Final stack:
+ • `x
+ • ":="
+ • (Lean.Doc.Syntax.arg_str <missing>)
+
+Remaining: "\"y"
+<end of output>
+Test time =   0.30 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0012.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0012.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+42/64 Testing: docparse/arg_0013.txt
+42/64 Test: docparse/arg_0013.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0013.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0013.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0013.txt
+2 failures:
+  @7 (⟨1, 7⟩): expected ')'
+    ""
+  @7 (⟨1, 7⟩): unterminated string literal
+    ""
+
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_str <missing>)
+   <missing>)
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0013.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0013.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+43/64 Testing: docparse/arg_0014.txt
+43/64 Test: docparse/arg_0014.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0014.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0014.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0014.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_num (num "42")))
+All input consumed.
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0014.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0014.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+44/64 Testing: docparse/arg_0015.txt
+44/64 Test: docparse/arg_0015.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0015.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0015.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0015.txt
+4 failures:
+  @4 (⟨1, 4⟩): expected ')'
+    ""
+  @4 (⟨1, 4⟩): expected ':='
+    ""
+  @4 (⟨1, 4⟩): expected token
+    ""
+  @4 (⟨1, 4⟩): unexpected end of input
+    ""
+
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   <missing>
+   <missing>
+   <missing>
+   <missing>)
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0015.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0015.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+45/64 Testing: docparse/arg_0016.txt
+45/64 Test: docparse/arg_0016.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0016.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0016.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0016.txt
+3 failures:
+  @6 (⟨1, 6⟩): expected ')'
+    ""
+  @6 (⟨1, 6⟩): expected ':='
+    ""
+  @6 (⟨1, 6⟩): unexpected end of input
+    ""
+
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   <missing>
+   <missing>
+   <missing>)
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0016.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0016.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+46/64 Testing: docparse/arg_0017.txt
+46/64 Test: docparse/arg_0017.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0017.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0017.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0017.txt
+Failure @8 (⟨1, 8⟩): expected ')'
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_num (num "42"))
+   <missing>)
+Remaining: "\n)"
+<end of output>
+Test time =   0.27 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0017.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0017.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+47/64 Testing: docparse/arg_0018.txt
+47/64 Test: docparse/arg_0018.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_0018.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_0018.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_0018.txt
+Failure @8 (⟨1, 8⟩): expected ')'
+Final stack:
+  (Lean.Doc.Syntax.named
+   "("
+   `x
+   ":="
+   (Lean.Doc.Syntax.arg_num (num "42"))
+   <missing>)
+Remaining: "\na"
+<end of output>
+Test time =   0.28 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_0018.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_0018.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+48/64 Testing: docparse/arg_val_0001.txt
+48/64 Test: docparse/arg_val_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0001.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0001.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_num (num "1")))
+All input consumed.
+<end of output>
+Test time =   0.30 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0001.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+49/64 Testing: docparse/arg_val_0002.txt
+49/64 Test: docparse/arg_val_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0002.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0002.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_num (num "3")))
+All input consumed.
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0002.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+50/64 Testing: docparse/arg_val_0003.txt
+50/64 Test: docparse/arg_val_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0003.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0003.txt
+Failure @0 (⟨1, 0⟩): unexpected end of input; expected '(', '+' or '-'
+Final stack:
+  <missing>
+Remaining: ""
+<end of output>
+Test time =   0.29 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0003.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+51/64 Testing: docparse/arg_val_0004.txt
+51/64 Test: docparse/arg_val_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0004.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0004.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_str
+    (str "\"a b c\t d\"")))
+All input consumed.
+<end of output>
+Test time =   0.49 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0004.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+52/64 Testing: docparse/arg_val_0005.txt
+52/64 Test: docparse/arg_val_0005.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0005.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0005.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0005.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_str
+    (str "\"a b c\t d\"")))
+Remaining:
+"\n"
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0005.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0005.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+53/64 Testing: docparse/arg_val_0006.txt
+53/64 Test: docparse/arg_val_0006.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0006.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0006.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0006.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.anon
+   (Lean.Doc.Syntax.arg_num (num "43")))
+Remaining:
+"\n\"foo\""
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0006.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0006.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+54/64 Testing: docparse/arg_val_0007.txt
+54/64 Test: docparse/arg_val_0007.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "arg_val_0007.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/arg_val_0007.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean arg_val_0007.txt
+Failure @0 (⟨1, 0⟩): unterminated string literal; expected '(', '+', '-' or token
+Final stack:
+  (Lean.Doc.Syntax.arg_str <missing>)
+Remaining: "\"foo"
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/arg_val_0007.txt" end time: Jul 23 07:33 UTC
+"docparse/arg_val_0007.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+55/64 Testing: docparse/args_0001.txt
+55/64 Test: docparse/args_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "args_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/args_0001.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0001.txt
+Success! Final stack:
+  [(Lean.Doc.Syntax.anon
+    (Lean.Doc.Syntax.arg_num (num "43")))]
+Remaining:
+"\n\"foo\""
+<end of output>
+Test time =   0.31 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/args_0001.txt" end time: Jul 23 07:33 UTC
+"docparse/args_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+56/64 Testing: docparse/args_0002.txt
+56/64 Test: docparse/args_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "args_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/args_0002.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0002.txt
+Success! Final stack:
+  [(Lean.Doc.Syntax.named_no_paren
+    `dialect
+    ":="
+    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))
+   (Lean.Doc.Syntax.anon
+    (Lean.Doc.Syntax.arg_num (num "43")))]
+Remaining:
+"\nfoo"
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/args_0002.txt" end time: Jul 23 07:33 UTC
+"docparse/args_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+57/64 Testing: docparse/args_0003.txt
+57/64 Test: docparse/args_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "args_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/args_0003.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean args_0003.txt
+Success! Final stack:
+  [(Lean.Doc.Syntax.named_no_paren
+    `dialect
+    ":="
+    (Lean.Doc.Syntax.arg_str (str "\"chicken\"")))
+   (Lean.Doc.Syntax.anon
+    (Lean.Doc.Syntax.arg_num (num "43")))]
+Remaining:
+"\n(foo)"
+<end of output>
+Test time =   0.49 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/args_0003.txt" end time: Jul 23 07:33 UTC
+"docparse/args_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+58/64 Testing: docparse/blockOpener_0001.txt
+58/64 Test: docparse/blockOpener_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "blockOpener_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/blockOpener_0001.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0001.txt
+Success! Final stack:
+ empty
+Remaining:
+"abc"
+<end of output>
+Test time =   0.53 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/blockOpener_0001.txt" end time: Jul 23 07:33 UTC
+"docparse/blockOpener_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+59/64 Testing: docparse/blockOpener_0002.txt
+59/64 Test: docparse/blockOpener_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "blockOpener_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/blockOpener_0002.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0002.txt
+Success! Final stack:
+ empty
+Remaining:
+"abc"
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/blockOpener_0002.txt" end time: Jul 23 07:33 UTC
+"docparse/blockOpener_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+60/64 Testing: docparse/blockOpener_0003.txt
+60/64 Test: docparse/blockOpener_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "blockOpener_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/blockOpener_0003.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean blockOpener_0003.txt
+Success! Final stack:
+ empty
+Remaining:
+"abc"
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/blockOpener_0003.txt" end time: Jul 23 07:33 UTC
+"docparse/blockOpener_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+61/64 Testing: docparse/block_0001.txt
+61/64 Test: docparse/block_0001.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "block_0001.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/block_0001.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0001.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.ul
+   "ul{"
+   [(Lean.Doc.Syntax.li
+     "*"
+     [(Lean.Doc.Syntax.para
+       "para{"
+       [(Lean.Doc.Syntax.text
+         (str "\"Here's a bullet\""))]
+       "}")])
+    (Lean.Doc.Syntax.li
+     "*"
+     [(Lean.Doc.Syntax.para
+       "para{"
+       [(Lean.Doc.Syntax.text
+         (str
+          "\"and another with some code in it\""))]
+       "}")
+      (Lean.Doc.Syntax.codeblock
+       "````"
+       [`lean []]
+       "\n"
+       (str "\"hey\\n\\nthere\\n\"")
+       "````")])
+    (Lean.Doc.Syntax.li
+     "*"
+     [(Lean.Doc.Syntax.para
+       "para{"
+       [(Lean.Doc.Syntax.text
+         (str "\"and another one\""))
+        (Lean.Doc.Syntax.linebreak
+         "line!"
+         (str "\"\\n\""))]
+       "}")])]
+   "}")
+All input consumed.
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/block_0001.txt" end time: Jul 23 07:33 UTC
+"docparse/block_0001.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+62/64 Testing: docparse/block_0002.txt
+62/64 Test: docparse/block_0002.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "block_0002.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/block_0002.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0002.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.command "{" `test [] "}")
+Remaining:
+"Here's a paragraph."
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/block_0002.txt" end time: Jul 23 07:33 UTC
+"docparse/block_0002.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+63/64 Testing: docparse/block_0003.txt
+63/64 Test: docparse/block_0003.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "block_0003.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/block_0003.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0003.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.command "{" `test [] "}")
+Remaining:
+" Here's a paragraph."
+<end of output>
+Test time =   0.47 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/block_0003.txt" end time: Jul 23 07:33 UTC
+"docparse/block_0003.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+64/64 Testing: docparse/block_0004.txt
+64/64 Test: docparse/block_0004.txt
+Command: "/usr/bin/bash" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/with_stage1_test_env.sh" "/home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse/run_test.sh" "block_0004.txt"
+Directory: /home/mjbommar/.cache/axeyum-tl063-m2-r6-dc588033/source/tests/docparse
+"docparse/block_0004.txt" start time: Jul 23 07:33 UTC
+Output:
+----------------------------------------------------------
+++ lean -Dlinter.all=false --run run_test.lean block_0004.txt
+Success! Final stack:
+  (Lean.Doc.Syntax.command "{" `test [] "}")
+Remaining:
+" Here's a paragraph."
+<end of output>
+Test time =   0.46 sec
+----------------------------------------------------------
+Test Passed.
+"docparse/block_0004.txt" end time: Jul 23 07:33 UTC
+"docparse/block_0004.txt" time elapsed: 00:00:00
+----------------------------------------------------------
+
+End testing: Jul 23 07:33 UTC

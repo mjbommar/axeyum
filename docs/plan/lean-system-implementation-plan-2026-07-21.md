@@ -240,7 +240,12 @@ freezes captured-original R5 validation and restoration without consuming
 attempt 004. Its pushed
 [implementation checkpoint](lean-u2-official-execution-tl0.6.3-m2-r6-control-history-r1-implementation-2026-07-23.md)
 now passes the exact temporary-control-context regression; corrected control and
-selected execution remain open.
+selected execution remain open. Both later passed/ran once at `dc588033`; the
+[pending-validation result](lean-u2-official-execution-tl0.6.3-m2-r6-attempt-004-pending-validation-result-2026-07-23.md)
+retains complete-looking 64/64 evidence but zero credit because post-install
+replay used pre-install completion mode. The source-first
+[R2 plan](lean-u2-official-execution-tl0.6.3-m2-r6-completion-replay-r2-plan-2026-07-23.md)
+authorizes only validator correction over the unchanged root.
 
 L0 exits when status is generated from evidence rather than hand-copied prose.
 
