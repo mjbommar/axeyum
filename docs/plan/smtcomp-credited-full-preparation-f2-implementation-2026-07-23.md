@@ -1,8 +1,8 @@
 # SMT-COMP credited full-population F2 preparation implementation
 
-Status: base process-free implementation integrated by `origin/main` merge
-`502e8875`; explicit host/sentinel preflight binding implemented on topic commit
-`43f871ad`; integration and live preparation remain outstanding
+Status: process-free implementation and explicit host/sentinel preflight
+integrated by `origin/main` merge `1b8ae016`; live preparation remains
+outstanding
 
 Date: 2026-07-23
 
@@ -81,8 +81,8 @@ solver-binary mutation also reject on replay.
 
 ## Gates
 
-The following pass on topic commit `43f871ad` over current `origin/main`
-`502e8875`:
+The following passed on implementation commit `43f871ad`, which is integrated
+by `origin/main` merge `1b8ae016`:
 
 ```text
 python3 -m unittest scripts.tests.test_smtcomp_full_population
@@ -94,17 +94,11 @@ runner/scoring/pipeline/selection/provenance checks, OK
 generated resume contract, selection authority, and repaired-P0 comparison, OK
 ```
 
-The explicit preflight implementation, this refreshed result/status document,
-and their readiness-source registration are not yet integrated. Independently,
-the branch-wide gate is not green:
+The explicit preflight implementation and readiness-source registration are
+integrated. Independently, the branch-wide gate is not green:
 `cargo fmt --all --check` reports existing
-format drift in the bench/CAS lane, which this increment did not edit. The
-focused Lean store check also still fails exactly because live
-`resume_fs.py` is `b05c3218...` while its test expects historical
-`1968e7b6...`. The integrated
-[Lean R7 plan](lean-complete-parity-current-source-identity-r7-plan-2026-07-23.md)
-preregisters the correct historical/current split, but its implementation is
-not yet on `origin/main`.
+format drift in the bench/CAS lane, which this increment did not edit. Lean R7
+is now integrated by merge `9fe5cab6`; its focused frozen-source test passes.
 
 ## Authorization boundary
 
