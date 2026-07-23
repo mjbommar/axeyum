@@ -1,6 +1,6 @@
 # TL0.7.4 plan — no-credit pinned Lean/export acceptance controls
 
-Status: **preregistered; no Lean compilation or exporter control has run**
+Status: **preregistered; exporter preparation built; no compile/export control has run**
 
 Date: 2026-07-22
 
@@ -55,7 +55,7 @@ current bytes:
 | `lean-toolchain` | `54727eec5cba149c18842e6deb5c41b369d66455c93ce135d7d5347c782b2325` | exact `leanprover/lean4:v4.30.0` selection |
 | `scripts/install-pinned-lean.sh` | `75acb49a48e18b43523257ac22bc82889d614a6678c1cc3a457b3a150e1c7f71` | checksum-pinned Linux x86-64 installer boundary |
 | installed pinned `bin/lean` | `3e0d0d3d801675359f2d4cf9815bfdb417b20b92fdd9d48b3b14c95bbae28bbf` | exact 9,024-byte executable used by the compile control |
-| flat probe source | `342337c885dd88d3ddc7c49aec52b57867206ebc3ae50f81f55e85e236dfb5` | exact 146-byte Lean source copied as `AxeyumProbe.lean` |
+| flat probe source | `342337c885dd88d3ddc7c7b49aec52b57867206ebc3ae50f81f55e85e236dfb5` | exact 146-byte Lean source copied as `AxeyumProbe.lean` |
 | flat reference NDJSON | `c582b5d5ab19cba61183d592d70c17eb7d101b8a1ad61e8c4c6022dfe95a8280` | exact 3,849-byte, 65-line exporter output acceptance oracle |
 | `lean-u2-official-ci-profiles-v1.json` | `4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548` | proves the controls select none of the 3,678/3,723 registered U2 cases |
 
@@ -111,6 +111,27 @@ The official sources establish the intended mechanics:
 
 These build facts are provenance for a later external control, not Lean or
 parity outcomes themselves.
+
+### 3.1 Preregistration amendment and preparation observation
+
+Published preregistration revision `48a365954ad3dfc23985ef3504d8a9392d05f6c8`
+accidentally omitted the two hex characters `7b` from the flat source digest,
+leaving a 62-character transcription rather than a SHA-256 value. The
+committed 146 source bytes did not change. The corrected 64-character digest
+above is their direct `sha256sum`; this amendment is published before the
+implementation or either compile/export control. Exporter build preparation
+does not consume the flat fixture, so it cannot have selected between the
+mistyped text and the actual source identity.
+
+After the original plan was pushed, the exact official checkout was created
+and remained clean. A first preparation command used unsupported Lake
+shorthand `-j1`; Lake exited 1 before compiling and emitted `error: unknown
+short option '-j'`. The retained successful command instead uses the pinned
+Lake 5 CLI's supported `lake build lean4export` form with
+`LEAN_NUM_THREADS=1`. It exited 0, stderr was empty, and the clean source build
+produced a 206,915,024-byte executable with SHA-256
+`8e763913b03762488571a93ced6ec1a4e04f7d8eebbe40bd1215ba41a6bd4449`.
+This preparation remains no-credit provenance. Neither real control has run.
 
 ## 4. Frozen controls
 

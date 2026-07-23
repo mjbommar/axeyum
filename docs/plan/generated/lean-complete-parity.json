@@ -68,7 +68,7 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "5edf51892ed6908227e021f7304529a63ca78069c6e33fd54762dd6ef367cd1f"
+      "sha256": "09532dbc98f7f5b2bd0bb8b1775cbf09c2bdab3eef2158e6715f89c8be1c0d84"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
