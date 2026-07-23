@@ -29,6 +29,7 @@ from p0_execute import (  # noqa: E402
     AXEYUM_CLOSURE_RESULT_PATH,
     CELL_RESULT_SCHEMA,
     CLOSURE_ADMISSION_PATH,
+    CVC5_RESULT_PATH,
     adjudicate_cell,
     cell_result_root,
     migrate_legacy_adjudication,
@@ -236,6 +237,21 @@ class P0PrepareTests(unittest.TestCase):
                         Path("scripts/smtcomp_repro/p0_execute.py"),
                         Path("scripts/smtcomp_repro/resume_runner.py"),
                         AXEYUM_CLOSURE_RESULT_PATH,
+                    ],
+                )
+
+        with mock.patch("p0_execute.require_integrated_admission") as base:
+            with mock.patch("p0_execute.require_integrated_path") as path:
+                require_integrated_cell_admission(ROOT, "bitwuzla")
+                base.assert_called_once_with(ROOT)
+                self.assertEqual(
+                    [call.args[1] for call in path.call_args_list],
+                    [
+                        CLOSURE_ADMISSION_PATH,
+                        Path("scripts/smtcomp_repro/p0_execute.py"),
+                        Path("scripts/smtcomp_repro/resume_runner.py"),
+                        AXEYUM_CLOSURE_RESULT_PATH,
+                        CVC5_RESULT_PATH,
                     ],
                 )
 

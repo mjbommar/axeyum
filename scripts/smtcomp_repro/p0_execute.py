@@ -39,6 +39,9 @@ CLOSURE_ADMISSION_PATH = Path(
 AXEYUM_CLOSURE_RESULT_PATH = Path(
     "docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md"
 )
+CVC5_RESULT_PATH = Path(
+    "docs/plan/smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md"
+)
 CELL_ORDER = ("axeyum", "cvc5", "bitwuzla")
 ADJUDICATION_SCHEMA = "axeyum.smtcomp-repaired-p0-cell-adjudication.v1"
 CELL_RESULT_SCHEMA = "axeyum.smtcomp-repaired-p0-cell-result.v1"
@@ -115,6 +118,8 @@ def require_integrated_cell_admission(
     )
     if cell_id != "axeyum":
         require_integrated_path(repository_root, AXEYUM_CLOSURE_RESULT_PATH)
+    if cell_id == "bitwuzla":
+        require_integrated_path(repository_root, CVC5_RESULT_PATH)
 
 
 def _json_count(path: Path) -> int:

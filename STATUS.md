@@ -426,9 +426,19 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   evidence and all three hosts are idle. The
   [closure result](docs/plan/smtcomp-repaired-p0-v2-axeyum-closure-result-2026-07-23.md)
   records the exact boundary. A new admission-source gate requires those exact
-  result bytes on `origin/main`, so Axeyum receives no credit and cvc5 remains
-  blocked until this checkpoint is integrated. Next: integrate this result and
-  gate, revalidate Axeyum, then launch only the frozen cvc5 initial allocations.
+  result bytes on `origin/main`. Merge `39691255` integrated that checkpoint,
+  and the gate then authorized exactly the three frozen cvc5 initial
+  allocations on `s5`/`s6`/`s7`. All 1,810 records and all three terminals
+  closed without retry: 672 `sat`, 841 `unsat`, 297 no verdict; 1,513 completed,
+  181 wall timeouts, and 116 typed nonzero exits. Independent validation
+  reproduces canonical bundle `4d791ab4...2685b`, external completion record
+  `e6fbc654...37faf`, zero known-status contradictions, zero Axeyum/cvc5
+  disagreements, and `safe_to_continue=true`. The
+  [cvc5 result](docs/plan/smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md)
+  freezes every completion hash. Bitwuzla still has zero evidence and is now
+  hard-gated on exact integration of that result and the corresponding source
+  check. Next: integrate the cvc5 checkpoint, revalidate both prior cells, then
+  launch only the frozen Bitwuzla initial allocations.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each
