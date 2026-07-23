@@ -155,6 +155,7 @@ FROZEN_REPOSITORY_INPUTS = {
 
 CURRENT_REPOSITORY_INPUTS = {
     **FROZEN_REPOSITORY_INPUTS,
+    "scripts/lean_execution_process.py": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948",
     "scripts/install-pinned-lean.sh": "8a48e25ee2d2fb6d364dcbe0505b8a2fd660237e18e536d52117dc947d4c71ee",
 }
 

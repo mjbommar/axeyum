@@ -356,11 +356,11 @@
     },
     {
       "path": "scripts/lean_execution_acceptance.py",
-      "sha256": "6b4f39901a76eb84f9ed9920c7e3b1c818a5740385ed4c668bd789c59443fa9a"
+      "sha256": "260523e04b72162cbf1feabbb2117772a94f4c29751c18970f6221c23709f084"
     },
     {
       "path": "scripts/lean_execution_process.py",
-      "sha256": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007"
+      "sha256": "b2f90c46928afad352fbf95390c5e54858ce792b5d20677f1ba25978375f7948"
     },
     {
       "path": "scripts/lean_execution_store.py",
@@ -376,11 +376,11 @@
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
-      "sha256": "47c779d5b465e32b1ffa8faf3598472ed2ac98bd058928494e65a68d4f205fc2"
+      "sha256": "320fc6d552b2d7d43b488bc6b5b3e90ebe18a048d342ebf075bcf1cb61c2ad68"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2.py",
-      "sha256": "03502d99a007cbcb3a6b5ee76585694ad4a8eae39c753d3266fec8396ec65788"
+      "sha256": "31d13ca21b9061deec4e15a12f85c2239f068df00b565975b7dca4aee7aefdf0"
     },
     {
       "path": "scripts/lean_u2_official_execution_m2_r2.py",
@@ -440,7 +440,7 @@
     },
     {
       "path": "scripts/tests/test_lean_execution_process.py",
-      "sha256": "5aea0fe02b3fa3278153807f7c1a1c8068ed1bfa7ea910f9b3aca08ae4a6521d"
+      "sha256": "1c2121c19dd8d9b484b26ef4729cf48855dfbfab4f734de6994ccb99b01f20b7"
     },
     {
       "path": "scripts/tests/test_lean_execution_store.py",

@@ -155,6 +155,33 @@ EXPECTED_CLASSES = {
 }
 SAFE_ID = re.compile(r"[a-z0-9][a-z0-9.-]{0,127}\Z")
 HEX64 = re.compile(r"[0-9a-f]{64}\Z")
+HISTORICAL_RESULT_SOURCE_INPUTS = (
+    {
+        "path": "docs/plan/lean-execution-process-adapter-tl0.7.2-plan-2026-07-22.md",
+        "sha256": "441f11cd86b50592ed038ef5b65451c74779d21d133065aa1e9213bde59d1239",
+        "binding": "preregistered-current-file",
+    },
+    {
+        "path": "scripts/lean_execution_process.py",
+        "sha256": "96f6866f619563e9fc639ca360f40260d2c35b521b3fc67941675d22984b2007",
+        "binding": "current-file",
+    },
+    {
+        "path": "scripts/lean_execution_probe.py",
+        "sha256": "24451fcdf9d0ff5fb0e2b7cd9e59b55d963aa12197c61c323881912f63e0b1cf",
+        "binding": "current-file",
+    },
+    {
+        "path": "scripts/fixtures/lean-execution-invalid-interpreter",
+        "sha256": "2bf4485b2388353e8be93d68a669b1d255e7709f5c33b9a17cf80861ef42893b",
+        "binding": "current-file",
+    },
+    {
+        "path": "scripts/tests/test_lean_execution_process.py",
+        "sha256": "5aea0fe02b3fa3278153807f7c1a1c8068ed1bfa7ea910f9b3aca08ae4a6521d",
+        "binding": "current-file",
+    },
+)
 
 
 class ProcessEvidenceError(ValueError):
@@ -196,6 +223,69 @@ def _metric(state: str, value: int | None, unit: str) -> dict[str, Any]:
 def _source_record(path: Path) -> dict[str, str]:
     relative = path.resolve().relative_to(ROOT).as_posix()
     return {"path": relative, "sha256": sha256_file(path)}
+
+
+def historical_result_source_inputs() -> list[dict[str, str]]:
+    """Return the immutable source identities of the accepted TL0.7.2 result."""
+    return copy.deepcopy(list(HISTORICAL_RESULT_SOURCE_INPUTS))
+
+
+def _root_for_repository_relative_path(path: str, relative: Path) -> Path | None:
+    """Recover the checkout root from an absolute path and expected suffix."""
+    candidate = Path(path)
+    if not candidate.is_absolute() or relative.is_absolute() or ".." in relative.parts:
+        return None
+    for part in reversed(relative.parts):
+        if candidate.name != part:
+            return None
+        candidate = candidate.parent
+    return candidate
+
+
+def _run_matches_spec_attribution(run: dict[str, Any], spec: dict[str, Any]) -> bool:
+    """Compare a retained run with a live spec modulo checkout-root relocation.
+
+    Retained process evidence deliberately preserves the absolute command that
+    executed.  Validation may happen in another worktree or CI checkout, so
+    repository-owned command arguments and the working directory are compared
+    by their ROOT-relative suffix.  Non-repository arguments, including the
+    Python executable, remain byte-exact.
+    """
+    run_command = run.get("command")
+    spec_command = spec.get("command")
+    if (
+        not isinstance(run_command, list)
+        or not isinstance(spec_command, list)
+        or len(run_command) != len(spec_command)
+    ):
+        return False
+
+    recorded_roots: set[Path] = set()
+    for retained, expected in zip(run_command, spec_command, strict=True):
+        if not isinstance(retained, str) or not isinstance(expected, str):
+            return False
+        try:
+            relative = Path(expected).relative_to(ROOT)
+        except ValueError:
+            if retained != expected:
+                return False
+            continue
+        recorded_root = _root_for_repository_relative_path(retained, relative)
+        if recorded_root is None:
+            return False
+        recorded_roots.add(recorded_root)
+
+    if len(recorded_roots) != 1:
+        return False
+    recorded_root = next(iter(recorded_roots))
+    try:
+        expected_cwd = Path(spec["working_directory"]).relative_to(ROOT)
+    except (KeyError, TypeError, ValueError):
+        return False
+    retained_cwd_root = _root_for_repository_relative_path(
+        str(run.get("working_directory", "")), expected_cwd
+    )
+    return retained_cwd_root == recorded_root
 
 
 def _memory_marker(limit_bytes: int, mapping_bytes: int) -> str:
@@ -960,7 +1050,9 @@ def validate_attempt_directory(
         except ProcessEvidenceError as exc:
             failures.append(str(exc))
             return failures
-        if run.get("id") != spec["run_id"] or run.get("command") != spec["command"]:
+        if run.get("id") != spec["run_id"] or not _run_matches_spec_attribution(
+            run, spec
+        ):
             failures.append("run/spec attribution drift")
         if (
             prelaunch.get("id") != spec["attempt_id"]
@@ -1091,33 +1183,7 @@ def build_result_authority(
     }
     if classification_counts != expected_counts:
         raise ProcessEvidenceError("retained terminal-class partition drift")
-    source_inputs = [
-        {
-            "path": PREREGISTRATION_PLAN.relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(PREREGISTRATION_PLAN),
-            "binding": "preregistered-current-file",
-        },
-        {
-            "path": Path(__file__).resolve().relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(Path(__file__).resolve()),
-            "binding": "current-file",
-        },
-        {
-            "path": PROBE.relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(PROBE),
-            "binding": "current-file",
-        },
-        {
-            "path": INVALID_INTERPRETER.relative_to(ROOT).as_posix(),
-            "sha256": sha256_file(INVALID_INTERPRETER),
-            "binding": "current-file",
-        },
-        {
-            "path": "scripts/tests/test_lean_execution_process.py",
-            "sha256": sha256_file(ROOT / "scripts/tests/test_lean_execution_process.py"),
-            "binding": "current-file",
-        },
-    ]
+    source_inputs = historical_result_source_inputs()
     files = _evidence_file_manifest(evidence_root)
     authority: dict[str, Any] = {
         "schema": RESULT_SCHEMA,

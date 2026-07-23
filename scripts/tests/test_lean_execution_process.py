@@ -75,6 +75,64 @@ class LeanExecutionProcessContractTests(unittest.TestCase):
         with self.assertRaises(PROCESS.ProcessEvidenceError):
             PROCESS.validate_spec(changed)
 
+    def test_run_spec_attribution_is_checkout_root_portable(self) -> None:
+        for control_id in PROCESS.CONTROL_IDS:
+            with self.subTest(control_id=control_id):
+                spec = PROCESS.build_control_spec(control_id)
+                retained_root = Path("/var/tmp/independent-axeyum-worktree")
+                command = []
+                for argument in spec["command"]:
+                    try:
+                        relative = Path(argument).relative_to(PROCESS.ROOT)
+                    except ValueError:
+                        command.append(argument)
+                    else:
+                        command.append(str(retained_root / relative))
+                relative_cwd = Path(spec["working_directory"]).relative_to(PROCESS.ROOT)
+                run = {
+                    "command": command,
+                    "working_directory": str(retained_root / relative_cwd),
+                }
+                self.assertTrue(PROCESS._run_matches_spec_attribution(run, spec))
+
+                wrong_target = copy.deepcopy(run)
+                wrong_target["command"][-2 if control_id.startswith("memory-limit-") else -1] = (
+                    str(retained_root / "scripts/not_the_registered_probe.py")
+                )
+                self.assertFalse(
+                    PROCESS._run_matches_spec_attribution(wrong_target, spec)
+                )
+
+                wrong_cwd = copy.deepcopy(run)
+                wrong_cwd["working_directory"] += "-other"
+                self.assertFalse(PROCESS._run_matches_spec_attribution(wrong_cwd, spec))
+
+    def test_run_spec_attribution_keeps_external_executable_exact(self) -> None:
+        spec = PROCESS.build_control_spec("exit-zero-4g")
+        run = {
+            "command": list(spec["command"]),
+            "working_directory": spec["working_directory"],
+        }
+        run["command"][0] = "/usr/bin/not-the-recorded-python"
+        self.assertFalse(PROCESS._run_matches_spec_attribution(run, spec))
+
+    def test_historical_result_inputs_remain_immutable(self) -> None:
+        authority = json.loads(PROCESS.RESULT_AUTHORITY.read_bytes())
+        self.assertEqual(
+            authority["source_inputs"], PROCESS.historical_result_source_inputs()
+        )
+        changed = copy.deepcopy(authority)
+        changed["source_inputs"][1]["sha256"] = "0" * 64
+        changed["authority_sha256"] = PROCESS.domain_digest(
+            PROCESS.RESULT_SCHEMA,
+            {
+                key: value
+                for key, value in changed.items()
+                if key != "authority_sha256"
+            },
+        )
+        self.assertTrue(PROCESS.validate_result_authority(changed))
+
     def test_result_builder_rejects_missing_or_partial_evidence(self) -> None:
         with tempfile.TemporaryDirectory(dir=PROCESS.ROOT) as temporary:
             with self.assertRaisesRegex(PROCESS.ProcessEvidenceError, "directory set"):
