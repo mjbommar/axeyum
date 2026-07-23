@@ -102,6 +102,19 @@ in the
 [`full-library handoff`](../../docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md)
 and generated
 [`resumable-run contract`](../../docs/plan/generated/smtcomp-resumable-run-contract.md).
+
+The completed repaired-P0 cells have a separate, process-free comparison
+generator. It validates all three external result roots before deriving exact
+native, pairwise, and three-solver decision projections. The committed view is
+[`smtcomp-repaired-p0-comparison.md`](../../docs/plan/generated/smtcomp-repaired-p0-comparison.md).
+Portable checks validate its self-seal and rendered bytes:
+
+```sh
+python3 scripts/generate-smtcomp-repaired-p0-comparison.py --check
+```
+
+Live revalidation additionally names the frozen preparation root. Neither mode
+writes to the preparation or any NAS artifact.
 The local kill-tested boundary is in the
 [`E1a result`](../../docs/plan/smtcomp-resumable-filesystem-e1a-2026-07-21.md).
 The source-backed v2 process-schema correction and narrow integration seams are
