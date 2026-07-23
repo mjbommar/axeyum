@@ -167,7 +167,9 @@ The bounded implementation:
 - requires this plan and all recovery-source bytes to be exact on `origin/main`;
   and
 - validates replay after authority publication, process-free finalization after
-  a completed retry, and a fully published result without launching twice.
+  a completed retry, and a fully published result without launching twice; and
+- directly exercises all three coordinator restart paths: fresh exact retry,
+  completed-retry finalization, and completed-result replay.
 
 Read-only live validation reports:
 
@@ -184,10 +186,10 @@ python3 -m unittest \
   scripts.tests.test_smtcomp_resume_fs \
   scripts.tests.test_smtcomp_multi_host \
   scripts.tests.test_smtcomp_p0_prepare
-  20 tests, OK
+  23 tests, OK
 
 ./scripts/check-smtcomp-resume.sh
-  68 tests, OK, one live-host skip
+  71 tests, OK, one live-host skip
 
 ./scripts/check-links.sh
   passed

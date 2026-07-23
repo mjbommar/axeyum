@@ -35,6 +35,7 @@ from p0_execute import (  # noqa: E402
     cell_result_root,
     migrate_legacy_adjudication,
     publish_cell_result,
+    recover_frozen_bitwuzla_v2,
     require_integrated_admission,
     require_integrated_bitwuzla_recovery,
     require_integrated_cell_admission,
@@ -105,6 +106,24 @@ def _cell_result_fixture(root: Path) -> tuple[Path, dict, Path]:
     )
     completion = {"cells": cells, "record_sha256": "e" * 64}
     return preparation, completion, run_dir
+
+
+def _bitwuzla_recovery_fixture(root: Path) -> tuple[Path, dict, Path, str]:
+    preparation = root / "preparation"
+    complete = preparation / "complete.json"
+    complete.parent.mkdir(parents=True)
+    complete.write_bytes(b'{"fixture":"bitwuzla-recovery"}\n')
+    cells = []
+    for solver_id in ("axeyum", "cvc5", "bitwuzla"):
+        run_dir = preparation / "cells" / solver_id
+        run_dir.mkdir(parents=True)
+        cells.append({"solver_id": solver_id, "attempt_root": str(run_dir)})
+    return (
+        preparation,
+        {"cells": cells},
+        preparation / "cells" / "bitwuzla",
+        _sha(complete),
+    )
 
 
 def _accepted_root(shared: Path, corpus: Path) -> Path:
@@ -211,6 +230,164 @@ class P0PrepareTests(unittest.TestCase):
                 side_effect=[b"", result.read_bytes()],
             ):
                 require_integrated_admission(root)
+
+    def test_completed_bitwuzla_result_replays_without_retry_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir, acknowledgement = (
+                _bitwuzla_recovery_fixture(Path(tmp))
+            )
+            result_root = cell_result_root(preparation, "bitwuzla")
+            result_root.mkdir(parents=True)
+            result_root.joinpath("complete.json").write_bytes(b"{}\n")
+            expected = {"safe_to_continue": True, "record_count": 1810}
+            with (
+                mock.patch("p0_execute.require_integrated_bitwuzla_recovery") as gate,
+                mock.patch(
+                    "p0_execute.validate_preparation", return_value=completion
+                ),
+                mock.patch(
+                    "p0_execute.validate_cell_result",
+                    return_value={"safe_to_continue": True},
+                ) as validate_result,
+                mock.patch(
+                    "p0_execute.validate_cell_adjudication", return_value=expected
+                ) as validate_adjudication,
+                mock.patch("p0_execute.start_allocation") as start,
+            ):
+                observed = recover_frozen_bitwuzla_v2(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                    acknowledged_completion_sha256=acknowledgement,
+                )
+            self.assertEqual(observed, expected)
+            gate.assert_called_once_with(ROOT)
+            validate_result.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+            )
+            validate_adjudication.assert_called_once_with(
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+                adjudication_path=result_root / "p0-cell-adjudication.json",
+            )
+            start.assert_not_called()
+
+    def test_completed_bitwuzla_retry_finalizes_without_second_launch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir, acknowledgement = (
+                _bitwuzla_recovery_fixture(Path(tmp))
+            )
+            attempt = run_dir / "multi-host-attempts" / "retry-1" / "attempt.json"
+            terminal = run_dir / "multi-host-terminals" / "retry-1" / "attempt.json"
+            attempt.parent.mkdir(parents=True)
+            terminal.parent.mkdir(parents=True)
+            attempt.write_bytes(b"{}\n")
+            terminal.write_bytes(canonical_bytes({"status": "completed"}))
+            expected = {"safe_to_continue": True, "record_count": 1810}
+            with (
+                mock.patch("p0_execute.require_integrated_bitwuzla_recovery"),
+                mock.patch(
+                    "p0_execute.validate_preparation", return_value=completion
+                ),
+                mock.patch("p0_execute.finalize_multi_host_run") as finalize,
+                mock.patch("p0_execute.publish_cell_result") as publish,
+                mock.patch(
+                    "p0_execute.validate_cell_adjudication", return_value=expected
+                ),
+                mock.patch("p0_execute.recover_released_failed_shard") as recover,
+                mock.patch("p0_execute.start_allocation") as start,
+            ):
+                observed = recover_frozen_bitwuzla_v2(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                    acknowledged_completion_sha256=acknowledgement,
+                )
+            self.assertEqual(observed, expected)
+            finalize.assert_called_once_with(run_dir)
+            publish.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+            )
+            recover.assert_not_called()
+            start.assert_not_called()
+
+    def test_fresh_bitwuzla_recovery_launches_only_registered_retry(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            preparation, completion, run_dir, acknowledgement = (
+                _bitwuzla_recovery_fixture(Path(tmp))
+            )
+            plan = {"plan_sha256": "p" * 64}
+            command = {"remote_helper_path": "/tmp/multi-host-helper.py"}
+            process = mock.Mock()
+            process.poll.side_effect = [None, 0]
+            handle = mock.Mock(process=process)
+            expected = {"safe_to_continue": True, "record_count": 1810}
+            with (
+                mock.patch("p0_execute.require_integrated_bitwuzla_recovery"),
+                mock.patch(
+                    "p0_execute.validate_preparation", return_value=completion
+                ),
+                mock.patch(
+                    "p0_execute.validate_frozen_bitwuzla_recovery",
+                    return_value=(
+                        plan,
+                        command,
+                        run_dir / "terminals" / "1" / "failed.json",
+                    ),
+                ) as validate_frozen,
+                mock.patch(
+                    "p0_execute.read_canonical_json", return_value={"run": True}
+                ),
+                mock.patch("p0_execute.recover_released_failed_shard") as recover,
+                mock.patch("p0_execute.start_allocation", return_value=handle) as start,
+                mock.patch(
+                    "p0_execute.finish_allocation", return_value={"status": "completed"}
+                ) as finish,
+                mock.patch("p0_execute.finalize_multi_host_run") as finalize,
+                mock.patch("p0_execute.publish_cell_result") as publish,
+                mock.patch(
+                    "p0_execute.validate_cell_adjudication", return_value=expected
+                ),
+                mock.patch("p0_execute._records", return_value=[]),
+                mock.patch("p0_execute.time.sleep"),
+            ):
+                observed = recover_frozen_bitwuzla_v2(
+                    repository_root=ROOT,
+                    preparation_root=preparation,
+                    acknowledged_completion_sha256=acknowledgement,
+                    poll_seconds=1.0,
+                )
+            self.assertEqual(observed, expected)
+            validate_frozen.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                run_dir=run_dir,
+            )
+            recover.assert_called_once_with(
+                plan=plan,
+                run={"run": True},
+                run_dir=run_dir,
+                failed_allocation_id="initial-1",
+                retry_allocation_id="retry-1",
+                resource_session_id="p0-bitwuzla-initial-1-f49561551140",
+                remote_helper_path=Path("/tmp/multi-host-helper.py"),
+            )
+            start.assert_called_once_with(
+                plan=plan, command_manifest=command, run_dir=run_dir
+            )
+            finish.assert_called_once_with(handle, timeout=1.0)
+            finalize.assert_called_once_with(run_dir)
+            publish.assert_called_once_with(
+                preparation_root=preparation,
+                completion=completion,
+                cell_id="bitwuzla",
+                run_dir=run_dir,
+            )
 
     def test_later_cell_admission_requires_integrated_axeyum_closure_result(
         self,
