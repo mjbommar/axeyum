@@ -1,6 +1,6 @@
 # SMT-COMP repaired P0 v2 export-layout closure plan
 
-Status: preregistered after observation; no closure mutation performed
+Status: implemented and gated in `5c06ec76`; no closure mutation performed
 Date: 2026-07-23
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
 Prior incident: [v1 runtime-layout incident](smtcomp-repaired-p0-v1-layout-incident-2026-07-23.md)
@@ -172,10 +172,63 @@ Before operating on the live v2 cell:
 8. implementation and live-closure result bytes are separately integrated on
    `origin/main` before cvc5 launch.
 
+## Implementation checkpoint
+
+Commit `5c06ec76` implements only the preregistered boundary:
+
+- deterministic legacy raw bytes are now separable from their destination;
+- fresh coordinator outputs publish under `cell-results/<solver-id>/`;
+- `complete.json` binds the preparation, generic bundle, resource completion,
+  multi-host completion, recomputed adjudication, and exact raw export;
+- the one-time Axeyum v2 closure hard-codes every frozen hash above, moves only
+  the exact legacy adjudication to a content-bound quarantine path, and launches
+  no process;
+- later-cell admission requires validated external prior-cell completion; and
+- every future launch requires the closure plan and repaired coordinator/export
+  sources to be byte-identical to `origin/main`.
+
+The exact live freeze validates read-only before migration:
+
+```text
+FROZEN_AXEYUM_V2_VALID|adjudication_bytes=493
+```
+
+Committed gates:
+
+```text
+python3 -m unittest scripts.tests.test_smtcomp_p0_prepare
+  7 tests, OK
+
+./scripts/check-smtcomp-resume.sh
+  65 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
+  65 tests, OK, one multi-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
+  65 tests, OK, no skips
+  evidence: /nas3/data/axeyum/harness/e3-gate/live-1784826604526363736-5c06ec7606e2
+  control completion: 818420d35b2986d4286c70d09d8feb78e8e47180dd45f6db3fd77811efa4c8c5
+  loss/retry completion: 2c701bf7cde0f4d8b6a8fabd6e303d39b8aa2d2bcf4dd9f6840ccb115caa1f8e
+
+just foundational-resources
+  passed
+
+./scripts/check-links.sh
+  passed
+
+git diff --check
+  passed
+```
+
+The failed pre-commit E3 invocation is not a gate result: it correctly refused
+to run from a dirty worktree. The committed rerun above is the qualifying E3
+evidence.
+
 ## Next boundary
 
-Commit and integrate this preregistration first. Then implement and test only
-the separated coordinator-result namespace and exact process-free closure.
-After that implementation is integrated, run the closure once against the
+The preregistration is integrated and the bounded implementation is committed,
+gated, and pushed. After the implementation and these exact checkpoint bytes
+are integrated, run the closure once against the
 frozen Axeyum v2 cell, independently validate and document its result, and
 integrate that result. Only then may the frozen cvc5 cell start.
