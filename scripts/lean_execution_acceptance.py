@@ -46,6 +46,20 @@ PREREGISTRATION_PLAN = (
     ROOT / "docs/plan/lean-execution-acceptance-tl0.7.4-plan-2026-07-22.md"
 )
 PREREGISTRATION_COMMIT = "48a365954ad3dfc23985ef3504d8a9392d05f6c8"
+R1_PREREGISTRATION_PLAN = (
+    ROOT / "docs/plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md"
+)
+R1_PREREGISTRATION_COMMIT = "fde64fb39ded789f3a392a818d86d2dc7d299406"
+FAILED_ATTEMPT_RESULT = (
+    ROOT / "docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md"
+)
+FAILED_EVIDENCE_ROOT = (
+    ROOT / "docs/plan/evidence/lean-execution-acceptance-tl0.7.4-attempt-001-failed"
+)
+FAILED_IMPLEMENTATION_REVISION = "4ba69b7076996057390e54daf8624e1b1cec9fb7"
+FAILED_EVIDENCE_FILES = 41
+FAILED_EVIDENCE_BYTES = 89_974
+FAILED_EVIDENCE_MANIFEST_SHA256 = "c4f9fa088cd0f2fdb8a1cbebc111053252326ce5ea106f3e5ffa6b22ba292ae7"
 RESULT_AUTHORITY = ROOT / "docs/plan/lean-execution-acceptance-v1.json"
 RESULT_JSON = ROOT / "docs/plan/generated/lean-execution-acceptance.json"
 RESULT_MARKDOWN = ROOT / "docs/plan/generated/lean-execution-acceptance.md"
@@ -69,11 +83,12 @@ RESULT_SCHEMA = "axeyum-lean-execution-acceptance-result-v1"
 SUMMARY_SCHEMA = "axeyum-lean-execution-acceptance-summary-v1"
 
 CONTROL_IDS = (
-    "pinned-lean-compile-preflight-4g",
+    "pinned-lean-compile-preflight-4g-tstack512m",
     "official-lean4export-flat-export-8g",
 )
 COMPILE_CONTROL = CONTROL_IDS[0]
 EXPORT_CONTROL = CONTROL_IDS[1]
+FAILED_COMPILE_CONTROL = "pinned-lean-compile-preflight-4g"
 EMPTY_SELECTION_ID = "tl0.7.4-empty-selection-v1"
 CREDIT_CLASS = "real-external-control-no-credit"
 HEX40 = re.compile(r"[0-9a-f]{40}\Z")
@@ -92,6 +107,8 @@ FLAT_SOURCE_SHA256 = "342337c885dd88d3ddc7c7b49aec52b57867206ebc3ae50f81f55e85e2
 REFERENCE_SHA256 = "c582b5d5ab19cba61183d592d70c17eb7d101b8a1ad61e8c4c6022dfe95a8280"
 REFERENCE_BYTES = 3_849
 REFERENCE_LINES = 65
+TASK_STACK_KIB = 524_288
+TASK_STACK_BYTES = 536_870_912
 
 EXPORTER_REPOSITORY = "https://github.com/leanprover/lean4export"
 EXPORTER_TAG = "v4.30.0"
@@ -132,6 +149,8 @@ FROZEN_REPOSITORY_INPUTS = {
     "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.lean": FLAT_SOURCE_SHA256,
     "docs/plan/fixtures/lean4export-v4.30-axeyum-probe.ndjson": REFERENCE_SHA256,
     "docs/plan/lean-u2-official-ci-profiles-v1.json": "4817d177828797f9dab9e62cf7647732d2b9c3788db7b7b4e3461bc868948548",
+    "docs/plan/lean-execution-acceptance-tl0.7.4-r1-plan-2026-07-22.md": "241b9f4c2d68804f7fcfb91ef26c409cea377e75ed8cc58b526ecd031658bcda",
+    "docs/plan/lean-execution-acceptance-tl0.7.4-attempt-001-2026-07-22.md": "27b948b21bc9b2b14e185d2534e2bb96c13648750871c7f4e682b2eece479ec1",
 }
 
 LANES = {
@@ -220,7 +239,8 @@ COMPLETION_FIELDS = {
 }
 RESULT_FIELDS = {
     "schema", "status", "preregistration_commit", "implementation_revision",
-    "source_inputs", "build", "controls", "summary", "evidence_files",
+    "r1_preregistration_commit", "source_inputs", "build", "failed_attempt",
+    "controls", "summary", "evidence_files",
     "evidence_manifest_sha256", "claims", "credits", "record_sha256",
 }
 
@@ -349,6 +369,35 @@ def _file_record(relative: str, path: Path) -> dict[str, Any]:
         "bytes": path.stat().st_size,
         "sha256": sha256_file(path),
     }
+
+
+def _accepted_readonly_mode(path: Path) -> bool:
+    """Accept live 0444 or Git-checkout 0644 for already tracked evidence.
+
+    Git stores only the executable bit, so a committed 0444 checkpoint is
+    materialized as 0644 in a fresh checkout. Untracked/live evidence must
+    still be 0444; this exception cannot make a temporary mutation fixture
+    pass.
+    """
+
+    mode = stat.S_IMODE(path.stat().st_mode)
+    if mode == 0o444:
+        return True
+    if mode != 0o644:
+        return False
+    try:
+        relative = path.resolve().relative_to(ROOT).as_posix()
+    except ValueError:
+        return False
+    completed = subprocess.run(
+        ["/usr/bin/git", "-C", str(ROOT), "ls-files", "--error-unmatch", "--", relative],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+        timeout=5,
+    )
+    return completed.returncode == 0
 
 
 def capture_build_record(
@@ -599,7 +648,7 @@ def validate_build_record(record: Any, *, evidence_root: Path | None = None) -> 
                     path = evidence_root / str(sidecar.get("path"))
                     if (
                         not path.is_file() or path.is_symlink()
-                        or stat.S_IMODE(path.stat().st_mode) != 0o444
+                        or not _accepted_readonly_mode(path)
                         or path.stat().st_size != sidecar.get("bytes")
                         or sha256_file(path) != sidecar.get("sha256")
                     ):
@@ -629,7 +678,12 @@ def resource_envelope(control_id: str) -> dict[str, Any]:
         "memory_enforcement": "explicit-rlimit-as",
         "wall_timeout": metric("observed", lane["wall_timeout_ms"], "milliseconds"),
         "worker_limit": metric("observed", 1, "workers"),
-        "thread_limit": metric("observed", 1, "threads"),
+        "thread_limit": metric("not-enforced", None, "threads"),
+        "task_stack_limit": (
+            metric("observed", TASK_STACK_BYTES, "bytes")
+            if control_id == COMPILE_CONTROL
+            else metric("not-observed", None, "bytes")
+        ),
         "requested_parallelism": 1,
         "effective_parallelism": 1,
     }
@@ -661,7 +715,9 @@ def build_control_spec(
     if control_id == COMPILE_CONTROL:
         source = private_root / "AxeyumProbe.lean"
         output = private_root / "AxeyumProbe.olean"
-        command = [str(lean), "-j1", "-o", str(output), str(source)]
+        command = [
+            str(lean), "-j1", f"-s{TASK_STACK_KIB}", "-o", str(output), str(source)
+        ]
         working_directory = str(private_root)
         environment = {
             "LANG": "C.UTF-8",
@@ -730,6 +786,7 @@ def build_control_spec(
             "sequence": 1,
             "implementation_revision": implementation_revision,
             "preregistration_commit": PREREGISTRATION_COMMIT,
+            "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
             "lane_id": LANES[control_id]["lane_id"],
             "credit_class": CREDIT_CLASS,
             "command": command,
@@ -756,7 +813,8 @@ def validate_control_spec(spec: Any) -> list[str]:
     failures: list[str] = []
     fields = {
         "schema", "control_id", "run_id", "attempt_id", "sequence",
-        "implementation_revision", "preregistration_commit", "lane_id", "credit_class",
+        "implementation_revision", "preregistration_commit", "r1_preregistration_commit",
+        "lane_id", "credit_class",
         "command", "working_directory", "environment", "selection_set_id",
         "selection_case_ids", "case_records", "resource_envelope", "terminate_grace_ms",
         "inputs", "expected", "record_sha256",
@@ -771,6 +829,7 @@ def validate_control_spec(spec: Any) -> list[str]:
         return failures
     if (
         spec.get("preregistration_commit") != PREREGISTRATION_COMMIT
+        or spec.get("r1_preregistration_commit") != R1_PREREGISTRATION_COMMIT
         or not isinstance(spec.get("implementation_revision"), str)
         or not HEX40.fullmatch(spec["implementation_revision"])
         or spec.get("lane_id") != LANES[control_id]["lane_id"]
@@ -822,9 +881,12 @@ def validate_control_spec(spec: Any) -> list[str]:
         failures.append("control build-record identity is invalid")
     environment = spec.get("environment")
     if control_id == COMPILE_CONTROL:
-        if len(command) != 5 or command[1:3] != ["-j1", "-o"]:
+        if (
+            len(command) != 6
+            or command[1:4] != ["-j1", f"-s{TASK_STACK_KIB}", "-o"]
+        ):
             failures.append("compile command shape drift")
-        elif not all(Path(item).is_absolute() for item in (command[0], command[3], command[4])):
+        elif not all(Path(item).is_absolute() for item in (command[0], command[4], command[5])):
             failures.append("compile command uses implicit paths")
         expected_environment = {
             "LANG": "C.UTF-8", "LEAN_NUM_THREADS": "1",
@@ -1092,7 +1154,8 @@ def _projection(
 ) -> dict[str, Any]:
     if spec["control_id"] == COMPILE_CONTROL:
         command_shape = [
-            f"lean@{spec['inputs']['lean_sha256']}", "-j1", "-o",
+            f"lean@{spec['inputs']['lean_sha256']}", "-j1",
+            f"-s{TASK_STACK_KIB}", "-o",
             "private-output:AxeyumProbe.olean", "private-source:AxeyumProbe.lean",
         ]
         environment_shape = {
@@ -1209,6 +1272,9 @@ def execute_control(spec: dict[str, Any], *, control_root: Path, private_root: P
     terminal = seal(terminal, TERMINAL_SCHEMA)
     _install_bytes(control_root, "raw/stdout.bin", stdout)
     _install_bytes(control_root, "raw/stderr.bin", stderr)
+    # Failure evidence must close before any success-artifact predicate can
+    # raise. Attempt 001 exposed the inverse ordering as a retention defect.
+    _install_json(control_root, "attempt-terminal.json", terminal)
     if spec["control_id"] == COMPILE_CONTROL:
         output = private_root / "AxeyumProbe.olean"
         if not output.is_file() or output.is_symlink() or output.stat().st_size <= 0:
@@ -1252,7 +1318,6 @@ def execute_control(spec: dict[str, Any], *, control_root: Path, private_root: P
         }
     artifact = _artifact_record(spec["control_id"], artifacts, predicates)
     _install_json(control_root, "artifact.json", artifact)
-    _install_json(control_root, "attempt-terminal.json", terminal)
     if (
         terminal["class"] != "exited" or terminal["exit_code"] != 0
         or terminal["process"]["watchdog_fired"]
@@ -1301,7 +1366,7 @@ def validate_control_store(root: Path, *, expected_control: str) -> list[str]:
             failures.append(f"symlinked evidence path: {relative}")
         if path.is_file():
             actual.add(relative)
-            if stat.S_IMODE(path.stat().st_mode) != 0o444:
+            if not _accepted_readonly_mode(path):
                 failures.append(f"accepted evidence is not read-only: {relative}")
     if actual != allowed:
         failures.append("control store file set must be exact")
@@ -1502,6 +1567,101 @@ def _evidence_manifest(evidence_root: Path) -> list[dict[str, Any]]:
     return rows
 
 
+def validate_failed_attempt_evidence() -> tuple[list[str], list[dict[str, Any]]]:
+    failures: list[str] = []
+    if not FAILED_EVIDENCE_ROOT.is_dir() or FAILED_EVIDENCE_ROOT.is_symlink():
+        return ["missing real failed-attempt evidence root"], []
+    rows = _evidence_manifest(FAILED_EVIDENCE_ROOT)
+    if (
+        len(rows) != FAILED_EVIDENCE_FILES
+        or sum(item["bytes"] for item in rows) != FAILED_EVIDENCE_BYTES
+        or domain_digest(
+            "axeyum-lean-execution-acceptance-failed-evidence-v1", rows
+        )
+        != FAILED_EVIDENCE_MANIFEST_SHA256
+    ):
+        failures.append("failed-attempt evidence manifest drift")
+    for item in rows:
+        path = FAILED_EVIDENCE_ROOT / item["path"]
+        if path.is_symlink() or not _accepted_readonly_mode(path):
+            failures.append(f"invalid failed-attempt evidence mode: {item['path']}")
+    control = FAILED_EVIDENCE_ROOT / "controls" / FAILED_COMPILE_CONTROL
+    expected_partial = {
+        "artifacts/AxeyumProbe.lean",
+        "attempt-prelaunch.json",
+        "manifest.json",
+        "raw/stderr.bin",
+        "raw/stdout.bin",
+        "run.json",
+        "spec.json",
+    }
+    actual_partial = {
+        path.relative_to(control).as_posix()
+        for path in control.rglob("*")
+        if path.is_file()
+    } if control.is_dir() else set()
+    if actual_partial != expected_partial:
+        failures.append("failed-attempt partial control file set drift")
+    try:
+        spec = load_canonical(control / "spec.json")
+        build = load_canonical(FAILED_EVIDENCE_ROOT / "preparation/build.json")
+    except AcceptanceEvidenceError as exc:
+        failures.append(str(exc))
+        return failures, rows
+    failures.extend(
+        f"failed attempt build: {failure}"
+        for failure in validate_build_record(build, evidence_root=FAILED_EVIDENCE_ROOT)
+    )
+    if (
+        spec.get("control_id") != FAILED_COMPILE_CONTROL
+        or spec.get("implementation_revision") != FAILED_IMPLEMENTATION_REVISION
+        or spec.get("command", [None, None])[1] != "-j1"
+        or any(str(item).startswith("-s") for item in spec.get("command", []))
+        or spec.get("resource_envelope", {}).get("memory_limit", {}).get("value")
+        != 4_294_967_296
+    ):
+        failures.append("failed-attempt exact control attribution drift")
+    stderr = control / "raw/stderr.bin"
+    stdout = control / "raw/stdout.bin"
+    if (
+        not stderr.is_file()
+        or stderr.stat().st_size != 98
+        or sha256_file(stderr)
+        != "32a60967270365f092cad81a408cf0e68f13aceab4359f32700f140a54129b9b"
+        or not stdout.is_file()
+        or stdout.stat().st_size != 0
+    ):
+        failures.append("failed-attempt raw diagnostic drift")
+    trace = FAILED_EVIDENCE_ROOT / "diagnostics/strace/4g-thread-mmap.log"
+    try:
+        trace_text = trace.read_text(encoding="utf-8")
+    except OSError:
+        trace_text = ""
+    if (
+        "mmap(NULL, 1073745920" not in trace_text
+        or "= -1 ENOMEM (Cannot allocate memory)" not in trace_text
+    ):
+        failures.append("failed-attempt thread-stack trace drift")
+    expected_olean_hash = "1ce19df3f054ea6521fec7b8d49680d85087990c94e15bac00e731923152ecda"
+    passing = [
+        "diagnostics/rlimit-as-matrix/5g.olean",
+        "diagnostics/rlimit-as-matrix/6g.olean",
+        "diagnostics/rlimit-as-matrix/8g.olean",
+        "diagnostics/tstack-option-matrix/64m.olean",
+        "diagnostics/tstack-option-matrix/256m.olean",
+        "diagnostics/tstack-option-matrix/512m.olean",
+        "diagnostics/tstack-option-matrix/768m.olean",
+    ]
+    if any(
+        not (FAILED_EVIDENCE_ROOT / relative).is_file()
+        or (FAILED_EVIDENCE_ROOT / relative).stat().st_size != 9_672
+        or sha256_file(FAILED_EVIDENCE_ROOT / relative) != expected_olean_hash
+        for relative in passing
+    ):
+        failures.append("failed-attempt passing diagnostic artifact drift")
+    return failures, rows
+
+
 def validate_evidence_namespace(evidence_root: Path) -> list[str]:
     failures: list[str] = []
     if not evidence_root.is_dir() or evidence_root.is_symlink():
@@ -1532,7 +1692,7 @@ def validate_evidence_namespace(evidence_root: Path) -> list[str]:
     for path in preparation.iterdir():
         if (
             path.is_symlink() or not path.is_file()
-            or stat.S_IMODE(path.stat().st_mode) != 0o444
+            or not _accepted_readonly_mode(path)
         ):
             failures.append(f"invalid retained preparation file: {path.name}")
     return failures
@@ -1546,6 +1706,9 @@ def build_result_authority(
     input_failures = validate_repository_inputs()
     if input_failures:
         raise AcceptanceEvidenceError("; ".join(input_failures))
+    failed_failures, failed_evidence = validate_failed_attempt_evidence()
+    if failed_failures:
+        raise AcceptanceEvidenceError("; ".join(failed_failures))
     namespace_failures = validate_evidence_namespace(evidence_root)
     if namespace_failures:
         raise AcceptanceEvidenceError("; ".join(namespace_failures))
@@ -1579,6 +1742,7 @@ def build_result_authority(
             "schema": RESULT_SCHEMA,
             "status": "accepted-no-credit-real-controls",
             "preregistration_commit": PREREGISTRATION_COMMIT,
+            "r1_preregistration_commit": R1_PREREGISTRATION_COMMIT,
             "implementation_revision": implementation_revision,
             "source_inputs": [
                 {"path": path, "sha256": sha256_file(ROOT / path)}
@@ -1595,12 +1759,24 @@ def build_result_authority(
                 "source_commit": EXPORTER_COMMIT,
                 "source_tree": EXPORTER_TREE,
             },
+            "failed_attempt": {
+                "control_id": FAILED_COMPILE_CONTROL,
+                "implementation_revision": FAILED_IMPLEMENTATION_REVISION,
+                "state": "failed-incomplete-no-completion",
+                "raw_stderr_sha256": "32a60967270365f092cad81a408cf0e68f13aceab4359f32700f140a54129b9b",
+                "evidence_files": failed_evidence,
+                "evidence_manifest_sha256": FAILED_EVIDENCE_MANIFEST_SHA256,
+                "credits": ZERO_CREDITS,
+            },
             "controls": completions,
             "summary": {
                 "observed_external_controls": 2,
+                "observed_external_process_attempts": 3,
+                "failed_external_process_attempts": 1,
                 "completed_external_controls": 2,
-                "retained_files": len(evidence),
-                "retained_bytes": sum(item["bytes"] for item in evidence),
+                "retained_files": len(evidence) + len(failed_evidence),
+                "retained_bytes": sum(item["bytes"] for item in evidence)
+                + sum(item["bytes"] for item in failed_evidence),
                 "u2_cases": 0,
                 "case_records": 0,
                 "official_outcomes": 0,
@@ -1614,6 +1790,7 @@ def build_result_authority(
             ),
             "claims": {
                 "real_process_controls": True,
+                "failed_compile_attempt_retained": True,
                 "pinned_lean_compile_observed": True,
                 "official_export_observed": True,
                 "reference_stream_byte_equal": True,
@@ -1641,6 +1818,7 @@ def validate_result_authority(authority: Any) -> list[str]:
     if (
         authority.get("status") != "accepted-no-credit-real-controls"
         or authority.get("preregistration_commit") != PREREGISTRATION_COMMIT
+        or authority.get("r1_preregistration_commit") != R1_PREREGISTRATION_COMMIT
         or not isinstance(authority.get("implementation_revision"), str)
         or not HEX40.fullmatch(authority["implementation_revision"])
     ):
@@ -1656,6 +1834,29 @@ def validate_result_authority(authority: Any) -> list[str]:
             failures.append(f"result {field} must remain zero")
     if len(authority.get("controls", [])) != 2:
         failures.append("result must close exactly two controls")
+    if (
+        summary.get("observed_external_controls") != 2
+        or summary.get("observed_external_process_attempts") != 3
+        or summary.get("failed_external_process_attempts") != 1
+        or summary.get("completed_external_controls") != 2
+    ):
+        failures.append("result observed/completed process counts drift")
+    failed_attempt = authority.get("failed_attempt")
+    if (
+        not isinstance(failed_attempt, dict)
+        or failed_attempt.get("control_id") != FAILED_COMPILE_CONTROL
+        or failed_attempt.get("implementation_revision") != FAILED_IMPLEMENTATION_REVISION
+        or failed_attempt.get("state") != "failed-incomplete-no-completion"
+        or failed_attempt.get("evidence_manifest_sha256")
+        != FAILED_EVIDENCE_MANIFEST_SHA256
+        or domain_digest(
+            "axeyum-lean-execution-acceptance-failed-evidence-v1",
+            failed_attempt.get("evidence_files"),
+        )
+        != FAILED_EVIDENCE_MANIFEST_SHA256
+        or failed_attempt.get("credits") != ZERO_CREDITS
+    ):
+        failures.append("result failed-attempt closure drift")
     evidence = authority.get("evidence_files")
     if (
         not isinstance(evidence, list)
@@ -1693,7 +1894,8 @@ Generated from [`lean-execution-acceptance-v1.json`](../lean-execution-acceptanc
 - Implementation revision: `{authority['implementation_revision']}`
 - Official exporter source: `{build['source_commit']}` / tree `{build['source_tree']}`
 - Built exporter SHA-256: `{build['exporter_sha256']}` ({build['exporter_bytes']:,} bytes)
-- Observed/completed external controls: **2 / 2**
+- Observed process attempts / completed controls: **3 / 2**
+- Retained failed compile attempts: **1**
 - Retained evidence: **{summary['retained_files']} files / {summary['retained_bytes']:,} bytes**
 - U2 cases, official outcomes, Axeyum outcomes, paired cells, and performance rows: **0**
 - Terminal Lean parity credit: **0**

@@ -7,6 +7,7 @@ import stat
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from scripts import lean_execution_acceptance as ACCEPTANCE
 
@@ -265,8 +266,19 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
             spec = self.compile_spec(Path(temporary))
         self.assertEqual(ACCEPTANCE.validate_control_spec(spec), [])
-        self.assertEqual(spec["command"][1:3], ["-j1", "-o"])
-        self.assertTrue(all(Path(item).is_absolute() for item in (spec["command"][0], spec["command"][3], spec["command"][4])))
+        self.assertEqual(
+            spec["command"][1:4], ["-j1", "-s524288", "-o"]
+        )
+        self.assertTrue(
+            all(
+                Path(item).is_absolute()
+                for item in (spec["command"][0], spec["command"][4], spec["command"][5])
+            )
+        )
+        self.assertEqual(
+            spec["resource_envelope"]["task_stack_limit"],
+            ACCEPTANCE.metric("observed", 536_870_912, "bytes"),
+        )
         self.assertEqual(spec["selection_case_ids"], [])
         self.assertEqual(spec["case_records"], [])
         self.assertEqual(spec["credit_class"], ACCEPTANCE.CREDIT_CLASS)
@@ -487,16 +499,31 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             self.assertNotIn(b"999999", rendered)
 
     def test_19_result_validator_refuses_nonzero_parity_surface(self) -> None:
+        failed_rows = ACCEPTANCE._evidence_manifest(ACCEPTANCE.FAILED_EVIDENCE_ROOT)
         authority = ACCEPTANCE.seal(
             {
                 "schema": ACCEPTANCE.RESULT_SCHEMA,
                 "status": "accepted-no-credit-real-controls",
                 "preregistration_commit": ACCEPTANCE.PREREGISTRATION_COMMIT,
+                "r1_preregistration_commit": ACCEPTANCE.R1_PREREGISTRATION_COMMIT,
                 "implementation_revision": "a" * 40,
                 "source_inputs": [],
                 "build": {},
+                "failed_attempt": {
+                    "control_id": ACCEPTANCE.FAILED_COMPILE_CONTROL,
+                    "implementation_revision": ACCEPTANCE.FAILED_IMPLEMENTATION_REVISION,
+                    "state": "failed-incomplete-no-completion",
+                    "raw_stderr_sha256": "32a60967270365f092cad81a408cf0e68f13aceab4359f32700f140a54129b9b",
+                    "evidence_files": failed_rows,
+                    "evidence_manifest_sha256": ACCEPTANCE.FAILED_EVIDENCE_MANIFEST_SHA256,
+                    "credits": ACCEPTANCE.ZERO_CREDITS,
+                },
                 "controls": [{}, {}],
                 "summary": {
+                    "observed_external_controls": 2,
+                    "observed_external_process_attempts": 3,
+                    "failed_external_process_attempts": 1,
+                    "completed_external_controls": 2,
                     "u2_cases": 0,
                     "case_records": 0,
                     "official_outcomes": 0,
@@ -522,6 +549,61 @@ class LeanExecutionAcceptanceContractTests(unittest.TestCase):
             "acceptance result cannot receive parity credit",
             ACCEPTANCE.validate_result_authority(changed),
         )
+
+    def test_20_failed_process_installs_terminal_before_artifact_validation(self) -> None:
+        with tempfile.TemporaryDirectory(dir=ACCEPTANCE.ROOT) as temporary:
+            parent = Path(temporary)
+            spec = self.compile_spec(parent)
+            terminal = ACCEPTANCE.seal(
+                {
+                    "schema": ACCEPTANCE.TERMINAL_SCHEMA,
+                    "control_id": ACCEPTANCE.COMPILE_CONTROL,
+                    "run_id": spec["run_id"],
+                    "attempt_id": spec["attempt_id"],
+                    "sequence": 1,
+                    "prelaunch_sha256": "",
+                    "class": "signaled",
+                    "exit_code": None,
+                    "signal": 6,
+                    "events": ["direct-child-reaped"],
+                    "wall_time": ACCEPTANCE.metric("observed", 1, "milliseconds"),
+                    "cpu_time": ACCEPTANCE.metric("not-observed", None, "milliseconds"),
+                    "peak_rss": ACCEPTANCE.metric("not-observed", None, "bytes"),
+                    "process": {
+                        "pid": 123,
+                        "process_group_id": 123,
+                        "rlimit_as_bytes": 4_294_967_296,
+                        "watchdog_fired": False,
+                        "sigterm_sent": False,
+                        "sigkill_sent": False,
+                        "direct_child_reaped": True,
+                        "live_non_zombie_pids_after_cleanup": [],
+                    },
+                    "raw_outputs": [
+                        ACCEPTANCE._raw_descriptor("raw/stderr.bin", b"failed\n"),
+                        ACCEPTANCE._raw_descriptor("raw/stdout.bin", b""),
+                    ],
+                    "record_sha256": "",
+                },
+                ACCEPTANCE.TERMINAL_SCHEMA,
+            )
+            control_root = parent / "control"
+            private_root = parent / "private-run"
+            with mock.patch.object(
+                ACCEPTANCE,
+                "_execute_external",
+                return_value=(terminal, b"", b"failed\n"),
+            ):
+                with self.assertRaisesRegex(
+                    ACCEPTANCE.AcceptanceEvidenceError, "produced no regular nonempty"
+                ):
+                    ACCEPTANCE.execute_control(
+                        spec, control_root=control_root, private_root=private_root
+                    )
+            self.assertTrue((control_root / "attempt-terminal.json").is_file())
+            self.assertEqual((control_root / "raw/stderr.bin").read_bytes(), b"failed\n")
+            self.assertFalse((control_root / "artifact.json").exists())
+            self.assertFalse((control_root / "completion.json").exists())
 
 
 @unittest.skipUnless(
