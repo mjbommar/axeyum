@@ -562,12 +562,14 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   from an 11-value pool over one relevant source `Int`. Proposed ADR-0362 reuses
   the first ordered value from that pool and the shared deadline, disables the
   retry in the inner MBQI call, ignores fixed-query UNSAT/Unknown, and accepts
-  SAT only after exact unfixed replay. A focused preimplementation test corrected
-  the initially inert post-sweep order: invoke the one inner pass after older
-  routes decline, then continue the unchanged evaluated sweep. Multi-value or
-  two-symbol recursion, larger pools, and general UF synthesis remain excluded.
-  Next: commit the boundary correction, then implement its structurally
-  one-level, one-candidate internal entry and focused controls.
+  SAT only after exact unfixed replay. Focused tests showed every late placement
+  is inert once ADR-0360, ordinary MBQI, or E-matching consumes the shared
+  deadline. The final boundary invokes the one inner pass immediately after
+  initial certification fails, then continues every established route on
+  decline. Its prototype reaches 228/228 agreement and 210/210 SAT replay with
+  seed 145 preserved. Multi-value or two-symbol recursion, larger pools, and
+  general UF synthesis remain excluded. Next: commit the final ordering, then
+  publish the implementation and focused controls.
 - **2026-07-23 — ADR-0361 evaluated-scalar completion is implemented; its
   semantic gate is green and branch acceptance remains pending.** Commit
   `471738aa` preserves the established

@@ -48,9 +48,9 @@ structural depth bound. Proposed
 permits only a one-level internal retry for exactly one relevant source `Int`:
 
 - reuse ADR-0361's complete deterministic value pool and 16-value cap;
-- run only after ADR-0360, ordinary MBQI, and E-matching decline;
-- try only the first ordered evaluated value, then continue ADR-0361's unchanged
-  one-shot evaluated sweep if the inner attempt declines;
+- run immediately after the initial ground candidate fails direct certification;
+- try only the first ordered evaluated value, then continue ADR-0360, ordinary
+  MBQI, E-matching, and ADR-0361 unchanged if the inner attempt declines;
 - pass the caller's remaining shared deadline to every inner attempt;
 - disable this retry inside the inner MBQI invocation;
 - ignore inner UNSAT and Unknown results; and
@@ -58,12 +58,18 @@ permits only a one-level internal retry for exactly one relevant source `Int`:
   original assertions without the temporary scalar equality.
 
 The initial proposed ordering placed the inner pass after ADR-0361's complete
-evaluated sweep. A focused preimplementation test proved that ordering inert:
-the sweep may consume the complete shared deadline before an inner pass can
-start. The corrected first-candidate placement is strictly narrower than the
-45-query diagnostic, permits at most one inner MBQI invocation, and preserves
-all pre-ADR-0361 routes. It also matches the measurement: seed 111 succeeds on
-that first candidate.
+evaluated sweep. Focused preimplementation tests proved every later placement
+inert: ADR-0360 completion, ordinary MBQI, or E-matching can consume the shared
+deadline before an inner pass starts. The corrected first-candidate placement
+is strictly narrower than the 45-query diagnostic and permits at most one inner
+MBQI invocation. On decline it continues every established route unchanged.
+It also matches the measurement: seed 111 succeeds on that first candidate.
+
+The corrected prototype passes the frozen 256-case production gate at exactly
+228 jointly decided agreements, 210 Axeyum SAT, 24 Axeyum UNSAT, 22 Axeyum
+Unknown, 210/210 SAT replay, and zero error or disagreement. The remaining
+ordinary Z3-SAT Unknowns are exactly
+`30, 32, 70, 122, 150, 175, 182, 242`; seed 145 remains checked SAT.
 
 The expected frozen result is 228 jointly decided agreements, 210 Axeyum SAT,
 24 Axeyum UNSAT, 22 Axeyum Unknown, 210/210 SAT replay, and zero error or

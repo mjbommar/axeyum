@@ -389,8 +389,10 @@ The exact nine-seed follow-up is now
 [measured](../quantified-uflia-one-level-fixed-mbqi-measurement-2026-07-23.md):
 proposed ADR-0362 permits one recursion-guarded inner MBQI pass under the first
 ordered temporary source-`Int` fixing, with the unchanged 16-value pool, shared
-deadline, and exact unfixed replay. A preimplementation test corrected the
-initial inert post-sweep placement: the single pass runs after older routes
-decline and before ADR-0361's unchanged evaluated sweep. It measures one
-additional model, seed 111 at `-5`, and does not authorize multi-value or
-two-symbol recursive search, cap growth, or general function synthesis.*
+deadline, and exact unfixed replay. Preimplementation tests corrected every
+inert late placement: the single pass runs immediately after initial candidate
+certification fails, then continues ADR-0360, ordinary MBQI, E-matching, and
+ADR-0361 on decline. The prototype reaches 228/228 agreement and 210/210 SAT
+replay, adds seed 111 at `-5`, preserves seed 145, and does not authorize
+multi-value or two-symbol recursive search, cap growth, or general function
+synthesis.*
