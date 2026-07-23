@@ -10308,6 +10308,9 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(CasExpr::Const(value).abs());
     }
+    if let Some(value) = limit_globally_continuous_head_at_rational_inner(expr, var, point) {
+        return Some(value);
+    }
     // Linearity: `lim (f + g) = lim f + lim g` when both are finite — computes a
     // sum term-by-term (`x/(x²+1) + atan x → 0 + π/2` at ∞). Falls through if any
     // term's limit doesn't exist (an `∞ − ∞` form is left to other rules).
@@ -10430,6 +10433,40 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
         return limit_lhopital(expr, var, a, 4);
     }
     None
+}
+
+/// Compose an exact rational inner limit through a head that is continuous on
+/// the complete real line. Domain-restricted, discontinuous, meromorphic, and
+/// branch-sensitive heads deliberately stay on their specialized paths.
+fn limit_globally_continuous_head_at_rational_inner(
+    expr: &CasExpr,
+    var: &str,
+    point: LimitPoint,
+) -> Option<CasExpr> {
+    let CasExpr::Unary(
+        head @ (UnaryFunc::Sin
+        | UnaryFunc::Cos
+        | UnaryFunc::Atan
+        | UnaryFunc::Erf
+        | UnaryFunc::Si
+        | UnaryFunc::Shi
+        | UnaryFunc::FresnelS
+        | UnaryFunc::FresnelC
+        | UnaryFunc::Asinh
+        | UnaryFunc::Ai
+        | UnaryFunc::AiPrime
+        | UnaryFunc::Bi
+        | UnaryFunc::BiPrime),
+        inner,
+    ) = expr
+    else {
+        return None;
+    };
+    let CasExpr::Const(value) = limit(inner, var, point)? else {
+        return None;
+    };
+    let composed = CasExpr::Unary(*head, Box::new(CasExpr::Const(value)));
+    Some(simplify(&fold_elementary_constants(&composed)))
 }
 
 /// **L'Hôpital's rule** for a `0/0` quotient at a finite point: if `f(a) = g(a) =
@@ -11423,26 +11460,32 @@ fn deep_normalize(expr: &CasExpr) -> CasExpr {
     cancel(&rebuilt).unwrap_or(rebuilt)
 }
 
-/// Whether a polynomial argument `arg` tends to `+∞` (`Some(true)`) or `−∞`
-/// (`Some(false)`) as `var → point`. Decided by the leading term's sign and, at
-/// `−∞`, the degree parity. `None` if `arg` is not a non-constant polynomial in `var`.
+/// Whether a real algebraic argument `arg` tends to `+∞` (`Some(true)`) or
+/// `−∞` (`Some(false)`) as `var → point`. The result requires an exact
+/// positive leading order and a structurally certified sign. `None` if the
+/// argument is bounded, cancels at leading order, or lies outside the supported
+/// polynomial/square-root fragment.
 fn arg_tends_to_infinity(arg: &CasExpr, var: &str, point: LimitPoint) -> Option<bool> {
-    // Numeric probe: sample `arg` at two large |var| values in the limit direction
-    // and confirm it grows without bound, returning the sign. This handles **surd
-    // coefficients** (`t/√3 → +∞`) that the polynomial path can't, since `normalize`
-    // rejects irrational coefficients.
-    let far = match point {
-        LimitPoint::PosInfinity => 1e6,
-        LimitPoint::NegInfinity => -1e6,
+    // Reduce the negative direction to a positive-infinity leading-term proof.
+    // This handles even algebraic shapes such as `√(x²+1)` without guessing a
+    // sign from a polynomial degree parity.
+    let directed = match point {
+        LimitPoint::PosInfinity => arg.clone(),
+        LimitPoint::NegInfinity => {
+            arg.substitute(var, &CasExpr::Neg(Box::new(CasExpr::var(var))))
+        }
         LimitPoint::Finite(_) => return None,
     };
-    let near_value = evalf(arg, &[(var, far)])?;
-    let farther_value = evalf(arg, &[(var, far * 100.0)])?;
-    // Must actually be growing in magnitude (an unbounded argument), not bounded.
-    if farther_value.abs() <= near_value.abs() || near_value.abs() < 1e3 {
+    let (order, coefficient) = algebraic_leading_at_infinity(&directed, var)?;
+    if order <= Rational::zero() {
         return None;
     }
-    Some(farther_value > 0.0)
+    let coefficient = simplify(&simplify_radicals(&coefficient));
+    match Assumptions::new().sign_of(&coefficient) {
+        Sign::Positive => Some(true),
+        Sign::Negative => Some(false),
+        Sign::Zero | Sign::Nonnegative | Sign::Nonpositive | Sign::Unknown => None,
+    }
 }
 
 /// Like [`limit_exp_dominated`] but for exp factors with a **transcendental** rate,
@@ -21936,6 +21979,130 @@ mod tests {
                 finite_zero(),
             )
             .is_none()
+        );
+    }
+
+    #[test]
+    fn limits_compose_globally_real_continuous_heads_over_exact_rational_inners() {
+        let x = || v("x");
+        let unary = |head, inner| CasExpr::Unary(head, Box::new(inner));
+        let heads = [
+            UnaryFunc::Sin,
+            UnaryFunc::Cos,
+            UnaryFunc::Atan,
+            UnaryFunc::Erf,
+            UnaryFunc::Si,
+            UnaryFunc::Shi,
+            UnaryFunc::FresnelS,
+            UnaryFunc::FresnelC,
+            UnaryFunc::Asinh,
+            UnaryFunc::Ai,
+            UnaryFunc::AiPrime,
+            UnaryFunc::Bi,
+            UnaryFunc::BiPrime,
+        ];
+        let cases = [
+            (
+                (x().pow(2) + CasExpr::int(1)) / (x().pow(2) + CasExpr::int(2)),
+                LimitPoint::PosInfinity,
+                Rational::integer(1),
+            ),
+            (
+                (CasExpr::int(1) - x()) / (x() + CasExpr::int(1)),
+                LimitPoint::NegInfinity,
+                Rational::integer(-1),
+            ),
+            (x().sin() / x(), LimitPoint::PosInfinity, Rational::zero()),
+            (x().bessel_j(0), LimitPoint::PosInfinity, Rational::zero()),
+            (
+                x() * x().pow(3).bessel_j(0),
+                LimitPoint::NegInfinity,
+                Rational::zero(),
+            ),
+            (
+                x() - CasExpr::int(2),
+                LimitPoint::Finite(Rational::integer(1)),
+                Rational::integer(-1),
+            ),
+        ];
+
+        for head in heads {
+            for (inner, point, value) in &cases {
+                let expected = fold_elementary_constants(&unary(head, CasExpr::Const(*value)));
+                assert_equal(
+                    &limit(&unary(head, inner.clone()), "x", *point).unwrap(),
+                    &expected,
+                );
+            }
+
+            // An absent/oscillatory or symbolic inner limit cannot be promoted by
+            // continuity. These controls also ensure the outer head is not sampled.
+            assert!(limit(&unary(head, x().sin()), "x", LimitPoint::PosInfinity,).is_none());
+            assert!(
+                limit(
+                    &unary(head, x() + v("a")),
+                    "x",
+                    LimitPoint::Finite(Rational::zero()),
+                )
+                .is_none()
+            );
+        }
+
+        // Discontinuous heads remain outside this global continuity rule even
+        // when the inner limit is exact.
+        assert!(
+            limit(
+                &unary(UnaryFunc::Sign, x().sin() / x()),
+                "x",
+                LimitPoint::PosInfinity,
+            )
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn asymptotic_head_arguments_require_exact_unboundedness_proof() {
+        let x = || v("x");
+        let pos = LimitPoint::PosInfinity;
+        let neg = LimitPoint::NegInfinity;
+
+        assert_eq!(arg_tends_to_infinity(&x(), "x", pos), Some(true));
+        assert_eq!(arg_tends_to_infinity(&x(), "x", neg), Some(false));
+        assert_eq!(arg_tends_to_infinity(&(-x()), "x", pos), Some(false));
+        assert_eq!(arg_tends_to_infinity(&x().pow(2), "x", pos), Some(true));
+        assert_eq!(arg_tends_to_infinity(&x().pow(2), "x", neg), Some(true));
+
+        // Exact algebraic leading coefficients retain the established surd paths.
+        let surd_linear = x() / CasExpr::int(3).sqrt();
+        assert_eq!(arg_tends_to_infinity(&surd_linear, "x", pos), Some(true));
+        assert_eq!(arg_tends_to_infinity(&surd_linear, "x", neg), Some(false));
+        let even_algebraic = (x().pow(2) + CasExpr::int(1)).sqrt();
+        assert_eq!(arg_tends_to_infinity(&even_algebraic, "x", pos), Some(true));
+        assert_eq!(arg_tends_to_infinity(&even_algebraic, "x", neg), Some(true));
+        assert_equal(
+            &limit(&surd_linear.clone().atan(), "x", pos).unwrap(),
+            &(CasExpr::rat(1, 2) * v("pi")),
+        );
+        assert_equal(
+            &limit(&surd_linear.atan(), "x", neg).unwrap(),
+            &(CasExpr::rat(-1, 2) * v("pi")),
+        );
+
+        // Numeric samples are not proof. Bounded/oscillatory special heads,
+        // finite rational limits, and leading cancellations must all decline.
+        assert_eq!(arg_tends_to_infinity(&x().bessel_j(0), "x", pos), None);
+        assert_eq!(arg_tends_to_infinity(&x().sin(), "x", pos), None);
+        assert_eq!(
+            arg_tends_to_infinity(
+                &((x() - CasExpr::int(1)) / (x() + CasExpr::int(1))),
+                "x",
+                pos,
+            ),
+            None
+        );
+        assert_eq!(
+            arg_tends_to_infinity(&(x() + even_algebraic), "x", neg),
+            None
         );
     }
 
