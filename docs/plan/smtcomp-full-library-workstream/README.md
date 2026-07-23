@@ -351,9 +351,15 @@ gate.
    now closes that boundary: all populations account, zero known-status
    contradictions and zero cross-solver disagreements remain, and the
    self-sealed JSON/Markdown reproduce from the three validated roots.
-3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
-   the same versioned selection; publish the per-logic inventory and regenerate
-   the coverage-weighted parity matrix without combining incompatible regimes.
+3. **Credited full population — F0 plan preregistered.** The
+   [full-population plan](../smtcomp-credited-full-population-plan-2026-07-23.md)
+   freezes the same 45,905-file selection for all three solvers, a 96-shard/
+   48-allocation wave schedule, six-worker/16-GiB-per-host resource envelope,
+   exact different-host retries, thermal backoff, and complete per-logic
+   adjudication. Fixture implementation is next. Live preparation remains
+   blocked until that implementation and plan are integrated on a branch-wide
+   green `origin/main`; the SMT lane does not own the current bench/CAS format
+   drift.
 
 The same implementation rule continues to apply: prove each new mechanism and
 its destructive/interruption tests on a tiny corpus before spending the full
@@ -409,6 +415,8 @@ Repository:
 - repaired-P0 combined-comparison result and generated views:
   `docs/plan/smtcomp-repaired-p0-combined-comparison-result-2026-07-23.md` and
   `docs/plan/generated/smtcomp-repaired-p0-comparison.{json,md}`;
+- credited full-population execution plan:
+  `docs/plan/smtcomp-credited-full-population-plan-2026-07-23.md`;
 - candidate failure handoff:
   `docs/plan/smtcomp-full-library-candidate-run-handoff-2026-07-21.md`;
 - ranked gap plan: `docs/plan/full-library-gap-closing-plan-2026-07-22.md`;
@@ -449,7 +457,9 @@ NAS (shared, corpus read-only in practice):
    byte-identical replay are frozen in the closure result. Do not launch another
    retry. The combined three-cell repaired-P0 comparison is also complete and
    keeps the 1,305-row FP scope separate from the 1,810-row Axeyum/cvc5 scope.
-   Integrate that result before preregistering a larger credited population. The active solver
+   The credited full-population F0 plan is preregistered. Implement and prove its
+   fixture-only preparation, wave scheduler, and thermal-stop contract next; do
+   not publish a live preparation while `origin/main` is branch-wide red. The active solver
    capability checkpoint is
    [`../checked-multi-binder-quantified-uf-models-2026-07-22.md`](../checked-multi-binder-quantified-uf-models-2026-07-22.md).
 5. Update `STATUS.md` and this file before handoff; push only a green topic
