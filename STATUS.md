@@ -383,6 +383,17 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — ADR-0360 free-Int completion is implemented and solver-gated;
+  workspace acceptance is in progress.** Commit `5b4c5b40` searches the complete
+  bounded product for at most two exact-source free Int symbols only on the
+  initial MBQI candidate, under the shared deadline. Temporary fixings remain
+  QF search hints; source-bound finite-profile certification and exact unfixed
+  replay are authoritative. Focused cap/decline/evidence tests and the complete
+  solver package pass. The 256-case differential reaches 225/225 agreement,
+  207/207 SAT replay, and the corrected eleven-seed ordinary Z3-SAT Unknown
+  remainder. Next: finish workspace/static/resource/parity/link/profile/
+  recovery gates, accept ADR-0360, and publish the topic branch.
+
 - **2026-07-22 — the complete post-ADR-0359 Z3-SAT remainder now justifies
   proposed ADR-0360 free-Int completion.** Accepted ADR-0359 raised checked SAT
   from 111 to 178 with zero disagreements under the complete branch gate. The
@@ -398,7 +409,8 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   and only the existing source-bound finite-profile certificate plus canonical
   exact-original-query replay may return SAT. Next: implement that bounded
   one/two-free-Int search, then rerun the frozen 39-seed and 256-case gates
-  before acceptance.
+  before acceptance. That implementation and corrected gate are now recorded
+  in the newer entry above.
 
 - **2026-07-22 — TL0.6.3 M2's runner is pushed; its first invocation stopped
   during source preflight before any harness, discovery, or process.** The source-first

@@ -363,5 +363,7 @@ profile/recovery gates are green. The complete 39-case Z3-SAT remainder is now
 the strict exact-source, non-truncating 16-value/256-tuple scalar policy checks
 28 additional SAT models. The exploratory 33-case result used two broader
 heuristics and is not the production gate. Implement only the preregistered
-ADR-0360 boundary next; the eleven residual seeds remain separate. Do not
-substitute another large run for the bounded implementation.*
+ADR-0360 boundary is now implemented in `5b4c5b40`: the solver package and
+225/225 direct-Z3 joint differential are green, with 207/207 SAT replay. Finish
+the workspace/static/resource/parity/link/profile/recovery acceptance gate;
+the eleven residual seeds remain separate.*

@@ -100,3 +100,14 @@ This should close most of the measured post-ADR-0359 SAT remainder without
 widening the trusted checker or UNSAT surface. It does not repair the eleven
 residual cases, synthesize arbitrary arithmetic defaults, complete free Reals,
 search more than two scalars, or claim complete MBQI.
+
+## Implementation evidence
+
+Implemented in `5b4c5b40`. Focused tests cover one- and two-symbol completion,
+explicit UF table preservation, exact source/evidence replay, non-Int and
+three-symbol declines, complete-pool overflow, and shared-deadline expiry. The
+normal 256-case differential reaches 225/225 agreement with 207/207 SAT replay;
+the exact eleven-seed Z3-SAT residual matches the corrected preregistration.
+The complete solver package gate is green. ADR status remains proposed until
+the workspace/static/resource/parity/link/profile/recovery acceptance gate is
+also complete.

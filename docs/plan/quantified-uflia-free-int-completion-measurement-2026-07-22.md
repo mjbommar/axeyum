@@ -1,6 +1,6 @@
 # Quantified-UFLIA free-Int completion measurement
 
-Status: completed baseline; ADR-0360 proposed
+Status: implemented; ADR-0360 acceptance gates in progress
 Date: 2026-07-22
 Owner: solver/engine lane in `agent/smtcomp/full-library-resume`
 
@@ -56,6 +56,25 @@ without changing the finite-profile checker. The eleven residual seeds mix
 pool-overflow, extra default-value demand, source-threshold default needs, and
 nested/ground UF relationships and remain a separate measurement boundary.
 They are not evidence for widening ADR-0360.
+
+## Implementation result
+
+Commit `5b4c5b40` implements the strict policy in the ordinary MBQI path. The
+normal 256-case direct-Z3 differential now reports:
+
+- 225 jointly decided cases and 225 agreements;
+- 207 Axeyum SAT, 24 Axeyum UNSAT, and 25 Axeyum Unknown results;
+- 207 of 207 Axeyum SAT models accepted by exact canonical replay;
+- 11 ordinary-incomplete Z3-SAT Unknowns, exactly seeds `23, 30, 32, 70, 111,
+  122, 150, 175, 182, 231, 242`; and
+- zero Axeyum errors and zero disagreements.
+
+The 28 newly adjudicated SAT cases raise joint decisions from 197 to 225. Total
+Axeyum SAT rises from 178 to 207 because the bounded search also certifies one
+case for which the direct Z3 run returns Unknown. The complete
+`axeyum-solver --all-features` package gate is green: 901 unit tests, all normal
+integration/differential suites, and solver doctests pass; explicitly ignored
+measurement and release-stress tests remain opt-in.
 
 ## Reproduction
 
