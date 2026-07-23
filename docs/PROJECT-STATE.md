@@ -377,6 +377,15 @@ Again, there are distinct targets:
   a deterministic M3 queue. No M2.7 authority, accepted parent transfer,
   merged graph, closed cell, M3 review, outcome, pair, performance row, or
   parity credit exists.
+  M3.0's
+  [complete-row independent-review plan](plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+  now preregisters exact review after an accepted M2.7 result: one independent
+  primary disposition per 3,723 case rows and 408,374 case/variant cells, with
+  secondary concurrence for risk-bearing rows. The append-only campaign may
+  resume after validating its frozen prefix, but cannot sample, approve by
+  representative, silently replay, or repair M2 in place. No accepted M2
+  parent, M3 authority, assignment, review event, disposition, TL0.6.4
+  acceptance, outcome, pair, performance row, or parity credit exists.
   The subsequent
   [TL0.7.1 contract](plan/lean-execution-evidence-tl0.7.1-2026-07-22.md)
   defines explicit 4/8 GiB local lanes, twelve typed termination classes, and

@@ -420,6 +420,15 @@ Start at the root [`PLAN.md`](../../PLAN.md) (map + standing rules) and
   M1/M2 correction retention, and a deterministic complete-row M3 queue. It
   creates no M2.7 authority, accepted parent transfer, merged closure, closed
   cell, M3 acceptance, outcome, pair, performance row, or parity credit.
+- [`TL0.6.4 M3 complete-row independent-review plan`](lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+  — preregisters exhaustive review of all 3,723 case rows and 408,374 exact
+  case/variant cells after an accepted M2.7 result. Each row requires an
+  independent primary disposition; declines, corrections, equivalence proofs,
+  intentionally-online routes, and resolved contradictions require secondary
+  concurrence. Review is resumable through validated append-only prefixes but
+  cannot sample, silently replay, or repair M2 in place. It creates no M3
+  authority, assignment, event, disposition, TL0.6.4 acceptance, outcome,
+  pair, performance row, or parity credit.
 - [`Lean complete-parity worktree-portability R1 result`](lean-complete-parity-worktree-portability-r1-result-2026-07-23.md)
   — records the bounded validator repair at `c3f068ea`, `09e1dcd2`,
   `2267f41b`, and `98d85098`: retained repository-owned process/store paths

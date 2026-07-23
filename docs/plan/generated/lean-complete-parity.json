@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "edd78f7218ed0cfbee4bc16e5cec1e63ac117c5b965b33385ad18932e5a9e14e"
+      "sha256": "ba967a8ed8178259203062286aff4a146b176d92c67652ba24af2428d64e25cf"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -153,6 +153,10 @@
     {
       "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m2.0-result-2026-07-23.md",
       "sha256": "e82f8b26ad9c19c38c5011cf90d096c6244a1bce237599b5a8ab1d62103d5c25"
+    },
+    {
+      "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
+      "sha256": "f44e49e387c2128037750d1a242e75a8cc786bbbc0e40f91cc65ad1523a72752"
     },
     {
       "path": "docs/plan/lean-u2-native-surface-classification-v1.json",
@@ -340,11 +344,11 @@
     },
     {
       "path": "docs/plan/lean4-complete-parity-contract-2026-07-22.md",
-      "sha256": "20b1814ef47fafe6d7f6c4255aa17dd3d1eaa1f6f3c5f941b6539539c5a2937e"
+      "sha256": "315c18fd75cb185865f0352e962069750f077f0fceb2ce77a38db60592794504"
     },
     {
       "path": "docs/plan/lean4-complete-parity-roadmap-2026-07-22.md",
-      "sha256": "d0c6594e96ee4da7f25ab725dc19f38821d1ca1e608b24e213ffd07a258a468d"
+      "sha256": "998424e56fdd21b642a4b8d121b2490962857f75e7984908cb92275c7e98cd61"
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
@@ -452,7 +456,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "fe0d1a52d2eee5c9631653735a3c9118b50430dec1323d1da56d34ada18d9a3e"
+      "sha256": "3b817a5d47f14f1455b0cf5b97fadd03c881afe73ec46774c49841c1e8594bbd"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -1654,6 +1658,10 @@
           "detail": "Preregistered M2.7 lossless variant-merge and M3-handoff semantics for all 408,374 exact case/variant cells: provenance-preserving graph deduplication, non-total-order assurance vectors, per-cell closure, non-crediting union/intersection/delta/equivalence views, correction/residual retention, and deterministic complete-row review queues with zero accepted parent transfer, merged closure, or credit."
         },
         {
+          "path": "docs/plan/lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md",
+          "detail": "Preregistered M3.0 independent complete-row review semantics: exact primary dispositions for all 3,723 cases and 408,374 applicable cells, secondary concurrence for risk-bearing rows, resumable append-only review with explicit supersession, fail-closed repair routing, and bounded TL0.6.4 classification acceptance with no accepted M2 parent, review event, or parity credit."
+        },
+        {
           "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
           "detail": "Accepted bounded portability repair: retained repository-owned process/store paths are checkout-root-relative, Git checkout permissions preserve content/seal integrity, historical authorities remain immutable while new revisions freeze current sources, focused and live store tests pass, and the complete-parity check succeeds from a differently rooted detached worktree."
         },
@@ -1842,7 +1850,7 @@
           "detail": "Pinned tests tree inventory and the required CTest/test-pile derivation rule."
         }
       ],
-      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.3 now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch partition, configured CMake/CTest provenance, runner and shell-state semantics, trace boundary, and fail-closed controls. M2.4 now preregisters Lake workspace/project closure over a read-only floor of 52 direct cases, 70 tracked configuration roots, and 28 wrapper-directory lexical candidates pending M2.3, including configuration, manifest, materialization, target/facet/job, cache, and network semantics. M2.5 now preregisters compiler/runtime/FFI closure over a source-only floor of 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, including distinct frontend, interpreter, native toolchain, artifact, ABI, initialization, and effect routes. M2.6 now preserves the accepted M1 authority while rejecting four Lake cases promoted by eleven generic JSON version fields; its corrected 143-case source floor separates 137 server harnesses from six API-only cases and preregisters raw transport, lifecycle, document/snapshot, cancellation, watchdog/worker, restart, RPC/session/widget, normalization, and idbg semantics. M2.7 now preregisters lossless provenance/assurance joins and deterministic M3 handoff over all 408,374 exact case/variant cells; equal content may deduplicate storage but never ownership, denominator, conditions, declines, or evidence. M2.2-M2.7 still have no accepted input authorities or parent transfers, resolved/configured/observed closures, closed case/variant cells, M3 review acceptance, outcomes, pairs, or credit before accepted M2.1 evidence and separately bound downstream authorities. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
+      "residual": "Current credited local execution coverage is 66 official outcomes (65 passes / one failure) over 65 unique cases from the 3,678-case release Linux parent, with one of 289 derived physical shards complete and zero Axeyum outcomes or pairs. There are eight consumed selected process attempts: four M0 attempts, invalid M2 R1, timeout M2 R3, invalid M2 R5, and accepted M2 R6. M2 R1 retained 30 diagnostic passes / 34 failures but failed closure; R2 completed its zero-process diagnostic append. M2 R3 timed out after channel thread-creation failure. R4's 16 GiB control failed before selected discovery. R5 passed 64/64 under 32 GiB but its unconditional failure-log contract invalidated it; its diagnostic completion grants zero outcomes. R6 attempt 004 passed 64/64 under conditional semantics, and qualifying replay accepts its unchanged 152-file completion as 64 outcomes / one local shard. TL0.6.4 M0 assigns all 3,723 cases a conservative harness floor. M1 completes a source-only census over 7,004 tracked files and 90,909 exact/candidate signal spans, while 3,670 cases retain a generated-wrapper residual. M2.0 freezes the typed node, edge, assurance, resolver, provider-variant, selection, and case contract across 408,374 factored case/variant occurrences, but all 111 providers remain unbound and all exact module/generated/runtime/FFI/request/project nodes, edges, and closures remain not run or empty. M2.1 now preregisters 4,092 exact Lean source rows, 32 batches, 14 controls, and 39 no-retry processes, but no M2.1 process or header edge has been observed. M2.2 now preregisters exact module/source/artifact resolution semantics and fail-closed controls. Its R1 correction additionally separates raw import closure from the modifier-sensitive effective load fixed point and freezes ordered incremental .olean parts, IR-only reachability, and bounded cycle declines. M2.3 now preregisters the exact 3,670 wrapper / 52 inline Lake / one lint dispatch partition, configured CMake/CTest provenance, runner and shell-state semantics, trace boundary, and fail-closed controls. M2.4 now preregisters Lake workspace/project closure over a read-only floor of 52 direct cases, 70 tracked configuration roots, and 28 wrapper-directory lexical candidates pending M2.3, including configuration, manifest, materialization, target/facet/job, cache, and network semantics. M2.5 now preregisters compiler/runtime/FFI closure over a source-only floor of 841 direct and 860 closure compiler-runtime cases plus 24 provisional FFI cases, including distinct frontend, interpreter, native toolchain, artifact, ABI, initialization, and effect routes. M2.6 now preserves the accepted M1 authority while rejecting four Lake cases promoted by eleven generic JSON version fields; its corrected 143-case source floor separates 137 server harnesses from six API-only cases and preregisters raw transport, lifecycle, document/snapshot, cancellation, watchdog/worker, restart, RPC/session/widget, normalization, and idbg semantics. M2.7 now preregisters lossless provenance/assurance joins and deterministic M3 handoff over all 408,374 exact case/variant cells; equal content may deduplicate storage but never ownership, denominator, conditions, declines, or evidence. M3.0 now preregisters exact independent review of all 3,723 case rows and 408,374 cell rows, including secondary concurrence for risk-bearing dispositions and resumable append-only review; it has no accepted M2.7 parent, input authority, assignment, event, disposition, or TL0.6.4 acceptance. M2.2-M2.7 still have no accepted input authorities or parent transfers, resolved/configured/observed closures, or closed case/variant cells; M3 has no review acceptance, outcomes, pairs, or credit before accepted M2.1 evidence and separately bound downstream authorities. All 111 full official workflow attempts and every Axeyum/pair/performance/population/axis/gate/parity counter remain incomplete or zero. Next execute another source-first child shard, explicitly authorize and validate the TL0.6.4 M2.1 attempt, bind and execute M2.2-M2.7 exact dependency closure, complete M3 review, and only then run matched Axeyum cases. Scheduling metadata, content signals, empty graph contracts, unexecuted controls, diagnostic rows, and retries do not increase population coverage."
     },
     {
       "id": "U3",

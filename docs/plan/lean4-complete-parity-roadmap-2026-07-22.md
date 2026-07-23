@@ -33,7 +33,7 @@ Current machine-derived state:
 | U0-U9 | 0 complete authorities | a complete executable denominator for any terminal population |
 | A0-A11 | 0 complete axes | end-to-end native behavior on any complete required population |
 | G1-G10 | 0 satisfied terminal gates | any terminal parity claim |
-| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, and M2.1-M2.7 now have source-first header, resolution/effective-import, configured-runner, Lake-project, compiler/runtime/FFI, editor/server/RPC, and lossless variant-merge/M3-handoff semantics without executing those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner/Lake/compiler/runtime/FFI/editor edge, any closed case/variant cell, exact dependency-reviewed classification, an Axeyum outcome, a pair, or performance |
+| U2 official execution/classification | 8 consumed processes, 66 official outcomes, 65 passes / 1 failure over **65 unique cases**; execution M1 derives 5 exact memberships and 289 physical shards, one locally complete; TL0.6.4 M0 gives all 3,723 cases a harness floor, M1 inspects 7,004 tracked files / 90,909 spans, M2.0 freezes an empty typed graph across 408,374 factored case/variant occurrences, M2.1-M2.7 have source-first dependency/merge semantics, and M3.0 now defines exhaustive independent case/cell review without executing or accepting those programs | the 3,678/3,723-case parents, all 111 full attempts, any resolved dependency node/edge/closure, configured provider/runner/Lake/compiler/runtime/FFI/editor edge, any closed or reviewed case/variant cell, accepted TL0.6.4 classification, an Axeyum outcome, a pair, or performance |
 
 The accepted
 [`R3 result`](lean-u2-official-execution-tl0.6.3-m0-r3-result-2026-07-22.md)
@@ -269,6 +269,18 @@ correction overlay and defines a deterministic all-row M3 queue. No M2.7 input
 authority, accepted parent transfer, merged graph, closed cell, M3 acceptance,
 outcome, pair, performance row, or credit exists.
 
+M3.0's
+[complete-row independent-review plan](lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+now freezes the acceptance-review boundary without pretending the missing M2
+parent exists. It requires explicit primary dispositions for all 3,723 case
+rows and 408,374 applicable cells, plus independent secondary concurrence for
+declines, corrections, equivalence proofs, intentionally-online routes, and
+resolved contradictions. The campaign may resume across validated append-only
+prefixes, but cannot sample, silently replay, or approve by representative.
+Any evidence defect returns to a new M2 correction/result. No M3 authority,
+assignment, event, disposition, TL0.6.4 acceptance, outcome, pair, performance
+row, or credit exists.
+
 ## 2. What the SMT-LIB comparison actually says
 
 The solver program supplies a mature measurement warning for Lean parity:
@@ -386,8 +398,10 @@ execution, and content/dependency-complete U2 classification.
    M2.2-M2.7 plans freeze semantics only: none is an accepted input authority,
    parent transfer, closure result, or execution permission. Do not infer FFI
    absence from M0 or closure from M2.0/pre-execution M2.1.
-5. Review all rows under M3 and accept TL0.6.4 only when no provisional field,
-   unknown surface, or silent official-Lean delegation remains.
+5. After an accepted M2.7 result, bind M3.1 and review every case and applicable
+   variant under the preregistered independent-review contract. Accept TL0.6.4
+   only when every disposition/concurrence is complete and no provisional
+   field, unknown surface, or silent official-Lean delegation remains.
 6. Repair and attest the remote official-Lean executable identity across
    changed working directories without converting official evidence into
    native parity credit.

@@ -675,6 +675,19 @@ variant even when storage is shared. No M2.7 authority, accepted M2.1-M2.6
 transfer, merged graph, closed cell, M3 review, outcome, pair, performance row,
 or terminal credit exists.
 
+The source-first
+[M3 complete-row independent-review plan](lean-u2-native-surface-classification-tl0.6.4-m3-review-plan-2026-07-23.md)
+now freezes how TL0.6.4 classification can be accepted after M2.7. It requires
+one independent primary disposition for each of 3,723 case rows and all
+408,374 applicable case/variant cells; risk-bearing declines, corrections,
+equivalence proofs, intentionally-online routes, and resolved contradictions
+also require independent secondary concurrence. Review may span validated
+append-only sessions, but sampling, representative approval, silent replay,
+and in-place M2 repair are forbidden. A finding returns to a new retained M2
+correction/result. No accepted M2 parent, M3 authority, assignment, review
+event, disposition, TL0.6.4 acceptance, outcome, pair, performance row, or
+terminal credit exists.
+
 ## 8. Layer-specific equivalence
 
 One byte-comparison rule cannot cover the entire system:
