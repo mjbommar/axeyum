@@ -246,7 +246,10 @@ def recover_shard_lease(
 
 
 def recover_orphan_temporaries(
-    directory: Path, *, quarantine_root: Path | None = None
+    directory: Path,
+    *,
+    quarantine_root: Path | None = None,
+    eligible_targets: set[str] | None = None,
 ) -> list[Path]:
     """Quarantine, but never promote or delete, uncommitted temporary files."""
 
@@ -254,7 +257,14 @@ def recover_orphan_temporaries(
         return []
     recovered = []
     for path in sorted(directory.iterdir(), key=lambda item: item.name):
-        if path.is_file() and path.name.startswith(".") and ".tmp-" in path.name:
+        target = None
+        if path.name.startswith(".") and ".tmp-" in path.name:
+            target = path.name[1:].split(".tmp-", 1)[0]
+        if (
+            path.is_file()
+            and target
+            and (eligible_targets is None or target in eligible_targets)
+        ):
             recovered.append(_quarantine(path, "orphans", quarantine_root))
     return recovered
 

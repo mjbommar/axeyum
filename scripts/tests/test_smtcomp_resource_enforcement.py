@@ -12,14 +12,17 @@ ROOT = Path(__file__).resolve().parents[2]
 SMTCOMP = ROOT / "scripts" / "smtcomp_repro"
 sys.path.insert(0, str(SMTCOMP))
 
-from resume_contract import ContractError, digest  # noqa: E402
+from resume_contract import ContractError, canonical_bytes, digest  # noqa: E402
 from resource_enforcement import (  # noqa: E402
     CGROUP_KIND,
+    build_preflight,
+    build_terminal,
     cgroup_enforcement,
     cgroup_snapshot,
     configure_current_cgroup,
     systemd_run_command,
     validate_enforcement,
+    validate_resource_session,
     validate_snapshot,
 )
 
@@ -151,6 +154,91 @@ class ResourceEnforcementTests(unittest.TestCase):
         self.assertIn("--property=CPUQuota=200%", command)
         self.assertIn("--property=TasksMax=32", command)
         self.assertEqual(command[-1], "/bin/true")
+
+    def test_closed_resource_session_validates_exact_failed_terminal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            enforcement = cgroup_enforcement(
+                worker_slots=1,
+                aggregate_memory_bytes=64 * 1024**2,
+                aggregate_cpu_cores=1,
+                pids_max=32,
+            )
+            environment = "e" * 64
+            run = {
+                "identity_sha256": "a" * 64,
+                "identity": {
+                    "memory_limit_bytes": 64 * 1024**2,
+                    "cores": 1,
+                    "shard_count": 1,
+                    "environment_class_sha256": environment,
+                    "resource_enforcement_sha256": digest(enforcement),
+                },
+                "resource_enforcement": enforcement,
+            }
+            session_id = "failed-session"
+            unit = f"{enforcement['unit_prefix']}-{session_id}.service"
+            snapshot = {
+                "cgroup_path": f"/user.slice/{unit}",
+                "cgroup_inode": 1,
+                "controllers": ["cpu", "memory", "pids"],
+                "cgroup_type": "domain",
+                "memory_max_bytes": 64 * 1024**2,
+                "memory_swap_max_bytes": 0,
+                "memory_oom_group": 1,
+                "memory_peak_bytes": 1024,
+                "memory_events": {"oom": 0, "oom_kill": 0},
+                "cpu_quota_usec": 100_000,
+                "cpu_period_usec": 100_000,
+                "cpu_stat": {"usage_usec": 1},
+                "pids_max": 32,
+                "pids_current": 1,
+                "pids_peak": 1,
+                "pids_events": {"max": 0},
+                "member_pids": [os.getpid()],
+            }
+            preflight = build_preflight(
+                run=run,
+                session_id=session_id,
+                environment_class_sha256=environment,
+                snapshot=snapshot,
+                shard_ids=[0],
+            )
+            final_snapshot = dict(
+                snapshot,
+                memory_peak_bytes=2048,
+                pids_peak=2,
+                cpu_stat={"usage_usec": 2},
+            )
+            terminal = build_terminal(
+                preflight=preflight,
+                final_snapshot=final_snapshot,
+                enforcement=enforcement,
+                worker_exit_codes=[2],
+            )
+            session = root / "resource-sessions" / session_id
+            session.mkdir(parents=True)
+            session.joinpath("preflight.json").write_bytes(
+                canonical_bytes(preflight)
+            )
+            session.joinpath("terminal.json").write_bytes(
+                canonical_bytes(terminal)
+            )
+
+            observed = validate_resource_session(
+                run_dir=root,
+                run=run,
+                session_id=session_id,
+                expected_status="failed",
+            )
+            self.assertEqual(observed, (preflight, terminal))
+            with self.assertRaisesRegex(ContractError, "status mismatch"):
+                validate_resource_session(
+                    run_dir=root,
+                    run=run,
+                    session_id=session_id,
+                    expected_status="completed",
+                )
 
 
 if __name__ == "__main__":

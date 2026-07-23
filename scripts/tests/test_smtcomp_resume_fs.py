@@ -97,6 +97,27 @@ class ResumeFilesystemTests(unittest.TestCase):
             self.assertEqual(recovered[0].read_bytes(), b'{"truncated":')
             self.assertFalse((directory / "result.json").exists())
 
+    def test_orphan_recovery_is_scoped_to_owned_result_targets(self) -> None:
+        with temporary_directory() as tmp:
+            directory = Path(tmp) / "records"
+            directory.mkdir()
+            owned = directory / ".owned.json.tmp-1-dead"
+            foreign = directory / ".foreign.json.tmp-2-live"
+            malformed = directory / ".tmp-unowned"
+            owned.write_bytes(b"owned")
+            foreign.write_bytes(b"foreign")
+            malformed.write_bytes(b"malformed")
+
+            recovered = recover_orphan_temporaries(
+                directory, eligible_targets={"owned.json"}
+            )
+
+            self.assertEqual(len(recovered), 1)
+            self.assertEqual(recovered[0].read_bytes(), b"owned")
+            self.assertFalse(owned.exists())
+            self.assertEqual(foreign.read_bytes(), b"foreign")
+            self.assertEqual(malformed.read_bytes(), b"malformed")
+
     def test_forced_kills_resume_to_uninterrupted_canonical_output(self) -> None:
         baseline_bundle = GEN.make_bundle(interrupted=True)
         with temporary_directory() as tmp:

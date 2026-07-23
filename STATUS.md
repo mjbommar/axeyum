@@ -464,6 +464,28 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   WASM (7.00 s), strict stable/nightly rustdoc (2.00/1.79 s), links,
   whitespace, and owned-line formatting are green. Source `a6e79b08` was
   integrated exactly by merge `5b42a0ef`.
+  mode, gate it, then execute only `retry-1`. The implementation is now present:
+  foreign shard temporaries are excluded, released-lease failure evidence binds
+  both failed terminals and dead liveness, stale-lease recovery is unchanged,
+  and the Bitwuzla-only retry mode hard-pins every frozen hash and exact
+  `retry-1`. Twenty-three focused tests directly cover fresh retry, completed-
+  retry finalization, and completed-result replay; the 71-test portable gate
+  passes with one live-host skip. Existing-authority replay now repeats current
+  remote-liveness, lease, full allocation-evidence, runner-terminal, and zero-
+  record checks rather than trusting the earlier observation. The runner
+  terminal now requires its complete contract field set, exact empty-result
+  digest, and all 435 assigned keys in its missing set; the frozen evidence
+  passes this stronger check. A subsequent exact namespace audit found that the
+  failed resource session correctly retains a sealed failed `terminal.json`;
+  the first implementation had incorrectly rejected its presence. `6a34bf2e`
+  now validates that resource session through the E2 contract, binds terminal
+  file/record hashes, matches worker exit `[2]` to the failed outer allocation,
+  and adds `resource_enforcement.py` to the exact integration gate. A write-
+  mocked dry run passes the complete live recovery preflight and leaves recovery
+  records at zero. Twenty-eight focused tests and all 72 portable, mandatory
+  cgroup, and live E3 tests pass; live evidence is
+  `/nas3/data/axeyum/harness/e3-gate/live-1784833951553616481-378813e09840`.
+  Recovery stays blocked until these source and checkpoint bytes are integrated.
 - **2026-07-23 — certified rational weights inside powered rational-rate
   Bessel-J products.** Wave twenty-one extends the structural powered-product
   recognizer to exact rational weights inside the power. It carries each

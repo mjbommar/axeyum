@@ -1,6 +1,7 @@
 # SMT-COMP repaired P0 v2 Bitwuzla recovery plan
 
-Status: preregistered stop state; no recovery mutation or retry launch performed
+Status: preregistered; implementation complete and portable-gated; no recovery
+mutation or retry launch performed
 Date: 2026-07-23
 Predecessor: [cvc5 result](smtcomp-repaired-p0-v2-cvc5-result-2026-07-23.md)
 Preparation: [P0-S1 v2 result](smtcomp-repaired-p0-preparation-s1-result-2026-07-23.md)
@@ -68,6 +69,11 @@ Its zero-record runner terminal file SHA-256 is
 Its resource session is `p0-bitwuzla-initial-1-f49561551140`, whose preflight
 record SHA-256 is
 `5b641f004abb26a6e2a538b7c021df81c95657ede00bc4a2e45b2e2c6083f713`.
+That session also has a valid failed resource terminal with worker exit codes
+`[2]`: file SHA-256
+`e39e1e5cc665315b6b3bb6f96a80ea57303510255c8a858c544a233431a4ae43`
+and record SHA-256
+`6e7cf1b693c26fa6651de86f2c66e9c0c86086b4635291092d202c5e9d213df5`.
 
 Completed shard files are:
 
@@ -108,6 +114,7 @@ separate fail-closed recovery evidence variant that binds:
 
 - plan, run, failed allocation, retry allocation, resource session, and shard;
 - failed outer terminal file/record identity;
+- failed resource terminal file/record identity and matching worker exit code;
 - failed inner runner terminal file/identity and zero durable shard records;
 - exact remote liveness observation;
 - the assertion that the shard lease is absent; and
@@ -149,3 +156,70 @@ Before live recovery:
 The current 870 records receive no Bitwuzla correctness, performance, coverage,
 or parity credit. The completed Axeyum and cvc5 cells remain unchanged and
 credit-eligible under their own integrated result boundaries.
+
+## Implementation checkpoint
+
+The bounded implementation:
+
+- scopes startup orphan recovery to the current shard's exact assigned result
+  filenames, leaving every foreign or malformed temporary untouched;
+- adds `axeyum.smtcomp-host-released-recovery.v1`, which binds the failed outer
+  allocation terminal, failed resource terminal, zero-record inner runner
+  terminal, absent lease, dead process observation, and exact different-host
+  retry without fabricating stale lease quarantine;
+- preserves and continues to validate the existing stale-lease recovery schema;
+- adds a Bitwuzla-only `--recover-failed-allocation initial-1` coordinator mode
+  with every frozen live hash above hard-pinned;
+- requires this plan and all recovery-source bytes to be exact on `origin/main`;
+  and
+- validates replay after authority publication, process-free finalization after
+  a completed retry, and a fully published result without launching twice; and
+- directly exercises all three coordinator restart paths: fresh exact retry,
+  completed-retry finalization, and completed-result replay. Authority replay
+  repeats current remote-liveness, lease, allocation-evidence, runner-terminal,
+  and zero-record checks before returning the existing record. The runner
+  terminal must have the complete contract field set, exact empty-result digest,
+  and all shard-assigned keys in its missing set.
+
+Read-only live validation reports:
+
+```text
+FROZEN_BITWUZLA_RECOVERY_VALID
+plan=3531135a711b6de1e899e4cfdcda432c68e5ec77387f3e004131579725eec927
+retry=retry-1
+```
+
+Current gates:
+
+```text
+python3 -m unittest \
+  scripts.tests.test_smtcomp_resume_fs \
+  scripts.tests.test_smtcomp_multi_host \
+  scripts.tests.test_smtcomp_resource_enforcement \
+  scripts.tests.test_smtcomp_p0_prepare
+  28 tests, OK
+
+./scripts/check-smtcomp-resume.sh
+  72 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_CGROUP=1 ./scripts/check-smtcomp-resume.sh
+  72 tests, OK, one live-host skip
+
+AXEYUM_REQUIRE_SMTCOMP_MULTIHOST=1 ./scripts/check-smtcomp-resume.sh
+  72 tests, OK, no skips
+  evidence=/nas3/data/axeyum/harness/e3-gate/live-1784833951553616481-378813e09840
+  control=4574cfc31d1dbe905510d4fe629b1e62d8e779ebcc3745a7078fc87973f034a0
+  loss=fc5f11d24804ce1d1f8a9d9d948dc6c10eeae3676570742d8f86a79898f26fe0
+
+./scripts/check-links.sh
+  passed
+
+just foundational-resources
+  passed
+
+git diff --check
+  passed
+```
+
+Next: integrate the implementation/checkpoint bytes, revalidate the frozen stop
+state against the integrated source, then execute only `retry-1`.

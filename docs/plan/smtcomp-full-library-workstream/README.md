@@ -309,7 +309,19 @@ gate.
    retained all evidence and stopped before recovery. The
    [Bitwuzla recovery plan](../smtcomp-repaired-p0-v2-bitwuzla-recovery-plan-2026-07-23.md)
    freezes the 870-record stop state and preregisters the runner repair plus
-   exact different-host `retry-1` path. No Bitwuzla credit is claimed.
+   exact different-host `retry-1` path. The implementation now scopes orphan
+   recovery to shard-owned targets, represents cleanly released failed-runner
+   recovery without fake lease evidence, and exposes a hash-pinned recovery-only
+   coordinator mode. Twenty-three focused tests now cover the three coordinator
+   restart paths, including fresh liveness/evidence validation when replaying an
+   existing authority record. Released runner evidence must also exactly account
+   every shard-assigned key as missing under the complete terminal contract. The
+   real frozen session retains a valid failed resource terminal; `6a34bf2e`
+   corrects the earlier absent-terminal model by validating and binding its file
+   and record hashes plus matching worker exit code. Twenty-eight focused tests
+   and the 72-test portable/cgroup/live gates pass; live E3 has no skips. No
+   Bitwuzla credit is claimed, and no recovery mutation may occur before exact
+   integration.
 3. **Credited full population.** Only then execute Axeyum, cvc5, and Bitwuzla on
    the same versioned selection; publish the per-logic inventory and regenerate
    the coverage-weighted parity matrix without combining incompatible regimes.

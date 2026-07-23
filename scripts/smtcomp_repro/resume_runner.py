@@ -1305,7 +1305,11 @@ def execute_resumable(
     skipped_keys: set[str] = set()
     terminal_written = False
     try:
-        recover_orphan_temporaries(run_dir / "records", quarantine_root=quarantine)
+        recover_orphan_temporaries(
+            run_dir / "records",
+            quarantine_root=quarantine,
+            eligible_targets={f"{key}.json" for key in assigned},
+        )
         atomic_install_json(
             run_dir / "attempts" / shard_id,
             f"{attempt_id}.json",
