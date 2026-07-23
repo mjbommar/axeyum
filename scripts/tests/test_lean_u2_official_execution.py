@@ -258,6 +258,23 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         self.assertEqual(U2.validate_repository_inputs(), [])
         self.assertEqual(U2.validate_selection_authorities(), [])
 
+    def test_resume_contract_successor_is_current_only(self) -> None:
+        relative = "scripts/smtcomp_repro/resume_contract.py"
+        historical = "4713707b26d81e0e5444acc7c653b461fa79c2a94c392873c8565b443ba33930"
+        current = "c128444f940b04a99a5be5def253d56df9f17d488dcb2d739891b0085dd0efd7"
+        self.assertEqual(U2.REPOSITORY_INPUTS[relative], historical)
+        self.assertEqual(U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative], current)
+        self.assertEqual(U2.sha256_file(U2.ROOT / relative), current)
+
+        U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = "0" * 64
+        try:
+            self.assertIn(
+                f"frozen repository input drift: {relative}",
+                U2.validate_repository_inputs(),
+            )
+        finally:
+            U2.CURRENT_REPOSITORY_INPUT_OVERRIDES[relative] = current
+
     def test_spec_freezes_singleton_parent_command_environment_and_lane(self) -> None:
         spec = self.spec()
         self.assertEqual(U2.validate_spec(spec), [])
@@ -525,6 +542,13 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             self.assertEqual(authority["attempts"][0]["official_outcomes"], 0)
             self.assertEqual(authority["attempts"][1]["official_outcomes"], 1)
             self.assertEqual(authority["credits"]["parity_credit"], 0)
+            source_inputs = {
+                row["path"]: row["sha256"] for row in authority["source_inputs"]
+            }
+            self.assertEqual(
+                source_inputs["scripts/smtcomp_repro/resume_contract.py"],
+                U2.REPOSITORY_INPUTS["scripts/smtcomp_repro/resume_contract.py"],
+            )
 
     def test_complete_evidence_rejects_missing_extra_and_raw_drift(self) -> None:
         mutations = ("missing", "extra", "raw-drift")
@@ -554,15 +578,15 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
             with self.assertRaisesRegex(U2.U2ExecutionError, "not read-only"):
                 U2.validate_evidence_root(root, require_live_readonly=True)
 
-    def test_failed_attempt_dependency_validates_live_and_git_modes(self) -> None:
+    def test_failed_attempt_dependency_validates_checkout_git_mode(self) -> None:
         dependency = U2.validate_failed_attempt(
-            require_live_readonly=True,
+            require_live_readonly=False,
             require_git_index=True,
         )
         self.assertEqual(
             dependency,
             U2.failed_attempt_dependency(
-                live_readonly_validated=True, git_index_validated=True
+                live_readonly_validated=False, git_index_validated=True
             ),
         )
         self.assertEqual(dependency["official_outcomes"], 0)
@@ -572,6 +596,9 @@ class LeanU2OfficialExecutionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=U2.ROOT) as temporary:
             root = Path(temporary) / "failed"
             shutil.copytree(U2.FAILED_EVIDENCE_ROOT, root)
+            for path in root.rglob("*"):
+                if path.is_file():
+                    path.chmod(0o444)
             U2.validate_failed_attempt(
                 root, require_live_readonly=True, require_git_index=False
             )
