@@ -4186,14 +4186,61 @@ pub fn dsolve_first_order_linear(p: &CasExpr, q: &CasExpr, var: &str) -> Option<
     }
 }
 
+/// Solve `columns · x = rhs` when `columns` is an exact rational square matrix
+/// and `rhs` contains exact symbolic expressions. Each rational inverse-matrix
+/// column comes from the existing checked-`i128`/bounded-bignum solver; the
+/// expressions are combined only after those coefficients are known.
+fn solve_rational_linear_expr_rhs(
+    columns: &[Vec<Rational>],
+    rhs: &[CasExpr],
+) -> Option<Vec<CasExpr>> {
+    const MAX_SYMBOLIC_IVP_DIMENSION: usize = 16;
+    let dimension = columns.len();
+    if dimension == 0 || dimension != rhs.len() || dimension > MAX_SYMBOLIC_IVP_DIMENSION {
+        return None;
+    }
+
+    let inverse_columns: Vec<Vec<Rational>> = (0..dimension)
+        .map(|rhs_index| {
+            let mut unit = vec![Rational::zero(); dimension];
+            unit[rhs_index] = Rational::integer(1);
+            ratint::solve_linear(columns, &unit)
+        })
+        .collect::<Option<_>>()?;
+
+    (0..dimension)
+        .map(|solution_index| {
+            let terms: Vec<CasExpr> = inverse_columns
+                .iter()
+                .zip(rhs)
+                .filter_map(|(inverse_column, value)| {
+                    let coefficient = inverse_column[solution_index];
+                    (!coefficient.is_zero()).then(|| scaled_term(coefficient, value.clone()))
+                })
+                .collect();
+            Some(match terms.len() {
+                0 => CasExpr::zero(),
+                1 => terms.into_iter().next()?,
+                _ => simplify(&CasExpr::Add(terms)),
+            })
+        })
+        .collect()
+}
+
 /// Specialize a **general ODE solution** (with integration constants `C0, C1, …`)
 /// to an **initial-value problem**, solving for the constants from a list of
 /// conditions `(k, x₀, v)` meaning `y^{(k)}(x₀) = v`. The constants enter linearly,
 /// so each condition — differentiated `k` times and evaluated at `x₀` — is one
-/// linear equation; the exact rational system is solved and the constants
-/// substituted back. E.g. `y'' + y = 0` with `y(0)=1, y'(0)=0` gives `cos x`.
-/// `None` if the number of conditions ≠ number of constants, a condition does not
-/// evaluate to a rational, or the system is singular.
+/// linear equation. The basis matrix and constant baseline must evaluate to exact
+/// rationals; condition values may be arbitrary exact expressions independent of
+/// the ODE variable and reserved integration constants. Expression-valued systems
+/// are bounded to 16 constants; rational-valued systems retain the existing exact
+/// solver path beyond that bound. The result is returned only after substituting
+/// it back into every original condition and certifying exact equality. E.g.
+/// `y'' + y = 0` with `y(0)=A, y'(0)=B` gives `A·cos(x) + B·sin(x)`. `None` if the
+/// number of conditions differs from the number of constants, the basis matrix is
+/// outside the rational fragment, the system is singular, or any condition cannot
+/// be certified.
 #[must_use]
 pub fn apply_initial_conditions(
     general: &CasExpr,
@@ -4207,13 +4254,21 @@ pub fn apply_initial_conditions(
     if constants.is_empty() || constants.len() != conditions.len() {
         return None;
     }
+    for (_, point, value) in conditions {
+        let mut reserved = BTreeSet::new();
+        collect_constant_names(point, &mut reserved);
+        collect_constant_names(value, &mut reserved);
+        if !reserved.is_empty() || expr_contains_var(point, var) || expr_contains_var(value, var) {
+            return None;
+        }
+    }
     // Evaluate an expression to an exact rational (folding trig/exp constants).
     let to_rational = |expr: &CasExpr| -> Option<Rational> {
         constant_term(&simplify(&fold_elementary_constants(&evaluate_trig(expr))))
     };
     // One linear equation per condition; `columns[i]` = coefficients of `Cᵢ`.
     let mut columns: Vec<Vec<Rational>> = vec![Vec::new(); constants.len()];
-    let mut rhs: Vec<Rational> = Vec::new();
+    let mut rhs: Vec<CasExpr> = Vec::new();
     for (order, point, value) in conditions {
         let at_point = general.differentiate_n(var, *order).substitute(var, point);
         // Baseline with all constants zeroed.
@@ -4235,15 +4290,35 @@ pub fn apply_initial_conditions(
             }
             columns[i].push(to_rational(&probe)?.checked_sub(baseline_value)?);
         }
-        rhs.push(to_rational(value)?.checked_sub(baseline_value)?);
+        let folded_value = simplify(&fold_elementary_constants(&evaluate_trig(value)));
+        rhs.push(simplify(&(folded_value - CasExpr::Const(baseline_value))));
     }
-    let solution = ratint::solve_linear(&columns, &rhs)?;
+    let rational_rhs: Option<Vec<Rational>> = rhs.iter().map(&to_rational).collect();
+    let solution: Vec<CasExpr> = if let Some(rational_rhs) = rational_rhs {
+        ratint::solve_linear(&columns, &rational_rhs)?
+            .into_iter()
+            .map(CasExpr::Const)
+            .collect()
+    } else {
+        solve_rational_linear_expr_rhs(&columns, &rhs)?
+    };
     // Substitute the solved constants back into the general solution.
     let mut result = general.clone();
     for (name, value) in constants.iter().zip(solution) {
-        result = result.substitute(name, &CasExpr::Const(value));
+        result = result.substitute(name, &value);
     }
-    Some(simplify(&result))
+    result = simplify(&result);
+    // Whole-result certificate: every original condition must hold exactly.
+    for (order, point, value) in conditions {
+        let observed = result.differentiate_n(var, *order).substitute(var, point);
+        if !matches!(
+            equal(&observed, value),
+            ZeroTest::Certified { equal: true, .. }
+        ) {
+            return None;
+        }
+    }
+    Some(result)
 }
 
 /// Collect variable names of the form `C<digits>` (integration constants) from an
@@ -18018,6 +18093,118 @@ mod tests {
         ));
         // Mismatched condition count declines.
         assert!(apply_initial_conditions(&osc, "x", &[(0, zero(), CasExpr::int(1))]).is_none());
+    }
+
+    #[test]
+    fn initial_value_problems_exact_data() {
+        let ig = Rational::integer;
+        let x = || v("x");
+        let zero = || CasExpr::zero();
+        let oscillator = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").unwrap();
+
+        let radical = apply_initial_conditions(
+            &oscillator,
+            "x",
+            &[
+                (0, zero(), CasExpr::int(2).sqrt()),
+                (1, zero(), CasExpr::int(1)),
+            ],
+        )
+        .expect("exact radical data");
+        assert_equal(&radical, &(CasExpr::int(2).sqrt() * x().cos() + x().sin()));
+
+        let symbolic = apply_initial_conditions(
+            &oscillator,
+            "x",
+            &[(0, zero(), v("A")), (1, zero(), v("B"))],
+        )
+        .expect("symbolic parameter data");
+        assert_equal(&symbolic, &(v("A") * x().cos() + v("B") * x().sin()));
+
+        // The existing exact-point folding and rational solve remain intact.
+        let half_pi = v("pi") / CasExpr::int(2);
+        let nonzero_point = apply_initial_conditions(
+            &oscillator,
+            "x",
+            &[
+                (0, half_pi.clone(), CasExpr::int(2)),
+                (1, half_pi, CasExpr::int(3)),
+            ],
+        )
+        .expect("rational basis at a nonzero exact point");
+        assert_equal(
+            &nonzero_point,
+            &(CasExpr::int(-3) * x().cos() + CasExpr::int(2) * x().sin()),
+        );
+
+        // A rational nonzero baseline is subtracted before the expression-valued
+        // right-hand side is solved.
+        let affine_general = v("C0") * x().exp() + CasExpr::int(2);
+        let affine = apply_initial_conditions(&affine_general, "x", &[(0, zero(), v("A"))])
+            .expect("symbolic data with a rational baseline");
+        assert_equal(
+            &affine,
+            &((v("A") - CasExpr::int(2)) * x().exp() + CasExpr::int(2)),
+        );
+    }
+
+    #[test]
+    fn initial_value_problems_exact_data_declines() {
+        let ig = Rational::integer;
+        let x = || v("x");
+        let zero = || CasExpr::zero();
+        let oscillator = dsolve_homogeneous(&[ig(1), ig(0), ig(1)], "x").unwrap();
+        // Reserved integration-constant names, the ODE variable, irrational
+        // basis coefficients, singular systems, and the symbolic resource cap
+        // all decline rather than leaking an unresolved specialization.
+        assert!(
+            apply_initial_conditions(
+                &oscillator,
+                "x",
+                &[(0, zero(), v("C0")), (1, zero(), v("B"))],
+            )
+            .is_none()
+        );
+        assert!(
+            apply_initial_conditions(&oscillator, "x", &[(0, zero(), x()), (1, zero(), v("B"))],)
+                .is_none()
+        );
+        let growth = dsolve_homogeneous(&[ig(-1), ig(1)], "x").unwrap();
+        assert!(apply_initial_conditions(&growth, "x", &[(0, CasExpr::int(1), v("A"))]).is_none());
+        let singular = v("C0") + v("C1");
+        assert!(
+            apply_initial_conditions(&singular, "x", &[(0, zero(), v("A")), (0, zero(), v("B"))],)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn initial_value_problem_symbolic_dimension_cap_preserves_rational_path() {
+        let dimension = 17usize;
+        let x = v("x");
+        let general = CasExpr::Add(
+            (0..dimension)
+                .map(|order| {
+                    CasExpr::var(&format!("C{order}"))
+                        * x.clone().pow(u32::try_from(order).unwrap())
+                })
+                .collect(),
+        );
+        let rational_conditions: Vec<(usize, CasExpr, CasExpr)> = (0..dimension)
+            .map(|order| {
+                (
+                    order,
+                    CasExpr::zero(),
+                    CasExpr::int(i128::try_from(order + 1).unwrap()),
+                )
+            })
+            .collect();
+        assert!(apply_initial_conditions(&general, "x", &rational_conditions).is_some());
+
+        let symbolic_conditions: Vec<(usize, CasExpr, CasExpr)> = (0..dimension)
+            .map(|order| (order, CasExpr::zero(), CasExpr::var(&format!("A{order}"))))
+            .collect();
+        assert!(apply_initial_conditions(&general, "x", &symbolic_conditions).is_none());
     }
 
     #[test]

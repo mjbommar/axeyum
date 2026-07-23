@@ -388,6 +388,21 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
 
 ## Current focus
 
+- **2026-07-22 — exact-expression initial-condition data.** The measured
+  oscillator cases `y(0)=√2, y′(0)=1` and `y(0)=A, y′(0)=B` now specialize to
+  `√2 cos x + sin x` and `A cos x + B sin x`. The existing rational evaluation
+  still owns the basis matrix and baseline; for an expression-valued right-hand
+  side, exact rational inverse columns are computed through the existing
+  checked-`i128`/bounded-bignum solver and then combined with the values. Every
+  returned solution is substituted into every original condition and accepted
+  only when the zero-test certifies exact equality. Reserved `C<digits>` data,
+  data depending on the ODE variable, nonrational basis coefficients, singular
+  systems, and symbolic dimension 17 explicitly decline; a 17-constant rational
+  system proves the legacy path is not narrowed. SymPy independently agrees on
+  both new solutions and the existing `x=π/2` control. The full 533-unit/
+  147-doctest suite, warning-denied workspace all-target/all-feature Clippy,
+  strict stable/nightly rustdoc, WASM, links, and whitespace checks pass.
+
 - **2026-07-22 — TL0.6.3 M0 is source-first preregistered; no official U2 test
   has run.** The [M0 plan](docs/plan/lean-u2-official-execution-tl0.6.3-m0-plan-2026-07-22.md)
   selects only `compile/534.lean` from the exact release-tag Linux-release
@@ -7765,6 +7780,13 @@ plan is built and committed on the current branch:
 | P5.5 | External target, measured | **DONE (bounded v1, ADR-0323--0338):** authenticated Tock capture plus eight rechecked dual-DRAT proofs and six replayed controls, UNKNOWN=0, DISAGREE=0. Query time 12.700 s; fresh outer wall 50.745 s; peak RSS 1,256,496 KiB; zero OOM deltas. The committed case study compares exact target validation, universal coverage, trust, effort, artifact boundaries, and limits. No Tock bug was found, so no upstream issue is applicable. This is not a speed or whole-kernel claim. |
 
 ## Changelog
+
+- **2026-07-22 — Added exact-expression IVP data.**
+  `apply_initial_conditions` now solves rational evaluated basis matrices
+  against exact radicals or symbolic parameters, preserves the older rational
+  path beyond the symbolic 16-constant cap, and certifies every original
+  condition after substitution. The bounded controls bring the CAS surface to
+  533 unit tests and 147 doctests.
 
 - **2026-07-22 — Reconciled the official-Lean gate with the FP soundness
   boundary.** Removed the unsupported QF_BVFP reconstruction family and
