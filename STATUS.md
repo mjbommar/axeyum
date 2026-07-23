@@ -8179,8 +8179,9 @@ plan is built and committed on the current branch:
   population to the sorted `(id, cell_sha256)` sequence in addition to count
   and sorted IDs. Mutation controls reject changed execution inputs, side-seal
   substitution, normalization drift, common-identity drift, and a correctly
-  resealed cell under a stale population authority. The 20-test parity module
-  and deterministic generator check pass. All native outcomes, paired cells,
+  resealed cell under a stale population authority. The 20-test parity module,
+  full `just parity-docs`, link validation, and a differently rooted detached
+  generator/focused-test/link replay pass. All native outcomes, paired cells,
   complete pair authorities, gates, and parity credit remain zero; complete
   accepted TL0.6.3/TL0.6.4 parents remain mandatory before any process.
 

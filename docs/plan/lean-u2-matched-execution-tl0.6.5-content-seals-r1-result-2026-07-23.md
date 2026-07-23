@@ -67,8 +67,17 @@ The implementation checkpoint passed:
 - `python3 scripts/gen-lean-complete-parity.py --check`; and
 - `git diff --check`.
 
-The broader documentation, link, detached-root, and full parity gates are run
-again at the final documentation checkpoint.
+The final documentation checkpoint additionally passed:
+
+- `just parity-docs`, including the same 20-test module and every registered
+  parity evidence generator/checker;
+- `just links`; and
+- from a clean detached worktree at a different absolute root, complete-parity
+  generator `--check`, the three focused seal controls, and link validation.
+
+The detached worktree was removed after validation. No M2.1 native header run
+or M2.2-M2.7 external process was authorized or launched; the read-only M2.1
+contract checks continued to report zero observed processes and zero edges.
 
 ## Truth boundary
 
@@ -77,4 +86,3 @@ Lean or Axeyum, classify an outcome, register a paired cell, complete a paired
 population authority, promote U2, satisfy an axis or gate, or grant parity
 credit. TL0.6.5 still requires accepted complete TL0.6.3 and TL0.6.4 parents
 before deriving its exact obligation authority or authorizing native work.
-
