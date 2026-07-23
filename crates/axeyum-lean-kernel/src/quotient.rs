@@ -1286,5 +1286,30 @@ mod tests {
         assert_eq!(first.fired + first.inert, first.descriptors);
         assert!(first.fired > 0);
         assert!(first.inert > 0);
+        let transcript_fnv1a64 = first
+            .transcript
+            .bytes()
+            .fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
+                (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
+            });
+        assert_eq!(transcript_fnv1a64, 0x649c_9809_5f6e_8d45);
+    }
+
+    #[test]
+    fn quotient_declarations_render_only_as_lean_builtins() {
+        let kernel = initialized_kernel();
+        for (_, declaration) in kernel
+            .environment()
+            .iter()
+            .filter(|(_, declaration)| matches!(declaration, Declaration::Quotient { .. }))
+        {
+            let rendered = kernel.render_lean_decl(declaration);
+            assert!(
+                rendered.contains("provided by Lean's built-in quotient package"),
+                "{rendered}"
+            );
+            assert!(!rendered.contains("axiom"), "{rendered}");
+            assert!(!rendered.contains("opaque"), "{rendered}");
+        }
     }
 }
