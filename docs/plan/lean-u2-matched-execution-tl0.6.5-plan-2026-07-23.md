@@ -251,6 +251,13 @@ missing execution/classification parent. The accepted bounded
 implements that registry/projection boundary while retaining zero extractors,
 semantic canonicalizers, outcomes, pairs, and parity credit.
 
+The source-first
+[R4 typed-observable plan](lean-u2-matched-execution-tl0.6.5-typed-observables-r4-plan-2026-07-23.md)
+then closes R3's remaining value-shape defect: field names alone do not prove
+that digests, enums, integers, or strings have the required types. R4 versions
+the authority, contract IDs, and projection domain before any observation can
+exist; it remains offline and non-crediting.
+
 An Axeyum timeout, resource exhaustion, or supported decline is a completed
 typed Axeyum execution and can therefore produce `official-only`. Total absence
 of launch/completion is `not-run`. Inconsistent pins, artifacts, or attempt
