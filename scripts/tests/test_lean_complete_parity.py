@@ -22,6 +22,12 @@ SPEC.loader.exec_module(GEN)
 class LeanCompleteParityTests(unittest.TestCase):
     def setUp(self) -> None:
         self.data = GEN.load_manifest()
+        self.normalization_data = GEN.load_json(GEN.U2_NORMALIZATION_CONTRACTS)
+        self.kernel_normalizer = next(
+            contract
+            for contract in self.normalization_data["contracts"]
+            if contract["id"] == "lean-kernel-assurance-v1"
+        )
 
     def population(self, population_id: str) -> dict:
         return next(item for item in self.data["populations"] if item["id"] == population_id)
@@ -96,7 +102,7 @@ class LeanCompleteParityTests(unittest.TestCase):
             "population_member_id": "kernel-probe",
             "profile_id": "linux-control",
             "axis": "A1",
-            "layer": "kernel-admission",
+            "layer": self.kernel_normalizer["layer"],
             "source_sha256": "c" * 64,
             "dependency_sha256": "d" * 64,
             "source_family": "probe",
@@ -109,8 +115,8 @@ class LeanCompleteParityTests(unittest.TestCase):
         }
         comparison = {
             "outcome": outcome,
-            "normalization_id": "kernel-expression-v1",
-            "normalization_sha256": "e" * 64,
+            "normalization_id": self.kernel_normalizer["id"],
+            "normalization_sha256": self.kernel_normalizer["contract_sha256"],
             "contract_sha256": "f" * 64,
             "official_record_sha256": cell["official"]["record_sha256"],
             "axeyum_record_sha256": cell["axeyum"]["record_sha256"],
@@ -920,6 +926,24 @@ class LeanCompleteParityTests(unittest.TestCase):
         self.assertFalse(header["claims"]["fast_parser_observed"])
         self.assertFalse(header["claims"]["header_declarations_complete"])
         self.assertTrue(all(value == 0 for value in header["credits"].values()))
+        normalization = first["bounded_snapshot"][
+            "u2_normalization_contract_authority"
+        ]
+        self.assertEqual(normalization["status"], "bounded-contract-only")
+        self.assertEqual(normalization["summary"]["contracts"], 9)
+        self.assertEqual(normalization["summary"]["compared_fields"], 68)
+        self.assertEqual(normalization["summary"]["ignored_rules"], 18)
+        self.assertEqual(normalization["summary"]["raw_extractors_implemented"], 0)
+        self.assertEqual(
+            normalization["summary"]["semantic_canonicalizers_implemented"], 0
+        )
+        self.assertFalse(normalization["claims"]["parents_complete"])
+        self.assertFalse(normalization["claims"]["lean_complete_parity"])
+        self.assertIn(
+            "docs/plan/lean-u2-normalization-contracts-v1.json",
+            source_paths,
+        )
+        self.assertIn("scripts/lean_u2_normalization_contracts.py", source_paths)
         self.assertIn(
             "docs/plan/lean-u2-native-header-contract-m2.1-v1.json",
             source_paths,
@@ -1204,6 +1228,36 @@ class LeanCompleteParityTests(unittest.TestCase):
         cell["profile_id"] = "changed-profile"
         self.assertTrue(
             any("cell_sha256 must match canonical cell" in failure for failure in self.failures())
+        )
+
+    def test_paired_normalizer_must_be_registered_layer_matched_and_current(self) -> None:
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["normalization_id"] = "invented-normalizer-v1"
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any("is not registered" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["layer"] = "parser-macro"
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any("must match normalization layer" in failure for failure in self.failures())
+        )
+
+        self.data = GEN.load_manifest()
+        cell = self.paired_cell()
+        self.register_bounded_pair(cell)
+        cell["comparison"]["normalization_sha256"] = "9" * 64
+        self.reseal_pair(cell)
+        self.assertTrue(
+            any(
+                "normalization_sha256 must match registered contract" in failure
+                for failure in self.failures()
+            )
         )
 
     def test_paired_authority_binds_resealed_cell_content(self) -> None:

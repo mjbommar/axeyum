@@ -43,6 +43,10 @@ U2_NATIVE_DEPENDENCY = (
 U2_NATIVE_HEADER_CONTRACT = (
     ROOT / "docs" / "plan" / "lean-u2-native-header-contract-m2.1-v1.json"
 )
+U2_NORMALIZATION_CONTRACTS = (
+    ROOT / "docs" / "plan" / "lean-u2-normalization-contracts-v1.json"
+)
+U2_NORMALIZATION_SCRIPT = ROOT / "scripts" / "lean_u2_normalization_contracts.py"
 EXECUTION_EVIDENCE = ROOT / "docs" / "plan" / "lean-execution-evidence-v1.json"
 EXECUTION_PROCESS = ROOT / "docs" / "plan" / "lean-execution-process-v1.json"
 EXECUTION_STORE = ROOT / "docs" / "plan" / "lean-execution-store-v1.json"
@@ -313,6 +317,23 @@ def validate_definitions(data: dict[str, Any], failures: list[str]) -> None:
             failures.append(f"{field} must define exactly {sorted(states)}")
         elif any(not isinstance(value, str) or not value.strip() for value in definitions.values()):
             failures.append(f"{field} definitions must be non-empty strings")
+
+
+def validate_normalization_authority(
+    data: dict[str, Any], failures: list[str]
+) -> dict[str, dict[str, Any]]:
+    expected_path = "docs/plan/lean-u2-normalization-contracts-v1.json"
+    if data.get("normalization_authority") != expected_path:
+        failures.append("normalization authority path drift")
+        return {}
+    normalizer = load_script(
+        "lean_u2_normalization_contracts_for_complete_parity",
+        U2_NORMALIZATION_SCRIPT,
+    )
+    authority = load_json(U2_NORMALIZATION_CONTRACTS)
+    for failure in normalizer.validate_manifest(authority):
+        failures.append(f"normalization authority: {failure}")
+    return normalizer.contract_map(authority)
 
 
 def validate_populations(data: dict[str, Any], failures: list[str]) -> dict[str, Any]:
@@ -591,6 +612,8 @@ def derive_paired_outcome(
 def validate_paired_comparison(
     owner: str,
     comparison: Any,
+    layer: Any,
+    normalization_contracts: dict[str, dict[str, Any]],
     official: Any,
     axeyum: Any,
     official_state: str | None,
@@ -611,6 +634,24 @@ def validate_paired_comparison(
     normalization_id = comparison.get("normalization_id")
     if not isinstance(normalization_id, str) or not normalization_id.strip():
         failures.append(f"{owner}: non-empty normalization_id is required")
+    else:
+        normalization_contract = normalization_contracts.get(normalization_id)
+        if normalization_contract is None:
+            failures.append(
+                f"{owner}: normalization_id {normalization_id!r} is not registered"
+            )
+        else:
+            if layer != normalization_contract.get("layer"):
+                failures.append(
+                    f"{owner}: cell layer {layer!r} must match normalization layer "
+                    f"{normalization_contract.get('layer')!r}"
+                )
+            if comparison.get("normalization_sha256") != normalization_contract.get(
+                "contract_sha256"
+            ):
+                failures.append(
+                    f"{owner}: normalization_sha256 must match registered contract"
+                )
     for field in (
         "normalization_sha256",
         "contract_sha256",
@@ -665,7 +706,11 @@ def validate_paired_comparison(
     return outcome
 
 
-def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dict[str, Any]]:
+def validate_paired_cells(
+    data: dict[str, Any],
+    normalization_contracts: dict[str, dict[str, Any]],
+    failures: list[str],
+) -> list[dict[str, Any]]:
     outcomes = data.get("outcome_classes")
     if (tuple(outcomes) if isinstance(outcomes, list) else None) != OUTCOME_CLASSES:
         failures.append(f"outcome_classes/order must be {OUTCOME_CLASSES!r}")
@@ -709,6 +754,8 @@ def validate_paired_cells(data: dict[str, Any], failures: list[str]) -> list[dic
         validate_paired_comparison(
             cell_id + ".comparison",
             cell.get("comparison"),
+            cell.get("layer"),
+            normalization_contracts,
             cell.get("official"),
             cell.get("axeyum"),
             official_state,
@@ -960,9 +1007,10 @@ def validate_manifest(data: dict[str, Any]) -> list[str]:
         failures.append("contract path is missing")
     validate_target(data, failures)
     validate_definitions(data, failures)
+    normalization_contracts = validate_normalization_authority(data, failures)
     populations = validate_populations(data, failures)
     axes = validate_axes(data, populations, failures)
-    cells = validate_paired_cells(data, failures)
+    cells = validate_paired_cells(data, normalization_contracts, failures)
     paired_authorities = validate_paired_authorities(data, cells, failures)
     terminal_ready = validate_gates(
         data, populations, axes, paired_authorities, cells, failures
@@ -1387,6 +1435,23 @@ def task_snapshot() -> dict[str, Any]:
     }
 
 
+def u2_normalization_contract_snapshot() -> dict[str, Any]:
+    normalizer = load_script(
+        "lean_u2_normalization_contracts_snapshot",
+        U2_NORMALIZATION_SCRIPT,
+    )
+    authority = load_json(U2_NORMALIZATION_CONTRACTS)
+    failures = normalizer.validate_manifest(authority)
+    if failures:
+        raise RuntimeError("invalid U2 normalization authority: " + "; ".join(failures))
+    return {
+        "status": authority["status"],
+        "summary": authority["summary"],
+        "claims": authority["claims"],
+        "contract_ids": [contract["id"] for contract in authority["contracts"]],
+    }
+
+
 def report_source_paths(data: dict[str, Any]) -> list[Path]:
     paths = {
         MANIFEST,
@@ -1400,6 +1465,8 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         U2_NATIVE_CONTENT,
         U2_NATIVE_DEPENDENCY,
         U2_NATIVE_HEADER_CONTRACT,
+        U2_NORMALIZATION_CONTRACTS,
+        U2_NORMALIZATION_SCRIPT,
         EXECUTION_EVIDENCE,
         EXECUTION_PROCESS,
         EXECUTION_STORE,
@@ -1409,6 +1476,10 @@ def report_source_paths(data: dict[str, Any]) -> list[Path]:
         ROOT / data["contract"],
         ROOT / "scripts" / "gen-lean-complete-parity.py",
         ROOT / "scripts" / "tests" / "test_lean_complete_parity.py",
+        ROOT
+        / "scripts"
+        / "tests"
+        / "test_lean_u2_normalization_contracts.py",
         ROOT / "scripts" / "gen-lean-u2-test-authority.py",
         ROOT / "scripts" / "tests" / "test_lean_u2_test_authority.py",
         ROOT / "scripts" / "gen-lean-u2-official-ci-profiles.py",
@@ -1518,6 +1589,7 @@ def build_report(data: dict[str, Any]) -> dict[str, Any]:
             "u2_native_content_authority": u2_native_content_snapshot(),
             "u2_native_dependency_authority": u2_native_dependency_snapshot(),
             "u2_native_header_contract_authority": u2_native_header_contract_snapshot(),
+            "u2_normalization_contract_authority": u2_normalization_contract_snapshot(),
             "execution_evidence_authority": execution_evidence_snapshot(),
             "execution_process_authority": execution_process_snapshot(),
             "execution_store_authority": execution_store_snapshot(),
@@ -1619,6 +1691,7 @@ def render_markdown(report: dict[str, Any]) -> str:
     u2_content = bounded["u2_native_content_authority"]
     u2_dependency = bounded["u2_native_dependency_authority"]
     u2_header = bounded["u2_native_header_contract_authority"]
+    u2_normalization = bounded["u2_normalization_contract_authority"]
     execution = bounded["execution_evidence_authority"]
     process = bounded["execution_process_authority"]
     store = bounded["execution_store_authority"]
@@ -1744,6 +1817,16 @@ def render_markdown(report: dict[str, Any]) -> str:
             f"{u2_header['summary']['native_outcomes']} / "
             f"{u2_header['summary']['paired_cells']} / "
             f"{u2_header['credits']['parity_credit']}.",
+            f"- U2 normalization-contract authority: "
+            f"{u2_normalization['summary']['contracts']} registered layer contracts, "
+            f"{u2_normalization['summary']['compared_fields']} selected semantic fields, "
+            f"and {u2_normalization['summary']['ignored_rules']} explicit ignored-field "
+            "rules. Raw extractors and semantic canonicalizers remain "
+            f"{u2_normalization['summary']['raw_extractors_implemented']} / "
+            f"{u2_normalization['summary']['semantic_canonicalizers_implemented']}; "
+            f"paired cells and parity credit remain "
+            f"{u2_normalization['summary']['paired_cells']} / "
+            f"{u2_normalization['summary']['parity_credit']}.",
             f"- Lean execution evidence: {execution['lane_policies']} lane templates, "
             f"{execution['termination_classes']} termination classes, "
             f"{execution['synthetic_controls']} synthetic controls, and "

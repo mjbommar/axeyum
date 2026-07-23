@@ -52,7 +52,7 @@
     },
     {
       "path": "docs/plan/lean-complete-parity-v1.json",
-      "sha256": "15799218f5ad6438f945f44d583cbe8e118c230293b610baf7f2e6f720a675b5"
+      "sha256": "2c5fc17903bb6e1303bc4a40d00db7095ecce318564244121c6cdea97104e715"
     },
     {
       "path": "docs/plan/lean-complete-parity-worktree-portability-r1-result-2026-07-23.md",
@@ -104,7 +104,7 @@
     },
     {
       "path": "docs/plan/lean-u2-matched-execution-tl0.6.5-plan-2026-07-23.md",
-      "sha256": "51fc8dbb42211b329e4e3197e27cae4a2e22a207cd20aa421eff43f9019326c3"
+      "sha256": "742dad1b159629018a6bfec91ac38442af9fbcb9e975ed416172f9505432a54f"
     },
     {
       "path": "docs/plan/lean-u2-native-dependency-tl0.6.4-m2.1-plan-2026-07-23.md",
@@ -181,6 +181,10 @@
     {
       "path": "docs/plan/lean-u2-native-surface-content-v1.json",
       "sha256": "c83d10ce0f0619d4327dbbd7544bd584360cb080d35778ca7798a5f7da17560f"
+    },
+    {
+      "path": "docs/plan/lean-u2-normalization-contracts-v1.json",
+      "sha256": "e85141b7da5f58b05290a24831eefb4eedb317a74025d3f7817235d7da3c6acc"
     },
     {
       "path": "docs/plan/lean-u2-official-child-shards-v1.json",
@@ -368,7 +372,7 @@
     },
     {
       "path": "scripts/gen-lean-complete-parity.py",
-      "sha256": "6961cf93ac5df4be70c3ae6fc8a447a121775413f246a9183fe162828aee6c8d"
+      "sha256": "68a1965cfee067d081f4ca680339708913131f3de5838d8af13bbbcb57dd11ec"
     },
     {
       "path": "scripts/gen-lean-execution-evidence.py",
@@ -417,6 +421,10 @@
     {
       "path": "scripts/lean_u2_native_dependency_m2_1.py",
       "sha256": "9d1e13ca59535d198c7f5fa8f1bf6b79c9f76fb3ee0c944ee9bebb2a15bb2b07"
+    },
+    {
+      "path": "scripts/lean_u2_normalization_contracts.py",
+      "sha256": "0ab457046c157bc78ead1cab8992ac4ff0cf1277999c93497d23f25d9d1e9545"
     },
     {
       "path": "scripts/lean_u2_official_execution.py",
@@ -472,7 +480,7 @@
     },
     {
       "path": "scripts/tests/test_lean_complete_parity.py",
-      "sha256": "7def5319205ce3b24db115eef67dd756176c166c1db978381fa32bf74eed11c3"
+      "sha256": "bbf0b9709da530529523ad00b06963f92e69386d1bb013f9a4a2575d2d784fe4"
     },
     {
       "path": "scripts/tests/test_lean_execution_acceptance.py",
@@ -505,6 +513,10 @@
     {
       "path": "scripts/tests/test_lean_u2_native_surface_content.py",
       "sha256": "8acec41e70a820c2bd5b713673fc98f6019cd675885e8f2169b24ad265472da4"
+    },
+    {
+      "path": "scripts/tests/test_lean_u2_normalization_contracts.py",
+      "sha256": "4a1b18089a5ed92ddec4f5b470a4c37755e6f420c5f98eb3f8b6e657119a8f85"
     },
     {
       "path": "scripts/tests/test_lean_u2_official_child_shards.py",
@@ -1224,6 +1236,39 @@
         "parity_credit": 0
       },
       "record_sha256": "f0c8f7a0725c78d5659eda52c1bee29ae08548a9e1bfe8043a369ca772381466"
+    },
+    "u2_normalization_contract_authority": {
+      "status": "bounded-contract-only",
+      "summary": {
+        "contracts": 9,
+        "compared_fields": 68,
+        "ignored_rules": 18,
+        "raw_extractors_implemented": 0,
+        "semantic_canonicalizers_implemented": 0,
+        "official_outcomes": 0,
+        "axeyum_outcomes": 0,
+        "paired_cells": 0,
+        "parity_credit": 0
+      },
+      "claims": {
+        "parents_complete": false,
+        "obligation_authority_complete": false,
+        "raw_extractors_implemented": false,
+        "semantic_canonicalizers_implemented": false,
+        "external_process_observed": false,
+        "lean_complete_parity": false
+      },
+      "contract_ids": [
+        "lean-process-harness-v1",
+        "lean-parser-macro-v1",
+        "lean-elaboration-v1",
+        "lean-kernel-assurance-v1",
+        "lean-module-cache-v1",
+        "lean-tactic-v1",
+        "lean-compiler-runtime-v1",
+        "lean-server-rpc-v1",
+        "lean-lake-project-v1"
+      ]
     },
     "execution_evidence_authority": {
       "scope": "execution-evidence-contract-only-no-process-or-parity-outcome",
