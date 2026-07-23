@@ -45,10 +45,12 @@ from full_prepare import (  # noqa: E402
     validate_full_cell_composition,
     validate_full_selection,
 )
+import multi_host as multi_host_module  # noqa: E402
 from multi_host import (  # noqa: E402
     PLAN_SCHEMA,
     REGISTRATION_SCHEMA,
     TRANSPORT,
+    stop_remote_unit,
     validate_plan,
 )
 from resource_enforcement import MULTI_HOST_KIND  # noqa: E402
@@ -884,6 +886,72 @@ class FullPopulationContractTests(unittest.TestCase):
                     reseal(mutated),
                     selection=selection,
                     inspect_shared_root=False,
+                )
+
+    def test_remote_helper_thermal_stop_uses_only_exact_systemd_unit(self) -> None:
+        unit = "axeyum-smtcomp-e3-full-axeyum-initial-00.service"
+        active = mock.Mock(returncode=0, stdout="active\n")
+        stopped = mock.Mock(returncode=0, stderr=b"")
+        inactive = mock.Mock(returncode=3, stdout="inactive\n")
+        with (
+            mock.patch(
+                "multi_host.subprocess.run", side_effect=[active, stopped, inactive]
+            ) as run,
+            mock.patch("multi_host.time.time_ns", return_value=1234),
+        ):
+            evidence = multi_host_module._stop_unit(unit)
+        self.assertEqual(evidence["post_stop_unit_state"], "inactive")
+        self.assertEqual(
+            evidence["command"], ["systemctl", "--user", "stop", unit]
+        )
+        self.assertEqual(run.call_args_list[1].args[0], evidence["command"])
+        self.assertNotIn("pkill", repr(run.call_args_list))
+        self.assertNotIn("kill", repr(run.call_args_list))
+
+        with mock.patch(
+            "multi_host.subprocess.run",
+            return_value=mock.Mock(returncode=3, stdout="inactive\n"),
+        ):
+            with self.assertRaises(ContractError):
+                multi_host_module._stop_unit(unit)
+        with self.assertRaises(ContractError):
+            multi_host_module._stop_unit("unrelated.service")
+
+    def test_remote_thermal_stop_rejects_noncanonical_or_mutated_evidence(self) -> None:
+        unit = "axeyum-smtcomp-e3-full-axeyum-initial-00.service"
+        valid = {
+            "unit": unit,
+            "command": ["systemctl", "--user", "stop", unit],
+            "pre_stop_unit_state": "active",
+            "exit_code": 0,
+            "post_stop_unit_state": "inactive",
+            "stopped_at_ns": 1234,
+        }
+        completed = mock.Mock(
+            returncode=0,
+            stdout=canonical_bytes(valid),
+            stderr=b"",
+        )
+        with mock.patch("multi_host.subprocess.run", return_value=completed) as run:
+            self.assertEqual(
+                stop_remote_unit(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                    unit=unit,
+                ),
+                valid,
+            )
+        self.assertIn("stop-unit", run.call_args.args[0])
+        self.assertNotIn("pkill", run.call_args.args[0])
+
+        mutated = {**valid, "command": ["pkill", "solver"]}
+        completed.stdout = canonical_bytes(mutated)
+        with mock.patch("multi_host.subprocess.run", return_value=completed):
+            with self.assertRaises(ContractError):
+                stop_remote_unit(
+                    registration={"ssh_target": "s5"},
+                    remote_helper_path=Path("/tmp/full-multi-host.py"),
+                    unit=unit,
                 )
 
 

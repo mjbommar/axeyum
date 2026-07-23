@@ -1443,6 +1443,69 @@ def kill_remote_launcher(
     return evidence
 
 
+def stop_remote_unit(
+    *,
+    registration: dict[str, Any],
+    remote_helper_path: Path,
+    unit: str,
+) -> dict[str, Any]:
+    """Stop only one exact registered E3 unit and return canonical evidence."""
+
+    _require_e3_unit(unit)
+    helper = _require_safe_absolute_path(remote_helper_path, "remote_helper_path")
+    completed = subprocess.run(
+        [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "ConnectTimeout=5",
+            registration["ssh_target"],
+            "python3",
+            "-B",
+            str(helper),
+            "stop-unit",
+            "--unit",
+            unit,
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=30,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise ContractError(
+            "exact remote unit stop failed: "
+            + completed.stderr.decode("utf-8", errors="replace").strip()
+        )
+    try:
+        evidence = json.loads(completed.stdout)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ContractError("remote unit-stop evidence is malformed") from exc
+    if completed.stdout != canonical_bytes(evidence):
+        raise ContractError("remote unit-stop evidence is non-canonical")
+    expected_fields = {
+        "unit",
+        "command",
+        "pre_stop_unit_state",
+        "exit_code",
+        "post_stop_unit_state",
+        "stopped_at_ns",
+    }
+    if (
+        set(evidence) != expected_fields
+        or evidence.get("unit") != unit
+        or evidence.get("command") != ["systemctl", "--user", "stop", unit]
+        or evidence.get("pre_stop_unit_state") not in {"active", "activating"}
+        or evidence.get("exit_code") != 0
+        or evidence.get("post_stop_unit_state") not in {"inactive", "failed"}
+        or type(evidence.get("stopped_at_ns")) is not int
+        or evidence["stopped_at_ns"] <= 0
+    ):
+        raise ContractError("remote unit-stop evidence identity mismatch")
+    return evidence
+
+
 def remote_file_observation(
     *, registration: dict[str, Any], remote_helper_path: Path, path: Path
 ) -> dict[str, Any]:
@@ -3020,6 +3083,52 @@ def _kill_launcher(unit: str, launcher_pid: int) -> dict[str, Any]:
     }
 
 
+def _unit_state(unit: str) -> str:
+    try:
+        completed = subprocess.run(
+            ["systemctl", "--user", "is-active", unit],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ContractError("E3 unit-state query timed out") from exc
+    return completed.stdout.strip() or "unknown"
+
+
+def _stop_unit(unit: str) -> dict[str, Any]:
+    """Remote-helper implementation for an exact graceful E3 unit stop."""
+
+    _require_e3_unit(unit)
+    before = _unit_state(unit)
+    if before not in {"active", "activating"}:
+        raise ContractError("registered E3 unit is not active")
+    command = ["systemctl", "--user", "stop", unit]
+    try:
+        completed = subprocess.run(
+            command,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            timeout=20,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ContractError("exact E3 unit stop timed out") from exc
+    after = _unit_state(unit)
+    if completed.returncode != 0 or after not in {"inactive", "failed"}:
+        raise ContractError("exact E3 unit did not stop")
+    return {
+        "unit": unit,
+        "command": command,
+        "pre_stop_unit_state": before,
+        "exit_code": completed.returncode,
+        "post_stop_unit_state": after,
+        "stopped_at_ns": time.time_ns(),
+    }
+
+
 def _observe_file(path: Path) -> dict[str, Any]:
     observed_path = _require_safe_absolute_path(path, "observed_path")
     if not observed_path.is_file() or observed_path.is_symlink():
@@ -3050,6 +3159,8 @@ def main() -> int:
     kill = subparsers.add_parser("kill-launcher")
     kill.add_argument("--unit", required=True)
     kill.add_argument("--launcher-pid", required=True, type=int)
+    stop = subparsers.add_parser("stop-unit")
+    stop.add_argument("--unit", required=True)
     observe = subparsers.add_parser("observe-file")
     observe.add_argument("--path", required=True)
     args = parser.parse_args()
@@ -3068,6 +3179,9 @@ def main() -> int:
             sys.stdout.buffer.write(
                 canonical_bytes(_kill_launcher(args.unit, args.launcher_pid))
             )
+            return 0
+        if args.command == "stop-unit":
+            sys.stdout.buffer.write(canonical_bytes(_stop_unit(args.unit)))
             return 0
         if args.command == "observe-file":
             sys.stdout.buffer.write(canonical_bytes(_observe_file(Path(args.path))))
@@ -3108,6 +3222,7 @@ __all__ = [
     "shared_filesystem_observation",
     "stage_execution_bundle",
     "start_allocation",
+    "stop_remote_unit",
     "validate_execution_bundle",
     "validate_host_command",
     "validate_host_observation",
