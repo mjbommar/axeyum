@@ -10351,6 +10351,14 @@ pub fn limit(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<CasExpr> {
     {
         return Some(value);
     }
+    // Fixed integer-order Bessel J has an oscillatory O(|z|^{-1/2}) envelope on
+    // the real axis. Apply that exact zero limit only to a rational-affine argument
+    // and an outer factor independent of the limiting variable.
+    if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
+        && let Some(value) = limit_bessel_j_at_infinity(expr, var, point)
+    {
+        return Some(value);
+    }
     // Bounded transcendental heads with horizontal asymptotes (`erf(±∞)=±1`,
     // `atan(±∞)=±π/2`) — resolves e.g. the Gaussian `(√π/2)·erf(x)` at ±∞.
     if matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity)
@@ -10982,6 +10990,31 @@ fn limit_bounded_decay(expr: &CasExpr, var: &str, point: LimitPoint) -> Option<C
         }
         _ => None,
     }
+}
+
+/// Limit of `c·Jₙ(a·x+b)` at either real infinity for fixed nonnegative integer
+/// `n`, nonzero rational `a`, rational `b`, and any `x`-free factor `c`.
+///
+/// NIST DLMF 10.17.3 gives the fixed-order large-positive-argument expansion with
+/// an oscillatory `O(z^{-1/2})` envelope. DLMF 10.11.1 gives
+/// `Jₙ(-z)=(-1)ⁿJₙ(z)` for integer `n`, so the negative-real direction has the
+/// same zero limit. The rule deliberately does not substitute inside a denominator
+/// or accept an `x`-dependent outer factor: those shapes need rate analysis, and
+/// replacing `Jₙ` by zero there would be unsound.
+fn limit_bessel_j_at_infinity(
+    expr: &CasExpr,
+    var: &str,
+    point: LimitPoint,
+) -> Option<CasExpr> {
+    if !matches!(point, LimitPoint::PosInfinity | LimitPoint::NegInfinity) {
+        return None;
+    }
+    let (_, core) = split_var_free_factor(expr, var);
+    let CasExpr::Unary(UnaryFunc::BesselJ(_), argument) = core else {
+        return None;
+    };
+    univariate_affine(&argument, var)?;
+    Some(CasExpr::zero())
 }
 
 /// Whether any `sin`/`cos` appears inside a denominator (the second operand of a
@@ -21633,6 +21666,61 @@ mod tests {
         assert!(limit(&(x() * x().sin()), "x", LimitPoint::PosInfinity).is_none());
         assert!(limit(&x().sin(), "x", LimitPoint::PosInfinity).is_none());
         assert!(limit(&(CasExpr::int(1) / x().sin()), "x", LimitPoint::PosInfinity).is_none());
+    }
+
+    #[test]
+    fn limits_of_integer_order_bessel_j_at_infinity_and_declines() {
+        let x = || v("x");
+        let pos = || LimitPoint::PosInfinity;
+        let neg = || LimitPoint::NegInfinity;
+
+        // NIST DLMF 10.17.3: fixed-order Jₙ has an O(|x|^{-1/2}) envelope.
+        // Cover every scale direction at both infinities and orders far beyond any
+        // discovery loop: this rule is constant-time in the public `u32` order.
+        for order in [0, 1, 2, 7, 32, u32::MAX] {
+            for argument in [
+                x(),
+                CasExpr::int(2) * x() + CasExpr::int(3),
+                CasExpr::rat(1, 2) * x() - CasExpr::int(4),
+                CasExpr::int(-2) * x() + CasExpr::int(3),
+            ] {
+                let bessel = argument.bessel_j(order);
+                assert_equal(&limit(&bessel, "x", pos()).unwrap(), &CasExpr::zero());
+                assert_equal(&limit(&bessel, "x", neg()).unwrap(), &CasExpr::zero());
+            }
+        }
+
+        assert_equal(
+            &limit(&(v("c") * x().bessel_j(3)), "x", pos()).unwrap(),
+            &CasExpr::zero(),
+        );
+        assert_equal(
+            &limit(&(CasExpr::int(1) + x().bessel_j(0)), "x", pos()).unwrap(),
+            &CasExpr::int(1),
+        );
+
+        // These require growth/rate/domain reasoning not supplied by the bounded
+        // theorem-backed rule, or use a head with exponential rather than oscillatory
+        // behavior. They must continue to decline instead of inheriting a false zero.
+        assert!(limit(&x().bessel_i(0), "x", pos()).is_none());
+        assert!(limit(&(CasExpr::int(2).sqrt() * x()).bessel_j(0), "x", pos()).is_none());
+        assert!(limit(&x().pow(2).bessel_j(0), "x", pos()).is_none());
+        assert!(limit(&(v("a") + x()).bessel_j(0), "x", pos()).is_none());
+        assert_equal(
+            &limit(&CasExpr::zero().bessel_j(0), "x", pos()).unwrap(),
+            &CasExpr::int(1),
+        );
+        assert!(limit(&(CasExpr::int(1) / x().bessel_j(0)), "x", pos()).is_none());
+        assert!(limit(&(x() * x().bessel_j(0)), "x", pos()).is_none());
+        assert_equal(
+            &limit(
+                &x().bessel_j(0),
+                "x",
+                LimitPoint::Finite(Rational::zero()),
+            )
+            .unwrap(),
+            &CasExpr::int(1),
+        );
     }
 
     #[test]
