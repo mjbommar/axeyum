@@ -25,7 +25,7 @@ from full_population import (  # noqa: E402
     build_wave_checkpoint,
     cumulative_benchmark_count,
 )
-from full_result import CELL_RESULT_SCHEMA  # noqa: E402
+from full_result import CELL_RESULT_SCHEMA, publish_full_cell_result  # noqa: E402
 from multi_host import COMPLETION_SCHEMA as MULTI_HOST_COMPLETION_SCHEMA  # noqa: E402
 from resource_enforcement import COMPLETION_SCHEMA as RESOURCE_COMPLETION_SCHEMA  # noqa: E402
 from resume_contract import ContractError, digest  # noqa: E402
@@ -393,6 +393,15 @@ class FullExecutionAuthorityTests(unittest.TestCase):
             [prior_completion("axeyum")["record_sha256"]],
         )
         self.assertEqual(authority["cross_solver_disagreement_count"], 1)
+        with tempfile.TemporaryDirectory() as temp:
+            completion = publish_full_cell_result(
+                Path(temp) / "cvc5-result",
+                records=cvc5_records,
+                execution_authority=authority,
+                expected_logic_counts={"QF_BV": 1, "QF_UF": 1},
+                published_at_ns=300,
+            )
+        self.assertFalse(completion["safe_to_continue"])
 
         drifted = copy.deepcopy(axeyum_records)
         drifted.pop()
