@@ -467,6 +467,12 @@ that checkpoint. The subsequent
 retains one consumed process and exact 64-row JUnit (30 pass / 34 fail), but a
 family-blind docparse artifact rule stopped before post/projection/completion.
 All 64 rows remain diagnostic and M2 case/shard credit is zero.
+The published
+[R2 diagnostic-closure plan](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
+authorizes no process and no retroactive credit. It binds the exact 124-row /
+950,327,258-byte generated manifest, retains only 67 outcome/log payloads /
+106,610 bytes, and records 56 reproducible C/executable intermediates /
+950,219,754 bytes as metadata-only evidence before any later retry design.
 
 ## 8. Layer-specific equivalence
 

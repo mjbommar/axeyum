@@ -102,4 +102,8 @@ must be committed and pushed. A later source-first plan may evaluate whether
 the immutable retained process/JUnit evidence can be completed without a new
 process; it must separately freeze family-specific artifact rules, work-root
 integrity, no-overwrite installation, the thread-failure classification
-boundary, and stop conditions. R1 itself permits no retry.
+boundary, and stop conditions. R1 itself permits no retry. The subsequently
+published
+[R2 diagnostic-closure plan](lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
+selects only a zero-process, zero-credit evidence append; it cannot validate or
+promote R1.

@@ -547,7 +547,13 @@ core IR/solver/rewrite edits; every increment builds, passes gates, and holds
   family-blind artifact closure demanded compile `.c`/`.out` products from
   passing docparse cases and stopped before post/projection/completion. The
   attempt is consumed and invalid, so M2 outcome/shard credit remains zero.
-  Next: commit and push the evidence/result before any correction plan.
+  Commit `d9b286a1` publishes that exact evidence/result. The source-first
+  [R2 diagnostic-closure plan](docs/plan/lean-u2-official-execution-tl0.6.3-m2-r2-diagnostic-closure-plan-2026-07-22.md)
+  freezes zero-process/zero-credit family-specific closure: 124 generated rows
+  total 950,327,258 bytes, but only 67 outcome captures/CTest logs totaling
+  106,610 bytes are retained; 56 reproducible C/executable intermediates
+  totaling 950,219,754 bytes remain manifest-only. Next: implement/test/push
+  this diagnostic append before touching the live evidence root.
 
 - **2026-07-22 — TL0.6.3 M1 derives complete deterministic U2 child-shard
   scheduling with zero new outcomes or parity credit.** The source-first
@@ -8093,6 +8099,14 @@ plan is built and committed on the current branch:
   their uncertified `Fpa2Bv` proof credit. The pathological 30-minute
   collection path and fail-closed panic disappear; the exact pinned Lean 4.30
   gate accepts the current 70/70 modules with zero skips and zero failures.
+- **2026-07-22 — Preregistered M2 R2 as a zero-process diagnostic closure.**
+  The plan binds published R1 commit/authority/evidence, corrects only the
+  family classification used for diagnostics, freezes the exact 124-row /
+  950,327,258-byte work-root closure, retains 67 outcome/log payloads totaling
+  106,610 bytes, and keeps 56 reproducible C/executable intermediates totaling
+  950,219,754 bytes as explicit metadata-only evidence. It cannot create an
+  outcome, shard completion, retry, or parity credit.
+
 - **2026-07-22 — Retained TL0.6.3 M2 R1 attempt 001 as invalid after
   post-process artifact closure.** Corrected source preflight passed; CTest ran
   once, exited 8 in 50,775 ms, reaped its process group, and produced exact
